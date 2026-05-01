@@ -40,6 +40,8 @@ Fixture files are deterministic for the same scenario, seed, dimensions, and lay
 
 ## Shader Snapshot Coverage
 
+Current `TWF-002` coverage proves the wrapper dispatch contract in .NET tests only. The repository does not yet contain a Unity batchmode, DirectX Shader Compiler, or shader snapshot command that can compile or execute `FireSim.compute` outside Unity.
+
 Future GPU validation should add shader snapshot fixtures for:
 
 - Single ignition point.

@@ -53,3 +53,13 @@ Full-grid dispatch is the simplest useful GPU baseline. It proves the rule trans
 ## Notes
 
 - If shader execution cannot be tested in the current environment, record that limitation in the ticket notes and keep the implementation easy to verify later.
+
+## Worker Notes - 2026-05-01
+
+- Added `src/Wildfire.Unity/FireSim.compute` with a `SimulateFullGrid` kernel, packed-cell helpers, six in-bounds neighbor reads, deterministic hash ignition, full-grid bounds guards, separate `NextCells` writes, and padded compact delta appends.
+- Added a Unity-side dispatch baseline that sends current/next/delta buffers, dimensions, tick, seed, and `8 x 8 x 4` full-grid thread group counts through `IFireSimComputeDispatcher`, then swaps current and next cell buffers after dispatch.
+- Kept fire-spread rules out of C#; .NET tests assert dispatch shape and buffer swapping only.
+- Documented shader pseudocode differences in `docs/DESIGN.md` and the current shader validation gap in `docs/TEST_PLAN.md`.
+- Verification passed: `git diff --check`; `dotnet test` passed 31 tests; `dotnet build Wildfire.slnx` succeeded with 0 warnings and 0 errors.
+- Shader compile/execution was not verified here. `dxc` and `glslangValidator` are not installed. Unity 6000.3.6f1 is installed, but this repository has no Unity `Assets`, `Packages`, or `ProjectSettings` project, and `UnityShaderCompiler` exposes only the internal compiler-service invocation rather than a standalone file compile command.
+- Remaining blockers for live GPU proof: add a Unity project or CI shader compile harness, implement real UnityEngine compute-buffer binding/counter reset, add compact delta readback, and add external change upload in the follow-up ticket.

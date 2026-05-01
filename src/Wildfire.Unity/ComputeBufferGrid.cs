@@ -63,9 +63,9 @@ public sealed class ComputeBufferGrid : IDisposable
 
     public int CellCount => Dimensions.CellCount;
 
-    public IComputeBufferHandle CurrentCells { get; }
+    public IComputeBufferHandle CurrentCells { get; private set; }
 
-    public IComputeBufferHandle NextCells { get; }
+    public IComputeBufferHandle NextCells { get; private set; }
 
     public IComputeBufferHandle QueuedChanges { get; }
 
@@ -83,6 +83,11 @@ public sealed class ComputeBufferGrid : IDisposable
         IComputeBufferAllocator allocator)
     {
         return new ComputeBufferGrid(new ComputeGridDimensions(width, height, depth), initialCells, allocator);
+    }
+
+    public void SwapCellBuffers()
+    {
+        (CurrentCells, NextCells) = (NextCells, CurrentCells);
     }
 
     public void Dispose()

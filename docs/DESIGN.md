@@ -406,6 +406,18 @@ struct CellDeltaGpu
 };
 ```
 
+### Current Full-Grid Shader Baseline
+
+`FireSim.compute` currently exposes one `SimulateFullGrid` kernel with `8 x 8 x 4` thread groups. The Unity wrapper dispatches enough groups to cover the full grid, then swaps current and next cell buffers after dispatch. C# does not execute fire-spread rules for parity.
+
+The first shader translates the rule pseudocode with these implementation details:
+
+- Neighbor heat averages only in-bounds neighbors, so edge and corner cells divide by the number of real neighbors instead of a fixed six.
+- `burnChance` is saturated through `min` and unsigned subtraction guards instead of relying on pseudocode `clamp` behavior.
+- GPU delta records are padded to four `uint` fields so the current `wildfire.deltas` buffer stride stays 16 bytes.
+- External change upload remains a follow-up pass owned by `TWF-003`.
+- Visual-field writes remain a follow-up pass owned by `TWF-005`.
+
 ## 17. GPU Visual Pipeline
 
 The compute shader can drive visuals directly.

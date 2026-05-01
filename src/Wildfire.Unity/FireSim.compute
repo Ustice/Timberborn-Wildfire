@@ -1,0 +1,207 @@
+#pragma kernel SimulateFullGrid
+
+#define THREAD_GROUP_SIZE_X 8
+#define THREAD_GROUP_SIZE_Y 8
+#define THREAD_GROUP_SIZE_Z 4
+
+struct CellDeltaGpu
+{
+    uint Index;
+    uint OldCell;
+    uint NewCell;
+    uint Reserved;
+};
+
+StructuredBuffer<uint> CurrentCells;
+RWStructuredBuffer<uint> NextCells;
+AppendStructuredBuffer<CellDeltaGpu> Deltas;
+
+uint Width;
+uint Height;
+uint Depth;
+uint CellCount;
+uint Tick;
+uint Seed;
+
+uint Fuel(uint cell)
+{
+    return cell & 0xFu;
+}
+
+uint Heat(uint cell)
+{
+    return (cell >> 4) & 0xFu;
+}
+
+uint Flammability(uint cell)
+{
+    return (cell >> 8) & 0x3u;
+}
+
+uint Water(uint cell)
+{
+    return (cell >> 10) & 0x3u;
+}
+
+uint Terrain(uint cell)
+{
+    return (cell >> 12) & 0x1u;
+}
+
+uint HeatLoss(uint cell)
+{
+    return (cell >> 13) & 0x7u;
+}
+
+uint Pack(uint fuel, uint heat, uint flammability, uint water, uint terrain, uint heatLoss)
+{
+    return ((fuel & 0xFu) << 0) |
+        ((heat & 0xFu) << 4) |
+        ((flammability & 0x3u) << 8) |
+        ((water & 0x3u) << 10) |
+        ((terrain & 0x1u) << 12) |
+        ((heatLoss & 0x7u) << 13);
+}
+
+uint Hash(uint cellIndex, uint tick, uint seed)
+{
+    uint x = cellIndex ^ (tick * 747796405u) ^ seed;
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+
+uint ToIndex(uint3 coordinate)
+{
+    return coordinate.x + (coordinate.y * Width) + (coordinate.z * Width * Height);
+}
+
+bool IsBurning(uint cell)
+{
+    uint ignitionThreshold = 12u - Flammability(cell) + Water(cell);
+    return Terrain(cell) == 1u && Fuel(cell) > 0u && Heat(cell) >= ignitionThreshold;
+}
+
+void AddNeighbor(uint3 coordinate, inout uint heatSum, inout uint neighborCount, inout uint burningNeighborCount)
+{
+    uint cell = CurrentCells[ToIndex(coordinate)] & 0xFFFFu;
+    heatSum += Heat(cell);
+    neighborCount += 1u;
+
+    if (IsBurning(cell))
+    {
+        burningNeighborCount += 1u;
+    }
+}
+
+uint StepCell(uint index, uint3 coordinate, uint cell)
+{
+    uint fuel = Fuel(cell);
+    uint heat = Heat(cell);
+    uint flammability = Flammability(cell);
+    uint water = Water(cell);
+    uint terrain = Terrain(cell);
+    uint heatLoss = HeatLoss(cell);
+    uint neighborHeatSum = 0u;
+    uint neighborCount = 0u;
+    uint burningNeighborCount = 0u;
+
+    if (coordinate.x > 0u)
+    {
+        AddNeighbor(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+    }
+
+    if (coordinate.x + 1u < Width)
+    {
+        AddNeighbor(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+    }
+
+    if (coordinate.y > 0u)
+    {
+        AddNeighbor(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+    }
+
+    if (coordinate.y + 1u < Height)
+    {
+        AddNeighbor(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+    }
+
+    if (coordinate.z > 0u)
+    {
+        AddNeighbor(uint3(coordinate.x, coordinate.y, coordinate.z - 1u), neighborHeatSum, neighborCount, burningNeighborCount);
+    }
+
+    if (coordinate.z + 1u < Depth)
+    {
+        AddNeighbor(uint3(coordinate.x, coordinate.y, coordinate.z + 1u), neighborHeatSum, neighborCount, burningNeighborCount);
+    }
+
+    uint neighborHeat = neighborCount > 0u ? neighborHeatSum / neighborCount : 0u;
+    heat = ((heat * 3u) + neighborHeat) / 4u;
+    heat = min(15u, heat + burningNeighborCount);
+
+    if (water > 0u)
+    {
+        heat = heat > water ? heat - water : 0u;
+
+        if (heat > 8u)
+        {
+            water -= 1u;
+        }
+    }
+
+    bool canBurn = terrain == 1u && fuel > 0u;
+    uint ignitionThreshold = 12u - flammability + water;
+
+    if (canBurn && heat >= ignitionThreshold)
+    {
+        uint roll = Hash(index, Tick, Seed) & 15u;
+        uint burnPressure = heat + flammability;
+        burnPressure = burnPressure > water ? burnPressure - water : 0u;
+        uint burnChance = min(15u, burnPressure);
+
+        if (roll < burnChance)
+        {
+            fuel = fuel > 0u ? fuel - 1u : 0u;
+            heat = min(15u, heat + 2u + flammability);
+        }
+    }
+
+    uint cooling = 1u + (heatLoss / 3u);
+    heat = heat > cooling ? heat - cooling : 0u;
+
+    return Pack(fuel, heat, flammability, water, terrain, heatLoss);
+}
+
+[numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
+void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= Width || id.y >= Height || id.z >= Depth)
+    {
+        return;
+    }
+
+    uint index = ToIndex(id);
+
+    if (index >= CellCount)
+    {
+        return;
+    }
+
+    uint oldCell = CurrentCells[index] & 0xFFFFu;
+    uint newCell = StepCell(index, id, oldCell);
+    NextCells[index] = newCell;
+
+    if (newCell != oldCell)
+    {
+        CellDeltaGpu delta;
+        delta.Index = index;
+        delta.OldCell = oldCell;
+        delta.NewCell = newCell;
+        delta.Reserved = 0u;
+        Deltas.Append(delta);
+    }
+}
