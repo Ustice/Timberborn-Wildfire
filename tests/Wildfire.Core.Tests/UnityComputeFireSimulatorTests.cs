@@ -18,13 +18,20 @@ public sealed class UnityComputeFireSimulatorTests
             allocator);
         IComputeBufferHandle originalCurrentCells = grid.CurrentCells;
         IComputeBufferHandle originalNextCells = grid.NextCells;
-        RecordingFireSimComputeDispatcher dispatcher = new();
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            BeforeDispatch = dispatch => Assert.Equal(1, ((RecordingComputeBufferHandle)dispatch.Deltas).ResetAppendCounterCalls),
+        };
         UnityComputeFireSimulator simulator = new(grid, dispatcher, seed: 1234);
 
         GpuFireStepResult result = simulator.Tick();
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
 
         Assert.Equal(1u, result.Tick);
         Assert.Empty(result.Deltas);
+        Assert.Equal(1, deltas.ResetAppendCounterCalls);
+        Assert.Equal(1, deltas.ReadAppendCounterCalls);
+        Assert.Empty(deltas.ReadAppendedDataCounts);
         FireSimComputeDispatch dispatch = Assert.Single(dispatcher.Dispatches);
         Assert.Equal(UnityComputeFireSimulator.FullGridKernelName, dispatch.KernelName);
         Assert.Equal(new ComputeGridDimensions(17, 9, 5), dispatch.Dimensions);
@@ -40,6 +47,203 @@ public sealed class UnityComputeFireSimulatorTests
         Assert.Equal(2, dispatch.ThreadGroupsZ);
         Assert.Same(originalNextCells, grid.CurrentCells);
         Assert.Same(originalCurrentCells, grid.NextCells);
+    }
+
+    [Fact]
+    public void TickReturnsCompactDeltasAfterReadback()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 3,
+            height: 1,
+            depth: 1,
+            new ushort[3],
+            allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName != UnityComputeFireSimulator.FullGridKernelName)
+                {
+                    return;
+                }
+
+                deltas.AppendCounter = 2;
+                deltas.AppendedData =
+                [
+                    1u,
+                    0x1234u,
+                    0x5678u,
+                    0u,
+                    2u,
+                    0x9ABCu,
+                    0xDEF0u,
+                    0u,
+                ];
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        GpuFireStepResult result = simulator.Tick();
+
+        Assert.Equal(
+            [
+                new CellDelta(1, 0x1234, 0x5678),
+                new CellDelta(2, 0x9ABC, 0xDEF0),
+            ],
+            result.Deltas);
+        Assert.Equal([2], deltas.ReadAppendedDataCounts);
+    }
+
+    [Fact]
+    public void TickNotifiesListenersAfterDeltaReadback()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName != UnityComputeFireSimulator.FullGridKernelName)
+                {
+                    return;
+                }
+
+                deltas.AppendCounter = 1;
+                deltas.AppendedData = [0u, 0u, 0x101u, 0u];
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+        RecordingFireSimListener listener = new();
+
+        using IDisposable subscription = simulator.Subscribe(listener);
+
+        simulator.Tick();
+
+        CellDelta[] notification = Assert.Single(listener.Notifications);
+        Assert.Equal([new CellDelta(0, 0, 0x101)], notification);
+
+        subscription.Dispose();
+        simulator.Tick();
+
+        Assert.Single(listener.Notifications);
+    }
+
+    [Fact]
+    public void TickReturnsExternalChangeDeltaWhenSimulationDoesNotFurtherChangeCell()
+    {
+        ushort newCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 1, terrain: 0, heatLoss: 0);
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName != UnityComputeFireSimulator.ApplyExternalChangesKernelName)
+                {
+                    return;
+                }
+
+                deltas.AppendCounter = 1;
+                deltas.AppendedData = [0u, 0u, newCell, 0u];
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, SetWater: 1));
+
+        GpuFireStepResult result = simulator.Tick();
+
+        Assert.Equal([new CellDelta(0, 0, newCell)], result.Deltas);
+        Assert.Equal(
+            [
+                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+            ],
+            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
+    }
+
+    [Fact]
+    public void TickNotifiesListenersOfExternalChangeOnlyDelta()
+    {
+        ushort newCell = PackedCell.Pack(fuel: 3, heat: 0, flammability: 0, water: 0, terrain: 0, heatLoss: 0);
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName != UnityComputeFireSimulator.ApplyExternalChangesKernelName)
+                {
+                    return;
+                }
+
+                deltas.AppendCounter = 1;
+                deltas.AppendedData = [0u, 0u, newCell, 0u];
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+        RecordingFireSimListener listener = new();
+
+        using IDisposable subscription = simulator.Subscribe(listener);
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddFuel: 3));
+
+        simulator.Tick();
+
+        CellDelta[] notification = Assert.Single(listener.Notifications);
+        Assert.Equal([new CellDelta(0, 0, newCell)], notification);
+    }
+
+    [Fact]
+    public void TickRejectsDeltaCounterPastBufferCapacity()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName == UnityComputeFireSimulator.FullGridKernelName)
+                {
+                    deltas.AppendCounter = 2;
+                }
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+
+        Assert.Equal("GPU delta counter returned 2, but buffer capacity is 1.", exception.Message);
     }
 
     [Fact]
@@ -319,14 +523,21 @@ public sealed class UnityComputeFireSimulatorTests
 
         public string? ThrowOnKernelName { get; set; }
 
+        public Action<FireSimComputeDispatch>? BeforeDispatch { get; init; }
+
+        public Action<FireSimComputeDispatch>? AfterDispatch { get; init; }
+
         public void Dispatch(FireSimComputeDispatch dispatch)
         {
+            BeforeDispatch?.Invoke(dispatch);
             Dispatches.Add(dispatch);
 
             if (dispatch.KernelName == ThrowOnKernelName)
             {
                 throw new InvalidOperationException($"Dispatch failed for {dispatch.KernelName}.");
             }
+
+            AfterDispatch?.Invoke(dispatch);
         }
     }
 
@@ -336,9 +547,14 @@ public sealed class UnityComputeFireSimulatorTests
         {
             return new RecordingComputeBufferHandle(name, count, strideBytes);
         }
+
+        public IAppendComputeBufferHandle AllocateAppend(string name, int count, int strideBytes)
+        {
+            return new RecordingComputeBufferHandle(name, count, strideBytes);
+        }
     }
 
-    private sealed class RecordingComputeBufferHandle(string name, int count, int strideBytes) : IComputeBufferHandle
+    private sealed class RecordingComputeBufferHandle(string name, int count, int strideBytes) : IAppendComputeBufferHandle
     {
         public string Name { get; } = name;
 
@@ -352,6 +568,16 @@ public sealed class UnityComputeFireSimulatorTests
 
         public bool FailUpload { get; set; }
 
+        public int ResetAppendCounterCalls { get; private set; }
+
+        public int ReadAppendCounterCalls { get; private set; }
+
+        public int AppendCounter { get; set; }
+
+        public uint[] AppendedData { get; set; } = [];
+
+        public List<int> ReadAppendedDataCounts { get; } = [];
+
         public void Upload(ReadOnlySpan<uint> values)
         {
             if (FailUpload)
@@ -363,8 +589,36 @@ public sealed class UnityComputeFireSimulatorTests
             UploadHistory.Add(UploadedValues);
         }
 
+        public void ResetAppendCounter()
+        {
+            ResetAppendCounterCalls++;
+            AppendCounter = 0;
+        }
+
+        public int ReadAppendCounter()
+        {
+            ReadAppendCounterCalls++;
+            return AppendCounter;
+        }
+
+        public uint[] ReadAppendedData(int elementCount)
+        {
+            ReadAppendedDataCounts.Add(elementCount);
+            return AppendedData;
+        }
+
         public void Dispose()
         {
+        }
+    }
+
+    private sealed class RecordingFireSimListener : IFireSimListener
+    {
+        public List<CellDelta[]> Notifications { get; } = [];
+
+        public void OnFireSimDeltas(ReadOnlySpan<CellDelta> deltas)
+        {
+            Notifications.Add(deltas.ToArray());
         }
     }
 }

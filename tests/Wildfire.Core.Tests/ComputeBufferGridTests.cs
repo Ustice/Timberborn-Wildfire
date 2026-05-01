@@ -72,6 +72,7 @@ public sealed class ComputeBufferGridTests
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.NextCells.StrideBytes);
         Assert.Equal(ComputeBufferGrid.ChangeStrideBytes, grid.QueuedChanges.StrideBytes);
         Assert.Equal(ComputeBufferGrid.DeltaStrideBytes, grid.Deltas.StrideBytes);
+        Assert.True(((RecordingComputeBufferHandle)grid.Deltas).IsAppend);
         Assert.Equal(ComputeBufferGrid.GenerationStrideBytes, grid.Generations.StrideBytes);
         Assert.Equal(ComputeBufferGrid.VisualFieldStrideBytes, grid.VisualFields.StrideBytes);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.CurrentCells).UploadedValues);
@@ -157,9 +158,25 @@ public sealed class ComputeBufferGridTests
             Handles.Add(handle);
             return handle;
         }
+
+        public IAppendComputeBufferHandle AllocateAppend(string name, int count, int strideBytes)
+        {
+            if (name == FailAllocationName)
+            {
+                throw new InvalidOperationException($"Allocation failed for {name}.");
+            }
+
+            RecordingComputeBufferHandle handle = new(name, count, strideBytes)
+            {
+                FailUpload = name == FailUploadName,
+                IsAppend = true,
+            };
+            Handles.Add(handle);
+            return handle;
+        }
     }
 
-    private sealed class RecordingComputeBufferHandle(string name, int count, int strideBytes) : IComputeBufferHandle
+    private sealed class RecordingComputeBufferHandle(string name, int count, int strideBytes) : IAppendComputeBufferHandle
     {
         public string Name { get; } = name;
 
@@ -172,6 +189,8 @@ public sealed class ComputeBufferGridTests
         public uint[] UploadedValues { get; private set; } = [];
 
         public bool FailUpload { get; set; }
+
+        public bool IsAppend { get; init; }
 
         public void Upload(ReadOnlySpan<uint> values)
         {
@@ -186,6 +205,20 @@ public sealed class ComputeBufferGridTests
             }
 
             UploadedValues = values.ToArray();
+        }
+
+        public void ResetAppendCounter()
+        {
+        }
+
+        public int ReadAppendCounter()
+        {
+            return 0;
+        }
+
+        public uint[] ReadAppendedData(int elementCount)
+        {
+            return new uint[elementCount * (StrideBytes / sizeof(uint))];
         }
 
         public void Dispose()

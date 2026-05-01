@@ -42,6 +42,8 @@ Fixture files are deterministic for the same scenario, seed, dimensions, and lay
 
 Current `TWF-002` coverage proves the wrapper dispatch contract in .NET tests only. The repository does not yet contain a Unity batchmode, DirectX Shader Compiler, or shader snapshot command that can compile or execute `FireSim.compute` outside Unity.
 
+`TWF-004` adds .NET coverage for the compact delta readback wrapper: `wildfire.deltas` is allocated through the append-buffer abstraction, its append counter is reset before dispatch, the append counter is read after dispatch, compact `CellDelta` records are decoded, and subscribed listeners are notified from the readback result. This does not prove HLSL compile/runtime behavior because the repository still has no Unity runtime, Unity batchmode project, or standalone compute-shader compiler harness.
+
 Future GPU validation should add shader snapshot fixtures for:
 
 - Single ignition point.
@@ -60,6 +62,8 @@ For each fixture, record:
 - Tick count.
 - Final packed cell grid.
 - Per-tick compact delta counts.
+- Per-tick compact delta records for changed cells only, with old and new packed values.
+- Evidence that the append-buffer counter is reset before each dispatch/readback cycle.
 - Visual field checksum or image artifact when useful.
 
 Snapshot differences should be reviewed scenario by scenario. Avoid broad visual-only approval for behavior changes.

@@ -30,7 +30,7 @@ public sealed class ComputeBufferGrid : IDisposable
             IComputeBufferHandle currentCells = AllocateTracked(allocator, ownedBuffers, "wildfire.current_cells", dimensions.CellCount, PackedCellStrideBytes);
             IComputeBufferHandle nextCells = AllocateTracked(allocator, ownedBuffers, "wildfire.next_cells", dimensions.CellCount, PackedCellStrideBytes);
             IComputeBufferHandle queuedChanges = AllocateTracked(allocator, ownedBuffers, "wildfire.queued_changes", dimensions.CellCount, ChangeStrideBytes);
-            IComputeBufferHandle deltas = AllocateTracked(allocator, ownedBuffers, "wildfire.deltas", dimensions.CellCount, DeltaStrideBytes);
+            IAppendComputeBufferHandle deltas = AllocateAppendTracked(allocator, ownedBuffers, "wildfire.deltas", dimensions.CellCount, DeltaStrideBytes);
             IComputeBufferHandle generations = AllocateTracked(allocator, ownedBuffers, "wildfire.generations", dimensions.CellCount, GenerationStrideBytes);
             IComputeBufferHandle visualFields = AllocateTracked(allocator, ownedBuffers, "wildfire.visual_fields", dimensions.CellCount, VisualFieldStrideBytes);
 
@@ -69,7 +69,7 @@ public sealed class ComputeBufferGrid : IDisposable
 
     public IComputeBufferHandle QueuedChanges { get; }
 
-    public IComputeBufferHandle Deltas { get; }
+    public IAppendComputeBufferHandle Deltas { get; }
 
     public IComputeBufferHandle Generations { get; }
 
@@ -109,6 +109,18 @@ public sealed class ComputeBufferGrid : IDisposable
         int strideBytes)
     {
         IComputeBufferHandle buffer = allocator.Allocate(name, count, strideBytes);
+        ownedBuffers.Add(buffer);
+        return buffer;
+    }
+
+    private static IAppendComputeBufferHandle AllocateAppendTracked(
+        IComputeBufferAllocator allocator,
+        List<IComputeBufferHandle> ownedBuffers,
+        string name,
+        int count,
+        int strideBytes)
+    {
+        IAppendComputeBufferHandle buffer = allocator.AllocateAppend(name, count, strideBytes);
         ownedBuffers.Add(buffer);
         return buffer;
     }

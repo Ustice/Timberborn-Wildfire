@@ -123,6 +123,21 @@ uint Hash(uint cellIndex, uint tick, uint seed)
     return x;
 }
 
+void AppendDelta(uint index, uint oldCell, uint newCell)
+{
+    if (newCell == oldCell)
+    {
+        return;
+    }
+
+    CellDeltaGpu delta;
+    delta.Index = index;
+    delta.OldCell = oldCell;
+    delta.NewCell = newCell;
+    delta.Reserved = 0u;
+    Deltas.Append(delta);
+}
+
 uint ToIndex(uint3 coordinate)
 {
     return coordinate.x + (coordinate.y * Width) + (coordinate.z * Width * Height);
@@ -244,7 +259,8 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
             continue;
         }
 
-        uint cell = CurrentCells[change.CellIndex] & 0xFFFFu;
+        uint oldCell = CurrentCells[change.CellIndex] & 0xFFFFu;
+        uint cell = oldCell;
 
         if ((change.SetMask & CHANGE_SET_CELL) != 0u)
         {
@@ -295,6 +311,7 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
         }
 
         CurrentCells[change.CellIndex] = cell;
+        AppendDelta(change.CellIndex, oldCell, cell);
     }
 }
 
@@ -316,14 +333,5 @@ void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
     uint oldCell = CurrentCells[index] & 0xFFFFu;
     uint newCell = StepCell(index, id, oldCell);
     NextCells[index] = newCell;
-
-    if (newCell != oldCell)
-    {
-        CellDeltaGpu delta;
-        delta.Index = index;
-        delta.OldCell = oldCell;
-        delta.NewCell = newCell;
-        delta.Reserved = 0u;
-        Deltas.Append(delta);
-    }
+    AppendDelta(index, oldCell, newCell);
 }

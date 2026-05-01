@@ -3,6 +3,8 @@ namespace Wildfire.Unity;
 public interface IComputeBufferAllocator
 {
     IComputeBufferHandle Allocate(string name, int count, int strideBytes);
+
+    IAppendComputeBufferHandle AllocateAppend(string name, int count, int strideBytes);
 }
 
 public interface IComputeBufferHandle : IDisposable
@@ -14,4 +16,13 @@ public interface IComputeBufferHandle : IDisposable
     int StrideBytes { get; }
 
     void Upload(ReadOnlySpan<uint> values);
+}
+
+public interface IAppendComputeBufferHandle : IComputeBufferHandle
+{
+    void ResetAppendCounter();
+
+    int ReadAppendCounter();
+
+    uint[] ReadAppendedData(int elementCount);
 }

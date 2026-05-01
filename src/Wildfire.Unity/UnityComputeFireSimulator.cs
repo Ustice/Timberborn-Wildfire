@@ -9,9 +9,10 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     public const int ThreadGroupSizeX = 8;
     public const int ThreadGroupSizeY = 8;
     public const int ThreadGroupSizeZ = 4;
-    public const string Status = "External change upload and full-grid shader dispatch baseline ready; delta readback is not implemented.";
+    public const string Status = "External change upload, full-grid shader dispatch, and compact delta readback baseline ready.";
 
     private readonly List<FireSimChange> _queuedChanges = [];
+    private readonly List<IFireSimListener> _listeners = [];
     private readonly IFireSimComputeDispatcher? _dispatcher;
     private readonly uint _seed;
     private uint _tick;
@@ -72,6 +73,8 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
         }
 
+        BufferGrid.Deltas.ResetAppendCounter();
+
         QueuedChangeBatch changeBatch = CreateQueuedChangeBatch(BufferGrid.QueuedChanges.Count);
 
         LastIgnoredChangeCount = changeBatch.InvalidIndices.Count;
@@ -107,14 +110,21 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             GetThreadGroups(Dimensions.Depth, ThreadGroupSizeZ));
 
         _dispatcher.Dispatch(dispatch);
+
+        CellDelta[] deltas = FireSimDeltaReadback.Read(BufferGrid.Deltas);
         BufferGrid.SwapCellBuffers();
 
-        return new GpuFireStepResult(Array.Empty<CellDelta>(), dispatchTick);
+        NotifyListeners(deltas);
+
+        return new GpuFireStepResult(deltas, dispatchTick);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)
     {
-        throw new NotImplementedException("GPU delta subscription is not implemented yet.");
+        ArgumentNullException.ThrowIfNull(listener);
+
+        _listeners.Add(listener);
+        return new ListenerSubscription(_listeners, listener);
     }
 
     private static int GetThreadGroups(int dimension, int threadGroupSize)
@@ -177,8 +187,34 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             .ForEach(index => _queuedChanges.RemoveAt(index));
     }
 
+    private void NotifyListeners(ReadOnlySpan<CellDelta> deltas)
+    {
+        IFireSimListener[] listeners = _listeners.ToArray();
+
+        foreach (IFireSimListener listener in listeners)
+        {
+            listener.OnFireSimDeltas(deltas);
+        }
+    }
+
     private sealed record QueuedChangeBatch(
         IReadOnlyList<int> ValidIndices,
         FireSimChange[] ValidChanges,
         IReadOnlyList<int> InvalidIndices);
+
+    private sealed class ListenerSubscription(List<IFireSimListener> listeners, IFireSimListener listener) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            listeners.Remove(listener);
+            _disposed = true;
+        }
+    }
 }
