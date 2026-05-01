@@ -56,3 +56,16 @@ The current repo can build .NET projects and inspect Timberborn UI, but it does 
 
 - Use the Timberborn modding guide under `docs/reference/` as the starting source.
 - Do not broaden this into gameplay validation. This ticket only proves build, staging, deploy, and game-load evidence.
+- Worker update 2026-05-01:
+   - Added `scripts/deploy-timberborn-mod.ts`, a Bun/TypeScript direct-deploy script for the Wildfire Timberborn adapter.
+   - The deployed shape is `~/Documents/Timberborn/Mods/Wildfire/manifest.json` plus `Scripts/Wildfire.Timberborn.dll`, `Scripts/Wildfire.Core.dll`, and optional PDBs.
+   - `Scripts/` is the deployed managed-assembly directory, matching the official Timberborn mod builder convention.
+   - The script builds `Wildfire.slnx` by default, dry-runs by default, and supports `--apply`, `--dry-run`, `--skip-build`, `--clean`, `--remove`, `--mods-dir`, `--configuration`, `--lock-timeout`, `--force-lock`, and `--help`.
+   - Deploy/remove is serialized with `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`.
+   - Internal docs, kanban files, source files, and tests are not copied; only generated manifest and managed assemblies are staged.
+   - Dry-run evidence: `bun scripts/deploy-timberborn-mod.ts` passed, built the solution, detected `timberborn_running=true`, and printed target paths/artifact plan without writing to `~/Documents/Timberborn/Mods`.
+   - Real-deploy safety evidence: `bun scripts/deploy-timberborn-mod.ts --apply --skip-build` refused to write because Timberborn is running and reported `Timberborn appears to be running`.
+   - Verification passed: `git diff --check`; `dotnet test` passed 68 tests; `dotnet build Wildfire.slnx` succeeded with 0 warnings and 0 errors; `bun scripts/deploy-timberborn-mod.ts` dry-run succeeded.
+   - Player.log evidence is blocked until a real deploy can run: current `Player.log` and `Player-prev.log` contain only the save name `Wildfire testing`, not a Wildfire mod folder or `Wildfire.Timberborn.dll` load line.
+   - Live deploy was not run because Timberborn is open; real deploy should wait until Timberborn is closed or be run only with explicit `--allow-open-game`.
+   - Smallest live unblock: close Timberborn, run `bun scripts/deploy-timberborn-mod.ts --apply`, launch Timberborn, then inspect `~/Library/Logs/Mechanistry/Timberborn/Player.log` for Wildfire mod folder or assembly discovery.

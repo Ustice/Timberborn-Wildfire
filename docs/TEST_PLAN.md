@@ -16,6 +16,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - GPU visual field wrapper contract: `wildfire.visual_fields` is allocated as one `float4`-equivalent entry per packed cell, full-grid dispatch receives the visual buffer, shader source writes visual samples from post-step packed cell values, and deterministic tests cover fire, smoke, ash, and visibility derivation.
 - Timberborn cell mapping scaffold: deterministic terrain/building/resource/water source folding into packed cells, sorted `SetCell` change emission, field-width clamping, water overlay behavior, and out-of-bounds source rejection.
 - Timberborn QA command bridge scaffold: read-only `status` and `help` commands, placeholder simulator state before TWF-008 integration, searchable command request/result tokens, and explicit no-arbitrary-execution command dispatch.
+- Timberborn deploy pipeline scaffold: Bun/TypeScript deploy script, generated Wildfire manifest, managed assembly staging into `~/Documents/Timberborn/Mods/Wildfire/Scripts`, local build/deploy lock, dry-run/help output, and running-game guard for real deploy/remove.
 
 Run:
 
@@ -104,3 +105,44 @@ Current `TWF-007` coverage proves the mapper contract in .NET tests only. It doe
 Current `TWF-012` coverage adds an in-process command bridge scaffold only. QA or a future Timberborn binding can construct `TimberbornQaCommandBridge` and call `Execute("status")` or `Execute("help")`; both return a `TimberbornQaCommandResult` whose `ResultToken` includes searchable `wildfire_command_result`, `tick_count`, `queued_changes`, and `last_delta_count` fields. Blank command text intentionally normalizes to `status`; null command text intentionally returns a logged failure token without querying simulator state. Until TWF-008 is integrated, those simulator fields intentionally return `placeholder`.
 
 Live in-game command validation remains blocked because the repository still has no Timberborn UI, console, file-polling, or HTTP binding that forwards game-side input to `TimberbornQaCommandBridge.Execute`. The smallest unblock is a narrow Timberborn binding that exposes only the bridge's known commands, logs `wildfire_command_request` and `wildfire_command_result`, and does not expose arbitrary code execution.
+
+## Timberborn Deploy Pipeline
+
+Use the deploy script to build and stage the Timberborn adapter without making Timberborn own simulation rules:
+
+```bash
+bun scripts/deploy-timberborn-mod.ts
+```
+
+The default mode is a dry-run. It acquires the shared build/deploy lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, runs `dotnet build Wildfire.slnx --configuration Debug`, and prints `wildfire-deploy` lines for the mod id, version, target directory, manifest, and each planned assembly copy.
+
+Expected deployed folder shape:
+
+```text
+~/Documents/Timberborn/Mods/Wildfire/
+  manifest.json
+  Scripts/
+    Wildfire.Timberborn.dll
+    Wildfire.Core.dll
+    Wildfire.Timberborn.pdb
+    Wildfire.Core.pdb
+```
+
+`Scripts/` contains the managed assemblies, following the official Timberborn mod builder's code-output convention. The script only stages known build artifacts from `src/Wildfire.Timberborn/bin/<Configuration>/net10.0/`; it does not copy `docs/`, `kanban/`, `.git/`, or other internal repository content into the deployed mod.
+
+Run the real deploy only when Timberborn is closed or QA explicitly approves writing while the game is open:
+
+```bash
+bun scripts/deploy-timberborn-mod.ts --apply
+```
+
+Optional command flags:
+
+- `--configuration=Release` builds and stages Release artifacts.
+- `--skip-build` reuses existing build output.
+- `--mods-dir=/path/to/Mods` targets a non-default Timberborn Mods directory.
+- `--dry-run --remove` prints the cleanup action for the deployed Wildfire folder without deleting it.
+
+Cleanup is intentionally manual for live QA safety. Close Timberborn first, then inspect the dry-run remove output. Only remove `~/Documents/Timberborn/Mods/Wildfire` when QA no longer needs the deployed mod evidence.
+
+Player.log proof remains a live-QA step after a real deploy. Capture `~/Library/Logs/Mechanistry/Timberborn/Player.log` evidence that Timberborn discovered the Wildfire folder or loaded `Wildfire.Timberborn.dll`; if Timberborn cannot load the assembly yet, record the exact loader error and keep the fix in `Wildfire.Timberborn` or the deploy script rather than moving fire rules into `Wildfire.Core`.
