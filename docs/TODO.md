@@ -22,7 +22,7 @@
 - [x] Emit compact delta records scaffold.
 - [x] Generate visual texture output scaffold.
 - [x] Add shader snapshot harness.
-- [ ] Run `FireSim.compute` through a real shader execution harness.
+- [x] Run `FireSim.compute` through a real shader execution harness.
 
 ## Phase 4: Timberborn GPU Integration
 
