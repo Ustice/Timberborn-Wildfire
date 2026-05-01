@@ -69,3 +69,17 @@ The current repo can build .NET projects and inspect Timberborn UI, but it does 
    - Player.log evidence is blocked until a real deploy can run: current `Player.log` and `Player-prev.log` contain only the save name `Wildfire testing`, not a Wildfire mod folder or `Wildfire.Timberborn.dll` load line.
    - Live deploy was not run because Timberborn is open; real deploy should wait until Timberborn is closed or be run only with explicit `--allow-open-game`.
    - Smallest live unblock: close Timberborn, run `bun scripts/deploy-timberborn-mod.ts --apply`, launch Timberborn, then inspect `~/Library/Logs/Mechanistry/Timberborn/Player.log` for Wildfire mod folder or assembly discovery.
+
+## QA Notes - 2026-05-01 Follow-Up
+
+- First real deploy proved the mod folder was discovered, but Timberborn crashed on startup because the deployed assemblies targeted `.NET 10` and tried to load `System.Linq, Version=10.0.0.0`.
+- Retargeted `Wildfire.Core` and `Wildfire.Timberborn` to `netstandard2.1`, added record compatibility shims, and removed newer BCL calls from the Timberborn-facing path.
+- Redeployed with `bun scripts/deploy-timberborn-mod.ts --apply --allow-open-game --skip-build`; deploy copied `netstandard2.1` `Wildfire.Timberborn.dll` and `Wildfire.Core.dll`.
+- `Player.log` evidence after restart:
+   - `Modded: true, official`
+   - `- Wildfire (v0.1.0.0)`
+   - `Loading saved game Wildfire testing - 2026-05-01 07h49m, Day 1-2.autosave at 2026-05-01 07:54:28Z`
+- Screenshot evidence:
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/07-startup-mods-wildfire.png`
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/08-post-startup-loaded-save.png`
+- Result: deploy pipeline and game-load proof passed after compatibility fix.

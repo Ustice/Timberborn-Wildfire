@@ -14,8 +14,15 @@ public sealed class TimberbornFireSystem
 
     public TimberbornFireSystem(IGpuFireSimulator fireSimulator, TimberbornFireCellMapper cellMapper)
     {
-        ArgumentNullException.ThrowIfNull(fireSimulator);
-        ArgumentNullException.ThrowIfNull(cellMapper);
+        if (fireSimulator is null)
+        {
+            throw new ArgumentNullException(nameof(fireSimulator));
+        }
+
+        if (cellMapper is null)
+        {
+            throw new ArgumentNullException(nameof(cellMapper));
+        }
 
         _fireSimulator = fireSimulator;
         _cellMapper = cellMapper;
@@ -33,7 +40,10 @@ public sealed class TimberbornFireSystem
 
     public void RegisterMappedCellChanges(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
-        ArgumentNullException.ThrowIfNull(sources);
+        if (sources is null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
 
         _cellMapper.CreateSetCellChanges(grid, sources)
             .ToList()

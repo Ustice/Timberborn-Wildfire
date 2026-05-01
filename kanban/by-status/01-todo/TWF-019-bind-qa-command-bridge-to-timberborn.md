@@ -1,1 +1,0 @@
-../../all-tickets/TWF-019-bind-qa-command-bridge-to-timberborn.md

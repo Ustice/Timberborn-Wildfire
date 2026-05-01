@@ -78,7 +78,10 @@ public sealed class TimberbornFireCellMapper
 
     public ushort[] CreateInitialCells(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
-        ArgumentNullException.ThrowIfNull(sources);
+        if (sources is null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
 
         ushort[] cells = Enumerable.Repeat(EmptyCell, grid.CellCount).ToArray();
 
@@ -91,7 +94,10 @@ public sealed class TimberbornFireCellMapper
 
     public IReadOnlyList<FireSimChange> CreateSetCellChanges(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
-        ArgumentNullException.ThrowIfNull(sources);
+        if (sources is null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
 
         return CreateMappedCells(grid, sources)
             .Select(static mappedCell => new FireSimChange(mappedCell.CellIndex, SetCell: mappedCell.PackedCell))
@@ -100,7 +106,10 @@ public sealed class TimberbornFireCellMapper
 
     public IReadOnlyList<TimberbornMappedCell> CreateMappedCells(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
-        ArgumentNullException.ThrowIfNull(sources);
+        if (sources is null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
 
         return sources
             .Select(source => new IndexedSource(ToIndex(grid, source), source))

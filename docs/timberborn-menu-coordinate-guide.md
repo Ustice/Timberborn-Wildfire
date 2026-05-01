@@ -31,6 +31,11 @@ Computer Use could inspect and screenshot the Timberborn window, but direct Comp
 | Load Game close return state | `docs/reference/screenshots/timberborn-menu-coordinate-guide/04-after-load-menu-close.png` |
 | Mods dialog | `docs/reference/screenshots/timberborn-menu-coordinate-guide/05-mods-menu.png` |
 | Mods close return state | `docs/reference/screenshots/timberborn-menu-coordinate-guide/06-after-mods-close.png` |
+| Startup Mods dialog with Wildfire | `docs/reference/screenshots/timberborn-menu-coordinate-guide/07-startup-mods-wildfire.png` |
+| Post-startup loaded save | `docs/reference/screenshots/timberborn-menu-coordinate-guide/08-post-startup-loaded-save.png` |
+| Exit-to-main confirmation | `docs/reference/screenshots/timberborn-menu-coordinate-guide/09-exit-to-main-confirm.png` |
+| Standalone main menu | `docs/reference/screenshots/timberborn-menu-coordinate-guide/10-main-menu.png` |
+| Main-menu Load Game dialog | `docs/reference/screenshots/timberborn-menu-coordinate-guide/11-main-load-menu.png` |
 
 ## Coordinate Targets
 
@@ -116,11 +121,63 @@ Precondition: a save is loaded and no modal menu is open.
 | `hud.global_view` | 1298 | 20 | Visible | Top-right view control. |
 | `hud.cycle_indicator` | 1592 | 20 | Visible | Shows `Cycle 1, day 2` in captured state. |
 
-## Opening Screens And Main Menu
+## Startup Mods Dialog
 
-Opening screens and the standalone main menu were not visible in this run because Timberborn was already inside a loaded save.
+Precondition: Timberborn has launched after a mod set change and shows the startup Mods dialog.
 
-Do not click `pause.exit_to_main_menu` or confirm any exit prompt from a running save unless the coordinator explicitly allows that state change. Exiting to the main menu can discard unsaved progress or change the active runtime state. Capture these targets in a later QA pass that starts Timberborn directly at the title screen or uses a disposable save state.
+| Target | X | Y | Verified | Notes |
+| --- | ---: | ---: | --- | --- |
+| `startup_mods.wildfire_row` | 878 | 651 | Visible | `Wildfire v0.1.0.0` is visible and enabled. |
+| `startup_mods.ok` | 960 | 830 | Yes | Continues past the startup Mods dialog. |
+
+## Exit-To-Main Confirmation
+
+Precondition: a save is loaded, the Escape menu is visible, and `pause.exit_to_main_menu` has been clicked.
+
+| Target | X | Y | Verified | Notes |
+| --- | ---: | ---: | --- | --- |
+| `exit_to_main.share_feedback` | 819 | 596 | No | Opens external feedback flow; do not click in automation. |
+| `exit_to_main.exit` | 1106 | 596 | Yes | Returns to the standalone main menu. |
+| `exit_to_main.close` | 1284 | 430 | Visible | Closes the confirmation dialog. |
+
+## Standalone Main Menu
+
+Precondition: Timberborn is at the title/main menu.
+
+Manual verification path:
+
+```bash
+cliclick c:960,428
+```
+
+Result: the Load Game dialog opened from the standalone main menu.
+
+| Target | X | Y | Verified | Notes |
+| --- | ---: | ---: | --- | --- |
+| `main.continue` | 960 | 324 | Visible | Loads the latest save; state-changing. |
+| `main.new_game` | 960 | 376 | No | Starts new-game flow. |
+| `main.load_game` | 960 | 428 | Yes | Opens the Load Game dialog. |
+| `main.create_new_map` | 960 | 480 | No | Starts map creation flow. |
+| `main.edit_map` | 960 | 532 | No | Starts map editor flow. |
+| `main.mods` | 960 | 585 | Visible | Opens mod list. |
+| `main.settings` | 960 | 637 | Visible | Opens settings. |
+| `main.credits` | 960 | 689 | Visible | Opens credits. |
+| `main.feedback_site` | 960 | 741 | No | Opens external feedback flow; do not click in automation. |
+| `main.exit_game` | 960 | 793 | No | Exits Timberborn. |
+
+## Main-Menu Load Game Dialog
+
+Precondition: Timberborn is at the standalone main menu and `main.load_game` has been clicked.
+
+| Target | X | Y | Verified | Notes |
+| --- | ---: | ---: | --- | --- |
+| `main_load.close` | 1414 | 156 | Visible | Returns to the standalone main menu. |
+| `main_load.settlement_first_row` | 601 | 255 | Visible | First settlement row shown as `Wildfire testing`. |
+| `main_load.save_first_row` | 1043 | 271 | Visible | First save row shown as `Autosave`, `Cycle 1, day 2`. |
+| `main_load.delete_settlement` | 744 | 849 | No | Destructive. Never click from generic QA automation. |
+| `main_load.delete_save` | 960 | 849 | No | Destructive. Never click from generic QA automation. |
+| `main_load.load_selected_save` | 1178 | 849 | Boundary | Loads the selected save and changes runtime state. |
+| `main_load.browse_folder` | 1325 | 891 | No | Opens local file browser. |
 
 ### TWF-020 Capture Attempt
 

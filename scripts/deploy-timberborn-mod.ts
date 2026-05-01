@@ -22,6 +22,7 @@ type DeployOptions = {
   modsDir: string;
   remove: boolean;
   skipBuild: boolean;
+  targetFramework: string;
 };
 
 type CopyPlan = {
@@ -64,6 +65,7 @@ Options:
   --apply                   Write the deployed mod folder. Refuses while Timberborn is open unless --allow-open-game is set.
   --skip-build              Reuse existing build output instead of running dotnet build.
   --configuration <name>    Build configuration. Default: Debug.
+  --target-framework <tfm>  Timberborn adapter target framework. Default: netstandard2.1.
   --mods-dir <path>         Timberborn Mods directory. Default: ~/Documents/Timberborn/Mods.
   --clean                   Remove the target mod folder before copying files.
   --remove                  Remove the deployed Wildfire mod folder and exit.
@@ -90,6 +92,7 @@ const parseArgs = (args: string[]): DeployOptions => {
     modsDir: defaultModsDir,
     remove: false,
     skipBuild: false,
+    targetFramework: "netstandard2.1",
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -115,6 +118,10 @@ const parseArgs = (args: string[]): DeployOptions => {
       options.lockTimeoutSeconds = parseTimeout(requireValue(args, ++index, arg));
     } else if (arg.startsWith("--lock-timeout=")) {
       options.lockTimeoutSeconds = parseTimeout(arg.slice("--lock-timeout=".length));
+    } else if (arg === "--target-framework") {
+      options.targetFramework = requireValue(args, ++index, arg);
+    } else if (arg.startsWith("--target-framework=")) {
+      options.targetFramework = arg.slice("--target-framework=".length);
     } else if (arg === "--mods-dir") {
       options.modsDir = resolve(requireValue(args, ++index, arg));
     } else if (arg.startsWith("--mods-dir=")) {
@@ -130,6 +137,10 @@ const parseArgs = (args: string[]): DeployOptions => {
 
   if (!options.configuration.trim()) {
     fail("Build configuration must not be empty.");
+  }
+
+  if (!options.targetFramework.trim()) {
+    fail("Target framework must not be empty.");
   }
 
   return options;
@@ -239,11 +250,11 @@ const getGitBranch = (): string => {
   return result.exitCode === 0 ? result.stdout.toString().trim() : "unknown";
 };
 
-const getBuildOutputDir = (configuration: string): string =>
-  join(repoRoot, "src", "Wildfire.Timberborn", "bin", configuration, "net10.0");
+const getBuildOutputDir = (configuration: string, targetFramework: string): string =>
+  join(repoRoot, "src", "Wildfire.Timberborn", "bin", configuration, targetFramework);
 
 const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
-  const outputDir = getBuildOutputDir(options.configuration);
+  const outputDir = getBuildOutputDir(options.configuration, options.targetFramework);
   const targetDir = join(options.modsDir, modFolderName);
   const scriptsDir = join(targetDir, "Scripts");
 
@@ -275,6 +286,7 @@ const printPlan = (options: DeployOptions, plan: CopyPlan[]): void => {
   log(`mod_version=${manifest.Version}`);
   log(`minimum_game_version=${manifest.MinimumGameVersion}`);
   log(`configuration=${options.configuration}`);
+  log(`target_framework=${options.targetFramework}`);
   log(`mods_dir=${options.modsDir}`);
   log(`target_dir=${targetDir}`);
   log(`manifest=${join(targetDir, "manifest.json")}`);

@@ -80,3 +80,19 @@ Extend the Timberborn coordinate guide with opening-screen and standalone main-m
    | Verify title-screen to Load Game dialog | Blocked | No safe verified title-screen state and no screenshot capture. |
 
 - Smallest unblock action: provide or approve a known disposable title-screen path, then run the pass from an active desktop session where `screencapture` works. If the currently loaded `Wildfire testing` save is disposable, explicitly approve exiting it to the main menu before QA clicks that boundary.
+
+## QA Notes - 2026-05-01 Follow-Up
+
+- Captured the startup Mods dialog after the Wildfire deploy fix. `Wildfire v0.1.0.0` was visible and enabled.
+- Verified `startup_mods.ok` to continue past startup screens.
+- Verified post-startup auto-load into the `Wildfire testing` save.
+- Used the loaded save's Escape menu to reach `pause.exit_to_main_menu`, captured the exit confirmation, clicked the confirmation `Exit` button, and reached the standalone main menu.
+- Verified `main.load_game` opened the standalone Load Game dialog.
+- Added startup, exit-confirmation, main-menu, and main-menu Load Game coordinates to `docs/timberborn-menu-coordinate-guide.md`.
+- Screenshot evidence:
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/07-startup-mods-wildfire.png`
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/08-post-startup-loaded-save.png`
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/09-exit-to-main-confirm.png`
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/10-main-menu.png`
+   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/11-main-load-menu.png`
+- Result: title/startup coordinate pass is complete for the documented 1920 x 1080 display state.

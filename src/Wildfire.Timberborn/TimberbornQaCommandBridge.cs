@@ -18,8 +18,15 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaCommandLogSink logSink)
     {
-        ArgumentNullException.ThrowIfNull(stateProvider);
-        ArgumentNullException.ThrowIfNull(logSink);
+        if (stateProvider is null)
+        {
+            throw new ArgumentNullException(nameof(stateProvider));
+        }
+
+        if (logSink is null)
+        {
+            throw new ArgumentNullException(nameof(logSink));
+        }
 
         _stateProvider = stateProvider;
         _logSink = logSink;
@@ -78,7 +85,7 @@ public sealed class TimberbornQaCommandBridge
         }
     }
 
-    public IReadOnlyList<string> KnownCommands => _commands.Keys.Order(StringComparer.OrdinalIgnoreCase).ToArray();
+    public IReadOnlyList<string> KnownCommands => _commands.Keys.OrderBy(command => command, StringComparer.OrdinalIgnoreCase).ToArray();
 
     private TimberbornQaCommandResult ExecuteStatus()
     {
@@ -103,7 +110,7 @@ public sealed class TimberbornQaCommandBridge
             return StatusCommand;
         }
 
-        return command.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
+        return command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
     }
 
     internal static string FormatToken(string? value)
@@ -119,13 +126,20 @@ public interface ITimberbornQaCommandStateProvider
     TimberbornQaCommandState GetState();
 }
 
-public sealed class TimberbornQaCommandStateProvider(TimberbornQaCommandState state) : ITimberbornQaCommandStateProvider
+public sealed class TimberbornQaCommandStateProvider : ITimberbornQaCommandStateProvider
 {
     public static readonly TimberbornQaCommandStateProvider Placeholder = new(TimberbornQaCommandState.Placeholder);
 
+    private readonly TimberbornQaCommandState _state;
+
+    public TimberbornQaCommandStateProvider(TimberbornQaCommandState state)
+    {
+        _state = state;
+    }
+
     public TimberbornQaCommandState GetState()
     {
-        return state;
+        return _state;
     }
 }
 
