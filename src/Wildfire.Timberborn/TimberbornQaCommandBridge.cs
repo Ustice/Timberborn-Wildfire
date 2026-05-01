@@ -4,6 +4,7 @@ public sealed class TimberbornQaCommandBridge
 {
     public const string StatusCommand = "status";
     public const string HelpCommand = "help";
+    public const string QaReadinessCommand = "qa-readiness";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaCommandLogSink _logSink;
@@ -34,6 +35,7 @@ public sealed class TimberbornQaCommandBridge
         {
             [StatusCommand] = ExecuteStatus,
             [HelpCommand] = ExecuteHelp,
+            [QaReadinessCommand] = ExecuteQaReadiness,
         };
     }
 
@@ -98,7 +100,18 @@ public sealed class TimberbornQaCommandBridge
             HelpCommand,
             _stateProvider.GetState(),
             KnownCommands,
-            "Supported commands are read-only: help, status.");
+            "Supported commands are read-only: help, qa-readiness, status.");
+    }
+
+    private TimberbornQaCommandResult ExecuteQaReadiness()
+    {
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaReadinessCommand,
+            state,
+            KnownCommands,
+            state.IsLoadedGameReady ? "loaded_game_ready" : "loaded_game_not_ready");
     }
 
     private static string NormalizeCommand(string commandText)
@@ -145,6 +158,7 @@ public sealed class TimberbornQaCommandStateProvider : ITimberbornQaCommandState
 
 public sealed record TimberbornQaCommandState(
     bool IsSimulatorIntegrated,
+    bool IsGameContextRuntimeLoaded = false,
     int? Width = null,
     int? Height = null,
     int? Depth = null,
@@ -153,6 +167,14 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaCount = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
+
+    public bool IsLoadedGameReady =>
+        IsGameContextRuntimeLoaded &&
+        IsSimulatorIntegrated &&
+        Width.HasValue &&
+        Height.HasValue &&
+        Depth.HasValue &&
+        TickCount.HasValue;
 }
 
 public sealed record TimberbornQaCommandResult(
@@ -168,6 +190,9 @@ public sealed record TimberbornQaCommandResult(
         $"command={TimberbornQaCommandBridge.FormatToken(Command)} " +
         $"success={Success.ToString().ToLowerInvariant()} " +
         $"status={Status} " +
+        "bridge_alive=true " +
+        $"runtime_loaded={State.IsGameContextRuntimeLoaded.ToString().ToLowerInvariant()} " +
+        $"loaded_game_ready={State.IsLoadedGameReady.ToString().ToLowerInvariant()} " +
         $"simulator_integrated={State.IsSimulatorIntegrated.ToString().ToLowerInvariant()} " +
         $"width={FormatNumber(State.Width)} " +
         $"height={FormatNumber(State.Height)} " +

@@ -87,8 +87,69 @@ public sealed class TimberbornQaCommandBridgeTests
 
         Assert.True(result.Success);
         Assert.Equal("help", result.Command);
-        Assert.Equal(["help", "status"], result.KnownCommands);
+        Assert.Equal(["help", "qa-readiness", "status"], result.KnownCommands);
         Assert.Contains("read-only", result.Message);
+        Assert.Contains("qa-readiness", result.Message);
+    }
+
+    [Fact]
+    public void ExecuteQaReadinessReturnsSafeLoadedGameReadinessState()
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 12,
+            Height: 8,
+            Depth: 3,
+            TickCount: 42,
+            QueuedChangeCount: 5,
+            LastDeltaCount: 7);
+        RecordingStateProvider stateProvider = new(state);
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(stateProvider, logSink);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-readiness");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-readiness", result.Command);
+        Assert.Equal("success", result.Status);
+        Assert.Equal(state, result.State);
+        Assert.Equal(["help", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal("loaded_game_ready", result.Message);
+        Assert.Equal(1, stateProvider.CallCount);
+        Assert.Contains("wildfire_command_request command=qa-readiness", logSink.InfoMessages);
+        Assert.Contains(result.ResultToken, logSink.InfoMessages);
+    }
+
+    [Fact]
+    public void QaReadinessTokenIncludesReadinessAndSimulatorFields()
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 4,
+            Height: 5,
+            Depth: 6,
+            TickCount: 7,
+            QueuedChangeCount: 8,
+            LastDeltaCount: 9);
+        TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-readiness");
+
+        Assert.Contains("wildfire_command_result", result.ResultToken);
+        Assert.Contains("command=qa-readiness", result.ResultToken);
+        Assert.Contains("success=true", result.ResultToken);
+        Assert.Contains("bridge_alive=true", result.ResultToken);
+        Assert.Contains("runtime_loaded=true", result.ResultToken);
+        Assert.Contains("loaded_game_ready=true", result.ResultToken);
+        Assert.Contains("simulator_integrated=true", result.ResultToken);
+        Assert.Contains("width=4", result.ResultToken);
+        Assert.Contains("height=5", result.ResultToken);
+        Assert.Contains("depth=6", result.ResultToken);
+        Assert.Contains("tick_count=7", result.ResultToken);
+        Assert.Contains("queued_changes=8", result.ResultToken);
+        Assert.Contains("last_delta_count=9", result.ResultToken);
     }
 
     [Fact]

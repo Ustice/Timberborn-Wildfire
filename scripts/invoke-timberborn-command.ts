@@ -14,13 +14,14 @@ const home = process.env.HOME ?? "";
 const defaultCommandDir = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
 const inboxFileName = "command-inbox.txt";
 const outboxFileName = "command-outbox.txt";
-const knownCommands = ["help", "status"];
+const knownCommands = ["help", "qa-readiness", "status"];
 
 const usage = `Usage:
   bun scripts/invoke-timberborn-command.ts [command] [options]
 
 Commands:
   status                    Read-only Wildfire runtime status. Default.
+  qa-readiness              Read-only loaded-game readiness summary.
   help                      Read-only command list.
 
 Options:

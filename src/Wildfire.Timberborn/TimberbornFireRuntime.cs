@@ -10,6 +10,7 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private long _gameUpdateId;
+    private bool _isLoaded;
 
     public TimberbornFireRuntime()
     {
@@ -18,6 +19,7 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
 
     public void Load()
     {
+        _isLoaded = true;
         _logSink.Info(
             $"wildfire_timberborn_adapter_started cadence_interval_ms={TimberbornFireCadence.Default.Interval.TotalMilliseconds:F0}");
         _logSink.Info(
@@ -32,6 +34,7 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
         _dispatcher = null;
         _fireSystem = null;
         _gameUpdateId = 0;
+        _isLoaded = false;
         _logSink.Info("wildfire_timberborn_adapter_stopped");
         _logSink.Info("wildfire_timberborn_runtime_unloaded");
     }
@@ -114,11 +117,14 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
     {
         if (_fireSystem is not { IsInitialized: true } fireSystem)
         {
-            return TimberbornQaCommandState.Placeholder;
+            return new TimberbornQaCommandState(
+                IsSimulatorIntegrated: false,
+                IsGameContextRuntimeLoaded: _isLoaded);
         }
 
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: _isLoaded,
             Width: fireSystem.Width,
             Height: fireSystem.Height,
             Depth: fireSystem.Depth,
