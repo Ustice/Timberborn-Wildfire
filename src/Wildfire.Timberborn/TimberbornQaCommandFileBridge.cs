@@ -14,13 +14,18 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
     private readonly string _inboxPath;
     private readonly string _outboxPath;
 
-    public TimberbornQaCommandFileBridge()
+    public TimberbornQaCommandFileBridge(TimberbornFireRuntime fireRuntime)
     {
+        if (fireRuntime is null)
+        {
+            throw new ArgumentNullException(nameof(fireRuntime));
+        }
+
         string qaDirectory = Path.Combine(Application.persistentDataPath, QaDirectoryName);
         _inboxPath = Path.Combine(qaDirectory, InboxFileName);
         _outboxPath = Path.Combine(qaDirectory, OutboxFileName);
         _commandBridge = new TimberbornQaCommandBridge(
-            TimberbornQaCommandStateProvider.Placeholder,
+            fireRuntime,
             new UnityTimberbornQaCommandLogSink());
     }
 

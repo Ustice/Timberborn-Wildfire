@@ -7,6 +7,7 @@ public sealed class WildfireConfigurator : Configurator
 {
     protected override void Configure()
     {
+        Bind<TimberbornFireRuntime>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
     }
 }
