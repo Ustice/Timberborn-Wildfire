@@ -30,7 +30,8 @@
 - [x] Upload external changes to GPU buffers.
 - [x] Add in-process QA command bridge scaffold.
 - [x] Capture in-game Timberborn menu coordinates.
-- [ ] Add Timberborn mod build/deploy path.
+- [x] Add Timberborn mod build/deploy dry-run path.
+- [ ] Capture real Timberborn deploy and `Player.log` load proof.
 - [ ] Bind QA command bridge to a running Timberborn invocation surface.
 - [ ] Capture title-screen coordinates from a safe startup state.
 - [ ] Dispatch the GPU simulator on a fixed cadence.
