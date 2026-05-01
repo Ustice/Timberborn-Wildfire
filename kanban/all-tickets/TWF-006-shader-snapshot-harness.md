@@ -55,3 +55,9 @@ Once the rules live only in shaders, shader snapshots become the main behavioral
 ## Notes
 
 - If shader execution cannot run in CI yet, create the harness shape and mark the execution blocker clearly in the ticket notes.
+- Worker update 2026-05-01:
+   - Added `Wildfire.Unity` shader snapshot harness contracts for fixture loading, buffer-grid creation from CLI fixture cells, accepted snapshot JSON serialization, snapshot comparison diffs, and an explicit blocked executor.
+   - Added deterministic .NET coverage for fixture loading from `TWF-000` CLI fixture JSON, stable reviewable snapshot output, final-cell/per-tick-delta/visual diff messages, and the current execution blocker.
+   - Did not add C# fire-spread parity rules; the harness only defines the execution boundary and validates shape with fake/blocking executors.
+   - Current blocker: the repository still has no Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, or standalone compute-shader compiler/readback runner, so `FireSim.compute` cannot execute in CI yet.
+   - Evidence: `git diff --check` passed; `git diff --cached --check` passed; `dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests` passed 4 tests; `dotnet test` passed 47 tests.

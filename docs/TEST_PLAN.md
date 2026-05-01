@@ -12,11 +12,18 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Scenario dimension and seed overrides.
 - Seeded sparse layout determinism.
 - CLI fixture export shape and deterministic JSON output.
+- Shader snapshot harness contract: CLI fixture loading, buffer-grid creation from fixtures, stable accepted-snapshot JSON shape, actionable snapshot diffs, and explicit current execution blocker.
 
 Run:
 
 ```bash
 dotnet test
+```
+
+Run the shader snapshot harness slice:
+
+```bash
+dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests
 ```
 
 ## CLI Fixture Export
@@ -40,11 +47,19 @@ Fixture files are deterministic for the same scenario, seed, dimensions, and lay
 
 ## Shader Snapshot Coverage
 
-Current `TWF-002` coverage proves the wrapper dispatch contract in .NET tests only. The repository does not yet contain a Unity batchmode, DirectX Shader Compiler, or shader snapshot command that can compile or execute `FireSim.compute` outside Unity.
+Current `TWF-002` coverage proves the wrapper dispatch contract in .NET tests only. `TWF-006` adds the fixture-driven snapshot harness shape in `Wildfire.Unity`: it reads CLI fixture JSON, creates a `ComputeBufferGrid` from the fixture cells, defines the accepted snapshot JSON shape, compares final packed grids, per-tick compact deltas, and optional visual checksums, and exposes an `IShaderSnapshotExecutor` boundary for the future real GPU runner.
+
+The harness command currently validates shape and blocker handling:
+
+```bash
+dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests
+```
+
+Shader execution remains blocked in this repository because there is no Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, or standalone compute-shader compiler/readback runner. Do not add C# fire-spread parity rules to fill that gap. Enable execution by implementing `IShaderSnapshotExecutor` with a real Unity or compiler-backed GPU dispatcher, then point the harness at accepted fixture snapshots.
 
 `TWF-004` adds .NET coverage for the compact delta readback wrapper: `wildfire.deltas` is allocated through the append-buffer abstraction, its append counter is reset before dispatch, the append counter is read after dispatch, compact `CellDelta` records are decoded, and subscribed listeners are notified from the readback result. This does not prove HLSL compile/runtime behavior because the repository still has no Unity runtime, Unity batchmode project, or standalone compute-shader compiler harness.
 
-Future GPU validation should add shader snapshot fixtures for:
+Future GPU validation should add accepted shader snapshot fixtures for:
 
 - Single ignition point.
 - Line of fuel.
@@ -54,7 +69,7 @@ Future GPU validation should add shader snapshot fixtures for:
 - Building cluster.
 - Mixed terrain/fuel/water.
 
-For each fixture, record:
+For each accepted snapshot, record:
 
 - Scenario name.
 - Seed.
@@ -66,7 +81,7 @@ For each fixture, record:
 - Evidence that the append-buffer counter is reset before each dispatch/readback cycle.
 - Visual field checksum or image artifact when useful.
 
-Snapshot differences should be reviewed scenario by scenario. Avoid broad visual-only approval for behavior changes.
+Update snapshots intentionally only after reviewing the diff scenario by scenario. Regenerate the CLI fixture, run the shader snapshot command, inspect final packed-cell differences and per-tick delta differences, and commit the changed accepted snapshot JSON with the rule or shader change that justifies it. Avoid broad visual-only approval for behavior changes.
 
 ## Timberborn Validation
 
