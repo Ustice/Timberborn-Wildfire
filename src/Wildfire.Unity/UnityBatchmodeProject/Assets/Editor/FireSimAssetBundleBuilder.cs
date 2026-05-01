@@ -18,10 +18,27 @@ namespace Wildfire.UnityBatchmode
                 ImportShader(arguments.ShaderPath, arguments.BundleName);
                 Directory.CreateDirectory(arguments.OutputDirectory);
 
-                AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(
-                    arguments.OutputDirectory,
-                    BuildAssetBundleOptions.None,
-                    arguments.BuildTarget);
+                BuildAssetBundleOptions options =
+                    BuildAssetBundleOptions.ChunkBasedCompression |
+                    BuildAssetBundleOptions.ForceRebuildAssetBundle |
+                    BuildAssetBundleOptions.StrictMode;
+                BuildAssetBundlesParameters buildParameters = new BuildAssetBundlesParameters
+                {
+                    outputPath = arguments.OutputDirectory,
+                    bundleDefinitions = new[]
+                    {
+                        new AssetBundleBuild
+                        {
+                            assetBundleName = arguments.BundleName,
+                            assetNames = new[] { GeneratedShaderAssetPath },
+                        },
+                    },
+                    options = options,
+                    targetPlatform = arguments.BuildTarget,
+                    subtarget = (int)StandaloneBuildSubtarget.Player,
+                };
+                Debug.Log("wildfire_assetbundle_builder phase=build target=" + arguments.BuildTarget + " subtarget=" + StandaloneBuildSubtarget.Player + " options=" + options);
+                AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(buildParameters);
 
                 if (manifest == null)
                 {

@@ -56,3 +56,8 @@ Make the deployed `wildfire_compute_mac` compute shader bundle load successfully
 
 - Known failure from `TWF-021`: `The AssetBundle 'wildfire_compute_mac' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.`
 - Player.log and the Unity builder both reported `6000.3.6f1`, so do not assume the editor version is wrong without new evidence.
+- Worker update 2026-05-01:
+   - Tried an explicit AssetBundle build map with `ChunkBasedCompression`, `ForceRebuildAssetBundle`, `StrictMode`, and `StandaloneBuildSubtarget.Player`.
+   - Live `bun scripts/invoke-timberborn-command.ts status --wait=6` still returned `simulator_integrated=false`.
+   - Player.log changed from the compatibility error to `The AssetBundle 'wildfire_compute_mac' can't be loaded because another AssetBundle with the same files is already loaded.` after `wildfire_timberborn_compute_asset_load_started`.
+   - This suggests the generated bundle is now compatible enough to pass the original version check, but the loaded game has a duplicate bundle/file identity conflict. The next pass should unload stale bundles on initialization failure or make the built bundle identity/path unique across redeploys before attempting another manual load.
