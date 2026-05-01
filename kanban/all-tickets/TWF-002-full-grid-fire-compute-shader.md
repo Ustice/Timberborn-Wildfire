@@ -63,3 +63,6 @@ Full-grid dispatch is the simplest useful GPU baseline. It proves the rule trans
 - Verification passed: `git diff --check`; `dotnet test` passed 31 tests; `dotnet build Wildfire.slnx` succeeded with 0 warnings and 0 errors.
 - Shader compile/execution was not verified here. `dxc` and `glslangValidator` are not installed. Unity 6000.3.6f1 is installed, but this repository has no Unity `Assets`, `Packages`, or `ProjectSettings` project, and `UnityShaderCompiler` exposes only the internal compiler-service invocation rather than a standalone file compile command.
 - Remaining blockers for live GPU proof: add a Unity project or CI shader compile harness, implement real UnityEngine compute-buffer binding/counter reset, add compact delta readback, and add external change upload in the follow-up ticket.
+- Integrated on `main` in commit `14f7c82`.
+- Coordinator verification after integration: `git diff --check`, `dotnet test` with 31 tests, and sequential `dotnet build Wildfire.slnx` all passed.
+- Tech-lead caveat: before `TWF-004` compact delta readback can be accepted, the real Unity binding must allocate `wildfire.deltas` as an append buffer and reset the append counter before each dispatch.

@@ -54,3 +54,4 @@ Timberborn gameplay consequences should be driven by a small changed-cell stream
 ## Notes
 
 - If GPU append-buffer readback is awkward in the current environment, isolate the readback API behind a small wrapper so later Unity validation can focus on one surface.
+- `TWF-002` introduced shader-side `Deltas.Append(...)`; this ticket must ensure the real Unity binding allocates `wildfire.deltas` as an append buffer and resets its counter before each dispatch.
