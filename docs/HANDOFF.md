@@ -16,25 +16,26 @@
 
 ## Current Ticket State
 
-- The fresh compute-first ticket set exists as `TWF-000` through `TWF-020`.
+- The fresh compute-first ticket set exists as `TWF-000` through `TWF-021`.
 - `kanban/by-status` is the sprint source of truth.
 - `TWF-000` through `TWF-007` are done and integrated on `main`.
 - `TWF-012` is done and integrated on `main` in commits `6043959`, `1feb25e`, and `499040d`.
 - `TWF-013` is done with an explicit boundary: opening screens and standalone main-menu coordinates are split to `TWF-020`.
-- `TWF-008` is ready again after useful scaffolding on branch `codex/TWF-008-fixed-cadence` at commit `732779729afb3f77904b93c2132e12c5d2ef587c`; its deploy/test-harness blockers are cleared enough to resume.
+- `TWF-008` has useful fixed-cadence runtime scaffolding integrated on `main` in commits `b5eb8fe` and `e98e932`, but it is blocked because the deployed Timberborn mod still lacks a compute-backed `IGpuFireSimulator` factory.
 - `TWF-016` is done: deploy works, copies `netstandard2.1` assemblies, and `Player.log` shows `Wildfire (v0.1.0.0)` after restart.
 - `TWF-020` is done: startup Mods, post-load, exit confirmation, standalone main menu, and main-menu Load Game coordinates are captured.
 - `TWF-014` is done and integrated on `main` in commit `85e5538`.
 - `TWF-018` is done and integrated on `main` in commit `5b80d04`.
 - `TWF-019` is done and integrated on `main` in commit `a7ed538`; live Timberborn `status` invocation returned `wildfire_command_result success=true` from the `Wildfire testing` save.
+- `TWF-021` is ready and owns the missing deployable Timberborn compute-backed simulator factory needed to unblock live `TWF-008` completion.
 - `TWF-015` and `TWF-017` are dependency-ready.
-- `TWF-009`, `TWF-010`, and `TWF-011` remain dependency-gated behind `TWF-008` and diagnostics/profiling.
+- `TWF-009`, `TWF-010`, and `TWF-011` remain dependency-gated behind real `TWF-008` simulator integration and diagnostics/profiling.
 
 ## Next Exact Action
 
 Continue with:
 
-- Dispatch `TWF-008` next if the goal is resuming the fixed-cadence simulator loop; the deploy and startup blockers are now cleared.
+- Dispatch `TWF-021` next if the goal is making live `status` report real simulator fields; `TWF-008` cannot close until a deployable compute-backed simulator factory exists.
 - Dispatch `TWF-017` or `TWF-015` next if the goal is durable QA automation; both have their coordinate/deploy prerequisites ready.
 - Use `bun scripts/invoke-timberborn-command.ts status --wait=6` against a loaded Timberborn save when you need to confirm the in-game Wildfire command bridge is alive.
 - If shader behavior changes, use the opt-in Unity harness command documented in `docs/TEST_PLAN.md` to prove real execution before accepting the change.
@@ -42,4 +43,4 @@ Continue with:
 ## Known Gaps
 
 - `FireSim.compute` has local Unity batchmode proof, but CI does not run it unless Unity Editor licensing and compute-shader capable graphics are available.
-- The Timberborn command bridge currently reports placeholder simulator fields until `TWF-008` integrates the fixed-cadence simulator loop.
+- The Timberborn command bridge currently reports placeholder simulator fields until `TWF-021` provides a deployable compute-backed simulator factory and `TWF-008` can attach it to the fixed-cadence runtime.
