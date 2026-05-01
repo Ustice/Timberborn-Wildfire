@@ -13,17 +13,18 @@
 
 - The fresh compute-first ticket set exists as `TWF-000` through `TWF-015`.
 - `kanban/by-status` is the sprint source of truth.
-- `TWF-000` is in progress for CLI fixture export.
-- `TWF-013` is ready but should wait until its docs scope will not collide with active fixture work and Timberborn UI access is available.
+- `TWF-000` is done and integrated on `main` in commit `1dadc50`.
+- `TWF-001`, `TWF-007`, and `TWF-013` are ready.
+- `TWF-013` should wait until Timberborn UI access is available.
 - Later tickets are dependency-gated behind fixture export, Unity compute buffers, shader dispatch, compact delta readback, Timberborn adapters, and QA utility setup.
 
 ## Next Exact Action
 
 Continue with:
 
-- Reconcile `TWF-000` when the worker reports back.
-- Move `TWF-000` through verification and integration before unblocking `TWF-001` and `TWF-007`.
-- Dispatch `TWF-013` only when Timberborn UI access is available and its narrowed doc scope will not overlap active work.
+- Dispatch `TWF-001` next for Unity compute buffer scaffolding.
+- Dispatch `TWF-007` only if a parallel Timberborn adapter worker can stay out of `docs/ARCHITECTURE.md` while `TWF-001` is active, or after `TWF-001` lands.
+- Dispatch `TWF-013` when Timberborn UI access is available.
 
 ## Known Gaps
 

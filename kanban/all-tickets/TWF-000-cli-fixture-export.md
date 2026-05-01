@@ -58,3 +58,5 @@ The project has one authoritative GPU simulation path, but shader work still nee
 - Evidence: two identical CLI exports for `sparse-forest`, seed `42`, dimensions `9x7x2`, layer `1` compared equal with `cmp -s`.
 - Evidence: `git diff --check` passed.
 - Blockers: none found.
+- Integrated on `main` in commit `1dadc50`.
+- Coordinator verification after integration: `git diff --check`, `dotnet test`, `dotnet build Wildfire.slnx`, and repeated CLI export comparison all passed.
