@@ -46,6 +46,7 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
     private readonly ITimberbornFireLogSink _logSink;
     private AssetBundle? _assetBundle;
     private ComputeShader? _shader;
+    private bool _ownsAssetBundle;
 
     public TimberbornComputeShaderLoader(ITimberbornFireLogSink logSink)
     {
@@ -68,43 +69,101 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
             throw new FileNotFoundException("Wildfire compute shader AssetBundle was not deployed.", bundlePath);
         }
 
-        _assetBundle = AssetBundle.LoadFromFile(bundlePath);
-        if (_assetBundle == null)
+        try
         {
-            throw new InvalidOperationException($"Unity could not load the Wildfire compute shader AssetBundle at '{bundlePath}'.");
-        }
+            _assetBundle = TryFindLoadedComputeBundle(bundleName);
+            if (_assetBundle != null)
+            {
+                _ownsAssetBundle = false;
+                _logSink.Info(
+                    $"wildfire_timberborn_compute_asset_reused bundle={bundleName} loaded_bundle=\"{_assetBundle.name}\"");
+            }
+            else
+            {
+                _assetBundle = AssetBundle.LoadFromFile(bundlePath);
+                _ownsAssetBundle = _assetBundle != null;
+            }
 
-        string[] assetNames = _assetBundle.GetAllAssetNames();
-        string? shaderAssetName = assetNames.FirstOrDefault(static name =>
-            name.EndsWith("firesim.compute", StringComparison.OrdinalIgnoreCase));
-        if (shaderAssetName is null)
+            if (_assetBundle == null)
+            {
+                throw new InvalidOperationException($"Unity could not load the Wildfire compute shader AssetBundle at '{bundlePath}'.");
+            }
+
+            string[] assetNames = _assetBundle.GetAllAssetNames();
+            string? shaderAssetName = FindFireSimAssetName(assetNames);
+            if (shaderAssetName is null)
+            {
+                throw new InvalidOperationException(
+                    $"Wildfire compute shader AssetBundle '{bundlePath}' did not contain FireSim.compute. Assets: {string.Join(",", assetNames)}");
+            }
+
+            _shader = _assetBundle.LoadAsset<ComputeShader>(shaderAssetName);
+            if (_shader == null)
+            {
+                throw new InvalidOperationException(
+                    $"Wildfire compute shader asset '{shaderAssetName}' was present but did not load as a ComputeShader.");
+            }
+
+            _shader.FindKernel(TimberbornComputeFireSimulator.ApplyExternalChangesKernelName);
+            _shader.FindKernel(TimberbornComputeFireSimulator.FullGridKernelName);
+            _logSink.Info(
+                $"wildfire_timberborn_compute_asset_loaded bundle={bundleName} asset={shaderAssetName}");
+            return _shader;
+        }
+        catch
         {
-            throw new InvalidOperationException(
-                $"Wildfire compute shader AssetBundle '{bundlePath}' did not contain FireSim.compute. Assets: {string.Join(",", assetNames)}");
+            UnloadOwnedAssetBundle();
+            throw;
         }
-
-        _shader = _assetBundle.LoadAsset<ComputeShader>(shaderAssetName);
-        if (_shader == null)
-        {
-            throw new InvalidOperationException(
-                $"Wildfire compute shader asset '{shaderAssetName}' was present but did not load as a ComputeShader.");
-        }
-
-        _shader.FindKernel(TimberbornComputeFireSimulator.ApplyExternalChangesKernelName);
-        _shader.FindKernel(TimberbornComputeFireSimulator.FullGridKernelName);
-        _logSink.Info(
-            $"wildfire_timberborn_compute_asset_loaded bundle={bundleName} asset={shaderAssetName}");
-        return _shader;
     }
 
     public void Dispose()
     {
-        if (_assetBundle != null)
+        UnloadOwnedAssetBundle();
+    }
+
+    private AssetBundle? TryFindLoadedComputeBundle(string bundleName)
+    {
+        AssetBundle[] loadedBundles = AssetBundle.GetAllLoadedAssetBundles().ToArray();
+        _logSink.Info($"wildfire_timberborn_compute_asset_loaded_bundle_scan count={loadedBundles.Length}");
+
+        foreach (AssetBundle loadedBundle in loadedBundles)
+        {
+            string[] assetNames = loadedBundle.GetAllAssetNames();
+            string? shaderAssetName = FindFireSimAssetName(assetNames);
+            if (shaderAssetName != null)
+            {
+                _logSink.Info(
+                    $"wildfire_timberborn_compute_asset_loaded_bundle_match bundle={bundleName} loaded_bundle=\"{loadedBundle.name}\" asset={shaderAssetName}");
+                return loadedBundle;
+            }
+
+            if (string.Equals(loadedBundle.name, bundleName, StringComparison.OrdinalIgnoreCase))
+            {
+                _logSink.Info(
+                    $"wildfire_timberborn_compute_asset_loaded_bundle_name_conflict bundle={bundleName} assets={string.Join(",", assetNames)}");
+            }
+        }
+
+        return null;
+    }
+
+    private void UnloadOwnedAssetBundle()
+    {
+        if (_assetBundle != null && _ownsAssetBundle)
         {
             _assetBundle.Unload(unloadAllLoadedObjects: true);
-            _assetBundle = null;
-            _shader = null;
         }
+
+        _assetBundle = null;
+        _shader = null;
+        _ownsAssetBundle = false;
+    }
+
+    private static string? FindFireSimAssetName(IEnumerable<string> assetNames)
+    {
+        return assetNames.FirstOrDefault(static name =>
+            name.EndsWith("firesim.compute", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string GetPlatformBundleName()

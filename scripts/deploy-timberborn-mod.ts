@@ -48,6 +48,7 @@ const assetBundleTarget = "StandaloneOSX";
 const requiredAssetBundles = ["wildfire_compute_mac"];
 const optionalAssetBundles = ["wildfire_compute_mac.manifest"];
 const privateComputeShaderFolderName = "ComputeShaders";
+const requiredComputeShaderAsset = "Assets/WildfireGenerated/FireSim.compute";
 const manifest = {
   Name: "Wildfire",
   Version: "0.1.0.0",
@@ -370,6 +371,27 @@ const validateSources = (plan: CopyPlan[]): void => {
     .forEach((entry) => fail(`Required build artifact is missing: ${entry.from}`));
 };
 
+const validateComputeAssetBundleOutput = (): void => {
+  const outputDir = getAssetBundleOutputDir();
+  const bundlePath = join(outputDir, requiredAssetBundles[0]);
+  const manifestPath = join(outputDir, optionalAssetBundles[0]);
+
+  if (!existsSync(bundlePath) || !statSync(bundlePath).isFile()) {
+    fail(`Required compute AssetBundle is missing: ${bundlePath}`);
+  }
+
+  if (!existsSync(manifestPath) || !statSync(manifestPath).isFile()) {
+    fail(`Required compute AssetBundle manifest is missing: ${manifestPath}`);
+  }
+
+  const manifestText = readFileSync(manifestPath, "utf8");
+  if (!manifestText.includes(requiredComputeShaderAsset)) {
+    fail(
+      `Compute AssetBundle manifest does not contain ${requiredComputeShaderAsset}: ${manifestPath}`,
+    );
+  }
+};
+
 const printPlan = (options: DeployOptions, plan: CopyPlan[]): void => {
   const targetDir = join(options.modsDir, modFolderName);
   log(`mod_id=${manifest.Id}`);
@@ -469,6 +491,7 @@ const main = (): void => {
 
     if (!options.remove) {
       runUnityAssetBundleBuild(options);
+      validateComputeAssetBundleOutput();
     }
 
     const plan = createCopyPlan(options);

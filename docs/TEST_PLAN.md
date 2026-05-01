@@ -164,6 +164,8 @@ Expected deployed folder shape:
 
 `Scripts/` contains the managed assemblies, following the official Timberborn mod builder's code-output convention. `ComputeShaders/` contains the Unity-built compute shader bundle generated from `src/Wildfire.Unity/FireSim.compute`; it is intentionally outside Timberborn's built-in `AssetBundles/` auto-load folder so the adapter can load the exact private path after startup. The script only stages known build artifacts from `src/Wildfire.Timberborn/bin/<Configuration>/netstandard2.1/` and the known FireSim bundle from the Unity batchmode project; it does not copy `docs/`, `kanban/`, `.git/`, or other internal repository content into the deployed mod.
 
+The deploy script must validate the generated `wildfire_compute_mac.manifest` before copying it. A valid compute bundle manifest includes `Assets/WildfireGenerated/FireSim.compute`; if the manifest instead describes another mod's assets or any stale diagnostic bundle, treat the deploy as invalid and rebuild before running live QA.
+
 Run the real deploy only when Timberborn is closed or QA explicitly approves writing while the game is open:
 
 ```bash

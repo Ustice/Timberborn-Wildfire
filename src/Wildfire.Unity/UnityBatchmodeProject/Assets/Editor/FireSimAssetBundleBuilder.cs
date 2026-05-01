@@ -18,27 +18,20 @@ namespace Wildfire.UnityBatchmode
                 ImportShader(arguments.ShaderPath, arguments.BundleName);
                 Directory.CreateDirectory(arguments.OutputDirectory);
 
-                BuildAssetBundleOptions options =
-                    BuildAssetBundleOptions.ChunkBasedCompression |
-                    BuildAssetBundleOptions.ForceRebuildAssetBundle |
-                    BuildAssetBundleOptions.StrictMode;
-                BuildAssetBundlesParameters buildParameters = new BuildAssetBundlesParameters
+                AssetBundleBuild[] bundleDefinitions =
                 {
-                    outputPath = arguments.OutputDirectory,
-                    bundleDefinitions = new[]
+                    new AssetBundleBuild
                     {
-                        new AssetBundleBuild
-                        {
-                            assetBundleName = arguments.BundleName,
-                            assetNames = new[] { GeneratedShaderAssetPath },
-                        },
+                        assetBundleName = arguments.BundleName,
+                        assetNames = new[] { GeneratedShaderAssetPath },
                     },
-                    options = options,
-                    targetPlatform = arguments.BuildTarget,
-                    subtarget = (int)StandaloneBuildSubtarget.Player,
                 };
-                Debug.Log("wildfire_assetbundle_builder phase=build target=" + arguments.BuildTarget + " subtarget=" + StandaloneBuildSubtarget.Player + " options=" + options);
-                AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(buildParameters);
+                Debug.Log("wildfire_assetbundle_builder phase=build target=" + arguments.BuildTarget + " options=" + BuildAssetBundleOptions.None);
+                AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(
+                    arguments.OutputDirectory,
+                    bundleDefinitions,
+                    BuildAssetBundleOptions.None,
+                    arguments.BuildTarget);
 
                 if (manifest == null)
                 {
