@@ -59,3 +59,8 @@ External click automation can open menus and load saves, but it cannot reliably 
    - Live validation is blocked because this repository still has no Timberborn UI, console, file-polling, or HTTP hook that invokes the bridge from inside the running game.
    - Smallest unblock: add a narrow Timberborn binding that forwards only known bridge commands to `TimberbornQaCommandBridge.Execute` and captures `wildfire_command_request` / `wildfire_command_result` in logs.
    - Evidence: `git diff --check` passed; `dotnet test` passed 57 tests; `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
+- Worker review follow-up 2026-05-01:
+   - Added narrow unit coverage for `TimberbornQaCommandBridge` safety and observability.
+   - Covered `status`, empty command normalization to `status`, case/first-token normalization, `help`, unknown command failure, dynamic-looking command rejection, state-provider wiring, request/result logging, and result token fields for real and placeholder simulator state.
+   - Focused evidence: `dotnet test --filter FullyQualifiedName~TimberbornQaCommandBridgeTests` passed 10 tests.
+   - Full evidence: `git diff --check` passed; `dotnet test` passed 67 tests; `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
