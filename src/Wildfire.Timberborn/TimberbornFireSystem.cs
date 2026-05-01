@@ -2,7 +2,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
 
-public sealed class TimberbornFireSystem
+public sealed class TimberbornFireSystem : IDisposable
 {
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
@@ -45,6 +45,8 @@ public sealed class TimberbornFireSystem
         _grid = new FireGrid(fireSimulator.Width, fireSimulator.Height, fireSimulator.Depth);
         _cellMapper = cellMapper;
         _logSink = logSink;
+        LastTick = 0;
+        LastDeltaCount = 0;
         _logSink.Info(
             $"wildfire_timberborn_simulator_attached width={fireSimulator.Width} height={fireSimulator.Height} depth={fireSimulator.Depth}");
     }
@@ -106,11 +108,12 @@ public sealed class TimberbornFireSystem
         }
 
         ushort[] initialCells = _cellMapper.CreateInitialCells(grid, sources);
+        DisposeSimulator();
         _fireSimulator = _simulatorFactory.Create(grid, initialCells);
         _grid = grid;
         _registeredChangeCountSinceLastDispatch = 0;
-        LastTick = null;
-        LastDeltaCount = null;
+        LastTick = 0;
+        LastDeltaCount = 0;
         _logSink.Info(
             $"wildfire_timberborn_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
     }
@@ -186,6 +189,21 @@ public sealed class TimberbornFireSystem
     {
         return _fireSimulator ??
             throw new InvalidOperationException("Timberborn fire system must be initialized before dispatching or registering changes.");
+    }
+
+    public void Dispose()
+    {
+        DisposeSimulator();
+    }
+
+    private void DisposeSimulator()
+    {
+        if (_fireSimulator is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
+        _fireSimulator = null;
     }
 
     private FireGrid RequireGrid()

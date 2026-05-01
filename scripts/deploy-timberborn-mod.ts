@@ -21,7 +21,9 @@ type DeployOptions = {
   lockTimeoutSeconds: number;
   modsDir: string;
   remove: boolean;
+  skipAssetBundle: boolean;
   skipBuild: boolean;
+  unityExecutable: string;
   targetFramework: string;
 };
 
@@ -37,6 +39,15 @@ const defaultModsDir = join(home, "Documents", "Timberborn", "Mods");
 const lockDir = join(home, "Library", "Application Support", "Timberborn", "WildfireQA", "locks", "build-deploy.lock");
 const lockInfoPath = join(lockDir, "lock.json");
 const modFolderName = "Wildfire";
+const unityProjectPath = join(repoRoot, "src", "Wildfire.Unity", "UnityBatchmodeProject");
+const computeShaderPath = join(repoRoot, "src", "Wildfire.Unity", "FireSim.compute");
+const defaultUnityExecutable =
+  process.env.WILDFIRE_UNITY_EXECUTABLE ??
+  "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
+const assetBundleTarget = "StandaloneOSX";
+const requiredAssetBundles = ["wildfire_compute_mac"];
+const optionalAssetBundles = ["wildfire_compute_mac.manifest"];
+const privateComputeShaderFolderName = "ComputeShaders";
 const manifest = {
   Name: "Wildfire",
   Version: "0.1.0.0",
@@ -64,6 +75,8 @@ Options:
   --dry-run                 Print the build/deploy plan without writing the mod folder. Default.
   --apply                   Write the deployed mod folder. Refuses while Timberborn is open unless --allow-open-game is set.
   --skip-build              Reuse existing build output instead of running dotnet build.
+  --skip-asset-bundle       Reuse an existing FireSim AssetBundle instead of running Unity batchmode.
+  --unity-executable <path> Unity Editor executable. Default: WILDFIRE_UNITY_EXECUTABLE or Unity Hub 6000.3.6f1.
   --configuration <name>    Build configuration. Default: Debug.
   --target-framework <tfm>  Timberborn adapter target framework. Default: netstandard2.1.
   --mods-dir <path>         Timberborn Mods directory. Default: ~/Documents/Timberborn/Mods.
@@ -91,7 +104,9 @@ const parseArgs = (args: string[]): DeployOptions => {
     lockTimeoutSeconds: 0,
     modsDir: defaultModsDir,
     remove: false,
+    skipAssetBundle: false,
     skipBuild: false,
+    unityExecutable: defaultUnityExecutable,
     targetFramework: "netstandard2.1",
   };
 
@@ -128,8 +143,14 @@ const parseArgs = (args: string[]): DeployOptions => {
       options.modsDir = resolve(arg.slice("--mods-dir=".length));
     } else if (arg === "--remove") {
       options.remove = true;
+    } else if (arg === "--skip-asset-bundle") {
+      options.skipAssetBundle = true;
     } else if (arg === "--skip-build") {
       options.skipBuild = true;
+    } else if (arg === "--unity-executable") {
+      options.unityExecutable = resolve(requireValue(args, ++index, arg));
+    } else if (arg.startsWith("--unity-executable=")) {
+      options.unityExecutable = resolve(arg.slice("--unity-executable=".length));
     } else {
       fail(`Unknown argument: ${arg}`);
     }
@@ -253,10 +274,15 @@ const getGitBranch = (): string => {
 const getBuildOutputDir = (configuration: string, targetFramework: string): string =>
   join(repoRoot, "src", "Wildfire.Timberborn", "bin", configuration, targetFramework);
 
+const getAssetBundleOutputDir = (): string =>
+  join(unityProjectPath, "Build", "AssetBundles", assetBundleTarget);
+
 const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
   const outputDir = getBuildOutputDir(options.configuration, options.targetFramework);
+  const assetBundleOutputDir = getAssetBundleOutputDir();
   const targetDir = join(options.modsDir, modFolderName);
   const scriptsDir = join(targetDir, "Scripts");
+  const computeShadersDir = join(targetDir, privateComputeShaderFolderName);
 
   return [
     ...requiredAssemblies.map((name) => ({
@@ -269,7 +295,72 @@ const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
       to: join(scriptsDir, name),
       required: false,
     })),
+    ...requiredAssetBundles.map((name) => ({
+      from: join(assetBundleOutputDir, name),
+      to: join(computeShadersDir, name),
+      required: true,
+    })),
+    ...optionalAssetBundles.map((name) => ({
+      from: join(assetBundleOutputDir, name),
+      to: join(computeShadersDir, name),
+      required: false,
+    })),
   ];
+};
+
+const runUnityAssetBundleBuild = (options: DeployOptions): void => {
+  if (options.skipAssetBundle) {
+    log("skip_asset_bundle=true");
+    return;
+  }
+
+  if (!existsSync(options.unityExecutable)) {
+    fail(`Unity executable is missing: ${options.unityExecutable}`);
+  }
+
+  const outputDir = getAssetBundleOutputDir();
+  const logPath = join(outputDir, "assetbundle-build.log");
+  mkdirSync(outputDir, { recursive: true });
+  log(`run ${options.unityExecutable} -batchmode -quit -projectPath ${unityProjectPath} -executeMethod Wildfire.UnityBatchmode.FireSimAssetBundleBuilder.Build`);
+  const result = Bun.spawnSync(
+    [
+      options.unityExecutable,
+      "-batchmode",
+      "-quit",
+      "-projectPath",
+      unityProjectPath,
+      "-executeMethod",
+      "Wildfire.UnityBatchmode.FireSimAssetBundleBuilder.Build",
+      "-logFile",
+      logPath,
+      "--",
+      "--shader",
+      computeShaderPath,
+      "--output",
+      outputDir,
+      "--bundle",
+      requiredAssetBundles[0],
+      "--target",
+      assetBundleTarget,
+    ],
+    {
+      cwd: repoRoot,
+      stdout: "inherit",
+      stderr: "inherit",
+    },
+  );
+
+  if (result.exitCode !== 0) {
+    fail(`Unity AssetBundle build exited with code ${result.exitCode}. Log: ${logPath}\n${readLogTail(logPath)}`);
+  }
+};
+
+const readLogTail = (path: string): string => {
+  if (!existsSync(path)) {
+    return "(Unity log file was not created.)";
+  }
+
+  return readFileSync(path, "utf8").split(/\r?\n/u).slice(-80).join("\n");
 };
 
 const validateSources = (plan: CopyPlan[]): void => {
@@ -287,6 +378,11 @@ const printPlan = (options: DeployOptions, plan: CopyPlan[]): void => {
   log(`minimum_game_version=${manifest.MinimumGameVersion}`);
   log(`configuration=${options.configuration}`);
   log(`target_framework=${options.targetFramework}`);
+  log(`unity_project=${unityProjectPath}`);
+  log(`unity_executable=${options.unityExecutable}`);
+  log(`asset_bundle_target=${assetBundleTarget}`);
+  log(`asset_bundle_output_dir=${getAssetBundleOutputDir()}`);
+  log(`skip_asset_bundle=${options.skipAssetBundle}`);
   log(`mods_dir=${options.modsDir}`);
   log(`target_dir=${targetDir}`);
   log(`manifest=${join(targetDir, "manifest.json")}`);
@@ -342,6 +438,7 @@ const assertTargetShape = (targetDir: string): void => {
   const expectedPaths = [
     join(targetDir, "manifest.json"),
     ...requiredAssemblies.map((name) => join(targetDir, "Scripts", name)),
+    ...requiredAssetBundles.map((name) => join(targetDir, privateComputeShaderFolderName, name)),
   ];
 
   expectedPaths
@@ -368,6 +465,10 @@ const main = (): void => {
 
     if (!options.skipBuild && !options.remove) {
       run("dotnet", ["build", "Wildfire.slnx", "--configuration", options.configuration]);
+    }
+
+    if (!options.remove) {
+      runUnityAssetBundleBuild(options);
     }
 
     const plan = createCopyPlan(options);

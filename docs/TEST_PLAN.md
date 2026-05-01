@@ -17,8 +17,9 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - GPU visual field wrapper contract: `wildfire.visual_fields` is allocated as one `float4`-equivalent entry per packed cell, full-grid dispatch receives the visual buffer, shader source writes visual samples from post-step packed cell values, and deterministic tests cover fire, smoke, ash, and visibility derivation.
 - Timberborn cell mapping scaffold: deterministic terrain/building/resource/water source folding into packed cells, sorted `SetCell` change emission, field-width clamping, water overlay behavior, and out-of-bounds source rejection.
 - Timberborn QA command bridge scaffold: read-only `status` and `help` commands, simulator runtime state when available, searchable command request/result tokens, and explicit no-arbitrary-execution command dispatch.
-- Timberborn deploy pipeline scaffold: Bun/TypeScript deploy script, generated Wildfire manifest, managed assembly staging into `~/Documents/Timberborn/Mods/Wildfire/Scripts`, local build/deploy lock, dry-run/help output, and running-game guard for real deploy/remove.
+- Timberborn deploy pipeline scaffold: Bun/TypeScript deploy script, generated Wildfire manifest, managed assembly staging into `~/Documents/Timberborn/Mods/Wildfire/Scripts`, private FireSim AssetBundle staging into `~/Documents/Timberborn/Mods/Wildfire/ComputeShaders`, local build/deploy lock, dry-run/help output, and running-game guard for real deploy/remove.
 - Timberborn fixed-cadence dispatch scaffold: adapter initialization from mapped cells through an injected GPU simulator factory, external change registration through `IGpuFireSimulator.RegisterChange`, centralized cadence options, one dispatch per processed game update, compact-delta return/subscription surface, command-bridge status fields, and lifecycle log tokens for attach/init/change/wait/dispatch/readback/failure events.
+- Timberborn compute-backed simulator factory: live adapter loads `wildfire_compute_mac` from the deployed AssetBundle, creates Unity `ComputeBuffer` resources, dispatches `ApplyExternalChanges` and `SimulateFullGrid`, reads compact deltas, and initializes `TimberbornFireRuntime` from real terrain sources supplied by `MapSize` and `ITerrainService`.
 
 Run:
 
@@ -122,9 +123,13 @@ The Timberborn adapter polls that inbox from `TimberbornQaCommandFileBridge`, fo
 
 Current `TWF-008` coverage adds a Timberborn game-context runtime singleton for fixed-cadence dispatch. `TimberbornFireRuntime` is the command-bridge state provider, so `status` reports `simulator_integrated=true`, dimensions, `tick_count`, `queued_changes`, and `last_delta_count` after a simulator is attached. When no simulator factory has been attached by the live host yet, those simulator fields intentionally return `placeholder`.
 
-Search `~/Library/Logs/Mechanistry/Timberborn/Player.log` for `wildfire_command_bridge_ready`, `wildfire_command_request`, `wildfire_command_result`, `wildfire_timberborn_runtime_ready`, `wildfire_timberborn_cadence_configured`, `wildfire_timberborn_dispatch_started`, and `wildfire_timberborn_dispatch_completed`.
+Current `TWF-021` coverage adds the live compute-backed attachment path. `TimberbornFireRuntimeInitializer` builds the initial `FireGrid` from `MapSize.TerrainSize`, converts terrain cells from `ITerrainService.GetAllHeightsInCell(...)` through `TimberbornTerrainAdapter`, and initializes the runtime through `ITimberbornFireSimulatorFactory`. The factory manually loads `ComputeShaders/wildfire_compute_mac`, creates a real Unity `ComputeShader` simulator, and leaves fire-spread behavior in `FireSim.compute`.
 
-Current blocker: the deployed Timberborn mod stages `Wildfire.Timberborn.dll` and `Wildfire.Core.dll`, but the compute-backed simulator implementation lives in `Wildfire.Unity` as a `net10.0` project and depends on a Unity `ComputeShader` asset/dispatcher path that is only available in the batchmode harness. Do not satisfy TWF-008 by attaching a dispatch-only or C# no-op simulator; live completion requires a deployable compute-backed simulator factory that can import/package `FireSim.compute`, allocate buffers in Timberborn, and attach the real `IGpuFireSimulator` to `TimberbornFireRuntime`.
+Current live blocker: clean deploy now avoids Timberborn's built-in `AssetBundles/` auto-loader and the adapter reaches `wildfire_timberborn_compute_asset_load_started` for `~/Documents/Timberborn/Mods/Wildfire/ComputeShaders/wildfire_compute_mac`, but Unity still rejects the manually loaded bundle with `The AssetBundle 'wildfire_compute_mac' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.` The builder and Player.log both report Unity `6000.3.6f1`, so the next pass should inspect AssetBundle build target/options or an alternate compute shader packaging path rather than guessing an editor version.
+
+Search `~/Library/Logs/Mechanistry/Timberborn/Player.log` for `wildfire_command_bridge_ready`, `wildfire_command_request`, `wildfire_command_result`, `wildfire_timberborn_runtime_ready`, `wildfire_timberborn_runtime_initialize_started`, `wildfire_timberborn_compute_asset_loaded`, `wildfire_timberborn_gpu_factory_created`, `wildfire_timberborn_runtime_simulator_initialized`, `wildfire_timberborn_cadence_configured`, `wildfire_timberborn_gpu_dispatch_kernel`, `wildfire_timberborn_gpu_readback_completed`, `wildfire_timberborn_dispatch_started`, and `wildfire_timberborn_dispatch_completed`.
+
+Do not satisfy this stage by attaching a dispatch-only or C# no-op simulator. Live completion requires `wildfire_command_result ... simulator_integrated=true` with numeric dimensions, `tick_count`, `queued_changes`, and `last_delta_count`, plus Player.log evidence that the AssetBundle loaded and the real compute dispatch/readback path ran.
 
 ## Timberborn QA Utilities
 
@@ -152,9 +157,12 @@ Expected deployed folder shape:
     Wildfire.Core.dll
     Wildfire.Timberborn.pdb
     Wildfire.Core.pdb
+  ComputeShaders/
+    wildfire_compute_mac
+    wildfire_compute_mac.manifest
 ```
 
-`Scripts/` contains the managed assemblies, following the official Timberborn mod builder's code-output convention. The script only stages known build artifacts from `src/Wildfire.Timberborn/bin/<Configuration>/netstandard2.1/`; it does not copy `docs/`, `kanban/`, `.git/`, or other internal repository content into the deployed mod.
+`Scripts/` contains the managed assemblies, following the official Timberborn mod builder's code-output convention. `ComputeShaders/` contains the Unity-built compute shader bundle generated from `src/Wildfire.Unity/FireSim.compute`; it is intentionally outside Timberborn's built-in `AssetBundles/` auto-load folder so the adapter can load the exact private path after startup. The script only stages known build artifacts from `src/Wildfire.Timberborn/bin/<Configuration>/netstandard2.1/` and the known FireSim bundle from the Unity batchmode project; it does not copy `docs/`, `kanban/`, `.git/`, or other internal repository content into the deployed mod.
 
 Run the real deploy only when Timberborn is closed or QA explicitly approves writing while the game is open:
 
@@ -166,6 +174,8 @@ Optional command flags:
 
 - `--configuration=Release` builds and stages Release artifacts.
 - `--skip-build` reuses existing build output.
+- `--skip-asset-bundle` reuses an existing `wildfire_compute_mac` bundle instead of running Unity batchmode.
+- `--unity-executable=/path/to/Unity` selects a Unity Editor when `WILDFIRE_UNITY_EXECUTABLE` is not set.
 - `--mods-dir=/path/to/Mods` targets a non-default Timberborn Mods directory.
 - `--dry-run --remove` prints the cleanup action for the deployed Wildfire folder without deleting it.
 

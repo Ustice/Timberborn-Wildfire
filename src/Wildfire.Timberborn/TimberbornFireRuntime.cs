@@ -24,6 +24,7 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
 
     public void Unload()
     {
+        _fireSystem?.Dispose();
         _dispatcher = null;
         _fireSystem = null;
         _gameUpdateId = 0;
@@ -85,6 +86,8 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
         TimberbornFireSystem fireSystem = new(simulatorFactory, new TimberbornFireCellMapper(), _logSink);
         fireSystem.Initialize(grid, sources);
         Configure(fireSystem, cadence);
+        _logSink.Info(
+            $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth}");
     }
 
     public void RegisterHeat(int cellIndex, byte heat)
@@ -121,6 +124,7 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
 
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
+        _fireSystem?.Dispose();
         _fireSystem = fireSystem;
         _dispatcher = new TimberbornFixedCadenceFireDispatcher(
             fireSystem,
