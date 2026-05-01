@@ -130,7 +130,7 @@ const main = async (): Promise<void> => {
 
   const result = await waitForOutbox(outboxPath, previousModified, options.waitSeconds);
   if (result === null) {
-    fail(`Timed out waiting for ${outboxPath}. Is Timberborn running with a loaded game?`);
+    return fail(`Timed out waiting for ${outboxPath}. Is Timberborn running with a loaded game?`);
   }
 
   console.log(result.trimEnd());

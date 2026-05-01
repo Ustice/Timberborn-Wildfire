@@ -134,7 +134,7 @@ const parseMode = (value: string): Mode => {
     return value;
   }
 
-  fail(`Invalid mode: ${value}. Expected attach or launch.`);
+  return fail(`Invalid mode: ${value}. Expected attach or launch.`);
 };
 
 const parseScreenshotMode = (value: string): ScreenshotMode => {
@@ -142,7 +142,7 @@ const parseScreenshotMode = (value: string): ScreenshotMode => {
     return value;
   }
 
-  fail(`Invalid screenshot mode: ${value}. Expected failure, always, or never.`);
+  return fail(`Invalid screenshot mode: ${value}. Expected failure, always, or never.`);
 };
 
 const parseArgs = (args: string[]): StartupOptions => {
@@ -242,7 +242,7 @@ const parseArgs = (args: string[]): StartupOptions => {
 const normalizeResolution = (value: string): string => {
   const match = value.match(/^(\d+)\s*x\s*(\d+)$/iu);
   if (!match) {
-    fail(`Invalid resolution: ${value}. Expected WxH, for example 1920x1080.`);
+    return fail(`Invalid resolution: ${value}. Expected WxH, for example 1920x1080.`);
   }
 
   return `${match[1]}x${match[2]}`;
