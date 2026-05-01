@@ -53,3 +53,6 @@ This is the first real live-game loop. It proves that Timberborn can act as a ho
 ## Notes
 
 - Keep this ticket focused on dispatch and lifecycle. Gameplay consequences belong in `TWF-009`.
+- Parked during coordination on 2026-05-01 after a worker produced useful scaffolding on branch `codex/TWF-008-fixed-cadence` at commit `732779729afb3f77904b93c2132e12c5d2ef587c`.
+- Reason for parking: live validation is not meaningful until `TWF-012` provides an in-game command/test harness and `TWF-016` provides a repeatable Timberborn mod deploy path.
+- Smallest unblock: finish `TWF-012` enough to query placeholder runtime status from inside the game, then finish `TWF-016` enough to load the adapter in Timberborn.

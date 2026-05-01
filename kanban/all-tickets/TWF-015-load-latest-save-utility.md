@@ -7,6 +7,7 @@ doc_only: false
 dependencies:
    - TWF-013
    - TWF-014
+   - TWF-020
 write_scope:
    - scripts/**
    - docs/**
@@ -38,6 +39,7 @@ Live validation loses time when every run starts with manual menu navigation. A 
 
 - `TWF-013` Timberborn menu coordinate guide.
 - `TWF-014` QA utility skill.
+- `TWF-020` title-screen coordinate pass.
 
 ## Role
 
