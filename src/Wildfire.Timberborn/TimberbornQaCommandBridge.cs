@@ -1,0 +1,203 @@
+namespace Wildfire.Timberborn;
+
+public sealed class TimberbornQaCommandBridge
+{
+    public const string StatusCommand = "status";
+    public const string HelpCommand = "help";
+
+    private readonly ITimberbornQaCommandStateProvider _stateProvider;
+    private readonly ITimberbornQaCommandLogSink _logSink;
+    private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
+
+    public TimberbornQaCommandBridge()
+        : this(TimberbornQaCommandStateProvider.Placeholder, NullTimberbornQaCommandLogSink.Instance)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaCommandLogSink logSink)
+    {
+        ArgumentNullException.ThrowIfNull(stateProvider);
+        ArgumentNullException.ThrowIfNull(logSink);
+
+        _stateProvider = stateProvider;
+        _logSink = logSink;
+        _commands = new Dictionary<string, Func<TimberbornQaCommandResult>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [StatusCommand] = ExecuteStatus,
+            [HelpCommand] = ExecuteHelp,
+        };
+    }
+
+    public TimberbornQaCommandResult Execute(string commandText)
+    {
+        string command = NormalizeCommand(commandText);
+        _logSink.Info($"wildfire_command_request command={FormatToken(command)}");
+
+        if (!_commands.TryGetValue(command, out Func<TimberbornQaCommandResult>? handler))
+        {
+            TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                command,
+                $"Unknown command '{command}'.",
+                TimberbornQaCommandState.Placeholder,
+                KnownCommands);
+            _logSink.Warning(failure.ResultToken);
+            return failure;
+        }
+
+        try
+        {
+            TimberbornQaCommandResult result = handler();
+            _logSink.Info(result.ResultToken);
+            return result;
+        }
+        catch (Exception exception)
+        {
+            TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                command,
+                exception.Message,
+                TimberbornQaCommandState.Placeholder,
+                KnownCommands);
+            _logSink.Warning(failure.ResultToken);
+            return failure;
+        }
+    }
+
+    public IReadOnlyList<string> KnownCommands => _commands.Keys.Order(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    private TimberbornQaCommandResult ExecuteStatus()
+    {
+        return TimberbornQaCommandResult.CreateSuccess(StatusCommand, _stateProvider.GetState(), KnownCommands);
+    }
+
+    private TimberbornQaCommandResult ExecuteHelp()
+    {
+        return TimberbornQaCommandResult.CreateSuccess(
+            HelpCommand,
+            _stateProvider.GetState(),
+            KnownCommands,
+            "Supported commands are read-only: help, status.");
+    }
+
+    private static string NormalizeCommand(string commandText)
+    {
+        string command = commandText.Trim();
+
+        if (string.IsNullOrEmpty(command))
+        {
+            return StatusCommand;
+        }
+
+        return command.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
+    }
+
+    internal static string FormatToken(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "placeholder"
+            : value.Replace(' ', '_').Replace('"', '\'');
+    }
+}
+
+public interface ITimberbornQaCommandStateProvider
+{
+    TimberbornQaCommandState GetState();
+}
+
+public sealed class TimberbornQaCommandStateProvider(TimberbornQaCommandState state) : ITimberbornQaCommandStateProvider
+{
+    public static readonly TimberbornQaCommandStateProvider Placeholder = new(TimberbornQaCommandState.Placeholder);
+
+    public TimberbornQaCommandState GetState()
+    {
+        return state;
+    }
+}
+
+public sealed record TimberbornQaCommandState(
+    bool IsSimulatorIntegrated,
+    int? Width = null,
+    int? Height = null,
+    int? Depth = null,
+    uint? TickCount = null,
+    int? QueuedChangeCount = null,
+    int? LastDeltaCount = null)
+{
+    public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
+}
+
+public sealed record TimberbornQaCommandResult(
+    string Command,
+    bool Success,
+    string Status,
+    TimberbornQaCommandState State,
+    IReadOnlyList<string> KnownCommands,
+    string Message)
+{
+    public string ResultToken =>
+        "wildfire_command_result " +
+        $"command={TimberbornQaCommandBridge.FormatToken(Command)} " +
+        $"success={Success.ToString().ToLowerInvariant()} " +
+        $"status={Status} " +
+        $"simulator_integrated={State.IsSimulatorIntegrated.ToString().ToLowerInvariant()} " +
+        $"width={FormatNumber(State.Width)} " +
+        $"height={FormatNumber(State.Height)} " +
+        $"depth={FormatNumber(State.Depth)} " +
+        $"tick_count={FormatNumber(State.TickCount)} " +
+        $"queued_changes={FormatNumber(State.QueuedChangeCount)} " +
+        $"last_delta_count={FormatNumber(State.LastDeltaCount)} " +
+        $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
+
+    public static TimberbornQaCommandResult CreateSuccess(
+        string command,
+        TimberbornQaCommandState state,
+        IReadOnlyList<string> knownCommands,
+        string message = "ok")
+    {
+        return new TimberbornQaCommandResult(command, true, "success", state, knownCommands, message);
+    }
+
+    public static TimberbornQaCommandResult CreateFailure(
+        string command,
+        string message,
+        TimberbornQaCommandState state,
+        IReadOnlyList<string> knownCommands)
+    {
+        return new TimberbornQaCommandResult(command, false, "failure", state, knownCommands, message);
+    }
+
+    private static string FormatNumber(int? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+
+    private static string FormatNumber(uint? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+}
+
+public interface ITimberbornQaCommandLogSink
+{
+    void Info(string message);
+
+    void Warning(string message);
+}
+
+public sealed class NullTimberbornQaCommandLogSink : ITimberbornQaCommandLogSink
+{
+    public static readonly NullTimberbornQaCommandLogSink Instance = new();
+
+    private NullTimberbornQaCommandLogSink()
+    {
+    }
+
+    public void Info(string message)
+    {
+    }
+
+    public void Warning(string message)
+    {
+    }
+}

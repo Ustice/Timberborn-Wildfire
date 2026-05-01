@@ -50,3 +50,12 @@ External click automation can open menus and load saves, but it cannot reliably 
 ## Notes
 
 - Keep the first bridge boring. A small reliable status endpoint is better than a large fragile harness.
+- Worker update 2026-05-01:
+   - Added `TimberbornQaCommandBridge` as the smallest in-process command/test harness scaffold.
+   - Supported commands are read-only: `status` and `help`. Empty command text normalizes to `status`; unknown commands return failure without executing anything dynamic.
+   - `TimberbornQaCommandResult.ResultToken` logs searchable `wildfire_command_result` fields for command, success/failure, simulator integration, dimensions, `tick_count`, `queued_changes`, and `last_delta_count`.
+   - Before TWF-008 is integrated, simulator state intentionally reports `placeholder`; future TWF-008 runtime state can be supplied through `ITimberbornQaCommandStateProvider`.
+   - Did not add arbitrary code execution, a mutating command, C# fire-spread parity, or Timberborn-owned fire rules.
+   - Live validation is blocked because this repository still has no Timberborn UI, console, file-polling, or HTTP hook that invokes the bridge from inside the running game.
+   - Smallest unblock: add a narrow Timberborn binding that forwards only known bridge commands to `TimberbornQaCommandBridge.Execute` and captures `wildfire_command_request` / `wildfire_command_result` in logs.
+   - Evidence: `git diff --check` passed; `dotnet test` passed 57 tests; `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
