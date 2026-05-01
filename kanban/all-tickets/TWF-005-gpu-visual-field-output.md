@@ -45,7 +45,7 @@ The design depends on visuals staying close to the simulation buffers. A visual 
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 - Capture a visual artifact if Unity rendering is available.
 

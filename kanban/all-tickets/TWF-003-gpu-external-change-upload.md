@@ -46,7 +46,7 @@ Timberborn systems need a safe way to tell the simulator about heat, water, terr
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 
 ## Notes

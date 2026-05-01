@@ -48,7 +48,7 @@ GPU and live-game bugs can be hard to see from behavior alone. Diagnostics make 
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 
 ## Notes

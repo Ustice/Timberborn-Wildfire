@@ -49,7 +49,7 @@ Full-grid dispatch is the right first baseline, but large maps may spend work on
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run shader snapshots.
 - Record profiling evidence that justifies the optimization.
 

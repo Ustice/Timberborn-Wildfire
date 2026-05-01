@@ -46,7 +46,7 @@ This is the first real live-game loop. It proves that Timberborn can act as a ho
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 - Run live Timberborn validation and capture logs when available.
 

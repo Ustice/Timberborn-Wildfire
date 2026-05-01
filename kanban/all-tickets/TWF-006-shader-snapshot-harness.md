@@ -49,7 +49,7 @@ Once the rules live only in shaders, shader snapshots become the main behavioral
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run the shader snapshot command.
 
 ## Notes

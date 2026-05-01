@@ -48,7 +48,7 @@ The simulator is useful only if the game responds to changed cells. This ticket 
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 - Run live Timberborn QA with logs and screenshots when available.
 

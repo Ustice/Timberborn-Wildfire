@@ -45,7 +45,7 @@ The GPU simulator needs stable buffer ownership before rule code can be useful. 
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 
 ## Notes

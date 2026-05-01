@@ -11,17 +11,19 @@
 
 ## Current Ticket State
 
-- No active sprint tickets are currently defined.
-- The previous ticket set was removed so the board can be rebuilt from the updated design document.
-- `kanban/all-tickets/TEMPLATE.md` remains as the starting point for new tickets.
+- The fresh compute-first ticket set exists as `TWF-000` through `TWF-015`.
+- `kanban/by-status` is the sprint source of truth.
+- As of this handoff, no tickets are assigned yet.
+- `TWF-000` and `TWF-013` have no ticket dependencies and are the first candidates for `02-ready`.
+- Later tickets are dependency-gated behind fixture export, Unity compute buffers, shader dispatch, compact delta readback, Timberborn adapters, and QA utility setup.
 
 ## Next Exact Action
 
 Start with:
 
-- Read `docs/DESIGN.md`.
-- Create a fresh ticket set in `kanban/all-tickets/` that reflects the updated design.
 - Move dependency-ready tickets into `kanban/by-status/02-ready/`.
+- Dispatch `TWF-000` first for CLI fixture export.
+- Dispatch `TWF-013` when Timberborn UI access is available for QA coordinate capture.
 
 ## Known Gaps
 

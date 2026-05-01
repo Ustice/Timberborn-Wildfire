@@ -45,7 +45,7 @@ Timberborn has game-specific concepts, but the simulator only understands packed
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 - Run live Timberborn validation only if the local environment is ready.
 

@@ -46,7 +46,7 @@ Full-grid dispatch is the simplest useful GPU baseline. It proves the rule trans
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 - Run any Unity shader compile check available in the repo.
 

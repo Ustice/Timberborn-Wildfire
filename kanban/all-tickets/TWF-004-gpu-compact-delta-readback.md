@@ -48,7 +48,7 @@ Timberborn gameplay consequences should be driven by a small changed-cell stream
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 
 ## Notes

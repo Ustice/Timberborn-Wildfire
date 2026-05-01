@@ -43,7 +43,7 @@ External click automation can open menus and load saves, but it cannot reliably 
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run `dotnet build Wildfire.slnx`.
 - Validate in Timberborn if the local environment is available.
 

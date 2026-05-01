@@ -44,7 +44,7 @@ The project has one authoritative GPU simulation path, but shader work still nee
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test`.
+- Run `dotnet test`.
 - Run the new export command twice with the same arguments and confirm identical output.
 
 ## Notes
