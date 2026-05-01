@@ -7,6 +7,7 @@ type InvokeOptions = {
   command: string;
   commandDir: string;
   help: boolean;
+  requireAdvancedTick: boolean;
   waitSeconds: number;
 };
 
@@ -26,6 +27,7 @@ Commands:
 
 Options:
   --command-dir <path>      Command bridge directory. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA.
+  --require-advanced-tick   Fail unless the result reports numeric tick_count greater than 0. Unpause a loaded save before using this.
   --wait <seconds>          Wait for command-outbox.txt to update. Default: 5.
   --help                    Show this help.
 `;
@@ -57,6 +59,7 @@ const parseArgs = (args: string[]): InvokeOptions => {
     command: "status",
     commandDir: defaultCommandDir,
     help: false,
+    requireAdvancedTick: false,
     waitSeconds: 5,
   };
   let skipNext = false;
@@ -74,6 +77,8 @@ const parseArgs = (args: string[]): InvokeOptions => {
       skipNext = true;
     } else if (arg.startsWith("--command-dir=")) {
       options.commandDir = resolve(arg.slice("--command-dir=".length));
+    } else if (arg === "--require-advanced-tick") {
+      options.requireAdvancedTick = true;
     } else if (arg === "--wait") {
       options.waitSeconds = parseWait(requireValue(args, index + 1, arg));
       skipNext = true;
@@ -109,6 +114,17 @@ const waitForOutbox = async (outboxPath: string, previousModified: number, waitS
   return null;
 };
 
+const requireAdvancedTick = (result: string): void => {
+  const tickMatch =
+    result.match(/\btick_count=(\d+)\b/u) ??
+    fail("Result did not include numeric tick_count. Is the command reporting simulator state?");
+  const tickValue = tickMatch[1];
+  const tickCount = Number(tickValue);
+  if (tickCount <= 0) {
+    fail(`Result reported tick_count=${tickCount}. Unpause the loaded save and rerun the command.`);
+  }
+};
+
 const main = async (): Promise<void> => {
   const options = parseArgs(Bun.argv.slice(2));
   if (options.help) {
@@ -134,6 +150,9 @@ const main = async (): Promise<void> => {
   }
 
   console.log(result.trimEnd());
+  if (options.requireAdvancedTick) {
+    requireAdvancedTick(result);
+  }
 };
 
 try {
