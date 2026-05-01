@@ -10,9 +10,9 @@ description: Start or resume a multi-agent sprint in ~/repos/wildfire. Use when 
 Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 
 1. Start in `~/repos/wildfire`.
-2. Read `AGENTS.md`, `docs/INDEX.md`, `docs/HANDOFF.md`, `kanban/README.md`, `kanban/process.md`, and `kanban/roles/coordinator.md`.
+2. Read `AGENTS.md`, `docs/INDEX.md`, `docs/HANDOFF.md`, `kanban/README.md`, `kanban/process.md`, and `kanban/roles/coordinator.md` if you haven't already.
 3. Read active status symlinks under `kanban/by-status/` and canonical ticket files under `kanban/all-tickets/`.
-4. When resuming an existing sprint, start by delegating a Reviewer current-state pass.
+4. When resuming an existing sprint, start by delegating a Tech-Lead for a current-state pass.
 5. Treat `kanban/by-status` as the source of truth for sprint state.
 6. Follow `kanban/process.md` for startup, run loop, verification, integration, and sprint close.
 7. Link sub-agents to the relevant role doc.
@@ -31,3 +31,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 ## Closeout
 
 Before final response, verify the board state is current, required checks are recorded, blockers are explicit, and sprint-close docs are updated when project status changed.
+
+## To-Do
+
+Keep your codex todo items updated with the current sprint state and next steps. Add an item to not end your turn until the sprint is closed or the user explicitly tells you to stop.
