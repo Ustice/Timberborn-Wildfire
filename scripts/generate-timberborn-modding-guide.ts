@@ -30,8 +30,9 @@ const blueprintRoot =
 
 const guideDir = "doc/modding-guide";
 const mainGuidePath = `${guideDir}/README.md`;
-const blueprintReferencePath = `${guideDir}/blueprint-reference.md`;
-const indexPath = "doc/modding-guide.md";
+const blueprintReferencePath = "docs/reference/blueprint-reference.md";
+const folktailsIconPath = relative(dirname(blueprintReferencePath), "docs/reference/assets/faction-folktails.png");
+const ironTeethIconPath = relative(dirname(blueprintReferencePath), "docs/reference/assets/faction-ironteeth.png");
 
 const readJson = (path: string): Record<string, JsonValue> =>
   JSON.parse(readFileSync(path, "utf8").replace(/^\uFEFF/, ""));
@@ -51,11 +52,12 @@ const slug = (value: string): string =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+const referenceSlug = (value: string): string =>
+  slug(value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2"));
+
 const blueprintAnchor = (path: string): string => `blueprint-${slug(path)}`;
 
 const specAnchor = (category: string, spec: string): string => `spec-${slug(category)}-${slug(spec)}`;
-
-const link = (label: string, anchor: string): string => `[\`${label}\`](#${anchor})`;
 
 const blueprintName = (path: string): string => {
   const fileName = path.split("/").at(-1) ?? path;
@@ -97,11 +99,68 @@ const blueprintName = (path: string): string => {
   return withoutFaction.join(".") || withoutSuffix;
 };
 
-const blueprintLink = (path: string): string => link(blueprintName(path), blueprintAnchor(path));
+const blueprintStem = (path: string): string => {
+  const fileName = path.split("/").at(-1) ?? path;
+  return fileName.replace(/\.blueprint\.json$/i, "");
+};
+
+const faction = (path: string): "folktails" | "ironteeth" | undefined => {
+  if (path.includes(".Folktails.")) {
+    return "folktails";
+  }
+  if (path.includes(".IronTeeth.")) {
+    return "ironteeth";
+  }
+  return undefined;
+};
+
+const factionIcon = (path: string): string => {
+  const blueprintFaction = faction(path);
+  if (blueprintFaction === "folktails") {
+    return `![Folktails](${folktailsIconPath})`;
+  }
+  if (blueprintFaction === "ironteeth") {
+    return `![Iron Teeth](${ironTeethIconPath})`;
+  }
+  return "";
+};
+
+const factionRank = (path: string): number => {
+  const blueprintFaction = faction(path);
+  if (blueprintFaction === "folktails") {
+    return 0;
+  }
+  if (blueprintFaction === "ironteeth") {
+    return 1;
+  }
+  return 2;
+};
+
+const compareBlueprintPaths = (a: string, b: string): number =>
+  blueprintName(a).localeCompare(blueprintName(b)) || factionRank(a) - factionRank(b) || a.localeCompare(b);
+
+const sortBlueprintPaths = (paths: string[]): string[] => [...paths].sort(compareBlueprintPaths);
+
+const referenceLink = (label: string, referenceId: string): string => `[${label}][${referenceId}]`;
+
+const codeReferenceLink = (label: string, referenceId: string): string => referenceLink(`\`${label}\``, referenceId);
+
+const isChildrenSpec = (spec: string): boolean => spec === "Children";
+
+const formatChildrenSpecDescription = (sourceLabel: string): string[] => [
+  "Child map:",
+  "",
+  "- Keys are entity child names from individual blueprints, not reusable Spec properties.",
+  [
+    "- Values are child entity fragments that can contain Specs such as",
+    "`TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.",
+  ].join(" "),
+  `- Treat the ${sourceLabel} as the source for exact child names and shapes.`,
+];
 
 const normalizeTypes = (types: string[]): string[] => {
   const uniqueTypes = sorted(uniq(types));
-  const hasSpecificArray = uniqueTypes.some((type) => type.startsWith("array<"));
+  const hasSpecificArray = uniqueTypes.some((type) => type.endsWith("[]"));
   const hasSpecificObject = uniqueTypes.some((type) => type.startsWith("{ ") && type !== "{}");
   return uniqueTypes.filter(
     (type) => !(type === "array" && hasSpecificArray) && !(type === "{}" && hasSpecificObject),
@@ -148,6 +207,11 @@ const arrayObjectShape = (values: Array<Record<string, JsonValue>>): string => {
         .join("; ")} }`;
 };
 
+const arrayType = (type: string): string => {
+  const needsGrouping = type.includes(" | ");
+  return `${needsGrouping ? `(${type})` : type}[]`;
+};
+
 const valueType = (value: JsonValue): string => {
   if (value === null) {
     return "null";
@@ -158,10 +222,10 @@ const valueType = (value: JsonValue): string => {
         item !== null && typeof item === "object" && !Array.isArray(item),
     );
     if (objectValues.length === value.length && objectValues.length > 0) {
-      return `array<${arrayObjectShape(objectValues)}>`;
+      return arrayType(arrayObjectShape(objectValues));
     }
     const itemTypes = sorted(uniq(value.map(valueType)));
-    return itemTypes.length === 0 ? "array" : `array<${itemTypes.join(" | ")}>`;
+    return itemTypes.length === 0 ? "array" : arrayType(itemTypes.join(" | "));
   }
   if (typeof value === "object") {
     return objectShape(value);
@@ -186,8 +250,19 @@ const specFields = (value: JsonValue): Record<string, string[]> =>
 const formatFields = (fields: Record<string, string[]>): string[] => {
   const entries = Object.entries(fields).sort(([a], [b]) => a.localeCompare(b));
   return entries.length === 0
-    ? ["- none"]
-    : entries.map(([field, types]) => `- \`${field}\`: \`${types.join(" | ")}\``);
+    ? []
+    : [
+        "| Property | Type |",
+        "| --- | --- |",
+        ...entries.map(
+          ([field, types]) => `| \`${field}\` | \`${types.join(" | ").replaceAll("|", "\\|")}\` |`,
+        ),
+      ];
+};
+
+const formatPropertiesSection = (fields: Record<string, string[]>): string[] => {
+  const formattedFields = formatFields(fields);
+  return formattedFields.length === 0 ? [] : ["Properties:", "", ...formattedFields, ""];
 };
 
 const jsonFiles = walk(blueprintRoot).filter((path) => path.endsWith(".json"));
@@ -203,6 +278,107 @@ const blueprints: BlueprintRecord[] = jsonFiles
     };
   })
   .sort((a, b) => a.path.localeCompare(b.path));
+
+const blueprintReferencePrimarySeed = (path: string): string => {
+  const blueprintFaction = faction(path);
+  return blueprintFaction ? `${referenceSlug(blueprintName(path))}-${blueprintFaction}` : referenceSlug(blueprintName(path));
+};
+
+const blueprintReferenceSecondarySeed = (path: string): string => {
+  const blueprintFaction = faction(path);
+  return blueprintFaction ? blueprintReferencePrimarySeed(path) : referenceSlug(blueprintStem(path));
+};
+
+const groupPathsBySeed = (seedForPath: (path: string) => string): Record<string, string[]> =>
+  blueprints.reduce<Record<string, string[]>>(
+    (acc, blueprint) => ({
+      ...acc,
+      [seedForPath(blueprint.path)]: [...(acc[seedForPath(blueprint.path)] ?? []), blueprint.path],
+    }),
+    {},
+  );
+
+const primaryReferenceEntries = Object.entries(groupPathsBySeed(blueprintReferencePrimarySeed)).flatMap(
+  ([seed, paths]) => (paths.length === 1 ? [[paths[0] ?? "", seed] as const] : []),
+);
+
+const secondaryReferenceEntries = Object.values(groupPathsBySeed(blueprintReferencePrimarySeed))
+  .filter((paths) => paths.length > 1)
+  .flatMap((paths) => paths)
+  .map((path) => [path, blueprintReferenceSecondarySeed(path)] as const);
+
+const duplicatedSecondarySeeds = new Set(
+  Object.values(
+    secondaryReferenceEntries.reduce<Record<string, string[]>>(
+      (acc, [path, seed]) => ({ ...acc, [seed]: [...(acc[seed] ?? []), path] }),
+      {},
+    ),
+  )
+    .filter((paths) => paths.length > 1)
+    .flatMap((paths) => paths),
+);
+
+const blueprintReferenceIds = new Map([
+  ...primaryReferenceEntries,
+  ...secondaryReferenceEntries.map(
+    ([path, seed]) =>
+      [
+        path,
+        duplicatedSecondarySeeds.has(path) ? `${seed}-${referenceSlug(path.split("/").slice(0, -1).join("-"))}` : seed,
+      ] as const,
+  ),
+]);
+
+const blueprintReferenceId = (path: string): string => blueprintReferenceIds.get(path) ?? blueprintReferencePrimarySeed(path);
+
+const specReferenceId = (category: string, spec: string): string => specAnchor(category, spec);
+
+const specLink = (category: string, spec: string): string => codeReferenceLink(spec, specReferenceId(category, spec));
+
+const blueprintIconLink = (path: string): string => referenceLink(factionIcon(path), blueprintReferenceId(path));
+
+const blueprintLink = (path: string): string => {
+  const blueprintFaction = faction(path);
+  return blueprintFaction
+    ? [`\`${blueprintName(path)}\``, blueprintIconLink(path)].join(" ")
+    : codeReferenceLink(blueprintName(path), blueprintReferenceId(path));
+};
+
+const blueprintGroupKey = (blueprint: BlueprintRecord): string =>
+  faction(blueprint.path) ? `faction:${blueprint.category}:${blueprintName(blueprint.path)}` : `path:${blueprint.path}`;
+
+const groupBlueprints = (entries: BlueprintRecord[]): BlueprintRecord[][] =>
+  Object.values(
+    entries.reduce<Record<string, BlueprintRecord[]>>(
+      (acc, blueprint) => ({
+        ...acc,
+        [blueprintGroupKey(blueprint)]: [...(acc[blueprintGroupKey(blueprint)] ?? []), blueprint],
+      }),
+      {},
+    ),
+  ).map((group) => group.sort((a, b) => compareBlueprintPaths(a.path, b.path)));
+
+const formatBlueprintGroup = (group: BlueprintRecord[]): string => {
+  const sortedGroup = group.sort((a, b) => compareBlueprintPaths(a.path, b.path));
+  const first = sortedGroup[0];
+  if (!first) {
+    return "";
+  }
+  const factionBlueprints = sortedGroup.filter((blueprint) => faction(blueprint.path));
+  return factionBlueprints.length > 0
+    ? [`\`${blueprintName(first.path)}\``, ...factionBlueprints.map((blueprint) => blueprintIconLink(blueprint.path))].join(" ")
+    : blueprintLink(first.path);
+};
+
+const formatBlueprintList = (paths: string[]): string =>
+  groupBlueprints(
+    sortBlueprintPaths(paths)
+      .map((path) => blueprints.find((blueprint) => blueprint.path === path))
+      .filter((blueprint): blueprint is BlueprintRecord => Boolean(blueprint)),
+  )
+    .sort((a, b) => compareBlueprintPaths(a[0]?.path ?? "", b[0]?.path ?? ""))
+    .map(formatBlueprintGroup)
+    .join(", ");
 
 const specRecords: SpecRecord[] = Object.values(
   blueprints.reduce<Record<string, SpecRecord>>((acc, blueprint) => {
@@ -265,19 +441,29 @@ const categories = Object.entries(
 
 const categoryDetails = categories
   .map(([category]) => {
-    const entries = blueprints.filter((blueprint) => blueprint.category === category);
+    const entries = [...blueprints]
+      .filter((blueprint) => blueprint.category === category)
+      .sort((a, b) => compareBlueprintPaths(a.path, b.path));
+    const groupedEntries = groupBlueprints(entries).sort((a, b) =>
+      compareBlueprintPaths(a[0]?.path ?? "", b[0]?.path ?? ""),
+    );
     const specs = sorted(uniq(entries.flatMap((blueprint) => blueprint.specs)));
     return [
       `### ${category}`,
       "",
       `Blueprints: ${entries.length}`,
       "",
-      `Specs seen: ${specs.map((spec) => link(spec, specAnchor(category, spec))).join(", ") || "none"}`,
+      `Specs seen: ${specs.map((spec) => specLink(category, spec)).join(", ") || "none"}`,
       "",
-      ...entries.flatMap((blueprint) => [
-        `- <a id="${blueprintAnchor(blueprint.path)}"></a>\`${blueprintName(blueprint.path)}\``,
-        `   - Specs: ${blueprint.specs.map((spec) => link(spec, specAnchor(category, spec))).join(", ") || "none"}`,
-      ]),
+      ...groupedEntries.map(
+        (group) =>
+          [
+            `- ${group.map((blueprint) => `<a id="${blueprintAnchor(blueprint.path)}"></a>`).join("")}${formatBlueprintGroup(group)}`,
+            sorted(uniq(group.flatMap((blueprint) => blueprint.specs)))
+              .map((spec) => specLink(category, spec))
+              .join(", ") || "none",
+          ].join("—"),
+      ),
       "",
     ].join("\n");
   })
@@ -294,15 +480,12 @@ const specReference = categories
         "",
         `#### ${spec.name}`,
         "",
-        `Seen in ${spec.count} ${category} blueprint${spec.count === 1 ? "" : "s"}.`,
+        ...(isChildrenSpec(spec.name)
+          ? formatChildrenSpecDescription("linked blueprints")
+          : formatPropertiesSection(spec.fields)),
+        `Blueprints (${spec.count}):`,
         "",
-        "Properties:",
-        "",
-        ...formatFields(spec.fields),
-        "",
-        "Blueprints:",
-        "",
-        spec.examples.map(blueprintLink).join(", "),
+        formatBlueprintList(spec.examples),
         "",
       ]),
     ].join("\n");
@@ -315,17 +498,27 @@ const globalSpecIndex = specRecords
     "",
     `Seen in ${spec.count} blueprint${spec.count === 1 ? "" : "s"}.`,
     "",
-    `Categories: ${spec.categories.map((category) => link(category, specAnchor(category, spec.name))).join(", ")}`,
+    `Categories: ${spec.categories.map((category) => codeReferenceLink(category, specReferenceId(category, spec.name))).join(", ")}`,
     "",
-    "Properties:",
-    "",
-    ...formatFields(spec.fields),
-    "",
+    ...(isChildrenSpec(spec.name)
+      ? formatChildrenSpecDescription("examples")
+      : formatPropertiesSection(spec.fields)),
     "Examples:",
     "",
-    spec.examples.map(blueprintLink).join(", "),
+    formatBlueprintList(spec.examples),
     "",
   ].join("\n"))
+  .join("\n");
+
+const referenceDefinitions = [
+  ...blueprints.map(
+    (blueprint) => `[${blueprintReferenceId(blueprint.path)}]: #${blueprintAnchor(blueprint.path)}`,
+  ),
+  ...categorySpecRecords.map(
+    (spec) => `[${specReferenceId(spec.category, spec.name)}]: #${specAnchor(spec.category, spec.name)}`,
+  ),
+]
+  .sort((a, b) => a.localeCompare(b))
   .join("\n");
 
 const blueprintReference = `# Timberborn 1.0+ Blueprint Reference
@@ -351,6 +544,8 @@ ${globalSpecIndex}
 ## Every Blueprint
 
 ${categoryDetails}
+
+${referenceDefinitions}
 `;
 
 const guide = `# Timberborn 1.0+ Modding Guide
@@ -368,7 +563,7 @@ The complete generated inventory lives in [blueprint-reference.md](blueprint-ref
 ## Guide Decisions
 
 - This is both a general Timberborn modding handbook and the upstream Wildfire Timberborn adapter guide.
-- Generated reference material is split under \`doc/modding-guide/\` so the main guide stays readable.
+- Generated reference material is split under \`docs/reference/\` so the main guide stays readable.
 - Code examples should be C# unless a section is explicitly about local automation.
 - Prometheus and Wildfire policies are included as quotes and suggestions, not as universal Timberborn rules.
 - Discord research is approved, but this environment needs exported threads, screenshots, or access to relevant modding channels before it can cite that material.
@@ -893,16 +1088,6 @@ Discord research is approved, but not complete. To incorporate it without guessi
 When Discord material is added, keep it in a separate sourced section and mark whether it is official Mechanistry guidance, community convention, or one author's implementation advice.
 `;
 
-const index = `# Timberborn 1.0+ Modding Guide
-
-The guide has moved into an organized directory:
-
-- [Main guide](modding-guide/README.md)
-- [Generated Blueprint and Spec reference](modding-guide/blueprint-reference.md)
-`;
-
 mkdirSync(guideDir, { recursive: true });
-mkdirSync(dirname(indexPath), { recursive: true });
 writeFileSync(mainGuidePath, guide);
 writeFileSync(blueprintReferencePath, blueprintReference);
-writeFileSync(indexPath, index);
