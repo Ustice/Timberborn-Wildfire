@@ -56,8 +56,7 @@ Use these instructions for Wildfire sprint-management runs.
 
 - Do not end your turn once you have passed a milestone.
 - Continue the sprint until either the sprint is finished, or you are instructed to do so.
-- When it is time for a hand-off, do not dispatch new agents.
-- If your sub-agents are almost complete, you can let them finish, otherwise have them update their ticket with their work and current status.
+- Add a codex-native todo to not end your turn until instructed to or until you finish the sprint.
 
 ## Hand-off
 

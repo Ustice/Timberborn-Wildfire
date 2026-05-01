@@ -10,6 +10,7 @@
 - Timberborn now has deterministic cell-mapping adapter scaffolds; it should remain a host adapter.
 - Timberborn QA now has an in-process command bridge and a live Timberborn file binding with read-only `status` and `help` commands, searchable result tokens, unit coverage for the command safety boundary, and live `Player.log` proof from a loaded save.
 - Timberborn menu coordinate capture now covers startup Mods, post-startup load, exit-to-main confirmation, standalone main menu, main-menu Load Game, in-game Escape, in-game Load Game, Mods dialog, and HUD targets at 1920 x 1080, with screenshot evidence in `docs/reference/screenshots/timberborn-menu-coordinate-guide/`.
+- Timberborn debug/developer panel reference now exists in `docs/timberborn-debug-panels.md`, with clean 1920 x 1080 screenshots under `docs/reference/screenshots/timberborn-debug-panels/`.
 - The deploy pipeline now emits Timberborn-facing `netstandard2.1` assemblies and has live `Player.log` proof that Timberborn discovers `Wildfire (v0.1.0.0)` and loads the `Wildfire testing` save without the earlier `.NET 10` `System.Linq` crash.
 - Timberborn now loads the private `wildfire_compute_mac` bundle as a real `ComputeShader`, initializes the compute-backed simulator, and live `status` reports `simulator_integrated=true` with dimensions `128x128x23`.
 - Live Timberborn evidence now includes real compute dispatch/readback tokens such as `wildfire_timberborn_gpu_dispatch_kernel`, `wildfire_timberborn_gpu_readback_completed`, and `wildfire_timberborn_dispatch_completed`.
@@ -29,7 +30,7 @@
 - `TWF-014` is done and integrated on `main` in commit `85e5538`.
 - `TWF-015` is dependency-ready, but should follow `TWF-024` because it depends on trustworthy coordinate-guide evidence.
 - `TWF-016` is done: deploy works, copies `netstandard2.1` assemblies, and `Player.log` shows `Wildfire (v0.1.0.0)` after restart.
-- `TWF-017` is in verify: the startup harness code passed review after fixing stale-log and failure-token issues, but still needs a fresh Timberborn startup window for final live proof.
+- `TWF-017` is done: after an approved Timberborn restart, the startup harness passed against current-window launch evidence and a loaded-save `status` command returned `simulator_integrated=true`.
 - `TWF-018` is done and integrated on `main` in commit `5b80d04`.
 - `TWF-019` is done and integrated on `main` in commit `a7ed538`; live Timberborn `status` invocation returned `wildfire_command_result success=true` from the `Wildfire testing` save.
 - `TWF-020` is done: startup Mods, post-load, exit confirmation, standalone main menu, and main-menu Load Game coordinates are captured.
@@ -39,7 +40,7 @@
 - `TWF-024` is done: the contaminated in-game running screenshot was replaced with a clean `1920 x 1080` Timberborn loaded-save baseline.
 - `TWF-025` is done: the bottom-menu guide covers the loaded-save toolbar, submenus, `Alt-Shift-Z` developer mode, `Shift-Alt-X` debug entry, and composite screenshot references.
 - `TWF-026` is todo: it should fix TypeScript script type errors after `TWF-017` finishes its active `scripts/**` changes.
-- `TWF-027` is blocked: the first worker captured one partial debug/object debugger screenshot in `~/repos/wildfire-TWF-027` but did not produce the guide or final evidence before becoming unresponsive.
+- `TWF-027` is done: the contaminated first worktree capture was rejected, clean debug/developer screenshots were captured in the main checkout, and `docs/timberborn-debug-panels.md` documents the visible panels, QA relevance, and unsafe mutation controls.
 - `TWF-028` is done: current Wildfire QA cannot navigate Timberborn menus remotely without screen interaction; the accepted safer path is narrow allowlisted command-bridge outcomes, not generic menu driving.
 - `TWF-029` is dependency-ready: it should add a read-only `qa-readiness` command to the existing Timberborn command bridge.
 
@@ -47,8 +48,6 @@
 
 Continue with:
 
-- Redispatch `TWF-027` from `~/repos/wildfire-TWF-027` or a clean worktree if the goal is a deeper reference for Timberborn debug panels and QA-relevant controls.
-- Validate `TWF-017` with a fresh Timberborn startup window when it is safe to restart or relaunch the game.
 - Dispatch `TWF-029` if the goal is reducing coordinate-click dependency through a safe read-only command-bridge readiness check.
 - Dispatch `TWF-026` after `TWF-017` if the goal is cleaning up script type-check failures.
 - Dispatch `TWF-015` after `TWF-024` if the goal is loading the latest save without manual clicks.

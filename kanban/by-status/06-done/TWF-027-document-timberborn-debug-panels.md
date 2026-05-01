@@ -1,0 +1,1 @@
+../../all-tickets/TWF-027-document-timberborn-debug-panels.md

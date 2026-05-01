@@ -9,6 +9,7 @@ Use this page as the startup map for humans and agents.
 - [HANDOFF.md](HANDOFF.md) owns current status, blockers, and next exact action.
 - [TEST_PLAN.md](TEST_PLAN.md) owns validation strategy and evidence expectations.
 - [reference/timberborn-ui.md](reference/timberborn-ui.md) owns Timberborn UI design-system notes for adapter-facing UI.
+- [timberborn-debug-panels.md](timberborn-debug-panels.md) owns the focused Timberborn debug/developer panel reference for QA.
 - [TODO.md](TODO.md) owns milestone-level status, not per-agent scratch work.
 - [../kanban/process.md](../kanban/process.md) owns sprint startup, delegation, verification, and integration flow.
 - [../kanban/README.md](../kanban/README.md) owns the ticket-board state machine.

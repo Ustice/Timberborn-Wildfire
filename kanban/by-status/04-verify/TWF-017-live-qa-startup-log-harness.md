@@ -1,1 +1,0 @@
-../../all-tickets/TWF-017-live-qa-startup-log-harness.md

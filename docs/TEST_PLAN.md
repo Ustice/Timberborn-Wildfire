@@ -142,6 +142,33 @@ Search `~/Library/Logs/Mechanistry/Timberborn/Player.log` for `wildfire_command_
 
 Do not satisfy this stage by attaching a dispatch-only or C# no-op simulator. Live completion requires `wildfire_command_result ... simulator_integrated=true` with numeric dimensions, `tick_count`, `queued_changes`, and `last_delta_count`, plus Player.log evidence that the AssetBundle loaded and the real compute dispatch/readback path ran.
 
+## Timberborn Startup Log Harness
+
+Use the startup log harness when QA needs repeatable evidence that the deployed Wildfire mod loaded in Timberborn:
+
+```bash
+bun scripts/check-timberborn-startup.ts --attach --wait=30
+```
+
+Use `--launch` instead of `--attach` when Timberborn should be opened by bundle id:
+
+```bash
+bun scripts/check-timberborn-startup.ts --launch --wait=120
+```
+
+The harness serializes with deploy work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, captures a `Player.log` baseline before attach or launch work, activates `com.mechanistry.timberborn`, waits for required current-window `Player.log` tokens, and writes evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/startup-harness/<timestamp>/`.
+
+Default required startup tokens are:
+
+- `wildfire_command_bridge_ready`.
+- `wildfire_timberborn_runtime_ready`.
+- `wildfire_timberborn_diagnostic_asset_loaded`.
+- `wildfire_timberborn_compute_asset_loaded`.
+- `wildfire_timberborn_gpu_factory_created`.
+- `wildfire_timberborn_runtime_simulator_initialized`.
+
+Use `--require-command-status` only when a save is already loaded and the command bridge is expected to answer a read-only `status` request with `success=true` and `simulator_integrated=true`. Failure tokens after the `Player.log` baseline fail the run even when all success tokens are present. The startup harness does not click through the startup Mods dialog, load saves, unpause the simulation, or replace the live gameplay validation owned by later QA tickets. Screenshots are captured only on failure by default, or when explicitly requested with `--screenshot=always`.
+
 ## Timberborn QA Utilities
 
 Use the local [Timberborn QA Utility skill](../.codex/skills/timberborn-qa-utility/SKILL.md) when building Bun/TypeScript scripts or guarded `cliclick`-style automation for live Timberborn QA.

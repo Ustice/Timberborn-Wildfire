@@ -61,3 +61,31 @@ Wildfire QA and live validation will lean on Timberborn's debug tools. A focused
 - 2026-05-01 worker checkpoint: verified TWF-025 clean debug evidence exists in the main checkout: `33-debug-panel-alt-shift-x.png`, `34-debug-panel-object-selected.png`, `35-debug-mode-panel-expanded.png`, `36-object-debugger-panel-expanded.png`, and `composite-dev-debug-panels.png`. The four source screenshots are `1920 x 1080`; the composite is `1862 x 5664`.
 - 2026-05-01 worker checkpoint: live Timberborn was available and showed the expanded `Debug mode panel` plus `Object debugger`; visible debug sections included Automation, Performance, Cursor, Mesh metrics, Sound system, Mechanical system, Navigation, Terrain columns, Parallel singletons, Time scale, Clock, Water rendering data, Water rendering times, Water columns, and Weather.
 - 2026-05-01 blocker/partial-progress note: an attempted fresh `screencapture` in the TWF-027 screenshot folder captured VS Code instead of Timberborn and is contaminated. It must not be used in the guide. Next exact action is to remove or overwrite that contaminated capture, then take a clean Timberborn-only focused screenshot set before writing `docs/timberborn-debug-panels.md`.
+
+## QA Closeout - 2026-05-01
+
+- QA inspected `/Users/jasonkleinberg/repos/wildfire-TWF-027/docs/reference/screenshots/timberborn-debug-panels/01-expanded-debug-and-object-debugger.png`.
+- Result: failed. The image is a `1920 x 1080` VS Code desktop capture, not a Timberborn debug-panel capture.
+- No `docs/timberborn-debug-panels.md` guide exists in the worktree, so the ticket requirements are not met.
+- This ticket remains blocked rather than done. The partial worktree can be removed after preserving this blocker note because it contains no acceptable deliverable.
+- Smallest unblock: capture clean Timberborn-only screenshots of the debug panels from the loaded-save state, write `docs/timberborn-debug-panels.md`, verify image dimensions and links, then rerun `git diff --check`.
+
+## Worker Results - 2026-05-01
+
+- Created `docs/timberborn-debug-panels.md` as the focused Timberborn debug-panel reference.
+- Used only the clean main-checkout screenshots under `docs/reference/screenshots/timberborn-debug-panels/`: `01-loaded-save-baseline.png`, `02-developer-mode-alt-shift-z.png`, and `03-debug-panel-alt-shift-x.png`.
+- Documented the verified `Alt-Shift-Z` developer-mode entrypoint and `Alt-Shift-X` debug-panel entrypoint.
+- Documented visible Development controls, Debug mode panel sections, `Performance` metrics, Object debugger singleton context, Wildfire QA relevance, and unsafe mutation controls.
+- Verified all three linked screenshot paths exist and are `1920 x 1080` with `sips -g pixelWidth -g pixelHeight`.
+- Visually inspected all three screenshots to confirm they show Timberborn, with the debug/developer panels visible where expected, not Codex or another desktop app.
+- Ran `git diff --check`; result passed.
+- Did not touch board symlinks or unrelated docs/code.
+- Blockers: none for the focused reference. Deeper object-property safety remains intentionally undocumented because the provided evidence only shows the singleton list, not expanded object rows.
+
+## Coordinator Verification - 2026-05-01
+
+- Inspected `docs/timberborn-debug-panels.md` and verified it covers the captured Development controls panel, Debug mode panel, Object debugger, QA relevance, and unsafe mutation controls.
+- Verified screenshot paths referenced by the guide exist under `docs/reference/screenshots/timberborn-debug-panels/`.
+- Re-ran `sips -g pixelWidth -g pixelHeight docs/reference/screenshots/timberborn-debug-panels/*.png`; all three images are `1920 x 1080`.
+- Re-ran `git diff --check`; passed.
+- Accepted the ticket for `06-done`.
