@@ -8,7 +8,7 @@
 - Unity now has compute-buffer, shader-dispatch, change-upload, compact-delta, visual-field, and snapshot-harness scaffolds; it should remain the GPU adapter.
 - Unity now has an opt-in batchmode shader execution harness that imports `FireSim.compute`, dispatches a seeded fixture, reads packed cells, compact deltas, and a visual checksum.
 - Timberborn now has deterministic cell-mapping adapter scaffolds; it should remain a host adapter.
-- Timberborn QA now has an in-process command bridge scaffold with read-only `status` and `help` commands, searchable result tokens, and unit coverage for the command safety boundary.
+- Timberborn QA now has an in-process command bridge and a live Timberborn file binding with read-only `status` and `help` commands, searchable result tokens, unit coverage for the command safety boundary, and live `Player.log` proof from a loaded save.
 - Timberborn menu coordinate capture now covers startup Mods, post-startup load, exit-to-main confirmation, standalone main menu, main-menu Load Game, in-game Escape, in-game Load Game, Mods dialog, and HUD targets at 1920 x 1080, with screenshot evidence in `docs/reference/screenshots/timberborn-menu-coordinate-guide/`.
 - The deploy pipeline now emits Timberborn-facing `netstandard2.1` assemblies and has live `Player.log` proof that Timberborn discovers `Wildfire (v0.1.0.0)` and loads the `Wildfire testing` save without the earlier `.NET 10` `System.Linq` crash.
 - The old alternate C# execution path and its snapshot tests were removed; future simulation work should target the GPU simulator path only.
@@ -26,20 +26,20 @@
 - `TWF-020` is done: startup Mods, post-load, exit confirmation, standalone main menu, and main-menu Load Game coordinates are captured.
 - `TWF-014` is done and integrated on `main` in commit `85e5538`.
 - `TWF-018` is done and integrated on `main` in commit `5b80d04`.
-- `TWF-015`, `TWF-017`, and `TWF-019` are dependency-ready.
+- `TWF-019` is done and integrated on `main` in commit `a7ed538`; live Timberborn `status` invocation returned `wildfire_command_result success=true` from the `Wildfire testing` save.
+- `TWF-015` and `TWF-017` are dependency-ready.
 - `TWF-009`, `TWF-010`, and `TWF-011` remain dependency-gated behind `TWF-008` and diagnostics/profiling.
 
 ## Next Exact Action
 
 Continue with:
 
-- Dispatch `TWF-019` next if the goal is live in-game queryability; it binds the safe `TWF-012` command bridge to a Timberborn invocation surface now that deploy proof exists.
 - Dispatch `TWF-008` next if the goal is resuming the fixed-cadence simulator loop; the deploy and startup blockers are now cleared.
 - Dispatch `TWF-017` or `TWF-015` next if the goal is durable QA automation; both have their coordinate/deploy prerequisites ready.
+- Use `bun scripts/invoke-timberborn-command.ts status --wait=6` against a loaded Timberborn save when you need to confirm the in-game Wildfire command bridge is alive.
 - If shader behavior changes, use the opt-in Unity harness command documented in `docs/TEST_PLAN.md` to prove real execution before accepting the change.
 
 ## Known Gaps
 
 - `FireSim.compute` has local Unity batchmode proof, but CI does not run it unless Unity Editor licensing and compute-shader capable graphics are available.
-- Timberborn adapters and the QA command bridge are deterministic scaffolds only; live command invocation and gameplay validation have not been run.
-- The command bridge is not yet invokable from the running game; `TWF-019` owns the narrow Timberborn binding.
+- The Timberborn command bridge currently reports placeholder simulator fields until `TWF-008` integrates the fixed-cadence simulator loop.
