@@ -96,7 +96,7 @@ public sealed class ShaderSnapshotHarnessTests
     }
 
     [Fact]
-    public void BlockedExecutorMakesCurrentShaderExecutionBlockerExplicit()
+    public void BlockedExecutorMakesEnvironmentBlockerExplicit()
     {
         ShaderSnapshotHarness harness = new(new BlockedShaderSnapshotExecutor(ShaderSnapshotExecutionBlocker.CurrentRepository));
         ShaderSnapshotFixture fixture = new(
@@ -110,8 +110,8 @@ public sealed class ShaderSnapshotHarnessTests
         ShaderSnapshotExecutionBlockedException exception = Assert.Throws<ShaderSnapshotExecutionBlockedException>(
             () => harness.Capture(fixture, tickCount: 1));
 
-        Assert.Contains("no Unity batchmode project", exception.Blocker.Reason);
-        Assert.Contains("IShaderSnapshotExecutor", exception.Blocker.Enablement);
+        Assert.Contains("Unity Editor installation", exception.Blocker.Reason);
+        Assert.Contains("UnityBatchmodeShaderSnapshotExecutor", exception.Blocker.Enablement);
     }
 
     private static ShaderSnapshotCapture CreateCapture(

@@ -13,6 +13,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Seeded sparse layout determinism.
 - CLI fixture export shape and deterministic JSON output.
 - Shader snapshot harness contract: CLI fixture loading, buffer-grid creation from fixtures, stable accepted-snapshot JSON shape, actionable snapshot diffs, and explicit current execution blocker.
+- Unity batchmode shader execution harness: opt-in local test loads `FireSim.compute`, dispatches a seeded `TWF-000` fixture, reads back final packed cells, compact deltas, and visual-field checksum through the existing shader snapshot harness.
 - GPU visual field wrapper contract: `wildfire.visual_fields` is allocated as one `float4`-equivalent entry per packed cell, full-grid dispatch receives the visual buffer, shader source writes visual samples from post-step packed cell values, and deterministic tests cover fire, smoke, ash, and visibility derivation.
 - Timberborn cell mapping scaffold: deterministic terrain/building/resource/water source folding into packed cells, sorted `SetCell` change emission, field-width clamping, water overlay behavior, and out-of-bounds source rejection.
 - Timberborn QA command bridge scaffold: read-only `status` and `help` commands, placeholder simulator state before TWF-008 integration, searchable command request/result tokens, and explicit no-arbitrary-execution command dispatch.
@@ -28,6 +29,12 @@ Run the shader snapshot harness slice:
 
 ```bash
 dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests
+```
+
+Run the real Unity compute-shader execution harness locally:
+
+```bash
+WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
 ```
 
 ## CLI Fixture Export
@@ -51,19 +58,21 @@ Fixture files are deterministic for the same scenario, seed, dimensions, and lay
 
 ## Shader Snapshot Coverage
 
-Current `TWF-002` coverage proves the wrapper dispatch contract in .NET tests only. `TWF-006` adds the fixture-driven snapshot harness shape in `Wildfire.Unity`: it reads CLI fixture JSON, creates a `ComputeBufferGrid` from the fixture cells, defines the accepted snapshot JSON shape, compares final packed grids, per-tick compact deltas, and optional visual checksums, and exposes an `IShaderSnapshotExecutor` boundary for the future real GPU runner.
+Current `TWF-002` coverage proves the wrapper dispatch contract in .NET tests only. `TWF-006` adds the fixture-driven snapshot harness shape in `Wildfire.Unity`: it reads CLI fixture JSON, creates a `ComputeBufferGrid` from the fixture cells, defines the accepted snapshot JSON shape, compares final packed grids, per-tick compact deltas, and optional visual checksums, and exposes an `IShaderSnapshotExecutor` boundary.
 
-The harness command currently validates shape and blocker handling:
+The harness command validates shape, comparison, blocker handling, and Unity executor failure surfacing:
 
 ```bash
 dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests
 ```
 
-Shader execution remains blocked in this repository because there is no Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, or standalone compute-shader compiler/readback runner. Do not add C# fire-spread parity rules to fill that gap. Enable execution by implementing `IShaderSnapshotExecutor` with a real Unity or compiler-backed GPU dispatcher, then point the harness at accepted fixture snapshots.
+`TWF-018` adds `UnityBatchmodeShaderSnapshotExecutor`, which launches `src/Wildfire.Unity/UnityBatchmodeProject` in Unity batchmode. The Unity Editor runner copies the repository `FireSim.compute` into the temporary project asset area, imports it as a real `ComputeShader`, dispatches `SimulateFullGrid` for a seeded `TWF-000` fixture, reads the append-buffer delta counter and records, reads final packed cells, reads visual fields, and writes snapshot JSON back through the existing `ShaderSnapshotHarness`.
 
-`TWF-004` adds .NET coverage for the compact delta readback wrapper: `wildfire.deltas` is allocated through the append-buffer abstraction, its append counter is reset before dispatch, the append counter is read after dispatch, compact `CellDelta` records are decoded, and subscribed listeners are notified from the readback result. This does not prove HLSL compile/runtime behavior because the repository still has no Unity runtime, Unity batchmode project, or standalone compute-shader compiler harness.
+The real shader execution test is opt-in because it requires a local Unity Editor installation, licensing, and compute-shader capable graphics access. CI should keep running the normal .NET harness tests unless the runner image explicitly provides Unity and a graphics device. Use `WILDFIRE_UNITY_EXECUTABLE` when Unity is not installed at the default macOS Hub path.
 
-`TWF-005` adds .NET coverage for the visual-field data path only: the visual field is a `float4`-equivalent buffer handle, dispatch records carry it to the compute boundary, and shader source writes the visual sample from packed cell output. This does not prove rendered pixels, HLSL compilation, GPU texture binding, or visual readback because the repository still has no Unity runtime, Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, or standalone compute-shader compiler/readback runner.
+`TWF-004` adds .NET coverage for the compact delta readback wrapper: `wildfire.deltas` is allocated through the append-buffer abstraction, its append counter is reset before dispatch, the append counter is read after dispatch, compact `CellDelta` records are decoded, and subscribed listeners are notified from the readback result. Those wrapper tests remain contract-only; use the TWF-018 Unity batchmode harness for HLSL compile/runtime proof.
+
+`TWF-005` adds .NET coverage for the visual-field data path only: the visual field is a `float4`-equivalent buffer handle, dispatch records carry it to the compute boundary, and shader source writes the visual sample from packed cell output. The TWF-018 Unity batchmode harness proves shader visual-field readback via checksum, but rendered pixels, GPU texture binding, and material sampling still need later visual validation.
 
 Future GPU validation should add accepted shader snapshot fixtures for:
 

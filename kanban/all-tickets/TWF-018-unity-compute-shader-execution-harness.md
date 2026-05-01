@@ -53,3 +53,10 @@ The current shader snapshot harness is intentionally blocked because the repo la
 
 - Do not implement a CPU fire-spread fallback to make snapshots pass.
 - If Unity installation or licensing blocks execution, update this ticket with the smallest concrete environment requirement.
+- Worker update 2026-05-01:
+   - Chosen execution strategy: Unity batchmode project at `src/Wildfire.Unity/UnityBatchmodeProject`, launched by `UnityBatchmodeShaderSnapshotExecutor` through the existing `IShaderSnapshotExecutor` boundary.
+   - The Unity Editor runner imports the repo `FireSim.compute` as a real `ComputeShader`, dispatches `SimulateFullGrid`, reads final packed cells, compact append-buffer deltas, and visual-field samples, then writes snapshot JSON for `ShaderSnapshotHarness`.
+   - Local execution evidence: `WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled` passed against seeded `single-ignition` fixture after proving compile/import, buffer allocation, dispatch, delta readback, final packed-cell readback, and visual checksum readback.
+   - Unity log evidence included `phase=compile status=ok`, `phase=buffer status=ok`, `phase=dispatch status=ok tick=1`, `phase=readback status=ok tick=1 deltas=1`, and output snapshot `visual.checksum=visual-fnv1a32:F715E561`.
+   - Normal .NET evidence: `dotnet test` passed.
+   - CI limitation: keep real Unity execution opt-in unless the CI image has Unity Editor licensing and compute-shader capable graphics access. The normal test suite validates command/error wiring without requiring Unity.

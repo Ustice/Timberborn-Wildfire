@@ -222,6 +222,90 @@ public static class ShaderSnapshotJson
         File.WriteAllText(fullPath, Serialize(capture), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
+    public static ShaderSnapshotCapture LoadFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Snapshot path must not be empty.", nameof(path));
+        }
+
+        return Load(File.ReadAllText(path, Encoding.UTF8), path);
+    }
+
+    public static ShaderSnapshotCapture Load(string json, string sourceName = "<snapshot>")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement root = document.RootElement;
+
+        int formatVersion = GetRequiredProperty(root, "formatVersion", sourceName).GetInt32();
+        if (formatVersion != 1)
+        {
+            throw new InvalidDataException($"{sourceName}: expected snapshot formatVersion 1, got {formatVersion}.");
+        }
+
+        string scenario = GetRequiredString(root, "scenario", sourceName);
+        uint seed = GetRequiredProperty(root, "seed", sourceName).GetUInt32();
+        JsonElement grid = GetRequiredProperty(root, "grid", sourceName);
+        ComputeGridDimensions dimensions = new(
+            GetRequiredProperty(grid, "width", sourceName).GetInt32(),
+            GetRequiredProperty(grid, "height", sourceName).GetInt32(),
+            GetRequiredProperty(grid, "depth", sourceName).GetInt32());
+        int tickCount = GetRequiredProperty(root, "tickCount", sourceName).GetInt32();
+        ushort[] finalPackedCells = GetRequiredProperty(root, "finalPackedCells", sourceName)
+            .EnumerateArray()
+            .Select(value => ReadUInt16(value, sourceName, "finalPackedCells"))
+            .ToArray();
+        ComputeGridValidation.RequireCellCount(dimensions, finalPackedCells.Length, "finalPackedCells");
+        ShaderSnapshotTick[] ticks = GetRequiredProperty(root, "perTickDeltas", sourceName)
+            .EnumerateArray()
+            .Select(tick => ReadTick(tick, sourceName))
+            .ToArray();
+        ShaderSnapshotVisual? visual = root.TryGetProperty("visual", out JsonElement visualElement) && visualElement.ValueKind != JsonValueKind.Null
+            ? new ShaderSnapshotVisual(
+                Checksum: visualElement.TryGetProperty("checksum", out JsonElement checksum) ? checksum.GetString() : null,
+                ArtifactPath: visualElement.TryGetProperty("artifactPath", out JsonElement artifactPath) ? artifactPath.GetString() : null)
+            : null;
+
+        return new ShaderSnapshotCapture(scenario, seed, dimensions, tickCount, finalPackedCells, ticks, visual);
+    }
+
+    public static string SerializeFixture(ShaderSnapshotFixture fixture)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        ShaderSnapshotFixtureDocument document = new(
+            FormatVersion: fixture.FormatVersion,
+            Scenario: fixture.Scenario,
+            Seed: fixture.Seed,
+            Grid: new ShaderSnapshotGrid(fixture.Grid.Width, fixture.Grid.Height, fixture.Grid.Depth),
+            SelectedLayer: fixture.SelectedLayer,
+            PackedCellValues: new ShaderSnapshotPackedCellValues(
+                ShaderSnapshotFixture.PackedCellValueType,
+                ShaderSnapshotFixture.PackedCellIndexOrder,
+                fixture.InitialCells));
+
+        return JsonSerializer.Serialize(document, JsonOptions) + Environment.NewLine;
+    }
+
+    public static void WriteFixtureFile(string path, ShaderSnapshotFixture fixture)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Fixture path must not be empty.", nameof(path));
+        }
+
+        string fullPath = Path.GetFullPath(path);
+        string? directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllText(fullPath, SerializeFixture(fixture), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    }
+
     private static ShaderSnapshotDocument ToDocument(ShaderSnapshotCapture capture)
     {
         return new ShaderSnapshotDocument(
@@ -236,6 +320,60 @@ public static class ShaderSnapshotJson
             Visual: capture.Visual);
     }
 
+    private static ShaderSnapshotTick ReadTick(JsonElement tick, string sourceName)
+    {
+        int tickNumber = GetRequiredProperty(tick, "tick", sourceName).GetInt32();
+        int deltaCount = GetRequiredProperty(tick, "deltaCount", sourceName).GetInt32();
+        ShaderSnapshotDelta[] deltas = GetRequiredProperty(tick, "deltas", sourceName)
+            .EnumerateArray()
+            .Select(delta => ReadDelta(delta, sourceName))
+            .ToArray();
+
+        if (deltaCount != deltas.Length)
+        {
+            throw new InvalidDataException($"{sourceName}: tick {tickNumber} deltaCount {deltaCount} does not match {deltas.Length} deltas.");
+        }
+
+        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas);
+    }
+
+    private static ShaderSnapshotDelta ReadDelta(JsonElement delta, string sourceName)
+    {
+        return new ShaderSnapshotDelta(
+            GetRequiredProperty(delta, "cellIndex", sourceName).GetInt32(),
+            ReadUInt16(GetRequiredProperty(delta, "oldCell", sourceName), sourceName, "oldCell"),
+            ReadUInt16(GetRequiredProperty(delta, "newCell", sourceName), sourceName, "newCell"));
+    }
+
+    private static ushort ReadUInt16(JsonElement value, string sourceName, string propertyName)
+    {
+        uint packedCell = value.GetUInt32();
+        if (packedCell > ushort.MaxValue)
+        {
+            throw new InvalidDataException($"{sourceName}: {propertyName} value {packedCell} does not fit uint16.");
+        }
+
+        return checked((ushort)packedCell);
+    }
+
+    private static JsonElement GetRequiredProperty(JsonElement element, string propertyName, string sourceName)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement property))
+        {
+            throw new InvalidDataException($"{sourceName}: missing required property '{propertyName}'.");
+        }
+
+        return property;
+    }
+
+    private static string GetRequiredString(JsonElement element, string propertyName, string sourceName)
+    {
+        string? value = GetRequiredProperty(element, propertyName, sourceName).GetString();
+        return string.IsNullOrWhiteSpace(value)
+            ? throw new InvalidDataException($"{sourceName}: property '{propertyName}' must not be empty.")
+            : value;
+    }
+
     private sealed record ShaderSnapshotDocument(
         int FormatVersion,
         string Scenario,
@@ -248,6 +386,16 @@ public static class ShaderSnapshotJson
         ShaderSnapshotVisual? Visual);
 
     private sealed record ShaderSnapshotGrid(int Width, int Height, int Depth);
+
+    private sealed record ShaderSnapshotFixtureDocument(
+        int FormatVersion,
+        string Scenario,
+        uint Seed,
+        ShaderSnapshotGrid Grid,
+        ShaderSnapshotLayer SelectedLayer,
+        ShaderSnapshotPackedCellValues PackedCellValues);
+
+    private sealed record ShaderSnapshotPackedCellValues(string ValueType, string IndexOrder, ushort[] Values);
 }
 
 public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences)
@@ -376,8 +524,8 @@ public sealed class ShaderSnapshotExecutionBlockedException(ShaderSnapshotExecut
 public sealed record ShaderSnapshotExecutionBlocker(string Reason, string Enablement)
 {
     public static ShaderSnapshotExecutionBlocker CurrentRepository { get; } = new(
-        "Shader snapshot execution is blocked because the repository has no Unity batchmode project, UnityEngine ComputeShader dispatcher, or standalone compute-shader compiler/readback runner.",
-        "Implement IShaderSnapshotExecutor with a real Unity or compiler-backed GPU dispatcher, then point the harness at accepted fixture snapshots.");
+        "Shader snapshot execution requires a local Unity Editor installation with compute-shader capable graphics access.",
+        "Use UnityBatchmodeShaderSnapshotExecutor with src/Wildfire.Unity/UnityBatchmodeProject, set WILDFIRE_UNITY_EXECUTABLE if Unity is not at the default path, and enable the opt-in execution test with WILDFIRE_RUN_UNITY_SHADER_HARNESS=1.");
 }
 
 public sealed class BlockedShaderSnapshotExecutor(ShaderSnapshotExecutionBlocker blocker) : IShaderSnapshotExecutor

@@ -1,0 +1,10 @@
+Assets/WildfireGenerated/
+Assets/WildfireGenerated.meta
+Library/
+Logs/
+ProjectSettings/*
+!ProjectSettings/
+!ProjectSettings/ProjectVersion.txt
+Temp/
+UserSettings/
+obj/
