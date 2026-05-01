@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Wildfire.Cli\Wildfire.Cli.csproj" />
     <ProjectReference Include="..\..\src\Wildfire.Core\Wildfire.Core.csproj" />
   </ItemGroup>
 
