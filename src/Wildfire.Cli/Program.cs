@@ -19,6 +19,13 @@ try
     Scenario scenario = ScenarioCatalog.Build(options);
     int layer = Math.Clamp(options.Layer, 0, scenario.Grid.Depth - 1);
 
+    if (options.ExportFixturePath is not null)
+    {
+        FixtureExporter.Write(options.ExportFixturePath, scenario, layer);
+        Console.WriteLine($"Exported fixture to {options.ExportFixturePath}");
+        return;
+    }
+
     Console.CursorVisible = false;
     Console.Clear();
 

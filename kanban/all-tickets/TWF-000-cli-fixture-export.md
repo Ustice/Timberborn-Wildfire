@@ -51,3 +51,10 @@ The project has one authoritative GPU simulation path, but shader work still nee
 
 - Prefer adding a small exporter class instead of putting all serialization directly in `Program.cs`.
 - Keep the output small and explicit; this is a test fixture, not a save format.
+- Worker implementation in `~/repos/wildfire-TWF-000` on branch `codex/TWF-000-cli-fixture-export`.
+- Added `--export-fixture=<path>` to write deterministic JSON from the selected scenario without running any C# fire-spread simulation path.
+- Fixture JSON includes `formatVersion`, scenario, seed, grid dimensions, selected layer index/offset/cell count, `uint16` packed value metadata, and full-grid packed values in `x + y * width + z * width * height` order.
+- Evidence: `dotnet test` passed with 19 tests.
+- Evidence: two identical CLI exports for `sparse-forest`, seed `42`, dimensions `9x7x2`, layer `1` compared equal with `cmp -s`.
+- Evidence: `git diff --check` passed.
+- Blockers: none found.

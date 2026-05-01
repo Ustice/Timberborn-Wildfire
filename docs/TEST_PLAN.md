@@ -11,12 +11,32 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Seeded scenario catalog coverage.
 - Scenario dimension and seed overrides.
 - Seeded sparse layout determinism.
+- CLI fixture export shape and deterministic JSON output.
 
 Run:
 
 ```bash
 dotnet test
 ```
+
+## CLI Fixture Export
+
+Use the CLI fixture exporter when shader tests need deterministic packed-cell inputs without launching Timberborn:
+
+```bash
+dotnet run --project src/Wildfire.Cli -- --scenario=mixed-terrain --seed=42 --width=32 --height=18 --depth=3 --layer=0 --export-fixture=artifacts/mixed-terrain.fixture.json
+```
+
+The JSON fixture contains:
+
+- `formatVersion`.
+- Scenario name and seed.
+- Grid `width`, `height`, and `depth`.
+- Selected layer `index`, flat `offset`, and `cellCount`.
+- Packed cell value metadata with `valueType: "uint16"` and index order `x + y * width + z * width * height`.
+- Full-grid packed cell `values` in flat index order.
+
+Fixture files are deterministic for the same scenario, seed, dimensions, and layer. Shader harnesses should load the JSON, upload the `values` array as the initial packed grid, and use the selected layer metadata only as the preview or snapshot slice.
 
 ## Shader Snapshot Coverage
 

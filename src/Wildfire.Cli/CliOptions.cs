@@ -7,6 +7,7 @@ public sealed record CliOptions(
     int? Height,
     int? Depth,
     int Layer,
+    string? ExportFixturePath,
     bool ListScenarios,
     bool ShowHelp)
 {
@@ -19,6 +20,7 @@ public sealed record CliOptions(
             Height: null,
             Depth: null,
             Layer: 0,
+            ExportFixturePath: null,
             ListScenarios: false,
             ShowHelp: false);
 
@@ -49,6 +51,8 @@ public sealed record CliOptions(
               --height=<int>        Override scenario height.
               --depth=<int>         Override scenario depth.
               --layer=<int>         Initial layer to render.
+              --export-fixture=<path>
+                                    Write the selected scenario as a deterministic JSON fixture.
               --list-scenarios      Print scenario names and exit.
               --help                Print this help and exit.
             """;
@@ -66,6 +70,7 @@ public sealed record CliOptions(
             _ when ReadIntOption(arg, "--height=", value => options with { Height = value }) is { } next => next,
             _ when ReadIntOption(arg, "--depth=", value => options with { Depth = value }) is { } next => next,
             _ when ReadIntOption(arg, "--layer=", value => options with { Layer = value }) is { } next => next,
+            _ when ReadOption(arg, "--export-fixture=", value => options with { ExportFixturePath = value }) is { } next => next,
             _ when !arg.StartsWith("--", StringComparison.Ordinal) => ParsePositional(options, arg, positionalIndex),
             _ => throw new ArgumentException($"Unknown option '{arg}'. Use --help for supported options.")
         };
