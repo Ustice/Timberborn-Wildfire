@@ -1,0 +1,1 @@
+../../all-tickets/TWF-007-timberborn-cell-adapters.md

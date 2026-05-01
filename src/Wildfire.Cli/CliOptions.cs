@@ -7,8 +7,6 @@ public sealed record CliOptions(
     int? Height,
     int? Depth,
     int Layer,
-    int? Ticks,
-    int DelayMilliseconds,
     bool ListScenarios,
     bool ShowHelp)
 {
@@ -21,8 +19,6 @@ public sealed record CliOptions(
             Height: null,
             Depth: null,
             Layer: 0,
-            Ticks: null,
-            DelayMilliseconds: 100,
             ListScenarios: false,
             ShowHelp: false);
 
@@ -48,18 +44,13 @@ public sealed record CliOptions(
 
             Options:
               --scenario=<name>     Scenario name. Known: {scenarios}
-              --seed=<uint>         Deterministic seed for scenario layout and simulation.
+              --seed=<uint>         Deterministic seed for scenario layout.
               --width=<int>         Override scenario width.
               --height=<int>        Override scenario height.
               --depth=<int>         Override scenario depth.
               --layer=<int>         Initial layer to render.
-              --ticks=<int>         Run this many ticks and exit. Omit for interactive mode.
-              --delay-ms=<int>      Delay between frames in milliseconds.
               --list-scenarios      Print scenario names and exit.
               --help                Print this help and exit.
-
-            Interactive keys:
-              up/down layer, space pause, q quit
             """;
     }
 
@@ -75,8 +66,6 @@ public sealed record CliOptions(
             _ when ReadIntOption(arg, "--height=", value => options with { Height = value }) is { } next => next,
             _ when ReadIntOption(arg, "--depth=", value => options with { Depth = value }) is { } next => next,
             _ when ReadIntOption(arg, "--layer=", value => options with { Layer = value }) is { } next => next,
-            _ when ReadIntOption(arg, "--ticks=", value => options with { Ticks = value }) is { } next => next,
-            _ when ReadIntOption(arg, "--delay-ms=", value => options with { DelayMilliseconds = value }) is { } next => next,
             _ when !arg.StartsWith("--", StringComparison.Ordinal) => ParsePositional(options, arg, positionalIndex),
             _ => throw new ArgumentException($"Unknown option '{arg}'. Use --help for supported options.")
         };

@@ -17,30 +17,14 @@ try
     }
 
     Scenario scenario = ScenarioCatalog.Build(options);
-    CpuFireSimulator simulator = new(
-        scenario.Grid.Width,
-        scenario.Grid.Height,
-        scenario.Grid.Depth,
-        scenario.Seed,
-        scenario.Cells);
-
     int layer = Math.Clamp(options.Layer, 0, scenario.Grid.Depth - 1);
-    bool paused = false;
-    bool interactive = options.Ticks is null;
 
     Console.CursorVisible = false;
     Console.Clear();
 
     try
     {
-        if (interactive)
-        {
-            RunInteractive(simulator, scenario, layer, options.DelayMilliseconds, paused);
-        }
-        else if (options.Ticks is int ticks)
-        {
-            RunFixedTicks(simulator, scenario, layer, ticks, options.DelayMilliseconds);
-        }
+        Render(scenario.Cells, scenario, layer);
     }
     finally
     {
@@ -54,56 +38,11 @@ catch (Exception ex) when (ex is ArgumentException or OverflowException)
     Environment.ExitCode = 1;
 }
 
-static void RunInteractive(CpuFireSimulator simulator, Scenario scenario, int layer, int delayMilliseconds, bool paused)
-{
-    while (true)
-    {
-        while (Console.KeyAvailable)
-        {
-            ConsoleKey key = Console.ReadKey(intercept: true).Key;
-            if (key == ConsoleKey.Q)
-            {
-                return;
-            }
-
-            if (key == ConsoleKey.Spacebar)
-            {
-                paused = !paused;
-            }
-
-            if (key == ConsoleKey.UpArrow)
-            {
-                layer = Math.Min(scenario.Grid.Depth - 1, layer + 1);
-            }
-
-            if (key == ConsoleKey.DownArrow)
-            {
-                layer = Math.Max(0, layer - 1);
-            }
-        }
-
-        FireStepResult result = paused ? new FireStepResult([], 0) : simulator.Tick();
-        Render(simulator.Cells, scenario, layer, paused, result.Tick);
-        Thread.Sleep(delayMilliseconds);
-    }
-}
-
-static void RunFixedTicks(CpuFireSimulator simulator, Scenario scenario, int layer, int ticks, int delayMilliseconds)
-{
-    FireStepResult result = new([], 0);
-    foreach (int _ in Enumerable.Range(0, Math.Max(0, ticks)))
-    {
-        result = simulator.Tick();
-        Render(simulator.Cells, scenario, layer, paused: false, result.Tick);
-        Thread.Sleep(delayMilliseconds);
-    }
-}
-
-static void Render(ReadOnlySpan<ushort> cells, Scenario scenario, int layer, bool paused, uint tick)
+static void Render(ReadOnlySpan<ushort> cells, Scenario scenario, int layer)
 {
     Console.SetCursorPosition(0, 0);
     Console.ResetColor();
-    Console.WriteLine($"Wildfire CLI  scenario={scenario.Name}  seed={scenario.Seed}  {scenario.Grid.Width}x{scenario.Grid.Height}x{scenario.Grid.Depth}  layer={layer}  tick={tick}  {(paused ? "paused" : "running")}  [up/down layer] [space pause] [q quit]");
+    Console.WriteLine($"Wildfire scenario preview  scenario={scenario.Name}  seed={scenario.Seed}  {scenario.Grid.Width}x{scenario.Grid.Height}x{scenario.Grid.Depth}  layer={layer}");
 
     int offset = layer * scenario.Grid.Width * scenario.Grid.Height;
     for (int y = 0; y < scenario.Grid.Height; y += 1)

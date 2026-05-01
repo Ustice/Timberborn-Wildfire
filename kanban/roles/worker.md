@@ -30,7 +30,7 @@ Use these instructions for every Wildfire ticket worker unless the ticket says o
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test` for code, content, script, or behavior changes.
+- Run `dotnet test` for code, content, script, or behavior changes.
 - Skip runtime verification for documentation-only tickets marked `doc_only: true` when the diff only changes documentation.
 
 ## Final Report

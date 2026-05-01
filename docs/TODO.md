@@ -1,38 +1,38 @@
 # Wildfire Milestones
 
-## Phase 1: CPU Core
+## Phase 1: Core Data Model
 
 - [x] Scaffold solution and core projects.
 - [x] Implement packed cell helpers.
-- [x] Implement deterministic CPU simulator.
-- [x] Emit deltas and listener notifications.
-- [x] Add first unit tests.
-- [x] Harden active frontier, dedupe, and listener next-tick behavior.
-- [x] Add seeded CPU snapshot scenarios.
+- [x] Implement grid indexing helpers.
+- [x] Define GPU simulator contracts, deltas, listeners, and change records.
+- [x] Add packed-cell and scenario tests.
 
-## Phase 2: CLI Harness
+## Phase 2: Scenario Preview
 
-- [x] Add minimal terminal renderer.
-- [x] Add scenario selection.
+- [x] Add named seeded scenarios.
 - [x] Add seed/config options.
-- [ ] Improve redraw and layer navigation ergonomics.
+- [x] Add packed-cell-derived terminal preview.
+- [ ] Add fixture export for shader snapshots.
 
-## Phase 3: Timberborn CPU Backend
-
-- [x] Discover current Timberborn adapter APIs.
-- [ ] Convert terrain/buildings/resources into packed cells.
-- [ ] Consume deltas for overlays and gameplay consequences.
-- [ ] Validate first live gameplay loop.
-
-## Phase 4: Unity Compute Prototype
+## Phase 3: Unity Compute Simulator
 
 - [ ] Implement compute shader rule translation.
-- [ ] Compare GPU snapshots against CPU snapshots.
+- [ ] Implement full-grid dispatch.
+- [ ] Emit compact delta records.
 - [ ] Generate visual texture output.
+- [ ] Add shader snapshot tests.
 
-## Phase 5: Timberborn GPU Backend
+## Phase 4: Timberborn GPU Integration
 
-- [ ] Package/load compute shader.
-- [ ] Drive GPU visual pipeline.
-- [ ] Read back compact deltas for gameplay.
-- [ ] Keep CPU fallback/debug mode.
+- [ ] Convert terrain/buildings/resources into packed cells.
+- [ ] Upload external changes to GPU buffers.
+- [ ] Dispatch the GPU simulator on a fixed cadence.
+- [ ] Consume compact deltas for overlays and gameplay consequences.
+- [ ] Validate first live gameplay loop.
+
+## Phase 5: Optimization And Polish
+
+- [ ] Add active frontier optimization if profiling justifies it.
+- [ ] Tune visual output.
+- [ ] Add runtime diagnostics.

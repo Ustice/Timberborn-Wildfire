@@ -32,7 +32,7 @@ State the outcome in one or two sentences.
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test` unless this is a documentation-only ticket.
+- Run `dotnet test` unless this is a documentation-only ticket.
 - Run live Timberborn QA only when the ticket explicitly requires it.
 
 ## Notes

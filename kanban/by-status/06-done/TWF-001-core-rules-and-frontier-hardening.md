@@ -1,1 +1,0 @@
-../../all-tickets/TWF-001-core-rules-and-frontier-hardening.md

@@ -4,18 +4,6 @@ Ask questions. Jason isn't always right, and he wants to know when he is wrong. 
 
 Use `~/repos` instead of `/Users/jasonkleinberg/repos`
 
-## Scripts
-
-Use bun.sh instead of node.js.
-
-Use `bun` instead of `npm`.
-
-Use Typescript for all repository scripts, skills, and automations.
-
-For Typescript:
-
-- Prefer using `.map`, `.reduce`, `.flatMap`, and similar collection helpers over for-loops.
-
 ## Markdown
 
 - Add one blank line before and after each heading.

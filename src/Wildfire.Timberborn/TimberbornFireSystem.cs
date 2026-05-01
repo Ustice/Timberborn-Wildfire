@@ -4,14 +4,14 @@ namespace Wildfire.Timberborn;
 
 public sealed class TimberbornFireSystem
 {
-    private readonly IFireSimulator _fireSimulator;
+    private readonly IGpuFireSimulator _fireSimulator;
 
-    public TimberbornFireSystem(IFireSimulator fireSimulator)
+    public TimberbornFireSystem(IGpuFireSimulator fireSimulator)
     {
         _fireSimulator = fireSimulator;
     }
 
-    public FireStepResult Tick()
+    public GpuFireStepResult Tick()
     {
         return _fireSimulator.Tick();
     }

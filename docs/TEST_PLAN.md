@@ -1,37 +1,26 @@
 # Wildfire Test Plan
 
-## Unit Tests
+## Scope
 
-Core tests should cover:
+Validation should prove the shared packed data model, deterministic scenario inputs, shader execution, compact delta readback, and Timberborn adapter behavior.
 
-- Packed cell round trips.
-- Field setters.
-- Ignition threshold behavior.
-- Water suppression.
-- Heat loss.
-- Deterministic random hash.
-- External change queuing.
-- Active frontier inclusion.
-- Candidate deduplication.
-- Listener next-tick mutation behavior.
+## Current Automated Coverage
 
-## Snapshot Tests
+- Packed cell round-trips and field setters.
+- Burning-threshold helper behavior.
+- Seeded scenario catalog coverage.
+- Scenario dimension and seed overrides.
+- Seeded sparse layout determinism.
 
-Given the same seed, initial grid, and tick count, CPU snapshots should be stable.
+Run:
 
-Starter CPU snapshots record the packed cell grid in hex plus per-tick delta counts for reviewable regression diffs.
+```bash
+dotnet test
+```
 
-Later GPU validation should use the CPU snapshot suite as the oracle:
+## Shader Snapshot Coverage
 
-- Run the same named scenario, seed, dimensions, initial packed cells, and tick count on the GPU backend.
-- Read back the packed GPU cell grid after the final tick and format it with the same row/layer order as the CPU snapshot.
-- Compare CPU and GPU packed cells exactly first.
-- If exact matching is not possible, record each differing cell with coordinates, CPU packed value, GPU packed value, and the rule or shader limitation that explains the difference.
-- Keep accepted tolerances scenario-specific and bounded; do not replace CPU snapshots with broad image-only or visual checks.
-
-## CLI Scenarios
-
-Seeded scenarios should include:
+Future GPU validation should add shader snapshot fixtures for:
 
 - Single ignition point.
 - Line of fuel.
@@ -39,17 +28,27 @@ Seeded scenarios should include:
 - Vertical fuel column.
 - Sparse forest.
 - Building cluster.
-- Mixed terrain, fuel, and water.
+- Mixed terrain/fuel/water.
 
-## Timberborn QA
+For each fixture, record:
 
-Timberborn validation does not begin until the backend and adapter contract are stable enough to avoid debugging sim rules inside the game.
+- Scenario name.
+- Seed.
+- Grid dimensions.
+- Tick count.
+- Final packed cell grid.
+- Per-tick compact delta counts.
+- Visual field checksum or image artifact when useful.
 
-Runtime QA tickets must record:
+Snapshot differences should be reviewed scenario by scenario. Avoid broad visual-only approval for behavior changes.
 
-- Save or fixture.
-- Build/deploy/launch command.
-- UI or debug commands used.
-- Log paths and relevant extracted events.
-- Screenshots when visual behavior is claimed.
-- Pass/fail per acceptance criterion.
+## Timberborn Validation
+
+Live Timberborn validation should start only after the GPU simulator and adapter path can:
+
+- Upload terrain/building/water cells.
+- Register external heat and water changes.
+- Dispatch on a fixed cadence.
+- Read compact deltas.
+- Update overlays or effects from changed cells.
+- Apply gameplay consequences from deltas.

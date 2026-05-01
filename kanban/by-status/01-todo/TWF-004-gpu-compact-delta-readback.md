@@ -1,0 +1,1 @@
+../../all-tickets/TWF-004-gpu-compact-delta-readback.md

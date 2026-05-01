@@ -1,6 +1,6 @@
 namespace Wildfire.Core;
 
-public interface IFireSimulator
+public interface IGpuFireSimulator
 {
     int Width { get; }
 
@@ -8,16 +8,14 @@ public interface IFireSimulator
 
     int Depth { get; }
 
-    ReadOnlySpan<ushort> Cells { get; }
-
     void RegisterChange(FireSimChange change);
 
-    FireStepResult Tick();
+    GpuFireStepResult Tick();
 
     IDisposable Subscribe(IFireSimListener listener);
 }
 
-public readonly record struct FireStepResult(IReadOnlyList<CellDelta> Deltas, uint Tick);
+public readonly record struct GpuFireStepResult(IReadOnlyList<CellDelta> Deltas, uint Tick);
 
 public readonly record struct CellDelta(int CellIndex, ushort OldCell, ushort NewCell);
 

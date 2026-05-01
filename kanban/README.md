@@ -4,7 +4,7 @@ This directory is the permanent file-based board for Wildfire work.
 
 Canonical ticket files live in `all-tickets/`. Status directories live under `by-status/` and contain symlinks to those canonical files.
 
-Move status symlinks instead of moving the ticket files. Use `./tickets move <TWF-id-or-ticket-path> <status>` for common moves.
+Move status symlinks instead of moving the ticket files.
 
 Use [process.md](process.md) to start or resume a multi-agent coordination run.
 
@@ -60,7 +60,7 @@ State the outcome.
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun run test` unless this is documentation-only.
+- Run `dotnet test` unless this is documentation-only.
 
 ## Notes
 

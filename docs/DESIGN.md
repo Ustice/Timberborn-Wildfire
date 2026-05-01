@@ -2,25 +2,21 @@
 
 ## 1. Overview
 
-This document specifies a compact, stochastic cellular automata fire and heat simulation intended to run in three contexts:
+Wildfire is a compact, stochastic cellular automata fire and heat simulation built around one authoritative GPU execution path.
 
-1. CLI test harness: fast iteration and debugging without launching Timberborn.
-2. Unity prototype: GPU compute shader development and visualization testing.
-3. Timberborn mod: final gameplay integration.
+The reusable core owns packed data formats and host-facing contracts. Unity and Timberborn adapters own compute-buffer setup, shader dispatch, delta readback, visuals, and gameplay integration. Timberborn provides map data, registers external changes, and responds to simulation deltas; it must not own fire rules or mutate the grid directly.
 
-The simulation should be implemented as a reusable core system with host-specific adapters. Timberborn should not own the simulation rules. It should provide map data, register external changes, and respond to simulation deltas.
+The CLI is a scenario preview and fixture-generation tool. It should not run an alternate simulation path.
 
 ## 2. Goals
 
 - Support grids up to `256 x 256 x 32` cells.
 - Use compact per-cell storage.
-- Allow deterministic stochastic behavior.
-- Allow simulation testing outside Timberborn.
-- Support CPU simulation for debugging and tests.
-- Support GPU compute simulation for Unity/Timberborn rendering performance.
-- Output changed cells as deltas so Timberborn updates remain minimal.
-- Allow entities to register changes at any time, while the sim mutates only during controlled ticks.
-- Ensure each cell/entity is processed at most once per update cycle.
+- Allow deterministic stochastic behavior in compute shaders.
+- Support simulation development outside Timberborn through Unity and shader-facing fixtures.
+- Output changed cells as compact deltas so Timberborn updates remain minimal.
+- Allow entities to register changes at any time while the sim mutates only during controlled dispatch ticks.
+- Ensure each cell is processed at most once per update cycle when frontier optimization is enabled.
 - Allow visual effects to be driven directly from GPU simulation output.
 
 ## 3. Non-Goals
@@ -30,6 +26,7 @@ The simulation should be implemented as a reusable core system with host-specifi
 - Do not require one Unity or Timberborn entity per visual fire/smoke/ash cell.
 - Do not rely on Timberborn being open for simulation development.
 - Do not make the grid itself delta-only; the simulator keeps full cell buffers internally.
+- Do not maintain a second C# execution path for fire spread.
 
 ## 4. Project Structure
 
@@ -41,12 +38,8 @@ Wildfire/
     Wildfire.Core/
       PackedCell.cs
       FireGrid.cs
-      FireRules.cs
-      IFireSimulator.cs
-      CpuFireSimulator.cs
-      CellDelta.cs
-      FireSimChange.cs
-      FireSimEvents.cs
+      FireSimContracts.cs
+      FireRandom.cs
     Wildfire.Unity/
       FireSim.compute
       FireVisuals.compute
@@ -55,8 +48,8 @@ Wildfire/
       FireVisualRenderer.cs
     Wildfire.Cli/
       Program.cs
-      TerminalRenderer.cs
-      CliInput.cs
+      ScenarioCatalog.cs
+      CliOptions.cs
     Wildfire.Timberborn/
       TimberbornFireSystem.cs
       TimberbornTerrainAdapter.cs
@@ -70,7 +63,7 @@ Wildfire/
 
 ## 5. Cell Model
 
-Each simulation cell is stored as a packed 16-bit value.
+Each simulation cell is stored as a packed 16-bit value. Compute buffers may use `uint` values for alignment, with the lower 16 bits containing the packed cell.
 
 ```text
 ushort cell:
@@ -82,8 +75,6 @@ bit  12:    terrain       0-1
 bits 13-15: heatLoss      0-7
 ```
 
-### Stored Properties
-
 | Property | Range | Meaning |
 | --- | --- | --- |
 | fuel | 0-15 | Remaining burnable material. |
@@ -93,118 +84,29 @@ bits 13-15: heatLoss      0-7
 | terrain | 0-1 | Whether the cell represents solid terrain/building material. |
 | heatLoss | 0-7 | How quickly the cell loses heat. |
 
-### Derived Properties
+The following values are derived, not stored:
 
-The following are not stored directly:
+- Burning state from fuel, heat, flammability, water, and terrain.
+- Flame visual intensity from heat and burning state.
+- Smoke visual intensity from burning state, fuel, and heat.
+- Ash visual intensity from low/no fuel and heat history approximation.
 
-| Derived Value | Derived From |
-| --- | --- |
-| Burning state | fuel, heat, flammability, water, terrain |
-| Flame visual intensity | heat, burning state |
-| Smoke visual intensity | burning state, fuel, heat |
-| Ash visual intensity | low/no fuel, heat history approximation |
+## 6. Core Contracts
 
-This keeps the simulation compact and avoids storing flames, smoke, or ash directly.
-
-## 6. Packed Cell Helpers
+The host-facing simulation contract is explicitly GPU-oriented. Shared contracts live in `Wildfire.Core`; concrete execution lives in Unity or Timberborn adapter code.
 
 ```csharp
-public static class PackedCell
-{
-    public static ushort Pack(
-        int fuel,
-        int heat,
-        int flammability,
-        int water,
-        int terrain,
-        int heatLoss)
-    {
-        return (ushort)(
-            ((fuel         & 0b1111) << 0)  |
-            ((heat         & 0b1111) << 4)  |
-            ((flammability & 0b11)   << 8)  |
-            ((water        & 0b11)   << 10) |
-            ((terrain      & 0b1)    << 12) |
-            ((heatLoss     & 0b111)  << 13)
-        );
-    }
-
-    public static int Fuel(ushort cell)         => (cell >> 0)  & 0b1111;
-    public static int Heat(ushort cell)         => (cell >> 4)  & 0b1111;
-    public static int Flammability(ushort cell) => (cell >> 8)  & 0b11;
-    public static int Water(ushort cell)        => (cell >> 10) & 0b11;
-    public static int Terrain(ushort cell)      => (cell >> 12) & 0b1;
-    public static int HeatLoss(ushort cell)     => (cell >> 13) & 0b111;
-
-    public static ushort SetFuel(ushort cell, int fuel)
-    {
-        return (ushort)((cell & ~0b0000_0000_0000_1111) | ((fuel & 0b1111) << 0));
-    }
-
-    public static ushort SetHeat(ushort cell, int heat)
-    {
-        return (ushort)((cell & ~0b0000_0000_1111_0000) | ((heat & 0b1111) << 4));
-    }
-
-    public static ushort SetWater(ushort cell, int water)
-    {
-        return (ushort)((cell & ~0b0000_1100_0000_0000) | ((water & 0b11) << 10));
-    }
-
-    public static bool IsBurning(ushort cell)
-    {
-        int fuel = Fuel(cell);
-        int heat = Heat(cell);
-        int flammability = Flammability(cell);
-        int water = Water(cell);
-        int terrain = Terrain(cell);
-        int ignitionThreshold = 12 - flammability + water;
-        return terrain == 1
-            && fuel > 0
-            && heat >= ignitionThreshold;
-    }
-}
-```
-
-## 7. Memory Budget
-
-Maximum grid size:
-
-```text
-256 x 256 x 32 = 2,097,152 cells
-```
-
-At 16 bits per cell:
-
-```text
-2 bytes/cell ~= 4 MB per buffer
-Double-buffered ~= 8 MB
-```
-
-GPU implementations may store each cell in a `uint` instead of a `ushort` for buffer alignment simplicity:
-
-```text
-4 bytes/cell ~= 8 MB per buffer
-Double-buffered ~= 16 MB
-```
-
-Both are acceptable. CPU and CLI should use `ushort[]`. GPU can use `uint` buffers with the lower 16 bits containing the packed cell.
-
-## 8. Simulator Interfaces
-
-```csharp
-public interface IFireSimulator
+public interface IGpuFireSimulator
 {
     int Width { get; }
     int Height { get; }
     int Depth { get; }
-    ReadOnlySpan<ushort> Cells { get; }
     void RegisterChange(FireSimChange change);
-    FireStepResult Tick();
+    GpuFireStepResult Tick();
     IDisposable Subscribe(IFireSimListener listener);
 }
 
-public readonly record struct FireStepResult(
+public readonly record struct GpuFireStepResult(
     IReadOnlyList<CellDelta> Deltas,
     uint Tick
 );
@@ -221,11 +123,9 @@ public interface IFireSimListener
 }
 ```
 
-## 9. External Change Registration
+## 7. External Change Registration
 
-Entities may register simulation changes at any time, but changes are not applied immediately.
-
-They are queued and applied at the start of the next simulation tick.
+Entities may register simulation changes at any time, but changes are not applied immediately. They are uploaded and applied at the start of the next dispatch tick.
 
 ```csharp
 public readonly record struct FireSimChange(
@@ -242,136 +142,29 @@ public readonly record struct FireSimChange(
 );
 ```
 
-Example:
-
-```csharp
-_fireSim.RegisterChange(new FireSimChange(
-    CellIndex: index,
-    AddHeat: 8
-));
-```
-
 Rule:
 
-Nothing mutates the sim immediately except the sim tick itself.
+Nothing mutates simulation buffers immediately except the simulator dispatch itself. This prevents recursive update chains and keeps behavior deterministic.
 
-This prevents recursive update chains and makes testing deterministic.
-
-## 10. Tick Pipeline
+## 8. GPU Tick Pipeline
 
 Each tick follows this pipeline:
 
 1. Increment tick/generation.
-2. Apply queued external changes.
-3. Add changed external cells and their neighbors to the candidate set.
-4. Add previously active cells and their neighbors to the candidate set.
-5. Process each candidate cell once.
-6. Write changed cells to the delta list.
-7. Build the next active frontier.
-8. Notify listeners of deltas.
-9. Swap active frontier buffers.
+2. Upload queued external changes.
+3. Apply external changes pass.
+4. Build candidate frontier pass.
+5. Run fire simulation pass.
+6. Append changed cells to the delta buffer.
+7. Append next active cells.
+8. Generate visual fields.
+9. Read back compact gameplay deltas.
+10. Notify listeners.
+11. Swap current/next buffers.
 
-Pseudo-code:
+Initial implementation may scan the full grid for simplicity. Frontier optimization can come later without changing host contracts.
 
-```csharp
-public FireStepResult Tick()
-{
-    _tick++;
-    _generation++;
-    _candidates.Clear();
-    _deltas.Clear();
-    _nextActive.Clear();
-
-    ApplyQueuedExternalChanges();
-    AddActiveFrontierToCandidates();
-
-    foreach (int index in _candidates)
-    {
-        ushort oldCell = _cells[index];
-        ushort newCell = StepCell(index, oldCell, _cells, _tick, _seed);
-        if (newCell != oldCell)
-        {
-            _cells[index] = newCell;
-            _deltas.Add(new CellDelta(index, oldCell, newCell));
-            EnqueueNextActiveWithNeighbors(index);
-        }
-
-        if (ShouldRemainActive(newCell))
-        {
-            EnqueueNextActiveWithNeighbors(index);
-        }
-    }
-
-    NotifyListeners(_deltas);
-    SwapActiveSets();
-    return new FireStepResult(_deltas, _tick);
-}
-```
-
-## 11. Active Frontier
-
-Most of the simulation grid is expected to be inactive.
-
-The simulator should avoid scanning the full grid whenever possible.
-
-A cell should be considered a candidate if it is:
-
-- Changed last tick.
-- Externally changed this tick.
-- Still active from the previous tick.
-- A neighbor of any of the above.
-
-### Why Deltas Alone Are Not Enough
-
-Previous deltas approximate the active frontier, but stochastic rules can cause a cell to remain eligible without changing.
-
-Example:
-
-A cell is hot enough to maybe ignite. The random roll fails. The cell does not change. It still needs to be checked next tick.
-
-Therefore, the simulator must also track active cells separately from deltas.
-
-## 12. Processing Each Cell Once
-
-Use a generation-stamped queue.
-
-```csharp
-private readonly int[] _queuedGeneration;
-private int _generation;
-
-private void EnqueueCandidate(int index)
-{
-    if ((uint)index >= (uint)_cells.Length)
-        return;
-
-    if (_queuedGeneration[index] == _generation)
-        return;
-
-    _queuedGeneration[index] = _generation;
-    _candidates.Add(index);
-}
-```
-
-Adding a cell and its neighbors:
-
-```csharp
-private void EnqueueCandidateWithNeighbors(int index)
-{
-    EnqueueCandidate(index);
-    foreach (int neighbor in GetNeighbors(index))
-    {
-        EnqueueCandidate(neighbor);
-    }
-}
-```
-
-Rule:
-
-A cell may be requested many times, but it may only be admitted once per tick.
-
-Newly activated cells should be queued for the next tick, not processed immediately during the current tick.
-
-## 13. Neighbor Model
+## 9. Neighbor Model
 
 Use a 6-neighbor 3D cellular automata model:
 
@@ -389,20 +182,20 @@ Optional later extensions:
 - Upward smoke spread.
 - Elevation-biased heat spread.
 
-Initial implementation should stay with 6-neighbor behavior for predictability.
+Initial behavior should stay with 6-neighbor spread for predictability.
 
-## 14. Deterministic Stochastic Behavior
+## 10. Deterministic Stochastic Behavior
 
-Do not use `Random` during simulation steps.
-
-Use hash-based randomness keyed by:
+Do not use runtime-global random state during simulation steps. Use hash-based randomness keyed by:
 
 - Cell index.
 - Tick.
 - Seed.
 
-```csharp
-public static uint Hash(uint cellIndex, uint tick, uint seed)
+The same hash algorithm must be available to shader code and scenario-fixture tooling so seeded scenarios remain reproducible.
+
+```hlsl
+uint Hash(uint cellIndex, uint tick, uint seed)
 {
     uint x = cellIndex ^ (tick * 747796405u) ^ seed;
     x ^= x >> 16;
@@ -414,11 +207,9 @@ public static uint Hash(uint cellIndex, uint tick, uint seed)
 }
 ```
 
-This lets CPU, CLI, Unity, and Timberborn produce comparable behavior.
+## 11. Cell Step Rules
 
-## 15. Cell Step Rules
-
-The first implementation should be intentionally simple.
+The first implementation should be intentionally simple and live in `FireSim.compute`.
 
 Inputs:
 
@@ -430,99 +221,94 @@ Inputs:
 Outputs:
 
 - New packed cell.
+- Optional visual-field values.
+- Optional delta record.
 
 Suggested rule outline:
 
-```csharp
-private ushort StepCell(int index, ushort cell, ReadOnlySpan<ushort> cells, uint tick, uint seed)
+```hlsl
+uint StepCell(uint index, uint cell, uint tick, uint seed)
 {
-    int fuel = PackedCell.Fuel(cell);
-    int heat = PackedCell.Heat(cell);
-    int flammability = PackedCell.Flammability(cell);
-    int water = PackedCell.Water(cell);
-    int terrain = PackedCell.Terrain(cell);
-    int heatLoss = PackedCell.HeatLoss(cell);
+    uint fuel = Fuel(cell);
+    uint heat = Heat(cell);
+    uint flammability = Flammability(cell);
+    uint water = Water(cell);
+    uint terrain = Terrain(cell);
+    uint heatLoss = HeatLoss(cell);
 
-    int neighborHeat = AverageNeighborHeat(index, cells);
-    int burningNeighborCount = CountBurningNeighbors(index, cells);
+    uint neighborHeat = AverageNeighborHeat(index);
+    uint burningNeighborCount = CountBurningNeighbors(index);
 
-    // Heat diffusion.
-    heat = ((heat * 3) + neighborHeat) / 4;
-
-    // Burning neighbors add heat pressure.
+    heat = ((heat * 3u) + neighborHeat) / 4u;
     heat += burningNeighborCount;
 
-    // Water suppresses heat.
-    if (water > 0)
+    if (water > 0u)
     {
-        heat -= water;
-        if (heat > 8)
+        heat = heat > water ? heat - water : 0u;
+        if (heat > 8u)
         {
-            water -= 1;
+            water -= 1u;
         }
     }
 
-    // Ignition / burning.
-    bool canBurn = terrain == 1 && fuel > 0;
-    int ignitionThreshold = 12 - flammability + water;
+    bool canBurn = terrain == 1u && fuel > 0u;
+    uint ignitionThreshold = 12u - flammability + water;
     if (canBurn && heat >= ignitionThreshold)
     {
-        uint roll = FireRandom.Hash((uint)index, tick, seed) & 15u;
-        int burnChance = Math.Clamp(heat + flammability - water, 0, 15);
+        uint roll = Hash(index, tick, seed) & 15u;
+        uint burnChance = clamp(heat + flammability - water, 0u, 15u);
         if (roll < burnChance)
         {
-            fuel = Math.Max(0, fuel - 1);
-            heat = Math.Min(15, heat + 2 + flammability);
+            fuel = fuel > 0u ? fuel - 1u : 0u;
+            heat = min(15u, heat + 2u + flammability);
         }
     }
 
-    // Passive heat loss.
-    heat -= 1 + (heatLoss / 3);
-    heat = Math.Clamp(heat, 0, 15);
-    fuel = Math.Clamp(fuel, 0, 15);
-    water = Math.Clamp(water, 0, 3);
-
-    return PackedCell.Pack(
-        fuel,
-        heat,
-        flammability,
-        water,
-        terrain,
-        heatLoss
-    );
+    heat = heat > 1u + (heatLoss / 3u) ? heat - 1u - (heatLoss / 3u) : 0u;
+    return Pack(fuel, heat, flammability, water, terrain, heatLoss);
 }
 ```
 
-The exact constants should be tuned from the CLI.
+The exact constants should be tuned from shader snapshots and visual validation.
 
-## 16. Active Predicate
+## 12. Frontier And Deduplication
 
-A cell should remain active if it may change in future ticks without outside input.
+Most of the simulation grid is expected to be inactive.
 
-```csharp
-private static bool ShouldRemainActive(ushort cell)
+The first shader may dispatch over the full grid. A later optimized shader should use active frontier buffers and generation stamps.
+
+A cell should be considered a candidate if it is:
+
+- Changed last tick.
+- Externally changed this tick.
+- Still active from the previous tick.
+- A neighbor of any of the above.
+
+Use atomic generation stamps to admit each candidate once per tick.
+
+```hlsl
+RWStructuredBuffer<uint> QueuedGeneration;
+AppendStructuredBuffer<uint> NextActive;
+
+void EnqueueOnce(uint index, uint generation)
 {
-    int fuel = PackedCell.Fuel(cell);
-    int heat = PackedCell.Heat(cell);
-    int water = PackedCell.Water(cell);
-    int terrain = PackedCell.Terrain(cell);
-    int flammability = PackedCell.Flammability(cell);
+    uint oldValue;
+    InterlockedCompareExchange(
+        QueuedGeneration[index],
+        generation,
+        generation - 1,
+        oldValue);
 
-    if (heat > 0)
-        return true;
-
-    if (water > 0 && heat > 0)
-        return true;
-
-    int ignitionThreshold = 12 - flammability + water;
-    if (terrain == 1 && fuel > 0 && heat >= ignitionThreshold - 2)
-        return true;
-
-    return false;
+    if (oldValue != generation)
+    {
+        NextActive.Append(index);
+    }
 }
 ```
 
-## 17. Delta Output
+Newly activated cells should be queued for the next tick, not processed immediately during the current tick.
+
+## 13. Delta Output
 
 Each tick emits only changed cells.
 
@@ -539,21 +325,13 @@ Deltas are used for:
 - Timberborn overlay updates.
 - Building damage/destruction checks.
 - Terrain state changes.
-- CLI rendering updates.
-- Optional CPU readback from GPU simulation.
+- Compact gameplay readback.
 
 The grid remains full-state internally.
 
-## 18. Listener Notifications
+## 14. Listener Notifications
 
 Listeners receive deltas after a tick completes.
-
-```csharp
-public interface IFireSimListener
-{
-    void OnFireSimDeltas(ReadOnlySpan<CellDelta> deltas);
-}
-```
 
 Listeners may register new changes, but those changes apply on the next tick.
 
@@ -577,52 +355,27 @@ Rule:
 
 Listeners do not directly mutate simulation state. They enqueue changes for the next tick.
 
-## 19. CLI Harness
+## 15. Scenario Preview CLI
 
-The CLI exists to test and tune the simulation without Timberborn.
+The CLI exists to inspect seeded input grids without launching Timberborn. It should not execute fire spread.
 
 ### Requirements
 
-- Run the CPU simulator.
-- Display one Z layer at a time.
-- Navigate layers with up/down arrows.
-- Pause/resume with space.
-- Quit with `q`.
-- Use terminal characters and colors for state.
-- Optionally redraw only cells changed by deltas.
+- Build named seeded scenarios.
+- Display one Z layer at a time through `--layer`.
+- Use terminal characters and colors derived from packed cell values.
+- Support dimensions and seed overrides.
+- Support scenario names that map cleanly to shader fixtures.
 
 ### Command
 
 ```bash
-dotnet run --project src/Wildfire.Cli -- 128 128 8
+dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --layer=0
 ```
 
-### Controls
+## 16. Unity Compute Simulator
 
-| Input | Action |
-| --- | --- |
-| Up arrow | Layer up. |
-| Down arrow | Layer down. |
-| Space | Pause/resume. |
-| Q | Quit. |
-
-### Suggested Characters
-
-| State | Character |
-| --- | --- |
-| Empty | Space |
-| Terrain/fuel | `"` |
-| Warm | `-` |
-| Hot | `+` |
-| Burning | `*` / `@` |
-| Water | `~` |
-| Burned out / ash visual | `.` / `:` |
-
-The CLI should derive visuals from packed cell values rather than requiring stored flame/smoke/ash fields.
-
-## 20. Unity Compute Backend
-
-The Unity compute backend should use the same packed cell format and rules translated to HLSL.
+The Unity compute simulator should use the packed cell format and HLSL rules.
 
 ### Buffers
 
@@ -633,6 +386,7 @@ CurrentActive:      StructuredBuffer<uint>
 NextActive:         AppendStructuredBuffer<uint>
 Deltas:             AppendStructuredBuffer<CellDeltaGpu>
 QueuedGeneration:   RWStructuredBuffer<uint>
+VisualField:        RWTexture2DArray<float4>
 ```
 
 GPU cell values use lower 16 bits:
@@ -652,52 +406,11 @@ struct CellDeltaGpu
 };
 ```
 
-### Compute Pipeline
-
-1. Upload queued external changes, if any.
-2. Apply external changes pass.
-3. Build candidate frontier pass.
-4. Fire simulation pass.
-5. Append changed cells to delta buffer.
-6. Append next active cells.
-7. Generate visual field.
-8. Swap current/next buffers.
-
-Initial GPU implementation may scan the full grid for simplicity. Active frontier GPU optimization can come later.
-
-## 21. GPU Deduplication
-
-GPU frontier deduplication should use atomic generation stamps.
-
-```hlsl
-RWStructuredBuffer<uint> QueuedGeneration;
-AppendStructuredBuffer<uint> NextActive;
-
-void EnqueueOnce(uint index, uint generation)
-{
-    uint oldValue;
-    InterlockedCompareExchange(
-        QueuedGeneration[index],
-        generation,
-        generation - 1,
-        oldValue);
-
-    if (oldValue != generation)
-    {
-        NextActive.Append(index);
-    }
-}
-```
-
-Depending on platform behavior, this may need to be adapted. CPU active frontier should be implemented first.
-
-## 22. GPU Visual Pipeline
+## 17. GPU Visual Pipeline
 
 The compute shader can drive visuals directly.
 
 It should not directly notify gameplay entities.
-
-### Visual Pipeline
 
 ```text
 FireSim.compute
@@ -712,18 +425,7 @@ FireVisuals.compute or material shader
 Overlay / smoke / fire rendering
 ```
 
-### Visual Texture
-
 Use a `Texture2DArray` for cell-layer visuals.
-
-```text
-layer 0 = z0
-layer 1 = z1
-layer 2 = z2
-...
-```
-
-Each texel corresponds to one simulation cell.
 
 Suggested channels:
 
@@ -732,33 +434,20 @@ Suggested channels:
 - B: ash intensity.
 - A: heat intensity or visibility.
 
-Example HLSL output:
-
-```hlsl
-RWTexture2DArray<float4> FireVisuals;
-
-FireVisuals[int3(x, y, z)] = float4(
-    fireIntensity,
-    smokeIntensity,
-    ashIntensity,
-    heatIntensity
-);
-```
-
 Rule:
 
 Visual effects can be GPU-driven. Gameplay/entity changes remain C#-driven through deltas.
 
-## 23. Timberborn Integration
+## 18. Timberborn Integration
 
-Timberborn should be an adapter around the simulator.
+Timberborn should be an adapter around the GPU simulator.
 
 ### Timberborn Responsibilities
 
 - Convert terrain/buildings/resources into packed fire cells.
 - Register external changes from gameplay events.
 - Run the sim on a fixed cadence.
-- Consume deltas.
+- Consume compact deltas.
 - Update overlays/effects only where needed.
 - Apply gameplay consequences from deltas.
 
@@ -767,7 +456,7 @@ Timberborn should be an adapter around the simulator.
 - Own the fire rules.
 - Mutate the fire grid directly.
 - Create one game entity per fire/smoke/ash cell.
-- Require the game to run for core sim testing.
+- Require the game to run for shader and scenario-fixture development.
 
 ### Example Integration Flow
 
@@ -775,7 +464,7 @@ Timberborn should be an adapter around the simulator.
 Building / terrain / water system
   registers FireSimChange
         |
-FireSim tick
+GPU fire sim dispatch
   applies changes
   computes new state
   emits CellDelta list
@@ -787,7 +476,7 @@ Timberborn listeners
   update alerts
 ```
 
-## 24. Timberborn Entity/Event Examples
+## 19. Timberborn Entity/Event Examples
 
 ### Building Receives Heat
 
@@ -827,51 +516,48 @@ if (VisualStateChanged(delta.OldCell, delta.NewCell))
 }
 ```
 
-## 25. CPU First, GPU Later
+## 20. Implementation Phases
 
-Implementation should proceed in phases.
+### Phase 1: Core Data Contracts
 
-### Phase 1: CPU Core
+- Keep packed cell helpers.
+- Keep grid indexing helpers.
+- Define GPU simulator contracts and delta records.
+- Keep deterministic hash helper for scenario fixtures.
+- Keep scenario catalog tests.
 
-- Implement packed cell helpers.
-- Implement CPU simulator.
-- Implement deterministic stochastic rules.
-- Implement delta output.
-- Implement active frontier.
-- Implement generation-stamped dedupe.
-- Add unit tests.
+### Phase 2: Unity Compute Prototype
 
-### Phase 2: CLI Harness
+- Implement `FireSim.compute` with the packed cell layout.
+- Implement full-grid dispatch first.
+- Emit compact delta records.
+- Emit visual field output.
+- Add shader snapshot fixtures.
 
-- Add terminal renderer.
-- Add layer navigation.
-- Add pause/resume.
-- Add seed/config options.
-- Add test scenarios.
+### Phase 3: Scenario Preview And Fixtures
 
-### Phase 3: Timberborn CPU Backend
+- Keep the CLI as a seeded input-grid preview.
+- Export fixture grids for shader tests.
+- Keep scenario generation deterministic.
+
+### Phase 4: Timberborn GPU Integration
 
 - Add Timberborn adapters.
 - Convert map/building data into cells.
-- Consume deltas.
-- Update overlays/effects from deltas.
+- Upload external changes.
+- Dispatch the GPU simulator on a fixed cadence.
+- Consume compact deltas.
+- Update overlays/effects from deltas and visual fields.
 - Validate gameplay loop.
 
-### Phase 4: Unity Compute Prototype
+### Phase 5: Visual And Performance Tuning
 
-- Implement `.compute` shader using same cell layout.
-- Compare GPU snapshots against CPU snapshots.
-- Add visual texture output.
-- Prototype overlay material.
+- Add active frontier optimization if profiling justifies it.
+- Tune visual texture output.
+- Tune gameplay delta readback.
+- Add runtime diagnostics.
 
-### Phase 5: Timberborn GPU Backend
-
-- Package/load compute shader.
-- Use GPU visual pipeline.
-- Read back compact deltas for gameplay.
-- Keep CPU backend as fallback/debug mode.
-
-## 26. Testing Strategy
+## 21. Testing Strategy
 
 ### Unit Tests
 
@@ -879,14 +565,12 @@ Test:
 
 - Packed cell round-trips.
 - Field setters.
-- Ignition threshold behavior.
-- Water suppression.
-- Heat loss.
-- Deterministic random hash.
-- Active frontier inclusion.
-- Dedupe behavior.
+- Ignition threshold helper behavior.
+- Fire grid indexing.
+- Scenario determinism.
+- Contract-level validation.
 
-### Snapshot Tests
+### Shader Snapshot Tests
 
 Given:
 
@@ -894,13 +578,13 @@ Given:
 - Same initial grid.
 - Same tick count.
 
-CPU and GPU should produce comparable packed cell grids.
+The compute shader should produce stable packed cell grids and compact deltas for each accepted scenario.
 
-Exact matching is ideal, but if GPU rules diverge slightly due to shader limitations, snapshot differences should be understood and bounded.
+Snapshot differences should be understood, reviewed, and bounded by scenario.
 
 ### CLI Scenarios
 
-Add seeded scenarios:
+Keep seeded scenarios for:
 
 - Single ignition point.
 - Line of fuel.
@@ -910,7 +594,7 @@ Add seeded scenarios:
 - Building cluster.
 - Mixed terrain/fuel/water.
 
-## 27. Important Design Rules
+## 22. Important Design Rules
 
 1. The sim owns mutation.
 
@@ -920,9 +604,9 @@ Add seeded scenarios:
 
    Changes registered during notification apply on the next tick.
 
-3. Each cell processes once per tick.
+3. Each candidate cell processes once per optimized tick.
 
-   Use generation-stamped deduplication.
+   Use generation-stamped deduplication when active frontier optimization is enabled.
 
 4. Deltas are output, not storage.
 
@@ -934,7 +618,7 @@ Add seeded scenarios:
 
 6. Randomness is deterministic.
 
-   Use hash-based randomness, not `Random`.
+   Use hash-based randomness, not runtime-global random state.
 
 7. Visuals can stay GPU-side.
 
@@ -942,9 +626,9 @@ Add seeded scenarios:
 
 8. Timberborn is a host.
 
-   The simulator should remain testable outside the game.
+   It adapts to the simulator; it does not own fire rules.
 
-## 28. Open Questions
+## 23. Open Questions
 
 - How often should the Timberborn fire sim tick relative to game ticks?
 - Should fire spread diagonally, or only through 6-neighbor adjacency?
@@ -953,10 +637,10 @@ Add seeded scenarios:
 - How should Timberborn buildings map to vertical cells?
 - Should water represent temporary wetness, standing water, or both?
 - Should heat loss be material-specific, biome-specific, or weather-driven?
-- Should the GPU backend use full-grid dispatch first, then active frontier later?
+- Should the first shader dispatch use full-grid evaluation before active frontier optimization?
 
-## 29. Summary
+## 24. Summary
 
-The fire simulator should be a compact, deterministic, tick-based cellular automata system with a packed 16-bit cell format. It should expose a clean change-registration and delta-notification API so Timberborn entities can interact with it without owning simulation state.
+The fire simulator should be a compact, deterministic, tick-based cellular automata system with a packed 16-bit cell format and one authoritative GPU execution path. It should expose a clean change-registration and delta-notification API so Timberborn entities can interact with it without owning simulation state.
 
-The CPU backend should be implemented first for CLI testing and deterministic debugging. The GPU backend should use the same packed format and produce both deltas and GPU-side visual fields. Timberborn should consume gameplay deltas through C# while visual overlays and effects can be driven directly from compute shader output.
+The GPU simulator should use the packed format, produce compact deltas, and generate GPU-side visual fields. Timberborn should consume gameplay deltas through C# while visual overlays and effects are driven directly from compute shader output.

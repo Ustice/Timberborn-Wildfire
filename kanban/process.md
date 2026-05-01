@@ -62,7 +62,7 @@ Do not end the coordination turn until the sprint is closed or the user explicit
 ## Verification Rules
 
 - Run `git diff --check` for all integrated work.
-- Run `bun run test` for code, content, script, or behavior tickets.
+- Run `dotnet test` for code, content, script, or behavior tickets.
 - Run live Timberborn validation only after a ticket explicitly requires it.
 - Documentation-only tickets do not need runtime validation when they only change docs.
 

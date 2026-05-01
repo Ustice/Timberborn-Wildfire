@@ -2,15 +2,15 @@
 
 Wildfire is a Timberborn mod project built around a reusable, deterministic cellular automata fire simulation.
 
-The simulation core is intentionally independent from Timberborn so fire rules can be tested from a CLI harness, prototyped in Unity compute shaders, and then integrated into Timberborn through adapters.
+The simulation core is intentionally independent from Timberborn so packed scenario inputs, GPU simulator contracts, and host adapters can evolve without making Timberborn own fire rules.
 
 ## Project Layout
 
-- `src/Wildfire.Core/` contains the packed-cell model, deterministic rules, CPU simulator, deltas, and listener contracts.
-- `src/Wildfire.Cli/` contains the terminal harness for tuning and seeded scenarios.
+- `src/Wildfire.Core/` contains the packed-cell model, grid helpers, GPU simulator contracts, deltas, and listener contracts.
+- `src/Wildfire.Cli/` contains the terminal preview for seeded scenarios.
 - `src/Wildfire.Unity/` is the planned compute shader prototype surface.
 - `src/Wildfire.Timberborn/` is the planned Timberborn adapter layer.
-- `tests/Wildfire.Core.Tests/` contains deterministic CPU-core tests.
+- `tests/Wildfire.Core.Tests/` contains packed-cell and scenario tests.
 - `docs/` contains design, architecture, handoff, validation, and milestone status.
 - `kanban/` contains coordination, roles, tickets, and status lanes.
 
@@ -24,7 +24,6 @@ The simulation core is intentionally independent from Timberborn so fire rules c
 ## Commands
 
 ```bash
-bun run test
-./tickets move TWF-001 ready
-dotnet run --project src/Wildfire.Cli -- 64 32 4
+dotnet test
+dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --layer=0
 ```
