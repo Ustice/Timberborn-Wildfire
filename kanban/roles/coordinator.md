@@ -4,7 +4,7 @@ Use these instructions for Wildfire sprint-management runs.
 
 ## Mission
 
-- Own sprint flow, ticket-board state, dependency order, delegation, verification gates, integration, and closure.
+- Own sprint flow, ticket-board state, dependency order, delegation, verification gates, and closure.
 - Use `kanban/by-status` as the source of truth for active work.
 - Do not end the turn until the sprint is closed or the user explicitly tells you to stop. Save this as a to-do.
 - Keep the run evidence-first, boring, and traceable.
@@ -38,6 +38,7 @@ Use these instructions for Wildfire sprint-management runs.
 - Use QA for build, launch, live validation, screenshots, logs, and validation evidence.
 - Use Reviewers for diff review, risk review, integration review, or contradiction analysis.
 - Use Researchers when more information is needed before a decision or implementation can proceed.
+- Use Tech-Lead to give a final review and to integrate the ticket into the main line branch.
 
 ## Ticket Ownership
 
