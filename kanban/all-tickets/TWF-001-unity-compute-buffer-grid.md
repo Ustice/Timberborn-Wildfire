@@ -69,3 +69,6 @@ The GPU simulator needs stable buffer ownership before rule code can be useful. 
    - `dotnet test`: passed, 29 tests.
    - `dotnet build Wildfire.slnx`: passed, 0 warnings and 0 errors.
    - Blockers: none.
+- Integrated on `main` in commit `2915475`.
+- Coordinator verification after integration: `git diff --check` passed, `dotnet test` passed with 29 tests, and sequential `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
+- Note: one concurrent `dotnet build Wildfire.slnx` run failed while `dotnet test` was running because both processes tried to write `Wildfire.Cli.runtimeconfig.json`; rerunning the build sequentially passed.
