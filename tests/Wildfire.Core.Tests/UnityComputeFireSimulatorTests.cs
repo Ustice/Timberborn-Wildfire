@@ -41,6 +41,7 @@ public sealed class UnityComputeFireSimulatorTests
         Assert.Same(originalNextCells, dispatch.NextCells);
         Assert.Same(grid.QueuedChanges, dispatch.QueuedChanges);
         Assert.Same(grid.Deltas, dispatch.Deltas);
+        Assert.Same(grid.VisualFields, dispatch.VisualFields);
         Assert.Equal(0u, dispatch.ChangeCount);
         Assert.Equal(3, dispatch.ThreadGroupsX);
         Assert.Equal(2, dispatch.ThreadGroupsY);
@@ -299,6 +300,7 @@ public sealed class UnityComputeFireSimulatorTests
                 Assert.Equal(UnityComputeFireSimulator.ApplyExternalChangesKernelName, apply.KernelName);
                 Assert.Equal(1u, apply.Tick);
                 Assert.Same(grid.QueuedChanges, apply.QueuedChanges);
+                Assert.Same(grid.VisualFields, apply.VisualFields);
                 Assert.Equal(1u, apply.ChangeCount);
                 Assert.Equal(1, apply.ThreadGroupsX);
                 Assert.Equal(1, apply.ThreadGroupsY);
@@ -307,6 +309,7 @@ public sealed class UnityComputeFireSimulatorTests
             simulate =>
             {
                 Assert.Equal(UnityComputeFireSimulator.FullGridKernelName, simulate.KernelName);
+                Assert.Same(grid.VisualFields, simulate.VisualFields);
                 Assert.Equal(0u, simulate.ChangeCount);
             });
         Assert.Equal(

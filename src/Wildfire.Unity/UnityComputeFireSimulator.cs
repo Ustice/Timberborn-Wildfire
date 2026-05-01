@@ -9,7 +9,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     public const int ThreadGroupSizeX = 8;
     public const int ThreadGroupSizeY = 8;
     public const int ThreadGroupSizeZ = 4;
-    public const string Status = "External change upload, full-grid shader dispatch, and compact delta readback baseline ready.";
+    public const string Status = "External change upload, full-grid shader dispatch, compact delta readback, and GPU visual field output baseline ready.";
 
     private readonly List<FireSimChange> _queuedChanges = [];
     private readonly List<IFireSimListener> _listeners = [];
@@ -104,6 +104,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.NextCells,
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
+            BufferGrid.VisualFields,
             0u,
             GetThreadGroups(Dimensions.Width, ThreadGroupSizeX),
             GetThreadGroups(Dimensions.Height, ThreadGroupSizeY),
@@ -143,6 +144,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.NextCells,
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
+            BufferGrid.VisualFields,
             checked((uint)changeCount),
             1,
             1,

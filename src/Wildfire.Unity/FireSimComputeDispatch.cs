@@ -14,6 +14,7 @@ public readonly record struct FireSimComputeDispatch(
     IComputeBufferHandle NextCells,
     IComputeBufferHandle QueuedChanges,
     IAppendComputeBufferHandle Deltas,
+    IComputeBufferHandle VisualFields,
     uint ChangeCount,
     int ThreadGroupsX,
     int ThreadGroupsY,

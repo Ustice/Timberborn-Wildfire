@@ -33,6 +33,7 @@ RWStructuredBuffer<uint> CurrentCells;
 RWStructuredBuffer<uint> NextCells;
 StructuredBuffer<FireSimChangeGpu> ExternalChanges;
 AppendStructuredBuffer<CellDeltaGpu> Deltas;
+RWStructuredBuffer<float4> VisualFields;
 
 uint Width;
 uint Height;
@@ -147,6 +148,32 @@ bool IsBurning(uint cell)
 {
     uint ignitionThreshold = 12u - Flammability(cell) + Water(cell);
     return Terrain(cell) == 1u && Fuel(cell) > 0u && Heat(cell) >= ignitionThreshold;
+}
+
+float SaturateUnit(float value)
+{
+    return saturate(value);
+}
+
+float4 BuildVisualSample(uint cell)
+{
+    float fuel = (float)Fuel(cell) / 15.0f;
+    float heat = (float)Heat(cell) / 15.0f;
+    bool terrain = Terrain(cell) == 1u;
+    bool burning = IsBurning(cell);
+    bool ashCandidate = terrain && Fuel(cell) <= 2u && Heat(cell) > 0u;
+
+    float fire = burning ? SaturateUnit(0.35f + (heat * 0.65f)) : 0.0f;
+    float smoke = burning ? SaturateUnit(0.2f + (fuel * 0.35f) + (heat * 0.45f)) : 0.0f;
+    float ash = ashCandidate ? SaturateUnit((1.0f - fuel) * max(0.25f, heat)) : 0.0f;
+    float visibility = max(heat, max(fire, max(smoke, ash)));
+
+    return float4(fire, smoke, ash, visibility);
+}
+
+void WriteVisualField(uint index, uint cell)
+{
+    VisualFields[index] = BuildVisualSample(cell);
 }
 
 void AddNeighbor(uint3 coordinate, inout uint heatSum, inout uint neighborCount, inout uint burningNeighborCount)
@@ -333,5 +360,6 @@ void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
     uint oldCell = CurrentCells[index] & 0xFFFFu;
     uint newCell = StepCell(index, id, oldCell);
     NextCells[index] = newCell;
+    WriteVisualField(index, newCell);
     AppendDelta(index, oldCell, newCell);
 }

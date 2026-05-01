@@ -8,7 +8,7 @@ public sealed class ComputeBufferGrid : IDisposable
     public const int ChangeStrideBytes = sizeof(uint) * 4;
     public const int DeltaStrideBytes = sizeof(uint) * 4;
     public const int GenerationStrideBytes = sizeof(uint);
-    public const int VisualFieldStrideBytes = sizeof(float);
+    public const int VisualFieldStrideBytes = FireVisualField.StrideBytes;
 
     private readonly List<IComputeBufferHandle> _ownedBuffers;
     private bool _disposed;

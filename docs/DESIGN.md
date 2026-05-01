@@ -386,7 +386,7 @@ CurrentActive:      StructuredBuffer<uint>
 NextActive:         AppendStructuredBuffer<uint>
 Deltas:             AppendStructuredBuffer<CellDeltaGpu>
 QueuedGeneration:   RWStructuredBuffer<uint>
-VisualField:        RWTexture2DArray<float4>
+VisualField:        RWStructuredBuffer<float4>
 ```
 
 GPU cell values use lower 16 bits:
@@ -416,7 +416,7 @@ The first shader translates the rule pseudocode with these implementation detail
 - `burnChance` is saturated through `min` and unsigned subtraction guards instead of relying on pseudocode `clamp` behavior.
 - GPU delta records are padded to four `uint` fields so the current `wildfire.deltas` buffer stride stays 16 bytes.
 - External change upload remains a follow-up pass owned by `TWF-003`.
-- Visual-field writes remain a follow-up pass owned by `TWF-005`.
+- Visual-field writes now happen in the full-grid kernel from the post-step packed cell value.
 
 ## 17. GPU Visual Pipeline
 
@@ -437,7 +437,7 @@ FireVisuals.compute or material shader
 Overlay / smoke / fire rendering
 ```
 
-Use a `Texture2DArray` for cell-layer visuals.
+Use a four-channel visual field for cell-layer visuals. The current repository does not reference UnityEngine, so the first implementation uses an `RWStructuredBuffer<float4>` abstraction with one entry per cell. A future Unity binding can expose the same layout through `Texture2DArray<float4>` or copy the buffer into a texture for material sampling.
 
 Suggested channels:
 
@@ -445,6 +445,13 @@ Suggested channels:
 - G: smoke intensity.
 - B: ash intensity.
 - A: heat intensity or visibility.
+
+Current derivation:
+
+- Fire intensity comes from burning state and heat.
+- Smoke intensity comes from burning state, remaining fuel, and heat.
+- Ash intensity comes from terrain cells with low/no fuel and residual heat. Because `PackedCell` has no burn-history field, ash disappears after heat decays; this is a temporary approximation, not stored ash state.
+- Alpha is visibility, the maximum of heat, fire, smoke, and ash intensity.
 
 Rule:
 

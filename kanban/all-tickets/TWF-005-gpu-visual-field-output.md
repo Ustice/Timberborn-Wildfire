@@ -52,3 +52,9 @@ The design depends on visuals staying close to the simulation buffers. A visual 
 ## Notes
 
 - This ticket does not need polished art. It needs the data path and enough output to prove the renderer can consume it.
+- Worker implementation started in `~/repos/wildfire-TWF-005` on branch `codex/TWF-005-visual-fields`.
+- Implemented visual output as a `float4`-equivalent `wildfire.visual_fields` buffer because the current solution has no UnityEngine texture/runtime binding.
+- `FireSim.compute` now writes R/G/B/A visual samples from the post-step packed cell value: fire from burning state and heat, smoke from burning state plus fuel and heat, ash from terrain low/no fuel plus residual heat, and alpha from max visibility.
+- Did not add flame, smoke, or ash fields to `PackedCell`.
+- Did not add C# fire-spread parity.
+- Real rendered artifact is blocked by the existing repository limitation: no Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, standalone shader compiler, GPU texture binding, or visual readback runner.

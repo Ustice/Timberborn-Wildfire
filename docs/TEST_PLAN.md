@@ -13,6 +13,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Seeded sparse layout determinism.
 - CLI fixture export shape and deterministic JSON output.
 - Shader snapshot harness contract: CLI fixture loading, buffer-grid creation from fixtures, stable accepted-snapshot JSON shape, actionable snapshot diffs, and explicit current execution blocker.
+- GPU visual field wrapper contract: `wildfire.visual_fields` is allocated as one `float4`-equivalent entry per packed cell, full-grid dispatch receives the visual buffer, shader source writes visual samples from post-step packed cell values, and deterministic tests cover fire, smoke, ash, and visibility derivation.
 
 Run:
 
@@ -58,6 +59,8 @@ dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests
 Shader execution remains blocked in this repository because there is no Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, or standalone compute-shader compiler/readback runner. Do not add C# fire-spread parity rules to fill that gap. Enable execution by implementing `IShaderSnapshotExecutor` with a real Unity or compiler-backed GPU dispatcher, then point the harness at accepted fixture snapshots.
 
 `TWF-004` adds .NET coverage for the compact delta readback wrapper: `wildfire.deltas` is allocated through the append-buffer abstraction, its append counter is reset before dispatch, the append counter is read after dispatch, compact `CellDelta` records are decoded, and subscribed listeners are notified from the readback result. This does not prove HLSL compile/runtime behavior because the repository still has no Unity runtime, Unity batchmode project, or standalone compute-shader compiler harness.
+
+`TWF-005` adds .NET coverage for the visual-field data path only: the visual field is a `float4`-equivalent buffer handle, dispatch records carry it to the compute boundary, and shader source writes the visual sample from packed cell output. This does not prove rendered pixels, HLSL compilation, GPU texture binding, or visual readback because the repository still has no Unity runtime, Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, or standalone compute-shader compiler/readback runner.
 
 Future GPU validation should add accepted shader snapshot fixtures for:
 
