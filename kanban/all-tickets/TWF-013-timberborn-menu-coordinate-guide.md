@@ -60,6 +60,8 @@ Click automation is only as reliable as its map of the UI. A coordinate guide ma
 - Stopped before selecting `load_dialog.load_selected_save` because loading a save changes the running game state.
 - Captured the Mods dialog and verified `Prometheus v0.2` was visible and enabled.
 - Did not capture standalone opening screens or the main menu because Timberborn was already inside a running save. Exiting to the main menu could discard unsaved progress or change the active runtime state, so the guide documents that boundary and refresh instructions.
+- Pickup QA pass on 2026-05-01 confirmed all screenshot files are `1920 x 1080`, re-read the guide against the visible screenshot evidence, and added explicit notes that no Wildfire row, Timberborn debug menu, developer console, or Wildfire-specific menu was visible in the captured states.
+- Attempted a live re-check with Computer Use, `screencapture`, and `cliclick`; Computer Use returned `appNotFound("Timberborn")` or Apple event errors, `screencapture` returned `could not create image from display`, and `cliclick` warned that Accessibility privileges are not enabled. The previous load-menu click verification and captured `03-load-menu.png` remain the pass evidence for the required non-destructive load-menu path.
 
 ## QA Evidence
 
@@ -79,3 +81,4 @@ Click automation is only as reliable as its map of the UI. A coordinate guide ma
 - Save-selection targets documented without destructive clicks: pass.
 - Mod/Wildfire-relevant menu captured: pass.
 - Opening screens/main menu captured: blocked by running-save boundary; documented as a refresh item.
+- Current pickup verification: pass with existing screenshot and ticket evidence; live re-screenshot was blocked by local macOS capture/accessibility permissions.

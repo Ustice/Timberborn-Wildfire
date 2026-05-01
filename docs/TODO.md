@@ -13,20 +13,26 @@
 - [x] Add named seeded scenarios.
 - [x] Add seed/config options.
 - [x] Add packed-cell-derived terminal preview.
-- [ ] Add fixture export for shader snapshots.
+- [x] Add fixture export for shader snapshots.
 
 ## Phase 3: Unity Compute Simulator
 
-- [ ] Implement compute shader rule translation.
-- [ ] Implement full-grid dispatch.
-- [ ] Emit compact delta records.
-- [ ] Generate visual texture output.
-- [ ] Add shader snapshot tests.
+- [x] Implement compute shader rule translation.
+- [x] Implement full-grid dispatch scaffold.
+- [x] Emit compact delta records scaffold.
+- [x] Generate visual texture output scaffold.
+- [x] Add shader snapshot harness.
+- [ ] Run `FireSim.compute` through a real shader execution harness.
 
 ## Phase 4: Timberborn GPU Integration
 
-- [ ] Convert terrain/buildings/resources into packed cells.
-- [ ] Upload external changes to GPU buffers.
+- [x] Convert terrain/buildings/resources into packed cells.
+- [x] Upload external changes to GPU buffers.
+- [x] Add in-process QA command bridge scaffold.
+- [x] Capture in-game Timberborn menu coordinates.
+- [ ] Add Timberborn mod build/deploy path.
+- [ ] Bind QA command bridge to a running Timberborn invocation surface.
+- [ ] Capture title-screen coordinates from a safe startup state.
 - [ ] Dispatch the GPU simulator on a fixed cadence.
 - [ ] Consume compact deltas for overlays and gameplay consequences.
 - [ ] Validate first live gameplay loop.
