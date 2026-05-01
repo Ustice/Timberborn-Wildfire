@@ -17,7 +17,8 @@
 - `TWF-001` is done and integrated on `main` in commit `2915475`.
 - `TWF-002` is done and integrated on `main` in commit `14f7c82`.
 - `TWF-003` is done and integrated on `main` in commit `cfe8aec`.
-- `TWF-004`, `TWF-005`, and `TWF-007` are ready.
+- `TWF-004` is done and integrated on `main` in commit `8d563f4`.
+- `TWF-005`, `TWF-006`, and `TWF-007` are ready.
 - `TWF-013` is blocked until Timberborn UI is open at the intended QA resolution.
 - Later tickets are dependency-gated behind fixture export, Unity compute buffers, shader dispatch, compact delta readback, Timberborn adapters, and QA utility setup.
 
@@ -25,9 +26,8 @@
 
 Continue with:
 
-- Dispatch `TWF-004` next for compact delta readback.
-- `TWF-004` must handle append-buffer counter reset before compact delta readback is accepted.
-- `TWF-005` can run in parallel with `TWF-003` only if write scopes avoid `docs/TEST_PLAN.md` conflicts.
+- Dispatch `TWF-006` next for shader snapshot harness shape, or `TWF-005` for visual field output if visuals should come first.
+- `TWF-005` can run in parallel with `TWF-006` only if write scopes avoid `docs/TEST_PLAN.md` conflicts.
 - `TWF-007` can run in parallel if its worker avoids overlapping `docs/TEST_PLAN.md` changes.
 - Unblock and dispatch `TWF-013` when Timberborn UI access is available.
 

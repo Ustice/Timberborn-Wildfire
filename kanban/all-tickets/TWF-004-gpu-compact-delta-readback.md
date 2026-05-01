@@ -71,6 +71,8 @@ Timberborn gameplay consequences should be driven by a small changed-cell stream
 - `git diff --check`: passed.
 - `dotnet test`: passed, 43 tests.
 - `dotnet build Wildfire.slnx`: passed, 0 warnings, 0 errors.
+- Integrated on `main` in commit `8d563f4`.
+- Coordinator verification after integration: `git diff --check`, `dotnet test` with 43 tests, and sequential `dotnet build Wildfire.slnx` all passed.
 
 ## Blockers
 
