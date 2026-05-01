@@ -47,3 +47,36 @@ Extend the Timberborn coordinate guide with opening-screen and standalone main-m
 ## Notes
 
 - This ticket exists because `TWF-013` correctly avoided exiting a running save during evidence capture.
+
+## QA Notes - 2026-05-01
+
+- Role: QA.
+- Fixture/save state: Timberborn process was already running. `~/Library/Logs/Mechanistry/Timberborn/Player.log` shows `Loading saved game Wildfire testing - 2026-05-01 06h45m, Day 1-1.autosave at 2026-05-01 06:51:01Z`, followed by an autosave at `2026-05-01 07:01:01Z`.
+- Launch command: none. Existing app process was observed with `pgrep -fl Timberborn`.
+- Display metadata: `C27F390`, `1920 x 1080`, `UI Looks like: 1920 x 1080 @ 60.00Hz`; Sidecar display also present but not used for the coordinate guide.
+- Version evidence: `Player.log` reports `Starting game version 1.0.13.0-1e60728-xsm`.
+- Commands attempted:
+
+   ```bash
+   osascript -e 'tell application id "com.mechanistry.timberborn" to activate'
+   screencapture -x docs/reference/screenshots/timberborn-menu-coordinate-guide/07-title-pass-current-state.png
+   screencapture -x -D 1 docs/reference/screenshots/timberborn-menu-coordinate-guide/07-title-pass-current-state.png
+   screencapture -x -D 2 /tmp/wildfire-D2.png
+   system_profiler SPDisplaysDataType
+   ```
+
+- Screenshot result: blocked. `screencapture` returned `could not create image from display` for the default display, `-D 1`, and `-D 2`; no new title-screen screenshot was created.
+- Manual verification result: blocked. QA did not click `pause.exit_to_main_menu` because the app was already in a loaded save and exiting could discard unsaved progress or change active runtime state. QA also could not verify the title-screen-to-Load-Game path without screenshots or a confirmed title-screen state.
+- Guide update: added a `TWF-020 Capture Attempt` note to `docs/timberborn-menu-coordinate-guide.md` with current environment evidence and the explicit no-coordinate boundary.
+- Pass/fail result:
+
+   | Requirement | Result | Evidence |
+   | --- | --- | --- |
+   | Start from safe title-screen or disposable-save state | Blocked | Current process was in a loaded save; no explicit disposable-state approval for exiting to main menu. |
+   | Capture opening screens and standalone main-menu targets | Blocked | `screencapture` could not create an image from display. |
+   | Record resolution/display/scaling/version | Partial pass | Metadata recorded from `system_profiler` and `Player.log`. |
+   | Add named coordinate targets | Not done | No verified title-screen screenshots or clicks; no guessed coordinates added. |
+   | Mark destructive/state-changing targets as boundaries | Pass | Existing guide boundary remains; TWF-020 note reinforces no exit/load/delete/overwrite actions. |
+   | Verify title-screen to Load Game dialog | Blocked | No safe verified title-screen state and no screenshot capture. |
+
+- Smallest unblock action: provide or approve a known disposable title-screen path, then run the pass from an active desktop session where `screencapture` works. If the currently loaded `Wildfire testing` save is disposable, explicitly approve exiting it to the main menu before QA clicks that boundary.

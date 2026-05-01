@@ -122,6 +122,22 @@ Opening screens and the standalone main menu were not visible in this run becaus
 
 Do not click `pause.exit_to_main_menu` or confirm any exit prompt from a running save unless the coordinator explicitly allows that state change. Exiting to the main menu can discard unsaved progress or change the active runtime state. Capture these targets in a later QA pass that starts Timberborn directly at the title screen or uses a disposable save state.
 
+### TWF-020 Capture Attempt
+
+QA attempted the title-screen coordinate pass on 2026-05-01, but stopped at the safety boundary before adding coordinate targets.
+
+| Field | Value |
+| --- | --- |
+| App process | Running as `com.mechanistry.timberborn` |
+| Display | `C27F390` |
+| Resolution | `1920 x 1080` |
+| macOS UI scaling | `UI Looks like: 1920 x 1080 @ 60.00Hz` |
+| Timberborn version text | `v1.0.13.0-1e60728-xsm` from `Player.log` |
+| Current state evidence | `Player.log` shows `Loading saved game Wildfire testing - 2026-05-01 06h45m, Day 1-1.autosave` |
+| Screenshot result | `screencapture` failed with `could not create image from display`; no new title-screen PNG was created |
+
+No opening-screen or standalone main-menu targets are recorded yet. Do not infer coordinates from the in-game Escape menu. A future pass should start from a known title-screen state with working screenshot capture, or use a clearly disposable save where exiting to the main menu has been explicitly approved.
+
 ## Refresh Instructions
 
 Refresh this guide whenever Timberborn version, monitor, display resolution, UI scaling, or menu layout changes.
