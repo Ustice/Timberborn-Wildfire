@@ -1,6 +1,6 @@
 ---
 name: ticket-agent
-description: Work one assigned Wildfire ticket in /Users/jasonkleinberg/Documents/New project as a Worker, QA, Reviewer, or Researcher.
+description: Work one assigned Wildfire ticket in /Users/jasonkleinberg/repos/wildfire as a Worker, QA, Reviewer, or Researcher.
 ---
 
 # Ticket Agent
@@ -9,7 +9,7 @@ description: Work one assigned Wildfire ticket in /Users/jasonkleinberg/Document
 
 Use this skill only for a specific assigned Wildfire ticket.
 
-1. Start in `/Users/jasonkleinberg/Documents/New project` or the assigned ticket worktree.
+1. Start in `/Users/jasonkleinberg/repos/wildfire` or the assigned ticket worktree.
 2. Read `AGENTS.md`, `docs/INDEX.md`, `kanban/README.md`, and the assigned ticket file.
 3. Determine the role from the assignment or ticket frontmatter.
 4. Read the matching role doc.

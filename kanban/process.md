@@ -2,12 +2,12 @@
 
 Use this runbook when starting or resuming a Wildfire multi-agent sprint.
 
-Project-local Codex skills live under [../.codex/skills/](../.codex/skills/). Use `coordinate-sprint` for sprint management and `ticket-agent` for one assigned Worker, QA, Reviewer, or Researcher ticket.
+Project-local Codex skills live under [../.codex/skills/](../.codex/skills/). Use `kanban` for sprint management and `ticket-agent` for one assigned Worker, QA, Reviewer, or Researcher ticket.
 
 ## Quick Kickoff Prompt
 
 ```text
-Start a Wildfire coordination run in /Users/jasonkleinberg/Documents/New project.
+Start a Wildfire coordination run in /Users/jasonkleinberg/repos/wildfire.
 
 Read AGENTS.md, docs/INDEX.md, docs/HANDOFF.md, kanban/README.md, kanban/roles/coordinator.md, active status symlinks under kanban/by-status/, and canonical ticket files under kanban/all-tickets/.
 

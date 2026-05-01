@@ -7,19 +7,19 @@
 - [x] Implement deterministic CPU simulator.
 - [x] Emit deltas and listener notifications.
 - [x] Add first unit tests.
-- [ ] Harden active frontier, dedupe, and listener next-tick behavior.
-- [ ] Add seeded CPU snapshot scenarios.
+- [x] Harden active frontier, dedupe, and listener next-tick behavior.
+- [x] Add seeded CPU snapshot scenarios.
 
 ## Phase 2: CLI Harness
 
 - [x] Add minimal terminal renderer.
-- [ ] Add scenario selection.
-- [ ] Add seed/config options.
+- [x] Add scenario selection.
+- [x] Add seed/config options.
 - [ ] Improve redraw and layer navigation ergonomics.
 
 ## Phase 3: Timberborn CPU Backend
 
-- [ ] Discover current Timberborn adapter APIs.
+- [x] Discover current Timberborn adapter APIs.
 - [ ] Convert terrain/buildings/resources into packed cells.
 - [ ] Consume deltas for overlays and gameplay consequences.
 - [ ] Validate first live gameplay loop.
