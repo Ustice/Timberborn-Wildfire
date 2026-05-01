@@ -21,6 +21,12 @@ Use this page as the startup map for humans and agents.
 - [../kanban/roles/tech-lead.md](../kanban/roles/tech-lead.md)
 - [../kanban/roles/researcher.md](../kanban/roles/researcher.md)
 
+## Local Codex Skills
+
+- [../.codex/skills/kanban/SKILL.md](../.codex/skills/kanban/SKILL.md) starts or resumes the file-board sprint.
+- [../.codex/skills/delegate/SKILL.md](../.codex/skills/delegate/SKILL.md) guides assigned ticket agents.
+- [../.codex/skills/timberborn-qa-utility/SKILL.md](../.codex/skills/timberborn-qa-utility/SKILL.md) guides Timberborn QA utility scripts and guarded UI automation.
+
 ## Historical Material
 
 Closed sprint notes and obsolete planning should move to [archive/](archive/) instead of staying in active docs.

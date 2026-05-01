@@ -9,6 +9,7 @@ dependencies:
 write_scope:
    - .codex/skills/**
    - docs/**
+   - kanban/all-tickets/TWF-014-qa-utility-skill.md
 ---
 
 # TWF-014: Create QA Utility Skill
@@ -50,3 +51,31 @@ QA utility scripts need consistent guardrails: use Bun and TypeScript, avoid uns
 ## Notes
 
 - This ticket creates the reusable instructions. The first concrete utility is `TWF-015`.
+
+## Worker Notes
+
+- Created local skill `.codex/skills/timberborn-qa-utility/SKILL.md`.
+- Linked the skill from `docs/INDEX.md` and `docs/TEST_PLAN.md`.
+- Kept this pass to Markdown/docs only. No TypeScript helper scripts were added.
+
+### Skill Review Outline
+
+Simple utility task: outline a future non-destructive script that opens the in-game Escape menu, opens the Mods dialog, verifies a known mod row, and closes the dialog.
+
+Using the new skill, the utility should:
+
+- Run as a TypeScript script with `bun`.
+- Read target ids from `docs/timberborn-menu-coordinate-guide.md`: `pause.mods`, `mods.prometheus_row`, and `mods.ok`.
+- Activate `com.mechanistry.timberborn` before input.
+- Verify the display assumptions match the coordinate guide.
+- Verify the in-game Escape menu is visible before clicking `pause.mods`.
+- Stop with a non-zero error if Timberborn is not running, activation fails, screenshot capture fails, the Escape menu is not visible, or any coordinate id is missing.
+- Avoid `mods.browse_local_mods`, `mods.create_new_mod`, save loading, delete buttons, and exit targets because those can change state or leave Timberborn.
+- Record command output, before/after screen evidence, coordinate ids, and pass/fail notes in the assigned ticket.
+
+### Evidence
+
+- `git diff --check`: passed.
+- `dotnet test`: passed, 68 tests.
+- Skill review outline: complete in this ticket note.
+- Bun execution: not applicable; no TypeScript examples or helper scripts were added.

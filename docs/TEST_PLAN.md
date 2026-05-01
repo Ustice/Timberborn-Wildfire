@@ -106,6 +106,12 @@ Current `TWF-012` coverage adds an in-process command bridge scaffold only. QA o
 
 Live in-game command validation remains blocked because the repository still has no Timberborn UI, console, file-polling, or HTTP binding that forwards game-side input to `TimberbornQaCommandBridge.Execute`. The smallest unblock is a narrow Timberborn binding that exposes only the bridge's known commands, logs `wildfire_command_request` and `wildfire_command_result`, and does not expose arbitrary code execution.
 
+## Timberborn QA Utilities
+
+Use the local [Timberborn QA Utility skill](../.codex/skills/timberborn-qa-utility/SKILL.md) when building Bun/TypeScript scripts or guarded `cliclick`-style automation for live Timberborn QA.
+
+UI automation must take coordinate targets from [timberborn-menu-coordinate-guide.md](timberborn-menu-coordinate-guide.md), verify the target app and expected screen before acting, and fail loudly rather than clicking through an unknown Timberborn state.
+
 ## Timberborn Deploy Pipeline
 
 Use the deploy script to build and stage the Timberborn adapter without making Timberborn own simulation rules:
