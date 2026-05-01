@@ -13,6 +13,7 @@ public sealed class CpuFireSimulator : IFireSimulator
     private readonly int[] _queuedGeneration;
     private readonly int[] _nextActiveGeneration;
     private readonly List<CellDelta> _deltas = [];
+    private readonly Dictionary<int, int> _deltaPositions = [];
     private readonly List<IFireSimListener> _listeners = [];
     private int _generation;
     private int _nextActiveStamp = 1;
@@ -66,6 +67,7 @@ public sealed class CpuFireSimulator : IFireSimulator
         _nextActiveStamp += 1;
         _candidates.Clear();
         _deltas.Clear();
+        _deltaPositions.Clear();
         _nextActive.Clear();
 
         ApplyQueuedExternalChanges();
@@ -120,7 +122,7 @@ public sealed class CpuFireSimulator : IFireSimulator
             }
 
             _cells[change.CellIndex] = newCell;
-            _deltas.Add(new CellDelta(change.CellIndex, oldCell, newCell));
+            RecordDelta(change.CellIndex, oldCell, newCell);
             EnqueueCandidateWithNeighbors(change.CellIndex);
             EnqueueNextActiveWithNeighbors(change.CellIndex);
         }
@@ -190,7 +192,7 @@ public sealed class CpuFireSimulator : IFireSimulator
             if (newCell != oldCell)
             {
                 _cells[index] = newCell;
-                _deltas.Add(new CellDelta(index, oldCell, newCell));
+                RecordDelta(index, oldCell, newCell);
                 EnqueueNextActiveWithNeighbors(index);
             }
 
@@ -199,6 +201,48 @@ public sealed class CpuFireSimulator : IFireSimulator
                 EnqueueNextActiveWithNeighbors(index);
             }
         }
+    }
+
+    private void RecordDelta(int index, ushort oldCell, ushort newCell)
+    {
+        if (oldCell == newCell)
+        {
+            return;
+        }
+
+        if (!_deltaPositions.TryGetValue(index, out int position))
+        {
+            _deltaPositions[index] = _deltas.Count;
+            _deltas.Add(new CellDelta(index, oldCell, newCell));
+            return;
+        }
+
+        CellDelta existing = _deltas[position];
+        if (existing.OldCell == newCell)
+        {
+            RemoveDeltaAt(position);
+            return;
+        }
+
+        _deltas[position] = existing with { NewCell = newCell };
+    }
+
+    private void RemoveDeltaAt(int position)
+    {
+        CellDelta removed = _deltas[position];
+        int lastPosition = _deltas.Count - 1;
+        CellDelta last = _deltas[lastPosition];
+
+        _deltas.RemoveAt(lastPosition);
+        _deltaPositions.Remove(removed.CellIndex);
+
+        if (position == lastPosition)
+        {
+            return;
+        }
+
+        _deltas[position] = last;
+        _deltaPositions[last.CellIndex] = position;
     }
 
     private void EnqueueCandidate(int index)

@@ -40,3 +40,5 @@ Bring the first CPU core implementation into closer alignment with the Wildfire 
 ## Notes
 
 - The current handoff notes that delta consolidation can be improved when external changes and rules touch the same cell in one tick.
+- Worker evidence: added CPU core tests covering shared-neighbor candidate dedupe, active-frontier carryover after a stochastic no-change ignition attempt, listener-registered changes applying on the following tick, and one net delta per cell when external changes and rules touch the same cell in one tick.
+- Worker decision: fixed duplicate-delta behavior in `CpuFireSimulator` by consolidating same-tick deltas per cell to the original old cell and final new cell; net-zero same-tick changes are removed from the tick result.
