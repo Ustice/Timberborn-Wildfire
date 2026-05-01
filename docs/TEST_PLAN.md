@@ -19,6 +19,16 @@ Core tests should cover:
 
 Given the same seed, initial grid, and tick count, CPU snapshots should be stable.
 
+Starter CPU snapshots record the packed cell grid in hex plus per-tick delta counts for reviewable regression diffs.
+
+Later GPU validation should use the CPU snapshot suite as the oracle:
+
+- Run the same named scenario, seed, dimensions, initial packed cells, and tick count on the GPU backend.
+- Read back the packed GPU cell grid after the final tick and format it with the same row/layer order as the CPU snapshot.
+- Compare CPU and GPU packed cells exactly first.
+- If exact matching is not possible, record each differing cell with coordinates, CPU packed value, GPU packed value, and the rule or shader limitation that explains the difference.
+- Keep accepted tolerances scenario-specific and bounded; do not replace CPU snapshots with broad image-only or visual checks.
+
 ## CLI Scenarios
 
 Seeded scenarios should include:
