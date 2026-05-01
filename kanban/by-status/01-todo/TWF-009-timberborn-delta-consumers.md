@@ -1,1 +1,0 @@
-../../all-tickets/TWF-009-timberborn-delta-consumers.md

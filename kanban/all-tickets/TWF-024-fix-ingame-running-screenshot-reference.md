@@ -49,3 +49,8 @@ The current screenshot was captured while Jason was interacting with the compute
 ## Notes
 
 - User report on 2026-05-01: `01-ingame-running.png` is incorrect and was likely captured while the user was interacting with the computer.
+- Worker evidence on 2026-05-01: inspected the existing `docs/reference/screenshots/timberborn-menu-coordinate-guide/01-ingame-running.png`; it was `1920 x 1080` but visibly showed the Codex desktop, not Timberborn.
+- Capture result on 2026-05-01: `osascript -e 'tell application id "com.mechanistry.timberborn" to activate'`, then `screencapture -x docs/reference/screenshots/timberborn-menu-coordinate-guide/01-ingame-running-candidate.png` succeeded.
+- Replacement evidence: `docs/reference/screenshots/timberborn-menu-coordinate-guide/01-ingame-running.png` is now a clean Timberborn loaded-save running screenshot at `1920 x 1080`; visual inspection shows Timberborn in-game HUD and no Codex or other desktop app.
+- Guide update: `docs/timberborn-menu-coordinate-guide.md` now records the TWF-024 replacement note and updates `hud.cycle_indicator` to the visible `Cycle 3, day 18` state from the corrected baseline.
+- Verification on 2026-05-01: `git diff --check` passed, `sips -g pixelWidth -g pixelHeight docs/reference/screenshots/timberborn-menu-coordinate-guide/01-ingame-running.png` reported `1920 x 1080`, and `dotnet test tests/Wildfire.Core.Tests/Wildfire.Core.Tests.csproj` passed 71 tests.

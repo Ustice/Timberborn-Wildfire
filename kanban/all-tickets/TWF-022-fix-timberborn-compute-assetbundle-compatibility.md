@@ -69,3 +69,6 @@ Make the deployed `wildfire_compute_mac` compute shader bundle load successfully
    - Live Timberborn still reports `simulator_integrated=false`; `Player.log` shows `wildfire_timberborn_compute_asset_loaded_bundle_scan count=4`, then `The AssetBundle 'wildfire_compute_mac' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.`
    - Unity build log still emits `'AssetBundle' is not supported because the module AssetBundle is disabled in the build.` and `'AssetBundleManifest' is not supported because the module AssetBundle is disabled in the build.` even after trying the official-style overload. This is now the smallest remaining blocker.
    - Split follow-up: `TWF-023` should prove a Timberborn-loadable compute shader bundle from the official modding pipeline or identify the required Unity project/module setting. Do not fake simulator success.
+- Coordinator reconciliation 2026-05-01:
+   - Moved to done after `TWF-023` proved the exact compatibility fix: include `com.unity.modules.assetbundle` in the minimal Unity batchmode project package manifest.
+   - `main` commit `9859ceb` records live Timberborn proof that `wildfire_compute_mac` loads as a real compute shader and `status` reports `simulator_integrated=true`.

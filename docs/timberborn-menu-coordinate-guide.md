@@ -37,6 +37,8 @@ Computer Use could inspect and screenshot the Timberborn window, but direct Comp
 | Standalone main menu | `docs/reference/screenshots/timberborn-menu-coordinate-guide/10-main-menu.png` |
 | Main-menu Load Game dialog | `docs/reference/screenshots/timberborn-menu-coordinate-guide/11-main-load-menu.png` |
 
+TWF-024 verified the previous `01-ingame-running.png` was contaminated by a Codex desktop screenshot, then replaced it with a clean `screencapture` PNG of the loaded Timberborn save at `1920 x 1080`.
+
 ## Coordinate Targets
 
 ### In-Game Escape Menu
@@ -119,7 +121,7 @@ Precondition: a save is loaded and no modal menu is open.
 | `hud.tool_palette_start` | 278 | 1044 | Visible | Bottom tool palette begins near this point. |
 | `hud.version_label` | 1638 | 1071 | Visible | Version text appears at lower right. |
 | `hud.global_view` | 1298 | 20 | Visible | Top-right view control. |
-| `hud.cycle_indicator` | 1592 | 20 | Visible | Shows `Cycle 1, day 2` in captured state. |
+| `hud.cycle_indicator` | 1592 | 20 | Visible | Shows `Cycle 3, day 18` in the TWF-024 recaptured clean baseline. |
 
 ## Startup Mods Dialog
 
