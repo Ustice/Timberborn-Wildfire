@@ -19,15 +19,20 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
     public void Load()
     {
         _logSink.Info(
+            $"wildfire_timberborn_adapter_started cadence_interval_ms={TimberbornFireCadence.Default.Interval.TotalMilliseconds:F0}");
+        _logSink.Info(
             $"wildfire_timberborn_runtime_ready cadence_interval_ms={TimberbornFireCadence.Default.Interval.TotalMilliseconds:F0}");
     }
 
     public void Unload()
     {
+        _logSink.Info(
+            $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         _fireSystem?.Dispose();
         _dispatcher = null;
         _fireSystem = null;
         _gameUpdateId = 0;
+        _logSink.Info("wildfire_timberborn_adapter_stopped");
         _logSink.Info("wildfire_timberborn_runtime_unloaded");
     }
 
@@ -131,6 +136,8 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
             cadence ?? TimberbornFireCadence.Default,
             _logSink);
         _gameUpdateId = 0;
+        _logSink.Info(
+            $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
     }
 
     private TimberbornFireSystem RequireFireSystem()

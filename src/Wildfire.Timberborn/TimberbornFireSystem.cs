@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
@@ -126,12 +127,14 @@ public sealed class TimberbornFireSystem : IDisposable
         _logSink.Info($"wildfire_timberborn_dispatch_started pending_changes={pendingChangeCount}");
         try
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             GpuFireStepResult result = fireSimulator.Tick();
+            stopwatch.Stop();
             _registeredChangeCountSinceLastDispatch = 0;
             LastTick = result.Tick;
             LastDeltaCount = result.Deltas.Count;
             _logSink.Info(
-                $"wildfire_timberborn_dispatch_completed tick={result.Tick} delta_count={result.Deltas.Count}");
+                $"wildfire_timberborn_dispatch_completed tick={result.Tick} delta_count={result.Deltas.Count} elapsed_ms={stopwatch.Elapsed.TotalMilliseconds:F3}");
 
             return result;
         }
@@ -164,8 +167,9 @@ public sealed class TimberbornFireSystem : IDisposable
 
         changes
             .ToList()
-            .ForEach(change => RegisterChange(change, "mapped_cell"));
-        _logSink.Info($"wildfire_timberborn_mapped_changes_registered count={changes.Length}");
+            .ForEach(change => RegisterChange(change, "mapped_cell", shouldLog: false));
+        _logSink.Info(
+            $"wildfire_timberborn_changes_registered source=mapped_cell count={changes.Length} pending_changes={_registeredChangeCountSinceLastDispatch}");
     }
 
     public void RegisterMappedCellChanges(IEnumerable<TimberbornCellSource> sources)
@@ -178,11 +182,15 @@ public sealed class TimberbornFireSystem : IDisposable
         return RequireSimulator().Subscribe(listener);
     }
 
-    private void RegisterChange(FireSimChange change, string source)
+    private void RegisterChange(FireSimChange change, string source, bool shouldLog = true)
     {
         RequireSimulator().RegisterChange(change);
         _registeredChangeCountSinceLastDispatch++;
-        _logSink.Info($"wildfire_timberborn_change_registered source={source} cell_index={change.CellIndex}");
+        if (shouldLog)
+        {
+            _logSink.Info(
+                $"wildfire_timberborn_changes_registered source={source} count=1 pending_changes={_registeredChangeCountSinceLastDispatch}");
+        }
     }
 
     private IGpuFireSimulator RequireSimulator()
@@ -245,6 +253,7 @@ public sealed class TimberbornFixedCadenceFireDispatcher
     private readonly ITimberbornFireLogSink _logSink;
     private TimeSpan _accumulatedElapsed = TimeSpan.Zero;
     private long? _lastProcessedGameUpdateId;
+    private bool _loggedWaitingForCurrentInterval;
 
     public TimberbornFixedCadenceFireDispatcher(TimberbornFireSystem fireSystem)
         : this(fireSystem, TimberbornFireCadence.Default, NullTimberbornFireLogSink.Instance)
@@ -285,12 +294,18 @@ public sealed class TimberbornFixedCadenceFireDispatcher
 
         if (_accumulatedElapsed < _cadence.Interval)
         {
-            _logSink.Info(
-                $"wildfire_timberborn_dispatch_waiting game_update_id={update.GameUpdateId} accumulated_ms={_accumulatedElapsed.TotalMilliseconds:F0}");
+            if (!_loggedWaitingForCurrentInterval)
+            {
+                _logSink.Info(
+                    $"wildfire_timberborn_dispatch_waiting game_update_id={update.GameUpdateId} accumulated_ms={_accumulatedElapsed.TotalMilliseconds:F0}");
+                _loggedWaitingForCurrentInterval = true;
+            }
+
             return TimberbornFireDispatchResult.Skipped("cadence-not-reached", _accumulatedElapsed);
         }
 
         _accumulatedElapsed -= _cadence.Interval;
+        _loggedWaitingForCurrentInterval = false;
         GpuFireStepResult step = _fireSystem.Tick();
 
         return TimberbornFireDispatchResult.Dispatched(step, _accumulatedElapsed);

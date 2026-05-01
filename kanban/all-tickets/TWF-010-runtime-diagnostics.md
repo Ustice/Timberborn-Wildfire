@@ -54,3 +54,16 @@ GPU and live-game bugs can be hard to see from behavior alone. Diagnostics make 
 ## Notes
 
 - Prefer structured log tokens that can be searched with `rg`.
+- Worker evidence 2026-05-01:
+   - Added no-op-by-default Unity GPU diagnostic sink with `wildfire_gpu_simulator_initialized`, `wildfire_gpu_simulator_queued_changes`, `wildfire_gpu_simulator_dispatch_started`, `wildfire_gpu_simulator_dispatch_completed`, `wildfire_gpu_simulator_readback_started`, `wildfire_gpu_simulator_readback_completed`, and `wildfire_gpu_simulator_listeners_notified`.
+   - Added live Timberborn GPU diagnostics for simulator initialization/disposal, queued change batches, dispatch kernel start/completion elapsed timing, readback counter/counts, and listener notification counts.
+   - Added adapter startup/shutdown tokens `wildfire_timberborn_adapter_started`, `wildfire_timberborn_adapter_stopping`, and `wildfire_timberborn_adapter_stopped`.
+   - Replaced mapped-cell per-change logging with one aggregate `wildfire_timberborn_changes_registered source=mapped_cell count=... pending_changes=...` line; single external/heat registrations still log concise counts without cell-index spam.
+   - Updated `docs/TEST_PLAN.md` with the runtime diagnostic search tokens QA should use in `Player.log`.
+   - Verification passed: `git diff --check`, `dotnet test` (`71` passed), and `dotnet build Wildfire.slnx` (`0` warnings, `0` errors).
+   - Recommended board move: `04-verify`.
+- Reviewer revision evidence 2026-05-01:
+   - Fixed `wildfire_timberborn_gpu_readback_counter` to report the current dispatch/readback tick instead of `_tick + 1`.
+   - Reduced pre-existing `wildfire_timberborn_dispatch_waiting` noise by logging once per cadence interval instead of every non-dispatch game update.
+   - Verification rerun passed: `git diff --check`, `dotnet test` (`71` passed), and `dotnet build Wildfire.slnx` (`0` warnings, `0` errors).
+   - Recommended board move remains `04-verify`.

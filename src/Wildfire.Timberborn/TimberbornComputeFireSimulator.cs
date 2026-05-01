@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using Wildfire.Core;
@@ -401,6 +402,8 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             _nextCells.SetData(packedCells);
             _readCells = _currentCells;
             _writeCells = _nextCells;
+            _logSink.Info(
+                $"wildfire_timberborn_gpu_simulator_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
         }
         catch
         {
@@ -429,7 +432,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
         uint dispatchTick = _tick + 1;
         QueuedChangeBatch changeBatch = CreateQueuedChangeBatch(Grid.CellCount);
         _logSink.Info(
-            $"wildfire_timberborn_gpu_dispatch_start tick={dispatchTick} queued_changes={_queuedChanges.Count} valid_changes={changeBatch.ValidChanges.Length} ignored_changes={changeBatch.InvalidIndices.Count}");
+            $"wildfire_timberborn_gpu_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={Grid.CellCount} valid_changes={changeBatch.ValidChanges.Length} ignored_changes={changeBatch.InvalidIndices.Count}");
 
         try
         {
@@ -439,9 +442,14 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             {
                 _externalChanges.SetData(ToGpuChanges(changeBatch.ValidChanges), 0, 0, changeBatch.ValidChanges.Length);
                 BindKernel(_applyExternalChangesKernel, dispatchTick, checked((uint)changeBatch.ValidChanges.Length));
-                _logSink.Info(
-                    $"wildfire_timberborn_gpu_dispatch_kernel kernel={ApplyExternalChangesKernelName} tick={dispatchTick} change_count={changeBatch.ValidChanges.Length}");
-                _shader.Dispatch(_applyExternalChangesKernel, 1, 1, 1);
+                DispatchKernel(
+                    _applyExternalChangesKernel,
+                    ApplyExternalChangesKernelName,
+                    dispatchTick,
+                    changeBatch.ValidChanges.Length,
+                    1,
+                    1,
+                    1);
             }
 
             ConsumeQueuedChanges(changeBatch);
@@ -451,9 +459,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             int groupsX = GetThreadGroups(Width, ThreadGroupSizeX);
             int groupsY = GetThreadGroups(Height, ThreadGroupSizeY);
             int groupsZ = GetThreadGroups(Depth, ThreadGroupSizeZ);
-            _logSink.Info(
-                $"wildfire_timberborn_gpu_dispatch_kernel kernel={FullGridKernelName} tick={dispatchTick} groups={groupsX}x{groupsY}x{groupsZ}");
-            _shader.Dispatch(_fullGridKernel, groupsX, groupsY, groupsZ);
+            DispatchKernel(_fullGridKernel, FullGridKernelName, dispatchTick, 0, groupsX, groupsY, groupsZ);
 
             CellDelta[] deltas = ReadDeltas();
             SwapCellBuffers();
@@ -500,7 +506,20 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             .Where(static buffer => buffer != null)
             .ToList()
             .ForEach(static buffer => buffer.Release());
+        _logSink.Info(
+            $"wildfire_timberborn_gpu_simulator_disposed tick={_tick} queued_changes={_queuedChanges.Count} listener_count={_listeners.Count}");
         _disposed = true;
+    }
+
+    private void DispatchKernel(int kernel, string kernelName, uint tick, int changeCount, int groupsX, int groupsY, int groupsZ)
+    {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        _logSink.Info(
+            $"wildfire_timberborn_gpu_dispatch_kernel_started kernel={kernelName} tick={tick} groups={groupsX}x{groupsY}x{groupsZ} change_count={changeCount}");
+        _shader.Dispatch(kernel, groupsX, groupsY, groupsZ);
+        stopwatch.Stop();
+        _logSink.Info(
+            $"wildfire_timberborn_gpu_dispatch_kernel_completed kernel={kernelName} tick={tick} elapsed_ms={stopwatch.Elapsed.TotalMilliseconds:F3}");
     }
 
     private void BindKernel(int kernel, uint tick, uint changeCount)
@@ -533,6 +552,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
         }
 
         int deltaCount = checked((int)rawDeltaCount);
+        _logSink.Info($"wildfire_timberborn_gpu_readback_counter tick={_tick} delta_count={deltaCount}");
         if (deltaCount == 0)
         {
             return Array.Empty<CellDelta>();
@@ -635,10 +655,12 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
 
     private void NotifyListeners(CellDelta[] deltas)
     {
-        _listeners
-            .ToArray()
+        IFireSimListener[] listeners = _listeners.ToArray();
+        listeners
             .ToList()
             .ForEach(listener => listener.OnFireSimDeltas(deltas));
+        _logSink.Info(
+            $"wildfire_timberborn_gpu_listeners_notified tick={_tick} listener_count={listeners.Length} delta_count={deltas.Length}");
     }
 
     private void SwapCellBuffers()

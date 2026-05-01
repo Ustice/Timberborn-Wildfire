@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Wildfire.Core;
 
 namespace Wildfire.Unity;
@@ -14,22 +15,46 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     private readonly List<FireSimChange> _queuedChanges = [];
     private readonly List<IFireSimListener> _listeners = [];
     private readonly IFireSimComputeDispatcher? _dispatcher;
+    private readonly IFireSimDiagnosticSink _diagnostics;
     private readonly uint _seed;
     private uint _tick;
 
     public UnityComputeFireSimulator(int width, int height, int depth)
+        : this(width, height, depth, NullFireSimDiagnosticSink.Instance)
+    {
+    }
+
+    public UnityComputeFireSimulator(int width, int height, int depth, IFireSimDiagnosticSink diagnostics)
     {
         Dimensions = new ComputeGridDimensions(width, height, depth);
+        _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        LogInitialized();
     }
 
     public UnityComputeFireSimulator(ComputeBufferGrid grid)
+        : this(grid, NullFireSimDiagnosticSink.Instance)
+    {
+    }
+
+    public UnityComputeFireSimulator(ComputeBufferGrid grid, IFireSimDiagnosticSink diagnostics)
     {
         ArgumentNullException.ThrowIfNull(grid);
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
+        _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        LogInitialized();
     }
 
     public UnityComputeFireSimulator(ComputeBufferGrid grid, IFireSimComputeDispatcher dispatcher, uint seed = 0)
+        : this(grid, dispatcher, NullFireSimDiagnosticSink.Instance, seed)
+    {
+    }
+
+    public UnityComputeFireSimulator(
+        ComputeBufferGrid grid,
+        IFireSimComputeDispatcher dispatcher,
+        IFireSimDiagnosticSink diagnostics,
+        uint seed = 0)
     {
         ArgumentNullException.ThrowIfNull(grid);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -37,7 +62,9 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
         _dispatcher = dispatcher;
+        _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _seed = seed;
+        LogInitialized();
     }
 
     public ComputeGridDimensions Dimensions { get; }
@@ -76,6 +103,9 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         BufferGrid.Deltas.ResetAppendCounter();
 
         QueuedChangeBatch changeBatch = CreateQueuedChangeBatch(BufferGrid.QueuedChanges.Count);
+        uint dispatchTick = _tick + 1;
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={BufferGrid.QueuedChanges.Count} valid_changes={changeBatch.ValidChanges.Length} ignored_changes={changeBatch.InvalidIndices.Count}");
 
         LastIgnoredChangeCount = changeBatch.InvalidIndices.Count;
         LastUploadedChangeCount = changeBatch.ValidChanges.Length;
@@ -85,11 +115,9 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.QueuedChanges.Upload(FireSimChangeUpload.Encode(changeBatch.ValidChanges, BufferGrid.QueuedChanges.Count));
         }
 
-        uint dispatchTick = _tick + 1;
-
         if (changeBatch.ValidChanges.Length > 0)
         {
-            _dispatcher.Dispatch(CreateApplyExternalChangesDispatch(changeBatch.ValidChanges.Length, dispatchTick));
+            DispatchWithDiagnostics(CreateApplyExternalChangesDispatch(changeBatch.ValidChanges.Length, dispatchTick));
         }
 
         ConsumeQueuedChanges(changeBatch);
@@ -110,10 +138,12 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             GetThreadGroups(Dimensions.Height, ThreadGroupSizeY),
             GetThreadGroups(Dimensions.Depth, ThreadGroupSizeZ));
 
-        _dispatcher.Dispatch(dispatch);
+        DispatchWithDiagnostics(dispatch);
 
+        _diagnostics.Info($"wildfire_gpu_simulator_readback_started tick={dispatchTick}");
         CellDelta[] deltas = FireSimDeltaReadback.Read(BufferGrid.Deltas);
         BufferGrid.SwapCellBuffers();
+        _diagnostics.Info($"wildfire_gpu_simulator_readback_completed tick={dispatchTick} delta_count={deltas.Length}");
 
         NotifyListeners(deltas);
 
@@ -197,6 +227,26 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         {
             listener.OnFireSimDeltas(deltas);
         }
+
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_listeners_notified tick={_tick} listener_count={listeners.Length} delta_count={deltas.Length}");
+    }
+
+    private void DispatchWithDiagnostics(FireSimComputeDispatch dispatch)
+    {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_dispatch_started kernel={dispatch.KernelName} tick={dispatch.Tick} groups={dispatch.ThreadGroupsX}x{dispatch.ThreadGroupsY}x{dispatch.ThreadGroupsZ} change_count={dispatch.ChangeCount}");
+        _dispatcher!.Dispatch(dispatch);
+        stopwatch.Stop();
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_dispatch_completed kernel={dispatch.KernelName} tick={dispatch.Tick} elapsed_ms={stopwatch.Elapsed.TotalMilliseconds:F3}");
+    }
+
+    private void LogInitialized()
+    {
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_initialized width={Dimensions.Width} height={Dimensions.Height} depth={Dimensions.Depth} cell_count={Dimensions.CellCount}");
     }
 
     private sealed record QueuedChangeBatch(
@@ -218,5 +268,23 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             listeners.Remove(listener);
             _disposed = true;
         }
+    }
+}
+
+public interface IFireSimDiagnosticSink
+{
+    void Info(string message);
+}
+
+public sealed class NullFireSimDiagnosticSink : IFireSimDiagnosticSink
+{
+    public static readonly NullFireSimDiagnosticSink Instance = new();
+
+    private NullFireSimDiagnosticSink()
+    {
+    }
+
+    public void Info(string message)
+    {
     }
 }
