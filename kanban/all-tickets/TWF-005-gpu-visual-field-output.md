@@ -58,3 +58,5 @@ The design depends on visuals staying close to the simulation buffers. A visual 
 - Did not add flame, smoke, or ash fields to `PackedCell`.
 - Did not add C# fire-spread parity.
 - Real rendered artifact is blocked by the existing repository limitation: no Unity batchmode project, `UnityEngine.ComputeShader` dispatcher, standalone shader compiler, GPU texture binding, or visual readback runner.
+- Integrated on `main` in commit `c5a8254`.
+- Coordinator verification after integration: `git diff --check`, `dotnet test` with 51 tests, and sequential `dotnet build Wildfire.slnx` all passed.
