@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Wildfire.Cli/Wildfire.Cli.csproj" />
+    <Project Path="src/Wildfire.Core/Wildfire.Core.csproj" />
+    <Project Path="src/Wildfire.Timberborn/Wildfire.Timberborn.csproj" />
+    <Project Path="src/Wildfire.Unity/Wildfire.Unity.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Wildfire.Core.Tests/Wildfire.Core.Tests.csproj" />
+  </Folder>
+</Solution>

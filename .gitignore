@@ -1,0 +1,10 @@
+bin/
+obj/
+.DS_Store
+TestResults/
+coverage/
+node_modules/
+.env
+*.user
+*.suo
+*.tmp

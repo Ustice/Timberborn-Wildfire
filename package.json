@@ -1,0 +1,12 @@
+{
+  "name": "wildfire",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun scripts/test.ts",
+    "tickets": "./tickets"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
