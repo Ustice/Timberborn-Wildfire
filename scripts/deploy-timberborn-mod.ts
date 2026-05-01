@@ -33,6 +33,14 @@ type CopyPlan = {
   required: boolean;
 };
 
+type AssetBundleArtifact = {
+  builderMethod: string;
+  logName: string;
+  manifestName: string;
+  name: string;
+  requiredAsset: string;
+};
+
 const repoRoot = resolve(import.meta.dir, "..");
 const home = process.env.HOME ?? "";
 const defaultModsDir = join(home, "Documents", "Timberborn", "Mods");
@@ -45,10 +53,23 @@ const defaultUnityExecutable =
   process.env.WILDFIRE_UNITY_EXECUTABLE ??
   "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
 const assetBundleTarget = "StandaloneOSX";
-const requiredAssetBundles = ["wildfire_compute_mac"];
-const optionalAssetBundles = ["wildfire_compute_mac.manifest"];
 const privateComputeShaderFolderName = "ComputeShaders";
-const requiredComputeShaderAsset = "Assets/WildfireGenerated/FireSim.compute";
+const assetBundleArtifacts: AssetBundleArtifact[] = [
+  {
+    builderMethod: "Wildfire.UnityBatchmode.FireSimAssetBundleBuilder.Build",
+    logName: "assetbundle-build.log",
+    manifestName: "wildfire_compute_mac.manifest",
+    name: "wildfire_compute_mac",
+    requiredAsset: "Assets/WildfireGenerated/FireSim.compute",
+  },
+  {
+    builderMethod: "Wildfire.UnityBatchmode.DiagnosticTextAssetBundleBuilder.Build",
+    logName: "diagnostic-assetbundle-build.log",
+    manifestName: "wildfire_diagnostic_mac.manifest",
+    name: "wildfire_diagnostic_mac",
+    requiredAsset: "Assets/WildfireGenerated/Diagnostic.txt",
+  },
+];
 const manifest = {
   Name: "Wildfire",
   Version: "0.1.0.0",
@@ -76,7 +97,7 @@ Options:
   --dry-run                 Print the build/deploy plan without writing the mod folder. Default.
   --apply                   Write the deployed mod folder. Refuses while Timberborn is open unless --allow-open-game is set.
   --skip-build              Reuse existing build output instead of running dotnet build.
-  --skip-asset-bundle       Reuse an existing FireSim AssetBundle instead of running Unity batchmode.
+  --skip-asset-bundle       Reuse existing FireSim and diagnostic AssetBundles instead of running Unity batchmode.
   --unity-executable <path> Unity Editor executable. Default: WILDFIRE_UNITY_EXECUTABLE or Unity Hub 6000.3.6f1.
   --configuration <name>    Build configuration. Default: Debug.
   --target-framework <tfm>  Timberborn adapter target framework. Default: netstandard2.1.
@@ -284,6 +305,18 @@ const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
   const targetDir = join(options.modsDir, modFolderName);
   const scriptsDir = join(targetDir, "Scripts");
   const computeShadersDir = join(targetDir, privateComputeShaderFolderName);
+  const assetBundlePlan = assetBundleArtifacts.flatMap((artifact) => [
+    {
+      from: join(assetBundleOutputDir, artifact.name),
+      to: join(computeShadersDir, artifact.name),
+      required: true,
+    },
+    {
+      from: join(assetBundleOutputDir, artifact.manifestName),
+      to: join(computeShadersDir, artifact.manifestName),
+      required: false,
+    },
+  ]);
 
   return [
     ...requiredAssemblies.map((name) => ({
@@ -296,16 +329,7 @@ const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
       to: join(scriptsDir, name),
       required: false,
     })),
-    ...requiredAssetBundles.map((name) => ({
-      from: join(assetBundleOutputDir, name),
-      to: join(computeShadersDir, name),
-      required: true,
-    })),
-    ...optionalAssetBundles.map((name) => ({
-      from: join(assetBundleOutputDir, name),
-      to: join(computeShadersDir, name),
-      required: false,
-    })),
+    ...assetBundlePlan,
   ];
 };
 
@@ -320,9 +344,19 @@ const runUnityAssetBundleBuild = (options: DeployOptions): void => {
   }
 
   const outputDir = getAssetBundleOutputDir();
-  const logPath = join(outputDir, "assetbundle-build.log");
   mkdirSync(outputDir, { recursive: true });
-  log(`run ${options.unityExecutable} -batchmode -quit -projectPath ${unityProjectPath} -executeMethod Wildfire.UnityBatchmode.FireSimAssetBundleBuilder.Build`);
+  assetBundleArtifacts.forEach((artifact) => runUnityAssetBundleBuilder(options, artifact, outputDir));
+};
+
+const runUnityAssetBundleBuilder = (
+  options: DeployOptions,
+  artifact: AssetBundleArtifact,
+  outputDir: string,
+): void => {
+  const logPath = join(outputDir, artifact.logName);
+  rmSync(join(outputDir, artifact.name), { force: true });
+  rmSync(join(outputDir, artifact.manifestName), { force: true });
+  log(`run ${options.unityExecutable} -batchmode -quit -projectPath ${unityProjectPath} -executeMethod ${artifact.builderMethod}`);
   const result = Bun.spawnSync(
     [
       options.unityExecutable,
@@ -331,7 +365,7 @@ const runUnityAssetBundleBuild = (options: DeployOptions): void => {
       "-projectPath",
       unityProjectPath,
       "-executeMethod",
-      "Wildfire.UnityBatchmode.FireSimAssetBundleBuilder.Build",
+      artifact.builderMethod,
       "-logFile",
       logPath,
       "--",
@@ -340,7 +374,7 @@ const runUnityAssetBundleBuild = (options: DeployOptions): void => {
       "--output",
       outputDir,
       "--bundle",
-      requiredAssetBundles[0],
+      artifact.name,
       "--target",
       assetBundleTarget,
     ],
@@ -371,23 +405,27 @@ const validateSources = (plan: CopyPlan[]): void => {
     .forEach((entry) => fail(`Required build artifact is missing: ${entry.from}`));
 };
 
-const validateComputeAssetBundleOutput = (): void => {
+const validateAssetBundleOutputs = (): void => {
   const outputDir = getAssetBundleOutputDir();
-  const bundlePath = join(outputDir, requiredAssetBundles[0]);
-  const manifestPath = join(outputDir, optionalAssetBundles[0]);
+  assetBundleArtifacts.forEach((artifact) => validateAssetBundleOutput(outputDir, artifact));
+};
+
+const validateAssetBundleOutput = (outputDir: string, artifact: AssetBundleArtifact): void => {
+  const bundlePath = join(outputDir, artifact.name);
+  const manifestPath = join(outputDir, artifact.manifestName);
 
   if (!existsSync(bundlePath) || !statSync(bundlePath).isFile()) {
-    fail(`Required compute AssetBundle is missing: ${bundlePath}`);
+    fail(`Required AssetBundle is missing: ${bundlePath}`);
   }
 
   if (!existsSync(manifestPath) || !statSync(manifestPath).isFile()) {
-    fail(`Required compute AssetBundle manifest is missing: ${manifestPath}`);
+    fail(`Required AssetBundle manifest is missing: ${manifestPath}`);
   }
 
   const manifestText = readFileSync(manifestPath, "utf8");
-  if (!manifestText.includes(requiredComputeShaderAsset)) {
+  if (!manifestText.includes(artifact.requiredAsset)) {
     fail(
-      `Compute AssetBundle manifest does not contain ${requiredComputeShaderAsset}: ${manifestPath}`,
+      `AssetBundle manifest does not contain ${artifact.requiredAsset}: ${manifestPath}`,
     );
   }
 };
@@ -403,6 +441,7 @@ const printPlan = (options: DeployOptions, plan: CopyPlan[]): void => {
   log(`unity_project=${unityProjectPath}`);
   log(`unity_executable=${options.unityExecutable}`);
   log(`asset_bundle_target=${assetBundleTarget}`);
+  log(`asset_bundles=${assetBundleArtifacts.map((artifact) => artifact.name).join(",")}`);
   log(`asset_bundle_output_dir=${getAssetBundleOutputDir()}`);
   log(`skip_asset_bundle=${options.skipAssetBundle}`);
   log(`mods_dir=${options.modsDir}`);
@@ -460,7 +499,7 @@ const assertTargetShape = (targetDir: string): void => {
   const expectedPaths = [
     join(targetDir, "manifest.json"),
     ...requiredAssemblies.map((name) => join(targetDir, "Scripts", name)),
-    ...requiredAssetBundles.map((name) => join(targetDir, privateComputeShaderFolderName, name)),
+    ...assetBundleArtifacts.map((artifact) => join(targetDir, privateComputeShaderFolderName, artifact.name)),
   ];
 
   expectedPaths
@@ -491,7 +530,7 @@ const main = (): void => {
 
     if (!options.remove) {
       runUnityAssetBundleBuild(options);
-      validateComputeAssetBundleOutput();
+      validateAssetBundleOutputs();
     }
 
     const plan = createCopyPlan(options);

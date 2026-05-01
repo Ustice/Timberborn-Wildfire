@@ -41,6 +41,8 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
 {
     public const string MacBundleName = "wildfire_compute_mac";
     public const string WindowsBundleName = "wildfire_compute_win";
+    public const string MacDiagnosticBundleName = "wildfire_diagnostic_mac";
+    public const string WindowsDiagnosticBundleName = "wildfire_diagnostic_win";
     private const string PrivateBundleDirectoryName = "ComputeShaders";
 
     private readonly ITimberbornFireLogSink _logSink;
@@ -63,6 +65,9 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
         string bundleName = GetPlatformBundleName();
         string bundlePath = GetBundlePath(bundleName);
         _logSink.Info($"wildfire_timberborn_compute_asset_load_started bundle={bundleName} path=\"{bundlePath}\"");
+        _logSink.Info(
+            $"wildfire_timberborn_compute_asset_context unity_version=\"{Application.unityVersion}\" platform={Application.platform} supports_compute_shaders={SystemInfo.supportsComputeShaders}");
+        ProbeDiagnosticTextBundle();
 
         if (!File.Exists(bundlePath))
         {
@@ -148,6 +153,59 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
         return null;
     }
 
+    private void ProbeDiagnosticTextBundle()
+    {
+        string bundleName = GetPlatformDiagnosticBundleName();
+        string bundlePath = GetBundlePath(bundleName);
+        _logSink.Info($"wildfire_timberborn_diagnostic_asset_load_started bundle={bundleName} path=\"{bundlePath}\"");
+
+        if (!File.Exists(bundlePath))
+        {
+            _logSink.Warning($"wildfire_timberborn_diagnostic_asset_missing bundle={bundleName} path=\"{bundlePath}\"");
+            return;
+        }
+
+        AssetBundle? diagnosticBundle = null;
+        try
+        {
+            diagnosticBundle = AssetBundle.LoadFromFile(bundlePath);
+            if (diagnosticBundle == null)
+            {
+                _logSink.Warning($"wildfire_timberborn_diagnostic_asset_load_failed bundle={bundleName} reason=null_bundle");
+                return;
+            }
+
+            string[] assetNames = diagnosticBundle.GetAllAssetNames();
+            string? diagnosticAssetName = FindDiagnosticAssetName(assetNames);
+            if (diagnosticAssetName is null)
+            {
+                _logSink.Warning(
+                    $"wildfire_timberborn_diagnostic_asset_missing_text bundle={bundleName} assets={string.Join(",", assetNames)}");
+                return;
+            }
+
+            TextAsset? diagnosticAsset = diagnosticBundle.LoadAsset<TextAsset>(diagnosticAssetName);
+            if (diagnosticAsset == null)
+            {
+                _logSink.Warning(
+                    $"wildfire_timberborn_diagnostic_asset_load_failed bundle={bundleName} asset={diagnosticAssetName} reason=null_text_asset");
+                return;
+            }
+
+            _logSink.Info(
+                $"wildfire_timberborn_diagnostic_asset_loaded bundle={bundleName} asset={diagnosticAssetName} text_length={diagnosticAsset.text.Length}");
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_diagnostic_asset_load_failed bundle={bundleName} message=\"{EscapeLogValue(exception.Message)}\"");
+        }
+        finally
+        {
+            diagnosticBundle?.Unload(unloadAllLoadedObjects: true);
+        }
+    }
+
     private void UnloadOwnedAssetBundle()
     {
         if (_assetBundle != null && _ownsAssetBundle)
@@ -166,6 +224,12 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
             name.EndsWith("firesim.compute", StringComparison.OrdinalIgnoreCase));
     }
 
+    private static string? FindDiagnosticAssetName(IEnumerable<string> assetNames)
+    {
+        return assetNames.FirstOrDefault(static name =>
+            name.EndsWith("diagnostic.txt", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string GetPlatformBundleName()
     {
         return Application.platform switch
@@ -175,6 +239,22 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
             _ => throw new PlatformNotSupportedException(
                 $"Wildfire compute AssetBundle is not packaged for Unity platform {Application.platform}."),
         };
+    }
+
+    private static string GetPlatformDiagnosticBundleName()
+    {
+        return Application.platform switch
+        {
+            RuntimePlatform.OSXEditor or RuntimePlatform.OSXPlayer => MacDiagnosticBundleName,
+            RuntimePlatform.WindowsEditor or RuntimePlatform.WindowsPlayer => WindowsDiagnosticBundleName,
+            _ => throw new PlatformNotSupportedException(
+                $"Wildfire diagnostic AssetBundle is not packaged for Unity platform {Application.platform}."),
+        };
+    }
+
+    private static string EscapeLogValue(string value)
+    {
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     private static string GetBundlePath(string bundleName)

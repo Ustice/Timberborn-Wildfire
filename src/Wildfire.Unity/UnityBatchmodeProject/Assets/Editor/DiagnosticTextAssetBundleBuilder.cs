@@ -11,33 +11,65 @@ namespace Wildfire.UnityBatchmode
 
         public static void Build()
         {
-            AssetBundleBuildArguments arguments = AssetBundleBuildArguments.Parse(Environment.GetCommandLineArgs());
-            string assetDirectory = Path.Combine(Application.dataPath, "WildfireGenerated");
-            Directory.CreateDirectory(assetDirectory);
-            File.WriteAllText(Path.Combine(assetDirectory, "Diagnostic.txt"), "wildfire diagnostic asset bundle\n");
-            AssetDatabase.ImportAsset(GeneratedAssetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-            Directory.CreateDirectory(arguments.OutputDirectory);
-
-            AssetBundleBuild[] bundleDefinitions =
+            try
             {
-                new AssetBundleBuild
+                AssetBundleBuildArguments arguments = AssetBundleBuildArguments.Parse(Environment.GetCommandLineArgs());
+                Debug.Log("wildfire_diagnostic_assetbundle_builder phase=start bundle=" + arguments.BundleName + " output=" + arguments.OutputDirectory);
+                string assetDirectory = Path.Combine(Application.dataPath, "WildfireGenerated");
+                Directory.CreateDirectory(assetDirectory);
+                File.WriteAllText(Path.Combine(assetDirectory, "Diagnostic.txt"), "wildfire diagnostic asset bundle\n");
+                AssetDatabase.ImportAsset(GeneratedAssetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh();
+
+                TextAsset diagnosticAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(GeneratedAssetPath);
+                if (diagnosticAsset == null)
                 {
-                    assetBundleName = arguments.BundleName,
-                    assetNames = new[] { GeneratedAssetPath },
-                },
-            };
+                    throw new InvalidOperationException("Unity imported Diagnostic.txt but did not load a TextAsset.");
+                }
 
-            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(
-                arguments.OutputDirectory,
-                bundleDefinitions,
-                BuildAssetBundleOptions.None,
-                arguments.BuildTarget);
-            if (manifest == null)
-            {
-                throw new InvalidOperationException("Unity did not return an AssetBundle manifest.");
+                AssetImporter importer = AssetImporter.GetAtPath(GeneratedAssetPath);
+                if (importer == null)
+                {
+                    throw new InvalidOperationException("Unity imported Diagnostic.txt but did not expose an AssetImporter.");
+                }
+
+                importer.assetBundleName = arguments.BundleName;
+                importer.SaveAndReimport();
+                Directory.CreateDirectory(arguments.OutputDirectory);
+
+                AssetBundleBuild[] bundleDefinitions =
+                {
+                    new AssetBundleBuild
+                    {
+                        assetBundleName = arguments.BundleName,
+                        assetNames = new[] { GeneratedAssetPath },
+                    },
+                };
+
+                AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(
+                    arguments.OutputDirectory,
+                    bundleDefinitions,
+                    BuildAssetBundleOptions.None,
+                    arguments.BuildTarget);
+                if (manifest == null)
+                {
+                    throw new InvalidOperationException("Unity did not return an AssetBundle manifest.");
+                }
+
+                Debug.Log("wildfire_diagnostic_assetbundle_builder phase=complete bundle=" + arguments.BundleName);
+                EditorApplication.Exit(0);
             }
+            catch (Exception exception)
+            {
+                Debug.LogError("wildfire_diagnostic_assetbundle_builder phase=failure message=\"" + Escape(exception.Message) + "\"");
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
 
-            EditorApplication.Exit(0);
+        private static string Escape(string value)
+        {
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
     }
 }
