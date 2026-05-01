@@ -30,8 +30,22 @@ public sealed class TimberbornQaCommandBridge
         };
     }
 
-    public TimberbornQaCommandResult Execute(string commandText)
+    public TimberbornQaCommandResult Execute(string? commandText)
     {
+        if (commandText is null)
+        {
+            const string nullCommand = "null";
+            _logSink.Info($"wildfire_command_request command={FormatToken(nullCommand)}");
+
+            TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                nullCommand,
+                "Command text is required.",
+                TimberbornQaCommandState.Placeholder,
+                KnownCommands);
+            _logSink.Warning(failure.ResultToken);
+            return failure;
+        }
+
         string command = NormalizeCommand(commandText);
         _logSink.Info($"wildfire_command_request command={FormatToken(command)}");
 

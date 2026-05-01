@@ -44,6 +44,25 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void NullCommandFailsAndLogsResultWithoutQueryingStateProvider()
+    {
+        RecordingStateProvider stateProvider = new(TimberbornQaCommandState.Placeholder);
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(stateProvider, logSink);
+
+        TimberbornQaCommandResult result = bridge.Execute(null);
+
+        Assert.False(result.Success);
+        Assert.Equal("null", result.Command);
+        Assert.Equal("failure", result.Status);
+        Assert.Equal(TimberbornQaCommandState.Placeholder, result.State);
+        Assert.Equal(0, stateProvider.CallCount);
+        Assert.Contains("Command text is required.", result.Message);
+        Assert.Contains("wildfire_command_request command=null", logSink.InfoMessages);
+        Assert.Contains(result.ResultToken, logSink.WarningMessages);
+    }
+
+    [Fact]
     public void CommandNormalizationUsesFirstTokenAndIgnoresCase()
     {
         TimberbornQaCommandState state = new(IsSimulatorIntegrated: true, TickCount: 3);

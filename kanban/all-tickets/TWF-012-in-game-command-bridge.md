@@ -64,3 +64,8 @@ External click automation can open menus and load saves, but it cannot reliably 
    - Covered `status`, empty command normalization to `status`, case/first-token normalization, `help`, unknown command failure, dynamic-looking command rejection, state-provider wiring, request/result logging, and result token fields for real and placeholder simulator state.
    - Focused evidence: `dotnet test --filter FullyQualifiedName~TimberbornQaCommandBridgeTests` passed 10 tests.
    - Full evidence: `git diff --check` passed; `dotnet test` passed 67 tests; `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
+- Worker review follow-up 2026-05-01:
+   - Made `TimberbornQaCommandBridge.Execute` defensive for null command text before normalization.
+   - Deliberate behavior: null command text returns a logged failure token with `command=null` and does not query simulator state; blank command text remains the documented `status` shortcut.
+   - Added deterministic regression coverage for the null-command path.
+   - Evidence: `git diff --check` passed; `dotnet test` passed 68 tests; `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
