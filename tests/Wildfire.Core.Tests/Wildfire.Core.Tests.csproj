@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Wildfire.Cli\Wildfire.Cli.csproj" />
     <ProjectReference Include="..\..\src\Wildfire.Core\Wildfire.Core.csproj" />
+    <ProjectReference Include="..\..\src\Wildfire.Unity\Wildfire.Unity.csproj" />
   </ItemGroup>
 
 </Project>

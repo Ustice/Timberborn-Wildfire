@@ -52,3 +52,20 @@ The GPU simulator needs stable buffer ownership before rule code can be useful. 
 
 - Keep Unity-specific APIs isolated inside `Wildfire.Unity`.
 - If Unity compute-buffer APIs are unavailable in the plain .NET build, create adapter interfaces and keep testable validation outside the Unity-only layer.
+- Worker evidence, 2026-05-01:
+   - Added `ComputeBufferGrid`, `ComputeGridDimensions`, and compute-buffer allocator/handle abstractions under `src/Wildfire.Unity`.
+   - Current and next cell buffers upload fixture-style `ushort` packed cells as `uint` values, preserving packed cells in the lower 16 bits.
+   - Added placeholders for queued changes, delta output, generations, and visual fields without implementing fire-spread rules.
+   - Added deterministic tests for dimension math, dimension overflow, initial cell-count validation, allocation shape, upload values, and disposal.
+   - `git diff --check`: passed.
+   - `dotnet test`: passed, 27 tests.
+   - `dotnet build Wildfire.slnx`: passed, 0 warnings and 0 errors.
+   - Blockers: none.
+   - Unresolved unknown: a future Unity worker still needs to bind `IComputeBufferAllocator` to actual `UnityEngine.ComputeBuffer` or the project’s selected Unity compute API.
+- Tech-lead rejection fix, 2026-05-01:
+   - Fixed `ComputeBufferGrid` construction to dispose every already-allocated buffer if later allocation or upload fails, then rethrow the original exception.
+   - Added deterministic tests for cleanup on mid-allocation failure and upload failure after buffer allocation.
+   - `git diff --check`: passed.
+   - `dotnet test`: passed, 29 tests.
+   - `dotnet build Wildfire.slnx`: passed, 0 warnings and 0 errors.
+   - Blockers: none.

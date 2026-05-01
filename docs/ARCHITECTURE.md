@@ -42,3 +42,11 @@ The repository currently has a core scaffold with:
 - `IFireSimListener`
 
 Unity and Timberborn projects are placeholders with adapter-facing names so compute and host integration can grow without moving the core boundary.
+
+## Unity Compute Buffer Scaffold
+
+`Wildfire.Unity` owns `ComputeBufferGrid`, the first GPU-side allocation boundary. The grid records width, height, depth, and checked cell count, then allocates named buffers for current cells, next cells, queued changes, delta output, generation state, and visual fields.
+
+Initial fixture-style `ushort` packed cells are uploaded to current and next cell buffers as `uint` values. The packed cell payload remains in the lower 16 bits, leaving the upper bits available for future GPU-side bookkeeping without changing the core `PackedCell` contract.
+
+The plain solution build does not reference UnityEngine APIs yet. Buffer allocation therefore flows through `IComputeBufferAllocator` and `IComputeBufferHandle`, so Unity can later provide real compute-buffer handles while tests use deterministic recording handles. Fire-spread rules are still owned by future compute shaders, not by the C# scaffold.

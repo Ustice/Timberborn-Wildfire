@@ -4,29 +4,33 @@ namespace Wildfire.Unity;
 
 public sealed class UnityComputeFireSimulator : IGpuFireSimulator
 {
-    public const string Status = "Planned";
+    public const string Status = "Buffer scaffold ready; rule dispatch is not implemented.";
 
     public UnityComputeFireSimulator(int width, int height, int depth)
     {
-        if (width <= 0 || height <= 0 || depth <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(width), "Fire grid dimensions must be positive.");
-        }
-
-        Width = width;
-        Height = height;
-        Depth = depth;
+        Dimensions = new ComputeGridDimensions(width, height, depth);
     }
 
-    public int Width { get; }
+    public UnityComputeFireSimulator(ComputeBufferGrid grid)
+    {
+        ArgumentNullException.ThrowIfNull(grid);
+        BufferGrid = grid;
+        Dimensions = grid.Dimensions;
+    }
 
-    public int Height { get; }
+    public ComputeGridDimensions Dimensions { get; }
 
-    public int Depth { get; }
+    public ComputeBufferGrid? BufferGrid { get; }
+
+    public int Width => Dimensions.Width;
+
+    public int Height => Dimensions.Height;
+
+    public int Depth => Dimensions.Depth;
 
     public static string Describe()
     {
-        return "GPU compute simulator placeholder. Wildfire rules should execute in compute shaders.";
+        return "Unity GPU simulator scaffold. Wildfire rules should execute in compute shaders.";
     }
 
     public void RegisterChange(FireSimChange change)
