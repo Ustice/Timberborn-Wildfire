@@ -111,9 +111,15 @@ Live Timberborn validation should start only after the GPU simulator and adapter
 
 Current `TWF-007` coverage proves the mapper contract in .NET tests only. It does not prove live Timberborn API binding, map-service discovery, terrain-height queries, building footprint extraction, vegetation/resource component lookup, water-depth sampling, mod loading, or in-game dispatch because the repository still has no Timberborn mod project reference or live-game harness wired to this adapter scaffold.
 
-Current `TWF-012` coverage adds an in-process command bridge scaffold only. QA or a future Timberborn binding can construct `TimberbornQaCommandBridge` and call `Execute("status")` or `Execute("help")`; both return a `TimberbornQaCommandResult` whose `ResultToken` includes searchable `wildfire_command_result`, `tick_count`, `queued_changes`, and `last_delta_count` fields. Blank command text intentionally normalizes to `status`; null command text intentionally returns a logged failure token without querying simulator state. Until TWF-008 is integrated, those simulator fields intentionally return `placeholder`.
+Current `TWF-012` and `TWF-019` coverage adds an in-process command bridge plus a narrow Timberborn game-context file binding. QA can invoke read-only `status` or `help` from a loaded game by writing one command to `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt`, or by running:
 
-Live in-game command validation remains blocked because the repository still has no Timberborn UI, console, file-polling, or HTTP binding that forwards game-side input to `TimberbornQaCommandBridge.Execute`. The smallest unblock is a narrow Timberborn binding that exposes only the bridge's known commands, logs `wildfire_command_request` and `wildfire_command_result`, and does not expose arbitrary code execution.
+```bash
+bun scripts/invoke-timberborn-command.ts status
+```
+
+The Timberborn adapter polls that inbox from `TimberbornQaCommandFileBridge`, forwards the command to `TimberbornQaCommandBridge`, deletes the inbox, and writes the latest result to `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-outbox.txt`. The script and bridge expose only known read-only commands. Unknown manual inbox commands are rejected by the bridge and logged as failures rather than executed.
+
+Search `~/Library/Logs/Mechanistry/Timberborn/Player.log` for `wildfire_command_bridge_ready`, `wildfire_command_request`, and `wildfire_command_result`. Result tokens include `tick_count`, `queued_changes`, and `last_delta_count` fields; until TWF-008 is integrated, simulator fields intentionally return `placeholder`.
 
 ## Timberborn QA Utilities
 
@@ -143,7 +149,7 @@ Expected deployed folder shape:
     Wildfire.Core.pdb
 ```
 
-`Scripts/` contains the managed assemblies, following the official Timberborn mod builder's code-output convention. The script only stages known build artifacts from `src/Wildfire.Timberborn/bin/<Configuration>/net10.0/`; it does not copy `docs/`, `kanban/`, `.git/`, or other internal repository content into the deployed mod.
+`Scripts/` contains the managed assemblies, following the official Timberborn mod builder's code-output convention. The script only stages known build artifacts from `src/Wildfire.Timberborn/bin/<Configuration>/netstandard2.1/`; it does not copy `docs/`, `kanban/`, `.git/`, or other internal repository content into the deployed mod.
 
 Run the real deploy only when Timberborn is closed or QA explicitly approves writing while the game is open:
 

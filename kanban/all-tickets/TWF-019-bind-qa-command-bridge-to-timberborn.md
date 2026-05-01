@@ -56,3 +56,41 @@ Expose the `TWF-012` command bridge through a narrow Timberborn runtime surface 
 ## Notes
 
 - Prefer boring and local over clever. The first binding only needs to prove that QA can ask the running game for Wildfire status.
+
+## Worker Notes
+
+- Worker worktree: `~/repos/wildfire-TWF-019` on branch `codex/TWF-019-command-binding`.
+- Implemented the first binding as a game-context Bindito singleton in `Wildfire.Timberborn`, not in `Wildfire.Core`.
+- Binding surface is a local file inbox/outbox under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/`.
+- Runtime command path:
+
+   1. QA writes `status` or `help` to `command-inbox.txt`, preferably with `bun scripts/invoke-timberborn-command.ts status`.
+   2. `TimberbornQaCommandFileBridge` polls from the loaded game, deletes the inbox, and forwards the command to `TimberbornQaCommandBridge`.
+   3. `UnityTimberbornQaCommandLogSink` writes `wildfire_command_request` and `wildfire_command_result` to `Player.log`.
+   4. The latest result token is written to `command-outbox.txt`.
+
+- The helper script rejects unknown commands before writing the inbox. Manual unknown inbox files still reach the safe bridge rejection path and log a failure token.
+
+## Verification Evidence
+
+- `git diff --check`: passed.
+- `dotnet test`: passed, 71 tests.
+- `dotnet build Wildfire.slnx`: passed with 0 warnings and 0 errors.
+- `bun scripts/invoke-timberborn-command.ts --help`: passed.
+- `bun scripts/deploy-timberborn-mod.ts --apply --allow-open-game --skip-build`: passed; copied `netstandard2.1` `Wildfire.Timberborn.dll`, `Wildfire.Core.dll`, and PDBs to `~/Documents/Timberborn/Mods/Wildfire/Scripts`.
+- Live Timberborn startup screens cleared manually: Mods `OK`, Experimental Mode `Start!`, then main-menu `Continue`.
+- Loaded save: `Wildfire testing - 2026-05-01 07h56m, Day 1-2.autosave`.
+- `bun scripts/invoke-timberborn-command.ts status --wait=6`: passed and returned:
+
+```text
+wildfire_command_result command=status success=true status=success simulator_integrated=false width=placeholder height=placeholder depth=placeholder tick_count=placeholder queued_changes=placeholder last_delta_count=placeholder message=ok
+updated_at_utc=2026-05-01T12:22:18.7560140Z
+```
+
+- `~/Library/Logs/Mechanistry/Timberborn/Player.log` live evidence:
+
+```text
+96:wildfire_command_bridge_ready inbox=/Users/jasonkleinberg/Library/Application_Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt outbox=/Users/jasonkleinberg/Library/Application_Support/Mechanistry/Timberborn/WildfireQA/command-outbox.txt known_commands=help,status
+97:wildfire_command_request command=status
+98:wildfire_command_result command=status success=true status=success simulator_integrated=false width=placeholder height=placeholder depth=placeholder tick_count=placeholder queued_changes=placeholder last_delta_count=placeholder message=ok
+```
