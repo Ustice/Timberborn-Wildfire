@@ -1,8 +1,17 @@
+#pragma kernel ApplyExternalChanges
 #pragma kernel SimulateFullGrid
 
 #define THREAD_GROUP_SIZE_X 8
 #define THREAD_GROUP_SIZE_Y 8
 #define THREAD_GROUP_SIZE_Z 4
+
+#define CHANGE_SET_CELL 1u
+#define CHANGE_SET_WATER 2u
+#define CHANGE_SET_FUEL 4u
+#define CHANGE_SET_HEAT 8u
+#define CHANGE_SET_FLAMMABILITY 16u
+#define CHANGE_SET_HEAT_LOSS 32u
+#define CHANGE_SET_TERRAIN 64u
 
 struct CellDeltaGpu
 {
@@ -12,8 +21,17 @@ struct CellDeltaGpu
     uint Reserved;
 };
 
-StructuredBuffer<uint> CurrentCells;
+struct FireSimChangeGpu
+{
+    uint CellIndex;
+    uint SetMask;
+    uint AddFields;
+    uint SetValues;
+};
+
+RWStructuredBuffer<uint> CurrentCells;
 RWStructuredBuffer<uint> NextCells;
+StructuredBuffer<FireSimChangeGpu> ExternalChanges;
 AppendStructuredBuffer<CellDeltaGpu> Deltas;
 
 uint Width;
@@ -22,6 +40,7 @@ uint Depth;
 uint CellCount;
 uint Tick;
 uint Seed;
+uint ChangeCount;
 
 uint Fuel(uint cell)
 {
@@ -61,6 +80,36 @@ uint Pack(uint fuel, uint heat, uint flammability, uint water, uint terrain, uin
         ((water & 0x3u) << 10) |
         ((terrain & 0x1u) << 12) |
         ((heatLoss & 0x7u) << 13);
+}
+
+uint WithFuel(uint cell, uint fuel)
+{
+    return (cell & ~0xFu) | ((fuel & 0xFu) << 0);
+}
+
+uint WithHeat(uint cell, uint heat)
+{
+    return (cell & ~0xF0u) | ((heat & 0xFu) << 4);
+}
+
+uint WithFlammability(uint cell, uint flammability)
+{
+    return (cell & ~0x300u) | ((flammability & 0x3u) << 8);
+}
+
+uint WithWater(uint cell, uint water)
+{
+    return (cell & ~0xC00u) | ((water & 0x3u) << 10);
+}
+
+uint WithTerrain(uint cell, uint terrain)
+{
+    return (cell & ~0x1000u) | ((terrain & 0x1u) << 12);
+}
+
+uint WithHeatLoss(uint cell, uint heatLoss)
+{
+    return (cell & ~0xE000u) | ((heatLoss & 0x7u) << 13);
 }
 
 uint Hash(uint cellIndex, uint tick, uint seed)
@@ -174,6 +223,79 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
     heat = heat > cooling ? heat - cooling : 0u;
 
     return Pack(fuel, heat, flammability, water, terrain, heatLoss);
+}
+
+// Baseline apply is intentionally single-threaded so repeated changes to one cell
+// remain in registration order until a later ordered parallel apply pass exists.
+[numthreads(1, 1, 1)]
+void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x != 0u || id.y != 0u || id.z != 0u)
+    {
+        return;
+    }
+
+    for (uint changeIndex = 0u; changeIndex < ChangeCount; changeIndex += 1u)
+    {
+        FireSimChangeGpu change = ExternalChanges[changeIndex];
+
+        if (change.CellIndex >= CellCount)
+        {
+            continue;
+        }
+
+        uint cell = CurrentCells[change.CellIndex] & 0xFFFFu;
+
+        if ((change.SetMask & CHANGE_SET_CELL) != 0u)
+        {
+            cell = change.SetValues & 0xFFFFu;
+        }
+
+        uint addHeat = change.AddFields & 0xFu;
+        uint addFuel = (change.AddFields >> 4) & 0xFu;
+
+        if (addHeat > 0u)
+        {
+            cell = WithHeat(cell, min(15u, Heat(cell) + addHeat));
+        }
+
+        if (addFuel > 0u)
+        {
+            cell = WithFuel(cell, min(15u, Fuel(cell) + addFuel));
+        }
+
+        if ((change.SetMask & CHANGE_SET_WATER) != 0u)
+        {
+            cell = WithWater(cell, (change.SetValues >> 16) & 0x3u);
+        }
+
+        if ((change.SetMask & CHANGE_SET_FUEL) != 0u)
+        {
+            cell = WithFuel(cell, (change.SetValues >> 18) & 0xFu);
+        }
+
+        if ((change.SetMask & CHANGE_SET_HEAT) != 0u)
+        {
+            cell = WithHeat(cell, (change.SetValues >> 22) & 0xFu);
+        }
+
+        if ((change.SetMask & CHANGE_SET_FLAMMABILITY) != 0u)
+        {
+            cell = WithFlammability(cell, (change.SetValues >> 26) & 0x3u);
+        }
+
+        if ((change.SetMask & CHANGE_SET_HEAT_LOSS) != 0u)
+        {
+            cell = WithHeatLoss(cell, (change.SetValues >> 28) & 0x7u);
+        }
+
+        if ((change.SetMask & CHANGE_SET_TERRAIN) != 0u)
+        {
+            cell = WithTerrain(cell, (change.SetValues >> 31) & 0x1u);
+        }
+
+        CurrentCells[change.CellIndex] = cell;
+    }
 }
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]

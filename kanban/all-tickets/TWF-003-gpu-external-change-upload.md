@@ -52,3 +52,30 @@ Timberborn systems need a safe way to tell the simulator about heat, water, terr
 ## Notes
 
 - Be careful with additive overflow. Match the packed-cell field limits instead of allowing wraparound.
+
+## Worker Notes - 2026-05-01
+
+- Implemented `RegisterChange` queueing in `UnityComputeFireSimulator`; queued changes are filtered for valid cell indices, uploaded to `wildfire.queued_changes`, applied through an `ApplyExternalChanges` dispatch, then followed by the existing `SimulateFullGrid` dispatch.
+- Added `FireSimChangeUpload` encoding for `SetCell`, additive heat/fuel, and individual packed-field setters. Additive and setter byte values clamp to packed field limits instead of wrapping.
+- Added `ApplyExternalChanges` to `FireSim.compute`. The pass mutates `CurrentCells` only inside the simulator dispatch path, skips out-of-range GPU-side indices defensively, and preserves host/listener non-mutation of simulation buffers.
+- Added wrapper tests for deferred upload, apply-before-sim dispatch order, invalid-index filtering, upload-failure queue retention, and packed-field clamp behavior.
+- Current blocker/unknown: the repository still has no Unity batchmode or shader snapshot harness, so this ticket proves the C# upload/dispatch contract with .NET tests but does not compile or execute `FireSim.compute` on a GPU. Delta readback also remains outside this ticket.
+
+## Tech Lead Fix Notes - 2026-05-01
+
+- Queue consumption policy: upload and apply-dispatch failure leave the queue untouched. Once `ApplyExternalChanges` returns successfully, the uploaded valid batch and invalid entries are consumed before `SimulateFullGrid`; the simulator tick is considered started at that point. If the full-grid dispatch then fails, applied changes are not replayed on the next tick.
+- Oversized queue policy: each tick uploads the first `wildfire.queued_changes` capacity of valid queued changes in registration order and leaves later valid changes queued for future ticks. This keeps same-cell ordering deterministic across chunks.
+- The current GPU apply kernel remains a documented single-thread baseline so repeated changes to the same cell apply in registration order. Follow-up should replace it with an ordered parallel apply pass after a shader execution harness exists.
+- Added tests for capacity-sized chunking, apply-dispatch failure queue retention, and full-grid failure not replaying already-applied changes.
+
+## Evidence - 2026-05-01
+
+- `dotnet test` passed: 35 tests.
+- `git diff --check` passed.
+- `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
+
+## Fix Evidence - 2026-05-01
+
+- `dotnet test` passed: 38 tests.
+- `git diff --check` passed.
+- `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.

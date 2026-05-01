@@ -32,7 +32,9 @@ public sealed class UnityComputeFireSimulatorTests
         Assert.Equal(1234u, dispatch.Seed);
         Assert.Same(originalCurrentCells, dispatch.CurrentCells);
         Assert.Same(originalNextCells, dispatch.NextCells);
+        Assert.Same(grid.QueuedChanges, dispatch.QueuedChanges);
         Assert.Same(grid.Deltas, dispatch.Deltas);
+        Assert.Equal(0u, dispatch.ChangeCount);
         Assert.Equal(3, dispatch.ThreadGroupsX);
         Assert.Equal(2, dispatch.ThreadGroupsY);
         Assert.Equal(2, dispatch.ThreadGroupsZ);
@@ -50,13 +52,281 @@ public sealed class UnityComputeFireSimulatorTests
         Assert.Equal("GPU compute simulation requires a buffer grid and compute dispatcher.", exception.Message);
     }
 
+    [Fact]
+    public void TickUploadsRegisteredChangesBeforeFullGridDispatch()
+    {
+        ushort setCell = PackedCell.Pack(1, 2, 3, 0, 1, 2);
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 2,
+            height: 1,
+            depth: 1,
+            new ushort[2],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        simulator.RegisterChange(
+            new FireSimChange(
+                CellIndex: 1,
+                SetCell: setCell,
+                AddHeat: 3,
+                AddFuel: 2,
+                SetWater: 1,
+                SetFuel: 7,
+                SetHeat: 8,
+                SetFlammability: 2,
+                SetHeatLoss: 6,
+                SetTerrain: 1));
+
+        Assert.Equal(1, simulator.PendingChangeCount);
+        Assert.Empty(((RecordingComputeBufferHandle)grid.QueuedChanges).UploadedValues);
+
+        simulator.Tick();
+
+        Assert.Equal(0, simulator.PendingChangeCount);
+        Assert.Equal(0, simulator.LastIgnoredChangeCount);
+        Assert.Equal(1, simulator.LastUploadedChangeCount);
+        Assert.Collection(
+            dispatcher.Dispatches,
+            apply =>
+            {
+                Assert.Equal(UnityComputeFireSimulator.ApplyExternalChangesKernelName, apply.KernelName);
+                Assert.Equal(1u, apply.Tick);
+                Assert.Same(grid.QueuedChanges, apply.QueuedChanges);
+                Assert.Equal(1u, apply.ChangeCount);
+                Assert.Equal(1, apply.ThreadGroupsX);
+                Assert.Equal(1, apply.ThreadGroupsY);
+                Assert.Equal(1, apply.ThreadGroupsZ);
+            },
+            simulate =>
+            {
+                Assert.Equal(UnityComputeFireSimulator.FullGridKernelName, simulate.KernelName);
+                Assert.Equal(0u, simulate.ChangeCount);
+            });
+        Assert.Equal(
+            [
+                1u,
+                0b111_1111u,
+                0x23u,
+                (uint)setCell |
+                    (1u << 16) |
+                    (7u << 18) |
+                    (8u << 22) |
+                    (2u << 26) |
+                    (6u << 28) |
+                    (1u << 31),
+                0u,
+                0u,
+                0u,
+                0u,
+            ],
+            ((RecordingComputeBufferHandle)grid.QueuedChanges).UploadedValues);
+    }
+
+    [Fact]
+    public void TickIgnoresOutOfRangeChangesWithoutUploadingThem()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 2,
+            height: 1,
+            depth: 1,
+            new ushort[2],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        simulator.RegisterChange(new FireSimChange(CellIndex: -1, AddHeat: 1));
+        simulator.RegisterChange(new FireSimChange(CellIndex: 2, AddFuel: 1));
+
+        simulator.Tick();
+
+        Assert.Equal(0, simulator.PendingChangeCount);
+        Assert.Equal(2, simulator.LastIgnoredChangeCount);
+        Assert.Equal(0, simulator.LastUploadedChangeCount);
+        FireSimComputeDispatch dispatch = Assert.Single(dispatcher.Dispatches);
+        Assert.Equal(UnityComputeFireSimulator.FullGridKernelName, dispatch.KernelName);
+        Assert.Empty(((RecordingComputeBufferHandle)grid.QueuedChanges).UploadedValues);
+    }
+
+    [Fact]
+    public void TickProcessesQueuedChangesInCapacitySizedChunks()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 2,
+            height: 1,
+            depth: 1,
+            new ushort[2],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
+        simulator.RegisterChange(new FireSimChange(CellIndex: 1, AddHeat: 2));
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 3));
+
+        simulator.Tick();
+
+        RecordingComputeBufferHandle queuedChanges = (RecordingComputeBufferHandle)grid.QueuedChanges;
+        Assert.Equal(1, simulator.PendingChangeCount);
+        Assert.Equal(2, simulator.LastUploadedChangeCount);
+        Assert.Equal(0x1u, queuedChanges.UploadHistory[0][2]);
+        Assert.Equal(0x2u, queuedChanges.UploadHistory[0][6]);
+
+        simulator.Tick();
+
+        Assert.Equal(0, simulator.PendingChangeCount);
+        Assert.Equal(1, simulator.LastUploadedChangeCount);
+        Assert.Equal(0x3u, queuedChanges.UploadHistory[1][2]);
+        Assert.Equal(
+            [
+                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+            ],
+            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
+    }
+
+    [Fact]
+    public void TickPreservesQueuedChangesWhenApplyDispatchFails()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            ThrowOnKernelName = UnityComputeFireSimulator.ApplyExternalChangesKernelName,
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+
+        Assert.Equal($"Dispatch failed for {UnityComputeFireSimulator.ApplyExternalChangesKernelName}.", exception.Message);
+        Assert.Equal(1, simulator.PendingChangeCount);
+        FireSimComputeDispatch dispatch = Assert.Single(dispatcher.Dispatches);
+        Assert.Equal(UnityComputeFireSimulator.ApplyExternalChangesKernelName, dispatch.KernelName);
+    }
+
+    [Fact]
+    public void TickConsumesAppliedChangesWhenFullGridDispatchFails()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            ThrowOnKernelName = UnityComputeFireSimulator.FullGridKernelName,
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+
+        Assert.Equal($"Dispatch failed for {UnityComputeFireSimulator.FullGridKernelName}.", exception.Message);
+        Assert.Equal(0, simulator.PendingChangeCount);
+        Assert.Equal(
+            [
+                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+            ],
+            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
+
+        dispatcher.ThrowOnKernelName = null;
+        simulator.Tick();
+
+        Assert.Equal(
+            [
+                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+            ],
+            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
+        Assert.Equal(2u, dispatcher.Dispatches[^1].Tick);
+    }
+
+    [Fact]
+    public void ChangeUploadClampsFieldValuesToPackedLimits()
+    {
+        uint[] encoded = FireSimChangeUpload.Encode(
+            [
+                new FireSimChange(
+                    CellIndex: 0,
+                    AddHeat: 16,
+                    AddFuel: 17,
+                    SetWater: 4,
+                    SetFuel: 16,
+                    SetHeat: 17,
+                    SetFlammability: 4,
+                    SetHeatLoss: 8,
+                    SetTerrain: 2),
+            ],
+            capacity: 1);
+
+        Assert.Equal(0xFFu, encoded[2]);
+        Assert.Equal(
+            (3u << 16) |
+                (15u << 18) |
+                (15u << 22) |
+                (3u << 26) |
+                (7u << 28) |
+                (1u << 31),
+            encoded[3]);
+    }
+
+    [Fact]
+    public void TickKeepsRegisteredChangesWhenChangeUploadFails()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [0],
+            allocator);
+        ((RecordingComputeBufferHandle)grid.QueuedChanges).FailUpload = true;
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+        simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+
+        Assert.Equal("Upload failed for wildfire.queued_changes.", exception.Message);
+        Assert.Equal(1, simulator.PendingChangeCount);
+        Assert.Empty(dispatcher.Dispatches);
+    }
+
     private sealed class RecordingFireSimComputeDispatcher : IFireSimComputeDispatcher
     {
         public List<FireSimComputeDispatch> Dispatches { get; } = [];
 
+        public string? ThrowOnKernelName { get; set; }
+
         public void Dispatch(FireSimComputeDispatch dispatch)
         {
             Dispatches.Add(dispatch);
+
+            if (dispatch.KernelName == ThrowOnKernelName)
+            {
+                throw new InvalidOperationException($"Dispatch failed for {dispatch.KernelName}.");
+            }
         }
     }
 
@@ -76,8 +346,21 @@ public sealed class UnityComputeFireSimulatorTests
 
         public int StrideBytes { get; } = strideBytes;
 
+        public uint[] UploadedValues { get; private set; } = [];
+
+        public List<uint[]> UploadHistory { get; } = [];
+
+        public bool FailUpload { get; set; }
+
         public void Upload(ReadOnlySpan<uint> values)
         {
+            if (FailUpload)
+            {
+                throw new InvalidOperationException($"Upload failed for {Name}.");
+            }
+
+            UploadedValues = values.ToArray();
+            UploadHistory.Add(UploadedValues);
         }
 
         public void Dispose()
