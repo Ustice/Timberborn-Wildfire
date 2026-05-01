@@ -48,3 +48,5 @@ Click automation is only as reliable as its map of the UI. A coordinate guide ma
 
 - Do not assume coordinates are portable across resolutions. Make the guide explicit about that limitation.
 - Keep this ticket away from `docs/TEST_PLAN.md` unless the coordinator explicitly widens scope.
+- Blocked during coordination on 2026-05-01 because Timberborn was not running. Steam was running, but the ticket needs actual Timberborn UI access at a known resolution.
+- Smallest unblock: open Timberborn at the intended QA resolution and confirm the UI is available for coordinate capture.
