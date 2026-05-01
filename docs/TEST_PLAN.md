@@ -124,6 +124,8 @@ Current `TWF-008` coverage adds a Timberborn game-context runtime singleton for 
 
 Search `~/Library/Logs/Mechanistry/Timberborn/Player.log` for `wildfire_command_bridge_ready`, `wildfire_command_request`, `wildfire_command_result`, `wildfire_timberborn_runtime_ready`, `wildfire_timberborn_cadence_configured`, `wildfire_timberborn_dispatch_started`, and `wildfire_timberborn_dispatch_completed`.
 
+Current blocker: the deployed Timberborn mod stages `Wildfire.Timberborn.dll` and `Wildfire.Core.dll`, but the compute-backed simulator implementation lives in `Wildfire.Unity` as a `net10.0` project and depends on a Unity `ComputeShader` asset/dispatcher path that is only available in the batchmode harness. Do not satisfy TWF-008 by attaching a dispatch-only or C# no-op simulator; live completion requires a deployable compute-backed simulator factory that can import/package `FireSim.compute`, allocate buffers in Timberborn, and attach the real `IGpuFireSimulator` to `TimberbornFireRuntime`.
+
 ## Timberborn QA Utilities
 
 Use the local [Timberborn QA Utility skill](../.codex/skills/timberborn-qa-utility/SKILL.md) when building Bun/TypeScript scripts or guarded `cliclick`-style automation for live Timberborn QA.

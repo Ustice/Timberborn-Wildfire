@@ -12,18 +12,8 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
     private long _gameUpdateId;
 
     public TimberbornFireRuntime()
-        : this(new UnityTimberbornFireLogSink())
     {
-    }
-
-    internal TimberbornFireRuntime(ITimberbornFireLogSink logSink)
-    {
-        if (logSink is null)
-        {
-            throw new ArgumentNullException(nameof(logSink));
-        }
-
-        _logSink = logSink;
+        _logSink = new UnityTimberbornFireLogSink();
     }
 
     public void Load()
