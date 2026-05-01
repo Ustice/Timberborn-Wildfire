@@ -68,6 +68,8 @@ Timberborn has game-specific concepts, but the simulator only understands packed
 - `git diff --check`: passed.
 - `dotnet test`: passed, 57 tests.
 - `dotnet build Wildfire.slnx`: passed, 0 warnings and 0 errors.
+- Integrated on `main` in commit `1e2339d`.
+- Coordinator verification after integration: `git diff --check`, `dotnet test` with 57 tests, and sequential `dotnet build Wildfire.slnx` all passed.
 
 ## Blockers
 

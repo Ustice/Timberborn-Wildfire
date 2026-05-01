@@ -20,7 +20,7 @@
 - `TWF-004` is done and integrated on `main` in commit `8d563f4`.
 - `TWF-006` is done and integrated on `main` in commit `1844b47`.
 - `TWF-005` is done and integrated on `main` in commit `c5a8254`.
-- `TWF-007` is ready.
+- `TWF-007` is done and integrated on `main` in commit `1e2339d`.
 - `TWF-013` is blocked until Timberborn UI is open at the intended QA resolution.
 - Later tickets are dependency-gated behind fixture export, Unity compute buffers, shader dispatch, compact delta readback, Timberborn adapters, and QA utility setup.
 
@@ -28,8 +28,10 @@
 
 Continue with:
 
-- Dispatch `TWF-007` next for Timberborn cell adapters.
+- No dependency-ready tickets remain except blocked `TWF-013`.
 - Unblock and dispatch `TWF-013` when Timberborn UI access is available.
+- After `TWF-013` is done, unblock `TWF-014`; after `TWF-014`, unblock `TWF-015`.
+- After live adapter/dispatch work is ready, move `TWF-008` through `TWF-012` according to their dependencies.
 
 ## Known Gaps
 
