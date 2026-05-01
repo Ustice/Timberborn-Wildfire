@@ -19,8 +19,8 @@ Do not end the coordination turn until the sprint is closed or the user explicit
 ## Startup Checklist
 
 - [ ] Read `AGENTS.md`.
-- [ ] Read [INDEX.md](INDEX.md).
-- [ ] Read [HANDOFF.md](HANDOFF.md).
+- [ ] Read [../docs/INDEX.md](../docs/INDEX.md).
+- [ ] Read [../docs/HANDOFF.md](../docs/HANDOFF.md).
 - [ ] Read [../kanban/README.md](../kanban/README.md).
 - [ ] Read [../kanban/roles/coordinator.md](../kanban/roles/coordinator.md).
 - [ ] Read [../kanban/roles/worker.md](../kanban/roles/worker.md).
@@ -74,7 +74,7 @@ Do not end the coordination turn until the sprint is closed or the user explicit
 - `docs/ARCHITECTURE.md` owns durable system boundaries.
 - `docs/TEST_PLAN.md` owns validation strategy and accepted evidence.
 - `docs/TODO.md` owns milestone status.
-- Historical or noisy sprint detail belongs in `docs/ARCHIVE/`.
+- Historical or noisy sprint detail belongs in `docs/archive/`.
 
 ## Sprint Close
 

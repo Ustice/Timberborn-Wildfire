@@ -13,17 +13,17 @@
 
 - The fresh compute-first ticket set exists as `TWF-000` through `TWF-015`.
 - `kanban/by-status` is the sprint source of truth.
-- As of this handoff, no tickets are assigned yet.
-- `TWF-000` and `TWF-013` have no ticket dependencies and are the first candidates for `02-ready`.
+- `TWF-000` is in progress for CLI fixture export.
+- `TWF-013` is ready but should wait until its docs scope will not collide with active fixture work and Timberborn UI access is available.
 - Later tickets are dependency-gated behind fixture export, Unity compute buffers, shader dispatch, compact delta readback, Timberborn adapters, and QA utility setup.
 
 ## Next Exact Action
 
-Start with:
+Continue with:
 
-- Move dependency-ready tickets into `kanban/by-status/02-ready/`.
-- Dispatch `TWF-000` first for CLI fixture export.
-- Dispatch `TWF-013` when Timberborn UI access is available for QA coordinate capture.
+- Reconcile `TWF-000` when the worker reports back.
+- Move `TWF-000` through verification and integration before unblocking `TWF-001` and `TWF-007`.
+- Dispatch `TWF-013` only when Timberborn UI access is available and its narrowed doc scope will not overlap active work.
 
 ## Known Gaps
 

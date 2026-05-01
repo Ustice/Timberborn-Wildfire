@@ -6,7 +6,8 @@ requires_qa: true
 doc_only: true
 dependencies: []
 write_scope:
-   - docs/**
+   - docs/timberborn-menu-coordinate-guide.md
+   - docs/reference/**
 ---
 
 # TWF-013: Document Timberborn Menu Coordinates
@@ -46,3 +47,4 @@ Click automation is only as reliable as its map of the UI. A coordinate guide ma
 ## Notes
 
 - Do not assume coordinates are portable across resolutions. Make the guide explicit about that limitation.
+- Keep this ticket away from `docs/TEST_PLAN.md` unless the coordinator explicitly widens scope.

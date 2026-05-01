@@ -70,7 +70,7 @@ State the outcome.
 ## Coordinator Rules
 
 - Use this board as the source of truth for active ticket state.
-- Read [COORDINATOR.md](COORDINATOR.md) before starting or resuming a sprint.
+- Read [roles/coordinator.md](roles/coordinator.md) before starting or resuming a sprint.
 - Do not end the coordination turn until the sprint is closed or the user explicitly tells you to stop.
 - Do not make code, content, script, runtime behavior, or test changes directly as the coordinator.
 - Assign one ticket per sub-agent with role instructions, explicit write scope, dependencies, and verification.

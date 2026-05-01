@@ -47,7 +47,7 @@ Live validation loses time when every run starts with manual menu navigation. A 
 ## Verification
 
 - Run `git diff --check`.
-- Run any dry-run or help mode added to the script.
+- Run any dry-run or help mode added to the script with `bun`.
 - Validate against Timberborn on the documented resolution.
 
 ## Notes

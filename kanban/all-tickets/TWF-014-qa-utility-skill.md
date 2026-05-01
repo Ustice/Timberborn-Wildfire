@@ -45,6 +45,7 @@ QA utility scripts need consistent guardrails: use Bun and TypeScript, avoid uns
 
 - Run `git diff --check`.
 - Review the skill by using it to outline a simple QA utility task.
+- If the ticket adds TypeScript examples or helper scripts, run them with `bun`.
 
 ## Notes
 
