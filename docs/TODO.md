@@ -35,7 +35,7 @@
 - [x] Capture title-screen coordinates from a safe startup state.
 - [x] Bind QA command bridge to a running Timberborn invocation surface.
 - [x] Dispatch the GPU simulator on a fixed cadence.
-- [ ] Consume compact deltas for overlays and gameplay consequences.
+- [x] Consume compact deltas for overlays and gameplay consequences.
 - [ ] Validate first live gameplay loop.
 
 ## Phase 5: Optimization And Polish
@@ -57,12 +57,12 @@ Use the existing live-delta tickets to prove the simulator can be safely stimula
 
 ### Sprint 2: Make Fire Affect Timberborn
 
-Once non-zero deltas are proven, expand the adapter-side gameplay surface without moving fire rules into Timberborn.
+Done. Once non-zero deltas were proven, this sprint expanded the adapter-side gameplay surface without moving fire rules into Timberborn.
 
-- `TWF-035`: expand Timberborn material mapping.
-- `TWF-036`: apply building burnout consequences from deltas.
-- `TWF-037`: update a fire overlay from changed cells.
-- `TWF-038`: register water suppression changes.
+- [x] `TWF-035`: expand Timberborn material mapping.
+- [x] `TWF-036`: apply building burnout consequences from deltas.
+- [x] `TWF-037`: update a fire overlay from changed cells.
+- [x] `TWF-038`: register water suppression changes.
 
 ### Sprint 3: Make Fire Legible To Players
 
