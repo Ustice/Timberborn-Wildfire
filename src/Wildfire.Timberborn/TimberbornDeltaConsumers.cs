@@ -69,6 +69,7 @@ public sealed class TimberbornFireDeltaConsumer
         LastSummary = TimberbornFireDeltaConsumerSummary.FromDecisions(
             tick,
             decisions,
+            debugVisualStates.Length,
             _debugVisualCells.Count,
             visualEffectEvents.Length,
             gameplayConsequences.Length,
@@ -144,22 +145,24 @@ public readonly record struct TimberbornFireCellDeltaDecision(
 public readonly record struct TimberbornFireDebugVisualCellState(
     int CellIndex,
     uint Tick,
-    int Fuel,
-    int Heat,
-    int Water,
-    bool IsBurning,
-    bool IsSpentFuel)
+    ushort PackedCellValue)
 {
+    public int Fuel => PackedCell.Fuel(PackedCellValue);
+
+    public int Heat => PackedCell.Heat(PackedCellValue);
+
+    public int Water => PackedCell.Water(PackedCellValue);
+
+    public bool IsBurning => PackedCell.IsBurning(PackedCellValue);
+
+    public bool IsSpentFuel => Fuel == 0;
+
     public static TimberbornFireDebugVisualCellState FromDecision(uint tick, TimberbornFireCellDeltaDecision decision)
     {
         return new TimberbornFireDebugVisualCellState(
             decision.CellIndex,
             tick,
-            decision.NewFuel,
-            decision.NewHeat,
-            decision.NewWater,
-            decision.IsBurning,
-            decision.NewFuel == 0);
+            decision.NewCell);
     }
 }
 
@@ -286,6 +289,7 @@ public readonly record struct TimberbornFireAlertEvent(
 public readonly record struct TimberbornFireDeltaConsumerSummary(
     uint Tick,
     int ChangedCellCount,
+    int DebugVisualUpdatedCellCount,
     int DebugVisualCellCount,
     int StartedBurningCount,
     int StoppedBurningCount,
@@ -300,6 +304,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     public static readonly TimberbornFireDeltaConsumerSummary Empty = new(
         Tick: 0,
         ChangedCellCount: 0,
+        DebugVisualUpdatedCellCount: 0,
         DebugVisualCellCount: 0,
         StartedBurningCount: 0,
         StoppedBurningCount: 0,
@@ -314,6 +319,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     public static TimberbornFireDeltaConsumerSummary FromDecisions(
         uint tick,
         IReadOnlyList<TimberbornFireCellDeltaDecision> decisions,
+        int debugVisualUpdatedCellCount,
         int debugVisualCellCount,
         int visualEffectEventCount,
         int gameplayConsequenceCount,
@@ -322,6 +328,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         return new TimberbornFireDeltaConsumerSummary(
             tick,
             decisions.Count,
+            debugVisualUpdatedCellCount,
             debugVisualCellCount,
             decisions.Count(static decision => decision.StartedBurning),
             decisions.Count(static decision => decision.StoppedBurning),
@@ -339,6 +346,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         return "wildfire_timberborn_delta_consumer_completed " +
             $"tick={Tick} " +
             $"changed_cells={ChangedCellCount} " +
+            $"debug_visual_updated_cells={DebugVisualUpdatedCellCount} " +
             $"debug_visual_cells={DebugVisualCellCount} " +
             $"started_burning={StartedBurningCount} " +
             $"stopped_burning={StoppedBurningCount} " +

@@ -291,12 +291,13 @@ public sealed class TimberbornQaCommandBridgeTests
             QueuedChangeCount: 8,
             LastDeltaCount: 9,
             LastDeltaConsumerChangedCellCount: 10,
-            LastDeltaConsumerDebugVisualCellCount: 11,
-            LastDeltaConsumerStartedBurningCount: 12,
-            LastDeltaConsumerFuelDepletedCount: 13,
-            LastDeltaConsumerVisualEffectEventCount: 14,
-            LastDeltaConsumerGameplayConsequenceCount: 15,
-            LastDeltaConsumerAlertCount: 16);
+            LastDeltaConsumerDebugVisualUpdatedCellCount: 11,
+            LastDeltaConsumerDebugVisualCellCount: 12,
+            LastDeltaConsumerStartedBurningCount: 13,
+            LastDeltaConsumerFuelDepletedCount: 14,
+            LastDeltaConsumerVisualEffectEventCount: 15,
+            LastDeltaConsumerGameplayConsequenceCount: 16,
+            LastDeltaConsumerAlertCount: 17);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -312,12 +313,13 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("queued_changes=8", result.ResultToken);
         Assert.Contains("last_delta_count=9", result.ResultToken);
         Assert.Contains("last_delta_consumer_changed_cells=10", result.ResultToken);
-        Assert.Contains("last_delta_consumer_debug_visual_cells=11", result.ResultToken);
-        Assert.Contains("last_delta_consumer_started_burning=12", result.ResultToken);
-        Assert.Contains("last_delta_consumer_fuel_depleted=13", result.ResultToken);
-        Assert.Contains("last_delta_consumer_visual_effect_events=14", result.ResultToken);
-        Assert.Contains("last_delta_consumer_gameplay_consequences=15", result.ResultToken);
-        Assert.Contains("last_delta_consumer_alerts=16", result.ResultToken);
+        Assert.Contains("last_delta_consumer_debug_visual_updated_cells=11", result.ResultToken);
+        Assert.Contains("last_delta_consumer_debug_visual_cells=12", result.ResultToken);
+        Assert.Contains("last_delta_consumer_started_burning=13", result.ResultToken);
+        Assert.Contains("last_delta_consumer_fuel_depleted=14", result.ResultToken);
+        Assert.Contains("last_delta_consumer_visual_effect_events=15", result.ResultToken);
+        Assert.Contains("last_delta_consumer_gameplay_consequences=16", result.ResultToken);
+        Assert.Contains("last_delta_consumer_alerts=17", result.ResultToken);
     }
 
     [Fact]

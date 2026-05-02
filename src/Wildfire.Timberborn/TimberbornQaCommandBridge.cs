@@ -234,6 +234,7 @@ public sealed record TimberbornQaCommandState(
     int? QueuedChangeCount = null,
     int? LastDeltaCount = null,
     int? LastDeltaConsumerChangedCellCount = null,
+    int? LastDeltaConsumerDebugVisualUpdatedCellCount = null,
     int? LastDeltaConsumerDebugVisualCellCount = null,
     int? LastDeltaConsumerStartedBurningCount = null,
     int? LastDeltaConsumerFuelDepletedCount = null,
@@ -276,6 +277,7 @@ public sealed record TimberbornQaCommandResult(
         $"queued_changes={FormatNumber(State.QueuedChangeCount)} " +
         $"last_delta_count={FormatNumber(State.LastDeltaCount)} " +
         $"last_delta_consumer_changed_cells={FormatNumber(State.LastDeltaConsumerChangedCellCount)} " +
+        $"last_delta_consumer_debug_visual_updated_cells={FormatNumber(State.LastDeltaConsumerDebugVisualUpdatedCellCount)} " +
         $"last_delta_consumer_debug_visual_cells={FormatNumber(State.LastDeltaConsumerDebugVisualCellCount)} " +
         $"last_delta_consumer_started_burning={FormatNumber(State.LastDeltaConsumerStartedBurningCount)} " +
         $"last_delta_consumer_fuel_depleted={FormatNumber(State.LastDeltaConsumerFuelDepletedCount)} " +

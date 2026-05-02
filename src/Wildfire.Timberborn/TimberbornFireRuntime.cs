@@ -165,6 +165,7 @@ public sealed class TimberbornFireRuntime :
             QueuedChangeCount: fireSystem.RegisteredChangeCountSinceLastDispatch,
             LastDeltaCount: fireSystem.LastDeltaCount,
             LastDeltaConsumerChangedCellCount: deltaConsumerSummary.ChangedCellCount,
+            LastDeltaConsumerDebugVisualUpdatedCellCount: deltaConsumerSummary.DebugVisualUpdatedCellCount,
             LastDeltaConsumerDebugVisualCellCount: _debugVisualSink.States.Count,
             LastDeltaConsumerStartedBurningCount: deltaConsumerSummary.StartedBurningCount,
             LastDeltaConsumerFuelDepletedCount: deltaConsumerSummary.FuelDepletedCount,
