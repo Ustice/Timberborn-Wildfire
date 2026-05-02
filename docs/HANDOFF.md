@@ -20,12 +20,12 @@
 
 ## Current Ticket State
 
-- The fresh compute-first ticket set exists as `TWF-000` through `TWF-030`.
+- The fresh compute-first ticket set exists as `TWF-000` through `TWF-034`.
 - `kanban/by-status` is the sprint source of truth.
 - `TWF-000` through `TWF-008` are done and integrated on `main`.
 - `TWF-009` is done and integrated on `main` in commit `aa9a260`; live status and `Player.log` evidence prove the Timberborn delta-consumer hook path is wired and reporting.
 - `TWF-010` is done: runtime diagnostics now cover GPU lifecycle, queued changes, dispatch/readback timing, listener counts, and Timberborn adapter startup/shutdown without per-cell mapped-change spam.
-- `TWF-011` remains todo until `TWF-009` proves consumer behavior and creates meaningful profiling/optimization evidence.
+- `TWF-011` is deferred until the new non-zero live delta sprint creates meaningful profiling evidence that full-grid dispatch is too expensive.
 - `TWF-012` is done and integrated on `main` in commits `6043959`, `1feb25e`, and `499040d`.
 - `TWF-013` is done with an explicit boundary: opening screens and standalone main-menu coordinates are split to `TWF-020`.
 - `TWF-014` is done and integrated on `main` in commit `85e5538`.
@@ -45,14 +45,19 @@
 - `TWF-028` is done: current Wildfire QA cannot navigate Timberborn menus remotely without screen interaction; the accepted safer path is narrow allowlisted command-bridge outcomes, not generic menu driving.
 - `TWF-029` is done: the read-only `qa-readiness` command is allowlisted, documented, unit-tested, and live-verified after deploy/restart with `loaded_game_ready=true`, `simulator_integrated=true`, dimensions `128x128x23`, and an advanced tick.
 - `TWF-030` is done: the signal-driven latest-save startup utility launches Timberborn, clears startup Mods and Experimental Mode from screenshot-confirmed signals, continues the latest save, recognizes the top-HUD loaded-save state, unpauses, and records `simulator_integrated=true` status plus dispatch evidence.
+- `TWF-031` is ready: add a guarded QA-only live stimulus that can produce non-zero simulator deltas in a loaded Timberborn save.
+- `TWF-032` is todo behind `TWF-031`: prove live `delta_count > 0` from the real GPU readback and status path.
+- `TWF-033` is todo behind `TWF-032`: bind one concrete Timberborn-facing consequence to non-zero deltas.
+- `TWF-034` is todo behind `TWF-032`: record live dispatch profiling and decide whether to promote `TWF-011`.
 - QA now owns live Timberborn builds, deployments, launches, restarts, and the shared deploy/QA lock for verification runs.
 
 ## Next Exact Action
 
 Continue with:
 
-- Treat the current sprint as closed except for `TWF-011`, which remains intentionally parked until profiling or diagnostics show full-grid dispatch is too expensive.
+- Start the next sprint with `TWF-031`, then use its evidence to unlock `TWF-032`.
 - Keep `TWF-015` deferred unless `TWF-030` is abandoned; it is superseded by the newer startup/load/unpause utility.
+- Keep `TWF-011` deferred until `TWF-034` recommends promoting it from measured live profiling evidence.
 - Use `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` against a loaded, unpaused Timberborn save when you need to confirm the in-game Wildfire command bridge, loaded-game runtime, simulator integration, and advancing dispatch tick are alive.
 - Use `bun run typecheck` before accepting TypeScript script changes.
 - If shader behavior changes, use the opt-in Unity harness command documented in `docs/TEST_PLAN.md` to prove real execution before accepting the change.
@@ -61,5 +66,6 @@ Continue with:
 
 - `FireSim.compute` has local Unity batchmode proof, but CI does not run it unless Unity Editor licensing and compute-shader capable graphics are available.
 - Current live TWF-009 evidence has `delta_count=0`; that proves the hook/status path, not non-zero visual/gameplay consequences.
+- The next sprint's first milestone is to produce and prove non-zero live deltas safely, not to optimize dispatch.
 - TWF-030's live run proves the guarded startup/load/unpause workflow, but the broader Timberborn UI is not exhaustively mapped; add settings/new-game/map-editor/deeper Mods coordinates only through explicit QA passes.
 - `TWF-009` intentionally provides Timberborn adapter hook surfaces; concrete binding to Timberborn damage/effect/alert services is follow-up work.
