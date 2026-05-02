@@ -123,7 +123,25 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.True(result.Success);
         Assert.Equal(["help", "qa-delta-stimulus", "qa-readiness", "status"], result.KnownCommands);
         Assert.Contains("qa-delta-stimulus", result.Message);
-        Assert.Contains("fixed QA-only simulator change", result.Message);
+        Assert.Contains("QA-only simulator change", result.Message);
+    }
+
+    [Fact]
+    public void BuildingBurnoutStimulusBindingExpandsAllowlistAndHelpMessage()
+    {
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
+            NullTimberbornQaDeltaStimulus.Instance,
+            new RecordingBuildingBurnoutStimulus(
+                new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 1, 2, 2)),
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("help");
+
+        Assert.True(result.Success);
+        Assert.Equal(["help", "qa-building-burnout-stimulus", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Contains("qa-building-burnout-stimulus", result.Message);
+        Assert.Contains("QA-only simulator change", result.Message);
     }
 
     [Fact]
@@ -222,6 +240,49 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void ExecuteQaBuildingBurnoutStimulusQueuesBoundStimulusAndReportsTargetFields()
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 8,
+            Height: 6,
+            Depth: 4,
+            TickCount: 12,
+            QueuedChangeCount: 2,
+            LastDeltaCount: 0);
+        RecordingStateProvider stateProvider = new(state);
+        RecordingBuildingBurnoutStimulus buildingBurnoutStimulus = new(
+            new TimberbornQaBuildingBurnoutStimulusResult(91, 3, 4, 2, 57, 498, 496, 2));
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            buildingBurnoutStimulus,
+            logSink);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-building-burnout-stimulus");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-building-burnout-stimulus", result.Command);
+        Assert.Equal(["help", "qa-building-burnout-stimulus", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal(1, buildingBurnoutStimulus.CallCount);
+        Assert.Equal(1, stateProvider.CallCount);
+        Assert.Contains("target_index=91", result.Message);
+        Assert.Contains("target_x=3", result.Message);
+        Assert.Contains("target_y=4", result.Message);
+        Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("scanned_cells=57", result.Message);
+        Assert.Contains("primed_cell=498", result.Message);
+        Assert.Contains("set_cell=496", result.Message);
+        Assert.Contains("queued_set_cell_changes=2", result.Message);
+        Assert.Contains("queued_changes=2", result.ResultToken);
+        Assert.Contains("tick_count=12", result.ResultToken);
+        Assert.Contains("wildfire_command_request command=qa-building-burnout-stimulus", logSink.InfoMessages);
+        Assert.Contains(result.ResultToken, logSink.InfoMessages);
+    }
+
+    [Fact]
     public void QueueFixedQaDeltaStimulusRegistersExactlyOneCenterSetCellChange()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
@@ -242,6 +303,75 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(change.SetHeatLoss);
         Assert.Null(change.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void QueueBuildingBurnoutQaStimulusRegistersOnlyTargetedSetCellChanges()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = new(simulator);
+        RecordingBuildingBurnoutTargetProvider targetProvider = new(
+            new TimberbornQaBuildingBurnoutStimulusTarget(38, 2, 3, 1, 39));
+
+        TimberbornQaBuildingBurnoutStimulusResult result =
+            fireSystem.QueueBuildingBurnoutQaStimulus(targetProvider);
+
+        Assert.Equal(
+            new TimberbornQaBuildingBurnoutStimulusResult(
+                38,
+                2,
+                3,
+                1,
+                39,
+                PackedCell.Pack(12, 15, 2, 0, 1, 4),
+                PackedCell.Pack(0, 15, 2, 0, 1, 4),
+                2),
+            result);
+        Assert.Equal(1, targetProvider.CallCount);
+        Assert.Equal([new FireGrid(4, 6, 2)], targetProvider.Grids);
+        Assert.Equal(2, simulator.RegisteredChanges.Count);
+        Assert.All(simulator.RegisteredChanges, change =>
+        {
+            Assert.Equal(38, change.CellIndex);
+            Assert.Null(change.AddHeat);
+            Assert.Null(change.AddFuel);
+            Assert.Null(change.SetWater);
+            Assert.Null(change.SetFuel);
+            Assert.Null(change.SetHeat);
+            Assert.Null(change.SetFlammability);
+            Assert.Null(change.SetHeatLoss);
+            Assert.Null(change.SetTerrain);
+            Assert.NotNull(change.SetCell);
+        });
+        Assert.Equal(PackedCell.Pack(12, 15, 2, 0, 1, 4), simulator.RegisteredChanges[0].SetCell);
+        Assert.Equal(PackedCell.Pack(0, 15, 2, 0, 1, 4), simulator.RegisteredChanges[1].SetCell);
+        Assert.Equal(2, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void FindBuildingBurnoutQaTargetSkipsUnusableCellsAndReportsScannedCount()
+    {
+        FireGrid grid = new(4, 3, 2);
+
+        TimberbornQaBuildingBurnoutStimulusTarget result =
+            TimberbornQaBuildingBurnoutStimulusTargets.FindFirstUsableTarget(
+                grid,
+                target => target.CellIndex == 13);
+
+        Assert.Equal(new TimberbornQaBuildingBurnoutStimulusTarget(13, 1, 0, 1, 14), result);
+    }
+
+    [Fact]
+    public void FindBuildingBurnoutQaTargetThrowsWhenNoUsableCellExists()
+    {
+        FireGrid grid = new(2, 2, 1);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            TimberbornQaBuildingBurnoutStimulusTargets.FindFirstUsableTarget(
+                grid,
+                static _ => false));
+
+        Assert.Contains("No unpaused pausable Timberborn building cell", exception.Message);
     }
 
     [Fact]
@@ -297,7 +427,10 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerFuelDepletedCount: 14,
             LastDeltaConsumerVisualEffectEventCount: 15,
             LastDeltaConsumerGameplayConsequenceCount: 16,
-            LastDeltaConsumerAlertCount: 17);
+            LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: 17,
+            LastDeltaConsumerBuildingBurnoutMatchedCellCount: 18,
+            LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: 19,
+            LastDeltaConsumerAlertCount: 20);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -319,7 +452,10 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_fuel_depleted=14", result.ResultToken);
         Assert.Contains("last_delta_consumer_visual_effect_events=15", result.ResultToken);
         Assert.Contains("last_delta_consumer_gameplay_consequences=16", result.ResultToken);
-        Assert.Contains("last_delta_consumer_alerts=17", result.ResultToken);
+        Assert.Contains("last_delta_consumer_building_burnout_considered_deltas=17", result.ResultToken);
+        Assert.Contains("last_delta_consumer_building_burnout_matched_cells=18", result.ResultToken);
+        Assert.Contains("last_delta_consumer_building_burnout_applied_consequences=19", result.ResultToken);
+        Assert.Contains("last_delta_consumer_alerts=20", result.ResultToken);
     }
 
     [Fact]
@@ -356,6 +492,33 @@ public sealed class TimberbornQaCommandBridgeTests
         {
             CallCount++;
             return result;
+        }
+    }
+
+    private sealed class RecordingBuildingBurnoutStimulus(TimberbornQaBuildingBurnoutStimulusResult result)
+        : ITimberbornQaBuildingBurnoutStimulus
+    {
+        public int CallCount { get; private set; }
+
+        public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutStimulus()
+        {
+            CallCount++;
+            return result;
+        }
+    }
+
+    private sealed class RecordingBuildingBurnoutTargetProvider(TimberbornQaBuildingBurnoutStimulusTarget target)
+        : ITimberbornQaBuildingBurnoutStimulusTargetProvider
+    {
+        public int CallCount { get; private set; }
+
+        public List<FireGrid> Grids { get; } = [];
+
+        public TimberbornQaBuildingBurnoutStimulusTarget FindTarget(FireGrid grid)
+        {
+            CallCount++;
+            Grids.Add(grid);
+            return target;
         }
     }
 

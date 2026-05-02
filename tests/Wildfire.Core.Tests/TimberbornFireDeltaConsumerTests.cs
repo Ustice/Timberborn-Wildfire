@@ -84,6 +84,9 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(1, summary.WaterChangedCount);
         Assert.Equal(3, summary.VisualEffectEventCount);
         Assert.Equal(2, summary.GameplayConsequenceCount);
+        Assert.Equal(0, summary.BuildingBurnoutConsideredDeltaCount);
+        Assert.Equal(0, summary.BuildingBurnoutMatchedCellCount);
+        Assert.Equal(0, summary.BuildingBurnoutAppliedConsequenceCount);
         Assert.Equal(2, summary.AlertCount);
         Assert.Equal(10, summary.MaxHeat);
 
@@ -109,7 +112,43 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Contains("debug_visual_updated_cells=3", logToken);
         Assert.Contains("visual_effect_events=3", logToken);
         Assert.Contains("gameplay_consequences=2", logToken);
+        Assert.Contains("building_burnout_considered_deltas=0", logToken);
         Assert.Contains("alerts=2", logToken);
+    }
+
+    [Fact]
+    public void ConsumeRoutesChangedCellsToBuildingBurnoutSink()
+    {
+        RecordingBuildingBurnoutConsequenceApi consequenceApi = new(
+            static consequence => new TimberbornBuildingBurnoutConsequenceResult(
+                MatchedBuildingCell: consequence.CellIndex is 3 or 4,
+                AppliedConsequence: consequence.CellIndex == 3 && consequence.ShouldApplyBurnout));
+        RecordingFireLogSink logSink = new();
+        TimberbornFireDeltaConsumer consumer = new(
+            logSink,
+            new TimberbornFireDeltaConsumerSinks(
+                buildingBurnoutConsequenceSink: new TimberbornBuildingBurnoutConsequenceSink(consequenceApi)));
+
+        TimberbornFireDeltaConsumerSummary summary = consumer.Consume(
+            26,
+            [
+                new CellDelta(2, Cell(fuel: 5, heat: 1), Cell(fuel: 4, heat: 1)),
+                new CellDelta(3, Cell(fuel: 2, heat: 10), Cell(fuel: 0, heat: 10)),
+                new CellDelta(4, Cell(fuel: 2, heat: 5), Cell(fuel: 2, heat: 6)),
+            ]);
+
+        Assert.Equal(3, summary.BuildingBurnoutConsideredDeltaCount);
+        Assert.Equal(2, summary.BuildingBurnoutMatchedCellCount);
+        Assert.Equal(1, summary.BuildingBurnoutAppliedConsequenceCount);
+        Assert.Equal([2, 3, 4], consequenceApi.Consequences.Select(static consequence => consequence.CellIndex).ToArray());
+        Assert.False(consequenceApi.Consequences[0].ShouldApplyBurnout);
+        Assert.True(consequenceApi.Consequences[1].ShouldApplyBurnout);
+        Assert.False(consequenceApi.Consequences[2].ShouldApplyBurnout);
+
+        string logToken = Assert.Single(logSink.InfoMessages);
+        Assert.Contains("building_burnout_considered_deltas=3", logToken);
+        Assert.Contains("building_burnout_matched_cells=2", logToken);
+        Assert.Contains("building_burnout_applied_consequences=1", logToken);
     }
 
     [Fact]
@@ -237,6 +276,20 @@ public sealed class TimberbornFireDeltaConsumerTests
 
         public void Warning(string message)
         {
+        }
+    }
+
+    private sealed class RecordingBuildingBurnoutConsequenceApi(
+        Func<TimberbornBuildingBurnoutConsequence, TimberbornBuildingBurnoutConsequenceResult> apply)
+        : ITimberbornBuildingBurnoutConsequenceApi
+    {
+        public List<TimberbornBuildingBurnoutConsequence> Consequences { get; } = [];
+
+        public TimberbornBuildingBurnoutConsequenceResult ApplyConsequence(
+            TimberbornBuildingBurnoutConsequence consequence)
+        {
+            Consequences.Add(consequence);
+            return apply(consequence);
         }
     }
 }

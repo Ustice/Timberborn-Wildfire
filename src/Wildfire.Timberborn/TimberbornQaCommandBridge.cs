@@ -1,3 +1,5 @@
+using Wildfire.Core;
+
 namespace Wildfire.Timberborn;
 
 public sealed class TimberbornQaCommandBridge
@@ -6,9 +8,11 @@ public sealed class TimberbornQaCommandBridge
     public const string HelpCommand = "help";
     public const string QaReadinessCommand = "qa-readiness";
     public const string QaDeltaStimulusCommand = "qa-delta-stimulus";
+    public const string QaBuildingBurnoutStimulusCommand = "qa-building-burnout-stimulus";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
+    private readonly ITimberbornQaBuildingBurnoutStimulus _buildingBurnoutStimulus;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -16,6 +20,7 @@ public sealed class TimberbornQaCommandBridge
         : this(
             TimberbornQaCommandStateProvider.Placeholder,
             NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
             NullTimberbornQaCommandLogSink.Instance)
     {
     }
@@ -23,13 +28,26 @@ public sealed class TimberbornQaCommandBridge
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaCommandLogSink logSink)
-        : this(stateProvider, NullTimberbornQaDeltaStimulus.Instance, logSink)
+        : this(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            logSink)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
+        ITimberbornQaCommandLogSink logSink)
+        : this(stateProvider, deltaStimulus, NullTimberbornQaBuildingBurnoutStimulus.Instance, logSink)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaDeltaStimulus deltaStimulus,
+        ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaCommandLogSink logSink)
     {
         if (stateProvider is null)
@@ -42,6 +60,11 @@ public sealed class TimberbornQaCommandBridge
             throw new ArgumentNullException(nameof(deltaStimulus));
         }
 
+        if (buildingBurnoutStimulus is null)
+        {
+            throw new ArgumentNullException(nameof(buildingBurnoutStimulus));
+        }
+
         if (logSink is null)
         {
             throw new ArgumentNullException(nameof(logSink));
@@ -49,6 +72,7 @@ public sealed class TimberbornQaCommandBridge
 
         _stateProvider = stateProvider;
         _deltaStimulus = deltaStimulus;
+        _buildingBurnoutStimulus = buildingBurnoutStimulus;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -60,6 +84,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(deltaStimulus, NullTimberbornQaDeltaStimulus.Instance))
         {
             commands[QaDeltaStimulusCommand] = ExecuteQaDeltaStimulus;
+        }
+
+        if (!ReferenceEquals(buildingBurnoutStimulus, NullTimberbornQaBuildingBurnoutStimulus.Instance))
+        {
+            commands[QaBuildingBurnoutStimulusCommand] = ExecuteQaBuildingBurnoutStimulus;
         }
 
         _commands = commands;
@@ -122,9 +151,15 @@ public sealed class TimberbornQaCommandBridge
 
     private TimberbornQaCommandResult ExecuteHelp()
     {
-        string message = _commands.ContainsKey(QaDeltaStimulusCommand)
-            ? "Supported commands: help, qa-readiness, qa-delta-stimulus, status. Only qa-delta-stimulus queues a fixed QA-only simulator change."
-            : "Supported commands are read-only: help, qa-readiness, status.";
+        string writableCommands = string.Join(
+            ",",
+            KnownCommands.Where(static command =>
+                command == QaDeltaStimulusCommand || command == QaBuildingBurnoutStimulusCommand));
+        string message = string.IsNullOrEmpty(writableCommands)
+            ? "Supported commands are read-only: help, qa-readiness, status."
+            : "Supported commands: " +
+            $"{string.Join(",", KnownCommands)}. " +
+            $"QA-only simulator change commands: {writableCommands}.";
 
         return TimberbornQaCommandResult.CreateSuccess(
             HelpCommand,
@@ -161,6 +196,27 @@ public sealed class TimberbornQaCommandBridge
             $"set_cell={stimulusResult.SetCell}");
     }
 
+    private TimberbornQaCommandResult ExecuteQaBuildingBurnoutStimulus()
+    {
+        TimberbornQaBuildingBurnoutStimulusResult stimulusResult =
+            _buildingBurnoutStimulus.QueueBuildingBurnoutStimulus();
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaBuildingBurnoutStimulusCommand,
+            state,
+            KnownCommands,
+            "queued_building_burnout_stimulus_" +
+            $"target_index={stimulusResult.CellIndex}_" +
+            $"target_x={stimulusResult.X}_" +
+            $"target_y={stimulusResult.Y}_" +
+            $"target_z={stimulusResult.Z}_" +
+            $"scanned_cells={stimulusResult.ScannedCellCount}_" +
+            $"primed_cell={stimulusResult.PrimedCell}_" +
+            $"set_cell={stimulusResult.SetCell}_" +
+            $"queued_set_cell_changes={stimulusResult.QueuedSetCellChangeCount}");
+    }
+
     private static string NormalizeCommand(string commandText)
     {
         string command = commandText.Trim();
@@ -193,6 +249,33 @@ public interface ITimberbornQaDeltaStimulus
 
 public sealed record TimberbornQaDeltaStimulusResult(int CellIndex, int X, int Y, int Z, ushort SetCell);
 
+public interface ITimberbornQaBuildingBurnoutStimulus
+{
+    TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutStimulus();
+}
+
+public sealed record TimberbornQaBuildingBurnoutStimulusTarget(
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    int ScannedCellCount);
+
+public sealed record TimberbornQaBuildingBurnoutStimulusResult(
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    int ScannedCellCount,
+    ushort PrimedCell,
+    ushort SetCell,
+    int QueuedSetCellChangeCount);
+
+public interface ITimberbornQaBuildingBurnoutStimulusTargetProvider
+{
+    TimberbornQaBuildingBurnoutStimulusTarget FindTarget(FireGrid grid);
+}
+
 public sealed class NullTimberbornQaDeltaStimulus : ITimberbornQaDeltaStimulus
 {
     public static readonly NullTimberbornQaDeltaStimulus Instance = new();
@@ -204,6 +287,21 @@ public sealed class NullTimberbornQaDeltaStimulus : ITimberbornQaDeltaStimulus
     public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
     {
         throw new InvalidOperationException("QA delta stimulus is unavailable until the Timberborn fire runtime is initialized.");
+    }
+}
+
+public sealed class NullTimberbornQaBuildingBurnoutStimulus : ITimberbornQaBuildingBurnoutStimulus
+{
+    public static readonly NullTimberbornQaBuildingBurnoutStimulus Instance = new();
+
+    private NullTimberbornQaBuildingBurnoutStimulus()
+    {
+    }
+
+    public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutStimulus()
+    {
+        throw new InvalidOperationException(
+            "QA building burnout stimulus is unavailable until the Timberborn fire runtime is initialized.");
     }
 }
 
@@ -240,6 +338,9 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerFuelDepletedCount = null,
     int? LastDeltaConsumerVisualEffectEventCount = null,
     int? LastDeltaConsumerGameplayConsequenceCount = null,
+    int? LastDeltaConsumerBuildingBurnoutConsideredDeltaCount = null,
+    int? LastDeltaConsumerBuildingBurnoutMatchedCellCount = null,
+    int? LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount = null,
     int? LastDeltaConsumerAlertCount = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
@@ -283,6 +384,9 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_fuel_depleted={FormatNumber(State.LastDeltaConsumerFuelDepletedCount)} " +
         $"last_delta_consumer_visual_effect_events={FormatNumber(State.LastDeltaConsumerVisualEffectEventCount)} " +
         $"last_delta_consumer_gameplay_consequences={FormatNumber(State.LastDeltaConsumerGameplayConsequenceCount)} " +
+        $"last_delta_consumer_building_burnout_considered_deltas={FormatNumber(State.LastDeltaConsumerBuildingBurnoutConsideredDeltaCount)} " +
+        $"last_delta_consumer_building_burnout_matched_cells={FormatNumber(State.LastDeltaConsumerBuildingBurnoutMatchedCellCount)} " +
+        $"last_delta_consumer_building_burnout_applied_consequences={FormatNumber(State.LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount)} " +
         $"last_delta_consumer_alerts={FormatNumber(State.LastDeltaConsumerAlertCount)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 

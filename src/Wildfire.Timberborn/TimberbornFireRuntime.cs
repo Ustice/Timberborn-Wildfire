@@ -9,10 +9,13 @@ public sealed class TimberbornFireRuntime :
     IUnloadableSingleton,
     IUpdatableSingleton,
     ITimberbornQaCommandStateProvider,
-    ITimberbornQaDeltaStimulus
+    ITimberbornQaDeltaStimulus,
+    ITimberbornQaBuildingBurnoutStimulus
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
+    private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
+    private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private long _gameUpdateId;
@@ -144,6 +147,28 @@ public sealed class TimberbornFireRuntime :
         return result;
     }
 
+    public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutStimulus()
+    {
+        ITimberbornQaBuildingBurnoutStimulusTargetProvider targetProvider =
+            _buildingBurnoutStimulusTargetProvider ??
+            throw new InvalidOperationException(
+                "QA building burnout stimulus requires a Timberborn pausable building target provider.");
+        TimberbornQaBuildingBurnoutStimulusResult result =
+            RequireFireSystem().QueueBuildingBurnoutQaStimulus(targetProvider);
+        _logSink.Info(
+            "wildfire_timberborn_qa_building_burnout_stimulus_queued " +
+            $"cell_index={result.CellIndex} " +
+            $"x={result.X} " +
+            $"y={result.Y} " +
+            $"z={result.Z} " +
+            $"scanned_cells={result.ScannedCellCount} " +
+            $"primed_cell={result.PrimedCell} " +
+            $"set_cell={result.SetCell} " +
+            $"queued_set_cell_changes={result.QueuedSetCellChangeCount}");
+
+        return result;
+    }
+
     public TimberbornQaCommandState GetState()
     {
         if (_fireSystem is not { IsInitialized: true } fireSystem)
@@ -171,7 +196,22 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerFuelDepletedCount: deltaConsumerSummary.FuelDepletedCount,
             LastDeltaConsumerVisualEffectEventCount: deltaConsumerSummary.VisualEffectEventCount,
             LastDeltaConsumerGameplayConsequenceCount: deltaConsumerSummary.GameplayConsequenceCount,
+            LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: deltaConsumerSummary.BuildingBurnoutConsideredDeltaCount,
+            LastDeltaConsumerBuildingBurnoutMatchedCellCount: deltaConsumerSummary.BuildingBurnoutMatchedCellCount,
+            LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: deltaConsumerSummary.BuildingBurnoutAppliedConsequenceCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount);
+    }
+
+    public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
+    {
+        _buildingBurnoutConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
+    }
+
+    public void AttachBuildingBurnoutStimulusTargetProvider(
+        ITimberbornQaBuildingBurnoutStimulusTargetProvider targetProvider)
+    {
+        _buildingBurnoutStimulusTargetProvider =
+            targetProvider ?? throw new ArgumentNullException(nameof(targetProvider));
     }
 
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
@@ -187,11 +227,19 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state");
+        if (_buildingBurnoutConsequenceApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
     {
-        return new TimberbornFireDeltaConsumerSinks(debugVisualSink: _debugVisualSink);
+        return new TimberbornFireDeltaConsumerSinks(
+            debugVisualSink: _debugVisualSink,
+            buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
+                ? null
+                : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi));
     }
 
     private TimberbornFireSystem RequireFireSystem()

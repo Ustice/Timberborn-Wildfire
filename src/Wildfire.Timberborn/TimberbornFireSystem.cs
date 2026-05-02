@@ -12,6 +12,20 @@ public sealed class TimberbornFireSystem : IDisposable
         water: 0,
         terrain: 1,
         heatLoss: 1);
+    private static readonly ushort QaBuildingBurnoutPrimedCell = PackedCell.Pack(
+        fuel: 12,
+        heat: 15,
+        flammability: 2,
+        water: 0,
+        terrain: 1,
+        heatLoss: 4);
+    private static readonly ushort QaBuildingBurnoutSpentCell = PackedCell.Pack(
+        fuel: 0,
+        heat: 15,
+        flammability: 2,
+        water: 0,
+        terrain: 1,
+        heatLoss: 4);
 
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
@@ -204,6 +218,33 @@ public sealed class TimberbornFireSystem : IDisposable
         RegisterChange(new FireSimChange(CellIndex: cellIndex, SetCell: QaDeltaStimulusCell), "qa_delta_stimulus");
 
         return new TimberbornQaDeltaStimulusResult(cellIndex, x, y, z, QaDeltaStimulusCell);
+    }
+
+    public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutQaStimulus(
+        ITimberbornQaBuildingBurnoutStimulusTargetProvider targetProvider)
+    {
+        if (targetProvider is null)
+        {
+            throw new ArgumentNullException(nameof(targetProvider));
+        }
+
+        TimberbornQaBuildingBurnoutStimulusTarget target = targetProvider.FindTarget(RequireGrid());
+        RegisterChange(
+            new FireSimChange(CellIndex: target.CellIndex, SetCell: QaBuildingBurnoutPrimedCell),
+            "qa_building_burnout_prime");
+        RegisterChange(
+            new FireSimChange(CellIndex: target.CellIndex, SetCell: QaBuildingBurnoutSpentCell),
+            "qa_building_burnout_stimulus");
+
+        return new TimberbornQaBuildingBurnoutStimulusResult(
+            target.CellIndex,
+            target.X,
+            target.Y,
+            target.Z,
+            target.ScannedCellCount,
+            QaBuildingBurnoutPrimedCell,
+            QaBuildingBurnoutSpentCell,
+            QueuedSetCellChangeCount: 2);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)

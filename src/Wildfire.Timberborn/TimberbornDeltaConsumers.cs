@@ -60,6 +60,9 @@ public sealed class TimberbornFireDeltaConsumer
             .ToArray();
         Array.ForEach(gameplayConsequences, _sinks.GameplayConsequenceSink.ApplyConsequence);
 
+        TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary =
+            _sinks.BuildingBurnoutConsequenceSink.ApplyConsequences(tick, decisions);
+
         TimberbornFireAlertEvent[] alertEvents = decisions
             .Where(static decision => decision.ShouldEmitAlert)
             .Select(decision => TimberbornFireAlertEvent.FromDecision(tick, decision))
@@ -73,6 +76,7 @@ public sealed class TimberbornFireDeltaConsumer
             _debugVisualCells.Count,
             visualEffectEvents.Length,
             gameplayConsequences.Length,
+            buildingBurnoutSummary,
             alertEvents.Length);
         _logSink.Info(LastSummary.ToLogToken());
         return LastSummary;
@@ -264,6 +268,43 @@ public readonly record struct TimberbornFireGameplayConsequence(
     }
 }
 
+public readonly record struct TimberbornBuildingBurnoutConsequence(
+    int CellIndex,
+    uint Tick,
+    bool ShouldApplyBurnout,
+    int Fuel,
+    int Heat,
+    int Water)
+{
+    public static TimberbornBuildingBurnoutConsequence FromDecision(
+        uint tick,
+        TimberbornFireCellDeltaDecision decision)
+    {
+        return new TimberbornBuildingBurnoutConsequence(
+            decision.CellIndex,
+            tick,
+            decision.FuelDepleted,
+            decision.NewFuel,
+            decision.NewHeat,
+            decision.NewWater);
+    }
+}
+
+public readonly record struct TimberbornBuildingBurnoutConsequenceResult(
+    bool MatchedBuildingCell,
+    bool AppliedConsequence);
+
+public readonly record struct TimberbornBuildingBurnoutConsequenceSummary(
+    int ConsideredDeltaCount,
+    int MatchedBuildingCellCount,
+    int AppliedConsequenceCount)
+{
+    public static readonly TimberbornBuildingBurnoutConsequenceSummary Empty = new(
+        ConsideredDeltaCount: 0,
+        MatchedBuildingCellCount: 0,
+        AppliedConsequenceCount: 0);
+}
+
 public enum TimberbornFireAlertKind
 {
     FireStarted,
@@ -298,6 +339,9 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int WaterChangedCount,
     int VisualEffectEventCount,
     int GameplayConsequenceCount,
+    int BuildingBurnoutConsideredDeltaCount,
+    int BuildingBurnoutMatchedCellCount,
+    int BuildingBurnoutAppliedConsequenceCount,
     int AlertCount,
     int MaxHeat)
 {
@@ -313,6 +357,9 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         WaterChangedCount: 0,
         VisualEffectEventCount: 0,
         GameplayConsequenceCount: 0,
+        BuildingBurnoutConsideredDeltaCount: 0,
+        BuildingBurnoutMatchedCellCount: 0,
+        BuildingBurnoutAppliedConsequenceCount: 0,
         AlertCount: 0,
         MaxHeat: 0);
 
@@ -323,6 +370,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         int debugVisualCellCount,
         int visualEffectEventCount,
         int gameplayConsequenceCount,
+        TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary,
         int alertCount)
     {
         return new TimberbornFireDeltaConsumerSummary(
@@ -337,6 +385,9 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             decisions.Count(static decision => decision.WaterChanged),
             visualEffectEventCount,
             gameplayConsequenceCount,
+            buildingBurnoutSummary.ConsideredDeltaCount,
+            buildingBurnoutSummary.MatchedBuildingCellCount,
+            buildingBurnoutSummary.AppliedConsequenceCount,
             alertCount,
             decisions.Select(static decision => decision.NewHeat).DefaultIfEmpty(0).Max());
     }
@@ -355,6 +406,9 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"water_changed={WaterChangedCount} " +
             $"visual_effect_events={VisualEffectEventCount} " +
             $"gameplay_consequences={GameplayConsequenceCount} " +
+            $"building_burnout_considered_deltas={BuildingBurnoutConsideredDeltaCount} " +
+            $"building_burnout_matched_cells={BuildingBurnoutMatchedCellCount} " +
+            $"building_burnout_applied_consequences={BuildingBurnoutAppliedConsequenceCount} " +
             $"alerts={AlertCount} " +
             $"max_heat={MaxHeat}";
     }
@@ -368,11 +422,14 @@ public sealed class TimberbornFireDeltaConsumerSinks
         ITimberbornFireDebugVisualSink? debugVisualSink = null,
         ITimberbornFireVisualEffectSink? visualEffectSink = null,
         ITimberbornFireGameplayConsequenceSink? gameplayConsequenceSink = null,
+        ITimberbornBuildingBurnoutConsequenceSink? buildingBurnoutConsequenceSink = null,
         ITimberbornFireAlertSink? alertSink = null)
     {
         DebugVisualSink = debugVisualSink ?? NullTimberbornFireDebugVisualSink.Instance;
         VisualEffectSink = visualEffectSink ?? NullTimberbornFireVisualEffectSink.Instance;
         GameplayConsequenceSink = gameplayConsequenceSink ?? NullTimberbornFireGameplayConsequenceSink.Instance;
+        BuildingBurnoutConsequenceSink =
+            buildingBurnoutConsequenceSink ?? NullTimberbornBuildingBurnoutConsequenceSink.Instance;
         AlertSink = alertSink ?? NullTimberbornFireAlertSink.Instance;
     }
 
@@ -381,6 +438,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornFireVisualEffectSink VisualEffectSink { get; }
 
     public ITimberbornFireGameplayConsequenceSink GameplayConsequenceSink { get; }
+
+    public ITimberbornBuildingBurnoutConsequenceSink BuildingBurnoutConsequenceSink { get; }
 
     public ITimberbornFireAlertSink AlertSink { get; }
 }
@@ -417,9 +476,46 @@ public interface ITimberbornFireGameplayConsequenceSink
     void ApplyConsequence(TimberbornFireGameplayConsequence consequence);
 }
 
+public interface ITimberbornBuildingBurnoutConsequenceSink
+{
+    TimberbornBuildingBurnoutConsequenceSummary ApplyConsequences(
+        uint tick,
+        IReadOnlyList<TimberbornFireCellDeltaDecision> decisions);
+}
+
+public interface ITimberbornBuildingBurnoutConsequenceApi
+{
+    TimberbornBuildingBurnoutConsequenceResult ApplyConsequence(TimberbornBuildingBurnoutConsequence consequence);
+}
+
 public interface ITimberbornFireAlertSink
 {
     void PublishAlert(TimberbornFireAlertEvent alertEvent);
+}
+
+public sealed class TimberbornBuildingBurnoutConsequenceSink : ITimberbornBuildingBurnoutConsequenceSink
+{
+    private readonly ITimberbornBuildingBurnoutConsequenceApi _consequenceApi;
+
+    public TimberbornBuildingBurnoutConsequenceSink(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
+    {
+        _consequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
+    }
+
+    public TimberbornBuildingBurnoutConsequenceSummary ApplyConsequences(
+        uint tick,
+        IReadOnlyList<TimberbornFireCellDeltaDecision> decisions)
+    {
+        TimberbornBuildingBurnoutConsequenceResult[] results = decisions
+            .Select(decision => TimberbornBuildingBurnoutConsequence.FromDecision(tick, decision))
+            .Select(_consequenceApi.ApplyConsequence)
+            .ToArray();
+
+        return new TimberbornBuildingBurnoutConsequenceSummary(
+            ConsideredDeltaCount: decisions.Count,
+            MatchedBuildingCellCount: results.Count(static result => result.MatchedBuildingCell),
+            AppliedConsequenceCount: results.Count(static result => result.AppliedConsequence));
+    }
 }
 
 public sealed class NullTimberbornFireDebugVisualSink : ITimberbornFireDebugVisualSink
@@ -458,6 +554,22 @@ public sealed class NullTimberbornFireGameplayConsequenceSink : ITimberbornFireG
 
     public void ApplyConsequence(TimberbornFireGameplayConsequence consequence)
     {
+    }
+}
+
+public sealed class NullTimberbornBuildingBurnoutConsequenceSink : ITimberbornBuildingBurnoutConsequenceSink
+{
+    public static readonly NullTimberbornBuildingBurnoutConsequenceSink Instance = new();
+
+    private NullTimberbornBuildingBurnoutConsequenceSink()
+    {
+    }
+
+    public TimberbornBuildingBurnoutConsequenceSummary ApplyConsequences(
+        uint tick,
+        IReadOnlyList<TimberbornFireCellDeltaDecision> decisions)
+    {
+        return TimberbornBuildingBurnoutConsequenceSummary.Empty;
     }
 }
 

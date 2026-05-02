@@ -1,3 +1,4 @@
+using Timberborn.BlockSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
 using Timberborn.TerrainSystem;
@@ -12,6 +13,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
     private readonly ITimberbornFireSimulatorFactory _simulatorFactory;
     private readonly MapSize _mapSize;
     private readonly ITerrainService _terrainService;
+    private readonly IBlockService _blockService;
     private readonly TimberbornTerrainCellSourceProvider _cellSourceProvider;
     private readonly ITimberbornFireLogSink _logSink;
 
@@ -19,12 +21,14 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
         TimberbornFireRuntime runtime,
         ITimberbornFireSimulatorFactory simulatorFactory,
         MapSize mapSize,
-        ITerrainService terrainService)
+        ITerrainService terrainService,
+        IBlockService blockService)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _simulatorFactory = simulatorFactory ?? throw new ArgumentNullException(nameof(simulatorFactory));
         _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
         _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
+        _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
         _cellSourceProvider = new TimberbornTerrainCellSourceProvider();
         _logSink = new UnityTimberbornFireLogSink();
     }
@@ -39,6 +43,10 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
 
             _logSink.Info(
                 $"wildfire_timberborn_runtime_initialize_started width={grid.Width} height={grid.Height} depth={grid.Depth} terrain_sources={sources.Length}");
+            TimberbornPausableBuildingBurnoutConsequenceApi buildingBurnoutApi =
+                new(grid, _blockService);
+            _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
+            _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
             _runtime.Initialize(grid, sources, _simulatorFactory);
             _logSink.Info(
                 $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} terrain_sources={sources.Length}");
