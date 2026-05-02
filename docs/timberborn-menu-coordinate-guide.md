@@ -122,6 +122,7 @@ Precondition: a save is loaded and no modal menu is open.
 | `hud.version_label` | 1638 | 1071 | Visible | Version text appears at lower right. |
 | `hud.global_view` | 1298 | 20 | Visible | Top-right view control. |
 | `hud.cycle_indicator` | 1592 | 20 | Visible | Shows `Cycle 3, day 18` in the TWF-024 recaptured clean baseline. |
+| `hud.speed1` | 1734 | 20 | Visible | Sets normal game speed from the loaded-save HUD; TWF-030 uses this only after the loaded-save HUD is positively identified. |
 
 ## Startup Mods Dialog
 
@@ -131,6 +132,14 @@ Precondition: Timberborn has launched after a mod set change and shows the start
 | --- | ---: | ---: | --- | --- |
 | `startup_mods.wildfire_row` | 878 | 651 | Visible | `Wildfire v0.1.0.0` is visible and enabled. |
 | `startup_mods.ok` | 960 | 830 | Yes | Continues past the startup Mods dialog. |
+
+## Experimental Mode Information
+
+Precondition: Timberborn has launched in experimental mode and shows the Experimental Mode Information modal.
+
+| Target | X | Y | Verified | Notes |
+| --- | ---: | ---: | --- | --- |
+| `experimental_mode.start` | 960 | 716 | Visible | Continues past the Experimental Mode Information modal. TWF-029 cleared this screen with Return; TWF-030 uses this coordinate only after the modal is positively identified. |
 
 ## Exit-To-Main Confirmation
 
@@ -181,9 +190,9 @@ Precondition: Timberborn is at the standalone main menu and `main.load_game` has
 | `main_load.load_selected_save` | 1178 | 849 | Boundary | Loads the selected save and changes runtime state. |
 | `main_load.browse_folder` | 1325 | 891 | No | Opens local file browser. |
 
-### TWF-020 Capture Attempt
+### TWF-020 Capture Notes
 
-QA attempted the title-screen coordinate pass on 2026-05-01, but stopped at the safety boundary before adding coordinate targets.
+QA attempted the title-screen coordinate pass on 2026-05-01 from a loaded save, then completed the safe startup and standalone main-menu capture through the approved exit-to-main path.
 
 | Field | Value |
 | --- | --- |
@@ -193,9 +202,9 @@ QA attempted the title-screen coordinate pass on 2026-05-01, but stopped at the 
 | macOS UI scaling | `UI Looks like: 1920 x 1080 @ 60.00Hz` |
 | Timberborn version text | `v1.0.13.0-1e60728-xsm` from `Player.log` |
 | Current state evidence | `Player.log` shows `Loading saved game Wildfire testing - 2026-05-01 06h45m, Day 1-1.autosave` |
-| Screenshot result | `screencapture` failed with `could not create image from display`; no new title-screen PNG was created |
+| Final screenshot result | Startup Mods, post-startup loaded save, exit-to-main confirmation, standalone main menu, and main-menu Load Game screenshots are now recorded above. |
 
-No opening-screen or standalone main-menu targets are recorded yet. Do not infer coordinates from the in-game Escape menu. A future pass should start from a known title-screen state with working screenshot capture, or use a clearly disposable save where exiting to the main menu has been explicitly approved.
+The guide still is not a full Timberborn UI atlas. Add settings, new-game, map editor, credits, deeper Mods flows, or destructive load/delete/exit targets only through explicitly assigned QA passes with fresh screenshot evidence.
 
 ## Refresh Instructions
 

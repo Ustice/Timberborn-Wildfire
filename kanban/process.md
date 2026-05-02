@@ -43,7 +43,7 @@ Do not end the coordination turn until the sprint is closed or the user explicit
 6. While workers run, dispatch newly unblocked tickets when write scopes do not conflict.
 7. Wait for sub-agent reports and ticket updates.
 8. Move completed implementation tickets to `04-verify/`.
-9. Send runtime or live-game tickets to QA when required.
+9. Send runtime or live-game tickets to QA when required; QA owns live builds, Timberborn deploys, launches, restarts, screenshots, logs, and the shared deploy/QA lock for those checks.
 10. Move accepted tickets to `05-integration/`.
 11. Tech-Lead should review integrate accepted work in dependency order.
 12. Rerun required checks after integration.
@@ -55,7 +55,7 @@ Do not end the coordination turn until the sprint is closed or the user explicit
 
 - [Coordinator](../kanban/roles/coordinator.md) owns board state, dependency order, delegation, integration, and sprint-close status docs.
 - [Worker](../kanban/roles/worker.md) owns one ticket implementation in one worktree.
-- [QA](../kanban/roles/qa.md) owns build, launch, runtime validation, screenshots, logs, and evidence.
+- [QA](../kanban/roles/qa.md) owns live builds, Timberborn deployments, launch, runtime validation, screenshots, logs, and evidence.
 - [Reviewer](../kanban/roles/tech-lead.md) owns risk review, architecture review, diff review, and integration recommendations.
 - [Researcher](../kanban/roles/researcher.md) owns focused unknowns that block decisions or implementation.
 
@@ -64,6 +64,7 @@ Do not end the coordination turn until the sprint is closed or the user explicit
 - Run `git diff --check` for all integrated work.
 - Run `dotnet test` for code, content, script, or behavior tickets.
 - Run live Timberborn validation only after a ticket explicitly requires it.
+- Route live Timberborn deploy, launch, restart, and shared-lock operations through QA to avoid worker lanes deadlocking each other.
 - Documentation-only tickets do not need runtime validation when they only change docs.
 
 ## Documentation Ownership

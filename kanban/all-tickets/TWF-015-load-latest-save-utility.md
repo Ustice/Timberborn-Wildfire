@@ -56,3 +56,4 @@ Live validation loses time when every run starts with manual menu navigation. A 
 
 - Prefer a `--dry-run` mode that prints intended clicks before moving the mouse.
 - If detecting the latest save requires OCR or filesystem access, document that choice before implementing it.
+- Deferred during coordination on 2026-05-01 because `TWF-030` supersedes this older utility shape with the fuller launch/load/unpause workflow and overlapping `scripts/**` write scope.
