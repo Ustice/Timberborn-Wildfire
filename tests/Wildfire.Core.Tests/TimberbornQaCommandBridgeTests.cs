@@ -579,6 +579,14 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: 21,
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: 22,
             LastDeltaConsumerAlertCount: 23,
+            LastPlayerFireAlertTick: 34,
+            LastPlayerFireAlertStartedFireCount: 35,
+            LastPlayerFireAlertFuelSpentCount: 36,
+            LastPlayerFireAlertMaxHeat: 37,
+            PlayerFireAlertNotificationCount: 38,
+            PlayerFireAlertPresentationFailureCount: 39,
+            PlayerFireAlertNotificationSent: true,
+            LastPlayerFireAlertMessage: "Wildfire alert",
             VisualFieldSurfaceBound: true,
             VisualFieldSurfaceCellCount: 24,
             VisualFieldSurfaceLastUpdatedTick: 25,
@@ -621,6 +629,14 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_building_burnout_matched_cells=21", result.ResultToken);
         Assert.Contains("last_delta_consumer_building_burnout_applied_consequences=22", result.ResultToken);
         Assert.Contains("last_delta_consumer_alerts=23", result.ResultToken);
+        Assert.Contains("last_player_fire_alert_tick=34", result.ResultToken);
+        Assert.Contains("last_player_fire_alert_started_fires=35", result.ResultToken);
+        Assert.Contains("last_player_fire_alert_fuel_spent=36", result.ResultToken);
+        Assert.Contains("last_player_fire_alert_max_heat=37", result.ResultToken);
+        Assert.Contains("player_fire_alert_notifications=38", result.ResultToken);
+        Assert.Contains("player_fire_alert_presentation_failures=39", result.ResultToken);
+        Assert.Contains("player_fire_alert_notification_sent=true", result.ResultToken);
+        Assert.Contains("last_player_fire_alert_message=Wildfire_alert", result.ResultToken);
         Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
         Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
         Assert.Contains("visual_field_surface_updated_tick=25", result.ResultToken);

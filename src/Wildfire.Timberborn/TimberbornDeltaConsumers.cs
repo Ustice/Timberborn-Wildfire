@@ -73,7 +73,7 @@ public sealed class TimberbornFireDeltaConsumer
             .Where(static decision => decision.ShouldEmitAlert)
             .Select(decision => TimberbornFireAlertEvent.FromDecision(tick, decision))
             .ToArray();
-        Array.ForEach(alertEvents, _sinks.AlertSink.PublishAlert);
+        ConsumeAlerts(tick, alertEvents);
 
         LastSummary = TimberbornFireDeltaConsumerSummary.FromDecisions(
             tick,
@@ -93,6 +93,57 @@ public sealed class TimberbornFireDeltaConsumer
 
         _logSink.Info(LastSummary.ToLogToken());
         return LastSummary;
+    }
+
+    private void ConsumeAlerts(uint tick, IReadOnlyList<TimberbornFireAlertEvent> alertEvents)
+    {
+        ITimberbornFireAlertDispatchSink? alertDispatchSink =
+            _sinks.AlertSink as ITimberbornFireAlertDispatchSink;
+        bool canPublishAlerts = true;
+        bool didBeginAlertDispatch = false;
+
+        if (alertDispatchSink is not null)
+        {
+            try
+            {
+                alertDispatchSink.BeginAlertDispatch(tick);
+                didBeginAlertDispatch = true;
+            }
+            catch (Exception exception)
+            {
+                canPublishAlerts = false;
+                LogAlertFailure(tick, null, "begin", exception);
+            }
+        }
+
+        if (canPublishAlerts)
+        {
+            alertEvents
+                .ToList()
+                .ForEach(alertEvent =>
+                {
+                    try
+                    {
+                        _sinks.AlertSink.PublishAlert(alertEvent);
+                    }
+                    catch (Exception exception)
+                    {
+                        LogAlertFailure(tick, alertEvent.CellIndex, "publish", exception);
+                    }
+                });
+        }
+
+        if (alertDispatchSink is not null && didBeginAlertDispatch)
+        {
+            try
+            {
+                alertDispatchSink.CompleteAlertDispatch(tick);
+            }
+            catch (Exception exception)
+            {
+                LogAlertFailure(tick, null, "complete", exception);
+            }
+        }
     }
 
     private int ConsumeVisualEffects(uint tick, IReadOnlyList<TimberbornFireVisualEffectEvent> visualEffectEvents)
@@ -154,6 +205,16 @@ public sealed class TimberbornFireDeltaConsumer
     {
         _logSink.Warning(
             "wildfire_timberborn_visual_effect_sink_failed " +
+            $"tick={tick} " +
+            $"stage={stage} " +
+            $"cell_index={FormatNumber(cellIndex)} " +
+            $"message=\"{EscapeLogValue(exception.Message)}\"");
+    }
+
+    private void LogAlertFailure(uint tick, int? cellIndex, string stage, Exception exception)
+    {
+        _logSink.Warning(
+            "wildfire_timberborn_alert_sink_failed " +
             $"tick={tick} " +
             $"stage={stage} " +
             $"cell_index={FormatNumber(cellIndex)} " +
@@ -591,6 +652,13 @@ public interface ITimberbornBuildingBurnoutConsequenceApi
 public interface ITimberbornFireAlertSink
 {
     void PublishAlert(TimberbornFireAlertEvent alertEvent);
+}
+
+public interface ITimberbornFireAlertDispatchSink : ITimberbornFireAlertSink
+{
+    void BeginAlertDispatch(uint tick);
+
+    void CompleteAlertDispatch(uint tick);
 }
 
 public sealed class TimberbornBuildingBurnoutConsequenceSink : ITimberbornBuildingBurnoutConsequenceSink

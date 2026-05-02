@@ -263,6 +263,12 @@ Use `NamedBoxTemplate.uxml` for modal-like boxes instead of inventing a frame.
 
 Use modal boxes for settings, confirmation, and workflow screens. Do not use them for selected-entity details.
 
+## Transient Hazard Notifications
+
+Use `Timberborn.QuickNotificationSystem.QuickNotificationService.SendWarningNotification(...)` for one-shot player-facing hazard warnings that should appear in Timberborn's native quick-notification area without opening a custom panel. Keep these messages bounded and aggregate per update or dispatch; do not send one notification per changed cell.
+
+Quick notifications are appropriate for status such as "new fire cells appeared" or "burnout consequences happened." Use alert-panel fragments or entity/tool-panel fragments only when the state must remain inspectable after the transient warning fades.
+
 ## Lists, Scrolls, And Rows
 
 Rows should be separate components when they repeat. Lists should use Timberborn scroll decoration.
