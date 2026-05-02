@@ -573,6 +573,7 @@ public sealed class TimberbornQaCommandBridgeTests
             LastPositiveWaterChangedTick: 16,
             LastPositiveWaterChangedCount: 17,
             LastDeltaConsumerVisualEffectEventCount: 18,
+            LastDeltaConsumerVisualEffectFailureCount: 30,
             LastDeltaConsumerGameplayConsequenceCount: 19,
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: 20,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: 21,
@@ -580,7 +581,17 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerAlertCount: 23,
             VisualFieldSurfaceBound: true,
             VisualFieldSurfaceCellCount: 24,
-            VisualFieldSurfaceLastUpdatedTick: 25);
+            VisualFieldSurfaceLastUpdatedTick: 25,
+            ActivePooledFireEffectCount: 26,
+            UpdatedVisualRegionCount: 27,
+            LastNonZeroUpdatedVisualRegionCount: 31,
+            LastNonZeroUpdatedVisualRegionTick: 32,
+            MaxPooledFireEffectCount: 28,
+            MaxUpdatedVisualRegionCount: 29,
+            PooledFireEffectPresentationFailureCount: 33,
+            PooledFireEffectsVisibleEnabled: true,
+            PooledFireEffectsNativePrefabResolved: true,
+            PooledFireEffectsNativePrefabName: "CampfireFire");
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -604,6 +615,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_positive_water_changed_tick=16", result.ResultToken);
         Assert.Contains("last_positive_water_changed_count=17", result.ResultToken);
         Assert.Contains("last_delta_consumer_visual_effect_events=18", result.ResultToken);
+        Assert.Contains("last_delta_consumer_visual_effect_failures=30", result.ResultToken);
         Assert.Contains("last_delta_consumer_gameplay_consequences=19", result.ResultToken);
         Assert.Contains("last_delta_consumer_building_burnout_considered_deltas=20", result.ResultToken);
         Assert.Contains("last_delta_consumer_building_burnout_matched_cells=21", result.ResultToken);
@@ -612,6 +624,16 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
         Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
         Assert.Contains("visual_field_surface_updated_tick=25", result.ResultToken);
+        Assert.Contains("active_pooled_fire_effects=26", result.ResultToken);
+        Assert.Contains("updated_visual_regions=27", result.ResultToken);
+        Assert.Contains("last_nonzero_updated_visual_regions=31", result.ResultToken);
+        Assert.Contains("last_nonzero_updated_visual_regions_tick=32", result.ResultToken);
+        Assert.Contains("max_pooled_fire_effects=28", result.ResultToken);
+        Assert.Contains("max_updated_visual_regions=29", result.ResultToken);
+        Assert.Contains("pooled_fire_effect_presentation_failures=33", result.ResultToken);
+        Assert.Contains("pooled_fire_effects_visible_enabled=true", result.ResultToken);
+        Assert.Contains("pooled_fire_effects_native_prefab_resolved=true", result.ResultToken);
+        Assert.Contains("pooled_fire_effects_native_prefab=CampfireFire", result.ResultToken);
     }
 
     [Fact]

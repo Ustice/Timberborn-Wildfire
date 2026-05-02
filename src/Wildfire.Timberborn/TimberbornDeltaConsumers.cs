@@ -58,7 +58,7 @@ public sealed class TimberbornFireDeltaConsumer
             .Where(static decision => decision.ShouldTriggerVisualEffect)
             .Select(decision => TimberbornFireVisualEffectEvent.FromDecision(tick, decision))
             .ToArray();
-        Array.ForEach(visualEffectEvents, _sinks.VisualEffectSink.UpdateVisualEffect);
+        int visualEffectFailureCount = ConsumeVisualEffects(tick, visualEffectEvents);
 
         TimberbornFireGameplayConsequence[] gameplayConsequences = decisions
             .Where(static decision => decision.ShouldApplyGameplayConsequence)
@@ -81,6 +81,7 @@ public sealed class TimberbornFireDeltaConsumer
             debugVisualStates.Length,
             _debugVisualCells.Count,
             visualEffectEvents.Length,
+            visualEffectFailureCount,
             gameplayConsequences.Length,
             buildingBurnoutSummary,
             alertEvents.Length);
@@ -92,6 +93,81 @@ public sealed class TimberbornFireDeltaConsumer
 
         _logSink.Info(LastSummary.ToLogToken());
         return LastSummary;
+    }
+
+    private int ConsumeVisualEffects(uint tick, IReadOnlyList<TimberbornFireVisualEffectEvent> visualEffectEvents)
+    {
+        ITimberbornFireVisualEffectDispatchSink? visualEffectDispatchSink =
+            _sinks.VisualEffectSink as ITimberbornFireVisualEffectDispatchSink;
+        int failureCount = 0;
+        bool canUpdateVisualEffects = true;
+
+        if (visualEffectDispatchSink is not null)
+        {
+            try
+            {
+                visualEffectDispatchSink.BeginVisualEffectDispatch(tick);
+            }
+            catch (Exception exception)
+            {
+                failureCount++;
+                canUpdateVisualEffects = false;
+                LogVisualEffectFailure(tick, null, "begin", exception);
+            }
+        }
+
+        if (canUpdateVisualEffects)
+        {
+            visualEffectEvents
+                .ToList()
+                .ForEach(effectEvent =>
+                {
+                    try
+                    {
+                        _sinks.VisualEffectSink.UpdateVisualEffect(effectEvent);
+                    }
+                    catch (Exception exception)
+                    {
+                        failureCount++;
+                        LogVisualEffectFailure(tick, effectEvent.CellIndex, "update", exception);
+                    }
+                });
+        }
+
+        if (visualEffectDispatchSink is not null)
+        {
+            try
+            {
+                visualEffectDispatchSink.CompleteVisualEffectDispatch(tick);
+            }
+            catch (Exception exception)
+            {
+                failureCount++;
+                LogVisualEffectFailure(tick, null, "complete", exception);
+            }
+        }
+
+        return failureCount;
+    }
+
+    private void LogVisualEffectFailure(uint tick, int? cellIndex, string stage, Exception exception)
+    {
+        _logSink.Warning(
+            "wildfire_timberborn_visual_effect_sink_failed " +
+            $"tick={tick} " +
+            $"stage={stage} " +
+            $"cell_index={FormatNumber(cellIndex)} " +
+            $"message=\"{EscapeLogValue(exception.Message)}\"");
+    }
+
+    private static string FormatNumber(int? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+
+    private static string EscapeLogValue(string value)
+    {
+        return value.Replace('\\', '/').Replace('"', '\'');
     }
 }
 
@@ -350,6 +426,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int HeatChangedCount,
     int WaterChangedCount,
     int VisualEffectEventCount,
+    int VisualEffectFailureCount,
     int GameplayConsequenceCount,
     int BuildingBurnoutConsideredDeltaCount,
     int BuildingBurnoutMatchedCellCount,
@@ -368,6 +445,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         HeatChangedCount: 0,
         WaterChangedCount: 0,
         VisualEffectEventCount: 0,
+        VisualEffectFailureCount: 0,
         GameplayConsequenceCount: 0,
         BuildingBurnoutConsideredDeltaCount: 0,
         BuildingBurnoutMatchedCellCount: 0,
@@ -381,6 +459,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         int debugVisualUpdatedCellCount,
         int debugVisualCellCount,
         int visualEffectEventCount,
+        int visualEffectFailureCount,
         int gameplayConsequenceCount,
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary,
         int alertCount)
@@ -396,6 +475,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             decisions.Count(static decision => decision.HeatChanged),
             decisions.Count(static decision => decision.WaterChanged),
             visualEffectEventCount,
+            visualEffectFailureCount,
             gameplayConsequenceCount,
             buildingBurnoutSummary.ConsideredDeltaCount,
             buildingBurnoutSummary.MatchedBuildingCellCount,
@@ -417,6 +497,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"heat_changed={HeatChangedCount} " +
             $"water_changed={WaterChangedCount} " +
             $"visual_effect_events={VisualEffectEventCount} " +
+            $"visual_effect_failures={VisualEffectFailureCount} " +
             $"gameplay_consequences={GameplayConsequenceCount} " +
             $"building_burnout_considered_deltas={BuildingBurnoutConsideredDeltaCount} " +
             $"building_burnout_matched_cells={BuildingBurnoutMatchedCellCount} " +
@@ -481,6 +562,13 @@ public interface ITimberbornFireDebugVisualSink
 public interface ITimberbornFireVisualEffectSink
 {
     void UpdateVisualEffect(TimberbornFireVisualEffectEvent effectEvent);
+}
+
+public interface ITimberbornFireVisualEffectDispatchSink : ITimberbornFireVisualEffectSink
+{
+    void BeginVisualEffectDispatch(uint tick);
+
+    void CompleteVisualEffectDispatch(uint tick);
 }
 
 public interface ITimberbornFireGameplayConsequenceSink

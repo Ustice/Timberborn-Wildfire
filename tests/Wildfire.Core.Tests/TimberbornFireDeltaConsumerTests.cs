@@ -83,6 +83,7 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(1, summary.HeatChangedCount);
         Assert.Equal(1, summary.WaterChangedCount);
         Assert.Equal(3, summary.VisualEffectEventCount);
+        Assert.Equal(0, summary.VisualEffectFailureCount);
         Assert.Equal(2, summary.GameplayConsequenceCount);
         Assert.Equal(0, summary.BuildingBurnoutConsideredDeltaCount);
         Assert.Equal(0, summary.BuildingBurnoutMatchedCellCount);
@@ -111,9 +112,46 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Contains("wildfire_timberborn_delta_consumer_completed", logToken);
         Assert.Contains("debug_visual_updated_cells=3", logToken);
         Assert.Contains("visual_effect_events=3", logToken);
+        Assert.Contains("visual_effect_failures=0", logToken);
         Assert.Contains("gameplay_consequences=2", logToken);
         Assert.Contains("building_burnout_considered_deltas=0", logToken);
         Assert.Contains("alerts=2", logToken);
+    }
+
+    [Fact]
+    public void ConsumeIsolatesVisualSinkExceptionsAndStillRoutesConsequences()
+    {
+        RecordingFireDeltaSinks recordingSinks = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornFireDeltaConsumer consumer = new(
+            logSink,
+            new TimberbornFireDeltaConsumerSinks(
+                visualEffectSink: new ThrowingVisualEffectSink(),
+                gameplayConsequenceSink: recordingSinks,
+                alertSink: recordingSinks));
+
+        TimberbornFireDeltaConsumerSummary summary = consumer.Consume(
+            27,
+            [new CellDelta(1, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10))]);
+
+        Assert.Equal(1, summary.VisualEffectEventCount);
+        Assert.Equal(1, summary.VisualEffectFailureCount);
+        Assert.Equal(1, summary.GameplayConsequenceCount);
+        Assert.Equal(1, summary.AlertCount);
+        Assert.Equal([TimberbornFireGameplayConsequenceKind.FireStarted],
+            recordingSinks.GameplayConsequences.Select(static consequence => consequence.Kind).ToArray());
+        Assert.Equal([TimberbornFireAlertKind.FireStarted],
+            recordingSinks.AlertEvents.Select(static alertEvent => alertEvent.Kind).ToArray());
+        Assert.Contains(
+            logSink.WarningMessages,
+            message => message.Contains("wildfire_timberborn_visual_effect_sink_failed tick=27 stage=update"));
+        Assert.Contains(
+            logSink.InfoMessages,
+            message => message.Contains(
+                "wildfire_timberborn_delta_consumer_completed tick=27") &&
+                message.Contains("visual_effect_failures=1") &&
+                message.Contains("gameplay_consequences=1") &&
+                message.Contains("alerts=1"));
     }
 
     [Fact]
@@ -287,6 +325,8 @@ public sealed class TimberbornFireDeltaConsumerTests
     {
         public List<string> InfoMessages { get; } = [];
 
+        public List<string> WarningMessages { get; } = [];
+
         public void Info(string message)
         {
             InfoMessages.Add(message);
@@ -294,6 +334,15 @@ public sealed class TimberbornFireDeltaConsumerTests
 
         public void Warning(string message)
         {
+            WarningMessages.Add(message);
+        }
+    }
+
+    private sealed class ThrowingVisualEffectSink : ITimberbornFireVisualEffectSink
+    {
+        public void UpdateVisualEffect(TimberbornFireVisualEffectEvent effectEvent)
+        {
+            throw new InvalidOperationException("visual boom");
         }
     }
 

@@ -15,6 +15,7 @@ public sealed class TimberbornFireRuntime :
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
+    private readonly TimberbornPooledFireSmokeAshEffectSink _pooledFireEffects;
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private TimberbornFireSystem? _fireSystem;
@@ -22,10 +23,13 @@ public sealed class TimberbornFireRuntime :
     private long _gameUpdateId;
     private bool _isLoaded;
 
-    public TimberbornFireRuntime()
+    public TimberbornFireRuntime(ITimberbornGpuVisualFieldSurface visualFieldSurface)
     {
         _logSink = new UnityTimberbornFireLogSink();
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
+        _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
+            visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
+            _logSink);
     }
 
     public void Load()
@@ -42,6 +46,7 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         _fireSystem?.Dispose();
+        _pooledFireEffects.Clear();
         _dispatcher = null;
         _fireSystem = null;
         _gameUpdateId = 0;
@@ -197,6 +202,7 @@ public sealed class TimberbornFireRuntime :
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
+        TimberbornPooledFireEffectCounters pooledEffectCounters = _pooledFireEffects.Counters;
 
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
@@ -216,6 +222,7 @@ public sealed class TimberbornFireRuntime :
             LastPositiveWaterChangedTick: fireSystem.LastPositiveWaterChangedTick,
             LastPositiveWaterChangedCount: fireSystem.LastPositiveWaterChangedCount,
             LastDeltaConsumerVisualEffectEventCount: deltaConsumerSummary.VisualEffectEventCount,
+            LastDeltaConsumerVisualEffectFailureCount: deltaConsumerSummary.VisualEffectFailureCount,
             LastDeltaConsumerGameplayConsequenceCount: deltaConsumerSummary.GameplayConsequenceCount,
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: deltaConsumerSummary.BuildingBurnoutConsideredDeltaCount,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: deltaConsumerSummary.BuildingBurnoutMatchedCellCount,
@@ -223,7 +230,17 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             VisualFieldSurfaceBound: visualFieldSurfaceState.IsBound,
             VisualFieldSurfaceCellCount: visualFieldSurfaceState.CellCount,
-            VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick);
+            VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick,
+            ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,
+            UpdatedVisualRegionCount: pooledEffectCounters.UpdatedVisualRegionCount,
+            LastNonZeroUpdatedVisualRegionCount: pooledEffectCounters.LastNonZeroUpdatedVisualRegionCount,
+            LastNonZeroUpdatedVisualRegionTick: pooledEffectCounters.LastNonZeroUpdatedVisualRegionTick,
+            MaxPooledFireEffectCount: pooledEffectCounters.MaxActivePooledEffectCount,
+            MaxUpdatedVisualRegionCount: pooledEffectCounters.MaxUpdatedVisualRegionCount,
+            PooledFireEffectPresentationFailureCount: pooledEffectCounters.PresentationFailureCount,
+            PooledFireEffectsVisibleEnabled: pooledEffectCounters.VisibleEffectsEnabled,
+            PooledFireEffectsNativePrefabResolved: pooledEffectCounters.NativeEffectPrefabResolved,
+            PooledFireEffectsNativePrefabName: pooledEffectCounters.LastNativeEffectPrefabName);
     }
 
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
@@ -242,6 +259,7 @@ public sealed class TimberbornFireRuntime :
     {
         _fireSystem?.Dispose();
         _debugVisualSink.Clear();
+        _pooledFireEffects.Clear();
         _fireSystem = fireSystem;
         _dispatcher = new TimberbornFixedCadenceFireDispatcher(
             fireSystem,
@@ -251,6 +269,7 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state");
+        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=pooled_fire_smoke_ash_effects");
         if (_buildingBurnoutConsequenceApi is not null)
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause");
@@ -261,6 +280,7 @@ public sealed class TimberbornFireRuntime :
     {
         return new TimberbornFireDeltaConsumerSinks(
             debugVisualSink: _debugVisualSink,
+            visualEffectSink: _pooledFireEffects,
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
                 ? null
                 : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi));

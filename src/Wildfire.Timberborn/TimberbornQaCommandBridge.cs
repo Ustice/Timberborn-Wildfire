@@ -447,6 +447,7 @@ public sealed record TimberbornQaCommandState(
     uint? LastPositiveWaterChangedTick = null,
     int? LastPositiveWaterChangedCount = null,
     int? LastDeltaConsumerVisualEffectEventCount = null,
+    int? LastDeltaConsumerVisualEffectFailureCount = null,
     int? LastDeltaConsumerGameplayConsequenceCount = null,
     int? LastDeltaConsumerBuildingBurnoutConsideredDeltaCount = null,
     int? LastDeltaConsumerBuildingBurnoutMatchedCellCount = null,
@@ -454,7 +455,17 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerAlertCount = null,
     bool VisualFieldSurfaceBound = false,
     int? VisualFieldSurfaceCellCount = null,
-    uint? VisualFieldSurfaceLastUpdatedTick = null)
+    uint? VisualFieldSurfaceLastUpdatedTick = null,
+    int? ActivePooledFireEffectCount = null,
+    int? UpdatedVisualRegionCount = null,
+    int? LastNonZeroUpdatedVisualRegionCount = null,
+    uint? LastNonZeroUpdatedVisualRegionTick = null,
+    int? MaxPooledFireEffectCount = null,
+    int? MaxUpdatedVisualRegionCount = null,
+    int? PooledFireEffectPresentationFailureCount = null,
+    bool PooledFireEffectsVisibleEnabled = false,
+    bool PooledFireEffectsNativePrefabResolved = false,
+    string? PooledFireEffectsNativePrefabName = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
@@ -499,6 +510,7 @@ public sealed record TimberbornQaCommandResult(
         $"last_positive_water_changed_tick={FormatNumber(State.LastPositiveWaterChangedTick)} " +
         $"last_positive_water_changed_count={FormatNumber(State.LastPositiveWaterChangedCount)} " +
         $"last_delta_consumer_visual_effect_events={FormatNumber(State.LastDeltaConsumerVisualEffectEventCount)} " +
+        $"last_delta_consumer_visual_effect_failures={FormatNumber(State.LastDeltaConsumerVisualEffectFailureCount)} " +
         $"last_delta_consumer_gameplay_consequences={FormatNumber(State.LastDeltaConsumerGameplayConsequenceCount)} " +
         $"last_delta_consumer_building_burnout_considered_deltas={FormatNumber(State.LastDeltaConsumerBuildingBurnoutConsideredDeltaCount)} " +
         $"last_delta_consumer_building_burnout_matched_cells={FormatNumber(State.LastDeltaConsumerBuildingBurnoutMatchedCellCount)} " +
@@ -507,6 +519,16 @@ public sealed record TimberbornQaCommandResult(
         $"visual_field_surface_bound={State.VisualFieldSurfaceBound.ToString().ToLowerInvariant()} " +
         $"visual_field_surface_cells={FormatNumber(State.VisualFieldSurfaceCellCount)} " +
         $"visual_field_surface_updated_tick={FormatNumber(State.VisualFieldSurfaceLastUpdatedTick)} " +
+        $"active_pooled_fire_effects={FormatNumber(State.ActivePooledFireEffectCount)} " +
+        $"updated_visual_regions={FormatNumber(State.UpdatedVisualRegionCount)} " +
+        $"last_nonzero_updated_visual_regions={FormatNumber(State.LastNonZeroUpdatedVisualRegionCount)} " +
+        $"last_nonzero_updated_visual_regions_tick={FormatNumber(State.LastNonZeroUpdatedVisualRegionTick)} " +
+        $"max_pooled_fire_effects={FormatNumber(State.MaxPooledFireEffectCount)} " +
+        $"max_updated_visual_regions={FormatNumber(State.MaxUpdatedVisualRegionCount)} " +
+        $"pooled_fire_effect_presentation_failures={FormatNumber(State.PooledFireEffectPresentationFailureCount)} " +
+        $"pooled_fire_effects_visible_enabled={State.PooledFireEffectsVisibleEnabled.ToString().ToLowerInvariant()} " +
+        $"pooled_fire_effects_native_prefab_resolved={State.PooledFireEffectsNativePrefabResolved.ToString().ToLowerInvariant()} " +
+        $"pooled_fire_effects_native_prefab={TimberbornQaCommandBridge.FormatToken(State.PooledFireEffectsNativePrefabName)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
     public static TimberbornQaCommandResult CreateSuccess(
