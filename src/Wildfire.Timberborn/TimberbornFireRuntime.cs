@@ -12,6 +12,7 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaDeltaStimulus
 {
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private long _gameUpdateId;
@@ -20,6 +21,7 @@ public sealed class TimberbornFireRuntime :
     public TimberbornFireRuntime()
     {
         _logSink = new UnityTimberbornFireLogSink();
+        _debugVisualSink = new TimberbornFireDebugVisualStateSink();
     }
 
     public void Load()
@@ -77,7 +79,13 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(fireSimulator));
         }
 
-        Configure(new TimberbornFireSystem(fireSimulator, new TimberbornFireCellMapper(), _logSink), cadence);
+        Configure(
+            new TimberbornFireSystem(
+                fireSimulator,
+                new TimberbornFireCellMapper(),
+                _logSink,
+                CreateDeltaConsumerSinks()),
+            cadence);
     }
 
     public void Initialize(
@@ -96,7 +104,11 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(simulatorFactory));
         }
 
-        TimberbornFireSystem fireSystem = new(simulatorFactory, new TimberbornFireCellMapper(), _logSink);
+        TimberbornFireSystem fireSystem = new(
+            simulatorFactory,
+            new TimberbornFireCellMapper(),
+            _logSink,
+            CreateDeltaConsumerSinks());
         fireSystem.Initialize(grid, sources);
         Configure(fireSystem, cadence);
         _logSink.Info(
@@ -153,7 +165,7 @@ public sealed class TimberbornFireRuntime :
             QueuedChangeCount: fireSystem.RegisteredChangeCountSinceLastDispatch,
             LastDeltaCount: fireSystem.LastDeltaCount,
             LastDeltaConsumerChangedCellCount: deltaConsumerSummary.ChangedCellCount,
-            LastDeltaConsumerDebugVisualCellCount: deltaConsumerSummary.DebugVisualCellCount,
+            LastDeltaConsumerDebugVisualCellCount: _debugVisualSink.States.Count,
             LastDeltaConsumerStartedBurningCount: deltaConsumerSummary.StartedBurningCount,
             LastDeltaConsumerFuelDepletedCount: deltaConsumerSummary.FuelDepletedCount,
             LastDeltaConsumerVisualEffectEventCount: deltaConsumerSummary.VisualEffectEventCount,
@@ -164,6 +176,7 @@ public sealed class TimberbornFireRuntime :
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
+        _debugVisualSink.Clear();
         _fireSystem = fireSystem;
         _dispatcher = new TimberbornFixedCadenceFireDispatcher(
             fireSystem,
@@ -172,6 +185,12 @@ public sealed class TimberbornFireRuntime :
         _gameUpdateId = 0;
         _logSink.Info(
             $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
+        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state");
+    }
+
+    private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
+    {
+        return new TimberbornFireDeltaConsumerSinks(debugVisualSink: _debugVisualSink);
     }
 
     private TimberbornFireSystem RequireFireSystem()

@@ -377,6 +377,23 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornFireAlertSink AlertSink { get; }
 }
 
+public sealed class TimberbornFireDebugVisualStateSink : ITimberbornFireDebugVisualSink
+{
+    private readonly Dictionary<int, TimberbornFireDebugVisualCellState> _states = new();
+
+    public IReadOnlyDictionary<int, TimberbornFireDebugVisualCellState> States => _states;
+
+    public void Clear()
+    {
+        _states.Clear();
+    }
+
+    public void UpdateDebugVisualState(TimberbornFireDebugVisualCellState state)
+    {
+        _states[state.CellIndex] = state;
+    }
+}
+
 public interface ITimberbornFireDebugVisualSink
 {
     void UpdateDebugVisualState(TimberbornFireDebugVisualCellState state);
