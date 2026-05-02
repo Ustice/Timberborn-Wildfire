@@ -229,6 +229,38 @@ Run the accepted release snapshot assertions with:
 WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
 ```
 
+## Coherent Live Gameplay Loop Evidence
+
+`TWF-046` accepts the first coherent live Timberborn gameplay loop after the `TWF-043` game-feel tuning and `TWF-045` release snapshot set. Live QA on 2026-05-02 attached to an already-running loaded save at `4de4642e7fd84d5033cf4b0a694db5b74b03238b`, used only the guarded startup and allowlisted stimulus paths, and preserved evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-046-live-20260502T232641Z/`.
+
+Run shape:
+
+```bash
+bun scripts/load-latest-save-and-unpause.ts --attach --wait=180 --artifacts-dir "$ARTIFACT/latest-save-attach" --lock-timeout=60
+bun scripts/invoke-timberborn-command.ts qa-readiness --wait=10 --require-advanced-tick
+bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=10 --require-advanced-tick
+bun scripts/invoke-timberborn-command.ts qa-readiness --wait=10 --require-advanced-tick --require-nonzero-delta
+printf 'qa-building-burnout-stimulus\n' > "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt"
+bun scripts/invoke-timberborn-command.ts qa-water-suppression-stimulus --wait=10 --require-advanced-tick
+bun scripts/invoke-timberborn-command.ts qa-readiness --wait=10 --require-advanced-tick --require-water-changed
+bun scripts/invoke-timberborn-command.ts qa-readiness --wait=10 --require-advanced-tick
+```
+
+Accepted evidence:
+
+- Guarded loaded-save attach reached `screen=loaded-save`, detected the save was already unpaused, and observed `tick_count` advance from `1707` to `1709`.
+- Baseline `qa-readiness` reported `loaded_game_ready=true`, `simulator_integrated=true`, dimensions `128x128x23`, `tick_count=1722`, and `queued_changes=0`.
+- `qa-delta-stimulus` queued the fixed center cell `target_index=188480`, `target_x=64`, `target_y=64`, `target_z=11`, `set_cell=13311`.
+- The next dispatch at tick `1734` uploaded the queued change, read back `delta_count=2`, updated the visual field, emitted `active_pooled_effects=1`, sent `Wildfire alert: 1 new fire. Max heat 15.`, and recorded `changed_cells=2`, `started_burning=1`, `visual_effect_events=2`, `gameplay_consequences=1`, and `alerts=1`.
+- Follow-up spread/resolution ticks kept advancing: tick `1735` reported `last_delta_count=1`, `active_pooled_fire_effects=1`, and alert counters for tick `1734`; tick `1736` reported `stopped_burning=1` and `gameplay_consequences=1`; by tick `1739`, heat settled to `0`.
+- Visible screenshots show the native Timberborn quick warning and loaded-save state: `fire-stimulus-visible-alert.png`, `building-burnout-consequence-alert.png`, `water-suppression-resolution.png`, and `final-stability-screen.png`.
+- `qa-water-suppression-stimulus` queued `SetWater=3` for the same fixed center target, and follow-up `qa-readiness --require-water-changed` reported `last_positive_water_changed_tick=1851`, `last_positive_water_changed_count=1`, `queued_changes=0`, and stable zero-delta state at `tick_count=1852`.
+- Delayed stability at `tick_count=1908` reported `queued_changes=0`, `last_delta_count=0`, `visual_field_surface_bound=true`, `pooled_fire_effects_visible_enabled=true`, `player_fire_alert_presentation_failures=0`, `pooled_fire_effect_presentation_failures=0`, and `message=loaded_game_ready`.
+- Copied log evidence includes `Player.log`, the baseline-bounded `Player-run-window.log`, `Player-run-window-wildfire-events.txt`, and `twf-046-live-loop-summary.txt`. The strict run-window failure scan in `Player-run-window-failures.txt` has `0` lines.
+- Final QA lock state: no lock files under `~/Library/Application Support/Timberborn/WildfireQA/locks` or `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/locks`. Timberborn remained running because QA attached to a pre-existing process.
+
+Follow-up note: two direct `qa-building-burnout-stimulus` attempts produced burned-out alert/status evidence and matched one building cell on the first attempt, but `building_burnout_applied_consequences` remained `0`. This did not block `TWF-046` because the live loop already produced compact-delta gameplay consequences from fire start/stop decisions, but a later hardening ticket should investigate why the pausable-building pause consequence was not applied in this loaded save.
+
 ## Timberborn Validation
 
 Live Timberborn validation should start only after the GPU simulator and adapter path can:
