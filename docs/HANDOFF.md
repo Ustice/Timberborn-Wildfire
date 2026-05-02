@@ -57,7 +57,7 @@
 - `TWF-039` is done and integrated on `main` in commit `2a7f013`: the live compute simulator now binds the GPU `VisualFields` buffer to a Timberborn-resolvable visual-field surface singleton, exposes bounded inspection/consumer APIs, reports QA telemetry, and has live proof from `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-039-live-final-20260502T204610Z`.
 - `TWF-040` is done and integrated on `main` in commit `808d88d`: compact-delta visual events now feed a bounded pooled Timberborn presentation layer using the `TWF-039` visual-field surface, expose active/updated/last-nonzero counters, resolve the native `CampfireFire` effect in live QA, and have proof from `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-040-live-final-20260502T211935Z`.
 - `TWF-041` is done and integrated on `main` in commits `3d1b910` and `942251c`: fire/smoke/ash/visibility visual constants are tuned in the C# mirror and HLSL shader, accepted shader checksum scenarios are recorded for `single-ignition` and `line-of-fuel`, ash remains an explicit derived heat/fuel approximation without packed-cell storage changes, and live QA proof is under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z`.
-- `TWF-042` is ready for the remaining player-legibility sprint work: one player-facing fire alert.
+- `TWF-042` is done and integrated on `main` in commit `fde36e6`: compact-delta alert decisions now feed one bounded Timberborn quick-warning player alert, QA telemetry reports alert counters, and live QA proof under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-042-live-rerun-20260502T222801Z` shows `Wildfire alert: 1 new fire. Max heat 15.` with matching status counters.
 - `TWF-043` through `TWF-046` are todo for Sprint 4: game-feel tuning, release-blocking simulation decisions, release scenario snapshots, and coherent live-loop validation.
 - `TWF-047` through `TWF-051` are todo for Sprint 5: save/reload disable/re-enable validation, release settings, compatibility probes, GPU/asset failure hardening, and the active-frontier release decision.
 - `TWF-052` through `TWF-063` are todo for Sprint 6: GitHub CI/CD, release packaging, release graphics/metadata, player docs, changelog/versioning, cross-platform bundle validation, clean-install release-candidate QA, release debug-surface scrub, license/attribution, support templates, and Steam Workshop distribution as the official first channel.
@@ -67,7 +67,7 @@
 
 Continue with:
 
-- Continue the player-legibility sprint with `TWF-042`: add one player-facing fire alert or status surface driven by simulator output.
+- Start Sprint 4 with `TWF-043`: tune fire game-feel constants now that the player-legibility sprint has integrated visual-field binding, pooled native presentation, visual tuning evidence, and one player-facing alert.
 - Keep `TWF-015` deferred unless `TWF-030` is abandoned; it is superseded by the newer startup/load/unpause utility.
 - Keep `TWF-011` deferred. `TWF-034` worker profiling over `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z/Player.log` observed ticks `1..43`, `43` full-grid dispatches, median dispatch wrapper time `2.737 ms`, p95 `4.846 ms`, max `6.014 ms`, and `SimulateFullGrid` kernel timing median `0.019 ms`, p95 `0.039 ms`, max `0.057 ms`. The non-zero stimulus ticks were `30:2@5.937 ms`, `31:1@4.308 ms`, `32:1@1.86 ms`, `33:1@3.055 ms`, and `34:1@4.178 ms`, with consumer counters reaching `max_changed_cells=2`, `max_visual_effect_events=2`, `max_gameplay_consequences=1`, and `max_alerts=1`.
 - Use `bun scripts/summarize-dispatch-profile.ts "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z"` to regenerate the TWF-034 timing summary from the preserved artifact.
@@ -80,6 +80,6 @@ Continue with:
 
 - `FireSim.compute` has local Unity batchmode proof, but CI does not run it unless Unity Editor licensing and compute-shader capable graphics are available.
 - Historical TWF-009 evidence had `delta_count=0`; TWF-031 now proves the live stimulus, GPU readback, dispatch, and status path can report non-zero deltas.
-- The current sprint milestone is player legibility: the GPU visual-field surface, bounded pooled native presentation, and visual tuning evidence are integrated, but one player-facing fire alert/status surface still remains.
+- The player-legibility sprint is complete: GPU visual-field binding, bounded pooled native presentation, visual tuning evidence, and one player-facing alert/status surface are integrated and live-verified.
 - TWF-030's live run proves the guarded startup/load/unpause workflow, but the broader Timberborn UI is not exhaustively mapped; add settings/new-game/map-editor/deeper Mods coordinates only through explicit QA passes.
 - `TWF-009` intentionally provides Timberborn adapter hook surfaces; concrete binding to Timberborn damage/effect/alert services is follow-up work.
