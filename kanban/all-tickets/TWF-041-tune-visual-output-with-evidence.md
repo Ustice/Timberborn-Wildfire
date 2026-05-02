@@ -118,7 +118,72 @@ The design says exact visual constants should be tuned from shader snapshots and
 - None for implementation.
 - Visual review caveat: the bounded QA stimulus is brief and settles quickly; the strongest live proof is the paired screenshot artifact plus command/log counters showing native `CampfireFire` effect resolution and active pooled visual output. Broader aesthetic approval across map scales remains QA/product review work.
 
+## QA Results
+
+- QA date: 2026-05-02.
+- QA role worktree: `~/repos/wildfire-TWF-041`.
+- QA branch/commit: `codex/TWF-041` at `d877a95 Tune visual output evidence for TWF-041`.
+- QA artifact root: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/`.
+- Worker evidence confirmed:
+
+   - Worker shader artifacts exist under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/`.
+   - Worker live artifacts exist under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-live-20260502T213953Z/`.
+   - Worker screenshots `live-after-tuned-delta-effects.png` and `live-after-second-tuned-delta-effects.png` are `1920x1080` PNGs.
+   - Worker copied log and command artifacts include `Player.log`, `relevant-player-log-tokens.txt`, `qa-delta-stimulus-output.txt`, `qa-readiness-after-delta-output.txt`, `status-after-delta-output.txt`, `qa-delta-stimulus-second-output.txt`, and `qa-readiness-second-after-delta-output.txt`.
+
+- Commands run:
+
+   - `git diff --check`.
+   - `dotnet test --filter FullyQualifiedName~FireVisualFieldTests`.
+   - `dotnet test --filter FullyQualifiedName~ShaderSnapshotHarnessTests`.
+   - `dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --seed=21 --width=5 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/single-ignition-seed21-5x5x1.fixture.json"`.
+   - `"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-041/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/single-ignition-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/single-ignition-seed21-5x5x1.fixture.json" --shader ~/repos/wildfire-TWF-041/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/single-ignition-seed21-5x5x1-tick2.capture.json" --ticks 2`.
+   - `dotnet run --project src/Wildfire.Cli -- --scenario=line-of-fuel --seed=42 --width=12 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/line-of-fuel-seed42-12x5x1.fixture.json"`.
+   - `"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-041/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/line-of-fuel-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/line-of-fuel-seed42-12x5x1.fixture.json" --shader ~/repos/wildfire-TWF-041/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/shader-snapshots/line-of-fuel-seed42-12x5x1-tick4.capture.json" --ticks 4`.
+   - `bun scripts/deploy-timberborn-mod.ts --apply --clean --lock-timeout=120`.
+   - `bun scripts/load-latest-save-and-unpause.ts --launch --wait=240 --lock-timeout=120 --artifacts-dir="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-qa-20260502T215231Z/live/latest-save-startup"`.
+   - `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=10 --require-advanced-tick`.
+   - `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=10 --require-advanced-tick`.
+   - `bun scripts/invoke-timberborn-command.ts status --wait=10 --require-advanced-tick`.
+   - Second tight capture pass: `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=10 --require-advanced-tick`, then repeated `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=2 --require-advanced-tick` until active visual counters were observed.
+   - `dotnet test`.
+
+- Automated and shader results:
+
+   - `git diff --check`: PASS.
+   - `FireVisualFieldTests`: PASS, 5 tests.
+   - `ShaderSnapshotHarnessTests`: PASS, 4 tests.
+   - Full `dotnet test`: PASS, 125 tests.
+   - `single-ignition`, seed `21`, `5x5x1`, ticks `2`: PASS, regenerated checksum `visual-fnv1a32:8710B4BB` at `shader-snapshots/single-ignition-seed21-5x5x1-tick2.capture.json`.
+   - `line-of-fuel`, seed `42`, `12x5x1`, ticks `4`: PASS, regenerated checksum `visual-fnv1a32:BFDB9857` at `shader-snapshots/line-of-fuel-seed42-12x5x1-tick4.capture.json`.
+   - Unity capture logs contain `phase=compile`, `phase=buffer`, `phase=dispatch`, and `phase=readback` `status=ok` tokens for both accepted scenarios. The logs also contain non-blocking Unity CDN timeout chatter after successful readback.
+
+- Live Timberborn results:
+
+   - Fresh deploy: PASS. `live/deploy-output.txt` shows Debug build success, rebuilt `wildfire_compute_mac` and `wildfire_diagnostic_mac`, staged from `~/repos/wildfire-TWF-041`, and released `build-deploy.lock`.
+   - Load latest save and unpause: PASS. `live/load-latest-save-and-unpause-output.txt` shows startup Mods and Experimental Mode gates positively identified, `main.continue` clicked, loaded-save screenshots captured, unpause clicked, `post_status_ok tick_count=3`, and the lock released.
+   - Fresh screenshot artifacts: PASS. `live/live-after-tuned-delta-stimulus.png`, `live/live-after-tuned-delta-readiness.png`, and `live/live-second-poll-1.png` are `1920x1080` PNGs from the loaded save.
+   - Live tuned visual output: PASS. `live/qa-readiness-second-poll-1.txt` reported `last_delta_count=1`, `last_delta_consumer_visual_effect_events=1`, `visual_field_surface_bound=true`, `visual_field_surface_cells=376832`, `active_pooled_fire_effects=1`, `updated_visual_regions=1`, `pooled_fire_effect_presentation_failures=0`, `pooled_fire_effects_visible_enabled=true`, `pooled_fire_effects_native_prefab_resolved=true`, and `pooled_fire_effects_native_prefab=CampfireFire`; `live/live-second-poll-1.png` was captured in that same active-counter window.
+   - Live log proof: PASS. `live/Player.log` and `live/relevant-player-log-tokens.txt` include diagnostic and compute AssetBundle load tokens, `wildfire_timberborn_gpu_visual_field_surface_bound ... channels=fire,smoke,ash,visibility`, `wildfire_timberborn_delta_consequence_sink_bound lane=pooled_fire_smoke_ash_effects`, `wildfire_timberborn_pooled_fire_effect_native_prefab_resolved kind=fire prefab=CampfireFire`, `wildfire_timberborn_qa_delta_stimulus_queued`, `wildfire_timberborn_changes_registered source=qa_delta_stimulus`, and follow-up dispatch/consumer/presentation tokens for the active visual event.
+
+- Acceptance criteria:
+
+   - Review/tune fire, smoke, ash, and visibility derivation: PASS. Constants are documented in `docs/TEST_PLAN.md`, mirrored in `FireVisualField.cs` and `FireSim.compute`, and covered by focused tests.
+   - Add/update accepted shader snapshot evidence for at least two meaningful scenarios: PASS. `single-ignition` and `line-of-fuel` are documented and regenerated by QA with matching checksums.
+   - Capture live visual evidence from a loaded Timberborn save: PASS. QA captured loaded-save screenshots and a live screenshot during an active pooled-effect counter window, backed by command outputs and `Player.log`.
+   - Keep packed-cell storage unchanged unless explicitly changed: PASS. The committed files do not add packed-cell storage fields; visual derivation reads existing `PackedCell` fuel/heat/terrain state only.
+   - Document accepted constants, commands, artifact paths, and interpretation in `docs/TEST_PLAN.md`: PASS.
+   - Ash-storage decision explicit: PASS. `docs/TEST_PLAN.md` and this ticket both state ash is a temporary heat/fuel approximation because `PackedCell` has no burn-history field, and persistent ash needs a future storage/design decision.
+
+- Cleanup:
+
+   - Timberborn was quit after QA.
+   - `live/final-lock-process-state.txt` shows only the locks directory and no Timberborn process. The remaining `UnityCodeModel.dll` process belongs to `~/repos/Timberborn-Prometheus`, not this QA run.
+
+- QA result: PASS.
+- Recommended board move: move `TWF-041` to `05-integration` for coordinator integration. Current checkout still has the status symlink under `kanban/by-status/02-ready/`; QA did not move board symlinks.
+
 ## Completion
 
-- Ready for coordinator review and verification.
-- Recommended board move: move `TWF-041` from `03-in-progress` to `04-verify`.
+- QA passed on 2026-05-02.
+- Recommended board move: move `TWF-041` to `05-integration` for coordinator integration.
