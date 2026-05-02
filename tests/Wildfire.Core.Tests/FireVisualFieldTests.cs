@@ -20,10 +20,23 @@ public sealed class FireVisualFieldTests
 
         FireVisualSample sample = FireVisualField.FromPackedCell(cell);
 
-        Assert.Equal(0.87f, sample.Fire, precision: 4);
-        Assert.Equal(0.7467f, sample.Smoke, precision: 4);
+        Assert.Equal(0.89f, sample.Fire, precision: 4);
+        Assert.Equal(0.5893f, sample.Smoke, precision: 4);
         Assert.Equal(0f, sample.Ash);
         Assert.Equal(sample.Fire, sample.Visibility);
+    }
+
+    [Fact]
+    public void VisualSampleLetsHeavyFuelCellsReadAsSmokeBeforePeakFire()
+    {
+        ushort cell = PackedCell.Pack(fuel: 15, heat: 9, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+
+        FireVisualSample sample = FireVisualField.FromPackedCell(cell);
+
+        Assert.Equal(0.78f, sample.Fire, precision: 4);
+        Assert.Equal(0.784f, sample.Smoke, precision: 4);
+        Assert.Equal(0f, sample.Ash);
+        Assert.True(sample.Smoke > sample.Fire);
     }
 
     [Fact]
@@ -33,7 +46,10 @@ public sealed class FireVisualFieldTests
         ushort coldBareTerrain = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 2);
         ushort nonTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 0, heatLoss: 2);
 
-        Assert.Equal(0.4f, FireVisualField.FromPackedCell(spentTerrain).Ash, precision: 4);
+        FireVisualSample spentSample = FireVisualField.FromPackedCell(spentTerrain);
+
+        Assert.Equal(0.808f, spentSample.Ash, precision: 4);
+        Assert.Equal(0.6464f, spentSample.Visibility, precision: 4);
         Assert.Equal(0f, FireVisualField.FromPackedCell(coldBareTerrain).Ash);
         Assert.Equal(0f, FireVisualField.FromPackedCell(nonTerrain).Ash);
     }
@@ -45,6 +61,10 @@ public sealed class FireVisualFieldTests
 
         Assert.Contains("RWStructuredBuffer<float4> VisualFields;", shader);
         Assert.Contains("float4 BuildVisualSample(uint cell)", shader);
+        Assert.Contains("#define VISUAL_FIRE_BASE_INTENSITY 0.45f", shader);
+        Assert.Contains("#define VISUAL_SMOKE_FUEL_WEIGHT 0.52f", shader);
+        Assert.Contains("#define VISUAL_ASH_BASE_INTENSITY 0.18f", shader);
+        Assert.Contains("#define VISUAL_VISIBILITY_SMOKE_WEIGHT 0.9f", shader);
         Assert.Contains("WriteVisualField(index, newCell);", shader);
         Assert.DoesNotContain("Flame", shader);
     }

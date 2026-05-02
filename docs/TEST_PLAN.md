@@ -22,6 +22,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Timberborn compute-backed simulator factory: live adapter loads `wildfire_compute_mac` from the deployed AssetBundle, creates Unity `ComputeBuffer` resources, dispatches `ApplyExternalChanges` and `SimulateFullGrid`, reads compact deltas, and initializes `TimberbornFireRuntime` from real terrain sources supplied by `MapSize` and `ITerrainService`.
 - Timberborn GPU visual-field surface binding: the live compute simulator binds the `VisualFields` compute buffer once as a Timberborn-facing DI singleton surface with one `float4`-equivalent entry per cell, channel order `fire,smoke,ash,visibility`, a consumer-facing binding view for future renderer/effect/debug-inspector systems, bounded sample inspection for specific cell indices, dispatch-update telemetry, and `qa-readiness`/`status` fields that prove the visual surface is bound without routing gameplay consequences through visual output.
 - Timberborn pooled fire/smoke/ash effect routing: compact delta visual-effect events select bounded visual-field samples through `ITimberbornGpuVisualFieldSurface`, the adapter maintains a capped pool of active fire/smoke/ash presentation anchors instead of one object per simulated cell, visual presentation failures are isolated from gameplay consequences, and `qa-readiness`/`status` fields expose active pooled effects, last-dispatch updated regions, stable last-nonzero updated regions, presentation failures, and native-prefab visibility state.
+- Tuned visual-field output: `TWF-041` accepts named fire/smoke/ash/visibility constants in the C# mirror and `FireSim.compute`, two Unity shader checksum snapshots, and live Timberborn pooled-effect evidence for the tuned output.
 - Timberborn debug fire overlay state: the adapter consumes compact deltas, filters them to visual-state changes, stores the latest packed cell only for affected overlay indices, derives fuel/heat/water/burning/spent state from that packed cell, and exposes per-dispatch updated-cell counters separately from the persistent overlay cell count.
 - Runtime diagnostics: Unity and Timberborn GPU paths emit concise `wildfire_*` tokens for simulator initialization/disposal, queued change batches, dispatch kernel start/completion with elapsed milliseconds, compact delta readback counts, listener notification counts, and adapter startup/shutdown without logging per-cell changes.
 
@@ -103,6 +104,35 @@ For each accepted snapshot, record:
 - Visual field checksum or image artifact when useful.
 
 Update snapshots intentionally only after reviewing the diff scenario by scenario. Regenerate the CLI fixture, run the shader snapshot command, inspect final packed-cell differences and per-tick delta differences, and commit the changed accepted snapshot JSON with the rule or shader change that justifies it. Avoid broad visual-only approval for behavior changes.
+
+`TWF-041` accepted visual-output tuning constants are mirrored in `FireVisualField` and `FireSim.compute`:
+
+- Fire: base `0.45`, heat weight `0.55`.
+- Smoke: base `0.12`, fuel weight `0.52`, heat weight `0.24`.
+- Ash: base `0.18`, inverse-fuel weight `0.5`, heat weight `0.32`.
+- Visibility: heat weight `0.55`, smoke weight `0.9`, ash weight `0.8`, with raw fire intensity still allowed to dominate visibility.
+
+Interpretation:
+
+- Fire remains the strongest channel for hot burning cells.
+- Heavy-fuel cells just at ignition can read as smoke-dominant before peak fire.
+- Ash is stronger on low-fuel residual-heat terrain, but it is still temporary. `PackedCell` has no burn-history field, so ash decays with heat; persistent ash requires an explicit future storage/design decision.
+- Visibility no longer lets heat alone dominate every visual sample; it weights residual heat below active fire and smoke so the pooled presentation lane stays less noisy.
+
+Accepted shader snapshot evidence for this tuning pass lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/`:
+
+- `single-ignition`, seed `21`, grid `5x5x1`, ticks `2`: fixture `single-ignition-seed21-5x5x1.fixture.json`, capture `single-ignition-seed21-5x5x1-tick2.capture.json`, checksum `visual-fnv1a32:8710B4BB`.
+- `line-of-fuel`, seed `42`, grid `12x5x1`, ticks `4`: fixture `line-of-fuel-seed42-12x5x1.fixture.json`, capture `line-of-fuel-seed42-12x5x1-tick4.capture.json`, checksum `visual-fnv1a32:BFDB9857`.
+- Unity log evidence: `single-ignition-unity.log` and `line-of-fuel-unity.log`, both with `phase=compile`, `phase=buffer`, `phase=dispatch`, and `phase=readback` `status=ok` tokens.
+
+Regenerate the accepted TWF-041 snapshots with:
+
+```bash
+dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --seed=21 --width=5 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/single-ignition-seed21-5x5x1.fixture.json"
+"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-041/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/single-ignition-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/single-ignition-seed21-5x5x1.fixture.json" --shader ~/repos/wildfire-TWF-041/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/single-ignition-seed21-5x5x1-tick2.capture.json" --ticks 2
+dotnet run --project src/Wildfire.Cli -- --scenario=line-of-fuel --seed=42 --width=12 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-seed42-12x5x1.fixture.json"
+"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-041/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-seed42-12x5x1.fixture.json" --shader ~/repos/wildfire-TWF-041/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-seed42-12x5x1-tick4.capture.json" --ticks 4
+```
 
 ## Timberborn Validation
 

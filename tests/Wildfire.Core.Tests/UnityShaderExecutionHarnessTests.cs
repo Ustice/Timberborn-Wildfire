@@ -89,31 +89,61 @@ public sealed class UnityShaderExecutionHarnessTests
         string repoRoot = FindRepoRoot();
         string unityExecutable = Environment.GetEnvironmentVariable("WILDFIRE_UNITY_EXECUTABLE")
             ?? "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
-        Scenario scenario = ScenarioCatalog.Build(CliOptions.Parse(
-        [
-            "--scenario=single-ignition",
-            "--seed=21",
-            "--width=5",
-            "--height=5",
-            "--depth=1",
-            "--layer=0",
-        ]));
-        ShaderSnapshotFixture fixture = ShaderSnapshotFixtureLoader.Load(FixtureExporter.Export(scenario, selectedLayer: 0));
         ShaderSnapshotHarness harness = new(new UnityBatchmodeShaderSnapshotExecutor(new UnityBatchmodeShaderSnapshotExecutorOptions(
             UnityExecutablePath: unityExecutable,
             ProjectPath: Path.Combine(repoRoot, "src/Wildfire.Unity/UnityBatchmodeProject"),
             ComputeShaderPath: Path.Combine(repoRoot, "src/Wildfire.Unity/FireSim.compute"),
             Timeout: TimeSpan.FromMinutes(5))));
 
-        ShaderSnapshotCapture capture = harness.Capture(fixture, tickCount: 1);
+        ShaderSnapshotFixture singleIgnition = CreateFixture(
+            scenario: "single-ignition",
+            seed: 21,
+            width: 5,
+            height: 5,
+            depth: 1);
+        ShaderSnapshotCapture singleIgnitionCapture = harness.Capture(singleIgnition, tickCount: 2);
 
-        Assert.Equal(fixture.Scenario, capture.Scenario);
-        Assert.Equal(fixture.Seed, capture.Seed);
-        Assert.Equal(fixture.Grid, capture.Grid);
-        Assert.Equal(fixture.Grid.CellCount, capture.FinalPackedCells.Length);
-        Assert.Single(capture.Ticks);
-        Assert.NotNull(capture.Visual?.Checksum);
-        Assert.StartsWith("visual-fnv1a32:", capture.Visual.Checksum, StringComparison.Ordinal);
+        Assert.Equal(singleIgnition.Scenario, singleIgnitionCapture.Scenario);
+        Assert.Equal(singleIgnition.Seed, singleIgnitionCapture.Seed);
+        Assert.Equal(singleIgnition.Grid, singleIgnitionCapture.Grid);
+        Assert.Equal(singleIgnition.Grid.CellCount, singleIgnitionCapture.FinalPackedCells.Length);
+        Assert.Equal(2, singleIgnitionCapture.Ticks.Length);
+        Assert.Equal("visual-fnv1a32:8710B4BB", singleIgnitionCapture.Visual?.Checksum);
+
+        ShaderSnapshotFixture lineOfFuel = CreateFixture(
+            scenario: "line-of-fuel",
+            seed: 42,
+            width: 12,
+            height: 5,
+            depth: 1);
+        ShaderSnapshotCapture lineOfFuelCapture = harness.Capture(lineOfFuel, tickCount: 4);
+
+        Assert.Equal(lineOfFuel.Scenario, lineOfFuelCapture.Scenario);
+        Assert.Equal(lineOfFuel.Seed, lineOfFuelCapture.Seed);
+        Assert.Equal(lineOfFuel.Grid, lineOfFuelCapture.Grid);
+        Assert.Equal(lineOfFuel.Grid.CellCount, lineOfFuelCapture.FinalPackedCells.Length);
+        Assert.Equal(4, lineOfFuelCapture.Ticks.Length);
+        Assert.Equal("visual-fnv1a32:BFDB9857", lineOfFuelCapture.Visual?.Checksum);
+    }
+
+    private static ShaderSnapshotFixture CreateFixture(
+        string scenario,
+        uint seed,
+        int width,
+        int height,
+        int depth)
+    {
+        Scenario builtScenario = ScenarioCatalog.Build(CliOptions.Parse(
+        [
+            "--scenario=" + scenario,
+            "--seed=" + seed,
+            "--width=" + width,
+            "--height=" + height,
+            "--depth=" + depth,
+            "--layer=0",
+        ]));
+
+        return ShaderSnapshotFixtureLoader.Load(FixtureExporter.Export(builtScenario, selectedLayer: 0));
     }
 
     private static string FindRepoRoot()

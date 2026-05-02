@@ -13,6 +13,18 @@
 #define CHANGE_SET_HEAT_LOSS 32u
 #define CHANGE_SET_TERRAIN 64u
 
+#define VISUAL_FIRE_BASE_INTENSITY 0.45f
+#define VISUAL_FIRE_HEAT_WEIGHT 0.55f
+#define VISUAL_SMOKE_BASE_INTENSITY 0.12f
+#define VISUAL_SMOKE_FUEL_WEIGHT 0.52f
+#define VISUAL_SMOKE_HEAT_WEIGHT 0.24f
+#define VISUAL_ASH_BASE_INTENSITY 0.18f
+#define VISUAL_ASH_FUEL_WEIGHT 0.5f
+#define VISUAL_ASH_HEAT_WEIGHT 0.32f
+#define VISUAL_VISIBILITY_HEAT_WEIGHT 0.55f
+#define VISUAL_VISIBILITY_SMOKE_WEIGHT 0.9f
+#define VISUAL_VISIBILITY_ASH_WEIGHT 0.8f
+
 struct CellDeltaGpu
 {
     uint Index;
@@ -163,10 +175,12 @@ float4 BuildVisualSample(uint cell)
     bool burning = IsBurning(cell);
     bool ashCandidate = terrain && Fuel(cell) <= 2u && Heat(cell) > 0u;
 
-    float fire = burning ? SaturateUnit(0.35f + (heat * 0.65f)) : 0.0f;
-    float smoke = burning ? SaturateUnit(0.2f + (fuel * 0.35f) + (heat * 0.45f)) : 0.0f;
-    float ash = ashCandidate ? SaturateUnit((1.0f - fuel) * max(0.25f, heat)) : 0.0f;
-    float visibility = max(heat, max(fire, max(smoke, ash)));
+    float fire = burning ? SaturateUnit(VISUAL_FIRE_BASE_INTENSITY + (heat * VISUAL_FIRE_HEAT_WEIGHT)) : 0.0f;
+    float smoke = burning ? SaturateUnit(VISUAL_SMOKE_BASE_INTENSITY + (fuel * VISUAL_SMOKE_FUEL_WEIGHT) + (heat * VISUAL_SMOKE_HEAT_WEIGHT)) : 0.0f;
+    float ash = ashCandidate ? SaturateUnit(VISUAL_ASH_BASE_INTENSITY + ((1.0f - fuel) * VISUAL_ASH_FUEL_WEIGHT) + (heat * VISUAL_ASH_HEAT_WEIGHT)) : 0.0f;
+    float visibility = max(
+        heat * VISUAL_VISIBILITY_HEAT_WEIGHT,
+        max(fire, max(smoke * VISUAL_VISIBILITY_SMOKE_WEIGHT, ash * VISUAL_VISIBILITY_ASH_WEIGHT)));
 
     return float4(fire, smoke, ash, visibility);
 }
