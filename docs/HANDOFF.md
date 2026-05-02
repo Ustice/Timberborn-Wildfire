@@ -51,7 +51,7 @@
 
 Continue with:
 
-- Integrate and clean up the completed `TWF-030` worktree after the main checkout commit lands.
+- Treat the current sprint as closed except for `TWF-011`, which remains intentionally parked until profiling or diagnostics show full-grid dispatch is too expensive.
 - Keep `TWF-015` deferred unless `TWF-030` is abandoned; it is superseded by the newer startup/load/unpause utility.
 - Use `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` against a loaded, unpaused Timberborn save when you need to confirm the in-game Wildfire command bridge, loaded-game runtime, simulator integration, and advancing dispatch tick are alive.
 - Use `bun run typecheck` before accepting TypeScript script changes.
