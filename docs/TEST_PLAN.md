@@ -45,6 +45,19 @@ Run the real Unity compute-shader execution harness locally:
 WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
 ```
 
+## Release Simulation Decision Validation
+
+`TWF-044` closes the release-blocking simulation design questions without adding runtime mechanics. Validation for the initial release should prove the conservative path, not speculative variants:
+
+- Cadence: live Timberborn QA should continue to use `qa-readiness --require-advanced-tick` and inspect `cadence_interval_ms=1000`, advancing `tick_count`, and `wildfire_timberborn_dispatch_completed` tokens. If `TWF-048` exposes cadence as a release setting, it needs separate setting-boundary tests and one live run per accepted preset.
+- Neighbor model: release shader snapshots should assume 6-neighbor spread only. `TWF-045` should include enough scenarios, such as single ignition, line of fuel, vertical fuel column, and water barrier, to catch accidental diagonal or wind-like spread.
+- Wind: no release validation is required beyond confirming there is no wind input, host-owned wind modifier, or wind setting in the public release surface.
+- Ash: snapshot and visual validation should treat ash as derived visual output. Passing evidence may show ash decays with heat; persistent ash must not be required for release screenshots or gameplay consequences.
+- Vertical building mapping: deterministic tests should keep covering multi-cell and vertical `TimberbornCellFootprint` expansion, sorted cell mapping, and out-of-bounds rejection. Live validation should use mapped building/consequence evidence rather than adding Timberborn-owned fire rules.
+- Water: water validation should continue to use `qa-water-suppression-stimulus` followed by `qa-readiness --require-advanced-tick --require-water-changed`, plus `Player.log` proof that the queued `SetWater=3` change produced a GPU delta and a water-change consumer count.
+- Heat loss: scenario snapshots and mapping tests should pin material-driven heat-loss bands for terrain, vegetation, stockpile resources, wood-like buildings, and non-burnable buildings. Weather, biome, or season-driven heat-loss changes are out of release scope unless a later adapter ticket adds explicit tests.
+- Dispatch strategy: keep full-grid dispatch as passing release behavior unless `TWF-051` changes the decision after `TWF-046`. Until then, validation should preserve `TWF-034` profiling evidence and watch live-loop dispatch/readback timing for regressions rather than requiring active-frontier buffers.
+
 ## CLI Fixture Export
 
 Use the CLI fixture exporter when shader tests need deterministic packed-cell inputs without launching Timberborn:

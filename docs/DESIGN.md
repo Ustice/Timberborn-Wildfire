@@ -647,16 +647,20 @@ Keep seeded scenarios for:
 
    It adapts to the simulator; it does not own fire rules.
 
-## 23. Open Questions
+## 23. Release Simulation Decisions
 
-- How often should the Timberborn fire sim tick relative to game ticks?
-- Should fire spread diagonally, or only through 6-neighbor adjacency?
-- Should wind be part of the core sim or a modifier applied by the host?
-- Should ash become a stored field later, or remain derived from fuel/heat?
-- How should Timberborn buildings map to vertical cells?
-- Should water represent temporary wetness, standing water, or both?
-- Should heat loss be material-specific, biome-specific, or weather-driven?
-- Should the first shader dispatch use full-grid evaluation before active frontier optimization?
+The initial release should stay conservative and ship the already-proven GPU path unless later live evidence creates a specific blocker. These decisions close the release-blocking questions from `TWF-044`; deferred items remain valid future work but should not block Sprint 4 or the first public release.
+
+| Topic | Initial Release Decision | Evidence And Follow-Up |
+| --- | --- | --- |
+| Tick cadence | Keep Timberborn dispatch on the centralized fixed cadence, currently one simulator tick per second of accumulated game time. | `TimberbornFireCadence.Default` is one second, live QA/readiness tokens already report advancing dispatch ticks, and `TWF-043` may tune constants inside that cadence without changing the boundary. A release setting can expose cadence later through `TWF-048` only after live-loop validation proves it is safe. |
+| Diagonal spread | Keep the 6-neighbor 3D model: left, right, north, south, below, and above. Do not add diagonal neighbors for the first release. | `FireSim.compute` implements exactly these six in-bounds reads. Diagonal spread would change scenario behavior, tuning, and snapshot expectations, so it is deferred until after release unless a specific accepted design ticket promotes it. |
+| Wind | Do not include wind in the release simulation. | There is no current wind input, storage field, shader rule, or Timberborn adapter contract. Wind remains a future mechanic and must not be smuggled into host-owned fire rules. |
+| Ash storage | Keep ash derived from heat, fuel, and terrain; do not add persistent ash storage for release. | `PackedCell` has no burn-history field, `TWF-041` accepted derived ash as a visual approximation, and adding storage would change the packed-cell contract. Persistent ash needs a future packed-format/design ticket. |
+| Vertical building mapping | Keep current footprint expansion across explicit `x`, `y`, and `z` cells. Each occupied vertical cell maps to a packed simulation cell through the Timberborn adapter. | `TimberbornCellFootprint` and mapper tests already cover vertical expansion. This keeps tall structures understandable without adding building-specific fire rules to Timberborn. |
+| Water semantics | Treat water as a bounded suppression/wetness band, not fluid simulation. It may come from standing water, wet terrain, or queued suppression changes, but in all cases it only writes the packed `water` field and reduces heat/ignition pressure. | `TWF-038` live evidence proves queued `SetWater=3` suppression through the GPU path. The project non-goals still exclude fluid dynamics and continuous water values. |
+| Heat-loss source | Keep heat loss material-driven for release. Timberborn terrain, resource, vegetation, and building adapters choose deterministic heat-loss bands before packing cells. | The mapper already centralizes material bands and clamps them to the packed field width. Biome, weather, or season-driven heat loss should be future adapter input that registers changes, not core rule ownership. |
+| Full-grid versus active frontier | Keep full-grid dispatch as the Sprint 4 release baseline. Active-frontier optimization remains deferred until profiling shows a measured bottleneck, with the final release-scope decision owned by `TWF-051` after coherent live-loop validation. | `TWF-034` profiling on the current `128x128x23` live save found full-grid dispatch acceptable. `TWF-011` stays deferred, and `TWF-051` may revisit only with `TWF-046` evidence. |
 
 ## 24. Summary
 
