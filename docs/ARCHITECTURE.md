@@ -59,9 +59,11 @@ The mapping is deterministic and intentionally rule-free:
 
 - Empty cells pack as no terrain, no fuel, no water, and maximum heat loss.
 - Terrain contributes solid material with no fuel, no flammability, and high heat loss.
-- Resources and vegetation contribute burnable material using adapter-supplied fuel, flammability, and heat-loss bands.
-- Buildings have material priority over resources and terrain for the same cell.
-- Water and terrain wetness contribute only to the packed water field and do not overwrite material.
+- Resource adapters expose deterministic stockpile and vegetation fuel bands before packing.
+- Building adapters expose deterministic wood-like and non-burnable material bands.
+- Buildings have material priority over resources and terrain for the same cell; non-burnable buildings still occupy terrain cells but pack no fuel or flammability.
+- Water and terrain wetness contribute only to the packed water field, clamp to the water field width, and do not overwrite material.
+- Multi-cell and vertical occupancy expands through `TimberbornCellFootprint`, emitting one source per covered `x`, `y`, and `z` cell before the mapper sorts by `FireGrid` index.
 - Inputs are clamped to the packed-cell field widths before packing.
 
 Timberborn systems should use this layer to translate game state, then register changes through `IGpuFireSimulator.RegisterChange`. The Timberborn project still does not own fire-spread rules or mutate Unity/GPU buffers directly.

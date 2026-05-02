@@ -53,3 +53,33 @@ The design says Timberborn converts map and entity state into packed cells while
 
 - This ticket should not add fire-spread rules in C#.
 - If a Timberborn API needed for material classification is missing, record the smallest follow-up research question instead of guessing broad reflection paths.
+
+## Worker Notes
+
+- Added deterministic adapter material bands for solid terrain, stockpile resources, vegetation, wood-like buildings, and non-burnable buildings.
+- Added `TimberbornCellFootprint` expansion so multi-cell and vertical occupancy emits one adapter source per covered `x`, `y`, and `z` cell before normal mapper grouping and sorting.
+- Kept `Wildfire.Core` unchanged; the Timberborn adapter still emits packed initial cells or sorted `FireSimChange` records with `SetCell` populated.
+- Non-burnable buildings now have building material priority but pack no fuel or flammability.
+- Wetness and water remain overlays on the packed water field and do not replace the selected material.
+
+## Changed Files
+
+- `src/Wildfire.Timberborn/TimberbornCellMapping.cs`
+- `tests/Wildfire.Core.Tests/TimberbornFireCellMapperTests.cs`
+- `docs/ARCHITECTURE.md`
+- `docs/TEST_PLAN.md`
+- `kanban/all-tickets/TWF-035-expand-timberborn-material-mapping.md`
+
+## Evidence
+
+- `git diff --check` passed.
+- `dotnet test` passed: 86 tests.
+- `dotnet build Wildfire.slnx` passed: 0 warnings, 0 errors.
+
+## Blockers
+
+- None.
+
+## Completion Details
+
+- Ready for coordinator review or verification lane.

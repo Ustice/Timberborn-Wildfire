@@ -4,13 +4,56 @@ namespace Wildfire.Timberborn;
 
 public readonly record struct TimberbornCellCoordinates(int X, int Y, int Z);
 
+public readonly record struct TimberbornCellFootprint(int X, int Y, int Z, int Width, int Height, int Depth)
+{
+    public IEnumerable<TimberbornCellCoordinates> EnumerateCoordinates()
+    {
+        if (Width <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Width), "Footprint width must be positive.");
+        }
+
+        if (Height <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Height), "Footprint height must be positive.");
+        }
+
+        if (Depth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Depth), "Footprint depth must be positive.");
+        }
+
+        int xStart = X;
+        int yStart = Y;
+        int zStart = Z;
+        int width = Width;
+        int height = Height;
+        int depth = Depth;
+
+        return Enumerable.Range(xStart, width)
+            .SelectMany(x => Enumerable.Range(yStart, height)
+                .SelectMany(y => Enumerable.Range(zStart, depth)
+                    .Select(z => new TimberbornCellCoordinates(x, y, z))));
+    }
+}
+
 public readonly record struct TimberbornTerrainCell(bool IsSolid, byte Wetness = 0);
 
-public readonly record struct TimberbornBuildingCell(byte Fuel, byte Flammability, byte HeatLoss);
+public readonly record struct TimberbornBuildingCell(
+    byte Fuel,
+    byte Flammability,
+    byte HeatLoss,
+    TimberbornBuildingMaterialKind Kind = TimberbornBuildingMaterialKind.WoodLike);
 
 public readonly record struct TimberbornResourceCell(byte Fuel, byte Flammability, byte HeatLoss, TimberbornResourceKind Kind);
 
 public readonly record struct TimberbornWaterCell(byte Water);
+
+public enum TimberbornBuildingMaterialKind
+{
+    WoodLike,
+    NonBurnable,
+}
 
 public enum TimberbornResourceKind
 {
@@ -27,6 +70,8 @@ public readonly record struct TimberbornCellSource(
 
 public sealed class TimberbornTerrainAdapter
 {
+    public const byte SolidTerrainHeatLoss = 6;
+
     public TimberbornCellSource CreateSource(int x, int y, int z, bool isSolid, byte wetness = 0)
     {
         return new TimberbornCellSource(
@@ -37,16 +82,78 @@ public sealed class TimberbornTerrainAdapter
 
 public sealed class TimberbornBuildingAdapter
 {
+    public const byte WoodLikeFuel = 12;
+    public const byte WoodLikeFlammability = 2;
+    public const byte WoodLikeHeatLoss = 4;
+    public const byte NonBurnableFuel = 0;
+    public const byte NonBurnableFlammability = 0;
+    public const byte NonBurnableHeatLoss = 7;
+
     public TimberbornCellSource CreateSource(int x, int y, int z, byte fuel, byte flammability, byte heatLoss)
+    {
+        return CreateSource(x, y, z, fuel, flammability, heatLoss, TimberbornBuildingMaterialKind.WoodLike);
+    }
+
+    public TimberbornCellSource CreateSource(
+        int x,
+        int y,
+        int z,
+        byte fuel,
+        byte flammability,
+        byte heatLoss,
+        TimberbornBuildingMaterialKind kind)
     {
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Building: new TimberbornBuildingCell(fuel, flammability, heatLoss));
+            Building: new TimberbornBuildingCell(fuel, flammability, heatLoss, kind));
+    }
+
+    public TimberbornCellSource CreateWoodLikeSource(int x, int y, int z)
+    {
+        return CreateSource(
+            x,
+            y,
+            z,
+            WoodLikeFuel,
+            WoodLikeFlammability,
+            WoodLikeHeatLoss,
+            TimberbornBuildingMaterialKind.WoodLike);
+    }
+
+    public TimberbornCellSource CreateNonBurnableSource(int x, int y, int z)
+    {
+        return CreateSource(
+            x,
+            y,
+            z,
+            NonBurnableFuel,
+            NonBurnableFlammability,
+            NonBurnableHeatLoss,
+            TimberbornBuildingMaterialKind.NonBurnable);
+    }
+
+    public IEnumerable<TimberbornCellSource> CreateWoodLikeFootprintSources(TimberbornCellFootprint footprint)
+    {
+        return footprint.EnumerateCoordinates()
+            .Select(coordinates => CreateWoodLikeSource(coordinates.X, coordinates.Y, coordinates.Z));
+    }
+
+    public IEnumerable<TimberbornCellSource> CreateNonBurnableFootprintSources(TimberbornCellFootprint footprint)
+    {
+        return footprint.EnumerateCoordinates()
+            .Select(coordinates => CreateNonBurnableSource(coordinates.X, coordinates.Y, coordinates.Z));
     }
 }
 
 public sealed class TimberbornResourceAdapter
 {
+    public const byte StockpileResourceFuel = 6;
+    public const byte StockpileResourceFlammability = 2;
+    public const byte StockpileResourceHeatLoss = 4;
+    public const byte VegetationFuel = 9;
+    public const byte VegetationFlammability = 3;
+    public const byte VegetationHeatLoss = 2;
+
     public TimberbornCellSource CreateSource(
         int x,
         int y,
@@ -59,6 +166,42 @@ public sealed class TimberbornResourceAdapter
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
             Resource: new TimberbornResourceCell(fuel, flammability, heatLoss, kind));
+    }
+
+    public TimberbornCellSource CreateStockpileResourceSource(int x, int y, int z)
+    {
+        return CreateSource(
+            x,
+            y,
+            z,
+            StockpileResourceFuel,
+            StockpileResourceFlammability,
+            StockpileResourceHeatLoss,
+            TimberbornResourceKind.StockpileResource);
+    }
+
+    public TimberbornCellSource CreateVegetationSource(int x, int y, int z)
+    {
+        return CreateSource(
+            x,
+            y,
+            z,
+            VegetationFuel,
+            VegetationFlammability,
+            VegetationHeatLoss,
+            TimberbornResourceKind.Vegetation);
+    }
+
+    public IEnumerable<TimberbornCellSource> CreateStockpileResourceSources(TimberbornCellFootprint footprint)
+    {
+        return footprint.EnumerateCoordinates()
+            .Select(coordinates => CreateStockpileResourceSource(coordinates.X, coordinates.Y, coordinates.Z));
+    }
+
+    public IEnumerable<TimberbornCellSource> CreateVegetationSources(TimberbornCellFootprint footprint)
+    {
+        return footprint.EnumerateCoordinates()
+            .Select(coordinates => CreateVegetationSource(coordinates.X, coordinates.Y, coordinates.Z));
     }
 }
 
@@ -153,14 +296,14 @@ public sealed class TimberbornFireCellMapper
 
     private static IEnumerable<MaterialContribution> EnumerateMaterialContributions(TimberbornCellSource source)
     {
-        if (source.Terrain is { IsSolid: true } terrain)
+        if (source.Terrain is { IsSolid: true })
         {
             yield return new MaterialContribution(
                 Priority: 1,
                 Fuel: 0,
                 Flammability: 0,
                 Terrain: 1,
-                HeatLoss: 6);
+                HeatLoss: TimberbornTerrainAdapter.SolidTerrainHeatLoss);
         }
 
         if (source.Resource is { } resource)
@@ -179,6 +322,18 @@ public sealed class TimberbornFireCellMapper
 
         if (source.Building is { } building)
         {
+            if (building.Kind == TimberbornBuildingMaterialKind.NonBurnable)
+            {
+                yield return new MaterialContribution(
+                    Priority: 3,
+                    Fuel: TimberbornBuildingAdapter.NonBurnableFuel,
+                    Flammability: TimberbornBuildingAdapter.NonBurnableFlammability,
+                    Terrain: 1,
+                    HeatLoss: TimberbornBuildingAdapter.NonBurnableHeatLoss);
+
+                yield break;
+            }
+
             yield return new MaterialContribution(
                 Priority: 3,
                 Fuel: ClampFuel(building.Fuel),
