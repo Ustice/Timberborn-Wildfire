@@ -179,6 +179,22 @@ public sealed class TimberbornFireDeltaConsumerTests
     }
 
     [Fact]
+    public void ConsumeRetainsLastPositiveWaterChangeEvidenceAfterZeroWaterDispatch()
+    {
+        TimberbornFireDeltaConsumer consumer = new(new RecordingFireLogSink());
+        ushort dryCell = Cell(fuel: 4, heat: 2, water: 0);
+        ushort wetCell = Cell(fuel: 4, heat: 2, water: 3);
+
+        consumer.Consume(31, [new CellDelta(4, dryCell, wetCell)]);
+        TimberbornFireDeltaConsumerSummary zeroWaterSummary =
+            consumer.Consume(32, [new CellDelta(5, dryCell, Cell(fuel: 4, heat: 5, water: 0))]);
+
+        Assert.Equal(0, zeroWaterSummary.WaterChangedCount);
+        Assert.Equal(31u, consumer.LastPositiveWaterChangedTick);
+        Assert.Equal(1, consumer.LastPositiveWaterChangedCount);
+    }
+
+    [Fact]
     public void ConsumeUpdatesOnlyLatestOverlayStatesForRoutedChangedCells()
     {
         RecordingFireDeltaSinks recordingSinks = new();
@@ -223,6 +239,8 @@ public sealed class TimberbornFireDeltaConsumerTests
 
         Assert.Empty(consumer.DebugVisualCells);
         Assert.Equal(TimberbornFireDeltaConsumerSummary.Empty, consumer.LastSummary);
+        Assert.Equal(0u, consumer.LastPositiveWaterChangedTick);
+        Assert.Equal(0, consumer.LastPositiveWaterChangedCount);
     }
 
     private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int heatLoss = 0)

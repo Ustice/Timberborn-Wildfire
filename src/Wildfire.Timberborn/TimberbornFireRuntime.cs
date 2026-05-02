@@ -10,7 +10,8 @@ public sealed class TimberbornFireRuntime :
     IUpdatableSingleton,
     ITimberbornQaCommandStateProvider,
     ITimberbornQaDeltaStimulus,
-    ITimberbornQaBuildingBurnoutStimulus
+    ITimberbornQaBuildingBurnoutStimulus,
+    ITimberbornQaWaterSuppressionStimulus
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
@@ -169,6 +170,22 @@ public sealed class TimberbornFireRuntime :
         return result;
     }
 
+    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus()
+    {
+        TimberbornQaWaterSuppressionStimulusResult result =
+            RequireFireSystem().QueueWaterSuppressionQaStimulus();
+        _logSink.Info(
+            "wildfire_timberborn_qa_water_suppression_queued " +
+            $"cell_index={result.CellIndex} " +
+            $"x={result.X} " +
+            $"y={result.Y} " +
+            $"z={result.Z} " +
+            $"set_water={result.SetWater} " +
+            $"queued_water_changes={result.QueuedWaterChangeCount}");
+
+        return result;
+    }
+
     public TimberbornQaCommandState GetState()
     {
         if (_fireSystem is not { IsInitialized: true } fireSystem)
@@ -194,6 +211,9 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerDebugVisualCellCount: _debugVisualSink.States.Count,
             LastDeltaConsumerStartedBurningCount: deltaConsumerSummary.StartedBurningCount,
             LastDeltaConsumerFuelDepletedCount: deltaConsumerSummary.FuelDepletedCount,
+            LastDeltaConsumerWaterChangedCount: deltaConsumerSummary.WaterChangedCount,
+            LastPositiveWaterChangedTick: fireSystem.LastPositiveWaterChangedTick,
+            LastPositiveWaterChangedCount: fireSystem.LastPositiveWaterChangedCount,
             LastDeltaConsumerVisualEffectEventCount: deltaConsumerSummary.VisualEffectEventCount,
             LastDeltaConsumerGameplayConsequenceCount: deltaConsumerSummary.GameplayConsequenceCount,
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: deltaConsumerSummary.BuildingBurnoutConsideredDeltaCount,

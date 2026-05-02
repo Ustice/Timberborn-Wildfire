@@ -9,6 +9,7 @@ type InvokeOptions = {
   help: boolean;
   requireAdvancedTick: boolean;
   requireNonzeroDelta: boolean;
+  requireWaterChanged: boolean;
   waitSeconds: number;
 };
 
@@ -16,7 +17,7 @@ const home = process.env.HOME ?? "";
 const defaultCommandDir = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
 const inboxFileName = "command-inbox.txt";
 const outboxFileName = "command-outbox.txt";
-const knownCommands = ["help", "qa-delta-stimulus", "qa-readiness", "status"];
+const knownCommands = ["help", "qa-delta-stimulus", "qa-readiness", "qa-water-suppression-stimulus", "status"];
 
 const usage = `Usage:
   bun scripts/invoke-timberborn-command.ts [command] [options]
@@ -25,12 +26,15 @@ Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
   qa-delta-stimulus         Queue one fixed QA-only simulator cell change.
+  qa-water-suppression-stimulus
+                            Queue one fixed QA-only water suppression change.
   help                      Read-only command list.
 
 Options:
   --command-dir <path>      Command bridge directory. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA.
   --require-advanced-tick   Fail unless the result reports numeric tick_count greater than 0. Unpause a loaded save before using this.
   --require-nonzero-delta   Fail unless the result reports numeric last_delta_count greater than 0. Use after qa-delta-stimulus.
+  --require-water-changed   Fail unless the result reports durable last_positive_water_changed_count greater than 0. Use after qa-water-suppression-stimulus.
   --wait <seconds>          Wait for command-outbox.txt to update. Default: 5.
   --help                    Show this help.
 `;
@@ -64,6 +68,7 @@ const parseArgs = (args: string[]): InvokeOptions => {
     help: false,
     requireAdvancedTick: false,
     requireNonzeroDelta: false,
+    requireWaterChanged: false,
     waitSeconds: 5,
   };
   let skipNext = false;
@@ -85,6 +90,8 @@ const parseArgs = (args: string[]): InvokeOptions => {
       options.requireAdvancedTick = true;
     } else if (arg === "--require-nonzero-delta") {
       options.requireNonzeroDelta = true;
+    } else if (arg === "--require-water-changed") {
+      options.requireWaterChanged = true;
     } else if (arg === "--wait") {
       options.waitSeconds = parseWait(requireValue(args, index + 1, arg));
       skipNext = true;
@@ -142,6 +149,17 @@ const requireNonzeroDelta = (result: string): void => {
   }
 };
 
+const requireWaterChanged = (result: string): void => {
+  const waterMatch =
+    result.match(/\blast_positive_water_changed_count=(\d+)\b/u) ??
+    fail("Result did not include numeric last_positive_water_changed_count. Is the command reporting persistent water-change state?");
+  const waterValue = waterMatch[1];
+  const waterChangedCount = Number(waterValue);
+  if (waterChangedCount <= 0) {
+    fail(`Result reported last_positive_water_changed_count=${waterChangedCount}. Run qa-water-suppression-stimulus against an unpaused loaded save, wait for a simulator tick, then rerun status or qa-readiness.`);
+  }
+};
+
 const main = async (): Promise<void> => {
   const options = parseArgs(Bun.argv.slice(2));
   if (options.help) {
@@ -173,6 +191,10 @@ const main = async (): Promise<void> => {
 
   if (options.requireNonzeroDelta) {
     requireNonzeroDelta(result);
+  }
+
+  if (options.requireWaterChanged) {
+    requireWaterChanged(result);
   }
 };
 

@@ -22,12 +22,18 @@ public sealed class TimberbornFireDeltaConsumer
 
     public TimberbornFireDeltaConsumerSummary LastSummary { get; private set; }
 
+    public uint LastPositiveWaterChangedTick { get; private set; }
+
+    public int LastPositiveWaterChangedCount { get; private set; }
+
     public IReadOnlyDictionary<int, TimberbornFireDebugVisualCellState> DebugVisualCells => _debugVisualCells;
 
     public void Reset()
     {
         _debugVisualCells.Clear();
         LastSummary = TimberbornFireDeltaConsumerSummary.Empty;
+        LastPositiveWaterChangedTick = 0;
+        LastPositiveWaterChangedCount = 0;
     }
 
     public TimberbornFireDeltaConsumerSummary Consume(uint tick, ReadOnlySpan<CellDelta> deltas)
@@ -78,6 +84,12 @@ public sealed class TimberbornFireDeltaConsumer
             gameplayConsequences.Length,
             buildingBurnoutSummary,
             alertEvents.Length);
+        if (LastSummary.WaterChangedCount > 0)
+        {
+            LastPositiveWaterChangedTick = tick;
+            LastPositiveWaterChangedCount = LastSummary.WaterChangedCount;
+        }
+
         _logSink.Info(LastSummary.ToLogToken());
         return LastSummary;
     }

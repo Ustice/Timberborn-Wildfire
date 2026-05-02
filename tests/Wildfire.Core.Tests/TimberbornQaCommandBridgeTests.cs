@@ -145,6 +145,25 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void WaterSuppressionStimulusBindingExpandsAllowlistAndHelpMessage()
+    {
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            new RecordingWaterSuppressionStimulus(
+                new TimberbornQaWaterSuppressionStimulusResult(0, 0, 0, 0, 3, 1)),
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("help");
+
+        Assert.True(result.Success);
+        Assert.Equal(["help", "qa-readiness", "qa-water-suppression-stimulus", "status"], result.KnownCommands);
+        Assert.Contains("qa-water-suppression-stimulus", result.Message);
+        Assert.Contains("QA-only simulator change", result.Message);
+    }
+
+    [Fact]
     public void ExecuteQaReadinessReturnsSafeLoadedGameReadinessState()
     {
         TimberbornQaCommandState state = new(
@@ -283,6 +302,48 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void ExecuteQaWaterSuppressionStimulusQueuesBoundStimulusAndReportsTargetFields()
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 8,
+            Height: 6,
+            Depth: 4,
+            TickCount: 12,
+            QueuedChangeCount: 1,
+            LastDeltaCount: 0);
+        RecordingStateProvider stateProvider = new(state);
+        RecordingWaterSuppressionStimulus waterSuppressionStimulus = new(
+            new TimberbornQaWaterSuppressionStimulusResult(91, 3, 4, 2, 3, 1));
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            waterSuppressionStimulus,
+            logSink);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-water-suppression-stimulus");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-water-suppression-stimulus", result.Command);
+        Assert.Equal(["help", "qa-readiness", "qa-water-suppression-stimulus", "status"], result.KnownCommands);
+        Assert.Equal(1, waterSuppressionStimulus.CallCount);
+        Assert.Equal(1, stateProvider.CallCount);
+        Assert.Contains("target_index=91", result.Message);
+        Assert.Contains("target_x=3", result.Message);
+        Assert.Contains("target_y=4", result.Message);
+        Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("set_water=3", result.Message);
+        Assert.Contains("queued_water_changes=1", result.Message);
+        Assert.Contains("queued_changes=1", result.ResultToken);
+        Assert.Contains("tick_count=12", result.ResultToken);
+        Assert.Contains("wildfire_command_request command=qa-water-suppression-stimulus", logSink.InfoMessages);
+        Assert.Contains(result.ResultToken, logSink.InfoMessages);
+    }
+
+    [Fact]
     public void QueueFixedQaDeltaStimulusRegistersExactlyOneCenterSetCellChange()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
@@ -349,6 +410,65 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void QueueWaterSuppressionQaStimulusRegistersExactlyOneBoundSetWaterChange()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = new(simulator);
+
+        TimberbornQaWaterSuppressionStimulusResult result =
+            fireSystem.QueueWaterSuppressionQaStimulus();
+
+        Assert.Equal(new TimberbornQaWaterSuppressionStimulusResult(38, 2, 3, 1, 3, 1), result);
+        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(38, change.CellIndex);
+        Assert.Null(change.SetCell);
+        Assert.Null(change.AddHeat);
+        Assert.Null(change.AddFuel);
+        Assert.Equal((byte)3, change.SetWater);
+        Assert.Null(change.SetFuel);
+        Assert.Null(change.SetHeat);
+        Assert.Null(change.SetFlammability);
+        Assert.Null(change.SetHeatLoss);
+        Assert.Null(change.SetTerrain);
+        Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void WaterSuppressionQaStimulusAppliesOnNextCadenceDispatchTick()
+    {
+        ushort burningCell = PackedCell.Pack(fuel: 12, heat: 15, flammability: 2, water: 0, terrain: 1, heatLoss: 4);
+        ushort wetCell = PackedCell.SetWater(burningCell, 3);
+        RecordingFireSimulator simulator = new(width: 1, height: 1, depth: 1);
+        simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(0, burningCell, wetCell)], Tick: 1));
+        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFixedCadenceFireDispatcher dispatcher = new(
+            fireSystem,
+            TimberbornFireCadence.FromSeconds(1),
+            NullTimberbornFireLogSink.Instance);
+
+        fireSystem.QueueWaterSuppressionQaStimulus();
+        TimberbornFireDispatchResult waiting = dispatcher.Update(
+            new TimberbornFireUpdate(1, TimeSpan.FromMilliseconds(500)));
+
+        Assert.False(waiting.DidDispatch);
+        Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+        Assert.Equal(0, simulator.TickCallCount);
+        Assert.Equal(0u, fireSystem.LastTick);
+        Assert.Equal(0, fireSystem.LastDeltaCount);
+
+        TimberbornFireDispatchResult dispatched = dispatcher.Update(
+            new TimberbornFireUpdate(2, TimeSpan.FromMilliseconds(500)));
+
+        Assert.True(dispatched.DidDispatch);
+        Assert.Equal(1, simulator.TickCallCount);
+        Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
+        Assert.Equal(1u, fireSystem.LastTick);
+        Assert.Equal(1, fireSystem.LastDeltaCount);
+        Assert.True(dispatched.Step.HasValue);
+        Assert.Equal([new CellDelta(0, burningCell, wetCell)], dispatched.Step.Value.Deltas);
+    }
+
+    [Fact]
     public void FindBuildingBurnoutQaTargetSkipsUnusableCellsAndReportsScannedCount()
     {
         FireGrid grid = new(4, 3, 2);
@@ -409,6 +529,30 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(0, stateProvider.CallCount);
     }
 
+    [Theory]
+    [InlineData("qa-delta-stimulus 1 2 3")]
+    [InlineData("qa-building-burnout-stimulus target=1")]
+    [InlineData("qa-water-suppression-stimulus x=1 y=2")]
+    public void SimulatorChangeCommandsRejectArguments(string command)
+    {
+        RecordingStateProvider stateProvider = new(TimberbornQaCommandState.Placeholder);
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            new RecordingDeltaStimulus(new TimberbornQaDeltaStimulusResult(0, 0, 0, 0, 1)),
+            new RecordingBuildingBurnoutStimulus(
+                new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 1, 2, 2)),
+            new RecordingWaterSuppressionStimulus(
+                new TimberbornQaWaterSuppressionStimulusResult(0, 0, 0, 0, 3, 1)),
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute(command);
+
+        Assert.False(result.Success);
+        Assert.Equal("failure", result.Status);
+        Assert.Contains("does not accept arguments", result.Message);
+        Assert.Equal(0, stateProvider.CallCount);
+    }
+
     [Fact]
     public void ResultTokenIncludesQaStateFields()
     {
@@ -425,12 +569,15 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerDebugVisualCellCount: 12,
             LastDeltaConsumerStartedBurningCount: 13,
             LastDeltaConsumerFuelDepletedCount: 14,
-            LastDeltaConsumerVisualEffectEventCount: 15,
-            LastDeltaConsumerGameplayConsequenceCount: 16,
-            LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: 17,
-            LastDeltaConsumerBuildingBurnoutMatchedCellCount: 18,
-            LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: 19,
-            LastDeltaConsumerAlertCount: 20);
+            LastDeltaConsumerWaterChangedCount: 15,
+            LastPositiveWaterChangedTick: 16,
+            LastPositiveWaterChangedCount: 17,
+            LastDeltaConsumerVisualEffectEventCount: 18,
+            LastDeltaConsumerGameplayConsequenceCount: 19,
+            LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: 20,
+            LastDeltaConsumerBuildingBurnoutMatchedCellCount: 21,
+            LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: 22,
+            LastDeltaConsumerAlertCount: 23);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -450,12 +597,15 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_debug_visual_cells=12", result.ResultToken);
         Assert.Contains("last_delta_consumer_started_burning=13", result.ResultToken);
         Assert.Contains("last_delta_consumer_fuel_depleted=14", result.ResultToken);
-        Assert.Contains("last_delta_consumer_visual_effect_events=15", result.ResultToken);
-        Assert.Contains("last_delta_consumer_gameplay_consequences=16", result.ResultToken);
-        Assert.Contains("last_delta_consumer_building_burnout_considered_deltas=17", result.ResultToken);
-        Assert.Contains("last_delta_consumer_building_burnout_matched_cells=18", result.ResultToken);
-        Assert.Contains("last_delta_consumer_building_burnout_applied_consequences=19", result.ResultToken);
-        Assert.Contains("last_delta_consumer_alerts=20", result.ResultToken);
+        Assert.Contains("last_delta_consumer_water_changed=15", result.ResultToken);
+        Assert.Contains("last_positive_water_changed_tick=16", result.ResultToken);
+        Assert.Contains("last_positive_water_changed_count=17", result.ResultToken);
+        Assert.Contains("last_delta_consumer_visual_effect_events=18", result.ResultToken);
+        Assert.Contains("last_delta_consumer_gameplay_consequences=19", result.ResultToken);
+        Assert.Contains("last_delta_consumer_building_burnout_considered_deltas=20", result.ResultToken);
+        Assert.Contains("last_delta_consumer_building_burnout_matched_cells=21", result.ResultToken);
+        Assert.Contains("last_delta_consumer_building_burnout_applied_consequences=22", result.ResultToken);
+        Assert.Contains("last_delta_consumer_alerts=23", result.ResultToken);
     }
 
     [Fact]
@@ -507,6 +657,18 @@ public sealed class TimberbornQaCommandBridgeTests
         }
     }
 
+    private sealed class RecordingWaterSuppressionStimulus(TimberbornQaWaterSuppressionStimulusResult result)
+        : ITimberbornQaWaterSuppressionStimulus
+    {
+        public int CallCount { get; private set; }
+
+        public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus()
+        {
+            CallCount++;
+            return result;
+        }
+    }
+
     private sealed class RecordingBuildingBurnoutTargetProvider(TimberbornQaBuildingBurnoutStimulusTarget target)
         : ITimberbornQaBuildingBurnoutStimulusTargetProvider
     {
@@ -549,6 +711,10 @@ public sealed class TimberbornQaCommandBridgeTests
 
         public List<FireSimChange> RegisteredChanges { get; } = [];
 
+        public Queue<GpuFireStepResult> TickResults { get; } = [];
+
+        public int TickCallCount { get; private set; }
+
         public void RegisterChange(FireSimChange change)
         {
             RegisteredChanges.Add(change);
@@ -556,7 +722,10 @@ public sealed class TimberbornQaCommandBridgeTests
 
         public GpuFireStepResult Tick()
         {
-            return new GpuFireStepResult([], Tick: 0);
+            TickCallCount++;
+            return TickResults.Count > 0
+                ? TickResults.Dequeue()
+                : new GpuFireStepResult([], Tick: (uint)TickCallCount);
         }
 
         public IDisposable Subscribe(IFireSimListener listener)

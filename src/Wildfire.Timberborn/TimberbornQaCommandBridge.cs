@@ -9,10 +9,12 @@ public sealed class TimberbornQaCommandBridge
     public const string QaReadinessCommand = "qa-readiness";
     public const string QaDeltaStimulusCommand = "qa-delta-stimulus";
     public const string QaBuildingBurnoutStimulusCommand = "qa-building-burnout-stimulus";
+    public const string QaWaterSuppressionStimulusCommand = "qa-water-suppression-stimulus";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
     private readonly ITimberbornQaBuildingBurnoutStimulus _buildingBurnoutStimulus;
+    private readonly ITimberbornQaWaterSuppressionStimulus _waterSuppressionStimulus;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -21,6 +23,7 @@ public sealed class TimberbornQaCommandBridge
             TimberbornQaCommandStateProvider.Placeholder,
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaCommandLogSink.Instance)
     {
     }
@@ -32,6 +35,7 @@ public sealed class TimberbornQaCommandBridge
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
             logSink)
     {
     }
@@ -40,7 +44,12 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaCommandLogSink logSink)
-        : this(stateProvider, deltaStimulus, NullTimberbornQaBuildingBurnoutStimulus.Instance, logSink)
+        : this(
+            stateProvider,
+            deltaStimulus,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            logSink)
     {
     }
 
@@ -48,6 +57,21 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
+        ITimberbornQaCommandLogSink logSink)
+        : this(
+            stateProvider,
+            deltaStimulus,
+            buildingBurnoutStimulus,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            logSink)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaDeltaStimulus deltaStimulus,
+        ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
+        ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaCommandLogSink logSink)
     {
         if (stateProvider is null)
@@ -65,6 +89,11 @@ public sealed class TimberbornQaCommandBridge
             throw new ArgumentNullException(nameof(buildingBurnoutStimulus));
         }
 
+        if (waterSuppressionStimulus is null)
+        {
+            throw new ArgumentNullException(nameof(waterSuppressionStimulus));
+        }
+
         if (logSink is null)
         {
             throw new ArgumentNullException(nameof(logSink));
@@ -73,6 +102,7 @@ public sealed class TimberbornQaCommandBridge
         _stateProvider = stateProvider;
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
+        _waterSuppressionStimulus = waterSuppressionStimulus;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -89,6 +119,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(buildingBurnoutStimulus, NullTimberbornQaBuildingBurnoutStimulus.Instance))
         {
             commands[QaBuildingBurnoutStimulusCommand] = ExecuteQaBuildingBurnoutStimulus;
+        }
+
+        if (!ReferenceEquals(waterSuppressionStimulus, NullTimberbornQaWaterSuppressionStimulus.Instance))
+        {
+            commands[QaWaterSuppressionStimulusCommand] = ExecuteQaWaterSuppressionStimulus;
         }
 
         _commands = commands;
@@ -124,6 +159,17 @@ public sealed class TimberbornQaCommandBridge
             return failure;
         }
 
+        if (IsSimulatorChangeCommand(command) && HasArguments(commandText))
+        {
+            TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                command,
+                $"Command '{command}' does not accept arguments.",
+                TimberbornQaCommandState.Placeholder,
+                KnownCommands);
+            _logSink.Warning(failure.ResultToken);
+            return failure;
+        }
+
         try
         {
             TimberbornQaCommandResult result = handler();
@@ -153,8 +199,7 @@ public sealed class TimberbornQaCommandBridge
     {
         string writableCommands = string.Join(
             ",",
-            KnownCommands.Where(static command =>
-                command == QaDeltaStimulusCommand || command == QaBuildingBurnoutStimulusCommand));
+            KnownCommands.Where(IsSimulatorChangeCommand));
         string message = string.IsNullOrEmpty(writableCommands)
             ? "Supported commands are read-only: help, qa-readiness, status."
             : "Supported commands: " +
@@ -217,6 +262,25 @@ public sealed class TimberbornQaCommandBridge
             $"queued_set_cell_changes={stimulusResult.QueuedSetCellChangeCount}");
     }
 
+    private TimberbornQaCommandResult ExecuteQaWaterSuppressionStimulus()
+    {
+        TimberbornQaWaterSuppressionStimulusResult stimulusResult =
+            _waterSuppressionStimulus.QueueWaterSuppressionStimulus();
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaWaterSuppressionStimulusCommand,
+            state,
+            KnownCommands,
+            "queued_water_suppression_stimulus_" +
+            $"target_index={stimulusResult.CellIndex}_" +
+            $"target_x={stimulusResult.X}_" +
+            $"target_y={stimulusResult.Y}_" +
+            $"target_z={stimulusResult.Z}_" +
+            $"set_water={stimulusResult.SetWater}_" +
+            $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}");
+    }
+
     private static string NormalizeCommand(string commandText)
     {
         string command = commandText.Trim();
@@ -227,6 +291,21 @@ public sealed class TimberbornQaCommandBridge
         }
 
         return command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+    }
+
+    private static bool HasArguments(string commandText)
+    {
+        return commandText.Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Skip(1)
+            .Any();
+    }
+
+    private static bool IsSimulatorChangeCommand(string command)
+    {
+        return StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaBuildingBurnoutStimulusCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand);
     }
 
     internal static string FormatToken(string? value)
@@ -271,6 +350,19 @@ public sealed record TimberbornQaBuildingBurnoutStimulusResult(
     ushort SetCell,
     int QueuedSetCellChangeCount);
 
+public interface ITimberbornQaWaterSuppressionStimulus
+{
+    TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus();
+}
+
+public sealed record TimberbornQaWaterSuppressionStimulusResult(
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    byte SetWater,
+    int QueuedWaterChangeCount);
+
 public interface ITimberbornQaBuildingBurnoutStimulusTargetProvider
 {
     TimberbornQaBuildingBurnoutStimulusTarget FindTarget(FireGrid grid);
@@ -305,6 +397,21 @@ public sealed class NullTimberbornQaBuildingBurnoutStimulus : ITimberbornQaBuild
     }
 }
 
+public sealed class NullTimberbornQaWaterSuppressionStimulus : ITimberbornQaWaterSuppressionStimulus
+{
+    public static readonly NullTimberbornQaWaterSuppressionStimulus Instance = new();
+
+    private NullTimberbornQaWaterSuppressionStimulus()
+    {
+    }
+
+    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus()
+    {
+        throw new InvalidOperationException(
+            "QA water suppression stimulus is unavailable until the Timberborn fire runtime is initialized.");
+    }
+}
+
 public sealed class TimberbornQaCommandStateProvider : ITimberbornQaCommandStateProvider
 {
     public static readonly TimberbornQaCommandStateProvider Placeholder = new(TimberbornQaCommandState.Placeholder);
@@ -336,6 +443,9 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerDebugVisualCellCount = null,
     int? LastDeltaConsumerStartedBurningCount = null,
     int? LastDeltaConsumerFuelDepletedCount = null,
+    int? LastDeltaConsumerWaterChangedCount = null,
+    uint? LastPositiveWaterChangedTick = null,
+    int? LastPositiveWaterChangedCount = null,
     int? LastDeltaConsumerVisualEffectEventCount = null,
     int? LastDeltaConsumerGameplayConsequenceCount = null,
     int? LastDeltaConsumerBuildingBurnoutConsideredDeltaCount = null,
@@ -382,6 +492,9 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_debug_visual_cells={FormatNumber(State.LastDeltaConsumerDebugVisualCellCount)} " +
         $"last_delta_consumer_started_burning={FormatNumber(State.LastDeltaConsumerStartedBurningCount)} " +
         $"last_delta_consumer_fuel_depleted={FormatNumber(State.LastDeltaConsumerFuelDepletedCount)} " +
+        $"last_delta_consumer_water_changed={FormatNumber(State.LastDeltaConsumerWaterChangedCount)} " +
+        $"last_positive_water_changed_tick={FormatNumber(State.LastPositiveWaterChangedTick)} " +
+        $"last_positive_water_changed_count={FormatNumber(State.LastPositiveWaterChangedCount)} " +
         $"last_delta_consumer_visual_effect_events={FormatNumber(State.LastDeltaConsumerVisualEffectEventCount)} " +
         $"last_delta_consumer_gameplay_consequences={FormatNumber(State.LastDeltaConsumerGameplayConsequenceCount)} " +
         $"last_delta_consumer_building_burnout_considered_deltas={FormatNumber(State.LastDeltaConsumerBuildingBurnoutConsideredDeltaCount)} " +

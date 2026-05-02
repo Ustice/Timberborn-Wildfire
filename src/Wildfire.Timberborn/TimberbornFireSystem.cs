@@ -26,6 +26,7 @@ public sealed class TimberbornFireSystem : IDisposable
         water: 0,
         terrain: 1,
         heatLoss: 4);
+    private const byte QaWaterSuppressionWater = 3;
 
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
@@ -124,6 +125,10 @@ public sealed class TimberbornFireSystem : IDisposable
     public int? LastDeltaCount { get; private set; }
 
     public TimberbornFireDeltaConsumerSummary LastDeltaConsumerSummary => _deltaConsumer.LastSummary;
+
+    public uint LastPositiveWaterChangedTick => _deltaConsumer.LastPositiveWaterChangedTick;
+
+    public int LastPositiveWaterChangedCount => _deltaConsumer.LastPositiveWaterChangedCount;
 
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
@@ -245,6 +250,26 @@ public sealed class TimberbornFireSystem : IDisposable
             QaBuildingBurnoutPrimedCell,
             QaBuildingBurnoutSpentCell,
             QueuedSetCellChangeCount: 2);
+    }
+
+    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionQaStimulus()
+    {
+        FireGrid grid = RequireGrid();
+        int x = grid.Width / 2;
+        int y = grid.Height / 2;
+        int z = grid.Depth / 2;
+        int cellIndex = grid.ToIndex(x, y, z);
+        RegisterChange(
+            new FireSimChange(CellIndex: cellIndex, SetWater: QaWaterSuppressionWater),
+            "qa_water_suppression");
+
+        return new TimberbornQaWaterSuppressionStimulusResult(
+            cellIndex,
+            x,
+            y,
+            z,
+            QaWaterSuppressionWater,
+            QueuedWaterChangeCount: 1);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)
