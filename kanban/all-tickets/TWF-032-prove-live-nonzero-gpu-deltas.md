@@ -54,3 +54,13 @@ Current live evidence proves dispatch, readback, status, and delta-consumer hook
 
 - This ticket proves non-zero simulator output, not final player-facing gameplay consequences.
 - If deltas remain zero, treat that as a simulation/input/debugging result, not as a QA flake.
+
+## Coordinator Closure
+
+- 2026-05-02: Closed as satisfied by `TWF-031` live QA evidence instead of re-running a duplicate proof ticket.
+- `TWF-031` replacement QA artifact directory: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z`.
+- Live command output captured `qa-delta-stimulus` accepted at `tick_count=29`, `queued_changes=1`, target `target_x=64`, `target_y=64`, `target_z=11`, and `set_cell=13311`.
+- Copied `Player.log` captured `wildfire_timberborn_gpu_readback_completed tick=30 delta_count=2` and `wildfire_timberborn_dispatch_completed tick=30 delta_count=2`.
+- Follow-up `qa-readiness` captured `tick_count=34`, `queued_changes=0`, `last_delta_count=1`, and `last_delta_consumer_changed_cells=1`.
+- Existing compact-delta readback semantics were preserved; the proof came from the real Timberborn GPU path after `IGpuFireSimulator.RegisterChange`, not a C# fallback or dispatch-only shortcut.
+- `docs/TEST_PLAN.md` now documents the accepted command sequence and expected evidence.

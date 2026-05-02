@@ -5,23 +5,41 @@ public sealed class TimberbornQaCommandBridge
     public const string StatusCommand = "status";
     public const string HelpCommand = "help";
     public const string QaReadinessCommand = "qa-readiness";
+    public const string QaDeltaStimulusCommand = "qa-delta-stimulus";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
+    private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
     public TimberbornQaCommandBridge()
-        : this(TimberbornQaCommandStateProvider.Placeholder, NullTimberbornQaCommandLogSink.Instance)
+        : this(
+            TimberbornQaCommandStateProvider.Placeholder,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaCommandLogSink.Instance)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaCommandLogSink logSink)
+        : this(stateProvider, NullTimberbornQaDeltaStimulus.Instance, logSink)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaDeltaStimulus deltaStimulus,
+        ITimberbornQaCommandLogSink logSink)
     {
         if (stateProvider is null)
         {
             throw new ArgumentNullException(nameof(stateProvider));
+        }
+
+        if (deltaStimulus is null)
+        {
+            throw new ArgumentNullException(nameof(deltaStimulus));
         }
 
         if (logSink is null)
@@ -30,13 +48,21 @@ public sealed class TimberbornQaCommandBridge
         }
 
         _stateProvider = stateProvider;
+        _deltaStimulus = deltaStimulus;
         _logSink = logSink;
-        _commands = new Dictionary<string, Func<TimberbornQaCommandResult>>(StringComparer.OrdinalIgnoreCase)
+        Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
             [StatusCommand] = ExecuteStatus,
             [HelpCommand] = ExecuteHelp,
             [QaReadinessCommand] = ExecuteQaReadiness,
         };
+
+        if (!ReferenceEquals(deltaStimulus, NullTimberbornQaDeltaStimulus.Instance))
+        {
+            commands[QaDeltaStimulusCommand] = ExecuteQaDeltaStimulus;
+        }
+
+        _commands = commands;
     }
 
     public TimberbornQaCommandResult Execute(string? commandText)
@@ -96,11 +122,15 @@ public sealed class TimberbornQaCommandBridge
 
     private TimberbornQaCommandResult ExecuteHelp()
     {
+        string message = _commands.ContainsKey(QaDeltaStimulusCommand)
+            ? "Supported commands: help, qa-readiness, qa-delta-stimulus, status. Only qa-delta-stimulus queues a fixed QA-only simulator change."
+            : "Supported commands are read-only: help, qa-readiness, status.";
+
         return TimberbornQaCommandResult.CreateSuccess(
             HelpCommand,
             _stateProvider.GetState(),
             KnownCommands,
-            "Supported commands are read-only: help, qa-readiness, status.");
+            message);
     }
 
     private TimberbornQaCommandResult ExecuteQaReadiness()
@@ -112,6 +142,23 @@ public sealed class TimberbornQaCommandBridge
             state,
             KnownCommands,
             state.IsLoadedGameReady ? "loaded_game_ready" : "loaded_game_not_ready");
+    }
+
+    private TimberbornQaCommandResult ExecuteQaDeltaStimulus()
+    {
+        TimberbornQaDeltaStimulusResult stimulusResult = _deltaStimulus.QueueFixedDeltaStimulus();
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaDeltaStimulusCommand,
+            state,
+            KnownCommands,
+            "queued_fixed_center_stimulus_" +
+            $"target_index={stimulusResult.CellIndex}_" +
+            $"target_x={stimulusResult.X}_" +
+            $"target_y={stimulusResult.Y}_" +
+            $"target_z={stimulusResult.Z}_" +
+            $"set_cell={stimulusResult.SetCell}");
     }
 
     private static string NormalizeCommand(string commandText)
@@ -137,6 +184,27 @@ public sealed class TimberbornQaCommandBridge
 public interface ITimberbornQaCommandStateProvider
 {
     TimberbornQaCommandState GetState();
+}
+
+public interface ITimberbornQaDeltaStimulus
+{
+    TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus();
+}
+
+public sealed record TimberbornQaDeltaStimulusResult(int CellIndex, int X, int Y, int Z, ushort SetCell);
+
+public sealed class NullTimberbornQaDeltaStimulus : ITimberbornQaDeltaStimulus
+{
+    public static readonly NullTimberbornQaDeltaStimulus Instance = new();
+
+    private NullTimberbornQaDeltaStimulus()
+    {
+    }
+
+    public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
+    {
+        throw new InvalidOperationException("QA delta stimulus is unavailable until the Timberborn fire runtime is initialized.");
+    }
 }
 
 public sealed class TimberbornQaCommandStateProvider : ITimberbornQaCommandStateProvider

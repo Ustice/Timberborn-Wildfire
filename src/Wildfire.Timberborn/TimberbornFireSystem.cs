@@ -5,6 +5,14 @@ namespace Wildfire.Timberborn;
 
 public sealed class TimberbornFireSystem : IDisposable
 {
+    private static readonly ushort QaDeltaStimulusCell = PackedCell.Pack(
+        fuel: 15,
+        heat: 15,
+        flammability: 3,
+        water: 0,
+        terrain: 1,
+        heatLoss: 1);
+
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
     private readonly ITimberbornFireLogSink _logSink;
@@ -184,6 +192,18 @@ public sealed class TimberbornFireSystem : IDisposable
     public void RegisterMappedCellChanges(IEnumerable<TimberbornCellSource> sources)
     {
         RegisterMappedCellChanges(RequireGrid(), sources);
+    }
+
+    public TimberbornQaDeltaStimulusResult QueueFixedQaDeltaStimulus()
+    {
+        FireGrid grid = RequireGrid();
+        int x = grid.Width / 2;
+        int y = grid.Height / 2;
+        int z = grid.Depth / 2;
+        int cellIndex = grid.ToIndex(x, y, z);
+        RegisterChange(new FireSimChange(CellIndex: cellIndex, SetCell: QaDeltaStimulusCell), "qa_delta_stimulus");
+
+        return new TimberbornQaDeltaStimulusResult(cellIndex, x, y, z, QaDeltaStimulusCell);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)

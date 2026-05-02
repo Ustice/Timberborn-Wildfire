@@ -45,10 +45,10 @@
 - `TWF-028` is done: current Wildfire QA cannot navigate Timberborn menus remotely without screen interaction; the accepted safer path is narrow allowlisted command-bridge outcomes, not generic menu driving.
 - `TWF-029` is done: the read-only `qa-readiness` command is allowlisted, documented, unit-tested, and live-verified after deploy/restart with `loaded_game_ready=true`, `simulator_integrated=true`, dimensions `128x128x23`, and an advanced tick.
 - `TWF-030` is done: the signal-driven latest-save startup utility launches Timberborn, clears startup Mods and Experimental Mode from screenshot-confirmed signals, continues the latest save, recognizes the top-HUD loaded-save state, unpauses, and records `simulator_integrated=true` status plus dispatch evidence.
-- `TWF-031` is in progress: add a guarded QA-only live stimulus that can produce non-zero simulator deltas in a loaded Timberborn save.
-- `TWF-032` is todo behind `TWF-031`: prove live `delta_count > 0` from the real GPU readback and status path.
-- `TWF-033` is todo behind `TWF-032`: bind one concrete Timberborn-facing consequence to non-zero deltas.
-- `TWF-034` is todo behind `TWF-032`: record live dispatch profiling and decide whether to promote `TWF-011`.
+- `TWF-031` is done: the guarded `qa-delta-stimulus` command is implemented, unit-tested, live-verified, and recorded with non-zero GPU readback evidence.
+- `TWF-032` is done by `TWF-031` evidence: live QA captured `wildfire_timberborn_gpu_readback_completed ... delta_count=2`, `wildfire_timberborn_dispatch_completed ... delta_count=2`, and follow-up `qa-readiness` with `last_delta_count=1`.
+- `TWF-033` is ready: bind one concrete Timberborn-facing consequence to non-zero deltas.
+- `TWF-034` is ready: record live dispatch profiling and decide whether to promote `TWF-011`.
 - `TWF-035` through `TWF-038` are todo for the next gameplay sprint: expanded material mapping, building burnout consequences, fire overlay updates, and water suppression changes.
 - `TWF-039` through `TWF-042` are todo for the next player-legibility sprint: GPU visual-field binding, pooled fire/smoke/ash effects, visual tuning with evidence, and one player-facing fire alert.
 - `TWF-043` through `TWF-046` are todo for Sprint 4: game-feel tuning, release-blocking simulation decisions, release scenario snapshots, and coherent live-loop validation.
@@ -60,7 +60,7 @@
 
 Continue with:
 
-- Start the next sprint with `TWF-031`, then use its evidence to unlock `TWF-032`.
+- Continue the sprint with `TWF-033` and `TWF-034`; `TWF-031` live QA already satisfied the `TWF-032` non-zero GPU delta proof gate.
 - Use the next-three-sprint plan in `docs/TODO.md` to continue from live GPU proof into gameplay surfaces and player-facing visuals.
 - Keep `TWF-015` deferred unless `TWF-030` is abandoned; it is superseded by the newer startup/load/unpause utility.
 - Keep `TWF-011` deferred until `TWF-034` recommends promoting it from measured live profiling evidence.
@@ -71,7 +71,7 @@ Continue with:
 ## Known Gaps
 
 - `FireSim.compute` has local Unity batchmode proof, but CI does not run it unless Unity Editor licensing and compute-shader capable graphics are available.
-- Current live TWF-009 evidence has `delta_count=0`; that proves the hook/status path, not non-zero visual/gameplay consequences.
-- The next sprint's first milestone is to produce and prove non-zero live deltas safely, not to optimize dispatch.
+- Historical TWF-009 evidence had `delta_count=0`; TWF-031 now proves the live stimulus, GPU readback, dispatch, and status path can report non-zero deltas.
+- The next sprint milestone is to bind a first consequence and capture profiling evidence before optimizing dispatch.
 - TWF-030's live run proves the guarded startup/load/unpause workflow, but the broader Timberborn UI is not exhaustively mapped; add settings/new-game/map-editor/deeper Mods coordinates only through explicit QA passes.
 - `TWF-009` intentionally provides Timberborn adapter hook surfaces; concrete binding to Timberborn damage/effect/alert services is follow-up work.

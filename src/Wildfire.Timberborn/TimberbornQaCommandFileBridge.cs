@@ -26,6 +26,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
         _outboxPath = Path.Combine(qaDirectory, OutboxFileName);
         _commandBridge = new TimberbornQaCommandBridge(
             fireRuntime,
+            fireRuntime,
             new UnityTimberbornQaCommandLogSink());
     }
 

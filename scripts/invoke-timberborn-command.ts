@@ -8,6 +8,7 @@ type InvokeOptions = {
   commandDir: string;
   help: boolean;
   requireAdvancedTick: boolean;
+  requireNonzeroDelta: boolean;
   waitSeconds: number;
 };
 
@@ -15,7 +16,7 @@ const home = process.env.HOME ?? "";
 const defaultCommandDir = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
 const inboxFileName = "command-inbox.txt";
 const outboxFileName = "command-outbox.txt";
-const knownCommands = ["help", "qa-readiness", "status"];
+const knownCommands = ["help", "qa-delta-stimulus", "qa-readiness", "status"];
 
 const usage = `Usage:
   bun scripts/invoke-timberborn-command.ts [command] [options]
@@ -23,11 +24,13 @@ const usage = `Usage:
 Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
+  qa-delta-stimulus         Queue one fixed QA-only simulator cell change.
   help                      Read-only command list.
 
 Options:
   --command-dir <path>      Command bridge directory. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA.
   --require-advanced-tick   Fail unless the result reports numeric tick_count greater than 0. Unpause a loaded save before using this.
+  --require-nonzero-delta   Fail unless the result reports numeric last_delta_count greater than 0. Use after qa-delta-stimulus.
   --wait <seconds>          Wait for command-outbox.txt to update. Default: 5.
   --help                    Show this help.
 `;
@@ -60,6 +63,7 @@ const parseArgs = (args: string[]): InvokeOptions => {
     commandDir: defaultCommandDir,
     help: false,
     requireAdvancedTick: false,
+    requireNonzeroDelta: false,
     waitSeconds: 5,
   };
   let skipNext = false;
@@ -79,6 +83,8 @@ const parseArgs = (args: string[]): InvokeOptions => {
       options.commandDir = resolve(arg.slice("--command-dir=".length));
     } else if (arg === "--require-advanced-tick") {
       options.requireAdvancedTick = true;
+    } else if (arg === "--require-nonzero-delta") {
+      options.requireNonzeroDelta = true;
     } else if (arg === "--wait") {
       options.waitSeconds = parseWait(requireValue(args, index + 1, arg));
       skipNext = true;
@@ -125,6 +131,17 @@ const requireAdvancedTick = (result: string): void => {
   }
 };
 
+const requireNonzeroDelta = (result: string): void => {
+  const deltaMatch =
+    result.match(/\blast_delta_count=(\d+)\b/u) ??
+    fail("Result did not include numeric last_delta_count. Is the command reporting simulator state?");
+  const deltaValue = deltaMatch[1];
+  const deltaCount = Number(deltaValue);
+  if (deltaCount <= 0) {
+    fail(`Result reported last_delta_count=${deltaCount}. Run qa-delta-stimulus against an unpaused loaded save, wait for a simulator tick, then rerun status or qa-readiness.`);
+  }
+};
+
 const main = async (): Promise<void> => {
   const options = parseArgs(Bun.argv.slice(2));
   if (options.help) {
@@ -152,6 +169,10 @@ const main = async (): Promise<void> => {
   console.log(result.trimEnd());
   if (options.requireAdvancedTick) {
     requireAdvancedTick(result);
+  }
+
+  if (options.requireNonzeroDelta) {
+    requireNonzeroDelta(result);
   }
 };
 

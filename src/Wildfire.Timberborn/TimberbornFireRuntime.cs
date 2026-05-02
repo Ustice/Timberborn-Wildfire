@@ -4,7 +4,12 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
 
-public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingleton, IUpdatableSingleton, ITimberbornQaCommandStateProvider
+public sealed class TimberbornFireRuntime :
+    ILoadableSingleton,
+    IUnloadableSingleton,
+    IUpdatableSingleton,
+    ITimberbornQaCommandStateProvider,
+    ITimberbornQaDeltaStimulus
 {
     private readonly ITimberbornFireLogSink _logSink;
     private TimberbornFireSystem? _fireSystem;
@@ -111,6 +116,20 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
     public void RegisterMappedCellChanges(IEnumerable<TimberbornCellSource> sources)
     {
         RequireFireSystem().RegisterMappedCellChanges(sources);
+    }
+
+    public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
+    {
+        TimberbornQaDeltaStimulusResult result = RequireFireSystem().QueueFixedQaDeltaStimulus();
+        _logSink.Info(
+            "wildfire_timberborn_qa_delta_stimulus_queued " +
+            $"cell_index={result.CellIndex} " +
+            $"x={result.X} " +
+            $"y={result.Y} " +
+            $"z={result.Z} " +
+            $"set_cell={result.SetCell}");
+
+        return result;
     }
 
     public TimberbornQaCommandState GetState()

@@ -1,3 +1,4 @@
+using Wildfire.Core;
 using Wildfire.Timberborn;
 
 namespace Wildfire.Core.Tests;
@@ -93,6 +94,39 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void DefaultConstructionKeepsQaDeltaStimulusRejectedAsUnknown()
+    {
+        RecordingStateProvider stateProvider = new(TimberbornQaCommandState.Placeholder);
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(stateProvider, logSink);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus");
+
+        Assert.False(result.Success);
+        Assert.Equal("qa-delta-stimulus", result.Command);
+        Assert.Equal(["help", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal(0, stateProvider.CallCount);
+        Assert.Contains("Unknown command 'qa-delta-stimulus'.", result.Message);
+        Assert.Contains(result.ResultToken, logSink.WarningMessages);
+    }
+
+    [Fact]
+    public void LiveStimulusBindingExpandsAllowlistAndHelpMessage()
+    {
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
+            new RecordingDeltaStimulus(new TimberbornQaDeltaStimulusResult(0, 0, 0, 0, 1)),
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("help");
+
+        Assert.True(result.Success);
+        Assert.Equal(["help", "qa-delta-stimulus", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Contains("qa-delta-stimulus", result.Message);
+        Assert.Contains("fixed QA-only simulator change", result.Message);
+    }
+
+    [Fact]
     public void ExecuteQaReadinessReturnsSafeLoadedGameReadinessState()
     {
         TimberbornQaCommandState state = new(
@@ -150,6 +184,64 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("tick_count=7", result.ResultToken);
         Assert.Contains("queued_changes=8", result.ResultToken);
         Assert.Contains("last_delta_count=9", result.ResultToken);
+    }
+
+    [Fact]
+    public void ExecuteQaDeltaStimulusQueuesBoundStimulusAndReportsTargetFields()
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 8,
+            Height: 6,
+            Depth: 4,
+            TickCount: 12,
+            QueuedChangeCount: 1,
+            LastDeltaCount: 0);
+        RecordingStateProvider stateProvider = new(state);
+        RecordingDeltaStimulus deltaStimulus = new(new TimberbornQaDeltaStimulusResult(91, 3, 4, 2, 498));
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-delta-stimulus", result.Command);
+        Assert.Equal(["help", "qa-delta-stimulus", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal(1, deltaStimulus.CallCount);
+        Assert.Equal(1, stateProvider.CallCount);
+        Assert.Contains("target_index=91", result.Message);
+        Assert.Contains("target_x=3", result.Message);
+        Assert.Contains("target_y=4", result.Message);
+        Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("set_cell=498", result.Message);
+        Assert.Contains("queued_changes=1", result.ResultToken);
+        Assert.Contains("tick_count=12", result.ResultToken);
+        Assert.Contains("wildfire_command_request command=qa-delta-stimulus", logSink.InfoMessages);
+        Assert.Contains(result.ResultToken, logSink.InfoMessages);
+    }
+
+    [Fact]
+    public void QueueFixedQaDeltaStimulusRegistersExactlyOneCenterSetCellChange()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = new(simulator);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueFixedQaDeltaStimulus();
+
+        Assert.Equal(new TimberbornQaDeltaStimulusResult(38, 2, 3, 1, PackedCell.Pack(15, 15, 3, 0, 1, 1)), result);
+        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(38, change.CellIndex);
+        Assert.Equal(PackedCell.Pack(15, 15, 3, 0, 1, 1), change.SetCell);
+        Assert.Null(change.AddHeat);
+        Assert.Null(change.AddFuel);
+        Assert.Null(change.SetWater);
+        Assert.Null(change.SetFuel);
+        Assert.Null(change.SetHeat);
+        Assert.Null(change.SetFlammability);
+        Assert.Null(change.SetHeatLoss);
+        Assert.Null(change.SetTerrain);
+        Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
     [Fact]
@@ -254,6 +346,17 @@ public sealed class TimberbornQaCommandBridgeTests
         }
     }
 
+    private sealed class RecordingDeltaStimulus(TimberbornQaDeltaStimulusResult result) : ITimberbornQaDeltaStimulus
+    {
+        public int CallCount { get; private set; }
+
+        public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
+        {
+            CallCount++;
+            return result;
+        }
+    }
+
     private sealed class RecordingLogSink : ITimberbornQaCommandLogSink
     {
         public List<string> InfoMessages { get; } = [];
@@ -268,6 +371,45 @@ public sealed class TimberbornQaCommandBridgeTests
         public void Warning(string message)
         {
             WarningMessages.Add(message);
+        }
+    }
+
+    private sealed class RecordingFireSimulator(int width, int height, int depth) : IGpuFireSimulator
+    {
+        public int Width { get; } = width;
+
+        public int Height { get; } = height;
+
+        public int Depth { get; } = depth;
+
+        public List<FireSimChange> RegisteredChanges { get; } = [];
+
+        public void RegisterChange(FireSimChange change)
+        {
+            RegisteredChanges.Add(change);
+        }
+
+        public GpuFireStepResult Tick()
+        {
+            return new GpuFireStepResult([], Tick: 0);
+        }
+
+        public IDisposable Subscribe(IFireSimListener listener)
+        {
+            return NullDisposable.Instance;
+        }
+    }
+
+    private sealed class NullDisposable : IDisposable
+    {
+        public static readonly NullDisposable Instance = new();
+
+        private NullDisposable()
+        {
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

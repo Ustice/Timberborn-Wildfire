@@ -122,11 +122,23 @@ bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6
 bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick
 ```
 
-The Timberborn adapter polls that inbox from `TimberbornQaCommandFileBridge`, forwards the command to `TimberbornQaCommandBridge`, deletes the inbox, and writes the latest result to `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-outbox.txt`. The script and bridge expose only known read-only commands. Unknown manual inbox commands are rejected by the bridge and logged as failures rather than executed.
+The Timberborn adapter polls that inbox from `TimberbornQaCommandFileBridge`, forwards the command to `TimberbornQaCommandBridge`, deletes the inbox, and writes the latest result to `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-outbox.txt`. The script and bridge expose only known allowlisted commands. Unknown manual inbox commands are rejected by the bridge and logged as failures rather than executed.
 
 Current `TWF-008` coverage adds a Timberborn game-context runtime singleton for fixed-cadence dispatch. `TimberbornFireRuntime` is the command-bridge state provider, so `status` and `qa-readiness` report `bridge_alive=true`, `runtime_loaded`, `loaded_game_ready`, `simulator_integrated`, dimensions, `tick_count`, `queued_changes`, and `last_delta_count` after a simulator is attached. When no simulator factory has been attached by the live host yet, simulator fields intentionally return `placeholder` and `loaded_game_ready=false`.
 
 `qa-readiness` is intentionally a loaded-game readiness probe, not a UI automation command. It does not navigate menus, click Timberborn UI, load saves, delete saves, invoke arbitrary `VisualElement` callbacks, mutate the Wildfire grid, or trigger debug/destructive actions. Treat `success=true` as "the command was handled safely"; treat `loaded_game_ready=true` plus numeric dimensions and tick fields as the loaded-game readiness signal. For live QA that needs to prove fixed-cadence dispatch is advancing, unpause the loaded save first and add `--require-advanced-tick`; the command script then fails unless the result includes `tick_count` greater than `0`.
+
+`TWF-031` adds one non-read-only QA stimulus command: `qa-delta-stimulus`. This command has no user-supplied coordinates or parameters. It requires an initialized `TimberbornFireRuntime`, chooses the deterministic center cell of the current fire grid, and queues one fixed `SetCell` external change through `IGpuFireSimulator.RegisterChange`; it does not mutate Timberborn terrain, buildings, saves, UI state, or simulator buffers directly. The command result message includes `target_index`, `target_x`, `target_y`, `target_z`, and `set_cell`; the same result token also reports current `queued_changes` and `tick_count` so QA can tie the request to the next simulator dispatch.
+
+Use the stimulus only after the guarded startup utility has loaded and unpaused a save:
+
+```bash
+bun scripts/load-latest-save-and-unpause.ts --launch
+bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=6 --require-advanced-tick
+bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick --require-nonzero-delta
+```
+
+The first command queues the bounded fixed cell change. The follow-up `qa-readiness` or `status` command is the proof point after at least one subsequent fixed-cadence tick; `--require-nonzero-delta` fails unless the result reports `last_delta_count` greater than `0`. Live QA evidence should include both command outputs plus `Player.log` tokens for `wildfire_command_request command=qa-delta-stimulus`, `wildfire_timberborn_qa_delta_stimulus_queued`, `wildfire_timberborn_changes_registered source=qa_delta_stimulus`, and the subsequent `wildfire_timberborn_dispatch_completed ... delta_count=<nonzero>` line.
 
 Current `TWF-021` coverage adds the live compute-backed attachment path. `TimberbornFireRuntimeInitializer` builds the initial `FireGrid` from `MapSize.TerrainSize`, converts terrain cells from `ITerrainService.GetAllHeightsInCell(...)` through `TimberbornTerrainAdapter`, and initializes the runtime through `ITimberbornFireSimulatorFactory`. The factory manually loads `ComputeShaders/wildfire_compute_mac`, creates a real Unity `ComputeShader` simulator, and leaves fire-spread behavior in `FireSim.compute`.
 
