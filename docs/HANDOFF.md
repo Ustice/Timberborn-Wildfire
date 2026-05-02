@@ -20,7 +20,7 @@
 
 ## Current Ticket State
 
-- The fresh compute-first ticket set exists as `TWF-000` through `TWF-034`.
+- The compute-first ticket set exists as `TWF-000` through `TWF-063`.
 - `kanban/by-status` is the sprint source of truth.
 - `TWF-000` through `TWF-008` are done and integrated on `main`.
 - `TWF-009` is done and integrated on `main` in commit `aa9a260`; live status and `Player.log` evidence prove the Timberborn delta-consumer hook path is wired and reporting.
@@ -45,10 +45,15 @@
 - `TWF-028` is done: current Wildfire QA cannot navigate Timberborn menus remotely without screen interaction; the accepted safer path is narrow allowlisted command-bridge outcomes, not generic menu driving.
 - `TWF-029` is done: the read-only `qa-readiness` command is allowlisted, documented, unit-tested, and live-verified after deploy/restart with `loaded_game_ready=true`, `simulator_integrated=true`, dimensions `128x128x23`, and an advanced tick.
 - `TWF-030` is done: the signal-driven latest-save startup utility launches Timberborn, clears startup Mods and Experimental Mode from screenshot-confirmed signals, continues the latest save, recognizes the top-HUD loaded-save state, unpauses, and records `simulator_integrated=true` status plus dispatch evidence.
-- `TWF-031` is ready: add a guarded QA-only live stimulus that can produce non-zero simulator deltas in a loaded Timberborn save.
+- `TWF-031` is in progress: add a guarded QA-only live stimulus that can produce non-zero simulator deltas in a loaded Timberborn save.
 - `TWF-032` is todo behind `TWF-031`: prove live `delta_count > 0` from the real GPU readback and status path.
 - `TWF-033` is todo behind `TWF-032`: bind one concrete Timberborn-facing consequence to non-zero deltas.
 - `TWF-034` is todo behind `TWF-032`: record live dispatch profiling and decide whether to promote `TWF-011`.
+- `TWF-035` through `TWF-038` are todo for the next gameplay sprint: expanded material mapping, building burnout consequences, fire overlay updates, and water suppression changes.
+- `TWF-039` through `TWF-042` are todo for the next player-legibility sprint: GPU visual-field binding, pooled fire/smoke/ash effects, visual tuning with evidence, and one player-facing fire alert.
+- `TWF-043` through `TWF-046` are todo for Sprint 4: game-feel tuning, release-blocking simulation decisions, release scenario snapshots, and coherent live-loop validation.
+- `TWF-047` through `TWF-051` are todo for Sprint 5: save/reload disable/re-enable validation, release settings, compatibility probes, GPU/asset failure hardening, and the active-frontier release decision.
+- `TWF-052` through `TWF-063` are todo for Sprint 6: GitHub CI/CD, release packaging, release graphics/metadata, player docs, changelog/versioning, cross-platform bundle validation, clean-install release-candidate QA, release debug-surface scrub, license/attribution, support templates, and Steam Workshop distribution as the official first channel.
 - QA now owns live Timberborn builds, deployments, launches, restarts, and the shared deploy/QA lock for verification runs.
 
 ## Next Exact Action
@@ -56,6 +61,7 @@
 Continue with:
 
 - Start the next sprint with `TWF-031`, then use its evidence to unlock `TWF-032`.
+- Use the next-three-sprint plan in `docs/TODO.md` to continue from live GPU proof into gameplay surfaces and player-facing visuals.
 - Keep `TWF-015` deferred unless `TWF-030` is abandoned; it is superseded by the newer startup/load/unpause utility.
 - Keep `TWF-011` deferred until `TWF-034` recommends promoting it from measured live profiling evidence.
 - Use `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` against a loaded, unpaused Timberborn save when you need to confirm the in-game Wildfire command bridge, loaded-game runtime, simulator integration, and advancing dispatch tick are alive.
