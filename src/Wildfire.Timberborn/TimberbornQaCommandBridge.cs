@@ -451,7 +451,10 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerBuildingBurnoutConsideredDeltaCount = null,
     int? LastDeltaConsumerBuildingBurnoutMatchedCellCount = null,
     int? LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount = null,
-    int? LastDeltaConsumerAlertCount = null)
+    int? LastDeltaConsumerAlertCount = null,
+    bool VisualFieldSurfaceBound = false,
+    int? VisualFieldSurfaceCellCount = null,
+    uint? VisualFieldSurfaceLastUpdatedTick = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
@@ -501,6 +504,9 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_building_burnout_matched_cells={FormatNumber(State.LastDeltaConsumerBuildingBurnoutMatchedCellCount)} " +
         $"last_delta_consumer_building_burnout_applied_consequences={FormatNumber(State.LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount)} " +
         $"last_delta_consumer_alerts={FormatNumber(State.LastDeltaConsumerAlertCount)} " +
+        $"visual_field_surface_bound={State.VisualFieldSurfaceBound.ToString().ToLowerInvariant()} " +
+        $"visual_field_surface_cells={FormatNumber(State.VisualFieldSurfaceCellCount)} " +
+        $"visual_field_surface_updated_tick={FormatNumber(State.VisualFieldSurfaceLastUpdatedTick)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
     public static TimberbornQaCommandResult CreateSuccess(

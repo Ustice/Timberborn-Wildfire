@@ -130,6 +130,10 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public int LastPositiveWaterChangedCount => _deltaConsumer.LastPositiveWaterChangedCount;
 
+    public TimberbornGpuVisualFieldSurfaceState VisualFieldSurfaceState =>
+        (_fireSimulator as ITimberbornGpuVisualFieldStateProvider)?.VisualFieldSurfaceState ??
+        TimberbornGpuVisualFieldSurfaceState.Unbound;
+
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
         if (sources is null)

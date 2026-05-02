@@ -577,7 +577,10 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: 20,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: 21,
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: 22,
-            LastDeltaConsumerAlertCount: 23);
+            LastDeltaConsumerAlertCount: 23,
+            VisualFieldSurfaceBound: true,
+            VisualFieldSurfaceCellCount: 24,
+            VisualFieldSurfaceLastUpdatedTick: 25);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -606,6 +609,9 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_building_burnout_matched_cells=21", result.ResultToken);
         Assert.Contains("last_delta_consumer_building_burnout_applied_consequences=22", result.ResultToken);
         Assert.Contains("last_delta_consumer_alerts=23", result.ResultToken);
+        Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
+        Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
+        Assert.Contains("visual_field_surface_updated_tick=25", result.ResultToken);
     }
 
     [Fact]

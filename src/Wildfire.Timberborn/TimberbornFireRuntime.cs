@@ -196,6 +196,7 @@ public sealed class TimberbornFireRuntime :
         }
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
+        TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
 
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
@@ -219,7 +220,10 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: deltaConsumerSummary.BuildingBurnoutConsideredDeltaCount,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: deltaConsumerSummary.BuildingBurnoutMatchedCellCount,
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: deltaConsumerSummary.BuildingBurnoutAppliedConsequenceCount,
-            LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount);
+            LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
+            VisualFieldSurfaceBound: visualFieldSurfaceState.IsBound,
+            VisualFieldSurfaceCellCount: visualFieldSurfaceState.CellCount,
+            VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick);
     }
 
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)

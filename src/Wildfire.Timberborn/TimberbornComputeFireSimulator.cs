@@ -9,13 +9,16 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornComputeShaderLoader _shaderLoader;
+    private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
 
-    public TimberbornComputeFireSimulatorFactory()
+    public TimberbornComputeFireSimulatorFactory(ITimberbornGpuVisualFieldSurface visualFieldSurface)
     {
         _logSink = new UnityTimberbornFireLogSink();
         _shaderLoader = new TimberbornComputeShaderLoader(_logSink);
-        _logSink.Info("wildfire_timberborn_gpu_factory_created backend=unity_compute");
+        _visualFieldSurface = visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface));
     }
+
+    public ITimberbornGpuVisualFieldSurface VisualFieldSurface => _visualFieldSurface;
 
     public IGpuFireSimulator Create(FireGrid grid, ReadOnlySpan<ushort> initialCells)
     {
@@ -24,8 +27,9 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
             throw new InvalidOperationException("The current Timberborn graphics device does not support compute shaders.");
         }
 
+        _logSink.Info("wildfire_timberborn_gpu_factory_created backend=unity_compute");
         ComputeShader shader = _shaderLoader.Load();
-        TimberbornComputeFireSimulator simulator = new(grid, initialCells, shader, _logSink);
+        TimberbornComputeFireSimulator simulator = new(grid, initialCells, shader, _logSink, _visualFieldSurface);
         _logSink.Info(
             $"wildfire_timberborn_gpu_simulator_created width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
 
@@ -334,7 +338,7 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
     }
 }
 
-public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposable
+public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberbornGpuVisualFieldStateProvider, IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -349,6 +353,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
 
     private readonly ComputeShader _shader;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
     private readonly List<FireSimChange> _queuedChanges = new List<FireSimChange>();
     private readonly List<IFireSimListener> _listeners = new List<IFireSimListener>();
     private readonly ComputeBuffer _currentCells;
@@ -359,6 +364,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
     private readonly ComputeBuffer _deltaCounter;
     private readonly int _applyExternalChangesKernel;
     private readonly int _fullGridKernel;
+    private TimberbornGpuVisualFieldSurfaceBindingLifecycle? _visualFieldBindingLifecycle;
     private ComputeBuffer _readCells;
     private ComputeBuffer _writeCells;
     private uint _tick;
@@ -369,6 +375,16 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
         ReadOnlySpan<ushort> initialCells,
         ComputeShader shader,
         ITimberbornFireLogSink logSink)
+        : this(grid, initialCells, shader, logSink, NullTimberbornGpuVisualFieldSurface.Instance)
+    {
+    }
+
+    public TimberbornComputeFireSimulator(
+        FireGrid grid,
+        ReadOnlySpan<ushort> initialCells,
+        ComputeShader shader,
+        ITimberbornFireLogSink logSink,
+        ITimberbornGpuVisualFieldSurface visualFieldSurface)
     {
         if (grid.CellCount <= 0)
         {
@@ -384,6 +400,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
 
         _shader = shader ?? throw new ArgumentNullException(nameof(shader));
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
+        _visualFieldSurface = visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface));
         Grid = grid;
         _applyExternalChangesKernel = _shader.FindKernel(ApplyExternalChangesKernelName);
         _fullGridKernel = _shader.FindKernel(FullGridKernelName);
@@ -402,6 +419,12 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             _nextCells.SetData(packedCells);
             _readCells = _currentCells;
             _writeCells = _nextCells;
+            _visualFieldBindingLifecycle = new TimberbornGpuVisualFieldSurfaceBindingLifecycle(
+                _visualFieldSurface,
+                _visualFields,
+                grid,
+                VisualFieldStrideBytes);
+            _visualFieldBindingLifecycle.Bind();
             _logSink.Info(
                 $"wildfire_timberborn_gpu_simulator_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
         }
@@ -419,6 +442,8 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
     public int Height => Grid.Height;
 
     public int Depth => Grid.Depth;
+
+    public TimberbornGpuVisualFieldSurfaceState VisualFieldSurfaceState => _visualFieldSurface.State;
 
     public void RegisterChange(FireSimChange change)
     {
@@ -460,6 +485,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             int groupsY = GetThreadGroups(Height, ThreadGroupSizeY);
             int groupsZ = GetThreadGroups(Depth, ThreadGroupSizeZ);
             DispatchKernel(_fullGridKernel, FullGridKernelName, dispatchTick, 0, groupsX, groupsY, groupsZ);
+            _visualFieldBindingLifecycle?.MarkUpdated(dispatchTick);
 
             CellDelta[] deltas = ReadDeltas();
             SwapCellBuffers();
@@ -494,6 +520,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, IDisposa
             return;
         }
 
+        _visualFieldBindingLifecycle?.Unbind();
         new[]
         {
             _currentCells,
