@@ -197,7 +197,14 @@ public sealed class TimberbornQaCommandBridgeTests
             Depth: 6,
             TickCount: 7,
             QueuedChangeCount: 8,
-            LastDeltaCount: 9);
+            LastDeltaCount: 9,
+            LastDeltaConsumerChangedCellCount: 10,
+            LastDeltaConsumerDebugVisualCellCount: 11,
+            LastDeltaConsumerStartedBurningCount: 12,
+            LastDeltaConsumerFuelDepletedCount: 13,
+            LastDeltaConsumerVisualEffectEventCount: 14,
+            LastDeltaConsumerGameplayConsequenceCount: 15,
+            LastDeltaConsumerAlertCount: 16);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -212,6 +219,13 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("tick_count=7", result.ResultToken);
         Assert.Contains("queued_changes=8", result.ResultToken);
         Assert.Contains("last_delta_count=9", result.ResultToken);
+        Assert.Contains("last_delta_consumer_changed_cells=10", result.ResultToken);
+        Assert.Contains("last_delta_consumer_debug_visual_cells=11", result.ResultToken);
+        Assert.Contains("last_delta_consumer_started_burning=12", result.ResultToken);
+        Assert.Contains("last_delta_consumer_fuel_depleted=13", result.ResultToken);
+        Assert.Contains("last_delta_consumer_visual_effect_events=14", result.ResultToken);
+        Assert.Contains("last_delta_consumer_gameplay_consequences=15", result.ResultToken);
+        Assert.Contains("last_delta_consumer_alerts=16", result.ResultToken);
     }
 
     [Fact]

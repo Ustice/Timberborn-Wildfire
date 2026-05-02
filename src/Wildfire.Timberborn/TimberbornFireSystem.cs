@@ -8,6 +8,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly TimberbornFireDeltaConsumer _deltaConsumer;
     private IGpuFireSimulator? _fireSimulator;
     private FireGrid? _grid;
     private int _registeredChangeCountSinceLastDispatch;
@@ -25,7 +26,8 @@ public sealed class TimberbornFireSystem : IDisposable
     public TimberbornFireSystem(
         IGpuFireSimulator fireSimulator,
         TimberbornFireCellMapper cellMapper,
-        ITimberbornFireLogSink logSink)
+        ITimberbornFireLogSink logSink,
+        TimberbornFireDeltaConsumerSinks? deltaConsumerSinks = null)
     {
         if (fireSimulator is null)
         {
@@ -46,6 +48,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _grid = new FireGrid(fireSimulator.Width, fireSimulator.Height, fireSimulator.Depth);
         _cellMapper = cellMapper;
         _logSink = logSink;
+        _deltaConsumer = new TimberbornFireDeltaConsumer(logSink, deltaConsumerSinks ?? TimberbornFireDeltaConsumerSinks.Null);
         LastTick = 0;
         LastDeltaCount = 0;
         _logSink.Info(
@@ -60,7 +63,8 @@ public sealed class TimberbornFireSystem : IDisposable
     public TimberbornFireSystem(
         ITimberbornFireSimulatorFactory simulatorFactory,
         TimberbornFireCellMapper cellMapper,
-        ITimberbornFireLogSink logSink)
+        ITimberbornFireLogSink logSink,
+        TimberbornFireDeltaConsumerSinks? deltaConsumerSinks = null)
     {
         if (simulatorFactory is null)
         {
@@ -80,6 +84,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _simulatorFactory = simulatorFactory;
         _cellMapper = cellMapper;
         _logSink = logSink;
+        _deltaConsumer = new TimberbornFireDeltaConsumer(logSink, deltaConsumerSinks ?? TimberbornFireDeltaConsumerSinks.Null);
     }
 
     public bool IsInitialized => _fireSimulator is not null;
@@ -95,6 +100,8 @@ public sealed class TimberbornFireSystem : IDisposable
     public uint? LastTick { get; private set; }
 
     public int? LastDeltaCount { get; private set; }
+
+    public TimberbornFireDeltaConsumerSummary LastDeltaConsumerSummary => _deltaConsumer.LastSummary;
 
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
@@ -115,6 +122,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _registeredChangeCountSinceLastDispatch = 0;
         LastTick = 0;
         LastDeltaCount = 0;
+        _deltaConsumer.Reset();
         _logSink.Info(
             $"wildfire_timberborn_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
     }
@@ -133,6 +141,7 @@ public sealed class TimberbornFireSystem : IDisposable
             _registeredChangeCountSinceLastDispatch = 0;
             LastTick = result.Tick;
             LastDeltaCount = result.Deltas.Count;
+            _deltaConsumer.Consume(result.Tick, result.Deltas.ToArray());
             _logSink.Info(
                 $"wildfire_timberborn_dispatch_completed tick={result.Tick} delta_count={result.Deltas.Count} elapsed_ms={stopwatch.Elapsed.TotalMilliseconds:F3}");
 

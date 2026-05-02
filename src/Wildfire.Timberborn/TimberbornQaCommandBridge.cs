@@ -164,7 +164,14 @@ public sealed record TimberbornQaCommandState(
     int? Depth = null,
     uint? TickCount = null,
     int? QueuedChangeCount = null,
-    int? LastDeltaCount = null)
+    int? LastDeltaCount = null,
+    int? LastDeltaConsumerChangedCellCount = null,
+    int? LastDeltaConsumerDebugVisualCellCount = null,
+    int? LastDeltaConsumerStartedBurningCount = null,
+    int? LastDeltaConsumerFuelDepletedCount = null,
+    int? LastDeltaConsumerVisualEffectEventCount = null,
+    int? LastDeltaConsumerGameplayConsequenceCount = null,
+    int? LastDeltaConsumerAlertCount = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
@@ -200,6 +207,13 @@ public sealed record TimberbornQaCommandResult(
         $"tick_count={FormatNumber(State.TickCount)} " +
         $"queued_changes={FormatNumber(State.QueuedChangeCount)} " +
         $"last_delta_count={FormatNumber(State.LastDeltaCount)} " +
+        $"last_delta_consumer_changed_cells={FormatNumber(State.LastDeltaConsumerChangedCellCount)} " +
+        $"last_delta_consumer_debug_visual_cells={FormatNumber(State.LastDeltaConsumerDebugVisualCellCount)} " +
+        $"last_delta_consumer_started_burning={FormatNumber(State.LastDeltaConsumerStartedBurningCount)} " +
+        $"last_delta_consumer_fuel_depleted={FormatNumber(State.LastDeltaConsumerFuelDepletedCount)} " +
+        $"last_delta_consumer_visual_effect_events={FormatNumber(State.LastDeltaConsumerVisualEffectEventCount)} " +
+        $"last_delta_consumer_gameplay_consequences={FormatNumber(State.LastDeltaConsumerGameplayConsequenceCount)} " +
+        $"last_delta_consumer_alerts={FormatNumber(State.LastDeltaConsumerAlertCount)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
     public static TimberbornQaCommandResult CreateSuccess(

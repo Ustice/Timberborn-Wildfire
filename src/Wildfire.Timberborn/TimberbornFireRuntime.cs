@@ -122,6 +122,8 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
                 IsGameContextRuntimeLoaded: _isLoaded);
         }
 
+        TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
+
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
             IsGameContextRuntimeLoaded: _isLoaded,
@@ -130,7 +132,14 @@ public sealed class TimberbornFireRuntime : ILoadableSingleton, IUnloadableSingl
             Depth: fireSystem.Depth,
             TickCount: fireSystem.LastTick,
             QueuedChangeCount: fireSystem.RegisteredChangeCountSinceLastDispatch,
-            LastDeltaCount: fireSystem.LastDeltaCount);
+            LastDeltaCount: fireSystem.LastDeltaCount,
+            LastDeltaConsumerChangedCellCount: deltaConsumerSummary.ChangedCellCount,
+            LastDeltaConsumerDebugVisualCellCount: deltaConsumerSummary.DebugVisualCellCount,
+            LastDeltaConsumerStartedBurningCount: deltaConsumerSummary.StartedBurningCount,
+            LastDeltaConsumerFuelDepletedCount: deltaConsumerSummary.FuelDepletedCount,
+            LastDeltaConsumerVisualEffectEventCount: deltaConsumerSummary.VisualEffectEventCount,
+            LastDeltaConsumerGameplayConsequenceCount: deltaConsumerSummary.GameplayConsequenceCount,
+            LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount);
     }
 
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
