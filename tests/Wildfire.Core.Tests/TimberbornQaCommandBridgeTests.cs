@@ -384,8 +384,8 @@ public sealed class TimberbornQaCommandBridgeTests
                 3,
                 1,
                 39,
-                PackedCell.Pack(12, 15, 2, 0, 1, 4),
-                PackedCell.Pack(0, 15, 2, 0, 1, 4),
+                PackedCell.Pack(15, 15, 1, 0, 1, 3),
+                PackedCell.Pack(0, 15, 1, 0, 1, 3),
                 2),
             result);
         Assert.Equal(1, targetProvider.CallCount);
@@ -404,8 +404,8 @@ public sealed class TimberbornQaCommandBridgeTests
             Assert.Null(change.SetTerrain);
             Assert.NotNull(change.SetCell);
         });
-        Assert.Equal(PackedCell.Pack(12, 15, 2, 0, 1, 4), simulator.RegisteredChanges[0].SetCell);
-        Assert.Equal(PackedCell.Pack(0, 15, 2, 0, 1, 4), simulator.RegisteredChanges[1].SetCell);
+        Assert.Equal(PackedCell.Pack(15, 15, 1, 0, 1, 3), simulator.RegisteredChanges[0].SetCell);
+        Assert.Equal(PackedCell.Pack(0, 15, 1, 0, 1, 3), simulator.RegisteredChanges[1].SetCell);
         Assert.Equal(2, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
@@ -436,7 +436,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void WaterSuppressionQaStimulusAppliesOnNextCadenceDispatchTick()
     {
-        ushort burningCell = PackedCell.Pack(fuel: 12, heat: 15, flammability: 2, water: 0, terrain: 1, heatLoss: 4);
+        ushort burningCell = PackedCell.Pack(fuel: 15, heat: 15, flammability: 1, water: 0, terrain: 1, heatLoss: 3);
         ushort wetCell = PackedCell.SetWater(burningCell, 3);
         RecordingFireSimulator simulator = new(width: 1, height: 1, depth: 1);
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(0, burningCell, wetCell)], Tick: 1));

@@ -23,6 +23,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Timberborn GPU visual-field surface binding: the live compute simulator binds the `VisualFields` compute buffer once as a Timberborn-facing DI singleton surface with one `float4`-equivalent entry per cell, channel order `fire,smoke,ash,visibility`, a consumer-facing binding view for future renderer/effect/debug-inspector systems, bounded sample inspection for specific cell indices, dispatch-update telemetry, and `qa-readiness`/`status` fields that prove the visual surface is bound without routing gameplay consequences through visual output.
 - Timberborn pooled fire/smoke/ash effect routing: compact delta visual-effect events select bounded visual-field samples through `ITimberbornGpuVisualFieldSurface`, the adapter maintains a capped pool of active fire/smoke/ash presentation anchors instead of one object per simulated cell, visual presentation failures are isolated from gameplay consequences, and `qa-readiness`/`status` fields expose active pooled effects, last-dispatch updated regions, stable last-nonzero updated regions, presentation failures, and native-prefab visibility state.
 - Tuned visual-field output: `TWF-041` accepts named fire/smoke/ash/visibility constants in the C# mirror and `FireSim.compute`, two Unity shader checksum snapshots, and live Timberborn pooled-effect evidence for the tuned output.
+- Tuned fire game-feel output: `TWF-043` accepts named ignition, spread, burn, heat-loss, flammability-pressure, and water-suppression constants in `FireSim.compute`, Timberborn adapter material bands, and three Unity shader snapshots that assert semantic delta and hot-cell outcomes in addition to visual checksums.
 - Timberborn debug fire overlay state: the adapter consumes compact deltas, filters them to visual-state changes, stores the latest packed cell only for affected overlay indices, derives fuel/heat/water/burning/spent state from that packed cell, and exposes per-dispatch updated-cell counters separately from the persistent overlay cell count.
 - Timberborn player-facing fire alert state: compact delta alert events are aggregated into at most one native quick warning per dispatch, warning text reports new fire cells, burned-out cells, and max heat, and status telemetry exposes the last player alert tick, counts, notification send state, and presentation failures.
 - Runtime diagnostics: Unity and Timberborn GPU paths emit concise `wildfire_*` tokens for simulator initialization/disposal, queued change batches, dispatch kernel start/completion with elapsed milliseconds, compact delta readback counts, listener notification counts, and adapter startup/shutdown without logging per-cell changes.
@@ -147,6 +148,56 @@ dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --seed=21 --
 dotnet run --project src/Wildfire.Cli -- --scenario=line-of-fuel --seed=42 --width=12 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-seed42-12x5x1.fixture.json"
 "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-041/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-seed42-12x5x1.fixture.json" --shader ~/repos/wildfire-TWF-041/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-041-shader-snapshots/line-of-fuel-seed42-12x5x1-tick4.capture.json" --ticks 4
 ```
+
+`TWF-043` accepted fire game-feel tuning keeps the `TWF-044` release decisions intact: the shader still reads the six cardinal 3D neighbors only, there is no wind input, and Timberborn supplies material and water bands without owning fire rules.
+
+Accepted `FireSim.compute` game-feel constants:
+
+- Ignition: `FIRE_IGNITION_BASE_HEAT=11`, `FIRE_WATER_IGNITION_PENALTY=2`.
+- Spread: `FIRE_RETAINED_HEAT_WEIGHT=2`, `FIRE_SPREAD_HEAT_WEIGHT=1`, `FIRE_BURNING_NEIGHBOR_HEAT_BONUS=3`, `FIRE_BURNING_NEIGHBOR_DIRECT_HEAT=1`.
+- Water suppression: `FIRE_WATER_SUPPRESSION_HEAT=2`, `FIRE_WATER_EVAPORATION_HEAT=10`.
+- Burn pressure: `FIRE_FLAMMABILITY_BURN_PRESSURE=2`, `FIRE_WATER_BURN_PRESSURE_PENALTY=3`, `FIRE_BURN_HEAT_BASE=1`.
+
+Accepted Timberborn adapter material bands:
+
+- Wood-like buildings: fuel `15`, flammability `1`, heat loss `3`.
+- Stockpile resources: fuel `8`, flammability `2`, heat loss `3`.
+- Vegetation: fuel `10`, flammability `3`, heat loss `1`.
+- Non-burnable buildings and solid terrain keep their existing non-fuel and high-heat-loss behavior.
+
+Interpretation:
+
+- Single ignition now radiates to adjacent cells in broad grass-like fuel instead of having neighbor heat disappear into integer averaging.
+- Line-of-fuel remains bounded and legible: the ignition advances along the fuel line, then settles as available heat and stochastic burn rolls decline.
+- The water barrier remains an effective suppression case: with `SetWater=3`, the accepted snapshot leaves only one hot cell after four ticks, proving water raises ignition difficulty and suppresses burn pressure without adding host-owned fire rules.
+- Wood-like buildings burn longer and less explosively because they carry more fuel, lower flammability, and lower heat loss than the old band; vegetation remains the fast-catching material.
+
+Accepted shader snapshot evidence for this tuning pass lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/`:
+
+- `single-ignition`, seed `21`, grid `5x5x1`, ticks `2`: fixture `single-ignition-seed21-5x5x1.fixture.json`, capture `single-ignition-seed21-5x5x1-tick2.capture.json`, checksum `visual-fnv1a32:50C4978E`, per-tick deltas `[5, 5]`, final hot cells `5`.
+- `line-of-fuel`, seed `42`, grid `12x5x1`, ticks `4`: fixture `line-of-fuel-seed42-12x5x1.fixture.json`, capture `line-of-fuel-seed42-12x5x1-tick4.capture.json`, checksum `visual-fnv1a32:120F70AE`, per-tick deltas `[5, 5, 5, 2]`, final hot cells `5`.
+- `water-barrier`, seed `42`, grid `12x5x1`, ticks `4`: fixture `water-barrier-seed42-12x5x1.fixture.json`, capture `water-barrier-seed42-12x5x1-tick4.capture.json`, checksum `visual-fnv1a32:40818F57`, per-tick deltas `[5, 5, 5, 5]`, final hot cells `1`.
+- Unity log evidence: `single-ignition-unity.log`, `line-of-fuel-unity.log`, and `water-barrier-unity.log`, all with `phase=compile`, `phase=buffer`, `phase=dispatch`, and `phase=readback` `status=ok` tokens.
+- Screenshot evidence: no live Timberborn screenshot was captured in the worker pass. QA must capture live screenshots after deploying these constants, and should attach the copied `Player.log` plus command evidence from the live sequence below before marking the ticket accepted.
+
+Regenerate the accepted TWF-043 snapshots with:
+
+```bash
+dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --seed=21 --width=5 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/single-ignition-seed21-5x5x1.fixture.json"
+"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-043/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/single-ignition-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/single-ignition-seed21-5x5x1.fixture.json" --shader ~/repos/wildfire-TWF-043/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/single-ignition-seed21-5x5x1-tick2.capture.json" --ticks 2
+dotnet run --project src/Wildfire.Cli -- --scenario=line-of-fuel --seed=42 --width=12 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/line-of-fuel-seed42-12x5x1.fixture.json"
+"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-043/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/line-of-fuel-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/line-of-fuel-seed42-12x5x1.fixture.json" --shader ~/repos/wildfire-TWF-043/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/line-of-fuel-seed42-12x5x1-tick4.capture.json" --ticks 4
+dotnet run --project src/Wildfire.Cli -- --scenario=water-barrier --seed=42 --width=12 --height=5 --depth=1 --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/water-barrier-seed42-12x5x1.fixture.json"
+"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-043/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/water-barrier-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/water-barrier-seed42-12x5x1.fixture.json" --shader ~/repos/wildfire-TWF-043/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-game-feel/water-barrier-seed42-12x5x1-tick4.capture.json" --ticks 4
+```
+
+Run the accepted TWF-043 shader harness assertions with:
+
+```bash
+WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
+```
+
+Live Timberborn QA for this tuning pass should deploy the mod, load and unpause a save, run `qa-delta-stimulus` or `qa-building-burnout-stimulus` for visible fire, run `qa-water-suppression-stimulus` plus `qa-readiness --require-advanced-tick --require-water-changed` for suppression proof, capture screenshots of the visible loop, and copy `Player.log` tokens showing the command request/result, queued GPU changes, compute dispatch/readback, visual/presentation update, and water-change consumer count.
 
 ## Timberborn Validation
 

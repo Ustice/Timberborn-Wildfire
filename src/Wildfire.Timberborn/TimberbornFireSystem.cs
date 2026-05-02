@@ -13,19 +13,19 @@ public sealed class TimberbornFireSystem : IDisposable
         terrain: 1,
         heatLoss: 1);
     private static readonly ushort QaBuildingBurnoutPrimedCell = PackedCell.Pack(
-        fuel: 12,
+        fuel: TimberbornBuildingAdapter.WoodLikeFuel,
         heat: 15,
-        flammability: 2,
+        flammability: TimberbornBuildingAdapter.WoodLikeFlammability,
         water: 0,
         terrain: 1,
-        heatLoss: 4);
+        heatLoss: TimberbornBuildingAdapter.WoodLikeHeatLoss);
     private static readonly ushort QaBuildingBurnoutSpentCell = PackedCell.Pack(
         fuel: 0,
         heat: 15,
-        flammability: 2,
+        flammability: TimberbornBuildingAdapter.WoodLikeFlammability,
         water: 0,
         terrain: 1,
-        heatLoss: 4);
+        heatLoss: TimberbornBuildingAdapter.WoodLikeHeatLoss);
     private const byte QaWaterSuppressionWater = 3;
 
     private readonly TimberbornFireCellMapper _cellMapper;

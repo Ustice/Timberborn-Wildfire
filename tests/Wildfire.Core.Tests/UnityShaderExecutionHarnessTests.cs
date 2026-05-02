@@ -1,4 +1,5 @@
 using Wildfire.Cli;
+using Wildfire.Core;
 using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
@@ -108,7 +109,9 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.Equal(singleIgnition.Grid, singleIgnitionCapture.Grid);
         Assert.Equal(singleIgnition.Grid.CellCount, singleIgnitionCapture.FinalPackedCells.Length);
         Assert.Equal(2, singleIgnitionCapture.Ticks.Length);
-        Assert.Equal("visual-fnv1a32:8710B4BB", singleIgnitionCapture.Visual?.Checksum);
+        Assert.Equal([5, 5], DeltaCounts(singleIgnitionCapture));
+        Assert.Equal(5, CountFinalHotCells(singleIgnitionCapture));
+        Assert.Equal("visual-fnv1a32:50C4978E", singleIgnitionCapture.Visual?.Checksum);
 
         ShaderSnapshotFixture lineOfFuel = CreateFixture(
             scenario: "line-of-fuel",
@@ -123,7 +126,36 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.Equal(lineOfFuel.Grid, lineOfFuelCapture.Grid);
         Assert.Equal(lineOfFuel.Grid.CellCount, lineOfFuelCapture.FinalPackedCells.Length);
         Assert.Equal(4, lineOfFuelCapture.Ticks.Length);
-        Assert.Equal("visual-fnv1a32:BFDB9857", lineOfFuelCapture.Visual?.Checksum);
+        Assert.Equal([5, 5, 5, 2], DeltaCounts(lineOfFuelCapture));
+        Assert.Equal(5, CountFinalHotCells(lineOfFuelCapture));
+        Assert.Equal("visual-fnv1a32:120F70AE", lineOfFuelCapture.Visual?.Checksum);
+
+        ShaderSnapshotFixture waterBarrier = CreateFixture(
+            scenario: "water-barrier",
+            seed: 42,
+            width: 12,
+            height: 5,
+            depth: 1);
+        ShaderSnapshotCapture waterBarrierCapture = harness.Capture(waterBarrier, tickCount: 4);
+
+        Assert.Equal(waterBarrier.Scenario, waterBarrierCapture.Scenario);
+        Assert.Equal(waterBarrier.Seed, waterBarrierCapture.Seed);
+        Assert.Equal(waterBarrier.Grid, waterBarrierCapture.Grid);
+        Assert.Equal(waterBarrier.Grid.CellCount, waterBarrierCapture.FinalPackedCells.Length);
+        Assert.Equal(4, waterBarrierCapture.Ticks.Length);
+        Assert.Equal([5, 5, 5, 5], DeltaCounts(waterBarrierCapture));
+        Assert.Equal(1, CountFinalHotCells(waterBarrierCapture));
+        Assert.Equal("visual-fnv1a32:40818F57", waterBarrierCapture.Visual?.Checksum);
+    }
+
+    private static int[] DeltaCounts(ShaderSnapshotCapture capture)
+    {
+        return capture.Ticks.Select(static tick => tick.DeltaCount).ToArray();
+    }
+
+    private static int CountFinalHotCells(ShaderSnapshotCapture capture)
+    {
+        return capture.FinalPackedCells.Count(static cell => PackedCell.Heat(cell) > 0);
     }
 
     private static ShaderSnapshotFixture CreateFixture(

@@ -82,9 +82,9 @@ public sealed class TimberbornTerrainAdapter
 
 public sealed class TimberbornBuildingAdapter
 {
-    public const byte WoodLikeFuel = 12;
-    public const byte WoodLikeFlammability = 2;
-    public const byte WoodLikeHeatLoss = 4;
+    public const byte WoodLikeFuel = 15;
+    public const byte WoodLikeFlammability = 1;
+    public const byte WoodLikeHeatLoss = 3;
     public const byte NonBurnableFuel = 0;
     public const byte NonBurnableFlammability = 0;
     public const byte NonBurnableHeatLoss = 7;
@@ -147,12 +147,12 @@ public sealed class TimberbornBuildingAdapter
 
 public sealed class TimberbornResourceAdapter
 {
-    public const byte StockpileResourceFuel = 6;
+    public const byte StockpileResourceFuel = 8;
     public const byte StockpileResourceFlammability = 2;
-    public const byte StockpileResourceHeatLoss = 4;
-    public const byte VegetationFuel = 9;
+    public const byte StockpileResourceHeatLoss = 3;
+    public const byte VegetationFuel = 10;
     public const byte VegetationFlammability = 3;
-    public const byte VegetationHeatLoss = 2;
+    public const byte VegetationHeatLoss = 1;
 
     public TimberbornCellSource CreateSource(
         int x,
