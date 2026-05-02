@@ -24,6 +24,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Timberborn pooled fire/smoke/ash effect routing: compact delta visual-effect events select bounded visual-field samples through `ITimberbornGpuVisualFieldSurface`, the adapter maintains a capped pool of active fire/smoke/ash presentation anchors instead of one object per simulated cell, visual presentation failures are isolated from gameplay consequences, and `qa-readiness`/`status` fields expose active pooled effects, last-dispatch updated regions, stable last-nonzero updated regions, presentation failures, and native-prefab visibility state.
 - Tuned visual-field output: `TWF-041` accepts named fire/smoke/ash/visibility constants in the C# mirror and `FireSim.compute`, two Unity shader checksum snapshots, and live Timberborn pooled-effect evidence for the tuned output.
 - Tuned fire game-feel output: `TWF-043` accepts named ignition, spread, burn, heat-loss, flammability-pressure, and water-suppression constants in `FireSim.compute`, Timberborn adapter material bands, and three Unity shader snapshots that assert semantic delta and hot-cell outcomes in addition to visual checksums.
+- Release scenario shader snapshots: `TWF-045` accepts seven real Unity compute captures for single ignition, line of fuel, water barrier, vertical fuel column, sparse forest, building cluster, and mixed terrain/fuel/water, with committed exact final packed-cell arrays, per-tick old/new delta records, visual checksums, logs, and normal-test append-counter reset coverage.
 - Timberborn debug fire overlay state: the adapter consumes compact deltas, filters them to visual-state changes, stores the latest packed cell only for affected overlay indices, derives fuel/heat/water/burning/spent state from that packed cell, and exposes per-dispatch updated-cell counters separately from the persistent overlay cell count.
 - Timberborn player-facing fire alert state: compact delta alert events are aggregated into at most one native quick warning per dispatch, warning text reports new fire cells, burned-out cells, and max heat, and status telemetry exposes the last player alert tick, counts, notification send state, and presentation failures.
 - Runtime diagnostics: Unity and Timberborn GPU paths emit concise `wildfire_*` tokens for simulator initialization/disposal, queued change batches, dispatch kernel start/completion with elapsed milliseconds, compact delta readback counts, listener notification counts, and adapter startup/shutdown without logging per-cell changes.
@@ -96,7 +97,7 @@ The real shader execution test is opt-in because it requires a local Unity Edito
 
 `TWF-005` adds .NET coverage for the visual-field data path only: the visual field is a `float4`-equivalent buffer handle, dispatch records carry it to the compute boundary, and shader source writes the visual sample from packed cell output. The TWF-018 Unity batchmode harness proves shader visual-field readback via checksum, but rendered pixels, GPU texture binding, and material sampling still need later visual validation.
 
-Future GPU validation should add accepted shader snapshot fixtures for:
+`TWF-045` adds accepted shader snapshot fixtures for the release behavior scenarios:
 
 - Single ignition point.
 - Line of fuel.
@@ -112,13 +113,13 @@ For each accepted snapshot, record:
 - Seed.
 - Grid dimensions.
 - Tick count.
-- Final packed cell grid.
+- Final packed cell grid or semantic final-cell summary.
 - Per-tick compact delta counts.
 - Per-tick compact delta records for changed cells only, with old and new packed values.
 - Evidence that the append-buffer counter is reset before each dispatch/readback cycle.
 - Visual field checksum or image artifact when useful.
 
-Update snapshots intentionally only after reviewing the diff scenario by scenario. Regenerate the CLI fixture, run the shader snapshot command, inspect final packed-cell differences and per-tick delta differences, and commit the changed accepted snapshot JSON with the rule or shader change that justifies it. Avoid broad visual-only approval for behavior changes.
+Update snapshots intentionally only after reviewing the diff scenario by scenario. Regenerate the CLI fixture, run the shader snapshot command, inspect final packed-cell differences, semantic summaries, and per-tick delta differences, and commit or record the changed accepted snapshot JSON with the rule or shader change that justifies it. Avoid broad visual-only approval for behavior changes.
 
 `TWF-041` accepted visual-output tuning constants are mirrored in `FireVisualField` and `FireSim.compute`:
 
@@ -198,6 +199,35 @@ WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unit
 ```
 
 Live Timberborn QA for this tuning pass should deploy the mod, load and unpause a save, run `qa-delta-stimulus` or `qa-building-burnout-stimulus` for visible fire, run `qa-water-suppression-stimulus` plus `qa-readiness --require-advanced-tick --require-water-changed` for suppression proof, capture screenshots of the visible loop, and copy `Player.log` tokens showing the command request/result, queued GPU changes, compute dispatch/readback, visual/presentation update, and water-change consumer count.
+
+## Release Shader Snapshot Evidence
+
+`TWF-045` accepts the release shader snapshot set after the `TWF-043` game-feel tuning and `TWF-044` conservative release decisions. Exact accepted capture JSONs are committed under `tests/Wildfire.Core.Tests/ShaderSnapshots/release/`; those files contain the durable `finalPackedCells` arrays and every per-tick delta record with `cellIndex`, `oldCell`, and `newCell`. Local fixture, capture, and Unity log mirrors live under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-045-release-snapshots/`.
+
+| Scenario | Seed | Grid | Ticks | Per-tick deltas | Final semantic summary | Visual checksum | Accepted files |
+| --- | ---: | --- | ---: | --- | --- | --- | --- |
+| `single-ignition` | `21` | `5x5x1` | `2` | `[5, 5]` | hot `5`, burning `0`, max heat `7`, water cells `0`, fuel total `175` | `visual-fnv1a32:50C4978E` | `single-ignition-seed21-5x5x1.fixture.json`, `single-ignition-seed21-5x5x1-tick2.capture.json`, `single-ignition-unity.log` |
+| `line-of-fuel` | `42` | `12x5x1` | `4` | `[5, 5, 5, 2]` | hot `5`, burning `1`, max heat `12`, water cells `0`, fuel total `104` | `visual-fnv1a32:120F70AE` | `line-of-fuel-seed42-12x5x1.fixture.json`, `line-of-fuel-seed42-12x5x1-tick4.capture.json`, `line-of-fuel-unity.log` |
+| `water-barrier` | `42` | `12x5x1` | `4` | `[5, 5, 5, 5]` | hot `1`, burning `0`, max heat `2`, water cells `5`, fuel total `385` | `visual-fnv1a32:40818F57` | `water-barrier-seed42-12x5x1.fixture.json`, `water-barrier-seed42-12x5x1-tick4.capture.json`, `water-barrier-unity.log` |
+| `vertical-fuel-column` | `17` | `5x5x4` | `4` | `[6, 6, 2, 1]` | hot `6`, burning `1`, max heat `11`, water cells `0`, fuel total `44` | `visual-fnv1a32:5F05530F` | `vertical-fuel-column-seed17-5x5x4.fixture.json`, `vertical-fuel-column-seed17-5x5x4-tick4.capture.json`, `vertical-fuel-column-unity.log` |
+| `sparse-forest` | `73` | `16x10x1` | `3` | `[5, 5, 5]` | hot `5`, burning `1`, max heat `12`, water cells `0`, fuel total `978` | `visual-fnv1a32:E4355BFA` | `sparse-forest-seed73-16x10x1.fixture.json`, `sparse-forest-seed73-16x10x1-tick3.capture.json`, `sparse-forest-tick3-unity.log` |
+| `building-cluster` | `91` | `14x10x1` | `3` | `[5, 1, 5]` | hot `1`, burning `0`, max heat `1`, water cells `0`, fuel total `1179` | `visual-fnv1a32:D12ED5D7` | `building-cluster-seed91-14x10x1.fixture.json`, `building-cluster-seed91-14x10x1-tick3.capture.json`, `building-cluster-tick3-unity.log` |
+| `mixed-terrain` | `123` | `16x10x3` | `3` | `[6, 6, 6]` | hot `5`, burning `0`, max heat `4`, water cells `10`, fuel total `3286` | `visual-fnv1a32:67BFDEEA` | `mixed-terrain-seed123-16x10x3.fixture.json`, `mixed-terrain-seed123-16x10x3-tick3.capture.json`, `mixed-terrain-tick3-unity.log` |
+
+Each Unity log has `phase=compile`, `phase=buffer`, per-tick `phase=dispatch`, and per-tick `phase=readback` `status=ok` tokens. The opt-in test `UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled` regenerates each scenario through real Unity compute execution and compares the full capture against the committed JSON with `ShaderSnapshotComparison`, so a moved heat/fuel/water value or changed old/new delta record fails even if aggregate totals remain unchanged. Per-tick GPU append order is not part of the production contract; comparison sorts expected and actual delta records by `cellIndex`, `oldCell`, and `newCell` before comparing the record set. The Unity batchmode runner resets the append-buffer counter with `deltas.SetCounterValue(0)` before every tick dispatch, reads it with `ComputeBuffer.CopyCount`, and the non-Unity wrapper test `TickResetsAppendCounterBeforeEveryFullGridDispatch` keeps the repeated-tick reset contract covered in normal `dotnet test`.
+
+Regenerate one accepted snapshot with:
+
+```bash
+dotnet run --project src/Wildfire.Cli -- --scenario=<scenario> --seed=<seed> --width=<width> --height=<height> --depth=<depth> --layer=0 --export-fixture="$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-045-release-snapshots/<fixture>.fixture.json"
+"/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath ~/repos/wildfire-TWF-045/src/Wildfire.Unity/UnityBatchmodeProject -executeMethod Wildfire.UnityBatchmode.FireSimBatchmodeRunner.Capture -logFile "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-045-release-snapshots/<scenario>-unity.log" -- --fixture "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-045-release-snapshots/<fixture>.fixture.json" --shader ~/repos/wildfire-TWF-045/src/Wildfire.Unity/FireSim.compute --output "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-045-release-snapshots/<capture>.capture.json" --ticks <ticks>
+```
+
+Run the accepted release snapshot assertions with:
+
+```bash
+WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
+```
 
 ## Timberborn Validation
 

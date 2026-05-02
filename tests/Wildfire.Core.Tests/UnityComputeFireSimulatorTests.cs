@@ -51,6 +51,43 @@ public sealed class UnityComputeFireSimulatorTests
     }
 
     [Fact]
+    public void TickResetsAppendCounterBeforeEveryFullGridDispatch()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 3,
+            height: 1,
+            depth: 1,
+            new ushort[3],
+            allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            BeforeDispatch = dispatch =>
+            {
+                if (dispatch.KernelName == UnityComputeFireSimulator.FullGridKernelName)
+                {
+                    Assert.Equal((int)dispatch.Tick, deltas.ResetAppendCounterCalls);
+                }
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+
+        simulator.Tick();
+        simulator.Tick();
+
+        Assert.Equal(2, deltas.ResetAppendCounterCalls);
+        Assert.Equal(2, deltas.ReadAppendCounterCalls);
+        Assert.Equal(
+            [
+                UnityComputeFireSimulator.FullGridKernelName,
+                UnityComputeFireSimulator.FullGridKernelName,
+            ],
+            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
+    }
+
+    [Fact]
     public void TickReturnsCompactDeltasAfterReadback()
     {
         RecordingComputeBufferAllocator allocator = new();

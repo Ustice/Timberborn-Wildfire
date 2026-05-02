@@ -194,7 +194,7 @@ public static class ScenarioCatalog
 
     private static ushort Timber() => PackedCell.Pack(fuel: 12, heat: 0, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
 
-    private static ushort Building() => PackedCell.Pack(fuel: 15, heat: 0, flammability: 2, water: 0, terrain: 1, heatLoss: 1);
+    private static ushort Building() => PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, heatLoss: 3);
 
     private static ushort Water() => PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 3, terrain: 1, heatLoss: 5);
 }

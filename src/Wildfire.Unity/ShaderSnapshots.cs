@@ -474,13 +474,24 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
         AddIfDifferent(differences, $"ticks[{expected.Tick}].deltaCount", expected.DeltaCount, actual.DeltaCount, maxDifferences);
         AddIfDifferent(differences, $"ticks[{expected.Tick}].deltas.length", expected.Deltas.Length, actual.Deltas.Length, maxDifferences);
 
+        ShaderSnapshotDelta[] expectedDeltas = SortDeltas(expected.Deltas);
+        ShaderSnapshotDelta[] actualDeltas = SortDeltas(actual.Deltas);
         int compareLength = Math.Min(expected.Deltas.Length, actual.Deltas.Length);
         Enumerable.Range(0, compareLength)
-            .Where(index => !expected.Deltas[index].Equals(actual.Deltas[index]))
+            .Where(index => !expectedDeltas[index].Equals(actualDeltas[index]))
             .Take(Math.Max(0, maxDifferences - differences.Count))
-            .Select(index => FormatDeltaDifference(expected.Tick, index, expected.Deltas[index], actual.Deltas[index]))
+            .Select(index => FormatDeltaDifference(expected.Tick, index, expectedDeltas[index], actualDeltas[index]))
             .ToList()
             .ForEach(differences.Add);
+    }
+
+    private static ShaderSnapshotDelta[] SortDeltas(ShaderSnapshotDelta[] deltas)
+    {
+        return deltas
+            .OrderBy(static delta => delta.CellIndex)
+            .ThenBy(static delta => delta.OldCell)
+            .ThenBy(static delta => delta.NewCell)
+            .ToArray();
     }
 
     private static void AddVisualDifferences(

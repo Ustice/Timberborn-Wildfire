@@ -96,6 +96,75 @@ public sealed class ShaderSnapshotHarnessTests
     }
 
     [Fact]
+    public void ComparisonTreatsPerTickDeltaOrderingAsUnstable()
+    {
+        ShaderSnapshotCapture expected = CreateCapture(
+            finalPackedCells: [0x1001, 0x1002, 0x1003],
+            ticks:
+            [
+                new ShaderSnapshotTick(
+                    1,
+                    3,
+                    [
+                        new ShaderSnapshotDelta(2, 0x1002, 0x1003),
+                        new ShaderSnapshotDelta(0, 0x1000, 0x1001),
+                        new ShaderSnapshotDelta(1, 0x1001, 0x1002),
+                    ]),
+            ]);
+        ShaderSnapshotCapture actual = CreateCapture(
+            finalPackedCells: [0x1001, 0x1002, 0x1003],
+            ticks:
+            [
+                new ShaderSnapshotTick(
+                    1,
+                    3,
+                    [
+                        new ShaderSnapshotDelta(1, 0x1001, 0x1002),
+                        new ShaderSnapshotDelta(2, 0x1002, 0x1003),
+                        new ShaderSnapshotDelta(0, 0x1000, 0x1001),
+                    ]),
+            ]);
+
+        ShaderSnapshotComparison comparison = ShaderSnapshotComparison.Create(expected, actual);
+
+        Assert.True(comparison.Matches);
+    }
+
+    [Fact]
+    public void ComparisonStillFailsWhenSortedDeltaRecordsDiffer()
+    {
+        ShaderSnapshotCapture expected = CreateCapture(
+            finalPackedCells: [0x1001, 0x1002, 0x1003],
+            ticks:
+            [
+                new ShaderSnapshotTick(
+                    1,
+                    2,
+                    [
+                        new ShaderSnapshotDelta(0, 0x1000, 0x1001),
+                        new ShaderSnapshotDelta(1, 0x1001, 0x1002),
+                    ]),
+            ]);
+        ShaderSnapshotCapture actual = CreateCapture(
+            finalPackedCells: [0x1001, 0x1002, 0x1003],
+            ticks:
+            [
+                new ShaderSnapshotTick(
+                    1,
+                    2,
+                    [
+                        new ShaderSnapshotDelta(1, 0x1001, 0x2002),
+                        new ShaderSnapshotDelta(0, 0x1000, 0x1001),
+                    ]),
+            ]);
+
+        ShaderSnapshotComparison comparison = ShaderSnapshotComparison.Create(expected, actual);
+
+        Assert.False(comparison.Matches);
+        Assert.Contains("ticks[1].deltas[1] expected cell 1 0x1001->0x1002, got cell 1 0x1001->0x2002.", comparison.Differences);
+    }
+
+    [Fact]
     public void BlockedExecutorMakesEnvironmentBlockerExplicit()
     {
         ShaderSnapshotHarness harness = new(new BlockedShaderSnapshotExecutor(ShaderSnapshotExecutionBlocker.CurrentRepository));

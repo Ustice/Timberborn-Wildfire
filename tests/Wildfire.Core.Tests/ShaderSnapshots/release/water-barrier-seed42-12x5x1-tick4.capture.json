@@ -1,0 +1,208 @@
+{
+  "formatVersion": 1,
+  "scenario": "water-barrier",
+  "seed": 42,
+  "grid": {
+    "width": 12,
+    "height": 5,
+    "depth": 1
+  },
+  "tickCount": 4,
+  "finalPackedCells": [
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    48128,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    48128,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    21031,
+    20999,
+    20999,
+    48128,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    48128,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    48128,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999
+  ],
+  "perTickDeltaCounts": [
+    5,
+    5,
+    5,
+    5
+  ],
+  "perTickDeltas": [
+    {
+      "tick": 1,
+      "deltaCount": 5,
+      "deltas": [
+        {
+          "cellIndex": 15,
+          "oldCell": 20999,
+          "newCell": 21031
+        },
+        {
+          "cellIndex": 26,
+          "oldCell": 20999,
+          "newCell": 21031
+        },
+        {
+          "cellIndex": 27,
+          "oldCell": 21240,
+          "newCell": 21191
+        },
+        {
+          "cellIndex": 28,
+          "oldCell": 20999,
+          "newCell": 21031
+        },
+        {
+          "cellIndex": 39,
+          "oldCell": 20999,
+          "newCell": 21031
+        }
+      ]
+    },
+    {
+      "tick": 2,
+      "deltaCount": 5,
+      "deltas": [
+        {
+          "cellIndex": 15,
+          "oldCell": 21031,
+          "newCell": 21047
+        },
+        {
+          "cellIndex": 26,
+          "oldCell": 21031,
+          "newCell": 21047
+        },
+        {
+          "cellIndex": 27,
+          "oldCell": 21191,
+          "newCell": 21111
+        },
+        {
+          "cellIndex": 28,
+          "oldCell": 21031,
+          "newCell": 21047
+        },
+        {
+          "cellIndex": 39,
+          "oldCell": 21031,
+          "newCell": 21047
+        }
+      ]
+    },
+    {
+      "tick": 3,
+      "deltaCount": 5,
+      "deltas": [
+        {
+          "cellIndex": 15,
+          "oldCell": 21047,
+          "newCell": 21015
+        },
+        {
+          "cellIndex": 26,
+          "oldCell": 21047,
+          "newCell": 21015
+        },
+        {
+          "cellIndex": 27,
+          "oldCell": 21111,
+          "newCell": 21063
+        },
+        {
+          "cellIndex": 28,
+          "oldCell": 21047,
+          "newCell": 21015
+        },
+        {
+          "cellIndex": 39,
+          "oldCell": 21047,
+          "newCell": 21015
+        }
+      ]
+    },
+    {
+      "tick": 4,
+      "deltaCount": 5,
+      "deltas": [
+        {
+          "cellIndex": 15,
+          "oldCell": 21015,
+          "newCell": 20999
+        },
+        {
+          "cellIndex": 26,
+          "oldCell": 21015,
+          "newCell": 20999
+        },
+        {
+          "cellIndex": 27,
+          "oldCell": 21063,
+          "newCell": 21031
+        },
+        {
+          "cellIndex": 28,
+          "oldCell": 21015,
+          "newCell": 20999
+        },
+        {
+          "cellIndex": 39,
+          "oldCell": 21015,
+          "newCell": 20999
+        }
+      ]
+    }
+  ],
+  "visual": {
+    "checksum": "visual-fnv1a32:40818F57"
+  }
+}
