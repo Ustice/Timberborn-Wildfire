@@ -6,6 +6,10 @@ requires_qa: true
 doc_only: false
 dependencies:
    - TWF-046
+   - TWF-066
+   - TWF-067
+   - TWF-068
+   - TWF-069
 write_scope:
    - docs/**
    - release/**
@@ -34,6 +38,7 @@ Players need to understand Wildfire before installing it. A release needs a thum
 ## Dependencies
 
 - `TWF-046` proves the coherent live gameplay loop that screenshots and copy should describe.
+- `TWF-066` through `TWF-069` provide the tuned visual-effect and behavior evidence that release media should not get ahead of.
 
 ## Role
 
