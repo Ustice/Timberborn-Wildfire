@@ -11,6 +11,7 @@ dependencies:
    - TWF-068
    - TWF-070
    - TWF-069
+   - TWF-074
 write_scope:
    - docs/**
    - release/**
@@ -39,7 +40,8 @@ Players need to understand Wildfire before installing it. A release needs a thum
 ## Dependencies
 
 - `TWF-046` proves the coherent live gameplay loop that screenshots and copy should describe.
-- `TWF-066` through `TWF-070` provide the tuned visual-effect and behavior evidence that release media should not get ahead of.
+- `TWF-066` through `TWF-070` provide the tuned visual-effect and fire-behavior evidence that release media should not get ahead of.
+- `TWF-074` proves beaver behavior in wildfire fields before release screenshots or copy imply more than the game does.
 
 ## Role
 

@@ -65,6 +65,7 @@
 - `TWF-052` through `TWF-063` are todo for Sprint 6: GitHub CI/CD, release packaging, release graphics/metadata, player docs, changelog/versioning, cross-platform bundle validation, clean-install release-candidate QA, release debug-surface scrub, license/attribution, support templates, and Steam Workshop distribution as the official first channel.
 - `TWF-064` is todo as a Sprint 5 hardening follow-up from `TWF-046`: investigate why building-burnout QA matched a building cell but did not apply a pausable-building pause consequence in that loaded save.
 - `TWF-065` through `TWF-070` are todo for the next tuning phase: add high-resolution and low-resolution screen recording tooling, then tune fire, smoke, ash, steam, and fire behavior as separate evidence loops.
+- `TWF-071` through `TWF-074` are todo for beaver field behavior: define field effects on beavers, add exposure telemetry, implement accepted behavior, and validate it with recordings.
 - QA now owns live Timberborn builds, deployments, launches, restarts, and the shared deploy/QA lock for verification runs.
 
 ## Next Exact Action
@@ -74,6 +75,7 @@ Continue with:
 - Sprint 4 is closed. Start Sprint 5 with `TWF-047` through `TWF-051`, include `TWF-064` as the building-burnout consequence hardening follow-up, and add `TWF-065` as the first tuning-enabler ticket.
 - Prioritize save/reload disable/re-enable validation first, then recording tooling, then release hardening around settings, compatibility probes, GPU/asset failure behavior, building-burnout pause telemetry, and the active-frontier decision.
 - Do not treat visual tuning as one ticket: `TWF-066`, `TWF-067`, `TWF-068`, `TWF-070`, and `TWF-069` intentionally split fire effect, smoke effect, ash effect, steam effect, and fire behavior tuning so each can use the right recording evidence.
+- Do not implement beaver reactions before `TWF-071` defines the contract. Start with exposure telemetry in `TWF-072`, then implement accepted behavior in `TWF-073`, then require recording evidence in `TWF-074`.
 - Keep `TWF-015` deferred unless `TWF-030` is abandoned; it is superseded by the newer startup/load/unpause utility.
 - Keep `TWF-011` deferred. `TWF-034` worker profiling over `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z/Player.log` observed ticks `1..43`, `43` full-grid dispatches, median dispatch wrapper time `2.737 ms`, p95 `4.846 ms`, max `6.014 ms`, and `SimulateFullGrid` kernel timing median `0.019 ms`, p95 `0.039 ms`, max `0.057 ms`. The non-zero stimulus ticks were `30:2@5.937 ms`, `31:1@4.308 ms`, `32:1@1.86 ms`, `33:1@3.055 ms`, and `34:1@4.178 ms`, with consumer counters reaching `max_changed_cells=2`, `max_visual_effect_events=2`, `max_gameplay_consequences=1`, and `max_alerts=1`.
 - Use `bun scripts/summarize-dispatch-profile.ts "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z"` to regenerate the TWF-034 timing summary from the preserved artifact.
