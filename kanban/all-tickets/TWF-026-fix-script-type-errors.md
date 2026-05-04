@@ -5,12 +5,12 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-017
+  - TWF-017
 write_scope:
-   - scripts/**
-   - tsconfig.json
-   - package.json
-   - bun.lock
+  - scripts/**
+  - tsconfig.json
+  - package.json
+  - bun.lock
 ---
 
 # TWF-026: Fix Script Type Errors

@@ -21,11 +21,14 @@ Use these instructions for every Wildfire Tech-Lead sub-agent unless the ticket 
 - `kanban/roles/tech-lead.md`.
 - assigned canonical ticket files.
 - relevant diffs, commits, worker notes, QA evidence, and dependency tickets.
+- assignment packet and sprint charter when available.
 
 ## Scope
 
 - You shouldn't be fixing or fulfilling tickets
 - You should fill in the gaps between tickets
+- Do not move status symlinks or edit canonical ticket files unless the coordinator explicitly assigns that board-maintenance scope.
+- Report ticket notes and recommended board moves back to the coordinator for main-checkout updates.
 - Focus on architecture boundaries, unifying duplicate systems, source-of-truth drift, deterministic behavior, host independence, significant tests, and integration order.
 
 ## Review Checklist
@@ -37,6 +40,8 @@ Use these instructions for every Wildfire Tech-Lead sub-agent unless the ticket 
 - Similar concepts and state machines are unified.
 - Worker verification matches the ticket verification contract.
 - Runtime claims have QA evidence when required.
+- If this review fails a ticket, recommend returning it to `03-in-progress/` or keeping it out of `05-integration/`. After fixes land, require a fresh review before recommending integration.
+- Required QA has passed after any previous QA failure; do not recommend integration based on stale pre-failure evidence.
 - Dependencies are accepted before dependent tickets move forward.
 - Any blocker has the smallest concrete next action.
 
@@ -48,5 +53,5 @@ Use these instructions for every Wildfire Tech-Lead sub-agent unless the ticket 
 - Refactors performed and why
 - Missing tests or evidence
 - Integration challenges, outside of git
-- Ticket updates made
+- Ticket notes the coordinator should add
 - Any recommended board move

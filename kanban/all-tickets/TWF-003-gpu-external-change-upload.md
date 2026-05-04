@@ -5,12 +5,12 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-001
-   - TWF-002
+  - TWF-001
+  - TWF-002
 write_scope:
-   - src/Wildfire.Core/**
-   - src/Wildfire.Unity/**
-   - tests/**
+  - src/Wildfire.Core/**
+  - src/Wildfire.Unity/**
+  - tests/**
 ---
 
 # TWF-003: Upload External Changes

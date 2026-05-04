@@ -5,12 +5,12 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-013
-   - TWF-020
-   - TWF-024
+  - TWF-013
+  - TWF-020
+  - TWF-024
 write_scope:
-   - docs/timberborn-bottom-menu-guide.md
-   - docs/reference/screenshots/timberborn-bottom-menu-guide/**
+  - docs/timberborn-bottom-menu-guide.md
+  - docs/reference/screenshots/timberborn-bottom-menu-guide/**
 ---
 
 # TWF-025: Create Bottom Menu Screenshot Guide
@@ -71,43 +71,43 @@ Future QA automation and Timberborn UI work need a reliable visual map of the bo
 
 ## Coverage Checklist
 
-| Item | Source | Composite | Status |
-| --- | --- | --- | --- |
-| Loaded-save HUD baseline | `01-loaded-save-hud.png` | `composite-bottom-menu-reference.png` | Captured |
-| Root selector | `01-selector.png` | `composite-bottom-menu-reference.png` | Captured |
-| Paths/structures submenu | `02-paths-structures.png` | `composite-bottom-menu-reference.png` | Captured |
-| Plants/food submenu | `03-food-farming.png` | `composite-bottom-menu-reference.png` | Captured |
-| Cutting/nature submenu | `04-nature-wood.png` | `composite-bottom-menu-reference.png` | Captured |
-| Terrain/landscaping submenu | `05-landscaping.png` | `composite-bottom-menu-reference.png` | Captured |
-| Housing/priorities item | `06-housing.png` | `composite-bottom-menu-reference.png` | Captured; no build strip appeared |
-| Beaver item | `07-beavers.png` | `composite-bottom-menu-reference.png` | Captured; no build strip appeared |
-| Labor/builder item | `08-labor-builder.png` | `composite-bottom-menu-reference.png` | Captured; no build strip appeared |
-| Water brush panel | `09-water.png` | `composite-bottom-menu-reference.png` | Captured |
-| Route/path submenu | `10-path-routing.png` | `composite-bottom-menu-reference.png` | Captured |
-| Platform/water structure submenu | `11-water-platforms.png` | `composite-bottom-menu-reference.png` | Captured |
-| Storage submenu | `12-storage.png` | `composite-bottom-menu-reference.png` | Captured |
-| Decoration submenu | `13-decoration.png` | `composite-bottom-menu-reference.png` | Captured |
-| Knowledge/books submenu | `14-books-knowledge.png` | `composite-bottom-menu-reference.png` | Captured |
-| Fluid/water infrastructure submenu | `15-fluid-water.png` | `composite-bottom-menu-reference.png` | Captured |
-| Food/carrots submenu | `16-food-carrot.png` | `composite-bottom-menu-reference.png` | Captured |
-| Wood/logs submenu | `17-wood-logs.png` | `composite-bottom-menu-reference.png` | Captured |
-| Wellbeing/star submenu | `18-wellbeing-star.png` | `composite-bottom-menu-reference.png` | Captured |
-| Industry/gears submenu | `19-industry-gears.png` | `composite-bottom-menu-reference.png` | Captured |
-| Science submenu | `20-science.png` | `composite-bottom-menu-reference.png` | Captured |
-| Lighting submenu | `21-lighting.png` | `composite-bottom-menu-reference.png` | Captured |
-| Wellbeing/masks submenu | `22-wellbeing-masks.png` | `composite-bottom-menu-reference.png` | Captured |
-| District/services submenu | `23-district-services.png` | `composite-bottom-menu-reference.png` | Captured |
-| Leisure/chair single-item expansion | `24-leisure-chair.png` | `composite-bottom-menu-reference.png` | Captured |
-| More submenu | `25-more.png` | `composite-bottom-menu-reference.png` | Captured |
-| Irrigation/water submenu | `26-irrigation-water.png` | `composite-bottom-menu-reference.png` | Captured |
-| Goods/cube submenu | `27-goods-cube.png` | `composite-bottom-menu-reference.png` | Captured |
-| Foliage/plants submenu | `28-foliage.png` | `composite-bottom-menu-reference.png` | Captured |
-| Version/mod button | `29-version-mod.png` | `composite-bottom-menu-reference.png` | Captured; opens pause/version panel instead of build submenu |
-| Developer mode toggle `Shift-Alt-Z` | `31-developer-menu-alt-shift-z.png` | Both composites | Captured |
-| Debug panel toggle `Shift-Alt-X` | `33-debug-panel-alt-shift-x.png` | Both composites | Captured |
-| Object selected with debug panels | `34-debug-panel-object-selected.png` | `composite-dev-debug-panels.png` | Captured |
-| Expanded debug mode panel | `35-debug-mode-panel-expanded.png` | `composite-dev-debug-panels.png` | Captured |
-| Expanded object debugger | `36-object-debugger-panel-expanded.png` | `composite-dev-debug-panels.png` | Captured |
+| Item                                | Source                                  | Composite                             | Status                                                       |
+| ----------------------------------- | --------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| Loaded-save HUD baseline            | `01-loaded-save-hud.png`                | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Root selector                       | `01-selector.png`                       | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Paths/structures submenu            | `02-paths-structures.png`               | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Plants/food submenu                 | `03-food-farming.png`                   | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Cutting/nature submenu              | `04-nature-wood.png`                    | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Terrain/landscaping submenu         | `05-landscaping.png`                    | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Housing/priorities item             | `06-housing.png`                        | `composite-bottom-menu-reference.png` | Captured; no build strip appeared                            |
+| Beaver item                         | `07-beavers.png`                        | `composite-bottom-menu-reference.png` | Captured; no build strip appeared                            |
+| Labor/builder item                  | `08-labor-builder.png`                  | `composite-bottom-menu-reference.png` | Captured; no build strip appeared                            |
+| Water brush panel                   | `09-water.png`                          | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Route/path submenu                  | `10-path-routing.png`                   | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Platform/water structure submenu    | `11-water-platforms.png`                | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Storage submenu                     | `12-storage.png`                        | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Decoration submenu                  | `13-decoration.png`                     | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Knowledge/books submenu             | `14-books-knowledge.png`                | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Fluid/water infrastructure submenu  | `15-fluid-water.png`                    | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Food/carrots submenu                | `16-food-carrot.png`                    | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Wood/logs submenu                   | `17-wood-logs.png`                      | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Wellbeing/star submenu              | `18-wellbeing-star.png`                 | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Industry/gears submenu              | `19-industry-gears.png`                 | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Science submenu                     | `20-science.png`                        | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Lighting submenu                    | `21-lighting.png`                       | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Wellbeing/masks submenu             | `22-wellbeing-masks.png`                | `composite-bottom-menu-reference.png` | Captured                                                     |
+| District/services submenu           | `23-district-services.png`              | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Leisure/chair single-item expansion | `24-leisure-chair.png`                  | `composite-bottom-menu-reference.png` | Captured                                                     |
+| More submenu                        | `25-more.png`                           | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Irrigation/water submenu            | `26-irrigation-water.png`               | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Goods/cube submenu                  | `27-goods-cube.png`                     | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Foliage/plants submenu              | `28-foliage.png`                        | `composite-bottom-menu-reference.png` | Captured                                                     |
+| Version/mod button                  | `29-version-mod.png`                    | `composite-bottom-menu-reference.png` | Captured; opens pause/version panel instead of build submenu |
+| Developer mode toggle `Shift-Alt-Z` | `31-developer-menu-alt-shift-z.png`     | Both composites                       | Captured                                                     |
+| Debug panel toggle `Shift-Alt-X`    | `33-debug-panel-alt-shift-x.png`        | Both composites                       | Captured                                                     |
+| Object selected with debug panels   | `34-debug-panel-object-selected.png`    | `composite-dev-debug-panels.png`      | Captured                                                     |
+| Expanded debug mode panel           | `35-debug-mode-panel-expanded.png`      | `composite-dev-debug-panels.png`      | Captured                                                     |
+| Expanded object debugger            | `36-object-debugger-panel-expanded.png` | `composite-dev-debug-panels.png`      | Captured                                                     |
 
 ## Intentional Omissions
 

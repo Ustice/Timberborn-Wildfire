@@ -6,6 +6,7 @@ Use this page as the startup map for humans and agents.
 
 - [DESIGN.md](DESIGN.md) owns the simulation and gameplay design.
 - [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
+- [world-consequence-first-pass.md](world-consequence-first-pass.md) owns the current first-pass plan for stored-item consequences, generated scenario saves, and faction fire-response ideas.
 - [HANDOFF.md](HANDOFF.md) owns current status, blockers, and next exact action.
 - [TEST_PLAN.md](TEST_PLAN.md) owns validation strategy and evidence expectations.
 - [reference/timberborn-ui.md](reference/timberborn-ui.md) owns Timberborn UI design-system notes for adapter-facing UI.

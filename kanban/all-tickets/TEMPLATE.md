@@ -6,7 +6,7 @@ requires_qa: false
 doc_only: false
 dependencies: []
 write_scope:
-   - path/or/glob
+  - path/or/glob
 ---
 
 # TWF-000: Short Imperative Title

@@ -5,24 +5,27 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-046
-   - TWF-066
-   - TWF-067
-   - TWF-068
-   - TWF-070
-   - TWF-069
-   - TWF-074
+  - TWF-046
+  - TWF-066
+  - TWF-067
+  - TWF-068
+  - TWF-070
+  - TWF-069
+  - TWF-074
+  - TWF-100
+  - TWF-101
+  - TWF-102
 write_scope:
-   - docs/**
-   - release/**
-   - kanban/all-tickets/TWF-055-create-release-graphic-and-metadata.md
+  - docs/**
+  - release/**
+  - kanban/all-tickets/TWF-055-create-release-graphic-and-metadata.md
 ---
 
 # TWF-055: Create Release Graphic And Metadata
 
 ## Goal
 
-Create the release graphic, screenshot set, and store metadata needed for Steam Workshop release preparation.
+Integrate the release graphic, screenshot set, and store metadata needed for Steam Workshop release preparation.
 
 ## Why
 
@@ -30,9 +33,9 @@ Players need to understand Wildfire before installing it. A release needs a thum
 
 ## Requirements
 
-- Create or collect a release thumbnail/key graphic suitable for Steam Workshop.
-- Capture at least one live in-game screenshot from the coherent gameplay loop.
-- Write short description, long description, feature bullets, compatibility notes, and known limitations.
+- Confirm `TWF-100` creates or collects a release thumbnail/key graphic suitable for Steam Workshop.
+- Confirm `TWF-101` captures the live in-game release screenshot set.
+- Confirm `TWF-102` writes release copy and metadata.
 - Store source metadata in a durable repo path such as `release/` or a documented docs path.
 - Track image source, generation prompt, screenshot source, and license/attribution needs.
 - Keep the description honest about current limitations.
@@ -56,3 +59,4 @@ Players need to understand Wildfire before installing it. A release needs a thum
 ## Notes
 
 - If generated art is used, preserve prompt/source details for `TWF-061`.
+- Child tickets: `TWF-100`, `TWF-101`, and `TWF-102`.

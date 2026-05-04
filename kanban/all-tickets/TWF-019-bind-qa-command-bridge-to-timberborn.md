@@ -5,12 +5,12 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-012
-   - TWF-016
+  - TWF-012
+  - TWF-016
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - scripts/**
-   - docs/TEST_PLAN.md
+  - src/Wildfire.Timberborn/**
+  - scripts/**
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-019: Bind QA Command Bridge To Timberborn
@@ -63,11 +63,10 @@ Expose the `TWF-012` command bridge through a narrow Timberborn runtime surface 
 - Implemented the first binding as a game-context Bindito singleton in `Wildfire.Timberborn`, not in `Wildfire.Core`.
 - Binding surface is a local file inbox/outbox under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/`.
 - Runtime command path:
-
-   1. QA writes `status` or `help` to `command-inbox.txt`, preferably with `bun scripts/invoke-timberborn-command.ts status`.
-   2. `TimberbornQaCommandFileBridge` polls from the loaded game, deletes the inbox, and forwards the command to `TimberbornQaCommandBridge`.
-   3. `UnityTimberbornQaCommandLogSink` writes `wildfire_command_request` and `wildfire_command_result` to `Player.log`.
-   4. The latest result token is written to `command-outbox.txt`.
+  1. QA writes `status` or `help` to `command-inbox.txt`, preferably with `bun scripts/invoke-timberborn-command.ts status`.
+  2. `TimberbornQaCommandFileBridge` polls from the loaded game, deletes the inbox, and forwards the command to `TimberbornQaCommandBridge`.
+  3. `UnityTimberbornQaCommandLogSink` writes `wildfire_command_request` and `wildfire_command_result` to `Player.log`.
+  4. The latest result token is written to `command-outbox.txt`.
 
 - The helper script rejects unknown commands before writing the inbox. Manual unknown inbox files still reach the safe bridge rejection path and log a failure token.
 

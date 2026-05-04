@@ -5,14 +5,14 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-036
-   - TWF-037
+  - TWF-036
+  - TWF-037
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/reference/timberborn-ui.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-042-add-player-facing-fire-alert.md
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/reference/timberborn-ui.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-042-add-player-facing-fire-alert.md
 ---
 
 # TWF-042: Add Player-Facing Fire Alert

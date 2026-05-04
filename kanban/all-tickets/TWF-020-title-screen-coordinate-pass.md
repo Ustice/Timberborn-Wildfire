@@ -5,10 +5,10 @@ role: qa
 requires_qa: true
 doc_only: true
 dependencies:
-   - TWF-013
+  - TWF-013
 write_scope:
-   - docs/timberborn-menu-coordinate-guide.md
-   - docs/reference/**
+  - docs/timberborn-menu-coordinate-guide.md
+  - docs/reference/**
 ---
 
 # TWF-020: Capture Timberborn Title Screen Coordinates
@@ -57,27 +57,27 @@ Extend the Timberborn coordinate guide with opening-screen and standalone main-m
 - Version evidence: `Player.log` reports `Starting game version 1.0.13.0-1e60728-xsm`.
 - Commands attempted:
 
-   ```bash
-   osascript -e 'tell application id "com.mechanistry.timberborn" to activate'
-   screencapture -x docs/reference/screenshots/timberborn-menu-coordinate-guide/07-title-pass-current-state.png
-   screencapture -x -D 1 docs/reference/screenshots/timberborn-menu-coordinate-guide/07-title-pass-current-state.png
-   screencapture -x -D 2 /tmp/wildfire-D2.png
-   system_profiler SPDisplaysDataType
-   ```
+  ```bash
+  osascript -e 'tell application id "com.mechanistry.timberborn" to activate'
+  screencapture -x docs/reference/screenshots/timberborn-menu-coordinate-guide/07-title-pass-current-state.png
+  screencapture -x -D 1 docs/reference/screenshots/timberborn-menu-coordinate-guide/07-title-pass-current-state.png
+  screencapture -x -D 2 /tmp/wildfire-D2.png
+  system_profiler SPDisplaysDataType
+  ```
 
 - Screenshot result: blocked. `screencapture` returned `could not create image from display` for the default display, `-D 1`, and `-D 2`; no new title-screen screenshot was created.
 - Manual verification result: blocked. QA did not click `pause.exit_to_main_menu` because the app was already in a loaded save and exiting could discard unsaved progress or change active runtime state. QA also could not verify the title-screen-to-Load-Game path without screenshots or a confirmed title-screen state.
 - Guide update: added a `TWF-020 Capture Attempt` note to `docs/timberborn-menu-coordinate-guide.md` with current environment evidence and the explicit no-coordinate boundary.
 - Pass/fail result:
 
-   | Requirement | Result | Evidence |
-   | --- | --- | --- |
-   | Start from safe title-screen or disposable-save state | Blocked | Current process was in a loaded save; no explicit disposable-state approval for exiting to main menu. |
-   | Capture opening screens and standalone main-menu targets | Blocked | `screencapture` could not create an image from display. |
-   | Record resolution/display/scaling/version | Partial pass | Metadata recorded from `system_profiler` and `Player.log`. |
-   | Add named coordinate targets | Not done | No verified title-screen screenshots or clicks; no guessed coordinates added. |
-   | Mark destructive/state-changing targets as boundaries | Pass | Existing guide boundary remains; TWF-020 note reinforces no exit/load/delete/overwrite actions. |
-   | Verify title-screen to Load Game dialog | Blocked | No safe verified title-screen state and no screenshot capture. |
+  | Requirement                                              | Result       | Evidence                                                                                              |
+  | -------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+  | Start from safe title-screen or disposable-save state    | Blocked      | Current process was in a loaded save; no explicit disposable-state approval for exiting to main menu. |
+  | Capture opening screens and standalone main-menu targets | Blocked      | `screencapture` could not create an image from display.                                               |
+  | Record resolution/display/scaling/version                | Partial pass | Metadata recorded from `system_profiler` and `Player.log`.                                            |
+  | Add named coordinate targets                             | Not done     | No verified title-screen screenshots or clicks; no guessed coordinates added.                         |
+  | Mark destructive/state-changing targets as boundaries    | Pass         | Existing guide boundary remains; TWF-020 note reinforces no exit/load/delete/overwrite actions.       |
+  | Verify title-screen to Load Game dialog                  | Blocked      | No safe verified title-screen state and no screenshot capture.                                        |
 
 - Smallest unblock action: provide or approve a known disposable title-screen path, then run the pass from an active desktop session where `screencapture` works. If the currently loaded `Wildfire testing` save is disposable, explicitly approve exiting it to the main menu before QA clicks that boundary.
 
@@ -90,9 +90,9 @@ Extend the Timberborn coordinate guide with opening-screen and standalone main-m
 - Verified `main.load_game` opened the standalone Load Game dialog.
 - Added startup, exit-confirmation, main-menu, and main-menu Load Game coordinates to `docs/timberborn-menu-coordinate-guide.md`.
 - Screenshot evidence:
-   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/07-startup-mods-wildfire.png`
-   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/08-post-startup-loaded-save.png`
-   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/09-exit-to-main-confirm.png`
-   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/10-main-menu.png`
-   - `docs/reference/screenshots/timberborn-menu-coordinate-guide/11-main-load-menu.png`
+  - `docs/reference/screenshots/timberborn-menu-coordinate-guide/07-startup-mods-wildfire.png`
+  - `docs/reference/screenshots/timberborn-menu-coordinate-guide/08-post-startup-loaded-save.png`
+  - `docs/reference/screenshots/timberborn-menu-coordinate-guide/09-exit-to-main-confirm.png`
+  - `docs/reference/screenshots/timberborn-menu-coordinate-guide/10-main-menu.png`
+  - `docs/reference/screenshots/timberborn-menu-coordinate-guide/11-main-load-menu.png`
 - Result: title/startup coordinate pass is complete for the documented 1920 x 1080 display state.

@@ -1,0 +1,1 @@
+../../all-tickets/TWF-107-gate-qa-command-bridge-for-release.md

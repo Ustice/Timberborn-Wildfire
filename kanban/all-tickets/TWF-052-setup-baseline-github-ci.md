@@ -5,12 +5,12 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-051
+  - TWF-051
 write_scope:
-   - .github/**
-   - scripts/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-052-setup-baseline-github-ci.md
+  - .github/**
+  - scripts/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-052-setup-baseline-github-ci.md
 ---
 
 # TWF-052: Set Up Baseline GitHub CI

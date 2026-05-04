@@ -55,13 +55,13 @@ It contains every Spec and every Blueprint discovered locally on 2026-05-01. Pro
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type      |
+| --------------- | --------- |
 | `FallbackGroup` | `boolean` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `NameLocKey` | `string` |
-| `Order` | `number` |
+| `Icon`          | `string`  |
+| `Id`            | `string`  |
+| `NameLocKey`    | `string`  |
+| `Order`         | `number`  |
 
 Blueprints (20):
 
@@ -75,11 +75,11 @@ Blueprints (20):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `LocKey` | `string` |
+| Property       | Type     |
+| -------------- | -------- |
+| `Icon`         | `string` |
+| `Id`           | `string` |
+| `LocKey`       | `string` |
 | `MaximumValue` | `number` |
 | `MinimumValue` | `number` |
 
@@ -103,10 +103,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ApplicationRadius` | `number` |
-| `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
+| Property            | Type                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `ApplicationRadius` | `number`                                                    |
+| `Effects`           | `{ NeedId: string; Points: number; Probability: string }[]` |
 
 Blueprints (1):
 
@@ -118,8 +118,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `WoodstackName` | `string` |
 
 Blueprints (4):
@@ -132,8 +132,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                                      |
+| --------- | ------------------------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Blueprints (26):
@@ -154,10 +154,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `AlternativeSoundName` | `string` |
-| `SoundName` | `string` |
+| `SoundName`            | `string` |
 
 Blueprints (1):
 
@@ -201,8 +201,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (2):
@@ -215,8 +215,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `HideableObjectName` | `string` |
 
 Blueprints (1):
@@ -229,9 +229,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AllowedCoordinates` | `{ X: number; Y: number; Z: number }[]` |
+| Property              | Type                                    |
+| --------------------- | --------------------------------------- |
+| `AllowedCoordinates`  | `{ X: number; Y: number; Z: number }[]` |
 | `BlockingCoordinates` | `{ X: number; Y: number; Z: number }[]` |
 
 Blueprints (4):
@@ -244,12 +244,12 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
-| `UncoveredModelName` | `string` |
+| Property                | Type     |
+| ----------------------- | -------- |
+| `FullModelName`         | `string` |
+| `UncoveredModelName`    | `string` |
 | `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
+| `UndergroundModelName`  | `string` |
 
 Blueprints (1):
 
@@ -269,13 +269,13 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BlockedEdges` | `{ End: { X: number; Y: number; Z: number }; Group: string; Start: { X: number; Y: number; Z: number } }[]` |
-| `EdgeGroups` | `{ AddedEdges: { End: { X: number; Y: number; Z: number }; IsTwoWay: boolean; Start: { X: number; Y: number; Z: number } }[]; Cost: number; Group: { GroupName: string; UseGroup: boolean }; IsPath: boolean }[]` |
-| `GenerateFloorsOnStackable` | `boolean` |
-| `NoAutoWalls` | `boolean` |
-| `UnblockedCoordinates` | `{ Coordinates: { X: number; Y: number; Z: number }; Group: string }[]` |
+| Property                    | Type                                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BlockedEdges`              | `{ End: { X: number; Y: number; Z: number }; Group: string; Start: { X: number; Y: number; Z: number } }[]`                                                                                                       |
+| `EdgeGroups`                | `{ AddedEdges: { End: { X: number; Y: number; Z: number }; IsTwoWay: boolean; Start: { X: number; Y: number; Z: number } }[]; Cost: number; Group: { GroupName: string; UseGroup: boolean }; IsPath: boolean }[]` |
+| `GenerateFloorsOnStackable` | `boolean`                                                                                                                                                                                                         |
+| `NoAutoWalls`               | `boolean`                                                                                                                                                                                                         |
+| `UnblockedCoordinates`      | `{ Coordinates: { X: number; Y: number; Z: number }; Group: string }[]`                                                                                                                                           |
 
 Blueprints (130):
 
@@ -295,14 +295,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZ` | `number` |
-| `Blocks` | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
-| `Entrance` | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }` |
-| `Flippable` | `boolean` |
-| `Overridable` | `boolean` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
+| Property      | Type                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseZ`       | `number`                                                                                                           |
+| `Blocks`      | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
+| `Entrance`    | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }`                                       |
+| `Flippable`   | `boolean`                                                                                                          |
+| `Overridable` | `boolean`                                                                                                          |
+| `Size`        | `{ X: number; Y: number; Z: number }`                                                                              |
 
 Blueprints (306):
 
@@ -330,14 +330,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AssemblyDuration` | `number` |
-| `AttachmentIds` | `string[]` |
-| `DrillName` | `string` |
-| `DrillRotationSpeed` | `number` |
-| `RingName` | `string` |
-| `RingRotationSpeed` | `number` |
+| Property             | Type       |
+| -------------------- | ---------- |
+| `AssemblyDuration`   | `number`   |
+| `AttachmentIds`      | `string[]` |
+| `DrillName`          | `string`   |
+| `DrillRotationSpeed` | `number`   |
+| `RingName`           | `string`   |
+| `RingRotationSpeed`  | `number`   |
 
 Blueprints (2):
 
@@ -357,11 +357,11 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Center` | `{ X: number; Y: number; Z: number }` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
-| `TargetName` | `string` |
+| Property     | Type                                  |
+| ------------ | ------------------------------------- |
+| `Center`     | `{ X: number; Y: number; Z: number }` |
+| `Size`       | `{ X: number; Y: number; Z: number }` |
+| `TargetName` | `string`                              |
 
 Blueprints (3):
 
@@ -373,14 +373,14 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CycleLengthInDays` | `number` |
-| `CyclesCapacity` | `number` |
-| `CyclesUntilFullyGrown` | `number` |
-| `EmbryoName` | `string` |
-| `NutrientsPerCycle` | `{ Amount: number; Id: string }[]` |
-| `SpawnAdults` | `boolean` |
+| Property                | Type                               |
+| ----------------------- | ---------------------------------- |
+| `CycleLengthInDays`     | `number`                           |
+| `CyclesCapacity`        | `number`                           |
+| `CyclesUntilFullyGrown` | `number`                           |
+| `EmbryoName`            | `string`                           |
+| `NutrientsPerCycle`     | `{ Amount: number; Id: string }[]` |
+| `SpawnAdults`           | `boolean`                          |
 
 Blueprints (2):
 
@@ -400,10 +400,10 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ForceOneFinalAccess` | `boolean` |
-| `LocalAccess` | `{ X: number; Y: number; Z: number }` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `ForceOneFinalAccess` | `boolean`                             |
+| `LocalAccess`         | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (135):
 
@@ -415,10 +415,10 @@ Blueprints (135):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Color` | `{ a: number; b: number; g: number; r: number }` |
-| `Texture` | `string` |
+| Property  | Type                                             |
+| --------- | ------------------------------------------------ |
+| `Color`   | `{ a: number; b: number; g: number; r: number }` |
+| `Texture` | `string`                                         |
 
 Blueprints (5):
 
@@ -430,9 +430,9 @@ Blueprints (5):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Offset` | `number` |
+| Property  | Type       |
+| --------- | ---------- |
+| `Offset`  | `number`   |
 | `Targets` | `string[]` |
 
 Blueprints (3):
@@ -445,14 +445,14 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstructionModeModel` | `string` |
-| `FinishedModelName` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `ConstructionModeModel`      | `string` |
+| `FinishedModelName`          | `string` |
 | `FinishedUncoveredModelName` | `string` |
-| `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
-| `UnfinishedModelName` | `string` |
+| `UndergroundModelDepth`      | `number` |
+| `UndergroundModelName`       | `string` |
+| `UnfinishedModelName`        | `string` |
 
 Blueprints (304):
 
@@ -464,15 +464,15 @@ Blueprints (304):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BuildingCost` | `{ Amount: number; Id: string }[]` |
-| `DrawRangeBoundsOnIt` | `boolean` |
-| `FinishableWithBeaversOnSite` | `boolean` |
-| `LoopingSoundName` | `string` |
-| `PlaceFinished` | `boolean` |
-| `ScienceCost` | `number` |
-| `SelectionSoundName` | `string` |
+| Property                      | Type                               |
+| ----------------------------- | ---------------------------------- |
+| `BuildingCost`                | `{ Amount: number; Id: string }[]` |
+| `DrawRangeBoundsOnIt`         | `boolean`                          |
+| `FinishableWithBeaversOnSite` | `boolean`                          |
+| `LoopingSoundName`            | `string`                           |
+| `PlaceFinished`               | `boolean`                          |
+| `ScienceCost`                 | `number`                           |
+| `SelectionSoundName`          | `string`                           |
 
 Blueprints (304):
 
@@ -484,8 +484,8 @@ Blueprints (304):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                    |
+| ------------- | --------------------------------------- |
 | `CutoutTiles` | `{ X: number; Y: number; Z: number }[]` |
 
 Blueprints (4):
@@ -501,7 +501,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (306):
+  Blueprints (306):
 
 `AdvancedBreedingPod` [![Iron Teeth](assets/faction-ironteeth.png)][advanced-breeding-pod-ironteeth], `Agora` [![Folktails](assets/faction-folktails.png)][agora-folktails], `AquaticFarmhouse` [![Folktails](assets/faction-folktails.png)][aquatic-farmhouse-folktails], `AquiferDrill` [![Folktails](assets/faction-folktails.png)][aquifer-drill-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][aquifer-drill-ironteeth], `BadwaterDischarge` [![Iron Teeth](assets/faction-ironteeth.png)][badwater-discharge-ironteeth], `BadwaterDome` [![Folktails](assets/faction-folktails.png)][badwater-dome-folktails], `BadwaterPump` [![Folktails](assets/faction-folktails.png)][badwater-pump-folktails], `BadwaterRig` [![Folktails](assets/faction-folktails.png)][badwater-rig-folktails], `Bakery` [![Folktails](assets/faction-folktails.png)][bakery-folktails], `Barrack` [![Iron Teeth](assets/faction-ironteeth.png)][barrack-ironteeth], `BeaverBust` [![Iron Teeth](assets/faction-ironteeth.png)][beaver-bust-ironteeth], `BeaverStatue` [![Folktails](assets/faction-folktails.png)][beaver-statue-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][beaver-statue-ironteeth], `Beehive` [![Folktails](assets/faction-folktails.png)][beehive-folktails], `Bell` [![Iron Teeth](assets/faction-ironteeth.png)][bell-ironteeth], `Bench` [![Folktails](assets/faction-folktails.png)][bench-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][bench-ironteeth], `BotAssembler` [![Folktails](assets/faction-folktails.png)][bot-assembler-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][bot-assembler-ironteeth], `BotPartFactory` [![Folktails](assets/faction-folktails.png)][bot-part-factory-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][bot-part-factory-ironteeth], `Brazier` [![Iron Teeth](assets/faction-ironteeth.png)][brazier-ironteeth], `BrazierOfBonding` [![Folktails](assets/faction-folktails.png)][brazier-of-bonding-folktails], `BreedingPod` [![Iron Teeth](assets/faction-ironteeth.png)][breeding-pod-ironteeth], `BuildersHut` [![Folktails](assets/faction-folktails.png)][builders-hut-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][builders-hut-ironteeth], `BulletinPole` [![Folktails](assets/faction-folktails.png)][bulletin-pole-folktails], `Campfire` [![Folktails](assets/faction-folktails.png)][campfire-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][campfire-ironteeth], `Carousel` [![Folktails](assets/faction-folktails.png)][carousel-folktails], `Centrifuge` [![Folktails](assets/faction-folktails.png)][centrifuge-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][centrifuge-ironteeth], `ChargingStation` [![Iron Teeth](assets/faction-ironteeth.png)][charging-station-ironteeth], `Chronometer` [![Folktails](assets/faction-folktails.png)][chronometer-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][chronometer-ironteeth], `Clutch` [![Folktails](assets/faction-folktails.png)][clutch-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][clutch-ironteeth], `CoffeeBrewery` [![Iron Teeth](assets/faction-ironteeth.png)][coffee-brewery-ironteeth], `CompactWaterWheel` [![Iron Teeth](assets/faction-ironteeth.png)][compact-water-wheel-ironteeth], `ContaminationBarrier` [![Folktails](assets/faction-folktails.png)][contamination-barrier-folktails], `ContaminationSensor` [![Folktails](assets/faction-folktails.png)][contamination-sensor-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][contamination-sensor-ironteeth], `ContemplationSpot` [![Folktails](assets/faction-folktails.png)][contemplation-spot-folktails], `ControlTower` [![Iron Teeth](assets/faction-ironteeth.png)][control-tower-ironteeth], `Dam` [![Folktails](assets/faction-folktails.png)][dam-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][dam-ironteeth], `DanceHall` [![Folktails](assets/faction-folktails.png)][dance-hall-folktails], `DecontaminationPod` [![Iron Teeth](assets/faction-ironteeth.png)][decontamination-pod-ironteeth], `DecorativeClock` [![Iron Teeth](assets/faction-ironteeth.png)][decorative-clock-ironteeth], `DeepBadwaterPump` [![Iron Teeth](assets/faction-ironteeth.png)][deep-badwater-pump-ironteeth], `DeepMechanicalFluidPump` [![Iron Teeth](assets/faction-ironteeth.png)][deep-mechanical-fluid-pump-ironteeth], `DeepWaterPump` [![Iron Teeth](assets/faction-ironteeth.png)][deep-water-pump-ironteeth], `DepthSensor` [![Folktails](assets/faction-folktails.png)][depth-sensor-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][depth-sensor-ironteeth], `Detailer` [![Folktails](assets/faction-folktails.png)][detailer-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][detailer-ironteeth], `Detonator` [![Folktails](assets/faction-folktails.png)][detonator-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][detonator-ironteeth], [`DevPowerGenerator`][dev-power-generator], [`DevWaterSource`][dev-water-source], `DirtExcavator` [![Folktails](assets/faction-folktails.png)][dirt-excavator-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][dirt-excavator-ironteeth], `DistrictCenter` [![Folktails](assets/faction-folktails.png)][district-center-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][district-center-ironteeth], `DistrictCrossing` [![Folktails](assets/faction-folktails.png)][district-crossing-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][district-crossing-ironteeth], `DoubleDynamite` [![Folktails](assets/faction-folktails.png)][double-dynamite-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][double-dynamite-ironteeth], `DoubleFloodgate` [![Folktails](assets/faction-folktails.png)][double-floodgate-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][double-floodgate-ironteeth], `DoubleLodge` [![Folktails](assets/faction-folktails.png)][double-lodge-folktails], `DoublePlatform` [![Folktails](assets/faction-folktails.png)][double-platform-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][double-platform-ironteeth], `DoubleShower` [![Iron Teeth](assets/faction-ironteeth.png)][double-shower-ironteeth], `Dynamite` [![Folktails](assets/faction-folktails.png)][dynamite-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][dynamite-ironteeth], `EarthRecultivator` [![Folktails](assets/faction-folktails.png)][earth-recultivator-folktails], `EarthRepopulator` [![Iron Teeth](assets/faction-ironteeth.png)][earth-repopulator-ironteeth], `EarthRepopulator.IronTeeth.Plane` [![Iron Teeth](assets/faction-ironteeth.png)][earth-repopulator-iron-teeth-plane-ironteeth], `EfficientFarmHouse` [![Folktails](assets/faction-folktails.png)][efficient-farm-house-folktails], `EfficientMine` [![Iron Teeth](assets/faction-ironteeth.png)][efficient-mine-ironteeth], `ExercisePlaza` [![Iron Teeth](assets/faction-ironteeth.png)][exercise-plaza-ironteeth], `ExplosivesFactory` [![Folktails](assets/faction-folktails.png)][explosives-factory-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][explosives-factory-ironteeth], `FarmerMonument` [![Folktails](assets/faction-folktails.png)][farmer-monument-folktails], `FarmHouse` [![Iron Teeth](assets/faction-ironteeth.png)][farm-house-ironteeth], `Fermenter` [![Iron Teeth](assets/faction-ironteeth.png)][fermenter-ironteeth], `FillValve` [![Folktails](assets/faction-folktails.png)][fill-valve-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][fill-valve-ironteeth], `FireworkLauncher` [![Folktails](assets/faction-folktails.png)][firework-launcher-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][firework-launcher-ironteeth], `FlameOfUnity` [![Iron Teeth](assets/faction-ironteeth.png)][flame-of-unity-ironteeth], `Floodgate` [![Folktails](assets/faction-folktails.png)][floodgate-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][floodgate-ironteeth], `FlowSensor` [![Folktails](assets/faction-folktails.png)][flow-sensor-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][flow-sensor-ironteeth], `FluidDump` [![Folktails](assets/faction-folktails.png)][fluid-dump-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][fluid-dump-ironteeth], `FoodFactory` [![Iron Teeth](assets/faction-ironteeth.png)][food-factory-ironteeth], `Forester` [![Folktails](assets/faction-folktails.png)][forester-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][forester-ironteeth], `FountainOfJoy` [![Folktails](assets/faction-folktails.png)][fountain-of-joy-folktails], `Gate` [![Folktails](assets/faction-folktails.png)][gate-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][gate-ironteeth], `GathererFlag` [![Folktails](assets/faction-folktails.png)][gatherer-flag-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][gatherer-flag-ironteeth], `GearWorkshop` [![Folktails](assets/faction-folktails.png)][gear-workshop-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][gear-workshop-ironteeth], `GeothermalEngine` [![Folktails](assets/faction-folktails.png)][geothermal-engine-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][geothermal-engine-ironteeth], `GravityBattery` [![Folktails](assets/faction-folktails.png)][gravity-battery-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][gravity-battery-ironteeth], `GreaseFactory` [![Iron Teeth](assets/faction-ironteeth.png)][grease-factory-ironteeth], `Grill` [![Folktails](assets/faction-folktails.png)][grill-folktails], `Gristmill` [![Folktails](assets/faction-folktails.png)][gristmill-folktails], `Hammock` [![Folktails](assets/faction-folktails.png)][hammock-folktails], `HaulingPost` [![Folktails](assets/faction-folktails.png)][hauling-post-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][hauling-post-ironteeth], `Hedge` [![Folktails](assets/faction-folktails.png)][hedge-folktails], `Herbalist` [![Folktails](assets/faction-folktails.png)][herbalist-folktails], `HttpAdapter` [![Folktails](assets/faction-folktails.png)][http-adapter-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][http-adapter-ironteeth], `HttpLever` [![Folktails](assets/faction-folktails.png)][http-lever-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][http-lever-ironteeth], `HydroponicGarden` [![Iron Teeth](assets/faction-ironteeth.png)][hydroponic-garden-ironteeth], `ImpermeableFloor` [![Folktails](assets/faction-folktails.png)][impermeable-floor-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][impermeable-floor-ironteeth], `Indicator` [![Folktails](assets/faction-folktails.png)][indicator-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][indicator-ironteeth], `IndustrialLumberMill` [![Iron Teeth](assets/faction-ironteeth.png)][industrial-lumber-mill-ironteeth], `Inventor` [![Folktails](assets/faction-folktails.png)][inventor-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][inventor-ironteeth], `IrrigationBarrier` [![Iron Teeth](assets/faction-ironteeth.png)][irrigation-barrier-ironteeth], `LaborerMonument` [![Iron Teeth](assets/faction-ironteeth.png)][laborer-monument-ironteeth], `Lantern` [![Folktails](assets/faction-folktails.png)][lantern-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][lantern-ironteeth], `LargeBarrack` [![Iron Teeth](assets/faction-ironteeth.png)][large-barrack-ironteeth], `LargeIndustrialPile` [![Iron Teeth](assets/faction-ironteeth.png)][large-industrial-pile-ironteeth], `LargePile` [![Folktails](assets/faction-folktails.png)][large-pile-folktails], `LargePowerWheel` [![Iron Teeth](assets/faction-ironteeth.png)][large-power-wheel-ironteeth], `LargeRowhouse` [![Iron Teeth](assets/faction-ironteeth.png)][large-rowhouse-ironteeth], `LargeTank` [![Folktails](assets/faction-folktails.png)][large-tank-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][large-tank-ironteeth], `LargeWarehouse` [![Folktails](assets/faction-folktails.png)][large-warehouse-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][large-warehouse-ironteeth], `LargeWaterPump` [![Folktails](assets/faction-folktails.png)][large-water-pump-folktails], `LargeWaterWheel` [![Iron Teeth](assets/faction-ironteeth.png)][large-water-wheel-ironteeth], `LargeWindTurbine` [![Folktails](assets/faction-folktails.png)][large-wind-turbine-folktails], `Levee` [![Folktails](assets/faction-folktails.png)][levee-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][levee-ironteeth], `Lever` [![Folktails](assets/faction-folktails.png)][lever-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][lever-ironteeth], `Lido` [![Folktails](assets/faction-folktails.png)][lido-folktails], `Lodge` [![Folktails](assets/faction-folktails.png)][lodge-folktails], `LumberjackFlag` [![Folktails](assets/faction-folktails.png)][lumberjack-flag-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][lumberjack-flag-ironteeth], `LumberMill` [![Folktails](assets/faction-folktails.png)][lumber-mill-folktails], `MechanicalFluidPump` [![Folktails](assets/faction-folktails.png)][mechanical-fluid-pump-folktails], `MedicalBed` [![Folktails](assets/faction-folktails.png)][medical-bed-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][medical-bed-ironteeth], `MediumTank` [![Folktails](assets/faction-folktails.png)][medium-tank-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][medium-tank-ironteeth], `MediumWarehouse` [![Folktails](assets/faction-folktails.png)][medium-warehouse-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][medium-warehouse-ironteeth], `Memory` [![Folktails](assets/faction-folktails.png)][memory-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][memory-ironteeth], `MetalFence` [![Iron Teeth](assets/faction-ironteeth.png)][metal-fence-ironteeth], `MetalPlatform3x3` [![Folktails](assets/faction-folktails.png)][metal-platform3x3-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][metal-platform3x3-ironteeth], `MetalPlatform5x5` [![Folktails](assets/faction-folktails.png)][metal-platform5x5-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][metal-platform5x5-ironteeth], `Metalsmith` [![Iron Teeth](assets/faction-ironteeth.png)][metalsmith-ironteeth], `Mine` [![Folktails](assets/faction-folktails.png)][mine-folktails], `MiniLodge` [![Folktails](assets/faction-folktails.png)][mini-lodge-folktails], `Motivatorium` [![Iron Teeth](assets/faction-ironteeth.png)][motivatorium-ironteeth], `MudBath` [![Iron Teeth](assets/faction-ironteeth.png)][mud-bath-ironteeth], `MudPit` [![Folktails](assets/faction-folktails.png)][mud-pit-folktails], `Numbercruncher` [![Iron Teeth](assets/faction-ironteeth.png)][numbercruncher-ironteeth], `Observatory` [![Folktails](assets/faction-folktails.png)][observatory-folktails], `OilPress` [![Iron Teeth](assets/faction-ironteeth.png)][oil-press-ironteeth], `Overhang2x1` [![Folktails](assets/faction-folktails.png)][overhang2x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][overhang2x1-ironteeth], `Overhang3x1` [![Folktails](assets/faction-folktails.png)][overhang3x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][overhang3x1-ironteeth], `Overhang4x1` [![Folktails](assets/faction-folktails.png)][overhang4x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][overhang4x1-ironteeth], `Overhang5x1` [![Folktails](assets/faction-folktails.png)][overhang5x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][overhang5x1-ironteeth], `Overhang6x1` [![Folktails](assets/faction-folktails.png)][overhang6x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][overhang6x1-ironteeth], `PaperMill` [![Folktails](assets/faction-folktails.png)][paper-mill-folktails], [`Path`][path], `Platform` [![Folktails](assets/faction-folktails.png)][platform-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][platform-ironteeth], `PoleBanner` [![Folktails](assets/faction-folktails.png)][pole-banner-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][pole-banner-ironteeth], `PopulationCounter` [![Folktails](assets/faction-folktails.png)][population-counter-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][population-counter-ironteeth], `PowerMeter` [![Folktails](assets/faction-folktails.png)][power-meter-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][power-meter-ironteeth], `PowerShaft` [![Folktails](assets/faction-folktails.png)][power-shaft-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][power-shaft-ironteeth], `PowerWheel` [![Folktails](assets/faction-folktails.png)][power-wheel-folktails], `PrintingPress` [![Folktails](assets/faction-folktails.png)][printing-press-folktails], `Refinery` [![Folktails](assets/faction-folktails.png)][refinery-folktails], `Relay` [![Folktails](assets/faction-folktails.png)][relay-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][relay-ironteeth], `ResourceCounter` [![Folktails](assets/faction-folktails.png)][resource-counter-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][resource-counter-ironteeth], `Roof1x1` [![Folktails](assets/faction-folktails.png)][roof1x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][roof1x1-ironteeth], `Roof1x2` [![Folktails](assets/faction-folktails.png)][roof1x2-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][roof1x2-ironteeth], `Roof2x2` [![Folktails](assets/faction-folktails.png)][roof2x2-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][roof2x2-ironteeth], `Roof2x3` [![Folktails](assets/faction-folktails.png)][roof2x3-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][roof2x3-ironteeth], `Roof3x2` [![Folktails](assets/faction-folktails.png)][roof3x2-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][roof3x2-ironteeth], `RooftopTerrace` [![Folktails](assets/faction-folktails.png)][rooftop-terrace-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][rooftop-terrace-ironteeth], `Rowhouse` [![Iron Teeth](assets/faction-ironteeth.png)][rowhouse-ironteeth], `Scarecrow` [![Folktails](assets/faction-folktails.png)][scarecrow-folktails], `ScavengerFlag` [![Folktails](assets/faction-folktails.png)][scavenger-flag-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][scavenger-flag-ironteeth], `ScienceCounter` [![Folktails](assets/faction-folktails.png)][science-counter-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][science-counter-ironteeth], `Scratcher` [![Iron Teeth](assets/faction-ironteeth.png)][scratcher-ironteeth], `Shower` [![Folktails](assets/faction-folktails.png)][shower-folktails], `Shrub` [![Folktails](assets/faction-folktails.png)][shrub-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][shrub-ironteeth], `Sluice` [![Folktails](assets/faction-folktails.png)][sluice-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][sluice-ironteeth], `SmallIndustrialPile` [![Iron Teeth](assets/faction-ironteeth.png)][small-industrial-pile-ironteeth], `SmallPile` [![Folktails](assets/faction-folktails.png)][small-pile-folktails], `SmallTank` [![Folktails](assets/faction-folktails.png)][small-tank-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][small-tank-ironteeth], `SmallWarehouse` [![Folktails](assets/faction-folktails.png)][small-warehouse-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][small-warehouse-ironteeth], `Smelter` [![Folktails](assets/faction-folktails.png)][smelter-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][smelter-ironteeth], `Speaker` [![Folktails](assets/faction-folktails.png)][speaker-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][speaker-ironteeth], `SpiralStairs` [![Folktails](assets/faction-folktails.png)][spiral-stairs-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][spiral-stairs-ironteeth], `SquareBanner` [![Folktails](assets/faction-folktails.png)][square-banner-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][square-banner-ironteeth], `Stairs` [![Folktails](assets/faction-folktails.png)][stairs-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][stairs-ironteeth], `SteamEngine` [![Iron Teeth](assets/faction-ironteeth.png)][steam-engine-ironteeth], `StreamGauge` [![Folktails](assets/faction-folktails.png)][stream-gauge-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][stream-gauge-ironteeth], `SuspensionBridge1x1` [![Folktails](assets/faction-folktails.png)][suspension-bridge1x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][suspension-bridge1x1-ironteeth], `SuspensionBridge2x1` [![Folktails](assets/faction-folktails.png)][suspension-bridge2x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][suspension-bridge2x1-ironteeth], `SuspensionBridge3x1` [![Folktails](assets/faction-folktails.png)][suspension-bridge3x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][suspension-bridge3x1-ironteeth], `SuspensionBridge4x1` [![Folktails](assets/faction-folktails.png)][suspension-bridge4x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][suspension-bridge4x1-ironteeth], `SuspensionBridge5x1` [![Folktails](assets/faction-folktails.png)][suspension-bridge5x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][suspension-bridge5x1-ironteeth], `SuspensionBridge6x1` [![Folktails](assets/faction-folktails.png)][suspension-bridge6x1-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][suspension-bridge6x1-ironteeth], `SwimmingPool` [![Iron Teeth](assets/faction-ironteeth.png)][swimming-pool-ironteeth], `TappersShack` [![Folktails](assets/faction-folktails.png)][tappers-shack-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][tappers-shack-ironteeth], `TeethGrindstone` [![Folktails](assets/faction-folktails.png)][teeth-grindstone-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][teeth-grindstone-ironteeth], `TerrainBlock` [![Folktails](assets/faction-folktails.png)][terrain-block-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][terrain-block-ironteeth], `Timer` [![Folktails](assets/faction-folktails.png)][timer-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][timer-ironteeth], `TributeToIngenuity` [![Iron Teeth](assets/faction-ironteeth.png)][tribute-to-ingenuity-ironteeth], `TripleDynamite` [![Folktails](assets/faction-folktails.png)][triple-dynamite-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][triple-dynamite-ironteeth], `TripleFloodgate` [![Folktails](assets/faction-folktails.png)][triple-floodgate-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][triple-floodgate-ironteeth], `TripleLodge` [![Folktails](assets/faction-folktails.png)][triple-lodge-folktails], `TriplePlatform` [![Folktails](assets/faction-folktails.png)][triple-platform-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][triple-platform-ironteeth], `Tubeway` [![Iron Teeth](assets/faction-ironteeth.png)][tubeway-ironteeth], `TubewayStation` [![Iron Teeth](assets/faction-ironteeth.png)][tubeway-station-ironteeth], `Tunnel` [![Folktails](assets/faction-folktails.png)][tunnel-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][tunnel-ironteeth], `UndergroundPile` [![Folktails](assets/faction-folktails.png)][underground-pile-folktails], `Valve` [![Folktails](assets/faction-folktails.png)][valve-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][valve-ironteeth], `VerticalPowerShaft` [![Folktails](assets/faction-folktails.png)][vertical-power-shaft-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][vertical-power-shaft-ironteeth], `VerticalTubeway` [![Iron Teeth](assets/faction-ironteeth.png)][vertical-tubeway-ironteeth], `WaterPump` [![Folktails](assets/faction-folktails.png)][water-pump-folktails], `WaterWheel` [![Folktails](assets/faction-folktails.png)][water-wheel-folktails], `WeatherStation` [![Folktails](assets/faction-folktails.png)][weather-station-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][weather-station-ironteeth], `Weathervane` [![Folktails](assets/faction-folktails.png)][weathervane-folktails], `WindTunnel` [![Iron Teeth](assets/faction-ironteeth.png)][wind-tunnel-ironteeth], `WindTurbine` [![Folktails](assets/faction-folktails.png)][wind-turbine-folktails], `WoodFence` [![Folktails](assets/faction-folktails.png)][wood-fence-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][wood-fence-ironteeth], `WoodWorkshop` [![Folktails](assets/faction-folktails.png)][wood-workshop-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][wood-workshop-ironteeth], `ZiplineBeam` [![Folktails](assets/faction-folktails.png)][zipline-beam-folktails], `ZiplinePylon` [![Folktails](assets/faction-folktails.png)][zipline-pylon-folktails], `ZiplineStation` [![Folktails](assets/faction-folktails.png)][zipline-station-folktails]
 
@@ -519,10 +519,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `AngleOffset` | `number` |
-| `HandName` | `string` |
+| `HandName`    | `string` |
 
 Blueprints (4):
 
@@ -534,10 +534,10 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `DisengagedModelName` | `string` |
-| `EngagedModelName` | `string` |
+| `EngagedModelName`    | `string` |
 
 Blueprints (2):
 
@@ -557,8 +557,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type                                  |
+| ---------- | ------------------------------------- |
 | `Position` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (2):
@@ -571,8 +571,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `MaxAllowedBuilders` | `number` |
 
 Blueprints (2):
@@ -585,8 +585,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `ConstructionTimeInHours` | `number` |
 
 Blueprints (2):
@@ -599,8 +599,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type       |
+| -------------------- | ---------- |
 | `ProgressThresholds` | `number[]` |
 
 Blueprints (300):
@@ -621,8 +621,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type                                  |
+| ------------------- | ------------------------------------- |
 | `SensorCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (2):
@@ -635,8 +635,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                                      |
+| --------- | ------------------------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Blueprints (30):
@@ -657,8 +657,8 @@ Blueprints (13):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `IconRendererName` | `string` |
 
 Blueprints (6):
@@ -671,8 +671,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type     |
+| ---------- | -------- |
 | `Category` | `string` |
 
 Blueprints (6):
@@ -685,8 +685,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type     |
+| --------- | -------- |
 | `ColorId` | `string` |
 
 Blueprints (38):
@@ -699,10 +699,10 @@ Blueprints (38):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `SensorCoordinates` | `{ X: number; Y: number; Z: number }` |
-| `SensorHeightOffset` | `number` |
+| Property             | Type                                  |
+| -------------------- | ------------------------------------- |
+| `SensorCoordinates`  | `{ X: number; Y: number; Z: number }` |
+| `SensorHeightOffset` | `number`                              |
 
 Blueprints (2):
 
@@ -746,8 +746,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `CoordinateOffset` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (2):
@@ -768,9 +768,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `HeadOffset` | `number` |
+| Property            | Type     |
+| ------------------- | -------- |
+| `HeadOffset`        | `number` |
 | `HeadTransformName` | `string` |
 
 Blueprints (2):
@@ -783,13 +783,13 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AnchorPosition` | `{ X: number; Y: number; Z: number }` |
-| `DrillRadius` | `number` |
-| `ParentName` | `string` |
-| `ScrewAxisPrefabPath` | `string` |
-| `ScrewHeadPrefabPath` | `string` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `AnchorPosition`      | `{ X: number; Y: number; Z: number }` |
+| `DrillRadius`         | `number`                              |
+| `ParentName`          | `string`                              |
+| `ScrewAxisPrefabPath` | `string`                              |
+| `ScrewHeadPrefabPath` | `string`                              |
 
 Blueprints (2):
 
@@ -801,9 +801,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MinimumRotationSpeed` | `number` |
+| Property                 | Type     |
+| ------------------------ | -------- |
+| `MinimumRotationSpeed`   | `number` |
 | `RotationSpeedPerWorker` | `number` |
 
 Blueprints (2):
@@ -816,10 +816,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type                                    |
+| ---------------------- | --------------------------------------- |
 | `DrillableCoordinates` | `{ X: number; Y: number; Z: number }[]` |
-| `RemovalEffectPath` | `string` |
+| `RemovalEffectPath`    | `string`                                |
 
 Blueprints (2):
 
@@ -831,13 +831,13 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CustomCoordinates` | `{ X: number; Y: number; Z: number }` |
-| `CustomDirection` | `string` |
-| `Driveway` | `string` |
-| `DrivewayMode` | `string` |
-| `HasCustomCoordinates` | `boolean` |
+| Property               | Type                                  |
+| ---------------------- | ------------------------------------- |
+| `CustomCoordinates`    | `{ X: number; Y: number; Z: number }` |
+| `CustomDirection`      | `string`                              |
+| `Driveway`             | `string`                              |
+| `DrivewayMode`         | `string`                              |
+| `HasCustomCoordinates` | `boolean`                             |
 
 Blueprints (22):
 
@@ -849,9 +849,9 @@ Blueprints (22):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxBeavers` | `number` |
+| Property       | Type                                                                      |
+| -------------- | ------------------------------------------------------------------------- |
+| `MaxBeavers`   | `number`                                                                  |
 | `SleepEffects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Blueprints (8):
@@ -864,10 +864,10 @@ Blueprints (8):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `GroundModelPrefix` | `string` |
-| `RoofModelPrefix` | `string` |
+| `RoofModelPrefix`   | `string` |
 
 Blueprints (3):
 
@@ -879,9 +879,9 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Depth` | `number` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `Depth`               | `number` |
 | `ExplosionPrefabPath` | `string` |
 
 Blueprints (6):
@@ -894,8 +894,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type      |
+| ------------------------ | --------- |
 | `ResetAnimationUponExit` | `boolean` |
 
 Blueprints (8):
@@ -916,8 +916,8 @@ Blueprints (23):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (6):
@@ -930,13 +930,13 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CapacityFinished` | `number` |
-| `CapacityUnfinished` | `number` |
-| `LimitedCapacityFinished` | `boolean` |
+| Property                    | Type      |
+| --------------------------- | --------- |
+| `CapacityFinished`          | `number`  |
+| `CapacityUnfinished`        | `number`  |
+| `LimitedCapacityFinished`   | `boolean` |
 | `LimitedCapacityUnfinished` | `boolean` |
-| `OperatingState` | `string` |
+| `OperatingState`            | `string`  |
 
 Blueprints (133):
 
@@ -956,9 +956,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Scale` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Scale`  | `number` |
 
 Blueprints (1):
 
@@ -970,8 +970,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                               |
+| --------------- | ---------------------------------- |
 | `NeedSuspender` | `{ SuspendableNeedIds: string[] }` |
 
 Blueprints (3):
@@ -992,14 +992,14 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultAutomationTargetHeightEnabled` | `boolean` |
-| `DefaultAutomationTargetHeightOffset` | `number` |
-| `DefaultTargetHeightEnabled` | `boolean` |
-| `DefaultTargetHeightOffset` | `number` |
-| `OutputCoordinates` | `{ X: number; Y: number; Z: number }` |
-| `OverflowLimit` | `number` |
+| Property                               | Type                                  |
+| -------------------------------------- | ------------------------------------- |
+| `DefaultAutomationTargetHeightEnabled` | `boolean`                             |
+| `DefaultAutomationTargetHeightOffset`  | `number`                              |
+| `DefaultTargetHeightEnabled`           | `boolean`                             |
+| `DefaultTargetHeightOffset`            | `number`                              |
+| `OutputCoordinates`                    | `{ X: number; Y: number; Z: number }` |
+| `OverflowLimit`                        | `number`                              |
 
 Blueprints (2):
 
@@ -1011,8 +1011,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type                                    |
+| ----------- | --------------------------------------- |
 | `Obstacles` | `{ X: number; Y: number; Z: number }[]` |
 
 Blueprints (16):
@@ -1025,8 +1025,8 @@ Blueprints (16):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Height` | `number` |
 
 Blueprints (6):
@@ -1047,8 +1047,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `ChildrenNames` | `string[]` |
 
 Blueprints (2):
@@ -1061,8 +1061,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `AttachmentId` | `string` |
 
 Blueprints (11):
@@ -1075,12 +1075,12 @@ Blueprints (11):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Barrel` | `string` |
+| Property     | Type     |
+| ------------ | -------- |
+| `Barrel`     | `string` |
 | `GoodAmount` | `number` |
-| `GoodId` | `string` |
-| `Turret` | `string` |
+| `GoodId`     | `string` |
+| `Turret`     | `string` |
 
 Blueprints (2):
 
@@ -1100,8 +1100,8 @@ Blueprints (33):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `DecalName` | `string` |
 
 Blueprints (4):
@@ -1138,8 +1138,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type     |
+| ---------- | -------- |
 | `GateName` | `string` |
 
 Blueprints (6):
@@ -1152,8 +1152,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `MaxHeight` | `number` |
 
 Blueprints (6):
@@ -1166,9 +1166,9 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxThreshold` | `number` |
+| Property            | Type                                  |
+| ------------------- | ------------------------------------- |
+| `MaxThreshold`      | `number`                              |
 | `SensorCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (2):
@@ -1189,10 +1189,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `ClosedModelName` | `string` |
-| `OpenModelName` | `string` |
+| `OpenModelName`   | `string` |
 
 Blueprints (2):
 
@@ -1204,10 +1204,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `End` | `{ X: number; Y: number; Z: number }` |
-| `Start` | `{ X: number; Y: number; Z: number }` |
+| Property | Type                                  |
+| -------- | ------------------------------------- |
+| `End`    | `{ X: number; Y: number; Z: number }` |
+| `Start`  | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (2):
 
@@ -1235,10 +1235,10 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
-| `SurfaceName` | `string` |
+| `SurfaceName`   | `string`   |
 
 Blueprints (3):
 
@@ -1250,10 +1250,10 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConsumedGoods` | `{ GoodId: string; GoodPerHour: number }[]` |
-| `FullInventoryWorkHours` | `number` |
+| Property                 | Type                                        |
+| ------------------------ | ------------------------------------------- |
+| `ConsumedGoods`          | `{ GoodId: string; GoodPerHour: number }[]` |
+| `FullInventoryWorkHours` | `number`                                    |
 
 Blueprints (7):
 
@@ -1281,8 +1281,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `CapacityPerTile` | `number` |
 
 Blueprints (2):
@@ -1311,12 +1311,12 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `GrowthTimeReduction` | `number` |
+| Property                   | Type     |
+| -------------------------- | -------- |
+| `GrowthTimeReduction`      | `number` |
 | `HoursBetweenPollinations` | `number` |
-| `PlantsPerPollination` | `number` |
-| `PollinationRadius` | `number` |
+| `PlantsPerPollination`     | `number` |
+| `PollinationRadius`        | `number` |
 
 Blueprints (1):
 
@@ -1344,8 +1344,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (5):
@@ -1382,12 +1382,12 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
+| Property                  | Type     |
+| ------------------------- | -------- |
+| `DescriptionLocKey`       | `string` |
+| `DisplayNameLocKey`       | `string` |
 | `FlavorDescriptionLocKey` | `string` |
-| `Icon` | `string` |
+| `Icon`                    | `string` |
 
 Blueprints (305):
 
@@ -1399,11 +1399,11 @@ Blueprints (305):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AnchorPosition` | `{ X: number; Y: number; Z: number }` |
-| `BlockCreationOffset` | `number` |
-| `LayerSize` | `{ X: number; Y: number }` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `AnchorPosition`      | `{ X: number; Y: number; Z: number }` |
+| `BlockCreationOffset` | `number`                              |
+| `LayerSize`           | `{ X: number; Y: number }`            |
 
 Blueprints (2):
 
@@ -1415,10 +1415,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `PositionTransformName` | `string` |
-| `ScaleTransformName` | `string` |
+| `ScaleTransformName`    | `string` |
 
 Blueprints (2):
 
@@ -1430,10 +1430,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `OffModelName` | `string` |
-| `OnModelName` | `string` |
+| `OnModelName`  | `string` |
 
 Blueprints (4):
 
@@ -1469,8 +1469,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                                            |
+| --------------- | ----------------------------------------------- |
 | `ProgressSteps` | `{ ModelNames: string[]; Threshold: number }[]` |
 
 Blueprints (3):
@@ -1483,10 +1483,10 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `InitialModelName` | `string` |
-| `RecipeModels` | `{ ModelName: string; RecipeId: string }[]` |
+| Property           | Type                                        |
+| ------------------ | ------------------------------------------- |
+| `InitialModelName` | `string`                                    |
+| `RecipeModels`     | `{ ModelName: string; RecipeId: string }[]` |
 
 Blueprints (1):
 
@@ -1498,8 +1498,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type       |
+| --------------------- | ---------- |
 | `ProductionRecipeIds` | `string[]` |
 
 Blueprints (46):
@@ -1512,8 +1512,8 @@ Blueprints (46):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `LabelLocKey` | `string` |
 
 Blueprints (2):
@@ -1558,8 +1558,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type       |
+| --------- | ---------- |
 | `Targets` | `string[]` |
 
 Blueprints (1):
@@ -1588,8 +1588,8 @@ Blueprints (72):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `MinSpeedMultiplier` | `number` |
 
 Blueprints (13):
@@ -1602,8 +1602,8 @@ Blueprints (13):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                     | Type     |
+| ---------------------------- | -------- |
 | `AlternativePowerUnitLocKey` | `string` |
 
 Blueprints (3):
@@ -1624,10 +1624,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
-| `MinEfficiency` | `number` |
+| `MinEfficiency` | `number`   |
 
 Blueprints (1):
 
@@ -1639,11 +1639,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IsShaft` | `boolean` |
-| `PowerInput` | `number` |
-| `PowerOutput` | `number` |
+| Property      | Type      |
+| ------------- | --------- |
+| `IsShaft`     | `boolean` |
+| `PowerInput`  | `number`  |
+| `PowerOutput` | `number`  |
 
 Blueprints (60):
 
@@ -1655,10 +1655,10 @@ Blueprints (60):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ChangeSpeed` | `number` |
-| `Range` | `number` |
+| Property        | Type     |
+| --------------- | -------- |
+| `ChangeSpeed`   | `number` |
+| `Range`         | `number` |
 | `TransformName` | `string` |
 
 Blueprints (1):
@@ -1687,8 +1687,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `ModelNamePrefix` | `string` |
 
 Blueprints (6):
@@ -1701,8 +1701,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `CoverModelName` | `string` |
 
 Blueprints (2):
@@ -1715,27 +1715,27 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AxleHorizontal` | `string` |
-| `AxleInnerLong` | `string` |
-| `AxleVertical` | `string` |
-| `GearBottomBase` | `string` |
-| `GearBottomLarge` | `string` |
-| `GearBottomSmall` | `string` |
-| `GearInner` | `string` |
-| `GearInnerLong` | `string` |
+| Property            | Type     |
+| ------------------- | -------- |
+| `AxleHorizontal`    | `string` |
+| `AxleInnerLong`     | `string` |
+| `AxleVertical`      | `string` |
+| `GearBottomBase`    | `string` |
+| `GearBottomLarge`   | `string` |
+| `GearBottomSmall`   | `string` |
+| `GearInner`         | `string` |
+| `GearInnerLong`     | `string` |
 | `GearInnerOpposite` | `string` |
-| `GearInnerThrough` | `string` |
-| `GearLarge` | `string` |
-| `GearMedium` | `string` |
-| `GearSmall` | `string` |
-| `GearTopLarge` | `string` |
-| `GearTopSmall` | `string` |
-| `ShaftBase` | `string` |
-| `ShaftFrame` | `string` |
-| `ShaftLowerFrame` | `string` |
-| `ShaftSupport` | `string` |
+| `GearInnerThrough`  | `string` |
+| `GearLarge`         | `string` |
+| `GearMedium`        | `string` |
+| `GearSmall`         | `string` |
+| `GearTopLarge`      | `string` |
+| `GearTopSmall`      | `string` |
+| `ShaftBase`         | `string` |
+| `ShaftFrame`        | `string` |
+| `ShaftLowerFrame`   | `string` |
+| `ShaftSupport`      | `string` |
 
 Blueprints (2):
 
@@ -1755,8 +1755,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `BoostPercentage` | `number` |
 
 Blueprints (6):
@@ -1769,8 +1769,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type      |
+| ------------ | --------- |
 | `IsEditable` | `boolean` |
 
 Blueprints (34):
@@ -1799,11 +1799,11 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FormatLocKey` | `string` |
-| `IsPersistent` | `boolean` |
-| `NumberingGroup` | `string` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `FormatLocKey`   | `string`  |
+| `IsPersistent`   | `boolean` |
+| `NumberingGroup` | `string`  |
 
 Blueprints (2):
 
@@ -1815,9 +1815,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DomeName` | `string` |
+| Property        | Type     |
+| --------------- | -------- |
+| `DomeName`      | `string` |
 | `TelescopeName` | `string` |
 
 Blueprints (1):
@@ -1838,8 +1838,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PathModelType` | `string` |
 
 Blueprints (2):
@@ -1852,8 +1852,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
 | `MainPathCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (29):
@@ -1866,8 +1866,8 @@ Blueprints (29):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `PatrollingSlots` | `{ Animation: string; BaseMovementSpeed: number; MaxRandomDeviationOfMovementSpeed: number; SlotKeyword: string; WaterSlot: boolean }[]` |
 
 Blueprints (2):
@@ -1880,15 +1880,15 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CanBeAttachedToTerrainSide` | `boolean` |
-| `CustomPivot` | `{ Coordinates: { X: number; Y: number; Z: number }; HasCustomPivot: boolean }` |
-| `DevModeTool` | `boolean` |
-| `Layout` | `string` |
-| `ToolGroupId` | `string` |
-| `ToolOrder` | `number` |
-| `ToolShape` | `string` |
+| Property                     | Type                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `CanBeAttachedToTerrainSide` | `boolean`                                                                       |
+| `CustomPivot`                | `{ Coordinates: { X: number; Y: number; Z: number }; HasCustomPivot: boolean }` |
+| `DevModeTool`                | `boolean`                                                                       |
+| `Layout`                     | `string`                                                                        |
+| `ToolGroupId`                | `string`                                                                        |
+| `ToolOrder`                  | `number`                                                                        |
+| `ToolShape`                  | `string`                                                                        |
 
 Blueprints (305):
 
@@ -1900,8 +1900,8 @@ Blueprints (305):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type                                                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `SpeedCurve` | `{ Keys: { InTangent: number; InWeight: number; OutTangent: number; OutWeight: number; Time: number; Value: number; WeightedMode: number }[]; PostWrapMode: string; PreWrapMode: string }` |
 
 Blueprints (1):
@@ -1914,11 +1914,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullRotationDuration` | `number` |
-| `RotatedElementName` | `string` |
-| `RotationCurve` | `{ Keys: { InTangent: number; InWeight: number; OutTangent: number; OutWeight: number; Time: number; Value: number; WeightedMode: number }[]; PostWrapMode: string; PreWrapMode: string }` |
+| Property               | Type                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FullRotationDuration` | `number`                                                                                                                                                                                   |
+| `RotatedElementName`   | `string`                                                                                                                                                                                   |
+| `RotationCurve`        | `{ Keys: { InTangent: number; InWeight: number; OutTangent: number; OutWeight: number; Time: number; Value: number; WeightedMode: number }[]; PostWrapMode: string; PreWrapMode: string }` |
 
 Blueprints (1):
 
@@ -1938,8 +1938,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `SpawnPointName` | `string` |
 
 Blueprints (1):
@@ -1952,8 +1952,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PilotSeatName` | `string` |
 | `RotationSpeed` | `number` |
 
@@ -1967,8 +1967,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `PlantableResourceGroup` | `string` |
 
 Blueprints (5):
@@ -1997,8 +1997,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (3):
@@ -2027,8 +2027,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type       |
+| ------------------- | ---------- |
 | `PrioritySlotNames` | `string[]` |
 
 Blueprints (1):
@@ -2057,12 +2057,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AlertLocKey` | `string` |
+| Property               | Type     |
+| ---------------------- | -------- |
+| `AlertLocKey`          | `string` |
 | `HoursToResetProgress` | `number` |
-| `StatusIcon` | `string` |
-| `StatusLocKey` | `string` |
+| `StatusIcon`           | `string` |
+| `StatusLocKey`         | `string` |
 
 Blueprints (1):
 
@@ -2074,8 +2074,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `EffectRadius` | `number` |
 
 Blueprints (32):
@@ -2136,8 +2136,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `ScienceUsedPerHour` | `number` |
 
 Blueprints (1):
@@ -2166,9 +2166,9 @@ Blueprints (46):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Capacity` | `number` |
+| Property            | Type      |
+| ------------------- | --------- |
+| `Capacity`          | `number`  |
 | `IgnorableCapacity` | `boolean` |
 
 Blueprints (15):
@@ -2181,8 +2181,8 @@ Blueprints (15):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `MaxTimeOffset` | `number` |
 
 Blueprints (2):
@@ -2203,11 +2203,11 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type      |
+| -------------------- | --------- |
 | `BlockAboveMoisture` | `boolean` |
 | `BlockContamination` | `boolean` |
-| `BlockFullMoisture` | `boolean` |
+| `BlockFullMoisture`  | `boolean` |
 
 Blueprints (6):
 
@@ -2243,11 +2243,11 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CenterOffset` | `{ X: number; Y: number; Z: number }` |
-| `GoodVisualizationId` | `string` |
-| `GoodVisualizationVariant` | `string` |
+| Property                   | Type                                  |
+| -------------------------- | ------------------------------------- |
+| `CenterOffset`             | `{ X: number; Y: number; Z: number }` |
+| `GoodVisualizationId`      | `string`                              |
+| `GoodVisualizationVariant` | `string`                              |
 
 Blueprints (6):
 
@@ -2259,10 +2259,10 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CenterOffset` | `{ X: number; Y: number; Z: number }` |
-| `GoodPileVisualizations` | `string[]` |
+| Property                 | Type                                  |
+| ------------------------ | ------------------------------------- |
+| `CenterOffset`           | `{ X: number; Y: number; Z: number }` |
+| `GoodPileVisualizations` | `string[]`                            |
 
 Blueprints (4):
 
@@ -2282,8 +2282,8 @@ Blueprints (7):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                       | Type                                                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `StockpilePlaneVisualizations` | `{ CenterOffset: { X: number; Y: number; Z: number }; GoodVisualizationId: string; GoodVisualizationVariant: string; MovementRange: { X: number; Y: number } }[]` |
 
 Blueprints (10):
@@ -2296,9 +2296,9 @@ Blueprints (10):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxCapacity` | `number` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `MaxCapacity`         | `number` |
 | `WhitelistedGoodType` | `string` |
 
 Blueprints (17):
@@ -2319,10 +2319,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `MarkerName` | `string` |
-| `MaxHeight` | `number` |
+| `MaxHeight`  | `number` |
 
 Blueprints (2):
 
@@ -2334,8 +2334,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `MaxWaterLevel` | `number` |
 
 Blueprints (2):
@@ -2348,8 +2348,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Attachments` | `{ AttachmentId: string; CreateInstantly: boolean; Parent: string; Position: { X: number; Y: number; Z: number }; Prefab: string; Rotation: { X: number; Y: number; Z: number }; Scale: { X: number; Y: number; Z: number } }[]` |
 
 Blueprints (51):
@@ -2362,12 +2362,12 @@ Blueprints (51):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                          | Type       |
+| --------------------------------- | ---------- |
 | `BackwardCompatibleTemplateNames` | `string[]` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| `DisablingFeatureToggle`          | `string`   |
+| `RequiredFeatureToggle`           | `string`   |
+| `TemplateName`                    | `string`   |
 
 Blueprints (306):
 
@@ -2387,10 +2387,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ChangeRange` | `number` |
-| `MinWaterHeight` | `number` |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
+| `ChangeRange`      | `number`                              |
+| `MinWaterHeight`   | `number`                              |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (3):
@@ -2403,10 +2403,10 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxHeight` | `number` |
-| `MinHeight` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `MaxHeight`          | `number` |
+| `MinHeight`          | `number` |
 | `ProgressObjectName` | `string` |
 
 Blueprints (2):
@@ -2427,9 +2427,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Slots` | `{ Animation: string; Inanimate: boolean; RandomizeYRotation: boolean; SlotKeyword: string; WaterSlot: boolean }[]` |
+| Property | Type                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `Slots`  | `{ Animation: string; Inanimate: boolean; RandomizeYRotation: boolean; SlotKeyword: string; WaterSlot: boolean }[]` |
 
 Blueprints (95):
 
@@ -2441,10 +2441,10 @@ Blueprints (95):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IgnoreRotation` | `boolean` |
-| `Transputs` | `{ Coordinates: { X: number; Y: number; Z: number }; Directions: string; ReverseRotation: boolean }[]` |
+| Property         | Type                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `IgnoreRotation` | `boolean`                                                                                              |
+| `Transputs`      | `{ Coordinates: { X: number; Y: number; Z: number }; Directions: string; ReverseRotation: boolean }[]` |
 
 Blueprints (90):
 
@@ -2456,8 +2456,8 @@ Blueprints (90):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `ModelPrefix` | `string` |
 
 Blueprints (2):
@@ -2470,8 +2470,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `PlatformModelName` | `string` |
 
 Blueprints (1):
@@ -2500,9 +2500,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ExplosionPrefabPath` | `string` |
+| Property                    | Type     |
+| --------------------------- | -------- |
+| `ExplosionPrefabPath`       | `string` |
 | `TunnelSupportTemplateName` | `string` |
 
 Blueprints (2):
@@ -2523,9 +2523,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `FullModelName`      | `string` |
 | `UncoveredModelName` | `string` |
 
 Blueprints (2):
@@ -2538,9 +2538,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Depth` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Depth`  | `number` |
 
 Blueprints (1):
 
@@ -2560,8 +2560,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type       |
+| ----------------------------- | ---------- |
 | `UnderstructureTemplateNames` | `string[]` |
 
 Blueprints (11):
@@ -2582,8 +2582,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `SlotKeyword` | `string` |
 
 Blueprints (2):
@@ -2604,22 +2604,22 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultAutomationOutflowLimit` | `number` |
+| Property                               | Type      |
+| -------------------------------------- | --------- |
+| `DefaultAutomationOutflowLimit`        | `number`  |
 | `DefaultAutomationOutflowLimitEnabled` | `boolean` |
-| `DefaultOutflowLimit` | `number` |
-| `DefaultOutflowLimitEnabled` | `boolean` |
-| `MaxOutflowLimit` | `number` |
-| `OutflowLimitStep` | `number` |
-| `RateOfChangeHighPrimary` | `number` |
-| `RateOfChangeHighSecondary` | `number` |
-| `RateOfChangeLowPrimary` | `number` |
-| `RateOfChangeLowSecondary` | `number` |
-| `RateOfChangePrimaryTicks` | `number` |
-| `RateOfChangePrimaryToSecondaryTicks` | `number` |
-| `ReactionSpeedExponent` | `number` |
-| `ReactionSpeedStep` | `number` |
+| `DefaultOutflowLimit`                  | `number`  |
+| `DefaultOutflowLimitEnabled`           | `boolean` |
+| `MaxOutflowLimit`                      | `number`  |
+| `OutflowLimitStep`                     | `number`  |
+| `RateOfChangeHighPrimary`              | `number`  |
+| `RateOfChangeHighSecondary`            | `number`  |
+| `RateOfChangeLowPrimary`               | `number`  |
+| `RateOfChangeLowSecondary`             | `number`  |
+| `RateOfChangePrimaryTicks`             | `number`  |
+| `RateOfChangePrimaryToSecondaryTicks`  | `number`  |
+| `ReactionSpeedExponent`                | `number`  |
+| `ReactionSpeedStep`                    | `number`  |
 
 Blueprints (2):
 
@@ -2639,11 +2639,11 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxDepth` | `number` |
-| `PipeParentName` | `string` |
-| `PipeSegmentPrefabPath` | `string` |
+| Property                | Type                                  |
+| ----------------------- | ------------------------------------- |
+| `MaxDepth`              | `number`                              |
+| `PipeParentName`        | `string`                              |
+| `PipeSegmentPrefabPath` | `string`                              |
 | `WaterInputCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (9):
@@ -2656,8 +2656,8 @@ Blueprints (9):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (2):
@@ -2670,8 +2670,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `WaterPerSecond` | `number` |
 
 Blueprints (2):
@@ -2692,8 +2692,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (13):
@@ -2706,8 +2706,8 @@ Blueprints (13):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                         |
+| ------------- | ---------------------------- |
 | `Coordinates` | `{ X: number; Y: number }[]` |
 
 Blueprints (12):
@@ -2720,8 +2720,8 @@ Blueprints (12):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `AttachmentId` | `string` |
 
 Blueprints (4):
@@ -2734,8 +2734,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (4):
@@ -2748,11 +2748,11 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Blocks` | `{ X: number; Y: number }[]` |
-| `ExpectedWaterDirection` | `{ X: number; Y: number }` |
-| `MinRequiredOutflow` | `number` |
+| Property                 | Type                         |
+| ------------------------ | ---------------------------- |
+| `Blocks`                 | `{ X: number; Y: number }[]` |
+| `ExpectedWaterDirection` | `{ X: number; Y: number }`   |
+| `MinRequiredOutflow`     | `number`                     |
 
 Blueprints (3):
 
@@ -2764,8 +2764,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `DefaultContamination` | `number` |
 
 Blueprints (1):
@@ -2794,8 +2794,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `RegulatorTransforms` | `{ TargetOffset: { X: number; Y: number; Z: number }; TargetRotation: { X: number; Y: number; Z: number }; TransformName: string }[]` |
 
 Blueprints (2):
@@ -2816,10 +2816,10 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Coordinates` | `{ X: number; Y: number }[]` |
-| `DefaultStrength` | `number` |
+| Property          | Type                         |
+| ----------------- | ---------------------------- |
+| `Coordinates`     | `{ X: number; Y: number }[]` |
+| `DefaultStrength` | `number`                     |
 
 Blueprints (1):
 
@@ -2839,8 +2839,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `MaxEarlyActivationHours` | `number` |
 
 Blueprints (2):
@@ -2861,8 +2861,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (10):
@@ -2883,8 +2883,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `MinRequiredWindStrength` | `number` |
 
 Blueprints (2):
@@ -2897,9 +2897,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Tower` | `{ RotationAxis: { X: number; Y: number; Z: number }; RotationSpeed: number; TransformName: string }` |
+| Property       | Type                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| `Tower`        | `{ RotationAxis: { X: number; Y: number; Z: number }; RotationSpeed: number; TransformName: string }`   |
 | `WindRotators` | `{ RotationAxis: { X: number; Y: number; Z: number }; RotationSpeed: number; TransformName: string }[]` |
 
 Blueprints (5):
@@ -2912,8 +2912,8 @@ Blueprints (5):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `TimerDelayInHours` | `number` |
 
 Blueprints (1):
@@ -2926,8 +2926,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                                      |
+| --------- | ------------------------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Blueprints (2):
@@ -2940,8 +2940,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                               |
+| --------------- | ---------------------------------- |
 | `RequiredGoods` | `{ Amount: number; Id: string }[]` |
 
 Blueprints (2):
@@ -2954,8 +2954,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (1):
@@ -2984,8 +2984,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                                        |
+| --------------- | ------------------------------------------- |
 | `WorkerBonuses` | `{ Id: string; MultiplierDelta: number }[]` |
 
 Blueprints (4):
@@ -3014,13 +3014,13 @@ Blueprints (60):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultWorkers` | `number` |
-| `DefaultWorkerType` | `string` |
-| `DisallowOtherWorkerTypes` | `boolean` |
-| `MaxWorkers` | `number` |
-| `WorkerTypeUnlockCosts` | `{ ScienceCost: number; WorkerType: string }[]` |
+| Property                   | Type                                            |
+| -------------------------- | ----------------------------------------------- |
+| `DefaultWorkers`           | `number`                                        |
+| `DefaultWorkerType`        | `string`                                        |
+| `DisallowOtherWorkerTypes` | `boolean`                                       |
+| `MaxWorkers`               | `number`                                        |
+| `WorkerTypeUnlockCosts`    | `{ ScienceCost: number; WorkerType: string }[]` |
 
 Blueprints (70):
 
@@ -3032,8 +3032,8 @@ Blueprints (70):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `WorkerOutfit` | `string` |
 
 Blueprints (12):
@@ -3054,8 +3054,8 @@ Blueprints (35):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (17):
@@ -3068,8 +3068,8 @@ Blueprints (17):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                        |
+| --------- | ----------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
 
 Blueprints (26):
@@ -3098,11 +3098,11 @@ Blueprints (39):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
-| `MinimumAttemptsThreshold` | `number` |
-| `YieldGoodId` | `string` |
+| Property                   | Type                                                        |
+| -------------------------- | ----------------------------------------------------------- |
+| `Effects`                  | `{ NeedId: string; Points: number; Probability: string }[]` |
+| `MinimumAttemptsThreshold` | `number`                                                    |
+| `YieldGoodId`              | `string`                                                    |
 
 Blueprints (2):
 
@@ -3114,8 +3114,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `ResourceGroup` | `string` |
 
 Blueprints (11):
@@ -3136,11 +3136,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CableAnchorPoint` | `{ X: number; Y: number; Z: number }` |
-| `MaxConnections` | `number` |
-| `MaxDistance` | `number` |
+| Property                  | Type                                    |
+| ------------------------- | --------------------------------------- |
+| `CableAnchorPoint`        | `{ X: number; Y: number; Z: number }`   |
+| `MaxConnections`          | `number`                                |
+| `MaxDistance`             | `number`                                |
 | `UnobstructedCoordinates` | `{ X: number; Y: number; Z: number }[]` |
 
 Blueprints (3):
@@ -3163,8 +3163,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------ |
 | `AnimationParticles` | `{ AnimationName: string; ParticlesAttachmentId: string; TriggerTimes: number[] }[]` |
 
 Blueprints (3):
@@ -3177,8 +3177,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type                                                                         |
+| ------------------- | ---------------------------------------------------------------------------- |
 | `InjuryTextureSets` | `{ DiffusePath: string; DisplacementPath: string; NormalMapPath: string }[]` |
 
 Blueprints (2):
@@ -3191,8 +3191,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type                                         |
+| -------------- | -------------------------------------------- |
 | `PropertySets` | `{ NeedId: string; PropertyName: string }[]` |
 
 Blueprints (2):
@@ -3213,8 +3213,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `SoundNameKey` | `string` |
 
 Blueprints (2):
@@ -3235,8 +3235,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `NotificationLocKey` | `string` |
 
 Blueprints (4):
@@ -3249,8 +3249,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `ModelName` | `string` |
 
 Blueprints (4):
@@ -3266,7 +3266,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (4):
+  Blueprints (4):
 
 [`BeaverAdult`][beaver-adult], [`BeaverChild`][beaver-child], `Bot` [![Folktails](assets/faction-folktails.png)][bot-folktails-characters-bot] [![Iron Teeth](assets/faction-ironteeth.png)][bot-ironteeth-characters-bot]
 
@@ -3284,10 +3284,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `Animation` | `string` |
-| `NeedId` | `string` |
+| `NeedId`    | `string` |
 
 Blueprints (2):
 
@@ -3299,8 +3299,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `DeadStatusLocKey` | `string` |
 
 Blueprints (4):
@@ -3313,8 +3313,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type                                                  |
+| ----------------------- | ----------------------------------------------------- |
 | `DemolishableParticles` | `{ AttachmentId: string; TemplateNames: string[] }[]` |
 
 Blueprints (3):
@@ -3335,8 +3335,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `DeteriorationInDays` | `number` |
 
 Blueprints (2):
@@ -3349,9 +3349,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackpackAttachmentName` | `string` |
+| Property                       | Type     |
+| ------------------------------ | -------- |
+| `BackpackAttachmentName`       | `string` |
 | `CarriedInHandsAttachmentName` | `string` |
 
 Blueprints (3):
@@ -3364,8 +3364,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `BaseLiftingCapacity` | `number` |
 
 Blueprints (3):
@@ -3386,8 +3386,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `AnimationSpeedScale` | `number` |
 
 Blueprints (4):
@@ -3400,8 +3400,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type      |
+| ------------ | --------- |
 | `IsEditable` | `boolean` |
 
 Blueprints (4):
@@ -3414,11 +3414,11 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FormatLocKey` | `string` |
-| `IsPersistent` | `boolean` |
-| `NumberingGroup` | `string` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `FormatLocKey`   | `string`  |
+| `IsPersistent`   | `boolean` |
+| `NumberingGroup` | `string`  |
 
 Blueprints (2):
 
@@ -3430,8 +3430,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                        |
+| --------------------- | ------------------------------------------- |
 | `OverburdenedBonuses` | `{ Id: string; MultiplierDelta: number }[]` |
 
 Blueprints (3):
@@ -3444,8 +3444,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `ParticlesAttachmentId` | `string` |
 
 Blueprints (3):
@@ -3458,10 +3458,10 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                        | Type     |
+| ------------------------------- | -------- |
 | `ShortWalkingDistanceThreshold` | `number` |
-| `WalkingSpeedThreshold` | `number` |
+| `WalkingSpeedThreshold`         | `number` |
 
 Blueprints (4):
 
@@ -3473,8 +3473,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `EntityNameLocKey` | `string` |
 
 Blueprints (4):
@@ -3487,9 +3487,9 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxOffsetInHours` | `number` |
+| Property              | Type                                                                      |
+| --------------------- | ------------------------------------------------------------------------- |
+| `MaxOffsetInHours`    | `number`                                                                  |
 | `SleepOutsideEffects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Blueprints (2):
@@ -3502,8 +3502,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type     |
+| ----------------------------- | -------- |
 | `LowerSwimmingDepthThreshold` | `number` |
 | `UpperSwimmingDepthThreshold` | `number` |
 
@@ -3517,8 +3517,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Attachments` | `{ AttachmentId: string; CreateInstantly: boolean; Parent: string; Position: { X: number; Y: number; Z: number }; Prefab: string; Rotation: { X: number; Y: number; Z: number }; Scale: { X: number; Y: number; Z: number } }[]` |
 
 Blueprints (4):
@@ -3531,12 +3531,12 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleTemplateNames` | `array` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `BackwardCompatibleTemplateNames` | `array`  |
+| `DisablingFeatureToggle`          | `string` |
+| `RequiredFeatureToggle`           | `string` |
+| `TemplateName`                    | `string` |
 
 Blueprints (4):
 
@@ -3556,11 +3556,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AnimatorStates` | `{ AnimationName: string; Conditions: { MustBeTrue: boolean; ParameterName: string }[]; Looped: boolean; Speed: number; SpeedModifier: string; StateName: string }[]` |
-| `BoolParameters` | `string[]` |
-| `FloatParameters` | `string[]` |
+| Property          | Type                                                                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AnimatorStates`  | `{ AnimationName: string; Conditions: { MustBeTrue: boolean; ParameterName: string }[]; Looped: boolean; Speed: number; SpeedModifier: string; StateName: string }[]` |
+| `BoolParameters`  | `string[]`                                                                                                                                                            |
+| `FloatParameters` | `string[]`                                                                                                                                                            |
 
 Blueprints (4):
 
@@ -3572,8 +3572,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `ParticlesAttachmentId` | `string` |
 
 Blueprints (3):
@@ -3586,8 +3586,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type       |
+| ---------- | ---------- |
 | `Variants` | `string[]` |
 
 Blueprints (2):
@@ -3600,9 +3600,9 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseSlowedSpeed` | `number` |
+| Property           | Type     |
+| ------------------ | -------- |
+| `BaseSlowedSpeed`  | `number` |
 | `BaseWalkingSpeed` | `number` |
 
 Blueprints (4):
@@ -3615,8 +3615,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type       |
+| --------- | ---------- |
 | `Bonuses` | `string[]` |
 
 Blueprints (4):
@@ -3629,8 +3629,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                           | Type                                                                                                       |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `WorkerOutfitAnimationAttachments` | `{ AnimationNames: string[]; HideWhenActive: string[]; ShowWhenActive: string[]; WorkerOutfit: string }[]` |
 
 Blueprints (3):
@@ -3643,8 +3643,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `WorkerType` | `string` |
 
 Blueprints (3):
@@ -3665,8 +3665,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `AttachmentId` | `string` |
 
 Blueprints (3):
@@ -3681,9 +3681,9 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DayAmbient` | `string` |
+| Property       | Type     |
+| -------------- | -------- |
+| `DayAmbient`   | `string` |
 | `NightAmbient` | `string` |
 | `WaterAmbient` | `string` |
 
@@ -3697,9 +3697,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AreaMaxBlocks` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `AreaMaxBlocks`      | `number` |
 | `SculptingMaxBlocks` | `number` |
 
 Blueprints (1):
@@ -3712,10 +3712,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `TileMaterial` | `string` |
-| `TileMesh` | `string` |
+| `TileMesh`     | `string` |
 
 Blueprints (1):
 
@@ -3727,8 +3727,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `AudioMixer` | `string` |
 
 Blueprints (1):
@@ -3741,8 +3741,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                         |
+| ------------- | ------------------------------------------------------------ |
 | `AutoAtlases` | `{ Fragments: string[]; IsUnique: boolean; Name: string }[]` |
 
 Blueprints (1):
@@ -3755,10 +3755,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `AutosavesPerSettlement` | `number` |
-| `FrequencyInMinutes` | `number` |
+| `FrequencyInMinutes`     | `number` |
 
 Blueprints (1):
 
@@ -3770,14 +3770,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `BlockSideMesh0010` | `string` |
 | `BlockSideMesh0011` | `string` |
 | `BlockSideMesh0111` | `string` |
 | `BlockSideMesh1010` | `string` |
 | `BlockSideMesh1111` | `string` |
-| `Material` | `string` |
+| `Material`          | `string` |
 
 Blueprints (1):
 
@@ -3789,10 +3789,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DeletedAreaSideColor` | `{ a: number; b: number; g: number; r: number }` |
-| `DeletedAreaTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                      | Type                                             |
+| ----------------------------- | ------------------------------------------------ |
+| `DeletedAreaSideColor`        | `{ a: number; b: number; g: number; r: number }` |
+| `DeletedAreaTileColor`        | `{ a: number; b: number; g: number; r: number }` |
 | `DeletedObjectHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -3805,8 +3805,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
 | `NegativeBonusHighlight` | `{ a: number; b: number; g: number; r: number }` |
 | `PositiveBonusHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
@@ -3820,8 +3820,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `BotColorId` | `string` |
 
 Blueprints (1):
@@ -3834,9 +3834,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Material` | `string` |
+| Property     | Type       |
+| ------------ | ---------- |
+| `Material`   | `string`   |
 | `TileMeshes` | `string[]` |
 
 Blueprints (1):
@@ -3849,11 +3849,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type                                             |
+| ---------- | ------------------------------------------------ |
 | `Negative` | `{ a: number; b: number; g: number; r: number }` |
-| `Neutral` | `{ a: number; b: number; g: number; r: number }` |
-| `Objects` | `{ a: number; b: number; g: number; r: number }` |
+| `Neutral`  | `{ a: number; b: number; g: number; r: number }` |
+| `Objects`  | `{ a: number; b: number; g: number; r: number }` |
 | `Positive` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -3866,8 +3866,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `MaxBrushSize` | `number` |
 
 Blueprints (1):
@@ -3880,12 +3880,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `PriorityActionColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
+| `PriorityActionColor`    | `{ a: number; b: number; g: number; r: number }` |
 | `PriorityHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
-| `PrioritySideColor` | `{ a: number; b: number; g: number; r: number }` |
-| `PriorityTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| `PrioritySideColor`      | `{ a: number; b: number; g: number; r: number }` |
+| `PriorityTileColor`      | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -3897,21 +3897,21 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseDistance` | `number` |
-| `DefaultZoomLimits` | `{ Max: number; Min: number }` |
-| `FreeModeMapMargin` | `number` |
-| `FreeModeZoomLimits` | `{ Max: number; Min: number }` |
-| `HorizontalAngle` | `number` |
+| Property              | Type                           |
+| --------------------- | ------------------------------ |
+| `BaseDistance`        | `number`                       |
+| `DefaultZoomLimits`   | `{ Max: number; Min: number }` |
+| `FreeModeMapMargin`   | `number`                       |
+| `FreeModeZoomLimits`  | `{ Max: number; Min: number }` |
+| `HorizontalAngle`     | `number`                       |
 | `MapEditorZoomLimits` | `{ Max: number; Min: number }` |
-| `MapMargin` | `number` |
-| `UnlockedZoomLimits` | `{ Max: number; Min: number }` |
-| `VerticalAngle` | `number` |
+| `MapMargin`           | `number`                       |
+| `UnlockedZoomLimits`  | `{ Max: number; Min: number }` |
+| `VerticalAngle`       | `number`                       |
 | `VerticalAngleLimits` | `{ Max: number; Min: number }` |
-| `ZoomBase` | `number` |
-| `ZoomLevel` | `number` |
-| `ZoomSpeed` | `number` |
+| `ZoomBase`            | `number`                       |
+| `ZoomLevel`           | `number`                       |
+| `ZoomSpeed`           | `number`                       |
 
 Blueprints (1):
 
@@ -3923,8 +3923,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Radius` | `number` |
 
 Blueprints (1):
@@ -3937,16 +3937,16 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxAmbientFade` | `number` |
-| `MaxBuildingFadeDistance` | `number` |
+| Property                                 | Type     |
+| ---------------------------------------- | -------- |
+| `MaxAmbientFade`                         | `number` |
+| `MaxBuildingFadeDistance`                | `number` |
 | `MaxVerticalListenerPositionAboveGround` | `number` |
-| `MaxWindFade` | `number` |
-| `MinAmbientFade` | `number` |
-| `MinBuildingFadeDistance` | `number` |
-| `MinWindFade` | `number` |
-| `WindAmbientKey` | `string` |
+| `MaxWindFade`                            | `number` |
+| `MinAmbientFade`                         | `number` |
+| `MinBuildingFadeDistance`                | `number` |
+| `MinWindFade`                            | `number` |
+| `WindAmbientKey`                         | `string` |
 
 Blueprints (1):
 
@@ -3958,11 +3958,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConfiguredDayLengthInTicks` | `number` |
+| Property                         | Type     |
+| -------------------------------- | -------- |
+| `ConfiguredDayLengthInTicks`     | `number` |
 | `ConfiguredDaytimeLengthInHours` | `number` |
-| `HoursPassedOnNewGame` | `number` |
+| `HoursPassedOnNewGame`           | `number` |
 
 Blueprints (1):
 
@@ -3974,10 +3974,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                     | Type     |
+| ---------------------------- | -------- |
 | `SunriseSunsetLengthInHours` | `number` |
-| `TransitionLengthInHours` | `number` |
+| `TransitionLengthInHours`    | `number` |
 
 Blueprints (1):
 
@@ -3989,14 +3989,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxNeighboursCount` | `number` |
-| `MaxParticlesForThreshold` | `number` |
+| Property                    | Type     |
+| --------------------------- | -------- |
+| `MaxNeighboursCount`        | `number` |
+| `MaxParticlesForThreshold`  | `number` |
 | `MaxParticleSpawnThreshold` | `number` |
-| `MinParticlesForThreshold` | `number` |
+| `MinParticlesForThreshold`  | `number` |
 | `MinParticleSpawnThreshold` | `number` |
-| `ParticlePrefabPath` | `string` |
+| `ParticlePrefabPath`        | `string` |
 
 Blueprints (1):
 
@@ -4008,10 +4008,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type     |
+| ---------- | -------- |
 | `Material` | `string` |
-| `Mesh` | `string` |
+| `Mesh`     | `string` |
 
 Blueprints (1):
 
@@ -4023,10 +4023,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DeletedAreaSideColor` | `{ a: number; b: number; g: number; r: number }` |
-| `DeletedAreaTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                      | Type                                             |
+| ----------------------------- | ------------------------------------------------ |
+| `DeletedAreaSideColor`        | `{ a: number; b: number; g: number; r: number }` |
+| `DeletedAreaTileColor`        | `{ a: number; b: number; g: number; r: number }` |
 | `DeletedObjectHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4039,8 +4039,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                                                        |
+| ------------------ | --------------------------------------------------------------------------- |
 | `DistanceGradient` | `{ Color: { a: number; b: number; g: number; r: number }; Time: number }[]` |
 
 Blueprints (1):
@@ -4053,8 +4053,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                             |
+| --------------------- | ------------------------------------------------ |
 | `ConnectionHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4067,11 +4067,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ArcAngle` | `number` |
-| `CurvePoints` | `number` |
-| `LineCutoff` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `ArcAngle`           | `number` |
+| `CurvePoints`        | `number` |
+| `LineCutoff`         | `number` |
 | `LineRendererPrefab` | `string` |
 
 Blueprints (1):
@@ -4084,8 +4084,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `MovementSpeed` | `number` |
 
 Blueprints (1):
@@ -4098,14 +4098,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `LongCenterDrivewayPrefab` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `LongCenterDrivewayPrefab`   | `string` |
 | `NarrowCenterDrivewayPrefab` | `string` |
-| `NarrowLeftDrivewayPrefab` | `string` |
-| `NarrowRightDrivewayPrefab` | `string` |
+| `NarrowLeftDrivewayPrefab`   | `string` |
+| `NarrowRightDrivewayPrefab`  | `string` |
 | `StraightPathDrivewayPrefab` | `string` |
-| `WideCenterDrivewayPrefab` | `string` |
+| `WideCenterDrivewayPrefab`   | `string` |
 
 Blueprints (1):
 
@@ -4117,8 +4117,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                             |
+| ------------- | ------------------------------------------------ |
 | `SourceColor` | `{ a: number; b: number; g: number; r: number }` |
 | `TargetColor` | `{ a: number; b: number; g: number; r: number }` |
 
@@ -4132,11 +4132,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `FastMovementSpeedBonus` | `number` |
-| `MaxBaseSpeed` | `number` |
-| `MinBaseSpeed` | `number` |
+| `MaxBaseSpeed`           | `number` |
+| `MinBaseSpeed`           | `number` |
 
 Blueprints (1):
 
@@ -4148,8 +4148,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type                                             |
+| ---------------------- | ------------------------------------------------ |
 | `ObjectHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4162,12 +4162,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `MaxGameSpeedScale` | `number` |
-| `MaxPopulation` | `number` |
+| `MaxPopulation`     | `number` |
 | `MinGameSpeedScale` | `number` |
-| `MinPopulation` | `number` |
+| `MinPopulation`     | `number` |
 
 Blueprints (1):
 
@@ -4179,9 +4179,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Tips` | `string[]` |
+| Property | Type       |
+| -------- | ---------- |
+| `Tips`   | `string[]` |
 
 Blueprints (1):
 
@@ -4193,15 +4193,15 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BadtideStartedSoundKey` | `string` |
-| `BlinkingSoundKey` | `string` |
-| `DroughtStartedSoundKey` | `string` |
-| `FieldPlaced` | `string` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `BadtideStartedSoundKey`          | `string` |
+| `BlinkingSoundKey`                | `string` |
+| `DroughtStartedSoundKey`          | `string` |
+| `FieldPlaced`                     | `string` |
 | `TemperateWeatherStartedSoundKey` | `string` |
-| `WellbeingHighscore` | `string` |
-| `WonderCongratulationSoundKey` | `string` |
+| `WellbeingHighscore`              | `string` |
+| `WonderCongratulationSoundKey`    | `string` |
 
 Blueprints (1):
 
@@ -4213,11 +4213,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type     |
+| ----------------------------- | -------- |
 | `ApproachingNotificationDays` | `number` |
-| `MaxDayProgressLeftToNotify` | `number` |
-| `NotificationDuration` | `number` |
+| `MaxDayProgressLeftToNotify`  | `number` |
+| `NotificationDuration`        | `number` |
 
 Blueprints (1):
 
@@ -4229,10 +4229,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `DefaultColorId` | `string` |
-| `IconExponent` | `number` |
+| `IconExponent`   | `number` |
 | `IconMultiplier` | `number` |
 
 Blueprints (1):
@@ -4245,10 +4245,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZoomSpeed` | `number` |
-| `JumpRotationAngle` | `number` |
+| Property                            | Type     |
+| ----------------------------------- | -------- |
+| `BaseZoomSpeed`                     | `number` |
+| `JumpRotationAngle`                 | `number` |
 | `JumpRotationSpeedInAnglePerUpdate` | `number` |
 
 Blueprints (1):
@@ -4261,8 +4261,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `AverageLifespan` | `number` |
 | `DaysOfChildhood` | `number` |
 
@@ -4276,9 +4276,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Tips` | `string[]` |
+| Property | Type       |
+| -------- | ---------- |
+| `Tips`   | `string[]` |
 
 Blueprints (1):
 
@@ -4290,14 +4290,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultMapSize` | `{ X: number; Y: number }` |
-| `MaxGameTerrainHeight` | `number` |
-| `MaxHeightAboveTerrain` | `number` |
-| `MaxMapEditorTerrainHeight` | `number` |
-| `MaxMapSize` | `number` |
-| `MinMapSize` | `number` |
+| Property                    | Type                       |
+| --------------------------- | -------------------------- |
+| `DefaultMapSize`            | `{ X: number; Y: number }` |
+| `MaxGameTerrainHeight`      | `number`                   |
+| `MaxHeightAboveTerrain`     | `number`                   |
+| `MaxMapEditorTerrainHeight` | `number`                   |
+| `MaxMapSize`                | `number`                   |
+| `MinMapSize`                | `number`                   |
 
 Blueprints (1):
 
@@ -4309,24 +4309,24 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ArrowMaterial` | `string` |
-| `ArrowMesh` | `string` |
-| `EntranceMarkerMaterial` | `string` |
-| `EntranceMesh` | `string` |
-| `LargeBlockMesh` | `string` |
-| `MechanicalInputMesh` | `string` |
+| Property                   | Type     |
+| -------------------------- | -------- |
+| `ArrowMaterial`            | `string` |
+| `ArrowMesh`                | `string` |
+| `EntranceMarkerMaterial`   | `string` |
+| `EntranceMesh`             | `string` |
+| `LargeBlockMesh`           | `string` |
+| `MechanicalInputMesh`      | `string` |
 | `MechanicalMarkerMaterial` | `string` |
-| `MechanicalOutputMesh` | `string` |
-| `PrioritizedTileMaterial` | `string` |
-| `SmallBlockMesh` | `string` |
-| `TerrainBlockMesh` | `string` |
-| `TerrainTileMaterial` | `string` |
-| `TileMaterial` | `string` |
-| `TileMesh` | `string` |
-| `TopTerrainTileMaterial` | `string` |
-| `TopTerrainTileMesh` | `string` |
+| `MechanicalOutputMesh`     | `string` |
+| `PrioritizedTileMaterial`  | `string` |
+| `SmallBlockMesh`           | `string` |
+| `TerrainBlockMesh`         | `string` |
+| `TerrainTileMaterial`      | `string` |
+| `TileMaterial`             | `string` |
+| `TileMesh`                 | `string` |
+| `TopTerrainTileMaterial`   | `string` |
+| `TopTerrainTileMesh`       | `string` |
 
 Blueprints (1):
 
@@ -4338,8 +4338,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                        | Type     |
+| ------------------------------- | -------- |
 | `MechanicalConnectorPrefabPath` | `string` |
 
 Blueprints (1):
@@ -4352,8 +4352,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type                                             |
+| ---------------- | ------------------------------------------------ |
 | `HighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4366,8 +4366,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `MaxAutomaticMigration` | `number` |
 
 Blueprints (1):
@@ -4380,10 +4380,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `RmbRotationMinDistance` | `number` |
-| `RmbRotationSpeed` | `number` |
+| `RmbRotationSpeed`       | `number` |
 
 Blueprints (1):
 
@@ -4395,13 +4395,13 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DroughtTrack` | `string` |
-| `MaxDelay` | `number` |
-| `MinDelay` | `number` |
+| Property         | Type     |
+| ---------------- | -------- |
+| `DroughtTrack`   | `string` |
+| `MaxDelay`       | `number` |
+| `MinDelay`       | `number` |
 | `StandardPhrase` | `string` |
-| `StandardTrack` | `string` |
+| `StandardTrack`  | `string` |
 
 Blueprints (1):
 
@@ -4413,11 +4413,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultNaturalResourceId` | `string` |
-| `RemovalTileColor` | `{ a: number; b: number; g: number; r: number }` |
-| `SpawnTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                   | Type                                             |
+| -------------------------- | ------------------------------------------------ |
+| `DefaultNaturalResourceId` | `string`                                         |
+| `RemovalTileColor`         | `{ a: number; b: number; g: number; r: number }` |
+| `SpawnTileColor`           | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -4429,8 +4429,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
 | `NegativeHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 | `PositiveHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
@@ -4444,11 +4444,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Material` | `string` |
+| Property               | Type       |
+| ---------------------- | ---------- |
+| `Material`             | `string`   |
 | `RegularModelVariants` | `string[]` |
-| `StairsModelVariants` | `string[]` |
+| `StairsModelVariants`  | `string[]` |
 
 Blueprints (1):
 
@@ -4460,10 +4460,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                             |
+| ------------------ | ------------------------------------------------ |
 | `PlantingToolTile` | `{ a: number; b: number; g: number; r: number }` |
-| `ToolActionTile` | `{ a: number; b: number; g: number; r: number }` |
+| `ToolActionTile`   | `{ a: number; b: number; g: number; r: number }` |
 | `ToolNoActionTile` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4476,11 +4476,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BuildablePreview` | `{ a: number; b: number; g: number; r: number }` |
+| Property             | Type                                             |
+| -------------------- | ------------------------------------------------ |
+| `BuildablePreview`   | `{ a: number; b: number; g: number; r: number }` |
 | `UnbuildablePreview` | `{ a: number; b: number; g: number; r: number }` |
-| `WarningPreview` | `{ a: number; b: number; g: number; r: number }` |
+| `WarningPreview`     | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -4492,18 +4492,18 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ButtonHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonLow` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonNormal` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonVeryHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonVeryLow` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightLow` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightNormal` | `{ a: number; b: number; g: number; r: number }` |
+| Property            | Type                                             |
+| ------------------- | ------------------------------------------------ |
+| `ButtonHigh`        | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonLow`         | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonNormal`      | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonVeryHigh`    | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonVeryLow`     | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightHigh`     | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightLow`      | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightNormal`   | `{ a: number; b: number; g: number; r: number }` |
 | `HighlightVeryHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightVeryLow` | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightVeryLow`  | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -4515,8 +4515,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type                                                          |
+| -------- | ------------------------------------------------------------- |
 | `Groups` | `{ High: number; Id: string; Low: number; Medium: number }[]` |
 
 Blueprints (1):
@@ -4529,9 +4529,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Duration` | `number` |
+| Property           | Type     |
+| ------------------ | -------- |
+| `Duration`         | `number` |
 | `ExtendedDuration` | `number` |
 
 Blueprints (1):
@@ -4544,10 +4544,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                             |
+| --------------------- | ------------------------------------------------ |
 | `BuildingRangeObject` | `{ a: number; b: number; g: number; r: number }` |
-| `BuildingRangeTile` | `{ a: number; b: number; g: number; r: number }` |
+| `BuildingRangeTile`   | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -4559,8 +4559,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type                                             |
+| ----------------- | ------------------------------------------------ |
 | `BuildingInRange` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4573,9 +4573,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxUpperSearch` | `number` |
+| Property          | Type     |
+| ----------------- | -------- |
+| `MaxUpperSearch`  | `number` |
 | `NeighboursRange` | `number` |
 
 Blueprints (1):
@@ -4588,16 +4588,16 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `BlockBottomMaterial` | `string` |
-| `BlockBottomMesh` | `string` |
-| `BlockSideMaterial` | `string` |
-| `BlockSideMesh0010` | `string` |
-| `BlockSideMesh0011` | `string` |
-| `BlockSideMesh0111` | `string` |
-| `BlockSideMesh1010` | `string` |
-| `BlockSideMesh1111` | `string` |
+| `BlockBottomMesh`     | `string` |
+| `BlockSideMaterial`   | `string` |
+| `BlockSideMesh0010`   | `string` |
+| `BlockSideMesh0011`   | `string` |
+| `BlockSideMesh0111`   | `string` |
+| `BlockSideMesh1010`   | `string` |
+| `BlockSideMesh1111`   | `string` |
 
 Blueprints (1):
 
@@ -4609,8 +4609,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type                                             |
+| ------------------- | ------------------------------------------------ |
 | `RelationSelection` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4623,10 +4623,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IvyDryModel` | `string` |
-| `IvyWetModel` | `string` |
+| Property            | Type                              |
+| ------------------- | --------------------------------- |
+| `IvyDryModel`       | `string`                          |
+| `IvyWetModel`       | `string`                          |
 | `RuinModelVariants` | `{ Id: string; Model: string }[]` |
 
 Blueprints (1):
@@ -4639,9 +4639,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `EntitySelection` | `{ a: number; b: number; g: number; r: number }` |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
+| `EntitySelection`        | `{ a: number; b: number; g: number; r: number }` |
 | `SelectionToolHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4654,13 +4654,13 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DayProgressDay` | `number` |
-| `DayProgressNight` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `DayProgressDay`     | `number` |
+| `DayProgressNight`   | `number` |
 | `DayProgressSunrise` | `number` |
-| `DayProgressSunset` | `number` |
-| `Skybox` | `string` |
+| `DayProgressSunset`  | `number` |
+| `Skybox`             | `string` |
 
 Blueprints (1):
 
@@ -4672,10 +4672,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `ContaminationThreshold` | `number` |
-| `MaxMapContamination` | `number` |
+| `MaxMapContamination`    | `number` |
 
 Blueprints (1):
 
@@ -4687,16 +4687,16 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ContaminationDecayRate` | `number` |
+| Property                                | Type     |
+| --------------------------------------- | -------- |
+| `ContaminationDecayRate`                | `number` |
 | `ContaminationNegativeEqualizationRate` | `number` |
 | `ContaminationPositiveEqualizationRate` | `number` |
-| `ContaminationSpreadingRate` | `number` |
-| `ContaminationThreshold` | `number` |
-| `MaxRangeFromSource` | `number` |
-| `MinimumWaterContamination` | `number` |
-| `VerticalSpreadCostMultiplier` | `number` |
+| `ContaminationSpreadingRate`            | `number` |
+| `ContaminationThreshold`                | `number` |
+| `MaxRangeFromSource`                    | `number` |
+| `MinimumWaterContamination`             | `number` |
+| `VerticalSpreadCostMultiplier`          | `number` |
 
 Blueprints (1):
 
@@ -4708,10 +4708,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `DesertMoistureThreshold` | `number` |
-| `MaxDesertIntensity` | `number` |
+| `MaxDesertIntensity`      | `number` |
 
 Blueprints (1):
 
@@ -4723,18 +4723,18 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstantQuadraticCoefficient` | `number` |
-| `LinearQuadraticCoefficient` | `number` |
-| `MaxClusterSaturation` | `number` |
-| `MaxEvaporationSaturation` | `number` |
-| `MaximumWaterContamination` | `number` |
-| `MinimumWaterContamination` | `number` |
-| `MoistureDecayRate` | `number` |
-| `MoistureSpreadingRate` | `number` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `ConstantQuadraticCoefficient`    | `number` |
+| `LinearQuadraticCoefficient`      | `number` |
+| `MaxClusterSaturation`            | `number` |
+| `MaxEvaporationSaturation`        | `number` |
+| `MaximumWaterContamination`       | `number` |
+| `MinimumWaterContamination`       | `number` |
+| `MoistureDecayRate`               | `number` |
+| `MoistureSpreadingRate`           | `number` |
 | `QuadraticEvaporationCoefficient` | `number` |
-| `VerticalSpreadCostMultiplier` | `number` |
+| `VerticalSpreadCostMultiplier`    | `number` |
 
 Blueprints (1):
 
@@ -4746,14 +4746,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DayColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
-| `NightColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
-| `RotateWithCameraOffset` | `number` |
-| `SunPrefab` | `string` |
-| `SunriseColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
-| `SunsetColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| Property                 | Type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DayColors`              | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| `NightColors`            | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| `RotateWithCameraOffset` | `number`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `SunPrefab`              | `string`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `SunriseColors`          | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| `SunsetColors`           | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
 
 Blueprints (1):
 
@@ -4765,20 +4765,20 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AltitudeCeiling` | `number` |
-| `AltitudeMultiplier` | `string` |
-| `BlendingMargin` | `number` |
-| `BlendingNoise` | `string` |
-| `BlendingNoiseMultiplier` | `number` |
-| `BlendingNoiseScale` | `number` |
-| `BlendingSoftness` | `number` |
-| `CutoutMargin` | `number` |
+| Property                   | Type     |
+| -------------------------- | -------- |
+| `AltitudeCeiling`          | `number` |
+| `AltitudeMultiplier`       | `string` |
+| `BlendingMargin`           | `number` |
+| `BlendingNoise`            | `string` |
+| `BlendingNoiseMultiplier`  | `number` |
+| `BlendingNoiseScale`       | `number` |
+| `BlendingSoftness`         | `number` |
+| `CutoutMargin`             | `number` |
 | `DesertAltitudeMultiplier` | `string` |
-| `DesertTexture` | `string` |
-| `DryFieldTexture` | `string` |
-| `WetFieldTexture` | `string` |
+| `DesertTexture`            | `string` |
+| `DryFieldTexture`          | `string` |
+| `WetFieldTexture`          | `string` |
 
 Blueprints (1):
 
@@ -4790,10 +4790,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `LayerToolTopMeshPrefab` | `string` |
-| `TerrainTilePrefab` | `string` |
+| `TerrainTilePrefab`      | `string` |
 
 Blueprints (1):
 
@@ -4805,8 +4805,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `TickIntervalInSeconds` | `number` |
 
 Blueprints (1):
@@ -4819,12 +4819,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FootprintTilesMaterialResourcePath` | `string` |
-| `MeshResourcePath` | `string` |
-| `TilesAboveMaterialResourcePath` | `string` |
-| `TilesBelowMaterialResourcePath` | `string` |
+| Property                               | Type     |
+| -------------------------------------- | -------- |
+| `FootprintTilesMaterialResourcePath`   | `string` |
+| `MeshResourcePath`                     | `string` |
+| `TilesAboveMaterialResourcePath`       | `string` |
+| `TilesBelowMaterialResourcePath`       | `string` |
 | `TilesOnSameLevelMaterialResourcePath` | `string` |
 
 Blueprints (1):
@@ -4837,10 +4837,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `HoveredTransmitterColor` | `{ a: number; b: number; g: number; r: number }` |
-| `TransmitterColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                     | Type                                             |
+| ---------------------------- | ------------------------------------------------ |
+| `HoveredTransmitterColor`    | `{ a: number; b: number; g: number; r: number }` |
+| `TransmitterColor`           | `{ a: number; b: number; g: number; r: number }` |
 | `UnfinishedTransmitterColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4853,12 +4853,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type                                             |
+| ---------------------- | ------------------------------------------------ |
 | `CuttingAreaHighlight` | `{ a: number; b: number; g: number; r: number }` |
-| `CuttingAreaTile` | `{ a: number; b: number; g: number; r: number }` |
-| `ToolActionTile` | `{ a: number; b: number; g: number; r: number }` |
-| `ToolNoActionTile` | `{ a: number; b: number; g: number; r: number }` |
+| `CuttingAreaTile`      | `{ a: number; b: number; g: number; r: number }` |
+| `ToolActionTile`       | `{ a: number; b: number; g: number; r: number }` |
+| `ToolNoActionTile`     | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -4870,8 +4870,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                    | Type                                             |
+| --------------------------- | ------------------------------------------------ |
 | `TutorialBuildingHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
@@ -4884,12 +4884,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CornerMarkerPath` | `string` |
-| `DestinationMarkerPath` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `CornerMarkerPath`           | `string` |
+| `DestinationMarkerPath`      | `string` |
 | `WalkerGameObjectMarkerPath` | `string` |
-| `WalkerModelMarkerPath` | `string` |
+| `WalkerModelMarkerPath`      | `string` |
 
 Blueprints (1):
 
@@ -4901,11 +4901,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AddingTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                | Type                                             |
+| ----------------------- | ------------------------------------------------ |
+| `AddingTileColor`       | `{ a: number; b: number; g: number; r: number }` |
 | `ContaminatedTileColor` | `{ a: number; b: number; g: number; r: number }` |
-| `RemovingTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| `RemovingTileColor`     | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -4917,11 +4917,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `OpaqueMaterial` | `string` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `OpaqueMaterial`      | `string` |
 | `TransparentMaterial` | `string` |
-| `WaterTile` | `string` |
+| `WaterTile`           | `string` |
 
 Blueprints (1):
 
@@ -4933,8 +4933,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                             | Type                                                                        |
+| ------------------------------------ | --------------------------------------------------------------------------- |
 | `WaterContaminationParticleGradient` | `{ Color: { a: number; b: number; g: number; r: number }; Time: number }[]` |
 
 Blueprints (1):
@@ -4947,23 +4947,23 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DiffusionDepthLimit` | `number` |
-| `DiffusionOutflowLimit` | `number` |
-| `DiffusionRate` | `number` |
+| Property                        | Type     |
+| ------------------------------- | -------- |
+| `DiffusionDepthLimit`           | `number` |
+| `DiffusionOutflowLimit`         | `number` |
+| `DiffusionRate`                 | `number` |
 | `FastEvaporationDepthThreshold` | `number` |
-| `FastEvaporationSpeed` | `number` |
-| `FlowChangeLimit` | `number` |
-| `HardDamOffset` | `number` |
-| `MaxHardDamDecrease` | `number` |
-| `MaxWaterContamination` | `number` |
-| `NormalEvaporationSpeed` | `number` |
-| `OutflowBalancingScaler` | `number` |
-| `OverflowPressureFactor` | `number` |
-| `SoftDamOffset` | `number` |
-| `WaterFlowFactor` | `number` |
-| `WaterSpillThreshold` | `number` |
+| `FastEvaporationSpeed`          | `number` |
+| `FlowChangeLimit`               | `number` |
+| `HardDamOffset`                 | `number` |
+| `MaxHardDamDecrease`            | `number` |
+| `MaxWaterContamination`         | `number` |
+| `NormalEvaporationSpeed`        | `number` |
+| `OutflowBalancingScaler`        | `number` |
+| `OverflowPressureFactor`        | `number` |
+| `SoftDamOffset`                 | `number` |
+| `WaterFlowFactor`               | `number` |
+| `WaterSpillThreshold`           | `number` |
 
 Blueprints (1):
 
@@ -4975,11 +4975,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                        | Type     |
+| ------------------------------- | -------- |
 | `MaxWaterSourceChangePerSecond` | `number` |
-| `MaxWaterSourceStrength` | `number` |
-| `MinWaterSourceChangeScaler` | `number` |
+| `MaxWaterSourceStrength`        | `number` |
+| `MinWaterSourceChangeScaler`    | `number` |
 
 Blueprints (1):
 
@@ -4991,9 +4991,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `NumberOfBlinks` | `number` |
+| Property               | Type     |
+| ---------------------- | -------- |
+| `NumberOfBlinks`       | `number` |
 | `SecondsBetweenBlinks` | `number` |
 
 Blueprints (1):
@@ -5006,11 +5006,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxWindStrength` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `MaxWindStrength`    | `number` |
 | `MaxWindTimeInHours` | `number` |
-| `MinWindStrength` | `number` |
+| `MinWindStrength`    | `number` |
 | `MinWindTimeInHours` | `number` |
 
 Blueprints (1):
@@ -5023,8 +5023,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `CableUnitCost` | `number` |
 
 Blueprints (1):
@@ -5037,8 +5037,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `MaxCableInclination` | `number` |
 
 Blueprints (1):
@@ -5051,11 +5051,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConnectableColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property              | Type                                             |
+| --------------------- | ------------------------------------------------ |
+| `ConnectableColor`    | `{ a: number; b: number; g: number; r: number }` |
 | `NotConnectableColor` | `{ a: number; b: number; g: number; r: number }` |
-| `OriginColor` | `{ a: number; b: number; g: number; r: number }` |
+| `OriginColor`         | `{ a: number; b: number; g: number; r: number }` |
 
 Blueprints (1):
 
@@ -5069,11 +5069,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BoxColliders` | `{ Center: { X: number; Y: number; Z: number }; Size: { X: number; Y: number; Z: number } }[]` |
-| `CapsuleColliders` | `array` |
-| `SphereColliders` | `{ Center: { X: number; Y: number; Z: number }; Radius: number }[]` |
+| Property           | Type                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `BoxColliders`     | `{ Center: { X: number; Y: number; Z: number }; Size: { X: number; Y: number; Z: number } }[]` |
+| `CapsuleColliders` | `array`                                                                                        |
+| `SphereColliders`  | `{ Center: { X: number; Y: number; Z: number }; Radius: number }[]`                            |
 
 Blueprints (25):
 
@@ -5085,9 +5085,9 @@ Blueprints (25):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Model` | `string` |
+| Property | Type     |
+| -------- | -------- |
+| `Model`  | `string` |
 
 Blueprints (25):
 
@@ -5101,13 +5101,13 @@ Blueprints (25):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Hotspot` | `{ X: number; Y: number }` |
-| `Id` | `string` |
-| `MacOsCursor` | `string` |
-| `MacOsCursorOffset` | `{ X: number; Y: number }` |
-| `WindowsCursor` | `string` |
+| Property              | Type                       |
+| --------------------- | -------------------------- |
+| `Hotspot`             | `{ X: number; Y: number }` |
+| `Id`                  | `string`                   |
+| `MacOsCursor`         | `string`                   |
+| `MacOsCursorOffset`   | `{ X: number; Y: number }` |
+| `WindowsCursor`       | `string`                   |
 | `WindowsCursorOffset` | `{ X: number; Y: number }` |
 
 Blueprints (12):
@@ -5122,11 +5122,11 @@ Blueprints (12):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Category` | `string` |
+| Property    | Type     |
+| ----------- | -------- |
+| `Category`  | `string` |
 | `FactionId` | `string` |
-| `Texture` | `string` |
+| `Texture`   | `string` |
 
 Blueprints (16):
 
@@ -5140,12 +5140,12 @@ Blueprints (16):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
-| `UncoveredModelName` | `string` |
+| Property                | Type     |
+| ----------------------- | -------- |
+| `FullModelName`         | `string` |
+| `UncoveredModelName`    | `string` |
 | `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
+| `UndergroundModelName`  | `string` |
 
 Blueprints (1):
 
@@ -5157,14 +5157,14 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZ` | `number` |
-| `Blocks` | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
-| `Entrance` | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }` |
-| `Flippable` | `boolean` |
-| `Overridable` | `boolean` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
+| Property      | Type                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseZ`       | `number`                                                                                                           |
+| `Blocks`      | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
+| `Entrance`    | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }`                                       |
+| `Flippable`   | `boolean`                                                                                                          |
+| `Overridable` | `boolean`                                                                                                          |
+| `Size`        | `{ X: number; Y: number; Z: number }`                                                                              |
 
 Blueprints (1):
 
@@ -5179,7 +5179,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (2):
+  Blueprints (2):
 
 [`GoodStackModel`][good-stack-model], [`RecoveredGoodStack`][recovered-good-stack]
 
@@ -5189,12 +5189,12 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BagObjectName` | `string` |
+| Property           | Type     |
+| ------------------ | -------- |
+| `BagObjectName`    | `string` |
 | `BarrelObjectName` | `string` |
-| `BoxObjectName` | `string` |
-| `LogObjectName` | `string` |
+| `BoxObjectName`    | `string` |
+| `LogObjectName`    | `string` |
 
 Blueprints (1):
 
@@ -5214,12 +5214,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
+| Property                  | Type     |
+| ------------------------- | -------- |
+| `DescriptionLocKey`       | `string` |
+| `DisplayNameLocKey`       | `string` |
 | `FlavorDescriptionLocKey` | `string` |
-| `Icon` | `string` |
+| `Icon`                    | `string` |
 
 Blueprints (1):
 
@@ -5231,8 +5231,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `DaysToDisintegrate` | `number` |
 
 Blueprints (1):
@@ -5245,8 +5245,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `ModelName` | `string` |
 
 Blueprints (1):
@@ -5267,12 +5267,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleTemplateNames` | `array` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `BackwardCompatibleTemplateNames` | `array`  |
+| `DisablingFeatureToggle`          | `string` |
+| `RequiredFeatureToggle`           | `string` |
+| `TemplateName`                    | `string` |
 
 Blueprints (1):
 
@@ -5284,11 +5284,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type                                  |
+| ---------- | ------------------------------------- |
 | `Position` | `{ X: number; Y: number; Z: number }` |
 | `Rotation` | `{ X: number; Y: number; Z: number }` |
-| `Scale` | `{ X: number; Y: number; Z: number }` |
+| `Scale`    | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (1):
 
@@ -5302,32 +5302,32 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Avatar` | `string` |
-| `BaseWoodMaterial` | `string` |
-| `BlueprintModifiers` | `array` |
-| `BotAvatar` | `string` |
-| `ChildAvatar` | `string` |
-| `ChildTextures` | `string[]` |
-| `ContaminatedAdultAvatar` | `string` |
-| `ContaminatedChildAvatar` | `string` |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `GameOverFlavorLocKey` | `string` |
-| `GameOverMessageLocKey` | `string` |
-| `GoodCollectionIds` | `string[]` |
-| `Id` | `string` |
-| `Logo` | `string` |
-| `MaterialCollectionIds` | `string[]` |
-| `NeedCollectionIds` | `string[]` |
-| `NewGameFullAvatar` | `string` |
-| `Order` | `number` |
-| `PathMaterial` | `string` |
-| `SoundId` | `string` |
-| `StartingBuildingId` | `string` |
-| `TemplateCollectionIds` | `string[]` |
-| `Textures` | `string[]` |
+| Property                  | Type       |
+| ------------------------- | ---------- |
+| `Avatar`                  | `string`   |
+| `BaseWoodMaterial`        | `string`   |
+| `BlueprintModifiers`      | `array`    |
+| `BotAvatar`               | `string`   |
+| `ChildAvatar`             | `string`   |
+| `ChildTextures`           | `string[]` |
+| `ContaminatedAdultAvatar` | `string`   |
+| `ContaminatedChildAvatar` | `string`   |
+| `DescriptionLocKey`       | `string`   |
+| `DisplayNameLocKey`       | `string`   |
+| `GameOverFlavorLocKey`    | `string`   |
+| `GameOverMessageLocKey`   | `string`   |
+| `GoodCollectionIds`       | `string[]` |
+| `Id`                      | `string`   |
+| `Logo`                    | `string`   |
+| `MaterialCollectionIds`   | `string[]` |
+| `NeedCollectionIds`       | `string[]` |
+| `NewGameFullAvatar`       | `string`   |
+| `Order`                   | `number`   |
+| `PathMaterial`            | `string`   |
+| `SoundId`                 | `string`   |
+| `StartingBuildingId`      | `string`   |
+| `TemplateCollectionIds`   | `string[]` |
+| `Textures`                | `string[]` |
 
 Blueprints (2):
 
@@ -5339,12 +5339,12 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `WonderCompletionFlavorLocKey` | `string` |
-| `WonderCompletionImage` | `string` |
+| Property                        | Type     |
+| ------------------------------- | -------- |
+| `WonderCompletionFlavorLocKey`  | `string` |
+| `WonderCompletionImage`         | `string` |
 | `WonderCompletionMessageLocKey` | `string` |
-| `WonderLaunchSound` | `string` |
+| `WonderLaunchSound`             | `string` |
 
 Blueprints (2):
 
@@ -5364,10 +5364,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                   | Type     |
+| -------------------------- | -------- |
 | `AverageWellbeingToUnlock` | `number` |
-| `PrerequisiteFaction` | `string` |
+| `PrerequisiteFaction`      | `string` |
 
 Blueprints (1):
 
@@ -5384,7 +5384,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (17):
+  Blueprints (17):
 
 [`CometBlue`][comet-blue], [`CometRed`][comet-red], [`CometWhite`][comet-white], [`Fish`][fish], [`KamuroBlue`][kamuro-blue], [`KamuroOrange`][kamuro-orange], [`KamuroPink`][kamuro-pink], [`KamuroRed`][kamuro-red], [`KamuroWhite`][kamuro-white], [`PalmBlue`][palm-blue], [`PalmGold`][palm-gold], [`PalmGreen`][palm-green], [`PeonyRedBlue`][peony-red-blue], [`PeonyViolet`][peony-violet], [`PeonyYellowGreen`][peony-yellow-green], [`Sparks`][sparks], [`Willow`][willow]
 
@@ -5394,12 +5394,12 @@ Blueprints (17):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BurstSound` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `HasBurst` | `boolean` |
-| `TrailSound` | `string` |
+| Property            | Type      |
+| ------------------- | --------- |
+| `BurstSound`        | `string`  |
+| `DisplayNameLocKey` | `string`  |
+| `HasBurst`          | `boolean` |
+| `TrailSound`        | `string`  |
 
 Blueprints (17):
 
@@ -5411,8 +5411,8 @@ Blueprints (17):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Attachments` | `{ AttachmentId: string; CreateInstantly: boolean; Parent: string; Position: { X: number; Y: number; Z: number }; Prefab: string; Rotation: { X: number; Y: number; Z: number }; Scale: { X: number; Y: number; Z: number } }[]` |
 
 Blueprints (17):
@@ -5425,12 +5425,12 @@ Blueprints (17):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleTemplateNames` | `array` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `BackwardCompatibleTemplateNames` | `array`  |
+| `DisablingFeatureToggle`          | `string` |
+| `RequiredFeatureToggle`           | `string` |
+| `TemplateName`                    | `string` |
 
 Blueprints (17):
 
@@ -5444,10 +5444,10 @@ Blueprints (17):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CollectionId` | `string` |
-| `Goods` | `string[]` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `CollectionId` | `string`   |
+| `Goods`        | `string[]` |
 
 Blueprints (3):
 
@@ -5461,12 +5461,12 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DisplayNameLocKey` | `string` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `Order` | `number` |
+| Property              | Type      |
+| --------------------- | --------- |
+| `DisplayNameLocKey`   | `string`  |
+| `Icon`                | `string`  |
+| `Id`                  | `string`  |
+| `Order`               | `number`  |
 | `SingleResourceGroup` | `boolean` |
 
 Blueprints (5):
@@ -5481,24 +5481,24 @@ Blueprints (5):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleIds` | `array` |
-| `CarryingAnimation` | `string` |
-| `ConsumptionEffects` | `{ NeedId: string; Points: number }[]` |
-| `ContainerColor` | `{ a: number; b: number; g: number; r: number }` |
-| `ContainerMaterial` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `ForceImport` | `boolean` |
-| `GoodGroupId` | `string` |
-| `GoodOrder` | `number` |
-| `GoodType` | `string` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `PluralDisplayNameLocKey` | `string` |
-| `StockpileVisualization` | `string` |
-| `VisibleContainer` | `string` |
-| `Weight` | `number` |
+| Property                  | Type                                             |
+| ------------------------- | ------------------------------------------------ |
+| `BackwardCompatibleIds`   | `array`                                          |
+| `CarryingAnimation`       | `string`                                         |
+| `ConsumptionEffects`      | `{ NeedId: string; Points: number }[]`           |
+| `ContainerColor`          | `{ a: number; b: number; g: number; r: number }` |
+| `ContainerMaterial`       | `string`                                         |
+| `DisplayNameLocKey`       | `string`                                         |
+| `ForceImport`             | `boolean`                                        |
+| `GoodGroupId`             | `string`                                         |
+| `GoodOrder`               | `number`                                         |
+| `GoodType`                | `string`                                         |
+| `Icon`                    | `string`                                         |
+| `Id`                      | `string`                                         |
+| `PluralDisplayNameLocKey` | `string`                                         |
+| `StockpileVisualization`  | `string`                                         |
+| `VisibleContainer`        | `string`                                         |
+| `Weight`                  | `number`                                         |
 
 Blueprints (60):
 
@@ -5512,16 +5512,16 @@ Blueprints (60):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
-| `LimitingAmount` | `number` |
-| `Material` | `string` |
-| `NonLinearity` | `number` |
-| `Offset` | `{ X: number; Y: number; Z: number }` |
-| `PrimaryMesh` | `string` |
-| `SecondaryMesh` | `string` |
-| `Variant` | `string` |
+| Property         | Type                                  |
+| ---------------- | ------------------------------------- |
+| `Id`             | `string`                              |
+| `LimitingAmount` | `number`                              |
+| `Material`       | `string`                              |
+| `NonLinearity`   | `number`                              |
+| `Offset`         | `{ X: number; Y: number; Z: number }` |
+| `PrimaryMesh`    | `string`                              |
+| `SecondaryMesh`  | `string`                              |
+| `Variant`        | `string`                              |
 
 Blueprints (13):
 
@@ -5535,10 +5535,10 @@ Blueprints (13):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Color` | `{ a: number; b: number; g: number; r: number }` |
-| `Id` | `string` |
+| Property | Type                                             |
+| -------- | ------------------------------------------------ |
+| `Color`  | `{ a: number; b: number; g: number; r: number }` |
+| `Id`     | `string`                                         |
 
 Blueprints (7):
 
@@ -5550,9 +5550,9 @@ Blueprints (7):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Order` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Order`  | `number` |
 
 Blueprints (7):
 
@@ -5574,11 +5574,11 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
+| Property | Type     |
+| -------- | -------- |
+| `Id`     | `string` |
 | `LocKey` | `string` |
-| `Order` | `number` |
+| `Order`  | `number` |
 
 Blueprints (10):
 
@@ -5592,14 +5592,14 @@ Blueprints (10):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type      |
+| --------------------- | --------- |
 | `AllowOtherModifiers` | `boolean` |
-| `DevModeOnly` | `boolean` |
-| `GroupId` | `string` |
-| `Id` | `string` |
-| `LocKey` | `string` |
-| `Order` | `number` |
+| `DevModeOnly`         | `boolean` |
+| `GroupId`             | `string`  |
+| `Id`                  | `string`  |
+| `LocKey`              | `string`  |
+| `Order`               | `number`  |
 
 Blueprints (134):
 
@@ -5611,11 +5611,11 @@ Blueprints (134):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `InputModifiers` | `string` |
-| `Path` | `string` |
-| `Unchangeable` | `boolean` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `InputModifiers` | `string`  |
+| `Path`           | `string`  |
+| `Unchangeable`   | `boolean` |
 
 Blueprints (101):
 
@@ -5627,11 +5627,11 @@ Blueprints (101):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `InputModifiers` | `string` |
-| `Path` | `string` |
-| `Unchangeable` | `boolean` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `InputModifiers` | `string`  |
+| `Path`           | `string`  |
+| `Unchangeable`   | `boolean` |
 
 Blueprints (35):
 
@@ -5645,11 +5645,11 @@ Blueprints (35):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
-| `MaxEmission` | `number` |
-| `MinEmission` | `number` |
+| `MaxEmission`   | `number`   |
+| `MinEmission`   | `number`   |
 
 Blueprints (4):
 
@@ -5661,12 +5661,12 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `StatusLocKey` | `string` |
-| `StatusSpriteName` | `string` |
+| Property             | Type      |
+| -------------------- | --------- |
+| `StatusLocKey`       | `string`  |
+| `StatusSpriteName`   | `string`  |
 | `UseInfiniteWarning` | `boolean` |
-| `WarningSound` | `string` |
+| `WarningSound`       | `string`  |
 
 Blueprints (6):
 
@@ -5686,10 +5686,10 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `AlternativeSoundName` | `string` |
-| `SoundName` | `string` |
+| `SoundName`            | `string` |
 
 Blueprints (23):
 
@@ -5709,8 +5709,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (5):
@@ -5723,12 +5723,12 @@ Blueprints (5):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
-| `UncoveredModelName` | `string` |
+| Property                | Type     |
+| ----------------------- | -------- |
+| `FullModelName`         | `string` |
+| `UncoveredModelName`    | `string` |
 | `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
+| `UndergroundModelName`  | `string` |
 
 Blueprints (28):
 
@@ -5748,13 +5748,13 @@ Blueprints (19):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BlockedEdges` | `array` |
-| `EdgeGroups` | `{ AddedEdges: { End: { X: number; Y: number; Z: number }; IsTwoWay: boolean; Start: { X: number; Y: number; Z: number } }[]; Cost: number; Group: { GroupName: string; UseGroup: boolean }; IsPath: boolean }[]` |
-| `GenerateFloorsOnStackable` | `boolean` |
-| `NoAutoWalls` | `boolean` |
-| `UnblockedCoordinates` | `array` |
+| Property                    | Type                                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BlockedEdges`              | `array`                                                                                                                                                                                                           |
+| `EdgeGroups`                | `{ AddedEdges: { End: { X: number; Y: number; Z: number }; IsTwoWay: boolean; Start: { X: number; Y: number; Z: number } }[]; Cost: number; Group: { GroupName: string; UseGroup: boolean }; IsPath: boolean }[]` |
+| `GenerateFloorsOnStackable` | `boolean`                                                                                                                                                                                                         |
+| `NoAutoWalls`               | `boolean`                                                                                                                                                                                                         |
+| `UnblockedCoordinates`      | `array`                                                                                                                                                                                                           |
 
 Blueprints (9):
 
@@ -5774,14 +5774,14 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZ` | `number` |
-| `Blocks` | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
-| `Entrance` | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }` |
-| `Flippable` | `boolean` |
-| `Overridable` | `boolean` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
+| Property      | Type                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseZ`       | `number`                                                                                                           |
+| `Blocks`      | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
+| `Entrance`    | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }`                                       |
+| `Flippable`   | `boolean`                                                                                                          |
+| `Overridable` | `boolean`                                                                                                          |
+| `Size`        | `{ X: number; Y: number; Z: number }`                                                                              |
 
 Blueprints (32):
 
@@ -5793,8 +5793,8 @@ Blueprints (32):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                    |
+| ------------- | --------------------------------------- |
 | `CutoutTiles` | `{ X: number; Y: number; Z: number }[]` |
 
 Blueprints (6):
@@ -5815,10 +5815,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ForceOneFinalAccess` | `boolean` |
-| `LocalAccess` | `{ X: number; Y: number; Z: number }` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `ForceOneFinalAccess` | `boolean`                             |
+| `LocalAccess`         | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (3):
 
@@ -5830,14 +5830,14 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstructionModeModel` | `string` |
-| `FinishedModelName` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `ConstructionModeModel`      | `string` |
+| `FinishedModelName`          | `string` |
 | `FinishedUncoveredModelName` | `string` |
-| `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
-| `UnfinishedModelName` | `string` |
+| `UndergroundModelDepth`      | `number` |
+| `UndergroundModelName`       | `string` |
+| `UnfinishedModelName`        | `string` |
 
 Blueprints (4):
 
@@ -5849,15 +5849,15 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BuildingCost` | `{ Amount: number; Id: string }[]` |
-| `DrawRangeBoundsOnIt` | `boolean` |
-| `FinishableWithBeaversOnSite` | `boolean` |
-| `LoopingSoundName` | `string` |
-| `PlaceFinished` | `boolean` |
-| `ScienceCost` | `number` |
-| `SelectionSoundName` | `string` |
+| Property                      | Type                               |
+| ----------------------------- | ---------------------------------- |
+| `BuildingCost`                | `{ Amount: number; Id: string }[]` |
+| `DrawRangeBoundsOnIt`         | `boolean`                          |
+| `FinishableWithBeaversOnSite` | `boolean`                          |
+| `LoopingSoundName`            | `string`                           |
+| `PlaceFinished`               | `boolean`                          |
+| `ScienceCost`                 | `number`                           |
+| `SelectionSoundName`          | `string`                           |
 
 Blueprints (4):
 
@@ -5872,7 +5872,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (32):
+  Blueprints (32):
 
 [`AncientAquiferDrill`][ancient-aquifer-drill], [`Aquifer`][aquifer], [`BadtideDrain`][badtide-drain], [`BadwaterSeep`][badwater-seep], [`BadwaterSource`][badwater-source], [`Blockage`][blockage], [`GeothermalField`][geothermal-field], [`LargeRelic`][large-relic], [`MediumRelic`][medium-relic], [`NaturalDam`][natural-dam], [`NaturalOverhang2x1`][natural-overhang2x1], [`NaturalOverhang3x1`][natural-overhang3x1], [`NaturalOverhang4x1`][natural-overhang4x1], [`ReservePile`][reserve-pile], [`ReserveTank`][reserve-tank], [`ReserveWarehouse`][reserve-warehouse], [`RuinColumnH1`][ruin-column-h1], [`RuinColumnH2`][ruin-column-h2], [`RuinColumnH3`][ruin-column-h3], [`RuinColumnH4`][ruin-column-h4], [`RuinColumnH5`][ruin-column-h5], [`RuinColumnH6`][ruin-column-h6], [`RuinColumnH7`][ruin-column-h7], [`RuinColumnH8`][ruin-column-h8], [`Slope`][slope], [`SmallRelic`][small-relic], [`StartingLocation`][starting-location], [`Thorns`][thorns], [`UndergroundRuins`][underground-ruins], [`UnstableCore`][unstable-core], [`WaterSeep`][water-seep], [`WaterSource`][water-source]
 
@@ -5890,8 +5890,8 @@ Blueprints (8):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                        |
+| --------- | ----------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
 
 Blueprints (1):
@@ -5912,8 +5912,8 @@ Blueprints (10):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `SciencePoints` | `number` |
 
 Blueprints (3):
@@ -5926,9 +5926,9 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DemolishTimeInHours` | `number` |
+| Property                          | Type      |
+| --------------------------------- | --------- |
+| `DemolishTimeInHours`             | `number`  |
 | `ShowDemolishButtonInEntityPanel` | `boolean` |
 
 Blueprints (10):
@@ -5957,8 +5957,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `DryModelName` | `string` |
 | `WetModelName` | `string` |
 
@@ -5980,13 +5980,13 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CapacityFinished` | `number` |
-| `CapacityUnfinished` | `number` |
-| `LimitedCapacityFinished` | `boolean` |
+| Property                    | Type      |
+| --------------------------- | --------- |
+| `CapacityFinished`          | `number`  |
+| `CapacityUnfinished`        | `number`  |
+| `LimitedCapacityFinished`   | `boolean` |
 | `LimitedCapacityUnfinished` | `boolean` |
-| `OperatingState` | `string` |
+| `OperatingState`            | `string`  |
 
 Blueprints (3):
 
@@ -5998,8 +5998,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type                                    |
+| ----------- | --------------------------------------- |
 | `Obstacles` | `{ X: number; Y: number; Z: number }[]` |
 
 Blueprints (4):
@@ -6012,8 +6012,8 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Height` | `number` |
 
 Blueprints (6):
@@ -6042,8 +6042,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                   | Type       |
+| -------------------------- | ---------- |
 | `ActiveInHazardousWeather` | `string[]` |
 
 Blueprints (1):
@@ -6056,12 +6056,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
+| Property                  | Type     |
+| ------------------------- | -------- |
+| `DescriptionLocKey`       | `string` |
+| `DisplayNameLocKey`       | `string` |
 | `FlavorDescriptionLocKey` | `string` |
-| `Icon` | `string` |
+| `Icon`                    | `string` |
 
 Blueprints (32):
 
@@ -6097,8 +6097,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `MinSpeedMultiplier` | `number` |
 
 Blueprints (1):
@@ -6111,11 +6111,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IsShaft` | `boolean` |
-| `PowerInput` | `number` |
-| `PowerOutput` | `number` |
+| Property      | Type      |
+| ------------- | --------- |
+| `IsShaft`     | `boolean` |
+| `PowerInput`  | `number`  |
+| `PowerOutput` | `number`  |
 
 Blueprints (1):
 
@@ -6135,8 +6135,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PathModelType` | `string` |
 
 Blueprints (3):
@@ -6149,8 +6149,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
 | `MainPathCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (1):
@@ -6171,15 +6171,15 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CanBeAttachedToTerrainSide` | `boolean` |
-| `CustomPivot` | `{ Coordinates: { X: number; Y: number; Z: number }; HasCustomPivot: boolean }` |
-| `DevModeTool` | `boolean` |
-| `Layout` | `string` |
-| `ToolGroupId` | `string` |
-| `ToolOrder` | `number` |
-| `ToolShape` | `string` |
+| Property                     | Type                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `CanBeAttachedToTerrainSide` | `boolean`                                                                       |
+| `CustomPivot`                | `{ Coordinates: { X: number; Y: number; Z: number }; HasCustomPivot: boolean }` |
+| `DevModeTool`                | `boolean`                                                                       |
+| `Layout`                     | `string`                                                                        |
+| `ToolGroupId`                | `string`                                                                        |
+| `ToolOrder`                  | `number`                                                                        |
+| `ToolShape`                  | `string`                                                                        |
 
 Blueprints (32):
 
@@ -6191,11 +6191,11 @@ Blueprints (32):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ModelParentName` | `string` |
-| `RuinHeight` | `number` |
-| `Yielder` | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
+| Property          | Type                                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ModelParentName` | `string`                                                                                                                     |
+| `RuinHeight`      | `number`                                                                                                                     |
+| `Yielder`         | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
 
 Blueprints (8):
 
@@ -6215,11 +6215,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type      |
+| -------------------- | --------- |
 | `BlockAboveMoisture` | `boolean` |
 | `BlockContamination` | `boolean` |
-| `BlockFullMoisture` | `boolean` |
+| `BlockFullMoisture`  | `boolean` |
 
 Blueprints (1):
 
@@ -6247,11 +6247,11 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CenterOffset` | `{ X: number; Y: number; Z: number }` |
-| `GoodVisualizationId` | `string` |
-| `GoodVisualizationVariant` | `string` |
+| Property                   | Type                                  |
+| -------------------------- | ------------------------------------- |
+| `CenterOffset`             | `{ X: number; Y: number; Z: number }` |
+| `GoodVisualizationId`      | `string`                              |
+| `GoodVisualizationVariant` | `string`                              |
 
 Blueprints (1):
 
@@ -6263,10 +6263,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CenterOffset` | `{ X: number; Y: number; Z: number }` |
-| `GoodPileVisualizations` | `string[]` |
+| Property                 | Type                                  |
+| ------------------------ | ------------------------------------- |
+| `CenterOffset`           | `{ X: number; Y: number; Z: number }` |
+| `GoodPileVisualizations` | `string[]`                            |
 
 Blueprints (1):
 
@@ -6278,8 +6278,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                       | Type                                                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `StockpilePlaneVisualizations` | `{ CenterOffset: { X: number; Y: number; Z: number }; GoodVisualizationId: string; GoodVisualizationVariant: string; MovementRange: { X: number; Y: number } }[]` |
 
 Blueprints (1):
@@ -6292,9 +6292,9 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxCapacity` | `number` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `MaxCapacity`         | `number` |
 | `WhitelistedGoodType` | `string` |
 
 Blueprints (3):
@@ -6315,8 +6315,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Attachments` | `{ AttachmentId: string; CreateInstantly: boolean; Parent: string; Position: { X: number; Y: number; Z: number }; Prefab: string; Rotation: { X: number; Y: number; Z: number }; Scale: { X: number; Y: number; Z: number } }[]` |
 
 Blueprints (6):
@@ -6329,12 +6329,12 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                          | Type       |
+| --------------------------------- | ---------- |
 | `BackwardCompatibleTemplateNames` | `string[]` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| `DisablingFeatureToggle`          | `string`   |
+| `RequiredFeatureToggle`           | `string`   |
+| `TemplateName`                    | `string`   |
 
 Blueprints (32):
 
@@ -6346,14 +6346,14 @@ Blueprints (32):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CyclesUntilCountdownActivation` | `number` |
-| `DaysUntilActivation` | `number` |
-| `IsHazardousActivator` | `boolean` |
-| `IsOptionallyActivable` | `boolean` |
-| `ProgressBarActiveLabelLocKey` | `string` |
-| `ProgressBarNotActiveLabelLocKey` | `string` |
+| Property                          | Type      |
+| --------------------------------- | --------- |
+| `CyclesUntilCountdownActivation`  | `number`  |
+| `DaysUntilActivation`             | `number`  |
+| `IsHazardousActivator`            | `boolean` |
+| `IsOptionallyActivable`           | `boolean` |
+| `ProgressBarActiveLabelLocKey`    | `string`  |
+| `ProgressBarNotActiveLabelLocKey` | `string`  |
 
 Blueprints (6):
 
@@ -6365,10 +6365,10 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IgnoreRotation` | `boolean` |
-| `Transputs` | `{ Coordinates: { X: number; Y: number; Z: number }; Directions: string; ReverseRotation: boolean }[]` |
+| Property         | Type                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `IgnoreRotation` | `boolean`                                                                                              |
+| `Transputs`      | `{ Coordinates: { X: number; Y: number; Z: number }; Directions: string; ReverseRotation: boolean }[]` |
 
 Blueprints (1):
 
@@ -6404,8 +6404,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type       |
+| ----------------------------- | ---------- |
 | `UnderstructureTemplateNames` | `string[]` |
 
 Blueprints (1):
@@ -6418,8 +6418,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `ExplosionPrefabPath` | `string` |
 
 Blueprints (1):
@@ -6432,12 +6432,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AttachmentId` | `string` |
+| Property        | Type     |
+| --------------- | -------- |
+| `AttachmentId`  | `string` |
 | `LightStrength` | `number` |
-| `MaxInterval` | `number` |
-| `MinInterval` | `number` |
+| `MaxInterval`   | `number` |
+| `MinInterval`   | `number` |
 
 Blueprints (1):
 
@@ -6449,12 +6449,12 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `DefaultExplosionRadius` | `number` |
-| `InnerRadius` | `number` |
-| `MaxExplosionRadius` | `number` |
-| `MinExplosionRadius` | `number` |
+| `InnerRadius`            | `number` |
+| `MaxExplosionRadius`     | `number` |
+| `MinExplosionRadius`     | `number` |
 
 Blueprints (1):
 
@@ -6466,8 +6466,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `DepthLimit` | `number` |
 
 Blueprints (2):
@@ -6480,8 +6480,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Blueprints (1):
@@ -6494,8 +6494,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                         |
+| ------------- | ---------------------------- |
 | `Coordinates` | `{ X: number; Y: number }[]` |
 
 Blueprints (6):
@@ -6508,8 +6508,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `DefaultContamination` | `number` |
 
 Blueprints (6):
@@ -6530,10 +6530,10 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Coordinates` | `{ X: number; Y: number }[]` |
-| `DefaultStrength` | `number` |
+| Property          | Type                         |
+| ----------------- | ---------------------------- |
+| `Coordinates`     | `{ X: number; Y: number }[]` |
+| `DefaultStrength` | `number`                     |
 
 Blueprints (6):
 
@@ -6545,8 +6545,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Blueprints (1):
@@ -6561,10 +6561,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CollectionId` | `string` |
-| `Materials` | `string[]` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `CollectionId` | `string`   |
+| `Materials`    | `string[]` |
 
 Blueprints (3):
 
@@ -6578,14 +6578,14 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZ` | `number` |
-| `Blocks` | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
-| `Entrance` | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }` |
-| `Flippable` | `boolean` |
-| `Overridable` | `boolean` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
+| Property      | Type                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseZ`       | `number`                                                                                                           |
+| `Blocks`      | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
+| `Entrance`    | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }`                                       |
+| `Flippable`   | `boolean`                                                                                                          |
+| `Overridable` | `boolean`                                                                                                          |
+| `Size`        | `{ X: number; Y: number; Z: number }`                                                                              |
 
 Blueprints (1):
 
@@ -6616,7 +6616,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (1):
+  Blueprints (1):
 
 [`ZiplineCable`][zipline-cable]
 
@@ -6628,10 +6628,10 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `AlternativeSoundName` | `string` |
-| `SoundName` | `string` |
+| `SoundName`            | `string` |
 
 Blueprints (21):
 
@@ -6643,12 +6643,12 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
-| `UncoveredModelName` | `string` |
+| Property                | Type     |
+| ----------------------- | -------- |
+| `FullModelName`         | `string` |
+| `UncoveredModelName`    | `string` |
 | `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
+| `UndergroundModelName`  | `string` |
 
 Blueprints (21):
 
@@ -6660,14 +6660,14 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZ` | `number` |
-| `Blocks` | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
-| `Entrance` | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }` |
-| `Flippable` | `boolean` |
-| `Overridable` | `boolean` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
+| Property      | Type                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseZ`       | `number`                                                                                                           |
+| `Blocks`      | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
+| `Entrance`    | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }`                                       |
+| `Flippable`   | `boolean`                                                                                                          |
+| `Overridable` | `boolean`                                                                                                          |
+| `Size`        | `{ X: number; Y: number; Z: number }`                                                                              |
 
 Blueprints (21):
 
@@ -6690,7 +6690,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (21):
+  Blueprints (21):
 
 [`Birch`][birch], [`BlueberryBush`][blueberry-bush], [`Canola`][canola], [`Carrot`][carrot], [`Cassava`][cassava], [`Cattail`][cattail], [`ChestnutTree`][chestnut-tree], [`CoffeeBush`][coffee-bush], [`Corn`][corn], [`Dandelion`][dandelion], [`Eggplant`][eggplant], [`Kohlrabi`][kohlrabi], [`Mangrove`][mangrove], [`Maple`][maple], [`Oak`][oak], [`Pine`][pine], [`Potato`][potato], [`Soybean`][soybean], [`Spadderdock`][spadderdock], [`Sunflower`][sunflower], [`Wheat`][wheat]
 
@@ -6716,11 +6716,11 @@ Blueprints (12):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `LeftoverModelName` | `string` |
-| `RemoveOnCut` | `boolean` |
-| `Yielder` | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
+| Property            | Type                                                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `LeftoverModelName` | `string`                                                                                                                     |
+| `RemoveOnCut`       | `boolean`                                                                                                                    |
+| `Yielder`           | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
 
 Blueprints (18):
 
@@ -6740,9 +6740,9 @@ Blueprints (12):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DemolishTimeInHours` | `number` |
+| Property                          | Type      |
+| --------------------------------- | --------- |
+| `DemolishTimeInHours`             | `number`  |
 | `ShowDemolishButtonInEntityPanel` | `boolean` |
 
 Blueprints (21):
@@ -6755,9 +6755,9 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DaysToDie` | `number` |
+| Property         | Type     |
+| ---------------- | -------- |
+| `DaysToDie`      | `number` |
 | `MaxWaterHeight` | `number` |
 | `MinWaterHeight` | `number` |
 
@@ -6771,10 +6771,10 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Yielder` | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
-| `YieldGrowthTimeInDays` | `number` |
+| Property                | Type                                                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `Yielder`               | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
+| `YieldGrowthTimeInDays` | `number`                                                                                                                     |
 
 Blueprints (7):
 
@@ -6786,8 +6786,8 @@ Blueprints (7):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `GrowthTimeInDays` | `number` |
 
 Blueprints (21):
@@ -6800,12 +6800,12 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
+| Property                  | Type     |
+| ------------------------- | -------- |
+| `DescriptionLocKey`       | `string` |
+| `DisplayNameLocKey`       | `string` |
 | `FlavorDescriptionLocKey` | `string` |
-| `Icon` | `string` |
+| `Icon`                    | `string` |
 
 Blueprints (21):
 
@@ -6817,16 +6817,16 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstrainProportion` | `boolean` |
-| `MaxHeightScaleFactor` | `number` |
-| `MaxRotation` | `number` |
-| `MaxWidthScaleFactor` | `number` |
-| `MinHeightScaleFactor` | `number` |
-| `MinRotation` | `number` |
-| `MinWidthScaleFactor` | `number` |
-| `RandomizedRotation` | `string` |
+| Property               | Type      |
+| ---------------------- | --------- |
+| `ConstrainProportion`  | `boolean` |
+| `MaxHeightScaleFactor` | `number`  |
+| `MaxRotation`          | `number`  |
+| `MaxWidthScaleFactor`  | `number`  |
+| `MinHeightScaleFactor` | `number`  |
+| `MinRotation`          | `number`  |
+| `MinWidthScaleFactor`  | `number`  |
+| `RandomizedRotation`   | `string`  |
 
 Blueprints (17):
 
@@ -6838,9 +6838,9 @@ Blueprints (17):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Order` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Order`  | `number` |
 
 Blueprints (21):
 
@@ -6852,9 +6852,9 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Model` | `string` |
+| Property | Type     |
+| -------- | -------- |
+| `Model`  | `string` |
 
 Blueprints (21):
 
@@ -6866,10 +6866,10 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `PlantTimeInHours` | `number` |
-| `ResourceGroup` | `string` |
+| `ResourceGroup`    | `string` |
 
 Blueprints (21):
 
@@ -6881,8 +6881,8 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `ReproductionChance` | `number` |
 
 Blueprints (9):
@@ -6895,12 +6895,12 @@ Blueprints (9):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                          | Type       |
+| --------------------------------- | ---------- |
 | `BackwardCompatibleTemplateNames` | `string[]` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| `DisablingFeatureToggle`          | `string`   |
+| `RequiredFeatureToggle`           | `string`   |
+| `TemplateName`                    | `string`   |
 
 Blueprints (21):
 
@@ -6920,8 +6920,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Radius` | `number` |
 
 Blueprints (6):
@@ -6934,8 +6934,8 @@ Blueprints (6):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `DaysToDieDry` | `number` |
 
 Blueprints (21):
@@ -6950,10 +6950,10 @@ Blueprints (21):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CollectionId` | `string` |
-| `Needs` | `string[]` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `CollectionId` | `string`   |
+| `Needs`        | `string[]` |
 
 Blueprints (3):
 
@@ -6967,11 +6967,11 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `DisplayNameLocKey` | `string` |
-| `Id` | `string` |
-| `Order` | `number` |
+| `Id`                | `string` |
+| `Order`             | `number` |
 
 Blueprints (8):
 
@@ -6985,12 +6985,12 @@ Blueprints (8):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CriticalNeedType` | `string` |
-| `DescriptionLocKey` | `string` |
+| Property                 | Type     |
+| ------------------------ | -------- |
+| `CriticalNeedType`       | `string` |
+| `DescriptionLocKey`      | `string` |
 | `DescriptionShortLocKey` | `string` |
-| `SpriteName` | `string` |
+| `SpriteName`             | `string` |
 
 Blueprints (8):
 
@@ -7018,8 +7018,8 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `DeathMessageLocKey` | `string` |
 | `DeathWarningLocKey` | `string` |
 
@@ -7033,8 +7033,8 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PointsPerHour` | `number` |
 
 Blueprints (1):
@@ -7047,8 +7047,8 @@ Blueprints (1):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                   | Type     |
+| -------------------------- | -------- |
 | `WorkRefusalWarningLocKey` | `string` |
 
 Blueprints (4):
@@ -7061,24 +7061,24 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type       |
+| ----------------------- | ---------- |
 | `BackwardCompatibleIds` | `string[]` |
-| `CharacterType` | `string` |
-| `DailyDelta` | `number` |
-| `DisplayNameLocKey` | `string` |
-| `Effectiveness` | `number` |
-| `FavorableWellbeing` | `number` |
-| `HoursWarningThreshold` | `number` |
-| `Id` | `string` |
-| `ImportanceMultiplier` | `number` |
-| `MaximumValue` | `number` |
-| `MinimumValue` | `number` |
-| `NeedGroupId` | `string` |
-| `Order` | `number` |
-| `StartingValue` | `number` |
-| `UnfavorableWellbeing` | `number` |
-| `Wastable` | `boolean` |
+| `CharacterType`         | `string`   |
+| `DailyDelta`            | `number`   |
+| `DisplayNameLocKey`     | `string`   |
+| `Effectiveness`         | `number`   |
+| `FavorableWellbeing`    | `number`   |
+| `HoursWarningThreshold` | `number`   |
+| `Id`                    | `string`   |
+| `ImportanceMultiplier`  | `number`   |
+| `MaximumValue`          | `number`   |
+| `MinimumValue`          | `number`   |
+| `NeedGroupId`           | `string`   |
+| `Order`                 | `number`   |
+| `StartingValue`         | `number`   |
+| `UnfavorableWellbeing`  | `number`   |
+| `Wastable`              | `boolean`  |
 
 Blueprints (68):
 
@@ -7090,8 +7090,8 @@ Blueprints (68):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type                                        |
+| ----------- | ------------------------------------------- |
 | `Penalties` | `{ Id: string; MultiplierDelta: number }[]` |
 
 Blueprints (7):
@@ -7106,31 +7106,31 @@ Blueprints (7):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AdultAgeProgress` | `{ Max: number; Min: number }` |
-| `BadtideDuration` | `{ Max: number; Min: number }` |
-| `BadtideDurationHandicapCycles` | `number` |
-| `BadtideDurationHandicapMultiplier` | `number` |
-| `ChanceForBadtide` | `number` |
-| `ChildAgeProgress` | `{ Max: number; Min: number }` |
-| `CyclesBeforeRandomizingBadtide` | `number` |
-| `DemolishableRecoveryRate` | `number` |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `DroughtDuration` | `{ Max: number; Min: number }` |
-| `DroughtDurationHandicapCycles` | `number` |
-| `DroughtDurationHandicapMultiplier` | `number` |
-| `FoodConsumption` | `number` |
-| `InjuryChance` | `number` |
-| `IsDefault` | `boolean` |
-| `Order` | `number` |
-| `StartingAdults` | `number` |
-| `StartingChildren` | `number` |
-| `StartingFood` | `number` |
-| `StartingWater` | `number` |
-| `TemperateWeatherDuration` | `{ Max: number; Min: number }` |
-| `WaterConsumption` | `number` |
+| Property                            | Type                           |
+| ----------------------------------- | ------------------------------ |
+| `AdultAgeProgress`                  | `{ Max: number; Min: number }` |
+| `BadtideDuration`                   | `{ Max: number; Min: number }` |
+| `BadtideDurationHandicapCycles`     | `number`                       |
+| `BadtideDurationHandicapMultiplier` | `number`                       |
+| `ChanceForBadtide`                  | `number`                       |
+| `ChildAgeProgress`                  | `{ Max: number; Min: number }` |
+| `CyclesBeforeRandomizingBadtide`    | `number`                       |
+| `DemolishableRecoveryRate`          | `number`                       |
+| `DescriptionLocKey`                 | `string`                       |
+| `DisplayNameLocKey`                 | `string`                       |
+| `DroughtDuration`                   | `{ Max: number; Min: number }` |
+| `DroughtDurationHandicapCycles`     | `number`                       |
+| `DroughtDurationHandicapMultiplier` | `number`                       |
+| `FoodConsumption`                   | `number`                       |
+| `InjuryChance`                      | `number`                       |
+| `IsDefault`                         | `boolean`                      |
+| `Order`                             | `number`                       |
+| `StartingAdults`                    | `number`                       |
+| `StartingChildren`                  | `number`                       |
+| `StartingFood`                      | `number`                       |
+| `StartingWater`                     | `number`                       |
+| `TemperateWeatherDuration`          | `{ Max: number; Min: number }` |
+| `WaterConsumption`                  | `number`                       |
 
 Blueprints (3):
 
@@ -7144,20 +7144,20 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleIds` | `array` |
-| `CycleDurationInHours` | `number` |
-| `CyclesCapacity` | `number` |
-| `CyclesFuelLasts` | `number` |
-| `DisplayLocKey` | `string` |
-| `Fuel` | `string` |
-| `FuelCapacity` | `number` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `Ingredients` | `{ Amount: number; Id: string }[]` |
-| `ProducedSciencePoints` | `number` |
-| `Products` | `{ Amount: number; Id: string }[]` |
+| Property                | Type                               |
+| ----------------------- | ---------------------------------- |
+| `BackwardCompatibleIds` | `array`                            |
+| `CycleDurationInHours`  | `number`                           |
+| `CyclesCapacity`        | `number`                           |
+| `CyclesFuelLasts`       | `number`                           |
+| `DisplayLocKey`         | `string`                           |
+| `Fuel`                  | `string`                           |
+| `FuelCapacity`          | `number`                           |
+| `Icon`                  | `string`                           |
+| `Id`                    | `string`                           |
+| `Ingredients`           | `{ Amount: number; Id: string }[]` |
+| `ProducedSciencePoints` | `number`                           |
+| `Products`              | `{ Amount: number; Id: string }[]` |
 
 Blueprints (55):
 
@@ -7171,11 +7171,11 @@ Blueprints (55):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Animation` | `string` |
+| Property                   | Type       |
+| -------------------------- | ---------- |
+| `Animation`                | `string`   |
 | `CompatibleResourceGroups` | `string[]` |
-| `Id` | `string` |
+| `Id`                       | `string`   |
 
 Blueprints (3):
 
@@ -7189,10 +7189,10 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `DisplayNameLocKey` | `string` |
-| `SoundId` | `string` |
+| `SoundId`           | `string` |
 
 Blueprints (4):
 
@@ -7206,10 +7206,10 @@ Blueprints (4):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Blueprints` | `string[]` |
-| `CollectionId` | `string` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `Blueprints`   | `string[]` |
+| `CollectionId` | `string`   |
 
 Blueprints (15):
 
@@ -7247,11 +7247,11 @@ Blueprints (3):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `DisplayNameLocKey` | `string` |
-| `Icon` | `string` |
-| `Id` | `string` |
+| `Icon`              | `string` |
+| `Id`                | `string` |
 
 Blueprints (5):
 
@@ -7284,7 +7284,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the linked blueprints as the source for exact child names and shapes.
-Blueprints (36):
+  Blueprints (36):
 
 [`Basics.ManagePause`][basics-manage-pause], [`Basics.ManageSpeed`][basics-manage-speed], [`Basics.MoveCamera`][basics-move-camera], [`Basics.RotateCamera`][basics-rotate-camera], [`Basics.ZoomCamera`][basics-zoom-camera], [`Dams.BuildDam`][dams-build-dam], [`Forestry.BuildForester`][forestry-build-forester], [`Forestry.MarkBirchesForPlanting`][forestry-mark-birches-for-planting], [`HaulersAndWorkforce.BuildHaulingPost`][haulers-and-workforce-build-hauling-post], [`HaulersAndWorkforce.ChangeWorkforce`][haulers-and-workforce-change-workforce], [`HaulersAndWorkforce.PauseHaulingPost`][haulers-and-workforce-pause-hauling-post], [`Housing.BuildLodges`][housing-build-lodges], [`LayerTool.ChangeUsingMouse`][layer-tool-change-using-mouse], [`LayerTool.ChangeUsingUI`][layer-tool-change-using-ui], [`MoreBeavers.GrowPopulation`][more-beavers-grow-population], [`PowerAndPlanks.BuildLumberMill`][power-and-planks-build-lumber-mill], [`PowerAndPlanks.BuildWaterWheel`][power-and-planks-build-water-wheel], [`Science.BuildInventor`][science-build-inventor], [`Storage.BuildPile`][storage-build-pile], [`Storage.BuildTanks`][storage-build-tanks], [`Storage.BuildWarehouses`][storage-build-warehouses], [`VerticalArchitecture.BuildRooftopTerrace`][vertical-architecture-build-rooftop-terrace], [`WaterAndFood.BuildFarmhouse`][water-and-food-build-farmhouse], [`WaterAndFood.BuildGatherer`][water-and-food-build-gatherer], [`WaterAndFood.BuildWaterPump`][water-and-food-build-water-pump], [`WaterAndFood.MarkCarrots`][water-and-food-mark-carrots], [`Wellbeing.BuildCampfire`][wellbeing-build-campfire], [`Wellbeing.BuildShrub`][wellbeing-build-shrub], [`Wellbeing.SelectBeaver`][wellbeing-select-beaver], [`Wellbeing.SetWorkingHours`][wellbeing-set-working-hours], [`Wellbeing.WellbeingPanel`][wellbeing-wellbeing-panel], [`Wood.ConnectLumberjacks`][wood-connect-lumberjacks], [`Wood.FinishLumberjacks`][wood-finish-lumberjacks], [`Wood.MarkTrees`][wood-mark-trees], [`Wood.PlaceLumberjack`][wood-place-lumberjack], [`WorkingHours.SetWorkingHours`][working-hours-set-working-hours]
 
@@ -7294,14 +7294,14 @@ Blueprints (36):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
-| `NameLocKey` | `string` |
-| `RequiredTutorialIds` | `string[]` |
-| `SkipIfTutorialFinished` | `string` |
-| `SortOrder` | `number` |
-| `Stages` | `string[]` |
+| Property                 | Type       |
+| ------------------------ | ---------- |
+| `Id`                     | `string`   |
+| `NameLocKey`             | `string`   |
+| `RequiredTutorialIds`    | `string[]` |
+| `SkipIfTutorialFinished` | `string`   |
+| `SortOrder`              | `number`   |
+| `Stages`                 | `string[]` |
 
 Blueprints (18):
 
@@ -7313,9 +7313,9 @@ Blueprints (18):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
+| Property      | Type     |
+| ------------- | -------- |
+| `Id`          | `string` |
 | `IntroLocKey` | `string` |
 
 Blueprints (40):
@@ -7330,13 +7330,13 @@ Blueprints (40):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Bonuses` | `{ Multiplier: number; Wellbeing: number }[]` |
-| `BonusId` | `string` |
-| `CharacterType` | `string` |
-| `MultiplierIncrement` | `number` |
-| `WellbeingThreshold` | `number` |
+| Property              | Type                                          |
+| --------------------- | --------------------------------------------- |
+| `Bonuses`             | `{ Multiplier: number; Wellbeing: number }[]` |
+| `BonusId`             | `string`                                      |
+| `CharacterType`       | `string`                                      |
+| `MultiplierIncrement` | `number`                                      |
+| `WellbeingThreshold`  | `number`                                      |
 
 Blueprints (8):
 
@@ -7350,14 +7350,14 @@ Blueprints (8):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Attachments` | `string[]` |
-| `DiffuseTexture` | `string` |
-| `FactionId` | `string` |
-| `Id` | `string` |
-| `NormalTexture` | `string` |
-| `WorkerType` | `string` |
+| Property         | Type       |
+| ---------------- | ---------- |
+| `Attachments`    | `string[]` |
+| `DiffuseTexture` | `string`   |
+| `FactionId`      | `string`   |
+| `Id`             | `string`   |
+| `NormalTexture`  | `string`   |
+| `WorkerType`     | `string`   |
 
 Blueprints (12):
 
@@ -7371,13 +7371,13 @@ Blueprints (12):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleIds` | `array` |
-| `DisplayNameLocKey` | `string` |
-| `Id` | `string` |
-| `IgnoresWorkingHours` | `boolean` |
-| `WorkerOnlyTextLocKey` | `string` |
+| Property                | Type      |
+| ----------------------- | --------- |
+| `BackwardCompatibleIds` | `array`   |
+| `DisplayNameLocKey`     | `string`  |
+| `Id`                    | `string`  |
+| `IgnoresWorkingHours`   | `boolean` |
+| `WorkerOnlyTextLocKey`  | `string`  |
 
 Blueprints (2):
 
@@ -7391,15 +7391,14 @@ Blueprints (2):
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type     |
+| --------- | -------- |
 | `BonusId` | `string` |
-| `GoodId` | `string` |
+| `GoodId`  | `string` |
 
 Blueprints (1):
 
 [`YieldRemovalChanceBonus.CuttingSuccessChance`][yield-removal-chance-bonus-cutting-success-chance]
-
 
 ## Global Spec Index
 
@@ -7411,11 +7410,11 @@ Categories: [`MapEditor`][spec-mapeditor-activationprogressparticlesspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
-| `MaxEmission` | `number` |
-| `MinEmission` | `number` |
+| `MaxEmission`   | `number`   |
+| `MinEmission`   | `number`   |
 
 Examples:
 
@@ -7429,12 +7428,12 @@ Categories: [`MapEditor`][spec-mapeditor-activationwarningstatusspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `StatusLocKey` | `string` |
-| `StatusSpriteName` | `string` |
+| Property             | Type      |
+| -------------------- | --------- |
+| `StatusLocKey`       | `string`  |
+| `StatusSpriteName`   | `string`  |
 | `UseInfiniteWarning` | `boolean` |
-| `WarningSound` | `string` |
+| `WarningSound`       | `string`  |
 
 Examples:
 
@@ -7468,9 +7467,9 @@ Categories: [`Configurations`][spec-configurations-ambientspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DayAmbient` | `string` |
+| Property       | Type     |
+| -------------- | -------- |
+| `DayAmbient`   | `string` |
 | `NightAmbient` | `string` |
 | `WaterAmbient` | `string` |
 
@@ -7486,8 +7485,8 @@ Categories: [`Characters`][spec-characters-animationparticlestriggerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------ |
 | `AnimationParticles` | `{ AnimationName: string; ParticlesAttachmentId: string; TriggerTimes: number[] }[]` |
 
 Examples:
@@ -7502,10 +7501,10 @@ Categories: [`Buildings`][spec-buildings-areaneedapplierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ApplicationRadius` | `number` |
-| `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
+| Property            | Type                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `ApplicationRadius` | `number`                                                    |
+| `Effects`           | `{ NeedId: string; Points: number; Probability: string }[]` |
 
 Examples:
 
@@ -7519,9 +7518,9 @@ Categories: [`Configurations`][spec-configurations-areapickersspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AreaMaxBlocks` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `AreaMaxBlocks`      | `number` |
 | `SculptingMaxBlocks` | `number` |
 
 Examples:
@@ -7536,10 +7535,10 @@ Categories: [`Configurations`][spec-configurations-areatiledrawerfactoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `TileMaterial` | `string` |
-| `TileMesh` | `string` |
+| `TileMesh`     | `string` |
 
 Examples:
 
@@ -7553,8 +7552,8 @@ Categories: [`Buildings`][spec-buildings-attractionfirespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `WoodstackName` | `string` |
 
 Examples:
@@ -7569,8 +7568,8 @@ Categories: [`Buildings`][spec-buildings-attractionspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                                      |
+| --------- | ------------------------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Examples:
@@ -7585,8 +7584,8 @@ Categories: [`Configurations`][spec-configurations-audiomixergroupretrieverspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `AudioMixer` | `string` |
 
 Examples:
@@ -7601,8 +7600,8 @@ Categories: [`Configurations`][spec-configurations-autoatlaserspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                         |
+| ------------- | ------------------------------------------------------------ |
 | `AutoAtlases` | `{ Fragments: string[]; IsUnique: boolean; Name: string }[]` |
 
 Examples:
@@ -7617,10 +7616,10 @@ Categories: [`Configurations`][spec-configurations-autosaverspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `AutosavesPerSettlement` | `number` |
-| `FrequencyInMinutes` | `number` |
+| `FrequencyInMinutes`     | `number` |
 
 Examples:
 
@@ -7644,10 +7643,10 @@ Categories: [`Buildings`][spec-buildings-basicselectionsoundspec], [`MapEditor`]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `AlternativeSoundName` | `string` |
-| `SoundName` | `string` |
+| `SoundName`            | `string` |
 
 Examples:
 
@@ -7661,8 +7660,8 @@ Categories: [`Characters`][spec-characters-beaverinjurytexturesetterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type                                                                         |
+| ------------------- | ---------------------------------------------------------------------------- |
 | `InjuryTextureSets` | `{ DiffusePath: string; DisplacementPath: string; NormalMapPath: string }[]` |
 
 Examples:
@@ -7677,8 +7676,8 @@ Categories: [`Characters`][spec-characters-beaverneedshaderpropertysetterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type                                         |
+| -------------- | -------------------------------------------- |
 | `PropertySets` | `{ NeedId: string; PropertyName: string }[]` |
 
 Examples:
@@ -7753,8 +7752,8 @@ Categories: [`Buildings`][spec-buildings-blockableobjectparticlecontrollerspec],
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -7769,8 +7768,8 @@ Categories: [`Buildings`][spec-buildings-blockableobjectvisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `HideableObjectName` | `string` |
 
 Examples:
@@ -7785,9 +7784,9 @@ Categories: [`Buildings`][spec-buildings-blockobjectaccessesspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AllowedCoordinates` | `{ X: number; Y: number; Z: number }[]` |
+| Property              | Type                                    |
+| --------------------- | --------------------------------------- |
+| `AllowedCoordinates`  | `{ X: number; Y: number; Z: number }[]` |
 | `BlockingCoordinates` | `{ X: number; Y: number; Z: number }[]` |
 
 Examples:
@@ -7802,14 +7801,14 @@ Categories: [`Configurations`][spec-configurations-blockobjectboundsdrawerfactor
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `BlockSideMesh0010` | `string` |
 | `BlockSideMesh0011` | `string` |
 | `BlockSideMesh0111` | `string` |
 | `BlockSideMesh1010` | `string` |
 | `BlockSideMesh1111` | `string` |
-| `Material` | `string` |
+| `Material`          | `string` |
 
 Examples:
 
@@ -7823,10 +7822,10 @@ Categories: [`Configurations`][spec-configurations-blockobjectdeletiontoolspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DeletedAreaSideColor` | `{ a: number; b: number; g: number; r: number }` |
-| `DeletedAreaTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                      | Type                                             |
+| ----------------------------- | ------------------------------------------------ |
+| `DeletedAreaSideColor`        | `{ a: number; b: number; g: number; r: number }` |
+| `DeletedAreaTileColor`        | `{ a: number; b: number; g: number; r: number }` |
 | `DeletedObjectHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -7841,12 +7840,12 @@ Categories: [`Buildings`][spec-buildings-blockobjectmodelspec], [`Environment`][
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
-| `UncoveredModelName` | `string` |
+| Property                | Type     |
+| ----------------------- | -------- |
+| `FullModelName`         | `string` |
+| `UncoveredModelName`    | `string` |
 | `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
+| `UndergroundModelName`  | `string` |
 
 Examples:
 
@@ -7870,13 +7869,13 @@ Categories: [`Buildings`][spec-buildings-blockobjectnavmeshsettingsspec], [`MapE
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BlockedEdges` | `{ End: { X: number; Y: number; Z: number }; Group: string; Start: { X: number; Y: number; Z: number } }[]` |
-| `EdgeGroups` | `{ AddedEdges: { End: { X: number; Y: number; Z: number }; IsTwoWay: boolean; Start: { X: number; Y: number; Z: number } }[]; Cost: number; Group: { GroupName: string; UseGroup: boolean }; IsPath: boolean }[]` |
-| `GenerateFloorsOnStackable` | `boolean` |
-| `NoAutoWalls` | `boolean` |
-| `UnblockedCoordinates` | `{ Coordinates: { X: number; Y: number; Z: number }; Group: string }[]` |
+| Property                    | Type                                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BlockedEdges`              | `{ End: { X: number; Y: number; Z: number }; Group: string; Start: { X: number; Y: number; Z: number } }[]`                                                                                                       |
+| `EdgeGroups`                | `{ AddedEdges: { End: { X: number; Y: number; Z: number }; IsTwoWay: boolean; Start: { X: number; Y: number; Z: number } }[]; Cost: number; Group: { GroupName: string; UseGroup: boolean }; IsPath: boolean }[]` |
+| `GenerateFloorsOnStackable` | `boolean`                                                                                                                                                                                                         |
+| `NoAutoWalls`               | `boolean`                                                                                                                                                                                                         |
+| `UnblockedCoordinates`      | `{ Coordinates: { X: number; Y: number; Z: number }; Group: string }[]`                                                                                                                                           |
 
 Examples:
 
@@ -7900,14 +7899,14 @@ Categories: [`Buildings`][spec-buildings-blockobjectspec], [`Environment`][spec-
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZ` | `number` |
-| `Blocks` | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
-| `Entrance` | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }` |
-| `Flippable` | `boolean` |
-| `Overridable` | `boolean` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
+| Property      | Type                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseZ`       | `number`                                                                                                           |
+| `Blocks`      | `{ MatterBelow: string; Occupations: string; OccupyAllBelow: boolean; Stackable: string; Underground: boolean }[]` |
+| `Entrance`    | `{ Coordinates: { X: number; Y: number; Z: number }; HasEntrance: boolean }`                                       |
+| `Flippable`   | `boolean`                                                                                                          |
+| `Overridable` | `boolean`                                                                                                          |
+| `Size`        | `{ X: number; Y: number; Z: number }`                                                                              |
 
 Examples:
 
@@ -7921,8 +7920,8 @@ Categories: [`MapEditor`][spec-mapeditor-blockobjectterraincutoutspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                    |
+| ------------- | --------------------------------------- |
 | `CutoutTiles` | `{ X: number; Y: number; Z: number }[]` |
 
 Examples:
@@ -7937,13 +7936,13 @@ Categories: [`BlockObjectToolGroups`][spec-blockobjecttoolgroups-blockobjecttool
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type      |
+| --------------- | --------- |
 | `FallbackGroup` | `boolean` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `NameLocKey` | `string` |
-| `Order` | `number` |
+| `Icon`          | `string`  |
+| `Id`            | `string`  |
+| `NameLocKey`    | `string`  |
+| `Order`         | `number`  |
 
 Examples:
 
@@ -7977,8 +7976,8 @@ Categories: [`Configurations`][spec-configurations-bonusdescribercolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
 | `NegativeBonusHighlight` | `{ a: number; b: number; g: number; r: number }` |
 | `PositiveBonusHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
@@ -7994,11 +7993,11 @@ Categories: [`BonusTypes`][spec-bonustypes-bonustypespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `LocKey` | `string` |
+| Property       | Type     |
+| -------------- | -------- |
+| `Icon`         | `string` |
+| `Id`           | `string` |
+| `LocKey`       | `string` |
 | `MaximumValue` | `number` |
 | `MinimumValue` | `number` |
 
@@ -8014,8 +8013,8 @@ Categories: [`Configurations`][spec-configurations-botcolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `BotColorId` | `string` |
 
 Examples:
@@ -8030,14 +8029,14 @@ Categories: [`Buildings`][spec-buildings-botmanufactoryanimationcontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AssemblyDuration` | `number` |
-| `AttachmentIds` | `string[]` |
-| `DrillName` | `string` |
-| `DrillRotationSpeed` | `number` |
-| `RingName` | `string` |
-| `RingRotationSpeed` | `number` |
+| Property             | Type       |
+| -------------------- | ---------- |
+| `AssemblyDuration`   | `number`   |
+| `AttachmentIds`      | `string[]` |
+| `DrillName`          | `string`   |
+| `DrillRotationSpeed` | `number`   |
+| `RingName`           | `string`   |
+| `RingRotationSpeed`  | `number`   |
 
 Examples:
 
@@ -8061,8 +8060,8 @@ Categories: [`Characters`][spec-characters-botselectionsoundspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `SoundNameKey` | `string` |
 
 Examples:
@@ -8087,9 +8086,9 @@ Categories: [`Configurations`][spec-configurations-boundsnavrangedrawerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Material` | `string` |
+| Property     | Type       |
+| ------------ | ---------- |
+| `Material`   | `string`   |
 | `TileMeshes` | `string[]` |
 
 Examples:
@@ -8104,11 +8103,11 @@ Categories: [`Buildings`][spec-buildings-boxcollideradderspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Center` | `{ X: number; Y: number; Z: number }` |
-| `Size` | `{ X: number; Y: number; Z: number }` |
-| `TargetName` | `string` |
+| Property     | Type                                  |
+| ------------ | ------------------------------------- |
+| `Center`     | `{ X: number; Y: number; Z: number }` |
+| `Size`       | `{ X: number; Y: number; Z: number }` |
+| `TargetName` | `string`                              |
 
 Examples:
 
@@ -8122,14 +8121,14 @@ Categories: [`Buildings`][spec-buildings-breedingpodspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CycleLengthInDays` | `number` |
-| `CyclesCapacity` | `number` |
-| `CyclesUntilFullyGrown` | `number` |
-| `EmbryoName` | `string` |
-| `NutrientsPerCycle` | `{ Amount: number; Id: string }[]` |
-| `SpawnAdults` | `boolean` |
+| Property                | Type                               |
+| ----------------------- | ---------------------------------- |
+| `CycleLengthInDays`     | `number`                           |
+| `CyclesCapacity`        | `number`                           |
+| `CyclesUntilFullyGrown` | `number`                           |
+| `EmbryoName`            | `string`                           |
+| `NutrientsPerCycle`     | `{ Amount: number; Id: string }[]` |
+| `SpawnAdults`           | `boolean`                          |
 
 Examples:
 
@@ -8143,11 +8142,11 @@ Categories: [`Configurations`][spec-configurations-brushcolorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type                                             |
+| ---------- | ------------------------------------------------ |
 | `Negative` | `{ a: number; b: number; g: number; r: number }` |
-| `Neutral` | `{ a: number; b: number; g: number; r: number }` |
-| `Objects` | `{ a: number; b: number; g: number; r: number }` |
+| `Neutral`  | `{ a: number; b: number; g: number; r: number }` |
+| `Objects`  | `{ a: number; b: number; g: number; r: number }` |
 | `Positive` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -8162,8 +8161,8 @@ Categories: [`Configurations`][spec-configurations-brushesspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `MaxBrushSize` | `number` |
 
 Examples:
@@ -8198,12 +8197,12 @@ Categories: [`Configurations`][spec-configurations-builderprioritytoolspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `PriorityActionColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
+| `PriorityActionColor`    | `{ a: number; b: number; g: number; r: number }` |
 | `PriorityHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
-| `PrioritySideColor` | `{ a: number; b: number; g: number; r: number }` |
-| `PriorityTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| `PrioritySideColor`      | `{ a: number; b: number; g: number; r: number }` |
+| `PriorityTileColor`      | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -8217,10 +8216,10 @@ Categories: [`Buildings`][spec-buildings-buildingaccessiblespec], [`MapEditor`][
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ForceOneFinalAccess` | `boolean` |
-| `LocalAccess` | `{ X: number; Y: number; Z: number }` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `ForceOneFinalAccess` | `boolean`                             |
+| `LocalAccess`         | `{ X: number; Y: number; Z: number }` |
 
 Examples:
 
@@ -8234,10 +8233,10 @@ Categories: [`Buildings`][spec-buildings-buildingdetailtexturespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Color` | `{ a: number; b: number; g: number; r: number }` |
-| `Texture` | `string` |
+| Property  | Type                                             |
+| --------- | ------------------------------------------------ |
+| `Color`   | `{ a: number; b: number; g: number; r: number }` |
+| `Texture` | `string`                                         |
 
 Examples:
 
@@ -8251,9 +8250,9 @@ Categories: [`Buildings`][spec-buildings-buildingmodelgroundcutoffspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Offset` | `number` |
+| Property  | Type       |
+| --------- | ---------- |
+| `Offset`  | `number`   |
 | `Targets` | `string[]` |
 
 Examples:
@@ -8268,14 +8267,14 @@ Categories: [`Buildings`][spec-buildings-buildingmodelspec], [`MapEditor`][spec-
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstructionModeModel` | `string` |
-| `FinishedModelName` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `ConstructionModeModel`      | `string` |
+| `FinishedModelName`          | `string` |
 | `FinishedUncoveredModelName` | `string` |
-| `UndergroundModelDepth` | `number` |
-| `UndergroundModelName` | `string` |
-| `UnfinishedModelName` | `string` |
+| `UndergroundModelDepth`      | `number` |
+| `UndergroundModelName`       | `string` |
+| `UnfinishedModelName`        | `string` |
 
 Examples:
 
@@ -8289,15 +8288,15 @@ Categories: [`Buildings`][spec-buildings-buildingspec], [`MapEditor`][spec-maped
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BuildingCost` | `{ Amount: number; Id: string }[]` |
-| `DrawRangeBoundsOnIt` | `boolean` |
-| `FinishableWithBeaversOnSite` | `boolean` |
-| `LoopingSoundName` | `string` |
-| `PlaceFinished` | `boolean` |
-| `ScienceCost` | `number` |
-| `SelectionSoundName` | `string` |
+| Property                      | Type                               |
+| ----------------------------- | ---------------------------------- |
+| `BuildingCost`                | `{ Amount: number; Id: string }[]` |
+| `DrawRangeBoundsOnIt`         | `boolean`                          |
+| `FinishableWithBeaversOnSite` | `boolean`                          |
+| `LoopingSoundName`            | `string`                           |
+| `PlaceFinished`               | `boolean`                          |
+| `ScienceCost`                 | `number`                           |
+| `SelectionSoundName`          | `string`                           |
 
 Examples:
 
@@ -8311,8 +8310,8 @@ Categories: [`Buildings`][spec-buildings-buildingterraincutoutspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                    |
+| ------------- | --------------------------------------- |
 | `CutoutTiles` | `{ X: number; Y: number; Z: number }[]` |
 
 Examples:
@@ -8357,21 +8356,21 @@ Categories: [`Configurations`][spec-configurations-cameraservicespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseDistance` | `number` |
-| `DefaultZoomLimits` | `{ Max: number; Min: number }` |
-| `FreeModeMapMargin` | `number` |
-| `FreeModeZoomLimits` | `{ Max: number; Min: number }` |
-| `HorizontalAngle` | `number` |
+| Property              | Type                           |
+| --------------------- | ------------------------------ |
+| `BaseDistance`        | `number`                       |
+| `DefaultZoomLimits`   | `{ Max: number; Min: number }` |
+| `FreeModeMapMargin`   | `number`                       |
+| `FreeModeZoomLimits`  | `{ Max: number; Min: number }` |
+| `HorizontalAngle`     | `number`                       |
 | `MapEditorZoomLimits` | `{ Max: number; Min: number }` |
-| `MapMargin` | `number` |
-| `UnlockedZoomLimits` | `{ Max: number; Min: number }` |
-| `VerticalAngle` | `number` |
+| `MapMargin`           | `number`                       |
+| `UnlockedZoomLimits`  | `{ Max: number; Min: number }` |
+| `VerticalAngle`       | `number`                       |
 | `VerticalAngleLimits` | `{ Max: number; Min: number }` |
-| `ZoomBase` | `number` |
-| `ZoomLevel` | `number` |
-| `ZoomSpeed` | `number` |
+| `ZoomBase`            | `number`                       |
+| `ZoomLevel`           | `number`                       |
+| `ZoomSpeed`           | `number`                       |
 
 Examples:
 
@@ -8385,8 +8384,8 @@ Categories: [`Characters`][spec-characters-characterbirthnotifierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `NotificationLocKey` | `string` |
 
 Examples:
@@ -8401,8 +8400,8 @@ Categories: [`Characters`][spec-characters-charactermodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `ModelName` | `string` |
 
 Examples:
@@ -8420,7 +8419,7 @@ Child map:
 - Keys are entity child names from individual blueprints, not reusable Spec properties.
 - Values are child entity fragments that can contain Specs such as `TimbermeshSpec`, `TransformSpec`, `CollidersSpec`, nested `Children`, or `BlueprintPath` references.
 - Treat the examples as the source for exact child names and shapes.
-Examples:
+  Examples:
 
 `Chronometer` [![Folktails](assets/faction-folktails.png)][chronometer-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][chronometer-ironteeth], `ContaminationSensor` [![Folktails](assets/faction-folktails.png)][contamination-sensor-folktails] [![Iron Teeth](assets/faction-ironteeth.png)][contamination-sensor-ironteeth], `DepthSensor` [![Folktails](assets/faction-folktails.png)][depth-sensor-folktails]
 
@@ -8452,10 +8451,10 @@ Categories: [`Buildings`][spec-buildings-clockhandanimatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `AngleOffset` | `number` |
-| `HandName` | `string` |
+| `HandName`    | `string` |
 
 Examples:
 
@@ -8469,10 +8468,10 @@ Categories: [`Buildings`][spec-buildings-clutchmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `DisengagedModelName` | `string` |
-| `EngagedModelName` | `string` |
+| `EngagedModelName`    | `string` |
 
 Examples:
 
@@ -8496,11 +8495,11 @@ Categories: [`ConstructionBases`][spec-constructionbases-collidersspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BoxColliders` | `{ Center: { X: number; Y: number; Z: number }; Size: { X: number; Y: number; Z: number } }[]` |
-| `CapsuleColliders` | `array` |
-| `SphereColliders` | `{ Center: { X: number; Y: number; Z: number }; Radius: number }[]` |
+| Property           | Type                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `BoxColliders`     | `{ Center: { X: number; Y: number; Z: number }; Size: { X: number; Y: number; Z: number } }[]` |
+| `CapsuleColliders` | `array`                                                                                        |
+| `SphereColliders`  | `{ Center: { X: number; Y: number; Z: number }; Radius: number }[]`                            |
 
 Examples:
 
@@ -8514,8 +8513,8 @@ Categories: [`Buildings`][spec-buildings-connectionanchorpointspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type                                  |
+| ---------- | ------------------------------------- |
 | `Position` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -8530,8 +8529,8 @@ Categories: [`Configurations`][spec-configurations-constructionguidelinesspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Radius` | `number` |
 
 Examples:
@@ -8556,8 +8555,8 @@ Categories: [`Buildings`][spec-buildings-constructionsitebuilderslimiterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `MaxAllowedBuilders` | `number` |
 
 Examples:
@@ -8572,8 +8571,8 @@ Categories: [`Buildings`][spec-buildings-constructionsitebuildtimespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `ConstructionTimeInHours` | `number` |
 
 Examples:
@@ -8588,8 +8587,8 @@ Categories: [`Buildings`][spec-buildings-constructionsiteprogressvisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type       |
+| -------------------- | ---------- |
 | `ProgressThresholds` | `number[]` |
 
 Examples:
@@ -8624,8 +8623,8 @@ Categories: [`Buildings`][spec-buildings-contaminationsensorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type                                  |
+| ------------------- | ------------------------------------- |
 | `SensorCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -8640,8 +8639,8 @@ Categories: [`Buildings`][spec-buildings-continuouseffectbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                                      |
+| --------- | ------------------------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Examples:
@@ -8666,16 +8665,16 @@ Categories: [`Configurations`][spec-configurations-coresoundspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxAmbientFade` | `number` |
-| `MaxBuildingFadeDistance` | `number` |
+| Property                                 | Type     |
+| ---------------------------------------- | -------- |
+| `MaxAmbientFade`                         | `number` |
+| `MaxBuildingFadeDistance`                | `number` |
 | `MaxVerticalListenerPositionAboveGround` | `number` |
-| `MaxWindFade` | `number` |
-| `MinAmbientFade` | `number` |
-| `MinBuildingFadeDistance` | `number` |
-| `MinWindFade` | `number` |
-| `WindAmbientKey` | `string` |
+| `MaxWindFade`                            | `number` |
+| `MinAmbientFade`                         | `number` |
+| `MinBuildingFadeDistance`                | `number` |
+| `MinWindFade`                            | `number` |
+| `WindAmbientKey`                         | `string` |
 
 Examples:
 
@@ -8689,12 +8688,12 @@ Categories: [`Needs`][spec-needs-criticalneedspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CriticalNeedType` | `string` |
-| `DescriptionLocKey` | `string` |
+| Property                 | Type     |
+| ------------------------ | -------- |
+| `CriticalNeedType`       | `string` |
+| `DescriptionLocKey`      | `string` |
 | `DescriptionShortLocKey` | `string` |
-| `SpriteName` | `string` |
+| `SpriteName`             | `string` |
 
 Examples:
 
@@ -8708,10 +8707,10 @@ Categories: [`Characters`][spec-characters-criticalneedstateanimationspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `Animation` | `string` |
-| `NeedId` | `string` |
+| `NeedId`    | `string` |
 
 Examples:
 
@@ -8735,13 +8734,13 @@ Categories: [`CustomCursors`][spec-customcursors-customcursorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Hotspot` | `{ X: number; Y: number }` |
-| `Id` | `string` |
-| `MacOsCursor` | `string` |
-| `MacOsCursorOffset` | `{ X: number; Y: number }` |
-| `WindowsCursor` | `string` |
+| Property              | Type                       |
+| --------------------- | -------------------------- |
+| `Hotspot`             | `{ X: number; Y: number }` |
+| `Id`                  | `string`                   |
+| `MacOsCursor`         | `string`                   |
+| `MacOsCursorOffset`   | `{ X: number; Y: number }` |
+| `WindowsCursor`       | `string`                   |
 | `WindowsCursorOffset` | `{ X: number; Y: number }` |
 
 Examples:
@@ -8766,11 +8765,11 @@ Categories: [`NaturalResources`][spec-naturalresources-cuttablespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `LeftoverModelName` | `string` |
-| `RemoveOnCut` | `boolean` |
-| `Yielder` | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
+| Property            | Type                                                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `LeftoverModelName` | `string`                                                                                                                     |
+| `RemoveOnCut`       | `boolean`                                                                                                                    |
+| `Yielder`           | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
 
 Examples:
 
@@ -8794,11 +8793,11 @@ Categories: [`Configurations`][spec-configurations-daynightcyclespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConfiguredDayLengthInTicks` | `number` |
+| Property                         | Type     |
+| -------------------------------- | -------- |
+| `ConfiguredDayLengthInTicks`     | `number` |
 | `ConfiguredDaytimeLengthInHours` | `number` |
-| `HoursPassedOnNewGame` | `number` |
+| `HoursPassedOnNewGame`           | `number` |
 
 Examples:
 
@@ -8812,10 +8811,10 @@ Categories: [`Configurations`][spec-configurations-daystagecyclespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                     | Type     |
+| ---------------------------- | -------- |
 | `SunriseSunsetLengthInHours` | `number` |
-| `TransitionLengthInHours` | `number` |
+| `TransitionLengthInHours`    | `number` |
 
 Examples:
 
@@ -8829,8 +8828,8 @@ Categories: [`Characters`][spec-characters-deadstatusspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `DeadStatusLocKey` | `string` |
 
 Examples:
@@ -8845,11 +8844,11 @@ Categories: [`Decals`][spec-decals-decalspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Category` | `string` |
+| Property    | Type     |
+| ----------- | -------- |
+| `Category`  | `string` |
 | `FactionId` | `string` |
-| `Texture` | `string` |
+| `Texture`   | `string` |
 
 Examples:
 
@@ -8863,8 +8862,8 @@ Categories: [`Buildings`][spec-buildings-decalsupplierbuildingiconspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `IconRendererName` | `string` |
 
 Examples:
@@ -8879,8 +8878,8 @@ Categories: [`Buildings`][spec-buildings-decalsupplierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type     |
+| ---------- | -------- |
 | `Category` | `string` |
 
 Examples:
@@ -8895,14 +8894,14 @@ Categories: [`Configurations`][spec-configurations-deconstructionparticlefactory
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxNeighboursCount` | `number` |
-| `MaxParticlesForThreshold` | `number` |
+| Property                    | Type     |
+| --------------------------- | -------- |
+| `MaxNeighboursCount`        | `number` |
+| `MaxParticlesForThreshold`  | `number` |
 | `MaxParticleSpawnThreshold` | `number` |
-| `MinParticlesForThreshold` | `number` |
+| `MinParticlesForThreshold`  | `number` |
 | `MinParticleSpawnThreshold` | `number` |
-| `ParticlePrefabPath` | `string` |
+| `ParticlePrefabPath`        | `string` |
 
 Examples:
 
@@ -8916,8 +8915,8 @@ Categories: [`Buildings`][spec-buildings-defaultilluminatorcolorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type     |
+| --------- | -------- |
 | `ColorId` | `string` |
 
 Examples:
@@ -8932,8 +8931,8 @@ Categories: [`MapEditor`][spec-mapeditor-demolishableeffectsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                        |
+| --------- | ----------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
 
 Examples:
@@ -8958,10 +8957,10 @@ Categories: [`Configurations`][spec-configurations-demolishablemarkerservicespec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type     |
+| ---------- | -------- |
 | `Material` | `string` |
-| `Mesh` | `string` |
+| `Mesh`     | `string` |
 
 Examples:
 
@@ -8975,8 +8974,8 @@ Categories: [`Characters`][spec-characters-demolishableparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type                                                  |
+| ----------------------- | ----------------------------------------------------- |
 | `DemolishableParticles` | `{ AttachmentId: string; TemplateNames: string[] }[]` |
 
 Examples:
@@ -8991,8 +8990,8 @@ Categories: [`MapEditor`][spec-mapeditor-demolishablesciencerewardspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `SciencePoints` | `number` |
 
 Examples:
@@ -9007,9 +9006,9 @@ Categories: [`MapEditor`][spec-mapeditor-demolishablespec], [`NaturalResources`]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DemolishTimeInHours` | `number` |
+| Property                          | Type      |
+| --------------------------------- | --------- |
+| `DemolishTimeInHours`             | `number`  |
 | `ShowDemolishButtonInEntityPanel` | `boolean` |
 
 Examples:
@@ -9044,10 +9043,10 @@ Categories: [`Configurations`][spec-configurations-demolishingcolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DeletedAreaSideColor` | `{ a: number; b: number; g: number; r: number }` |
-| `DeletedAreaTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                      | Type                                             |
+| ----------------------------- | ------------------------------------------------ |
+| `DeletedAreaSideColor`        | `{ a: number; b: number; g: number; r: number }` |
+| `DeletedAreaTileColor`        | `{ a: number; b: number; g: number; r: number }` |
 | `DeletedObjectHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -9062,10 +9061,10 @@ Categories: [`Buildings`][spec-buildings-depthsensorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `SensorCoordinates` | `{ X: number; Y: number; Z: number }` |
-| `SensorHeightOffset` | `number` |
+| Property             | Type                                  |
+| -------------------- | ------------------------------------- |
+| `SensorCoordinates`  | `{ X: number; Y: number; Z: number }` |
+| `SensorHeightOffset` | `number`                              |
 
 Examples:
 
@@ -9079,8 +9078,8 @@ Categories: [`Characters`][spec-characters-deteriorablespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `DeteriorationInDays` | `number` |
 
 Examples:
@@ -9115,8 +9114,8 @@ Categories: [`Configurations`][spec-configurations-distancetocolorconverterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                                                        |
+| ------------------ | --------------------------------------------------------------------------- |
 | `DistanceGradient` | `{ Color: { a: number; b: number; g: number; r: number }; Time: number }[]` |
 
 Examples:
@@ -9151,8 +9150,8 @@ Categories: [`Configurations`][spec-configurations-districtconnectiondrawingserv
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                             |
+| --------------------- | ------------------------------------------------ |
 | `ConnectionHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -9167,11 +9166,11 @@ Categories: [`Configurations`][spec-configurations-districtconnectionlinerendere
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ArcAngle` | `number` |
-| `CurvePoints` | `number` |
-| `LineCutoff` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `ArcAngle`           | `number` |
+| `CurvePoints`        | `number` |
+| `LineCutoff`         | `number` |
 | `LineRendererPrefab` | `string` |
 
 Examples:
@@ -9196,8 +9195,8 @@ Categories: [`Buildings`][spec-buildings-districtobstaclespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `CoordinateOffset` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -9222,8 +9221,8 @@ Categories: [`Configurations`][spec-configurations-draggingcameratargetpickerspe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `MovementSpeed` | `number` |
 
 Examples:
@@ -9238,9 +9237,9 @@ Categories: [`Buildings`][spec-buildings-drillheadvisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `HeadOffset` | `number` |
+| Property            | Type     |
+| ------------------- | -------- |
+| `HeadOffset`        | `number` |
 | `HeadTransformName` | `string` |
 
 Examples:
@@ -9255,13 +9254,13 @@ Categories: [`Buildings`][spec-buildings-drillscrewbuilderspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AnchorPosition` | `{ X: number; Y: number; Z: number }` |
-| `DrillRadius` | `number` |
-| `ParentName` | `string` |
-| `ScrewAxisPrefabPath` | `string` |
-| `ScrewHeadPrefabPath` | `string` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `AnchorPosition`      | `{ X: number; Y: number; Z: number }` |
+| `DrillRadius`         | `number`                              |
+| `ParentName`          | `string`                              |
+| `ScrewAxisPrefabPath` | `string`                              |
+| `ScrewHeadPrefabPath` | `string`                              |
 
 Examples:
 
@@ -9275,9 +9274,9 @@ Categories: [`Buildings`][spec-buildings-drillscrewrotatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MinimumRotationSpeed` | `number` |
+| Property                 | Type     |
+| ------------------------ | -------- |
+| `MinimumRotationSpeed`   | `number` |
 | `RotationSpeedPerWorker` | `number` |
 
 Examples:
@@ -9292,10 +9291,10 @@ Categories: [`Buildings`][spec-buildings-drillspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type                                    |
+| ---------------------- | --------------------------------------- |
 | `DrillableCoordinates` | `{ X: number; Y: number; Z: number }[]` |
-| `RemovalEffectPath` | `string` |
+| `RemovalEffectPath`    | `string`                                |
 
 Examples:
 
@@ -9309,14 +9308,14 @@ Categories: [`Configurations`][spec-configurations-drivewaymodelinstantiatorspec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `LongCenterDrivewayPrefab` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `LongCenterDrivewayPrefab`   | `string` |
 | `NarrowCenterDrivewayPrefab` | `string` |
-| `NarrowLeftDrivewayPrefab` | `string` |
-| `NarrowRightDrivewayPrefab` | `string` |
+| `NarrowLeftDrivewayPrefab`   | `string` |
+| `NarrowRightDrivewayPrefab`  | `string` |
 | `StraightPathDrivewayPrefab` | `string` |
-| `WideCenterDrivewayPrefab` | `string` |
+| `WideCenterDrivewayPrefab`   | `string` |
 
 Examples:
 
@@ -9330,13 +9329,13 @@ Categories: [`Buildings`][spec-buildings-drivewaymodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CustomCoordinates` | `{ X: number; Y: number; Z: number }` |
-| `CustomDirection` | `string` |
-| `Driveway` | `string` |
-| `DrivewayMode` | `string` |
-| `HasCustomCoordinates` | `boolean` |
+| Property               | Type                                  |
+| ---------------------- | ------------------------------------- |
+| `CustomCoordinates`    | `{ X: number; Y: number; Z: number }` |
+| `CustomDirection`      | `string`                              |
+| `Driveway`             | `string`                              |
+| `DrivewayMode`         | `string`                              |
+| `HasCustomCoordinates` | `boolean`                             |
 
 Examples:
 
@@ -9350,8 +9349,8 @@ Categories: [`MapEditor`][spec-mapeditor-dryobjectmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `DryModelName` | `string` |
 | `WetModelName` | `string` |
 
@@ -9377,8 +9376,8 @@ Categories: [`Configurations`][spec-configurations-duplicationsystemcolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                             |
+| ------------- | ------------------------------------------------ |
 | `SourceColor` | `{ a: number; b: number; g: number; r: number }` |
 | `TargetColor` | `{ a: number; b: number; g: number; r: number }` |
 
@@ -9394,9 +9393,9 @@ Categories: [`Buildings`][spec-buildings-dwellingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxBeavers` | `number` |
+| Property       | Type                                                                      |
+| -------------- | ------------------------------------------------------------------------- |
+| `MaxBeavers`   | `number`                                                                  |
 | `SleepEffects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Examples:
@@ -9411,10 +9410,10 @@ Categories: [`Buildings`][spec-buildings-dynamicpathmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `GroundModelPrefix` | `string` |
-| `RoofModelPrefix` | `string` |
+| `RoofModelPrefix`   | `string` |
 
 Examples:
 
@@ -9428,9 +9427,9 @@ Categories: [`Buildings`][spec-buildings-dynamitespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Depth` | `number` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `Depth`               | `number` |
 | `ExplosionPrefabPath` | `string` |
 
 Examples:
@@ -9445,11 +9444,11 @@ Categories: [`Configurations`][spec-configurations-edgepanningcameratargetpicker
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `FastMovementSpeedBonus` | `number` |
-| `MaxBaseSpeed` | `number` |
-| `MinBaseSpeed` | `number` |
+| `MaxBaseSpeed`           | `number` |
+| `MinBaseSpeed`           | `number` |
 
 Examples:
 
@@ -9463,8 +9462,8 @@ Categories: [`Buildings`][spec-buildings-enterableanimationcontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type      |
+| ------------------------ | --------- |
 | `ResetAnimationUponExit` | `boolean` |
 
 Examples:
@@ -9489,8 +9488,8 @@ Categories: [`Buildings`][spec-buildings-enterableparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -9505,13 +9504,13 @@ Categories: [`Buildings`][spec-buildings-enterablespec], [`MapEditor`][spec-mape
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CapacityFinished` | `number` |
-| `CapacityUnfinished` | `number` |
-| `LimitedCapacityFinished` | `boolean` |
+| Property                    | Type      |
+| --------------------------- | --------- |
+| `CapacityFinished`          | `number`  |
+| `CapacityUnfinished`        | `number`  |
+| `LimitedCapacityFinished`   | `boolean` |
 | `LimitedCapacityUnfinished` | `boolean` |
-| `OperatingState` | `string` |
+| `OperatingState`            | `string`  |
 
 Examples:
 
@@ -9535,9 +9534,9 @@ Categories: [`Buildings`][spec-buildings-entererboundsscalerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Scale` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Scale`  | `number` |
 
 Examples:
 
@@ -9551,8 +9550,8 @@ Categories: [`Buildings`][spec-buildings-entererneedsuspendingbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                               |
+| --------------- | ---------------------------------- |
 | `NeedSuspender` | `{ SuspendableNeedIds: string[] }` |
 
 Examples:
@@ -9567,8 +9566,8 @@ Categories: [`Configurations`][spec-configurations-explosionvisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type                                             |
+| ---------------------- | ------------------------------------------------ |
 | `ObjectHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -9583,32 +9582,32 @@ Categories: [`Factions`][spec-factions-factionspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Avatar` | `string` |
-| `BaseWoodMaterial` | `string` |
-| `BlueprintModifiers` | `array` |
-| `BotAvatar` | `string` |
-| `ChildAvatar` | `string` |
-| `ChildTextures` | `string[]` |
-| `ContaminatedAdultAvatar` | `string` |
-| `ContaminatedChildAvatar` | `string` |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `GameOverFlavorLocKey` | `string` |
-| `GameOverMessageLocKey` | `string` |
-| `GoodCollectionIds` | `string[]` |
-| `Id` | `string` |
-| `Logo` | `string` |
-| `MaterialCollectionIds` | `string[]` |
-| `NeedCollectionIds` | `string[]` |
-| `NewGameFullAvatar` | `string` |
-| `Order` | `number` |
-| `PathMaterial` | `string` |
-| `SoundId` | `string` |
-| `StartingBuildingId` | `string` |
-| `TemplateCollectionIds` | `string[]` |
-| `Textures` | `string[]` |
+| Property                  | Type       |
+| ------------------------- | ---------- |
+| `Avatar`                  | `string`   |
+| `BaseWoodMaterial`        | `string`   |
+| `BlueprintModifiers`      | `array`    |
+| `BotAvatar`               | `string`   |
+| `ChildAvatar`             | `string`   |
+| `ChildTextures`           | `string[]` |
+| `ContaminatedAdultAvatar` | `string`   |
+| `ContaminatedChildAvatar` | `string`   |
+| `DescriptionLocKey`       | `string`   |
+| `DisplayNameLocKey`       | `string`   |
+| `GameOverFlavorLocKey`    | `string`   |
+| `GameOverMessageLocKey`   | `string`   |
+| `GoodCollectionIds`       | `string[]` |
+| `Id`                      | `string`   |
+| `Logo`                    | `string`   |
+| `MaterialCollectionIds`   | `string[]` |
+| `NeedCollectionIds`       | `string[]` |
+| `NewGameFullAvatar`       | `string`   |
+| `Order`                   | `number`   |
+| `PathMaterial`            | `string`   |
+| `SoundId`                 | `string`   |
+| `StartingBuildingId`      | `string`   |
+| `TemplateCollectionIds`   | `string[]` |
+| `Textures`                | `string[]` |
 
 Examples:
 
@@ -9622,12 +9621,12 @@ Categories: [`Factions`][spec-factions-factionwonderspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `WonderCompletionFlavorLocKey` | `string` |
-| `WonderCompletionImage` | `string` |
+| Property                        | Type     |
+| ------------------------------- | -------- |
+| `WonderCompletionFlavorLocKey`  | `string` |
+| `WonderCompletionImage`         | `string` |
 | `WonderCompletionMessageLocKey` | `string` |
-| `WonderLaunchSound` | `string` |
+| `WonderLaunchSound`             | `string` |
 
 Examples:
 
@@ -9651,14 +9650,14 @@ Categories: [`Buildings`][spec-buildings-fillvalvespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultAutomationTargetHeightEnabled` | `boolean` |
-| `DefaultAutomationTargetHeightOffset` | `number` |
-| `DefaultTargetHeightEnabled` | `boolean` |
-| `DefaultTargetHeightOffset` | `number` |
-| `OutputCoordinates` | `{ X: number; Y: number; Z: number }` |
-| `OverflowLimit` | `number` |
+| Property                               | Type                                  |
+| -------------------------------------- | ------------------------------------- |
+| `DefaultAutomationTargetHeightEnabled` | `boolean`                             |
+| `DefaultAutomationTargetHeightOffset`  | `number`                              |
+| `DefaultTargetHeightEnabled`           | `boolean`                             |
+| `DefaultTargetHeightOffset`            | `number`                              |
+| `OutputCoordinates`                    | `{ X: number; Y: number; Z: number }` |
+| `OverflowLimit`                        | `number`                              |
 
 Examples:
 
@@ -9672,8 +9671,8 @@ Categories: [`Buildings`][spec-buildings-finishablehorizontalwaterobstaclespec],
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type                                    |
+| ----------- | --------------------------------------- |
 | `Obstacles` | `{ X: number; Y: number; Z: number }[]` |
 
 Examples:
@@ -9688,8 +9687,8 @@ Categories: [`Buildings`][spec-buildings-finishablewaterobstaclespec], [`MapEdit
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Height` | `number` |
 
 Examples:
@@ -9714,8 +9713,8 @@ Categories: [`Buildings`][spec-buildings-finishedstatelightingenforcerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `ChildrenNames` | `string[]` |
 
 Examples:
@@ -9730,8 +9729,8 @@ Categories: [`Buildings`][spec-buildings-firespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `AttachmentId` | `string` |
 
 Examples:
@@ -9746,12 +9745,12 @@ Categories: [`Buildings`][spec-buildings-fireworklauncherspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Barrel` | `string` |
+| Property     | Type     |
+| ------------ | -------- |
+| `Barrel`     | `string` |
 | `GoodAmount` | `number` |
-| `GoodId` | `string` |
-| `Turret` | `string` |
+| `GoodId`     | `string` |
+| `Turret`     | `string` |
 
 Examples:
 
@@ -9765,12 +9764,12 @@ Categories: [`Fireworks`][spec-fireworks-fireworkspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BurstSound` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `HasBurst` | `boolean` |
-| `TrailSound` | `string` |
+| Property            | Type      |
+| ------------------- | --------- |
+| `BurstSound`        | `string`  |
+| `DisplayNameLocKey` | `string`  |
+| `HasBurst`          | `boolean` |
+| `TrailSound`        | `string`  |
 
 Examples:
 
@@ -9804,8 +9803,8 @@ Categories: [`Buildings`][spec-buildings-flippabledecalspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `DecalName` | `string` |
 
 Examples:
@@ -9840,9 +9839,9 @@ Categories: [`NaturalResources`][spec-naturalresources-floodablenaturalresources
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DaysToDie` | `number` |
+| Property         | Type     |
+| ---------------- | -------- |
+| `DaysToDie`      | `number` |
 | `MaxWaterHeight` | `number` |
 | `MinWaterHeight` | `number` |
 
@@ -9878,8 +9877,8 @@ Categories: [`Buildings`][spec-buildings-floodgateanimationcontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type     |
+| ---------- | -------- |
 | `GateName` | `string` |
 
 Examples:
@@ -9894,8 +9893,8 @@ Categories: [`Buildings`][spec-buildings-floodgatespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `MaxHeight` | `number` |
 
 Examples:
@@ -9910,9 +9909,9 @@ Categories: [`Buildings`][spec-buildings-flowsensorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxThreshold` | `number` |
+| Property            | Type                                  |
+| ------------------- | ------------------------------------- |
+| `MaxThreshold`      | `number`                              |
 | `SensorCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -9937,31 +9936,31 @@ Categories: [`NewGameModes`][spec-newgamemodes-gamemodespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AdultAgeProgress` | `{ Max: number; Min: number }` |
-| `BadtideDuration` | `{ Max: number; Min: number }` |
-| `BadtideDurationHandicapCycles` | `number` |
-| `BadtideDurationHandicapMultiplier` | `number` |
-| `ChanceForBadtide` | `number` |
-| `ChildAgeProgress` | `{ Max: number; Min: number }` |
-| `CyclesBeforeRandomizingBadtide` | `number` |
-| `DemolishableRecoveryRate` | `number` |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `DroughtDuration` | `{ Max: number; Min: number }` |
-| `DroughtDurationHandicapCycles` | `number` |
-| `DroughtDurationHandicapMultiplier` | `number` |
-| `FoodConsumption` | `number` |
-| `InjuryChance` | `number` |
-| `IsDefault` | `boolean` |
-| `Order` | `number` |
-| `StartingAdults` | `number` |
-| `StartingChildren` | `number` |
-| `StartingFood` | `number` |
-| `StartingWater` | `number` |
-| `TemperateWeatherDuration` | `{ Max: number; Min: number }` |
-| `WaterConsumption` | `number` |
+| Property                            | Type                           |
+| ----------------------------------- | ------------------------------ |
+| `AdultAgeProgress`                  | `{ Max: number; Min: number }` |
+| `BadtideDuration`                   | `{ Max: number; Min: number }` |
+| `BadtideDurationHandicapCycles`     | `number`                       |
+| `BadtideDurationHandicapMultiplier` | `number`                       |
+| `ChanceForBadtide`                  | `number`                       |
+| `ChildAgeProgress`                  | `{ Max: number; Min: number }` |
+| `CyclesBeforeRandomizingBadtide`    | `number`                       |
+| `DemolishableRecoveryRate`          | `number`                       |
+| `DescriptionLocKey`                 | `string`                       |
+| `DisplayNameLocKey`                 | `string`                       |
+| `DroughtDuration`                   | `{ Max: number; Min: number }` |
+| `DroughtDurationHandicapCycles`     | `number`                       |
+| `DroughtDurationHandicapMultiplier` | `number`                       |
+| `FoodConsumption`                   | `number`                       |
+| `InjuryChance`                      | `number`                       |
+| `IsDefault`                         | `boolean`                      |
+| `Order`                             | `number`                       |
+| `StartingAdults`                    | `number`                       |
+| `StartingChildren`                  | `number`                       |
+| `StartingFood`                      | `number`                       |
+| `StartingWater`                     | `number`                       |
+| `TemperateWeatherDuration`          | `{ Max: number; Min: number }` |
+| `WaterConsumption`                  | `number`                       |
 
 Examples:
 
@@ -9975,12 +9974,12 @@ Categories: [`Configurations`][spec-configurations-gamespeedthrottlerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `MaxGameSpeedScale` | `number` |
-| `MaxPopulation` | `number` |
+| `MaxPopulation`     | `number` |
 | `MinGameSpeedScale` | `number` |
-| `MinPopulation` | `number` |
+| `MinPopulation`     | `number` |
 
 Examples:
 
@@ -9994,9 +9993,9 @@ Categories: [`Configurations`][spec-configurations-gametipspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Tips` | `string[]` |
+| Property | Type       |
+| -------- | ---------- |
+| `Tips`   | `string[]` |
 
 Examples:
 
@@ -10010,15 +10009,15 @@ Categories: [`Configurations`][spec-configurations-gameuisoundspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BadtideStartedSoundKey` | `string` |
-| `BlinkingSoundKey` | `string` |
-| `DroughtStartedSoundKey` | `string` |
-| `FieldPlaced` | `string` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `BadtideStartedSoundKey`          | `string` |
+| `BlinkingSoundKey`                | `string` |
+| `DroughtStartedSoundKey`          | `string` |
+| `FieldPlaced`                     | `string` |
 | `TemperateWeatherStartedSoundKey` | `string` |
-| `WellbeingHighscore` | `string` |
-| `WonderCongratulationSoundKey` | `string` |
+| `WellbeingHighscore`              | `string` |
+| `WonderCongratulationSoundKey`    | `string` |
 
 Examples:
 
@@ -10032,10 +10031,10 @@ Categories: [`Buildings`][spec-buildings-gatemodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `ClosedModelName` | `string` |
-| `OpenModelName` | `string` |
+| `OpenModelName`   | `string` |
 
 Examples:
 
@@ -10049,10 +10048,10 @@ Categories: [`Buildings`][spec-buildings-gatespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `End` | `{ X: number; Y: number; Z: number }` |
-| `Start` | `{ X: number; Y: number; Z: number }` |
+| Property | Type                                  |
+| -------- | ------------------------------------- |
+| `End`    | `{ X: number; Y: number; Z: number }` |
+| `Start`  | `{ X: number; Y: number; Z: number }` |
 
 Examples:
 
@@ -10066,10 +10065,10 @@ Categories: [`NaturalResources`][spec-naturalresources-gatherablespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Yielder` | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
-| `YieldGrowthTimeInDays` | `number` |
+| Property                | Type                                                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `Yielder`               | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
+| `YieldGrowthTimeInDays` | `number`                                                                                                                     |
 
 Examples:
 
@@ -10093,9 +10092,9 @@ Categories: [`Characters`][spec-characters-goodcarriermodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackpackAttachmentName` | `string` |
+| Property                       | Type     |
+| ------------------------------ | -------- |
+| `BackpackAttachmentName`       | `string` |
 | `CarriedInHandsAttachmentName` | `string` |
 
 Examples:
@@ -10110,8 +10109,8 @@ Categories: [`Characters`][spec-characters-goodcarrierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `BaseLiftingCapacity` | `number` |
 
 Examples:
@@ -10126,10 +10125,10 @@ Categories: [`GoodCollections`][spec-goodcollections-goodcollectionspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CollectionId` | `string` |
-| `Goods` | `string[]` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `CollectionId` | `string`   |
+| `Goods`        | `string[]` |
 
 Examples:
 
@@ -10153,10 +10152,10 @@ Categories: [`Buildings`][spec-buildings-goodconsumingattractionsurfacecontrolle
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
-| `SurfaceName` | `string` |
+| `SurfaceName`   | `string`   |
 
 Examples:
 
@@ -10170,10 +10169,10 @@ Categories: [`Buildings`][spec-buildings-goodconsumingbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConsumedGoods` | `{ GoodId: string; GoodPerHour: number }[]` |
-| `FullInventoryWorkHours` | `number` |
+| Property                 | Type                                        |
+| ------------------------ | ------------------------------------------- |
+| `ConsumedGoods`          | `{ GoodId: string; GoodPerHour: number }[]` |
+| `FullInventoryWorkHours` | `number`                                    |
 
 Examples:
 
@@ -10187,12 +10186,12 @@ Categories: [`GoodGroups`][spec-goodgroups-goodgroupspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DisplayNameLocKey` | `string` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `Order` | `number` |
+| Property              | Type      |
+| --------------------- | --------- |
+| `DisplayNameLocKey`   | `string`  |
+| `Icon`                | `string`  |
+| `Id`                  | `string`  |
+| `Order`               | `number`  |
 | `SingleResourceGroup` | `boolean` |
 
 Examples:
@@ -10227,24 +10226,24 @@ Categories: [`Goods`][spec-goods-goodspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleIds` | `array` |
-| `CarryingAnimation` | `string` |
-| `ConsumptionEffects` | `{ NeedId: string; Points: number }[]` |
-| `ContainerColor` | `{ a: number; b: number; g: number; r: number }` |
-| `ContainerMaterial` | `string` |
-| `DisplayNameLocKey` | `string` |
-| `ForceImport` | `boolean` |
-| `GoodGroupId` | `string` |
-| `GoodOrder` | `number` |
-| `GoodType` | `string` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `PluralDisplayNameLocKey` | `string` |
-| `StockpileVisualization` | `string` |
-| `VisibleContainer` | `string` |
-| `Weight` | `number` |
+| Property                  | Type                                             |
+| ------------------------- | ------------------------------------------------ |
+| `BackwardCompatibleIds`   | `array`                                          |
+| `CarryingAnimation`       | `string`                                         |
+| `ConsumptionEffects`      | `{ NeedId: string; Points: number }[]`           |
+| `ContainerColor`          | `{ a: number; b: number; g: number; r: number }` |
+| `ContainerMaterial`       | `string`                                         |
+| `DisplayNameLocKey`       | `string`                                         |
+| `ForceImport`             | `boolean`                                        |
+| `GoodGroupId`             | `string`                                         |
+| `GoodOrder`               | `number`                                         |
+| `GoodType`                | `string`                                         |
+| `Icon`                    | `string`                                         |
+| `Id`                      | `string`                                         |
+| `PluralDisplayNameLocKey` | `string`                                         |
+| `StockpileVisualization`  | `string`                                         |
+| `VisibleContainer`        | `string`                                         |
+| `Weight`                  | `number`                                         |
 
 Examples:
 
@@ -10258,12 +10257,12 @@ Categories: [`Environment`][spec-environment-goodstackmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BagObjectName` | `string` |
+| Property           | Type     |
+| ------------------ | -------- |
+| `BagObjectName`    | `string` |
 | `BarrelObjectName` | `string` |
-| `BoxObjectName` | `string` |
-| `LogObjectName` | `string` |
+| `BoxObjectName`    | `string` |
+| `LogObjectName`    | `string` |
 
 Examples:
 
@@ -10277,16 +10276,16 @@ Categories: [`GoodVisualization`][spec-goodvisualization-goodvisualizationspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
-| `LimitingAmount` | `number` |
-| `Material` | `string` |
-| `NonLinearity` | `number` |
-| `Offset` | `{ X: number; Y: number; Z: number }` |
-| `PrimaryMesh` | `string` |
-| `SecondaryMesh` | `string` |
-| `Variant` | `string` |
+| Property         | Type                                  |
+| ---------------- | ------------------------------------- |
+| `Id`             | `string`                              |
+| `LimitingAmount` | `number`                              |
+| `Material`       | `string`                              |
+| `NonLinearity`   | `number`                              |
+| `Offset`         | `{ X: number; Y: number; Z: number }` |
+| `PrimaryMesh`    | `string`                              |
+| `SecondaryMesh`  | `string`                              |
+| `Variant`        | `string`                              |
 
 Examples:
 
@@ -10300,8 +10299,8 @@ Categories: [`Buildings`][spec-buildings-gravitybatteryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `CapacityPerTile` | `number` |
 
 Examples:
@@ -10326,8 +10325,8 @@ Categories: [`NaturalResources`][spec-naturalresources-growablespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `GrowthTimeInDays` | `number` |
 
 Examples:
@@ -10352,11 +10351,11 @@ Categories: [`Configurations`][spec-configurations-hazardousweatheruispec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type     |
+| ----------------------------- | -------- |
 | `ApproachingNotificationDays` | `number` |
-| `MaxDayProgressLeftToNotify` | `number` |
-| `NotificationDuration` | `number` |
+| `MaxDayProgressLeftToNotify`  | `number` |
+| `NotificationDuration`        | `number` |
 
 Examples:
 
@@ -10370,8 +10369,8 @@ Categories: [`MapEditor`][spec-mapeditor-hazardousweatherwatersourcespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                   | Type       |
+| -------------------------- | ---------- |
 | `ActiveInHazardousWeather` | `string[]` |
 
 Examples:
@@ -10406,12 +10405,12 @@ Categories: [`Buildings`][spec-buildings-hivespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `GrowthTimeReduction` | `number` |
+| Property                   | Type     |
+| -------------------------- | -------- |
+| `GrowthTimeReduction`      | `number` |
 | `HoursBetweenPollinations` | `number` |
-| `PlantsPerPollination` | `number` |
-| `PollinationRadius` | `number` |
+| `PlantsPerPollination`     | `number` |
+| `PollinationRadius`        | `number` |
 
 Examples:
 
@@ -10445,10 +10444,10 @@ Categories: [`IlluminationColors`][spec-illuminationcolors-illuminationcolorspec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Color` | `{ a: number; b: number; g: number; r: number }` |
-| `Id` | `string` |
+| Property | Type                                             |
+| -------- | ------------------------------------------------ |
+| `Color`  | `{ a: number; b: number; g: number; r: number }` |
+| `Id`     | `string`                                         |
 
 Examples:
 
@@ -10462,9 +10461,9 @@ Categories: [`IlluminationColors`][spec-illuminationcolors-illuminationpresetspe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Order` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Order`  | `number` |
 
 Examples:
 
@@ -10478,10 +10477,10 @@ Categories: [`Configurations`][spec-configurations-illuminationservicespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `DefaultColorId` | `string` |
-| `IconExponent` | `number` |
+| `IconExponent`   | `number` |
 | `IconMultiplier` | `number` |
 
 Examples:
@@ -10496,8 +10495,8 @@ Categories: [`Buildings`][spec-buildings-illuminatorlightobjectsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -10562,11 +10561,11 @@ Categories: [`KeyBindingGroups`][spec-keybindinggroups-keybindinggroupspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
+| Property | Type     |
+| -------- | -------- |
+| `Id`     | `string` |
 | `LocKey` | `string` |
-| `Order` | `number` |
+| `Order`  | `number` |
 
 Examples:
 
@@ -10580,14 +10579,14 @@ Categories: [`KeyBindings`][spec-keybindings-keybindingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type      |
+| --------------------- | --------- |
 | `AllowOtherModifiers` | `boolean` |
-| `DevModeOnly` | `boolean` |
-| `GroupId` | `string` |
-| `Id` | `string` |
-| `LocKey` | `string` |
-| `Order` | `number` |
+| `DevModeOnly`         | `boolean` |
+| `GroupId`             | `string`  |
+| `Id`                  | `string`  |
+| `LocKey`              | `string`  |
+| `Order`               | `number`  |
 
 Examples:
 
@@ -10601,10 +10600,10 @@ Categories: [`Configurations`][spec-configurations-keyboardcameracontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseZoomSpeed` | `number` |
-| `JumpRotationAngle` | `number` |
+| Property                            | Type     |
+| ----------------------------------- | -------- |
+| `BaseZoomSpeed`                     | `number` |
+| `JumpRotationAngle`                 | `number` |
 | `JumpRotationSpeedInAnglePerUpdate` | `number` |
 
 Examples:
@@ -10619,12 +10618,12 @@ Categories: [`Buildings`][spec-buildings-labeledentityspec], [`Environment`][spe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DescriptionLocKey` | `string` |
-| `DisplayNameLocKey` | `string` |
+| Property                  | Type     |
+| ------------------------- | -------- |
+| `DescriptionLocKey`       | `string` |
+| `DisplayNameLocKey`       | `string` |
 | `FlavorDescriptionLocKey` | `string` |
-| `Icon` | `string` |
+| `Icon`                    | `string` |
 
 Examples:
 
@@ -10638,11 +10637,11 @@ Categories: [`Buildings`][spec-buildings-layeredblockobstaclespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AnchorPosition` | `{ X: number; Y: number; Z: number }` |
-| `BlockCreationOffset` | `number` |
-| `LayerSize` | `{ X: number; Y: number }` |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
+| `AnchorPosition`      | `{ X: number; Y: number; Z: number }` |
+| `BlockCreationOffset` | `number`                              |
+| `LayerSize`           | `{ X: number; Y: number }`            |
 
 Examples:
 
@@ -10656,10 +10655,10 @@ Categories: [`Buildings`][spec-buildings-layeredblockobstaclevisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `PositionTransformName` | `string` |
-| `ScaleTransformName` | `string` |
+| `ScaleTransformName`    | `string` |
 
 Examples:
 
@@ -10673,8 +10672,8 @@ Categories: [`Needs`][spec-needs-lethalneedspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `DeathMessageLocKey` | `string` |
 | `DeathWarningLocKey` | `string` |
 
@@ -10690,10 +10689,10 @@ Categories: [`Buildings`][spec-buildings-levermodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `OffModelName` | `string` |
-| `OnModelName` | `string` |
+| `OnModelName`  | `string` |
 
 Examples:
 
@@ -10717,8 +10716,8 @@ Categories: [`Configurations`][spec-configurations-lifeservicespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `AverageLifespan` | `number` |
 | `DaysOfChildhood` | `number` |
 
@@ -10764,8 +10763,8 @@ Categories: [`Buildings`][spec-buildings-manufactoryprogressvisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                                            |
+| --------------- | ----------------------------------------------- |
 | `ProgressSteps` | `{ ModelNames: string[]; Threshold: number }[]` |
 
 Examples:
@@ -10780,10 +10779,10 @@ Categories: [`Buildings`][spec-buildings-manufactoryrecipevisualizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `InitialModelName` | `string` |
-| `RecipeModels` | `{ ModelName: string; RecipeId: string }[]` |
+| Property           | Type                                        |
+| ------------------ | ------------------------------------------- |
+| `InitialModelName` | `string`                                    |
+| `RecipeModels`     | `{ ModelName: string; RecipeId: string }[]` |
 
 Examples:
 
@@ -10797,8 +10796,8 @@ Categories: [`Buildings`][spec-buildings-manufactoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type       |
+| --------------------- | ---------- |
 | `ProductionRecipeIds` | `string[]` |
 
 Examples:
@@ -10813,8 +10812,8 @@ Categories: [`Buildings`][spec-buildings-manufactorytogglablerecipesspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `LabelLocKey` | `string` |
 
 Examples:
@@ -10869,8 +10868,8 @@ Categories: [`Buildings`][spec-buildings-mapbottomgroundcutoffspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type       |
+| --------- | ---------- |
 | `Targets` | `string[]` |
 
 Examples:
@@ -10885,9 +10884,9 @@ Categories: [`Configurations`][spec-configurations-mapeditortipspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Tips` | `string[]` |
+| Property | Type       |
+| -------- | ---------- |
+| `Tips`   | `string[]` |
 
 Examples:
 
@@ -10901,14 +10900,14 @@ Categories: [`Configurations`][spec-configurations-mapsizespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultMapSize` | `{ X: number; Y: number }` |
-| `MaxGameTerrainHeight` | `number` |
-| `MaxHeightAboveTerrain` | `number` |
-| `MaxMapEditorTerrainHeight` | `number` |
-| `MaxMapSize` | `number` |
-| `MinMapSize` | `number` |
+| Property                    | Type                       |
+| --------------------------- | -------------------------- |
+| `DefaultMapSize`            | `{ X: number; Y: number }` |
+| `MaxGameTerrainHeight`      | `number`                   |
+| `MaxHeightAboveTerrain`     | `number`                   |
+| `MaxMapEditorTerrainHeight` | `number`                   |
+| `MaxMapSize`                | `number`                   |
+| `MinMapSize`                | `number`                   |
 
 Examples:
 
@@ -10922,24 +10921,24 @@ Categories: [`Configurations`][spec-configurations-markerdrawerfactoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ArrowMaterial` | `string` |
-| `ArrowMesh` | `string` |
-| `EntranceMarkerMaterial` | `string` |
-| `EntranceMesh` | `string` |
-| `LargeBlockMesh` | `string` |
-| `MechanicalInputMesh` | `string` |
+| Property                   | Type     |
+| -------------------------- | -------- |
+| `ArrowMaterial`            | `string` |
+| `ArrowMesh`                | `string` |
+| `EntranceMarkerMaterial`   | `string` |
+| `EntranceMesh`             | `string` |
+| `LargeBlockMesh`           | `string` |
+| `MechanicalInputMesh`      | `string` |
 | `MechanicalMarkerMaterial` | `string` |
-| `MechanicalOutputMesh` | `string` |
-| `PrioritizedTileMaterial` | `string` |
-| `SmallBlockMesh` | `string` |
-| `TerrainBlockMesh` | `string` |
-| `TerrainTileMaterial` | `string` |
-| `TileMaterial` | `string` |
-| `TileMesh` | `string` |
-| `TopTerrainTileMaterial` | `string` |
-| `TopTerrainTileMesh` | `string` |
+| `MechanicalOutputMesh`     | `string` |
+| `PrioritizedTileMaterial`  | `string` |
+| `SmallBlockMesh`           | `string` |
+| `TerrainBlockMesh`         | `string` |
+| `TerrainTileMaterial`      | `string` |
+| `TileMaterial`             | `string` |
+| `TileMesh`                 | `string` |
+| `TopTerrainTileMaterial`   | `string` |
+| `TopTerrainTileMesh`       | `string` |
 
 Examples:
 
@@ -10953,10 +10952,10 @@ Categories: [`MaterialCollections`][spec-materialcollections-materialcollections
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CollectionId` | `string` |
-| `Materials` | `string[]` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `CollectionId` | `string`   |
+| `Materials`    | `string[]` |
 
 Examples:
 
@@ -10980,8 +10979,8 @@ Categories: [`Configurations`][spec-configurations-mechanicalconnectorfactoryspe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                        | Type     |
+| ------------------------------- | -------- |
 | `MechanicalConnectorPrefabPath` | `string` |
 
 Examples:
@@ -11006,8 +11005,8 @@ Categories: [`Buildings`][spec-buildings-mechanicalnodeanimatorspec], [`MapEdito
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `MinSpeedMultiplier` | `number` |
 
 Examples:
@@ -11022,8 +11021,8 @@ Categories: [`Buildings`][spec-buildings-mechanicalnodedescriptionspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                     | Type     |
+| ---------------------------- | -------- |
 | `AlternativePowerUnitLocKey` | `string` |
 
 Examples:
@@ -11038,8 +11037,8 @@ Categories: [`Configurations`][spec-configurations-mechanicalnodehighlighterspec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type                                             |
+| ---------------- | ------------------------------------------------ |
 | `HighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -11064,10 +11063,10 @@ Categories: [`Buildings`][spec-buildings-mechanicalnodeparticlescontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
-| `MinEfficiency` | `number` |
+| `MinEfficiency` | `number`   |
 
 Examples:
 
@@ -11081,11 +11080,11 @@ Categories: [`Buildings`][spec-buildings-mechanicalnodespec], [`MapEditor`][spec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IsShaft` | `boolean` |
-| `PowerInput` | `number` |
-| `PowerOutput` | `number` |
+| Property      | Type      |
+| ------------- | --------- |
+| `IsShaft`     | `boolean` |
+| `PowerInput`  | `number`  |
+| `PowerOutput` | `number`  |
 
 Examples:
 
@@ -11099,10 +11098,10 @@ Categories: [`Buildings`][spec-buildings-mechanicalnodetransformheightspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ChangeSpeed` | `number` |
-| `Range` | `number` |
+| Property        | Type     |
+| --------------- | -------- |
+| `ChangeSpeed`   | `number` |
+| `Range`         | `number` |
 | `TransformName` | `string` |
 
 Examples:
@@ -11137,8 +11136,8 @@ Categories: [`Buildings`][spec-buildings-mergeableobjectmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `ModelNamePrefix` | `string` |
 
 Examples:
@@ -11153,8 +11152,8 @@ Categories: [`Configurations`][spec-configurations-migrationcoordinatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `MaxAutomaticMigration` | `number` |
 
 Examples:
@@ -11169,8 +11168,8 @@ Categories: [`Buildings`][spec-buildings-modularshaftcoverspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `CoverModelName` | `string` |
 
 Examples:
@@ -11185,27 +11184,27 @@ Categories: [`Buildings`][spec-buildings-modularshaftpartsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AxleHorizontal` | `string` |
-| `AxleInnerLong` | `string` |
-| `AxleVertical` | `string` |
-| `GearBottomBase` | `string` |
-| `GearBottomLarge` | `string` |
-| `GearBottomSmall` | `string` |
-| `GearInner` | `string` |
-| `GearInnerLong` | `string` |
+| Property            | Type     |
+| ------------------- | -------- |
+| `AxleHorizontal`    | `string` |
+| `AxleInnerLong`     | `string` |
+| `AxleVertical`      | `string` |
+| `GearBottomBase`    | `string` |
+| `GearBottomLarge`   | `string` |
+| `GearBottomSmall`   | `string` |
+| `GearInner`         | `string` |
+| `GearInnerLong`     | `string` |
 | `GearInnerOpposite` | `string` |
-| `GearInnerThrough` | `string` |
-| `GearLarge` | `string` |
-| `GearMedium` | `string` |
-| `GearSmall` | `string` |
-| `GearTopLarge` | `string` |
-| `GearTopSmall` | `string` |
-| `ShaftBase` | `string` |
-| `ShaftFrame` | `string` |
-| `ShaftLowerFrame` | `string` |
-| `ShaftSupport` | `string` |
+| `GearInnerThrough`  | `string` |
+| `GearLarge`         | `string` |
+| `GearMedium`        | `string` |
+| `GearSmall`         | `string` |
+| `GearTopLarge`      | `string` |
+| `GearTopSmall`      | `string` |
+| `ShaftBase`         | `string` |
+| `ShaftFrame`        | `string` |
+| `ShaftLowerFrame`   | `string` |
+| `ShaftSupport`      | `string` |
 
 Examples:
 
@@ -11239,10 +11238,10 @@ Categories: [`Configurations`][spec-configurations-mousecameracontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `RmbRotationMinDistance` | `number` |
-| `RmbRotationSpeed` | `number` |
+| `RmbRotationSpeed`       | `number` |
 
 Examples:
 
@@ -11256,8 +11255,8 @@ Categories: [`Characters`][spec-characters-movementanimatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `AnimationSpeedScale` | `number` |
 
 Examples:
@@ -11272,8 +11271,8 @@ Categories: [`Buildings`][spec-buildings-movementspeedboostingbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type     |
+| ----------------- | -------- |
 | `BoostPercentage` | `number` |
 
 Examples:
@@ -11288,13 +11287,13 @@ Categories: [`Configurations`][spec-configurations-musicspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DroughtTrack` | `string` |
-| `MaxDelay` | `number` |
-| `MinDelay` | `number` |
+| Property         | Type     |
+| ---------------- | -------- |
+| `DroughtTrack`   | `string` |
+| `MaxDelay`       | `number` |
+| `MinDelay`       | `number` |
 | `StandardPhrase` | `string` |
-| `StandardTrack` | `string` |
+| `StandardTrack`  | `string` |
 
 Examples:
 
@@ -11308,8 +11307,8 @@ Categories: [`Buildings`][spec-buildings-namedentityspec], [`Characters`][spec-c
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type      |
+| ------------ | --------- |
 | `IsEditable` | `boolean` |
 
 Examples:
@@ -11324,11 +11323,11 @@ Categories: [`Configurations`][spec-configurations-naturalresourcebrushspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultNaturalResourceId` | `string` |
-| `RemovalTileColor` | `{ a: number; b: number; g: number; r: number }` |
-| `SpawnTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                   | Type                                             |
+| -------------------------- | ------------------------------------------------ |
+| `DefaultNaturalResourceId` | `string`                                         |
+| `RemovalTileColor`         | `{ a: number; b: number; g: number; r: number }` |
+| `SpawnTileColor`           | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -11342,16 +11341,16 @@ Categories: [`NaturalResources`][spec-naturalresources-naturalresourcemodelrando
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstrainProportion` | `boolean` |
-| `MaxHeightScaleFactor` | `number` |
-| `MaxRotation` | `number` |
-| `MaxWidthScaleFactor` | `number` |
-| `MinHeightScaleFactor` | `number` |
-| `MinRotation` | `number` |
-| `MinWidthScaleFactor` | `number` |
-| `RandomizedRotation` | `string` |
+| Property               | Type      |
+| ---------------------- | --------- |
+| `ConstrainProportion`  | `boolean` |
+| `MaxHeightScaleFactor` | `number`  |
+| `MaxRotation`          | `number`  |
+| `MaxWidthScaleFactor`  | `number`  |
+| `MinHeightScaleFactor` | `number`  |
+| `MinRotation`          | `number`  |
+| `MinWidthScaleFactor`  | `number`  |
+| `RandomizedRotation`   | `string`  |
 
 Examples:
 
@@ -11365,9 +11364,9 @@ Categories: [`NaturalResources`][spec-naturalresources-naturalresourcespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Order` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Order`  | `number` |
 
 Examples:
 
@@ -11381,8 +11380,8 @@ Categories: [`Needs`][spec-needs-needaffectedbysoakednessspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PointsPerHour` | `number` |
 
 Examples:
@@ -11397,10 +11396,10 @@ Categories: [`NeedCollections`][spec-needcollections-needcollectionspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CollectionId` | `string` |
-| `Needs` | `string[]` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `CollectionId` | `string`   |
+| `Needs`        | `string[]` |
 
 Examples:
 
@@ -11414,11 +11413,11 @@ Categories: [`NeedGroups`][spec-needgroups-needgroupspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `DisplayNameLocKey` | `string` |
-| `Id` | `string` |
-| `Order` | `number` |
+| `Id`                | `string` |
+| `Order`             | `number` |
 
 Examples:
 
@@ -11432,8 +11431,8 @@ Categories: [`Needs`][spec-needs-needpreventingworkspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                   | Type     |
+| -------------------------- | -------- |
 | `WorkRefusalWarningLocKey` | `string` |
 
 Examples:
@@ -11448,24 +11447,24 @@ Categories: [`Needs`][spec-needs-needspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type       |
+| ----------------------- | ---------- |
 | `BackwardCompatibleIds` | `string[]` |
-| `CharacterType` | `string` |
-| `DailyDelta` | `number` |
-| `DisplayNameLocKey` | `string` |
-| `Effectiveness` | `number` |
-| `FavorableWellbeing` | `number` |
-| `HoursWarningThreshold` | `number` |
-| `Id` | `string` |
-| `ImportanceMultiplier` | `number` |
-| `MaximumValue` | `number` |
-| `MinimumValue` | `number` |
-| `NeedGroupId` | `string` |
-| `Order` | `number` |
-| `StartingValue` | `number` |
-| `UnfavorableWellbeing` | `number` |
-| `Wastable` | `boolean` |
+| `CharacterType`         | `string`   |
+| `DailyDelta`            | `number`   |
+| `DisplayNameLocKey`     | `string`   |
+| `Effectiveness`         | `number`   |
+| `FavorableWellbeing`    | `number`   |
+| `HoursWarningThreshold` | `number`   |
+| `Id`                    | `string`   |
+| `ImportanceMultiplier`  | `number`   |
+| `MaximumValue`          | `number`   |
+| `MinimumValue`          | `number`   |
+| `NeedGroupId`           | `string`   |
+| `Order`                 | `number`   |
+| `StartingValue`         | `number`   |
+| `UnfavorableWellbeing`  | `number`   |
+| `Wastable`              | `boolean`  |
 
 Examples:
 
@@ -11479,8 +11478,8 @@ Categories: [`Configurations`][spec-configurations-needspecformatterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
 | `NegativeHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 | `PositiveHighlightColor` | `{ a: number; b: number; g: number; r: number }` |
 
@@ -11516,11 +11515,11 @@ Categories: [`Buildings`][spec-buildings-numberedentitynamerspec], [`Characters`
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FormatLocKey` | `string` |
-| `IsPersistent` | `boolean` |
-| `NumberingGroup` | `string` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `FormatLocKey`   | `string`  |
+| `IsPersistent`   | `boolean` |
+| `NumberingGroup` | `string`  |
 
 Examples:
 
@@ -11534,9 +11533,9 @@ Categories: [`Buildings`][spec-buildings-observatoryanimatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DomeName` | `string` |
+| Property        | Type     |
+| --------------- | -------- |
+| `DomeName`      | `string` |
 | `TelescopeName` | `string` |
 
 Examples:
@@ -11561,8 +11560,8 @@ Categories: [`Characters`][spec-characters-overburdenablespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                        |
+| --------------------- | ------------------------------------------- |
 | `OverburdenedBonuses` | `{ Id: string; MultiplierDelta: number }[]` |
 
 Examples:
@@ -11577,11 +11576,11 @@ Categories: [`Configurations`][spec-configurations-pathmeshdrawerfactoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Material` | `string` |
+| Property               | Type       |
+| ---------------------- | ---------- |
+| `Material`             | `string`   |
 | `RegularModelVariants` | `string[]` |
-| `StairsModelVariants` | `string[]` |
+| `StairsModelVariants`  | `string[]` |
 
 Examples:
 
@@ -11595,8 +11594,8 @@ Categories: [`Buildings`][spec-buildings-pathmodeltypeenforcerspec], [`MapEditor
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PathModelType` | `string` |
 
 Examples:
@@ -11611,8 +11610,8 @@ Categories: [`Buildings`][spec-buildings-pathspec], [`MapEditor`][spec-mapeditor
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                  |
+| --------------------- | ------------------------------------- |
 | `MainPathCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -11627,8 +11626,8 @@ Categories: [`Buildings`][spec-buildings-patrollingslotinitializerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `PatrollingSlots` | `{ Animation: string; BaseMovementSpeed: number; MaxRandomDeviationOfMovementSpeed: number; SlotKeyword: string; WaterSlot: boolean }[]` |
 
 Examples:
@@ -11653,15 +11652,15 @@ Categories: [`Buildings`][spec-buildings-placeableblockobjectspec], [`MapEditor`
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CanBeAttachedToTerrainSide` | `boolean` |
-| `CustomPivot` | `{ Coordinates: { X: number; Y: number; Z: number }; HasCustomPivot: boolean }` |
-| `DevModeTool` | `boolean` |
-| `Layout` | `string` |
-| `ToolGroupId` | `string` |
-| `ToolOrder` | `number` |
-| `ToolShape` | `string` |
+| Property                     | Type                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `CanBeAttachedToTerrainSide` | `boolean`                                                                       |
+| `CustomPivot`                | `{ Coordinates: { X: number; Y: number; Z: number }; HasCustomPivot: boolean }` |
+| `DevModeTool`                | `boolean`                                                                       |
+| `Layout`                     | `string`                                                                        |
+| `ToolGroupId`                | `string`                                                                        |
+| `ToolOrder`                  | `number`                                                                        |
+| `ToolShape`                  | `string`                                                                        |
 
 Examples:
 
@@ -11675,8 +11674,8 @@ Categories: [`Buildings`][spec-buildings-planecatapultspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type                                                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `SpeedCurve` | `{ Keys: { InTangent: number; InWeight: number; OutTangent: number; OutWeight: number; Time: number; Value: number; WeightedMode: number }[]; PostWrapMode: string; PreWrapMode: string }` |
 
 Examples:
@@ -11691,11 +11690,11 @@ Categories: [`Buildings`][spec-buildings-planelauncherrotatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullRotationDuration` | `number` |
-| `RotatedElementName` | `string` |
-| `RotationCurve` | `{ Keys: { InTangent: number; InWeight: number; OutTangent: number; OutWeight: number; Time: number; Value: number; WeightedMode: number }[]; PostWrapMode: string; PreWrapMode: string }` |
+| Property               | Type                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FullRotationDuration` | `number`                                                                                                                                                                                   |
+| `RotatedElementName`   | `string`                                                                                                                                                                                   |
+| `RotationCurve`        | `{ Keys: { InTangent: number; InWeight: number; OutTangent: number; OutWeight: number; Time: number; Value: number; WeightedMode: number }[]; PostWrapMode: string; PreWrapMode: string }` |
 
 Examples:
 
@@ -11719,8 +11718,8 @@ Categories: [`Buildings`][spec-buildings-planespawnerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `SpawnPointName` | `string` |
 
 Examples:
@@ -11735,8 +11734,8 @@ Categories: [`Buildings`][spec-buildings-planespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `PilotSeatName` | `string` |
 | `RotationSpeed` | `number` |
 
@@ -11752,9 +11751,9 @@ Categories: [`NaturalResources`][spec-naturalresources-plantablepreviewmodelspec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Model` | `string` |
+| Property | Type     |
+| -------- | -------- |
+| `Model`  | `string` |
 
 Examples:
 
@@ -11768,10 +11767,10 @@ Categories: [`NaturalResources`][spec-naturalresources-plantablespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `PlantTimeInHours` | `number` |
-| `ResourceGroup` | `string` |
+| `ResourceGroup`    | `string` |
 
 Examples:
 
@@ -11785,8 +11784,8 @@ Categories: [`Buildings`][spec-buildings-planterbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `PlantableResourceGroup` | `string` |
 
 Examples:
@@ -11801,8 +11800,8 @@ Categories: [`Characters`][spec-characters-plantingparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `ParticlesAttachmentId` | `string` |
 
 Examples:
@@ -11817,10 +11816,10 @@ Categories: [`Configurations`][spec-configurations-plantingselectionservicespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                             |
+| ------------------ | ------------------------------------------------ |
 | `PlantingToolTile` | `{ a: number; b: number; g: number; r: number }` |
-| `ToolActionTile` | `{ a: number; b: number; g: number; r: number }` |
+| `ToolActionTile`   | `{ a: number; b: number; g: number; r: number }` |
 | `ToolNoActionTile` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -11865,8 +11864,8 @@ Categories: [`Buildings`][spec-buildings-powergeneratorparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -11901,11 +11900,11 @@ Categories: [`Configurations`][spec-configurations-previewshowerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BuildablePreview` | `{ a: number; b: number; g: number; r: number }` |
+| Property             | Type                                             |
+| -------------------- | ------------------------------------------------ |
+| `BuildablePreview`   | `{ a: number; b: number; g: number; r: number }` |
 | `UnbuildablePreview` | `{ a: number; b: number; g: number; r: number }` |
-| `WarningPreview` | `{ a: number; b: number; g: number; r: number }` |
+| `WarningPreview`     | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -11919,11 +11918,11 @@ Categories: [`KeyBindings`][spec-keybindings-primaryinputbindingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `InputModifiers` | `string` |
-| `Path` | `string` |
-| `Unchangeable` | `boolean` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `InputModifiers` | `string`  |
+| `Path`           | `string`  |
+| `Unchangeable`   | `boolean` |
 
 Examples:
 
@@ -11937,18 +11936,18 @@ Categories: [`Configurations`][spec-configurations-prioritycolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ButtonHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonLow` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonNormal` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonVeryHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `ButtonVeryLow` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightLow` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightNormal` | `{ a: number; b: number; g: number; r: number }` |
+| Property            | Type                                             |
+| ------------------- | ------------------------------------------------ |
+| `ButtonHigh`        | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonLow`         | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonNormal`      | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonVeryHigh`    | `{ a: number; b: number; g: number; r: number }` |
+| `ButtonVeryLow`     | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightHigh`     | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightLow`      | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightNormal`   | `{ a: number; b: number; g: number; r: number }` |
 | `HighlightVeryHigh` | `{ a: number; b: number; g: number; r: number }` |
-| `HighlightVeryLow` | `{ a: number; b: number; g: number; r: number }` |
+| `HighlightVeryLow`  | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -11962,8 +11961,8 @@ Categories: [`Buildings`][spec-buildings-priorityslotretrieverspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type       |
+| ------------------- | ---------- |
 | `PrioritySlotNames` | `string[]` |
 
 Examples:
@@ -11978,8 +11977,8 @@ Categories: [`Configurations`][spec-configurations-probabilitygroupsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type                                                          |
+| -------- | ------------------------------------------------------------- |
 | `Groups` | `{ High: number; Id: string; Low: number; Medium: number }[]` |
 
 Examples:
@@ -12014,12 +12013,12 @@ Categories: [`Buildings`][spec-buildings-productionresetterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AlertLocKey` | `string` |
+| Property               | Type     |
+| ---------------------- | -------- |
+| `AlertLocKey`          | `string` |
 | `HoursToResetProgress` | `number` |
-| `StatusIcon` | `string` |
-| `StatusLocKey` | `string` |
+| `StatusIcon`           | `string` |
+| `StatusLocKey`         | `string` |
 
 Examples:
 
@@ -12033,8 +12032,8 @@ Categories: [`Needs`][spec-needs-punitiveneedspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type                                        |
+| ----------- | ------------------------------------------- |
 | `Penalties` | `{ Id: string; MultiplierDelta: number }[]` |
 
 Examples:
@@ -12049,9 +12048,9 @@ Categories: [`Configurations`][spec-configurations-quicknotificationspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Duration` | `number` |
+| Property           | Type     |
+| ------------------ | -------- |
+| `Duration`         | `number` |
 | `ExtendedDuration` | `number` |
 
 Examples:
@@ -12066,10 +12065,10 @@ Categories: [`Configurations`][spec-configurations-rangedeffectbuildingcolorsspe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                             |
+| --------------------- | ------------------------------------------------ |
 | `BuildingRangeObject` | `{ a: number; b: number; g: number; r: number }` |
-| `BuildingRangeTile` | `{ a: number; b: number; g: number; r: number }` |
+| `BuildingRangeTile`   | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -12083,8 +12082,8 @@ Categories: [`Buildings`][spec-buildings-rangedeffectbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `EffectRadius` | `number` |
 
 Examples:
@@ -12099,8 +12098,8 @@ Categories: [`Configurations`][spec-configurations-rangeenterablehighlighterspec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property          | Type                                             |
+| ----------------- | ------------------------------------------------ |
 | `BuildingInRange` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -12115,20 +12114,20 @@ Categories: [`Recipes`][spec-recipes-recipespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleIds` | `array` |
-| `CycleDurationInHours` | `number` |
-| `CyclesCapacity` | `number` |
-| `CyclesFuelLasts` | `number` |
-| `DisplayLocKey` | `string` |
-| `Fuel` | `string` |
-| `FuelCapacity` | `number` |
-| `Icon` | `string` |
-| `Id` | `string` |
-| `Ingredients` | `{ Amount: number; Id: string }[]` |
-| `ProducedSciencePoints` | `number` |
-| `Products` | `{ Amount: number; Id: string }[]` |
+| Property                | Type                               |
+| ----------------------- | ---------------------------------- |
+| `BackwardCompatibleIds` | `array`                            |
+| `CycleDurationInHours`  | `number`                           |
+| `CyclesCapacity`        | `number`                           |
+| `CyclesFuelLasts`       | `number`                           |
+| `DisplayLocKey`         | `string`                           |
+| `Fuel`                  | `string`                           |
+| `FuelCapacity`          | `number`                           |
+| `Icon`                  | `string`                           |
+| `Id`                    | `string`                           |
+| `Ingredients`           | `{ Amount: number; Id: string }[]` |
+| `ProducedSciencePoints` | `number`                           |
+| `Products`              | `{ Amount: number; Id: string }[]` |
 
 Examples:
 
@@ -12142,9 +12141,9 @@ Categories: [`Configurations`][spec-configurations-recoveredgoodstackcoordinates
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxUpperSearch` | `number` |
+| Property          | Type     |
+| ----------------- | -------- |
+| `MaxUpperSearch`  | `number` |
 | `NeighboursRange` | `number` |
 
 Examples:
@@ -12159,8 +12158,8 @@ Categories: [`Environment`][spec-environment-recoveredgoodstackdisintegrationspe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `DaysToDisintegrate` | `number` |
 
 Examples:
@@ -12175,8 +12174,8 @@ Categories: [`Environment`][spec-environment-recoveredgoodstackmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property    | Type     |
+| ----------- | -------- |
 | `ModelName` | `string` |
 
 Examples:
@@ -12201,16 +12200,16 @@ Categories: [`Configurations`][spec-configurations-rectangleboundsdrawerfactorys
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `BlockBottomMaterial` | `string` |
-| `BlockBottomMesh` | `string` |
-| `BlockSideMaterial` | `string` |
-| `BlockSideMesh0010` | `string` |
-| `BlockSideMesh0011` | `string` |
-| `BlockSideMesh0111` | `string` |
-| `BlockSideMesh1010` | `string` |
-| `BlockSideMesh1111` | `string` |
+| `BlockBottomMesh`     | `string` |
+| `BlockSideMaterial`   | `string` |
+| `BlockSideMesh0010`   | `string` |
+| `BlockSideMesh0011`   | `string` |
+| `BlockSideMesh0111`   | `string` |
+| `BlockSideMesh1010`   | `string` |
+| `BlockSideMesh1111`   | `string` |
 
 Examples:
 
@@ -12234,8 +12233,8 @@ Categories: [`Configurations`][spec-configurations-relationhighlighterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type                                             |
+| ------------------- | ------------------------------------------------ |
 | `RelationSelection` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -12260,11 +12259,11 @@ Categories: [`RemoveYieldStrategies`][spec-removeyieldstrategies-removeyieldstra
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Animation` | `string` |
+| Property                   | Type       |
+| -------------------------- | ---------- |
+| `Animation`                | `string`   |
 | `CompatibleResourceGroups` | `string[]` |
-| `Id` | `string` |
+| `Id`                       | `string`   |
 
 Examples:
 
@@ -12278,8 +12277,8 @@ Categories: [`NaturalResources`][spec-naturalresources-reproduciblespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `ReproductionChance` | `number` |
 
 Examples:
@@ -12314,10 +12313,10 @@ Categories: [`Configurations`][spec-configurations-ruinmodelfactoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IvyDryModel` | `string` |
-| `IvyWetModel` | `string` |
+| Property            | Type                              |
+| ------------------- | --------------------------------- |
+| `IvyDryModel`       | `string`                          |
+| `IvyWetModel`       | `string`                          |
 | `RuinModelVariants` | `{ Id: string; Model: string }[]` |
 
 Examples:
@@ -12332,11 +12331,11 @@ Categories: [`MapEditor`][spec-mapeditor-ruinspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ModelParentName` | `string` |
-| `RuinHeight` | `number` |
-| `Yielder` | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
+| Property          | Type                                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ModelParentName` | `string`                                                                                                                     |
+| `RuinHeight`      | `number`                                                                                                                     |
+| `Yielder`         | `{ RemovalTimeInHours: number; ResourceGroup: string; Yield: { Amount: number; Id: string }; YielderComponentName: string }` |
 
 Examples:
 
@@ -12350,10 +12349,10 @@ Categories: [`Characters`][spec-characters-runningstateupdaterspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                        | Type     |
+| ------------------------------- | -------- |
 | `ShortWalkingDistanceThreshold` | `number` |
-| `WalkingSpeedThreshold` | `number` |
+| `WalkingSpeedThreshold`         | `number` |
 
 Examples:
 
@@ -12387,8 +12386,8 @@ Categories: [`Buildings`][spec-buildings-scienceneedingbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type     |
+| -------------------- | -------- |
 | `ScienceUsedPerHour` | `number` |
 
 Examples:
@@ -12403,11 +12402,11 @@ Categories: [`KeyBindings`][spec-keybindings-secondaryinputbindingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `InputModifiers` | `string` |
-| `Path` | `string` |
-| `Unchangeable` | `boolean` |
+| Property         | Type      |
+| ---------------- | --------- |
+| `InputModifiers` | `string`  |
+| `Path`           | `string`  |
+| `Unchangeable`   | `boolean` |
 
 Examples:
 
@@ -12421,9 +12420,9 @@ Categories: [`Configurations`][spec-configurations-selectioncolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `EntitySelection` | `{ a: number; b: number; g: number; r: number }` |
+| Property                 | Type                                             |
+| ------------------------ | ------------------------------------------------ |
+| `EntitySelection`        | `{ a: number; b: number; g: number; r: number }` |
 | `SelectionToolHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -12448,8 +12447,8 @@ Categories: [`Characters`][spec-characters-simplelabeledentityspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type     |
+| ------------------ | -------- |
 | `EntityNameLocKey` | `string` |
 
 Examples:
@@ -12474,9 +12473,9 @@ Categories: [`Buildings`][spec-buildings-simpleoutputinventoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Capacity` | `number` |
+| Property            | Type      |
+| ------------------- | --------- |
+| `Capacity`          | `number`  |
 | `IgnorableCapacity` | `boolean` |
 
 Examples:
@@ -12491,13 +12490,13 @@ Categories: [`Configurations`][spec-configurations-skyboxpositionerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DayProgressDay` | `number` |
-| `DayProgressNight` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `DayProgressDay`     | `number` |
+| `DayProgressNight`   | `number` |
 | `DayProgressSunrise` | `number` |
-| `DayProgressSunset` | `number` |
-| `Skybox` | `string` |
+| `DayProgressSunset`  | `number` |
+| `Skybox`             | `string` |
 
 Examples:
 
@@ -12511,9 +12510,9 @@ Categories: [`Characters`][spec-characters-sleeperspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxOffsetInHours` | `number` |
+| Property              | Type                                                                      |
+| --------------------- | ------------------------------------------------------------------------- |
+| `MaxOffsetInHours`    | `number`                                                                  |
 | `SleepOutsideEffects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Examples:
@@ -12538,8 +12537,8 @@ Categories: [`Buildings`][spec-buildings-slotanimationsynchronizerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `MaxTimeOffset` | `number` |
 
 Examples:
@@ -12564,11 +12563,11 @@ Categories: [`Buildings`][spec-buildings-soilbarrierspec], [`MapEditor`][spec-ma
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property             | Type      |
+| -------------------- | --------- |
 | `BlockAboveMoisture` | `boolean` |
 | `BlockContamination` | `boolean` |
-| `BlockFullMoisture` | `boolean` |
+| `BlockFullMoisture`  | `boolean` |
 
 Examples:
 
@@ -12582,10 +12581,10 @@ Categories: [`Configurations`][spec-configurations-soilcontaminationmapspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `ContaminationThreshold` | `number` |
-| `MaxMapContamination` | `number` |
+| `MaxMapContamination`    | `number` |
 
 Examples:
 
@@ -12599,16 +12598,16 @@ Categories: [`Configurations`][spec-configurations-soilcontaminationsimulatorspe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ContaminationDecayRate` | `number` |
+| Property                                | Type     |
+| --------------------------------------- | -------- |
+| `ContaminationDecayRate`                | `number` |
 | `ContaminationNegativeEqualizationRate` | `number` |
 | `ContaminationPositiveEqualizationRate` | `number` |
-| `ContaminationSpreadingRate` | `number` |
-| `ContaminationThreshold` | `number` |
-| `MaxRangeFromSource` | `number` |
-| `MinimumWaterContamination` | `number` |
-| `VerticalSpreadCostMultiplier` | `number` |
+| `ContaminationSpreadingRate`            | `number` |
+| `ContaminationThreshold`                | `number` |
+| `MaxRangeFromSource`                    | `number` |
+| `MinimumWaterContamination`             | `number` |
+| `VerticalSpreadCostMultiplier`          | `number` |
 
 Examples:
 
@@ -12622,10 +12621,10 @@ Categories: [`Configurations`][spec-configurations-soilmoisturemapspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `DesertMoistureThreshold` | `number` |
-| `MaxDesertIntensity` | `number` |
+| `MaxDesertIntensity`      | `number` |
 
 Examples:
 
@@ -12639,18 +12638,18 @@ Categories: [`Configurations`][spec-configurations-soilmoisturesimulatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConstantQuadraticCoefficient` | `number` |
-| `LinearQuadraticCoefficient` | `number` |
-| `MaxClusterSaturation` | `number` |
-| `MaxEvaporationSaturation` | `number` |
-| `MaximumWaterContamination` | `number` |
-| `MinimumWaterContamination` | `number` |
-| `MoistureDecayRate` | `number` |
-| `MoistureSpreadingRate` | `number` |
+| Property                          | Type     |
+| --------------------------------- | -------- |
+| `ConstantQuadraticCoefficient`    | `number` |
+| `LinearQuadraticCoefficient`      | `number` |
+| `MaxClusterSaturation`            | `number` |
+| `MaxEvaporationSaturation`        | `number` |
+| `MaximumWaterContamination`       | `number` |
+| `MinimumWaterContamination`       | `number` |
+| `MoistureDecayRate`               | `number` |
+| `MoistureSpreadingRate`           | `number` |
 | `QuadraticEvaporationCoefficient` | `number` |
-| `VerticalSpreadCostMultiplier` | `number` |
+| `VerticalSpreadCostMultiplier`    | `number` |
 
 Examples:
 
@@ -12664,10 +12663,10 @@ Categories: [`Sounds`][spec-sounds-speakersoundspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `DisplayNameLocKey` | `string` |
-| `SoundId` | `string` |
+| `SoundId`           | `string` |
 
 Examples:
 
@@ -12741,11 +12740,11 @@ Categories: [`Buildings`][spec-buildings-stockpilegoodcolumnvisualizerspec], [`M
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CenterOffset` | `{ X: number; Y: number; Z: number }` |
-| `GoodVisualizationId` | `string` |
-| `GoodVisualizationVariant` | `string` |
+| Property                   | Type                                  |
+| -------------------------- | ------------------------------------- |
+| `CenterOffset`             | `{ X: number; Y: number; Z: number }` |
+| `GoodVisualizationId`      | `string`                              |
+| `GoodVisualizationVariant` | `string`                              |
 
 Examples:
 
@@ -12759,10 +12758,10 @@ Categories: [`Buildings`][spec-buildings-stockpilegoodpilevisualizerspec], [`Map
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CenterOffset` | `{ X: number; Y: number; Z: number }` |
-| `GoodPileVisualizations` | `string[]` |
+| Property                 | Type                                  |
+| ------------------------ | ------------------------------------- |
+| `CenterOffset`           | `{ X: number; Y: number; Z: number }` |
+| `GoodPileVisualizations` | `string[]`                            |
 
 Examples:
 
@@ -12786,8 +12785,8 @@ Categories: [`Buildings`][spec-buildings-stockpileplanevisualizerspec], [`MapEdi
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                       | Type                                                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `StockpilePlaneVisualizations` | `{ CenterOffset: { X: number; Y: number; Z: number }; GoodVisualizationId: string; GoodVisualizationVariant: string; MovementRange: { X: number; Y: number } }[]` |
 
 Examples:
@@ -12802,9 +12801,9 @@ Categories: [`Buildings`][spec-buildings-stockpilespec], [`MapEditor`][spec-mape
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxCapacity` | `number` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `MaxCapacity`         | `number` |
 | `WhitelistedGoodType` | `string` |
 
 Examples:
@@ -12829,10 +12828,10 @@ Categories: [`Buildings`][spec-buildings-streamgaugeanimationcontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `MarkerName` | `string` |
-| `MaxHeight` | `number` |
+| `MaxHeight`  | `number` |
 
 Examples:
 
@@ -12846,8 +12845,8 @@ Categories: [`Buildings`][spec-buildings-streamgaugespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `MaxWaterLevel` | `number` |
 
 Examples:
@@ -12862,14 +12861,14 @@ Categories: [`Configurations`][spec-configurations-sunspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DayColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
-| `NightColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
-| `RotateWithCameraOffset` | `number` |
-| `SunPrefab` | `string` |
-| `SunriseColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
-| `SunsetColors` | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| Property                 | Type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DayColors`              | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| `NightColors`            | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| `RotateWithCameraOffset` | `number`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `SunPrefab`              | `string`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `SunriseColors`          | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
+| `SunsetColors`           | `{ AmbientEquatorColor: { a: number; b: number; g: number; r: number }; AmbientGroundColor: { a: number; b: number; g: number; r: number }; AmbientSkyColor: { a: number; b: number; g: number; r: number }; HazardousWeatherFogs: { FogSettings: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number }; HazardousWeatherId: string }[]; ReflectionsIntensity: number; ShadowStrength: number; SunColor: { a: number; b: number; g: number; r: number }; SunIntensity: number; SunXAngle: number; TemperateWeatherFog: { FogColor: { a: number; b: number; g: number; r: number }; FogDensity: number } }` |
 
 Examples:
 
@@ -12883,8 +12882,8 @@ Categories: [`Characters`][spec-characters-swimminganimatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type     |
+| ----------------------------- | -------- |
 | `LowerSwimmingDepthThreshold` | `number` |
 | `UpperSwimmingDepthThreshold` | `number` |
 
@@ -12900,8 +12899,8 @@ Categories: [`Buildings`][spec-buildings-templateattachmentsspec], [`Characters`
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                                                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Attachments` | `{ AttachmentId: string; CreateInstantly: boolean; Parent: string; Position: { X: number; Y: number; Z: number }; Prefab: string; Rotation: { X: number; Y: number; Z: number }; Scale: { X: number; Y: number; Z: number } }[]` |
 
 Examples:
@@ -12916,10 +12915,10 @@ Categories: [`TemplateCollections`][spec-templatecollections-templatecollections
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Blueprints` | `string[]` |
-| `CollectionId` | `string` |
+| Property       | Type       |
+| -------------- | ---------- |
+| `Blueprints`   | `string[]` |
+| `CollectionId` | `string`   |
 
 Examples:
 
@@ -12933,12 +12932,12 @@ Categories: [`Buildings`][spec-buildings-templatespec], [`Characters`][spec-char
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                          | Type       |
+| --------------------------------- | ---------- |
 | `BackwardCompatibleTemplateNames` | `string[]` |
-| `DisablingFeatureToggle` | `string` |
-| `RequiredFeatureToggle` | `string` |
-| `TemplateName` | `string` |
+| `DisablingFeatureToggle`          | `string`   |
+| `RequiredFeatureToggle`           | `string`   |
+| `TemplateName`                    | `string`   |
 
 Examples:
 
@@ -12962,20 +12961,20 @@ Categories: [`Configurations`][spec-configurations-terrainmaterialmapspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AltitudeCeiling` | `number` |
-| `AltitudeMultiplier` | `string` |
-| `BlendingMargin` | `number` |
-| `BlendingNoise` | `string` |
-| `BlendingNoiseMultiplier` | `number` |
-| `BlendingNoiseScale` | `number` |
-| `BlendingSoftness` | `number` |
-| `CutoutMargin` | `number` |
+| Property                   | Type     |
+| -------------------------- | -------- |
+| `AltitudeCeiling`          | `number` |
+| `AltitudeMultiplier`       | `string` |
+| `BlendingMargin`           | `number` |
+| `BlendingNoise`            | `string` |
+| `BlendingNoiseMultiplier`  | `number` |
+| `BlendingNoiseScale`       | `number` |
+| `BlendingSoftness`         | `number` |
+| `CutoutMargin`             | `number` |
 | `DesertAltitudeMultiplier` | `string` |
-| `DesertTexture` | `string` |
-| `DryFieldTexture` | `string` |
-| `WetFieldTexture` | `string` |
+| `DesertTexture`            | `string` |
+| `DryFieldTexture`          | `string` |
+| `WetFieldTexture`          | `string` |
 
 Examples:
 
@@ -12989,10 +12988,10 @@ Categories: [`Configurations`][spec-configurations-terrainmeshmanagerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `LayerToolTopMeshPrefab` | `string` |
-| `TerrainTilePrefab` | `string` |
+| `TerrainTilePrefab`      | `string` |
 
 Examples:
 
@@ -13016,10 +13015,10 @@ Categories: [`Buildings`][spec-buildings-tickablewaterbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ChangeRange` | `number` |
-| `MinWaterHeight` | `number` |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
+| `ChangeRange`      | `number`                              |
+| `MinWaterHeight`   | `number`                              |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -13034,8 +13033,8 @@ Categories: [`Configurations`][spec-configurations-ticktimespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `TickIntervalInSeconds` | `number` |
 
 Examples:
@@ -13050,12 +13049,12 @@ Categories: [`Configurations`][spec-configurations-tiledrawerfactoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FootprintTilesMaterialResourcePath` | `string` |
-| `MeshResourcePath` | `string` |
-| `TilesAboveMaterialResourcePath` | `string` |
-| `TilesBelowMaterialResourcePath` | `string` |
+| Property                               | Type     |
+| -------------------------------------- | -------- |
+| `FootprintTilesMaterialResourcePath`   | `string` |
+| `MeshResourcePath`                     | `string` |
+| `TilesAboveMaterialResourcePath`       | `string` |
+| `TilesBelowMaterialResourcePath`       | `string` |
 | `TilesOnSameLevelMaterialResourcePath` | `string` |
 
 Examples:
@@ -13070,11 +13069,11 @@ Categories: [`Characters`][spec-characters-timbermeshanimatorcontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AnimatorStates` | `{ AnimationName: string; Conditions: { MustBeTrue: boolean; ParameterName: string }[]; Looped: boolean; Speed: number; SpeedModifier: string; StateName: string }[]` |
-| `BoolParameters` | `string[]` |
-| `FloatParameters` | `string[]` |
+| Property          | Type                                                                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AnimatorStates`  | `{ AnimationName: string; Conditions: { MustBeTrue: boolean; ParameterName: string }[]; Looped: boolean; Speed: number; SpeedModifier: string; StateName: string }[]` |
+| `BoolParameters`  | `string[]`                                                                                                                                                            |
+| `FloatParameters` | `string[]`                                                                                                                                                            |
 
 Examples:
 
@@ -13088,9 +13087,9 @@ Categories: [`ConstructionBases`][spec-constructionbases-timbermeshspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Model` | `string` |
+| Property | Type     |
+| -------- | -------- |
+| `Model`  | `string` |
 
 Examples:
 
@@ -13104,14 +13103,14 @@ Categories: [`MapEditor`][spec-mapeditor-timedcomponentactivatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CyclesUntilCountdownActivation` | `number` |
-| `DaysUntilActivation` | `number` |
-| `IsHazardousActivator` | `boolean` |
-| `IsOptionallyActivable` | `boolean` |
-| `ProgressBarActiveLabelLocKey` | `string` |
-| `ProgressBarNotActiveLabelLocKey` | `string` |
+| Property                          | Type      |
+| --------------------------------- | --------- |
+| `CyclesUntilCountdownActivation`  | `number`  |
+| `DaysUntilActivation`             | `number`  |
+| `IsHazardousActivator`            | `boolean` |
+| `IsOptionallyActivable`           | `boolean` |
+| `ProgressBarActiveLabelLocKey`    | `string`  |
+| `ProgressBarNotActiveLabelLocKey` | `string`  |
 
 Examples:
 
@@ -13125,10 +13124,10 @@ Categories: [`Buildings`][spec-buildings-timermodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxHeight` | `number` |
-| `MinHeight` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `MaxHeight`          | `number` |
+| `MinHeight`          | `number` |
 | `ProgressObjectName` | `string` |
 
 Examples:
@@ -13153,11 +13152,11 @@ Categories: [`ToolGroups`][spec-toolgroups-toolgroupspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `DisplayNameLocKey` | `string` |
-| `Icon` | `string` |
-| `Id` | `string` |
+| `Icon`              | `string` |
+| `Id`                | `string` |
 
 Examples:
 
@@ -13171,9 +13170,9 @@ Categories: [`Buildings`][spec-buildings-transformslotinitializerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Slots` | `{ Animation: string; Inanimate: boolean; RandomizeYRotation: boolean; SlotKeyword: string; WaterSlot: boolean }[]` |
+| Property | Type                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `Slots`  | `{ Animation: string; Inanimate: boolean; RandomizeYRotation: boolean; SlotKeyword: string; WaterSlot: boolean }[]` |
 
 Examples:
 
@@ -13187,11 +13186,11 @@ Categories: [`Environment`][spec-environment-transformspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type                                  |
+| ---------- | ------------------------------------- |
 | `Position` | `{ X: number; Y: number; Z: number }` |
 | `Rotation` | `{ X: number; Y: number; Z: number }` |
-| `Scale` | `{ X: number; Y: number; Z: number }` |
+| `Scale`    | `{ X: number; Y: number; Z: number }` |
 
 Examples:
 
@@ -13205,10 +13204,10 @@ Categories: [`Configurations`][spec-configurations-transmitterpickercolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `HoveredTransmitterColor` | `{ a: number; b: number; g: number; r: number }` |
-| `TransmitterColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                     | Type                                             |
+| ---------------------------- | ------------------------------------------------ |
+| `HoveredTransmitterColor`    | `{ a: number; b: number; g: number; r: number }` |
+| `TransmitterColor`           | `{ a: number; b: number; g: number; r: number }` |
 | `UnfinishedTransmitterColor` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -13223,10 +13222,10 @@ Categories: [`Buildings`][spec-buildings-transputproviderspec], [`MapEditor`][sp
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `IgnoreRotation` | `boolean` |
-| `Transputs` | `{ Coordinates: { X: number; Y: number; Z: number }; Directions: string; ReverseRotation: boolean }[]` |
+| Property         | Type                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `IgnoreRotation` | `boolean`                                                                                              |
+| `Transputs`      | `{ Coordinates: { X: number; Y: number; Z: number }; Directions: string; ReverseRotation: boolean }[]` |
 
 Examples:
 
@@ -13250,8 +13249,8 @@ Categories: [`Characters`][spec-characters-treecutterparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                | Type     |
+| ----------------------- | -------- |
 | `ParticlesAttachmentId` | `string` |
 
 Examples:
@@ -13266,12 +13265,12 @@ Categories: [`Configurations`][spec-configurations-treecuttingcolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type                                             |
+| ---------------------- | ------------------------------------------------ |
 | `CuttingAreaHighlight` | `{ a: number; b: number; g: number; r: number }` |
-| `CuttingAreaTile` | `{ a: number; b: number; g: number; r: number }` |
-| `ToolActionTile` | `{ a: number; b: number; g: number; r: number }` |
-| `ToolNoActionTile` | `{ a: number; b: number; g: number; r: number }` |
+| `CuttingAreaTile`      | `{ a: number; b: number; g: number; r: number }` |
+| `ToolActionTile`       | `{ a: number; b: number; g: number; r: number }` |
+| `ToolNoActionTile`     | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -13285,8 +13284,8 @@ Categories: [`NaturalResources`][spec-naturalresources-treecuttingradiusspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property | Type     |
+| -------- | -------- |
 | `Radius` | `number` |
 
 Examples:
@@ -13311,8 +13310,8 @@ Categories: [`Buildings`][spec-buildings-tubemodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `ModelPrefix` | `string` |
 
 Examples:
@@ -13327,8 +13326,8 @@ Categories: [`Buildings`][spec-buildings-tubeplatformspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `PlatformModelName` | `string` |
 
 Examples:
@@ -13363,9 +13362,9 @@ Categories: [`Buildings`][spec-buildings-tunnelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ExplosionPrefabPath` | `string` |
+| Property                    | Type     |
+| --------------------------- | -------- |
+| `ExplosionPrefabPath`       | `string` |
 | `TunnelSupportTemplateName` | `string` |
 
 Examples:
@@ -13380,8 +13379,8 @@ Categories: [`Configurations`][spec-configurations-tutorialcolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                    | Type                                             |
+| --------------------------- | ------------------------------------------------ |
 | `TutorialBuildingHighlight` | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
@@ -13396,14 +13395,14 @@ Categories: [`Tutorials`][spec-tutorials-tutorialspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
-| `NameLocKey` | `string` |
-| `RequiredTutorialIds` | `string[]` |
-| `SkipIfTutorialFinished` | `string` |
-| `SortOrder` | `number` |
-| `Stages` | `string[]` |
+| Property                 | Type       |
+| ------------------------ | ---------- |
+| `Id`                     | `string`   |
+| `NameLocKey`             | `string`   |
+| `RequiredTutorialIds`    | `string[]` |
+| `SkipIfTutorialFinished` | `string`   |
+| `SortOrder`              | `number`   |
+| `Stages`                 | `string[]` |
 
 Examples:
 
@@ -13417,9 +13416,9 @@ Categories: [`Tutorials`][spec-tutorials-tutorialstagespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Id` | `string` |
+| Property      | Type     |
+| ------------- | -------- |
+| `Id`          | `string` |
 | `IntroLocKey` | `string` |
 
 Examples:
@@ -13444,9 +13443,9 @@ Categories: [`Buildings`][spec-buildings-uncoveredmodelswitcherspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `FullModelName` | `string` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `FullModelName`      | `string` |
 | `UncoveredModelName` | `string` |
 
 Examples:
@@ -13461,9 +13460,9 @@ Categories: [`Buildings`][spec-buildings-undergrounddepthdescriberspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Depth` | `number` |
+| Property | Type     |
+| -------- | -------- |
+| `Depth`  | `number` |
 
 Examples:
 
@@ -13497,8 +13496,8 @@ Categories: [`Buildings`][spec-buildings-understructureconstraintspec], [`MapEdi
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                      | Type       |
+| ----------------------------- | ---------- |
 | `UnderstructureTemplateNames` | `string[]` |
 
 Examples:
@@ -13523,8 +13522,8 @@ Categories: [`Buildings`][spec-buildings-unfinishedstateslotdisablerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type     |
+| ------------- | -------- |
 | `SlotKeyword` | `string` |
 
 Examples:
@@ -13539,10 +13538,10 @@ Categories: [`Factions`][spec-factions-unlockablefactionspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                   | Type     |
+| -------------------------- | -------- |
 | `AverageWellbeingToUnlock` | `number` |
-| `PrerequisiteFaction` | `string` |
+| `PrerequisiteFaction`      | `string` |
 
 Examples:
 
@@ -13566,8 +13565,8 @@ Categories: [`MapEditor`][spec-mapeditor-unstablecoreeffectsspawnerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `ExplosionPrefabPath` | `string` |
 
 Examples:
@@ -13582,12 +13581,12 @@ Categories: [`MapEditor`][spec-mapeditor-unstablecorelightingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AttachmentId` | `string` |
+| Property        | Type     |
+| --------------- | -------- |
+| `AttachmentId`  | `string` |
 | `LightStrength` | `number` |
-| `MaxInterval` | `number` |
-| `MinInterval` | `number` |
+| `MaxInterval`   | `number` |
+| `MinInterval`   | `number` |
 
 Examples:
 
@@ -13601,12 +13600,12 @@ Categories: [`MapEditor`][spec-mapeditor-unstablecorespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                 | Type     |
+| ------------------------ | -------- |
 | `DefaultExplosionRadius` | `number` |
-| `InnerRadius` | `number` |
-| `MaxExplosionRadius` | `number` |
-| `MinExplosionRadius` | `number` |
+| `InnerRadius`            | `number` |
+| `MaxExplosionRadius`     | `number` |
+| `MinExplosionRadius`     | `number` |
 
 Examples:
 
@@ -13620,22 +13619,22 @@ Categories: [`Buildings`][spec-buildings-valvespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultAutomationOutflowLimit` | `number` |
+| Property                               | Type      |
+| -------------------------------------- | --------- |
+| `DefaultAutomationOutflowLimit`        | `number`  |
 | `DefaultAutomationOutflowLimitEnabled` | `boolean` |
-| `DefaultOutflowLimit` | `number` |
-| `DefaultOutflowLimitEnabled` | `boolean` |
-| `MaxOutflowLimit` | `number` |
-| `OutflowLimitStep` | `number` |
-| `RateOfChangeHighPrimary` | `number` |
-| `RateOfChangeHighSecondary` | `number` |
-| `RateOfChangeLowPrimary` | `number` |
-| `RateOfChangeLowSecondary` | `number` |
-| `RateOfChangePrimaryTicks` | `number` |
-| `RateOfChangePrimaryToSecondaryTicks` | `number` |
-| `ReactionSpeedExponent` | `number` |
-| `ReactionSpeedStep` | `number` |
+| `DefaultOutflowLimit`                  | `number`  |
+| `DefaultOutflowLimitEnabled`           | `boolean` |
+| `MaxOutflowLimit`                      | `number`  |
+| `OutflowLimitStep`                     | `number`  |
+| `RateOfChangeHighPrimary`              | `number`  |
+| `RateOfChangeHighSecondary`            | `number`  |
+| `RateOfChangeLowPrimary`               | `number`  |
+| `RateOfChangeLowSecondary`             | `number`  |
+| `RateOfChangePrimaryTicks`             | `number`  |
+| `RateOfChangePrimaryToSecondaryTicks`  | `number`  |
+| `ReactionSpeedExponent`                | `number`  |
+| `ReactionSpeedStep`                    | `number`  |
 
 Examples:
 
@@ -13649,8 +13648,8 @@ Categories: [`Characters`][spec-characters-variedidleanimationspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property   | Type       |
+| ---------- | ---------- |
 | `Variants` | `string[]` |
 
 Examples:
@@ -13665,12 +13664,12 @@ Categories: [`Configurations`][spec-configurations-walkerdebuggerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CornerMarkerPath` | `string` |
-| `DestinationMarkerPath` | `string` |
+| Property                     | Type     |
+| ---------------------------- | -------- |
+| `CornerMarkerPath`           | `string` |
+| `DestinationMarkerPath`      | `string` |
 | `WalkerGameObjectMarkerPath` | `string` |
-| `WalkerModelMarkerPath` | `string` |
+| `WalkerModelMarkerPath`      | `string` |
 
 Examples:
 
@@ -13694,9 +13693,9 @@ Categories: [`Characters`][spec-characters-walkerspeedmanagerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BaseSlowedSpeed` | `number` |
+| Property           | Type     |
+| ------------------ | -------- |
+| `BaseSlowedSpeed`  | `number` |
 | `BaseWalkingSpeed` | `number` |
 
 Examples:
@@ -13711,8 +13710,8 @@ Categories: [`MapEditor`][spec-mapeditor-waterdepthstrengthmodifierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `DepthLimit` | `number` |
 
 Examples:
@@ -13727,8 +13726,8 @@ Categories: [`NaturalResources`][spec-naturalresources-waterednaturalresourcespe
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `DaysToDieDry` | `number` |
 
 Examples:
@@ -13743,11 +13742,11 @@ Categories: [`Configurations`][spec-configurations-waterheightbrushspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `AddingTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property                | Type                                             |
+| ----------------------- | ------------------------------------------------ |
+| `AddingTileColor`       | `{ a: number; b: number; g: number; r: number }` |
 | `ContaminatedTileColor` | `{ a: number; b: number; g: number; r: number }` |
-| `RemovingTileColor` | `{ a: number; b: number; g: number; r: number }` |
+| `RemovingTileColor`     | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -13761,11 +13760,11 @@ Categories: [`Buildings`][spec-buildings-waterinputspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxDepth` | `number` |
-| `PipeParentName` | `string` |
-| `PipeSegmentPrefabPath` | `string` |
+| Property                | Type                                  |
+| ----------------------- | ------------------------------------- |
+| `MaxDepth`              | `number`                              |
+| `PipeParentName`        | `string`                              |
+| `PipeSegmentPrefabPath` | `string`                              |
 | `WaterInputCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -13780,11 +13779,11 @@ Categories: [`Configurations`][spec-configurations-watermeshspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `OpaqueMaterial` | `string` |
+| Property              | Type     |
+| --------------------- | -------- |
+| `OpaqueMaterial`      | `string` |
 | `TransparentMaterial` | `string` |
-| `WaterTile` | `string` |
+| `WaterTile`           | `string` |
 
 Examples:
 
@@ -13798,8 +13797,8 @@ Categories: [`Buildings`][spec-buildings-watermoverparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -13814,8 +13813,8 @@ Categories: [`Buildings`][spec-buildings-watermoverspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property         | Type     |
+| ---------------- | -------- |
 | `WaterPerSecond` | `number` |
 
 Examples:
@@ -13840,8 +13839,8 @@ Categories: [`Buildings`][spec-buildings-waterobjectspec], [`MapEditor`][spec-ma
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -13856,8 +13855,8 @@ Categories: [`Buildings`][spec-buildings-waterobstaclespec], [`MapEditor`][spec-
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property      | Type                         |
+| ------------- | ---------------------------- |
 | `Coordinates` | `{ X: number; Y: number }[]` |
 
 Examples:
@@ -13872,8 +13871,8 @@ Categories: [`Configurations`][spec-configurations-wateroutputparticlecolorsspec
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                             | Type                                                                        |
+| ------------------------------------ | --------------------------------------------------------------------------- |
 | `WaterContaminationParticleGradient` | `{ Color: { a: number; b: number; g: number; r: number }; Time: number }[]` |
 
 Examples:
@@ -13888,8 +13887,8 @@ Categories: [`Buildings`][spec-buildings-wateroutputparticlespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `AttachmentId` | `string` |
 
 Examples:
@@ -13904,8 +13903,8 @@ Categories: [`Buildings`][spec-buildings-wateroutputspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property           | Type                                  |
+| ------------------ | ------------------------------------- |
 | `WaterCoordinates` | `{ X: number; Y: number; Z: number }` |
 
 Examples:
@@ -13920,11 +13919,11 @@ Categories: [`Buildings`][spec-buildings-waterpoweredgeneratorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Blocks` | `{ X: number; Y: number }[]` |
-| `ExpectedWaterDirection` | `{ X: number; Y: number }` |
-| `MinRequiredOutflow` | `number` |
+| Property                 | Type                         |
+| ------------------------ | ---------------------------- |
+| `Blocks`                 | `{ X: number; Y: number }[]` |
+| `ExpectedWaterDirection` | `{ X: number; Y: number }`   |
+| `MinRequiredOutflow`     | `number`                     |
 
 Examples:
 
@@ -13938,23 +13937,23 @@ Categories: [`Configurations`][spec-configurations-watersimulatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DiffusionDepthLimit` | `number` |
-| `DiffusionOutflowLimit` | `number` |
-| `DiffusionRate` | `number` |
+| Property                        | Type     |
+| ------------------------------- | -------- |
+| `DiffusionDepthLimit`           | `number` |
+| `DiffusionOutflowLimit`         | `number` |
+| `DiffusionRate`                 | `number` |
 | `FastEvaporationDepthThreshold` | `number` |
-| `FastEvaporationSpeed` | `number` |
-| `FlowChangeLimit` | `number` |
-| `HardDamOffset` | `number` |
-| `MaxHardDamDecrease` | `number` |
-| `MaxWaterContamination` | `number` |
-| `NormalEvaporationSpeed` | `number` |
-| `OutflowBalancingScaler` | `number` |
-| `OverflowPressureFactor` | `number` |
-| `SoftDamOffset` | `number` |
-| `WaterFlowFactor` | `number` |
-| `WaterSpillThreshold` | `number` |
+| `FastEvaporationSpeed`          | `number` |
+| `FlowChangeLimit`               | `number` |
+| `HardDamOffset`                 | `number` |
+| `MaxHardDamDecrease`            | `number` |
+| `MaxWaterContamination`         | `number` |
+| `NormalEvaporationSpeed`        | `number` |
+| `OutflowBalancingScaler`        | `number` |
+| `OverflowPressureFactor`        | `number` |
+| `SoftDamOffset`                 | `number` |
+| `WaterFlowFactor`               | `number` |
+| `WaterSpillThreshold`           | `number` |
 
 Examples:
 
@@ -13968,8 +13967,8 @@ Categories: [`Buildings`][spec-buildings-watersourcecontaminationspec], [`MapEdi
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property               | Type     |
+| ---------------------- | -------- |
 | `DefaultContamination` | `number` |
 
 Examples:
@@ -14004,8 +14003,8 @@ Categories: [`Buildings`][spec-buildings-watersourceregulatoranimationcontroller
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `RegulatorTransforms` | `{ TargetOffset: { X: number; Y: number; Z: number }; TargetRotation: { X: number; Y: number; Z: number }; TransformName: string }[]` |
 
 Examples:
@@ -14040,10 +14039,10 @@ Categories: [`Buildings`][spec-buildings-watersourcespec], [`MapEditor`][spec-ma
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Coordinates` | `{ X: number; Y: number }[]` |
-| `DefaultStrength` | `number` |
+| Property          | Type                         |
+| ----------------- | ---------------------------- |
+| `Coordinates`     | `{ X: number; Y: number }[]` |
+| `DefaultStrength` | `number`                     |
 
 Examples:
 
@@ -14057,11 +14056,11 @@ Categories: [`Configurations`][spec-configurations-waterstrengthspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                        | Type     |
+| ------------------------------- | -------- |
 | `MaxWaterSourceChangePerSecond` | `number` |
-| `MaxWaterSourceStrength` | `number` |
-| `MinWaterSourceChangeScaler` | `number` |
+| `MaxWaterSourceStrength`        | `number` |
+| `MinWaterSourceChangeScaler`    | `number` |
 
 Examples:
 
@@ -14085,9 +14084,9 @@ Categories: [`Configurations`][spec-configurations-weatherpanelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `NumberOfBlinks` | `number` |
+| Property               | Type     |
+| ---------------------- | -------- |
+| `NumberOfBlinks`       | `number` |
 | `SecondsBetweenBlinks` | `number` |
 
 Examples:
@@ -14102,8 +14101,8 @@ Categories: [`Buildings`][spec-buildings-weatherstationspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `MaxEarlyActivationHours` | `number` |
 
 Examples:
@@ -14128,8 +14127,8 @@ Categories: [`Characters`][spec-characters-wellbeingbonusessubjectspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type       |
+| --------- | ---------- |
 | `Bonuses` | `string[]` |
 
 Examples:
@@ -14144,13 +14143,13 @@ Categories: [`WellbeingTiers`][spec-wellbeingtiers-wellbeingtierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Bonuses` | `{ Multiplier: number; Wellbeing: number }[]` |
-| `BonusId` | `string` |
-| `CharacterType` | `string` |
-| `MultiplierIncrement` | `number` |
-| `WellbeingThreshold` | `number` |
+| Property              | Type                                          |
+| --------------------- | --------------------------------------------- |
+| `Bonuses`             | `{ Multiplier: number; Wellbeing: number }[]` |
+| `BonusId`             | `string`                                      |
+| `CharacterType`       | `string`                                      |
+| `MultiplierIncrement` | `number`                                      |
+| `WellbeingThreshold`  | `number`                                      |
 
 Examples:
 
@@ -14164,8 +14163,8 @@ Categories: [`Buildings`][spec-buildings-windparticlecontrollerspec], [`MapEdito
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -14190,8 +14189,8 @@ Categories: [`Buildings`][spec-buildings-windpoweredgeneratorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `MinRequiredWindStrength` | `number` |
 
 Examples:
@@ -14206,9 +14205,9 @@ Categories: [`Buildings`][spec-buildings-windrotationanimatorspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Tower` | `{ RotationAxis: { X: number; Y: number; Z: number }; RotationSpeed: number; TransformName: string }` |
+| Property       | Type                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| `Tower`        | `{ RotationAxis: { X: number; Y: number; Z: number }; RotationSpeed: number; TransformName: string }`   |
 | `WindRotators` | `{ RotationAxis: { X: number; Y: number; Z: number }; RotationSpeed: number; TransformName: string }[]` |
 
 Examples:
@@ -14223,11 +14222,11 @@ Categories: [`Configurations`][spec-configurations-windservicespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `MaxWindStrength` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `MaxWindStrength`    | `number` |
 | `MaxWindTimeInHours` | `number` |
-| `MinWindStrength` | `number` |
+| `MinWindStrength`    | `number` |
 | `MinWindTimeInHours` | `number` |
 
 Examples:
@@ -14242,8 +14241,8 @@ Categories: [`Buildings`][spec-buildings-wonderdeactivationtimerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property            | Type     |
+| ------------------- | -------- |
 | `TimerDelayInHours` | `number` |
 
 Examples:
@@ -14258,8 +14257,8 @@ Categories: [`Buildings`][spec-buildings-wondereffectcontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                                      |
+| --------- | ------------------------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; PointsPerHour: number; SatisfyToMaxValue: boolean }[]` |
 
 Examples:
@@ -14274,8 +14273,8 @@ Categories: [`Buildings`][spec-buildings-wonderinventoryspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                               |
+| --------------- | ---------------------------------- |
 | `RequiredGoods` | `{ Amount: number; Id: string }[]` |
 
 Examples:
@@ -14290,8 +14289,8 @@ Categories: [`Buildings`][spec-buildings-wonderparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -14316,8 +14315,8 @@ Categories: [`Characters`][spec-characters-workeroutfitanimationattachmentvisibi
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property                           | Type                                                                                                       |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `WorkerOutfitAnimationAttachments` | `{ AnimationNames: string[]; HideWhenActive: string[]; ShowWhenActive: string[]; WorkerOutfit: string }[]` |
 
 Examples:
@@ -14332,14 +14331,14 @@ Categories: [`WorkerOutfits`][spec-workeroutfits-workeroutfitspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Attachments` | `string[]` |
-| `DiffuseTexture` | `string` |
-| `FactionId` | `string` |
-| `Id` | `string` |
-| `NormalTexture` | `string` |
-| `WorkerType` | `string` |
+| Property         | Type       |
+| ---------------- | ---------- |
+| `Attachments`    | `string[]` |
+| `DiffuseTexture` | `string`   |
+| `FactionId`      | `string`   |
+| `Id`             | `string`   |
+| `NormalTexture`  | `string`   |
+| `WorkerType`     | `string`   |
 
 Examples:
 
@@ -14353,8 +14352,8 @@ Categories: [`Characters`][spec-characters-workerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type     |
+| ------------ | -------- |
 | `WorkerType` | `string` |
 
 Examples:
@@ -14369,13 +14368,13 @@ Categories: [`WorkerTypes`][spec-workertypes-workertypespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `BackwardCompatibleIds` | `array` |
-| `DisplayNameLocKey` | `string` |
-| `Id` | `string` |
-| `IgnoresWorkingHours` | `boolean` |
-| `WorkerOnlyTextLocKey` | `string` |
+| Property                | Type      |
+| ----------------------- | --------- |
+| `BackwardCompatibleIds` | `array`   |
+| `DisplayNameLocKey`     | `string`  |
+| `Id`                    | `string`  |
+| `IgnoresWorkingHours`   | `boolean` |
+| `WorkerOnlyTextLocKey`  | `string`  |
 
 Examples:
 
@@ -14399,8 +14398,8 @@ Categories: [`Buildings`][spec-buildings-workplacebonusesspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type                                        |
+| --------------- | ------------------------------------------- |
 | `WorkerBonuses` | `{ Id: string; MultiplierDelta: number }[]` |
 
 Examples:
@@ -14435,13 +14434,13 @@ Categories: [`Buildings`][spec-buildings-workplacespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `DefaultWorkers` | `number` |
-| `DefaultWorkerType` | `string` |
-| `DisallowOtherWorkerTypes` | `boolean` |
-| `MaxWorkers` | `number` |
-| `WorkerTypeUnlockCosts` | `{ ScienceCost: number; WorkerType: string }[]` |
+| Property                   | Type                                            |
+| -------------------------- | ----------------------------------------------- |
+| `DefaultWorkers`           | `number`                                        |
+| `DefaultWorkerType`        | `string`                                        |
+| `DisallowOtherWorkerTypes` | `boolean`                                       |
+| `MaxWorkers`               | `number`                                        |
+| `WorkerTypeUnlockCosts`    | `{ ScienceCost: number; WorkerType: string }[]` |
 
 Examples:
 
@@ -14455,8 +14454,8 @@ Categories: [`Buildings`][spec-buildings-workplaceworkeroutfitspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `WorkerOutfit` | `string` |
 
 Examples:
@@ -14481,8 +14480,8 @@ Categories: [`Buildings`][spec-buildings-workshopparticlecontrollerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type       |
+| --------------- | ---------- |
 | `AttachmentIds` | `string[]` |
 
 Examples:
@@ -14497,8 +14496,8 @@ Categories: [`Buildings`][spec-buildings-workshoprandomneedapplierspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type                                                        |
+| --------- | ----------------------------------------------------------- |
 | `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
 
 Examples:
@@ -14533,10 +14532,10 @@ Categories: [`YieldRemovalChanceBonuses`][spec-yieldremovalchancebonuses-yieldre
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property  | Type     |
+| --------- | -------- |
 | `BonusId` | `string` |
-| `GoodId` | `string` |
+| `GoodId`  | `string` |
 
 Examples:
 
@@ -14560,11 +14559,11 @@ Categories: [`Buildings`][spec-buildings-yieldremoverworkplaceeffectsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `Effects` | `{ NeedId: string; Points: number; Probability: string }[]` |
-| `MinimumAttemptsThreshold` | `number` |
-| `YieldGoodId` | `string` |
+| Property                   | Type                                                        |
+| -------------------------- | ----------------------------------------------------------- |
+| `Effects`                  | `{ NeedId: string; Points: number; Probability: string }[]` |
+| `MinimumAttemptsThreshold` | `number`                                                    |
+| `YieldGoodId`              | `string`                                                    |
 
 Examples:
 
@@ -14578,8 +14577,8 @@ Categories: [`Buildings`][spec-buildings-yieldremovingbuildingspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `ResourceGroup` | `string` |
 
 Examples:
@@ -14594,8 +14593,8 @@ Categories: [`Configurations`][spec-configurations-ziplinecablenavmeshspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property        | Type     |
+| --------------- | -------- |
 | `CableUnitCost` | `number` |
 
 Examples:
@@ -14610,8 +14609,8 @@ Categories: [`Configurations`][spec-configurations-ziplineconnectionservicespec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property              | Type     |
+| --------------------- | -------- |
 | `MaxCableInclination` | `number` |
 
 Examples:
@@ -14626,8 +14625,8 @@ Categories: [`Characters`][spec-characters-ziplineharnessmodelspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
+| Property       | Type     |
+| -------------- | -------- |
 | `AttachmentId` | `string` |
 
 Examples:
@@ -14652,11 +14651,11 @@ Categories: [`Configurations`][spec-configurations-ziplinesystemcolorsspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `ConnectableColor` | `{ a: number; b: number; g: number; r: number }` |
+| Property              | Type                                             |
+| --------------------- | ------------------------------------------------ |
+| `ConnectableColor`    | `{ a: number; b: number; g: number; r: number }` |
 | `NotConnectableColor` | `{ a: number; b: number; g: number; r: number }` |
-| `OriginColor` | `{ a: number; b: number; g: number; r: number }` |
+| `OriginColor`         | `{ a: number; b: number; g: number; r: number }` |
 
 Examples:
 
@@ -14670,17 +14669,16 @@ Categories: [`Buildings`][spec-buildings-ziplinetowerspec]
 
 Properties:
 
-| Property | Type |
-| --- | --- |
-| `CableAnchorPoint` | `{ X: number; Y: number; Z: number }` |
-| `MaxConnections` | `number` |
-| `MaxDistance` | `number` |
+| Property                  | Type                                    |
+| ------------------------- | --------------------------------------- |
+| `CableAnchorPoint`        | `{ X: number; Y: number; Z: number }`   |
+| `MaxConnections`          | `number`                                |
+| `MaxDistance`             | `number`                                |
 | `UnobstructedCoordinates` | `{ X: number; Y: number; Z: number }[]` |
 
 Examples:
 
 `ZiplineBeam` [![Folktails](assets/faction-folktails.png)][zipline-beam-folktails], `ZiplinePylon` [![Folktails](assets/faction-folktails.png)][zipline-pylon-folktails], `ZiplineStation` [![Folktails](assets/faction-folktails.png)][zipline-station-folktails]
-
 
 ## Every Blueprint
 
@@ -15843,7 +15841,6 @@ Blueprints: 1
 Specs seen: [`YieldRemovalChanceBonusSpec`][spec-yieldremovalchancebonuses-yieldremovalchancebonusspec]
 
 - <a id="blueprint-yieldremovalchancebonuses-yieldremovalchancebonus-cuttingsuccesschance-blueprint-json"></a>[`YieldRemovalChanceBonus.CuttingSuccessChance`][yield-removal-chance-bonus-cutting-success-chance]—[`YieldRemovalChanceBonusSpec`][spec-yieldremovalchancebonuses-yieldremovalchancebonusspec]
-
 
 [adult-life-expectancy]: #blueprint-wellbeingtiers-wellbeingtier-adult-lifeexpectancy-blueprint-json
 [adult-movement-speed]: #blueprint-wellbeingtiers-wellbeingtier-adult-movementspeed-blueprint-json

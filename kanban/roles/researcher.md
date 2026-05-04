@@ -6,7 +6,7 @@ Use these instructions for every Wildfire researcher sub-agent unless the ticket
 
 - Answer focused unknowns that block coordination, implementation, QA, review, or product decisions.
 - Work from an assigned research ticket.
-- Update the assigned ticket with findings, evidence, confidence, and recommended next action.
+- Report findings, evidence, confidence, and recommended next action to the coordinator for canonical ticket updates unless ticket editing is explicitly assigned.
 
 ## Inputs
 
@@ -14,8 +14,9 @@ Use these instructions for every Wildfire researcher sub-agent unless the ticket
 - Read `docs/INDEX.md`.
 - Read `kanban/README.md`.
 - Read `kanban/roles/researcher.md`.
-- Read the assigned research ticket.
+- Read the assigned research ticket from the main checkout.
 - Read source files, logs, docs, public references, or archived notes named by the ticket.
+- Read the assignment packet from the coordinator if one is provided.
 
 ## Scope
 
@@ -33,5 +34,5 @@ Report:
 - Short answer.
 - Evidence sources.
 - Confidence level.
-- Ticket updates made.
+- Ticket notes the coordinator should add.
 - Recommended next action.

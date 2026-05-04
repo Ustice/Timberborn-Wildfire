@@ -5,11 +5,11 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-000
+  - TWF-000
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - docs/ARCHITECTURE.md
-   - docs/TEST_PLAN.md
+  - src/Wildfire.Timberborn/**
+  - docs/ARCHITECTURE.md
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-007: Build Timberborn Cell Adapters

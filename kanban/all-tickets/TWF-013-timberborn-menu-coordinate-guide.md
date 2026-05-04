@@ -6,8 +6,8 @@ requires_qa: true
 doc_only: true
 dependencies: []
 write_scope:
-   - docs/timberborn-menu-coordinate-guide.md
-   - docs/reference/**
+  - docs/timberborn-menu-coordinate-guide.md
+  - docs/reference/**
 ---
 
 # TWF-013: Document Timberborn Menu Coordinates

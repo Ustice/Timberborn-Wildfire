@@ -5,13 +5,13 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-013
-   - TWF-017
-   - TWF-019
+  - TWF-013
+  - TWF-017
+  - TWF-019
 write_scope:
-   - scripts/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-030-load-latest-save-and-unpause-utility.md
+  - scripts/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-030-load-latest-save-and-unpause-utility.md
 ---
 
 # TWF-030: Add Latest-Save Startup Utility

@@ -5,26 +5,30 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-053
-   - TWF-055
-   - TWF-056
-   - TWF-057
-   - TWF-059
-   - TWF-061
+  - TWF-053
+  - TWF-055
+  - TWF-056
+  - TWF-057
+  - TWF-059
+  - TWF-061
+  - TWF-110
+  - TWF-111
+  - TWF-112
+  - TWF-113
 write_scope:
-   - release/**
-   - scripts/**
-   - README.md
-   - docs/TEST_PLAN.md
-   - docs/HANDOFF.md
-   - kanban/all-tickets/TWF-063-prepare-steam-workshop-distribution.md
+  - release/**
+  - scripts/**
+  - README.md
+  - docs/TEST_PLAN.md
+  - docs/HANDOFF.md
+  - kanban/all-tickets/TWF-063-prepare-steam-workshop-distribution.md
 ---
 
 # TWF-063: Prepare Steam Workshop Distribution
 
 ## Goal
 
-Prepare Steam Workshop as the official initial Wildfire distribution channel.
+Integrate the Workshop package shape, upload/update process, Workshop item metadata, and private install test for the official initial Wildfire distribution channel.
 
 ## Why
 
@@ -32,13 +36,13 @@ Steam Workshop is the primary place Timberborn players expect to install mods. O
 
 ## Requirements
 
-- Confirm the release package shape expected by Steam Workshop for Timberborn.
-- Prepare Workshop title, short description, long description, tags, thumbnail, screenshots, compatibility notes, and changelog.
+- Confirm `TWF-110` documents and validates the Steam Workshop package shape.
+- Confirm `TWF-111` documents the manual or scripted upload/update process.
+- Confirm `TWF-112` prepares the Workshop item metadata from release graphic/copy assets.
+- Confirm `TWF-113` runs or blocks the private or limited visibility Workshop install test.
 - Ensure packaged files match the artifact validated by release-candidate QA.
-- Document the manual or scripted upload/update process.
 - Record whether Workshop upload automation is feasible or intentionally manual for the first release.
 - Preserve the Steam Workshop item id or planned placeholder once created.
-- Run a private or limited visibility Workshop install test if Steam supports it for this workflow.
 - Update `docs/TEST_PLAN.md` and `docs/HANDOFF.md` with Workshop release evidence and blockers.
 
 ## Dependencies
@@ -64,3 +68,4 @@ Steam Workshop is the primary place Timberborn players expect to install mods. O
 ## Notes
 
 - GitHub artifacts remain useful for reproducibility, but Steam Workshop is the official first public distribution channel.
+- Child tickets: `TWF-110`, `TWF-111`, `TWF-112`, and `TWF-113`.

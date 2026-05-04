@@ -5,16 +5,16 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-065
-   - TWF-066
-   - TWF-067
+  - TWF-065
+  - TWF-066
+  - TWF-067
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - src/Wildfire.Unity/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/DESIGN.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-068-tune-visible-ash-effect.md
+  - src/Wildfire.Timberborn/**
+  - src/Wildfire.Unity/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/DESIGN.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-068-tune-visible-ash-effect.md
 ---
 
 # TWF-068: Tune Visible Ash Effect
@@ -29,7 +29,7 @@ Make ash or residual burn aftermath visually legible without pretending Wildfire
 
 ## Requirements
 
-- Keep ash behavior aligned with the `TWF-044` release decision: derived visual output, no persistent ash storage unless a new design decision changes that.
+- Keep visual ash behavior aligned with `docs/DESIGN.md` sections 17 and 20: derived visual output only, no persistent ash storage in `PackedCell`, and no confusion with gameplay ash/fertility.
 - Tune visual-field or presentation parameters only where needed for visible aftermath readability.
 - Prefer Timberborn-native smoke/ash-like prefabs and material conventions before custom art.
 - Capture high-resolution recordings and screenshots showing the accepted ash or aftermath behavior.
@@ -57,3 +57,4 @@ Make ash or residual burn aftermath visually legible without pretending Wildfire
 ## Notes
 
 - If the derived ash approximation is not good enough for release, this ticket should make that explicit and create or update the design follow-up rather than silently adding packed-cell storage.
+- Persistent gameplay ash belongs to the ash field service ticket, not this visual tuning ticket.

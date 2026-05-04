@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-032
+  - TWF-032
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/ARCHITECTURE.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-035-expand-timberborn-material-mapping.md
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/ARCHITECTURE.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-035-expand-timberborn-material-mapping.md
 ---
 
 # TWF-035: Expand Timberborn Material Mapping

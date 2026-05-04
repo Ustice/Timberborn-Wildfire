@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-002
-   - TWF-003
+  - TWF-002
+  - TWF-003
 write_scope:
-   - src/Wildfire.Core/**
-   - src/Wildfire.Unity/**
-   - tests/**
-   - docs/TEST_PLAN.md
+  - src/Wildfire.Core/**
+  - src/Wildfire.Unity/**
+  - tests/**
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-004: Read Back Compact Deltas

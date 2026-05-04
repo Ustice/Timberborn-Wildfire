@@ -5,23 +5,28 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-065
-   - TWF-043
-   - TWF-046
+  - TWF-065
+  - TWF-043
+  - TWF-046
+  - TWF-088
+  - TWF-089
+  - TWF-090
+  - TWF-091
+  - TWF-092
 write_scope:
-   - src/Wildfire.Unity/**
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/DESIGN.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-069-tune-fire-behavior-with-recordings.md
+  - src/Wildfire.Unity/**
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/DESIGN.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-069-tune-fire-behavior-with-recordings.md
 ---
 
 # TWF-069: Tune Fire Behavior With Recordings
 
 ## Goal
 
-Tune how fire behaves over time using low-resolution recordings and deterministic shader evidence, separate from visual-effect polish.
+Integrate and accept the fire-behavior tuning child tickets using low-resolution recordings and deterministic shader evidence, separate from visual-effect polish.
 
 ## Why
 
@@ -29,10 +34,11 @@ Visual effects answer whether fire looks legible; behavior tuning answers whethe
 
 ## Requirements
 
-- Use low-resolution recordings from `TWF-065` to compare behavior across representative scenarios.
+- Use the child tickets to tune spread pace, fuel burn-down duration, water suppression, structure/vertical behavior, and burnout/cooling.
+- Use low-resolution recordings from `TWF-065` to compare accepted child-ticket behavior across representative scenarios.
 - Keep fire-spread rules in `FireSim.compute`.
 - Preserve the `TWF-044` release decisions unless a new design decision explicitly changes them.
-- Tune behavior constants only when supported by deterministic shader snapshots and live recording evidence.
+- Accept behavior constants only when supported by deterministic shader snapshots and live recording evidence.
 - Include at least single ignition, line of fuel, water barrier, sparse forest, and building cluster behavior review.
 - Keep visual-effect scale, prefab selection, and screenshot aesthetics out of this ticket.
 - Update `docs/DESIGN.md` only for durable behavior-contract changes.
@@ -59,3 +65,4 @@ Visual effects answer whether fire looks legible; behavior tuning answers whethe
 ## Notes
 
 - This ticket should not change visual presentation unless a behavior bug makes the existing effects impossible to evaluate.
+- Child tickets: `TWF-088`, `TWF-089`, `TWF-090`, `TWF-091`, and `TWF-092`.

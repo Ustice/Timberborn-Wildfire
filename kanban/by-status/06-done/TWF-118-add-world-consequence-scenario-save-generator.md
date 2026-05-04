@@ -1,0 +1,1 @@
+../../all-tickets/TWF-118-add-world-consequence-scenario-save-generator.md

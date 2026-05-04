@@ -5,11 +5,11 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-013
-   - TWF-016
+  - TWF-013
+  - TWF-016
 write_scope:
-   - scripts/**
-   - docs/TEST_PLAN.md
+  - scripts/**
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-017: Add Live QA Startup Log Harness

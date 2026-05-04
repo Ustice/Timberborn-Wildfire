@@ -6,9 +6,9 @@ requires_qa: false
 doc_only: false
 dependencies: []
 write_scope:
-   - src/Wildfire.Cli/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
+  - src/Wildfire.Cli/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-000: Add CLI Fixture Export

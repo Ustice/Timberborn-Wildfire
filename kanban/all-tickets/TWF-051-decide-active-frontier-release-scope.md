@@ -5,14 +5,14 @@ role: reviewer
 requires_qa: false
 doc_only: true
 dependencies:
-   - TWF-034
-   - TWF-046
+  - TWF-034
+  - TWF-046
 write_scope:
-   - docs/DESIGN.md
-   - docs/HANDOFF.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-011-active-frontier-optimization.md
-   - kanban/all-tickets/TWF-051-decide-active-frontier-release-scope.md
+  - docs/DESIGN.md
+  - docs/HANDOFF.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-011-active-frontier-optimization.md
+  - kanban/all-tickets/TWF-051-decide-active-frontier-release-scope.md
 ---
 
 # TWF-051: Decide Active Frontier Release Scope
@@ -30,10 +30,9 @@ Active frontier is a real complexity increase. The design allows full-grid dispa
 - Review `TWF-034` profiling evidence and `TWF-046` live-loop evidence.
 - Compare observed map size, dispatch/readback time, delta count, and player-visible cost against release needs.
 - Recommend one of:
-
-   - Promote `TWF-011` to ready for release.
-   - Keep `TWF-011` deferred until after release.
-   - Add one more profiling ticket with exact missing evidence.
+  - Promote `TWF-011` to ready for release.
+  - Keep `TWF-011` deferred until after release.
+  - Add one more profiling ticket with exact missing evidence.
 
 - Update `TWF-011` notes with the decision.
 - Update `docs/DESIGN.md`, `docs/TEST_PLAN.md`, or `docs/HANDOFF.md` only where the release decision changes guidance.

@@ -5,16 +5,16 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-036
-   - TWF-038
-   - TWF-041
+  - TWF-036
+  - TWF-038
+  - TWF-041
 write_scope:
-   - src/Wildfire.Unity/**
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/DESIGN.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-043-tune-fire-game-feel-constants.md
+  - src/Wildfire.Unity/**
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/DESIGN.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-043-tune-fire-game-feel-constants.md
 ---
 
 # TWF-043: Tune Fire Game Feel Constants
@@ -69,9 +69,9 @@ Changed tuning:
 - Neighbor heating now gives burning neighbors enough direct heat to spread out of broad grass scenarios instead of being lost to integer averaging.
 - Water now applies stronger heat suppression, raises ignition threshold by two heat bands per water band, and applies a larger burn-pressure penalty before fuel consumption.
 - Timberborn adapter material bands now make vegetation and stockpile resources catch more readily while wood-like buildings burn longer and less explosively:
-   - Wood-like building: fuel `15`, flammability `1`, heat loss `3`.
-   - Stockpile resource: fuel `8`, flammability `2`, heat loss `3`.
-   - Vegetation: fuel `10`, flammability `3`, heat loss `1`.
+  - Wood-like building: fuel `15`, flammability `1`, heat loss `3`.
+  - Stockpile resource: fuel `8`, flammability `2`, heat loss `3`.
+  - Vegetation: fuel `10`, flammability `3`, heat loss `1`.
 - QA building-burnout stimulus now uses the tuned wood-like building constants for both the primed and spent cells.
 
 Representative shader evidence:
@@ -124,21 +124,21 @@ Live artifact directory:
 Live commands and status evidence:
 
 - `bun scripts/deploy-timberborn-mod.ts --apply --clean --lock-timeout=1`
-   - Result: pass. `dotnet build Wildfire.slnx --configuration Debug` succeeded, Unity rebuilt `wildfire_compute_mac` and `wildfire_diagnostic_mac`, and the script staged the mod under `~/Documents/Timberborn/Mods/Wildfire`.
+  - Result: pass. `dotnet build Wildfire.slnx --configuration Debug` succeeded, Unity rebuilt `wildfire_compute_mac` and `wildfire_diagnostic_mac`, and the script staged the mod under `~/Documents/Timberborn/Mods/Wildfire`.
 - `bun scripts/load-latest-save-and-unpause.ts --launch --wait=240 --artifacts-dir "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-043-live-20260502T225802Z-startup"`
-   - Result: pass. The guarded launcher observed startup Mods, Experimental Mode, main menu, and loaded-save screens, then unpaused the save. `latest-save-startup-summary.txt` records `wildfire_latest_save_startup_result=pass`, `simulator_integrated=true`, dimensions `128x128x23`, and post-unpause `tick_count=3`.
+  - Result: pass. The guarded launcher observed startup Mods, Experimental Mode, main menu, and loaded-save screens, then unpaused the save. `latest-save-startup-summary.txt` records `wildfire_latest_save_startup_result=pass`, `simulator_integrated=true`, dimensions `128x128x23`, and post-unpause `tick_count=3`.
 - `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick`
-   - Result: pass. `command-qa-readiness-baseline.txt` records `tick_count=22`, `simulator_integrated=true`, `visual_field_surface_bound=true`, and `queued_changes=0`.
+  - Result: pass. `command-qa-readiness-baseline.txt` records `tick_count=22`, `simulator_integrated=true`, `visual_field_surface_bound=true`, and `queued_changes=0`.
 - `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=6 --require-advanced-tick`
-   - Result: pass. `command-qa-delta-stimulus.txt` records the bounded center target `target_x=64`, `target_y=64`, `target_z=11`, and `queued_changes=1`.
+  - Result: pass. `command-qa-delta-stimulus.txt` records the bounded center target `target_x=64`, `target_y=64`, `target_z=11`, and `queued_changes=1`.
 - `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick --require-nonzero-delta`
-   - Result: pass. `command-qa-readiness-after-delta.txt` records `tick_count=25`, `last_delta_count=1`, `last_delta_consumer_changed_cells=1`, `last_delta_consumer_visual_effect_events=1`, `last_player_fire_alert_started_fires=1`, `player_fire_alert_notification_sent=true`, `pooled_fire_effects_visible_enabled=true`, and `pooled_fire_effects_native_prefab=CampfireFire`.
+  - Result: pass. `command-qa-readiness-after-delta.txt` records `tick_count=25`, `last_delta_count=1`, `last_delta_consumer_changed_cells=1`, `last_delta_consumer_visual_effect_events=1`, `last_player_fire_alert_started_fires=1`, `player_fire_alert_notification_sent=true`, `pooled_fire_effects_visible_enabled=true`, and `pooled_fire_effects_native_prefab=CampfireFire`.
 - `bun scripts/invoke-timberborn-command.ts qa-water-suppression-stimulus --wait=6 --require-advanced-tick`
-   - Result: pass. `command-qa-water-suppression-stimulus.txt` records `target_x=64`, `target_y=64`, `target_z=11`, `set_water=3`, and `queued_water_changes=1`.
+  - Result: pass. `command-qa-water-suppression-stimulus.txt` records `target_x=64`, `target_y=64`, `target_z=11`, `set_water=3`, and `queued_water_changes=1`.
 - `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick --require-water-changed`
-   - Result: pass. `command-qa-readiness-after-water.txt` records `tick_count=27`, `last_positive_water_changed_tick=26`, and `last_positive_water_changed_count=1`.
+  - Result: pass. `command-qa-readiness-after-water.txt` records `tick_count=27`, `last_positive_water_changed_tick=26`, and `last_positive_water_changed_count=1`.
 - Follow-up fast capture: `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=6 --require-advanced-tick`, `screencapture -x 08-after-second-qa-delta-stimulus-fast.png`, then `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick`
-   - Result: pass. `command-qa-readiness-after-second-delta.txt` records `tick_count=75`, `last_delta_count=2`, `last_delta_consumer_started_burning=1`, `last_delta_consumer_water_changed=1`, `last_delta_consumer_visual_effect_events=2`, `last_delta_consumer_alerts=1`, `player_fire_alert_notifications=2`, `active_pooled_fire_effects=1`, `pooled_fire_effects_visible_enabled=true`, and `pooled_fire_effects_native_prefab=CampfireFire`.
+  - Result: pass. `command-qa-readiness-after-second-delta.txt` records `tick_count=75`, `last_delta_count=2`, `last_delta_consumer_started_burning=1`, `last_delta_consumer_water_changed=1`, `last_delta_consumer_visual_effect_events=2`, `last_delta_consumer_alerts=1`, `player_fire_alert_notifications=2`, `active_pooled_fire_effects=1`, `pooled_fire_effects_visible_enabled=true`, and `pooled_fire_effects_native_prefab=CampfireFire`.
 
 Copied logs and screenshots:
 

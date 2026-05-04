@@ -5,14 +5,14 @@ role: researcher
 requires_qa: false
 doc_only: true
 dependencies:
-   - TWF-055
+  - TWF-055
 write_scope:
-   - LICENSE
-   - NOTICE.md
-   - README.md
-   - release/**
-   - docs/**
-   - kanban/all-tickets/TWF-061-add-license-attribution-pass.md
+  - LICENSE
+  - NOTICE.md
+  - README.md
+  - release/**
+  - docs/**
+  - kanban/all-tickets/TWF-061-add-license-attribution-pass.md
 ---
 
 # TWF-061: Add License Attribution Pass

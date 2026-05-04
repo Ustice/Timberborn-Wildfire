@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-050
-   - TWF-052
+  - TWF-050
+  - TWF-052
 write_scope:
-   - scripts/**
-   - docs/TEST_PLAN.md
-   - docs/reference/timberborn-deploy-pipeline.md
-   - kanban/all-tickets/TWF-053-add-release-packaging-workflow.md
+  - scripts/**
+  - docs/TEST_PLAN.md
+  - docs/reference/timberborn-deploy-pipeline.md
+  - kanban/all-tickets/TWF-053-add-release-packaging-workflow.md
 ---
 
 # TWF-053: Add Release Packaging Workflow

@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-002
-   - TWF-004
-   - TWF-010
+  - TWF-002
+  - TWF-004
+  - TWF-010
 write_scope:
-   - src/Wildfire.Unity/**
-   - docs/DESIGN.md
-   - docs/TEST_PLAN.md
+  - src/Wildfire.Unity/**
+  - docs/DESIGN.md
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-011: Add Active Frontier Optimization

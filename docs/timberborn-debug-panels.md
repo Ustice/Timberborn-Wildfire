@@ -4,11 +4,11 @@ This reference records the Timberborn debug and developer panels visible in the 
 
 ## Screenshot Evidence
 
-| Screenshot | Size | Evidence |
-| --- | --- | --- |
-| [`01-loaded-save-baseline.png`](reference/screenshots/timberborn-debug-panels/01-loaded-save-baseline.png) | `1920 x 1080` | Loaded save with the Development controls panel open over the colony. |
+| Screenshot                                                                                                             | Size          | Evidence                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| [`01-loaded-save-baseline.png`](reference/screenshots/timberborn-debug-panels/01-loaded-save-baseline.png)             | `1920 x 1080` | Loaded save with the Development controls panel open over the colony.        |
 | [`02-developer-mode-alt-shift-z.png`](reference/screenshots/timberborn-debug-panels/02-developer-mode-alt-shift-z.png) | `1920 x 1080` | Developer mode enabled with the loaded save visible and FPS overlay present. |
-| [`03-debug-panel-alt-shift-x.png`](reference/screenshots/timberborn-debug-panels/03-debug-panel-alt-shift-x.png) | `1920 x 1080` | Debug mode panel and Object debugger opened over the loaded save. |
+| [`03-debug-panel-alt-shift-x.png`](reference/screenshots/timberborn-debug-panels/03-debug-panel-alt-shift-x.png)       | `1920 x 1080` | Debug mode panel and Object debugger opened over the loaded save.            |
 
 ## Entrypoints
 

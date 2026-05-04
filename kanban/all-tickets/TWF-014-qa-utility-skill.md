@@ -5,11 +5,11 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-013
+  - TWF-013
 write_scope:
-   - .codex/skills/**
-   - docs/**
-   - kanban/all-tickets/TWF-014-qa-utility-skill.md
+  - .codex/skills/**
+  - docs/**
+  - kanban/all-tickets/TWF-014-qa-utility-skill.md
 ---
 
 # TWF-014: Create QA Utility Skill

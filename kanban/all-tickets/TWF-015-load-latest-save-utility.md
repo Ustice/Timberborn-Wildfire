@@ -5,12 +5,12 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-013
-   - TWF-014
-   - TWF-020
+  - TWF-013
+  - TWF-014
+  - TWF-020
 write_scope:
-   - scripts/**
-   - docs/**
+  - scripts/**
+  - docs/**
 ---
 
 # TWF-015: Add Load Latest Save Utility

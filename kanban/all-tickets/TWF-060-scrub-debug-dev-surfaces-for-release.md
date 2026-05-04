@@ -5,21 +5,24 @@ role: reviewer
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-048
-   - TWF-050
+  - TWF-048
+  - TWF-050
+  - TWF-107
+  - TWF-108
+  - TWF-109
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - scripts/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-060-scrub-debug-dev-surfaces-for-release.md
+  - src/Wildfire.Timberborn/**
+  - scripts/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-060-scrub-debug-dev-surfaces-for-release.md
 ---
 
 # TWF-060: Scrub Debug Dev Surfaces For Release
 
 ## Goal
 
-Review and gate debug, QA, and developer surfaces so release builds expose only safe player-facing behavior.
+Integrate command-bridge gating, release log policy, and script/developer-surface review so release builds expose only safe player-facing behavior.
 
 ## Why
 
@@ -27,10 +30,9 @@ The project intentionally uses command bridges and QA utilities. Release needs t
 
 ## Requirements
 
-- Review QA command bridge commands, file inbox/outbox behavior, debug visibility, logs, and scripts.
-- Ensure destructive or broad mutation commands are absent or disabled in release.
-- Keep read-only diagnostics available only where safe and intentional.
-- Reduce noisy logs while preserving actionable failure and compatibility tokens.
+- Confirm `TWF-107` gates QA command bridge commands and file inbox/outbox behavior.
+- Confirm `TWF-108` defines release log/noise policy.
+- Confirm `TWF-109` reviews scripts, debug visibility, and developer surfaces.
 - Add tests for command rejection or release gating where possible.
 - Document what remains available in release and why.
 
@@ -54,3 +56,4 @@ The project intentionally uses command bridges and QA utilities. Release needs t
 ## Notes
 
 - This ticket may produce small code changes if review finds unsafe release surfaces.
+- Child tickets: `TWF-107`, `TWF-108`, and `TWF-109`.

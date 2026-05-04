@@ -5,14 +5,14 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-043
-   - TWF-044
+  - TWF-043
+  - TWF-044
 write_scope:
-   - src/Wildfire.Cli/**
-   - src/Wildfire.Unity/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-045-add-release-scenario-shader-snapshots.md
+  - src/Wildfire.Cli/**
+  - src/Wildfire.Unity/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-045-add-release-scenario-shader-snapshots.md
 ---
 
 # TWF-045: Add Release Scenario Shader Snapshots

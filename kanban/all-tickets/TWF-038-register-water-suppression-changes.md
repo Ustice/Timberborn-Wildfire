@@ -5,14 +5,14 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-032
-   - TWF-035
+  - TWF-032
+  - TWF-035
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - scripts/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-038-register-water-suppression-changes.md
+  - src/Wildfire.Timberborn/**
+  - scripts/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-038-register-water-suppression-changes.md
 ---
 
 # TWF-038: Register Water Suppression Changes

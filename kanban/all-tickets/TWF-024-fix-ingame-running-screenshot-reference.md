@@ -5,10 +5,10 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-013
+  - TWF-013
 write_scope:
-   - docs/timberborn-menu-coordinate-guide.md
-   - docs/reference/screenshots/timberborn-menu-coordinate-guide/**
+  - docs/timberborn-menu-coordinate-guide.md
+  - docs/reference/screenshots/timberborn-menu-coordinate-guide/**
 ---
 
 # TWF-024: Fix In-Game Running Screenshot Reference

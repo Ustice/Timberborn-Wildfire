@@ -5,14 +5,14 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-065
-   - TWF-066
-   - TWF-067
+  - TWF-065
+  - TWF-066
+  - TWF-067
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-070-tune-visible-steam-effect.md
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-070-tune-visible-steam-effect.md
 ---
 
 # TWF-070: Tune Visible Steam Effect
@@ -28,6 +28,8 @@ Steam is different from smoke: it should communicate water meeting heat, not fue
 ## Requirements
 
 - Use the existing pooled presentation and visual-field surface.
+- Prefer field-based steam or vapor presentation over one effect object per wet hot cell.
+- Use compact deltas only to wake or bound visual regions; do not map one changed cell to one visible effect.
 - Prefer Timberborn-native steam or vapor-like prefabs before custom art.
 - Tune presentation concerns such as prefab choice, scale, placement, lifetime, intensity thresholds, and water-versus-smoke selection.
 - Keep water suppression semantics in the GPU simulation and adapter inputs; do not add Timberborn-owned fire rules.
@@ -54,3 +56,4 @@ Steam is different from smoke: it should communicate water meeting heat, not fue
 ## Notes
 
 - If current visual-field channels cannot distinguish steam cleanly from smoke, record the smallest shader or visual-field follow-up instead of forcing misleading presentation.
+- Relevant design references: `docs/DESIGN.md` section 17 and `docs/ARCHITECTURE.md` "Field Visual Presentation Service".

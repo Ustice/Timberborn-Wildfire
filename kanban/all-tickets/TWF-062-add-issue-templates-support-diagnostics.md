@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: true
 dependencies:
-   - TWF-056
-   - TWF-060
+  - TWF-056
+  - TWF-060
 write_scope:
-   - .github/**
-   - README.md
-   - docs/**
-   - kanban/all-tickets/TWF-062-add-issue-templates-support-diagnostics.md
+  - .github/**
+  - README.md
+  - docs/**
+  - kanban/all-tickets/TWF-062-add-issue-templates-support-diagnostics.md
 ---
 
 # TWF-062: Add Issue Templates Support Diagnostics

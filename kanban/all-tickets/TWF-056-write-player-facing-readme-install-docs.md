@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: true
 dependencies:
-   - TWF-048
-   - TWF-055
+  - TWF-048
+  - TWF-055
 write_scope:
-   - README.md
-   - docs/**
-   - release/**
-   - kanban/all-tickets/TWF-056-write-player-facing-readme-install-docs.md
+  - README.md
+  - docs/**
+  - release/**
+  - kanban/all-tickets/TWF-056-write-player-facing-readme-install-docs.md
 ---
 
 # TWF-056: Write Player Facing README Install Docs

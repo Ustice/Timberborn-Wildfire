@@ -5,15 +5,15 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-012
-   - TWF-017
-   - TWF-019
-   - TWF-028
+  - TWF-012
+  - TWF-017
+  - TWF-019
+  - TWF-028
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - scripts/invoke-timberborn-command.ts
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-029-add-qa-readiness-command.md
+  - src/Wildfire.Timberborn/**
+  - scripts/invoke-timberborn-command.ts
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-029-add-qa-readiness-command.md
 ---
 
 # TWF-029: Add QA Readiness Command

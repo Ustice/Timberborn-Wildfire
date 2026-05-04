@@ -5,13 +5,13 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-033
-   - TWF-035
+  - TWF-033
+  - TWF-035
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-036-apply-building-burnout-consequences.md
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-036-apply-building-burnout-consequences.md
 ---
 
 # TWF-036: Apply Building Burnout Consequences

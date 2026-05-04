@@ -5,14 +5,14 @@ role: qa
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-053
-   - TWF-055
-   - TWF-058
+  - TWF-053
+  - TWF-055
+  - TWF-058
 write_scope:
-   - docs/TEST_PLAN.md
-   - docs/HANDOFF.md
-   - release/**
-   - kanban/all-tickets/TWF-059-run-release-candidate-clean-install-qa.md
+  - docs/TEST_PLAN.md
+  - docs/HANDOFF.md
+  - release/**
+  - kanban/all-tickets/TWF-059-run-release-candidate-clean-install-qa.md
 ---
 
 # TWF-059: Run Release Candidate Clean Install QA

@@ -5,11 +5,11 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-032
+  - TWF-032
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-033-bind-first-delta-consequence.md
+  - src/Wildfire.Timberborn/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-033-bind-first-delta-consequence.md
 ---
 
 # TWF-033: Bind First Delta Consequence
@@ -57,18 +57,18 @@ Bind one concrete Timberborn-facing consequence to non-zero fire deltas and prov
 - Deterministic test note: existing `TimberbornFireDeltaConsumerTests.ConsumeRoutesChangedCellsToAdapterSinksAndSummarizesTelemetry` already covers changed-cell routing into the debug visual sink surface and telemetry. I did not add new tests because this worker write scope does not include `tests/**`.
 - Live QA expectation: after `qa-delta-stimulus`, accept `Player.log` proof of the non-zero dispatch and delta-consumer pass plus a follow-up command result where the persistent sink-backed `last_delta_consumer_debug_visual_cells` counter is greater than `0`. The follow-up command may show `last_delta_count=0` if later simulator ticks have already settled the stimulus.
 - Worker evidence 2026-05-02:
-   - `git diff --check` passed.
-   - `dotnet test` passed: 82 tests.
-   - `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
-   - Deployed the final adapter with `bun scripts/deploy-timberborn-mod.ts --apply --clean --skip-asset-bundle --lock-timeout=120`.
-   - Loaded and unpaused the latest save with `bun scripts/load-latest-save-and-unpause.ts --launch --wait=240`; artifact directory: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/latest-save-startup/2026-05-02T14-49-26-796Z`.
-   - `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=6 --require-advanced-tick` returned `success=true`, `simulator_integrated=true`, `tick_count=49`, `queued_changes=1`, and `last_delta_consumer_debug_visual_cells=1`.
-   - `Player.log` showed `wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state`.
-   - `Player.log` showed `wildfire_timberborn_dispatch_completed tick=50 delta_count=2` and `wildfire_timberborn_delta_consumer_completed tick=50 changed_cells=2 debug_visual_cells=1 started_burning=1 ... gameplay_consequences=1 alerts=1`.
-   - `bun scripts/invoke-timberborn-command.ts status --wait=6 --require-advanced-tick` later returned `success=true`, `simulator_integrated=true`, `tick_count=62`, and `last_delta_consumer_debug_visual_cells=1`; `last_delta_count` had already returned to `0` by that later status sample.
+  - `git diff --check` passed.
+  - `dotnet test` passed: 82 tests.
+  - `dotnet build Wildfire.slnx` passed with 0 warnings and 0 errors.
+  - Deployed the final adapter with `bun scripts/deploy-timberborn-mod.ts --apply --clean --skip-asset-bundle --lock-timeout=120`.
+  - Loaded and unpaused the latest save with `bun scripts/load-latest-save-and-unpause.ts --launch --wait=240`; artifact directory: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/latest-save-startup/2026-05-02T14-49-26-796Z`.
+  - `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus --wait=6 --require-advanced-tick` returned `success=true`, `simulator_integrated=true`, `tick_count=49`, `queued_changes=1`, and `last_delta_consumer_debug_visual_cells=1`.
+  - `Player.log` showed `wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state`.
+  - `Player.log` showed `wildfire_timberborn_dispatch_completed tick=50 delta_count=2` and `wildfire_timberborn_delta_consumer_completed tick=50 changed_cells=2 debug_visual_cells=1 started_burning=1 ... gameplay_consequences=1 alerts=1`.
+  - `bun scripts/invoke-timberborn-command.ts status --wait=6 --require-advanced-tick` later returned `success=true`, `simulator_integrated=true`, `tick_count=62`, and `last_delta_consumer_debug_visual_cells=1`; `last_delta_count` had already returned to `0` by that later status sample.
 - Worker follow-up 2026-05-02:
-   - Revised `docs/TEST_PLAN.md` and this ticket to explicitly accept the final-code evidence shape: non-zero dispatch plus consumer `Player.log` pair, followed by persistent sink-backed command status.
-   - Did not recapture a non-zero command result because the live command polling can miss the transient `last_delta_count` window while still proving the consequence sink persisted.
+  - Revised `docs/TEST_PLAN.md` and this ticket to explicitly accept the final-code evidence shape: non-zero dispatch plus consumer `Player.log` pair, followed by persistent sink-backed command status.
+  - Did not recapture a non-zero command result because the live command polling can miss the transient `last_delta_count` window while still proving the consequence sink persisted.
 
 ## Tech-Lead Review
 

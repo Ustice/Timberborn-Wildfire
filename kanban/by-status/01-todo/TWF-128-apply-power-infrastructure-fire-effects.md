@@ -1,0 +1,1 @@
+../../all-tickets/TWF-128-apply-power-infrastructure-fire-effects.md

@@ -36,7 +36,7 @@
 - [x] Bind QA command bridge to a running Timberborn invocation surface.
 - [x] Dispatch the GPU simulator on a fixed cadence.
 - [x] Consume compact deltas for overlays and gameplay consequences.
-- [ ] Validate first live gameplay loop.
+- [x] Validate first live gameplay loop.
 
 ## Phase 5: Optimization And Polish
 
@@ -44,67 +44,72 @@
 - [ ] Tune visual output.
 - [x] Add runtime diagnostics.
 
-## Next Three Sprint Plan
+## Current Sprint Plan
 
-### Sprint 1: Prove The Live GPU Loop
+Detailed sprint boundaries live in [../kanban/sprint-planning.md](../kanban/sprint-planning.md). Sprint 5 closeout lives in [../kanban/sprints/sprint-05.md](../kanban/sprints/sprint-05.md), and the active Sprint 6 charter lives in [../kanban/sprints/sprint-06.md](../kanban/sprints/sprint-06.md).
 
-Use the existing live-delta tickets to prove the simulator can be safely stimulated, can produce non-zero compact deltas from the real GPU path, can bind one narrow consequence, and can produce profiling evidence.
+### Completed Gameplay Foundation
 
-- `TWF-031`: add the guarded live stimulus.
-- `TWF-032`: prove non-zero live GPU deltas.
-- `TWF-033`: bind the first Timberborn-facing consequence.
-- `TWF-034`: record live dispatch profiling and decide whether `TWF-011` should be promoted.
+- [x] Sprint 1: prove the live GPU loop.
+- [x] Sprint 2: make fire affect Timberborn through the first bounded consequence lanes.
+- [x] Sprint 3: make fire legible to players through visual-field binding, pooled effects, tuning, and alerts.
+- [x] Sprint 4: tune game feel, settle release-blocking simulation decisions, and validate the first coherent live gameplay loop.
 
-### Sprint 2: Make Fire Affect Timberborn
+### Sprint 5: Safety Rails And Test Surfaces
 
-Done. Once non-zero deltas were proven, this sprint expanded the adapter-side gameplay surface without moving fire rules into Timberborn.
+Goal: make the next gameplay work reproducible and safe before broader world-consequence implementation begins.
 
-- [x] `TWF-035`: expand Timberborn material mapping.
-- [x] `TWF-036`: apply building burnout consequences from deltas.
-- [x] `TWF-037`: update a fire overlay from changed cells.
-- [x] `TWF-038`: register water suppression changes.
+First ready wave:
 
-### Sprint 3: Make Fire Legible To Players
+- [x] `TWF-049`: add compatibility probes.
+- [ ] `TWF-064`: investigate building burnout pause consequence. Blocked on live Timberborn launch.
+- [x] `TWF-065`: add screen recording QA tooling.
+- [x] `TWF-093`: validate enabled save/reload.
+- [x] `TWF-094`: validate disabled-mod save recovery.
+- [x] `TWF-096`: add release settings framework.
+- [x] `TWF-114`: define resource fuel and flammability catalog.
+- [x] `TWF-118`: add generated world-consequence scenario save tool.
+- [x] `TWF-126`: add ticket implementation-notes hygiene pass.
 
-After gameplay consequences exist, connect GPU visual output and player-facing feedback. Promote `TWF-011` into this sprint only if `TWF-034` shows full-grid dispatch is too expensive under a meaningful live workload.
+Follow-on gates:
 
-- `TWF-039`: bind the GPU visual field to a Timberborn visual surface.
-- `TWF-040`: add pooled fire, smoke, and ash effects.
-- `TWF-041`: tune visual output with shader snapshots and live evidence.
-- `TWF-042`: add a player-facing fire alert or status surface.
+- [x] `TWF-095`, then `TWF-047`: re-enable lifecycle and parent save/reload validation.
+- [ ] `TWF-050`: GPU asset failure hardening after compatibility probes. Blocked on live Timberborn launch.
+- [ ] `TWF-097`: enable/disable safety setting after settings framework. Deterministic implementation passed review; live QA is blocked.
+- [ ] `TWF-119`: generated scenario validation after scenario-save tool. Blocked on live Timberborn launch.
 
-### Sprint 4: Tune Game Feel And Rules
+### Sprint 6: Fire Feel And Field Presentation
 
-After the first player-visible loop exists, tune the actual fire behavior and settle the design decisions that affect how the system feels in normal play.
+Goal: make fire, smoke, ash, and steam readable, then tune core fire behavior from recording evidence.
 
-- `TWF-043`: tune spread, burn, heat-loss, and suppression constants.
-- `TWF-044`: resolve release-blocking simulation design decisions.
-- `TWF-045`: add accepted shader snapshots for release scenarios.
-- `TWF-046`: validate the first coherent gameplay loop.
+First ready wave:
 
-### Sprint 5: Harden Saves Settings Compatibility
+- [ ] `TWF-066`: tune visible fire effect. Reviewed deterministic implementation is blocked on live Timberborn recording evidence.
+- [ ] `TWF-088`: tune fire spread pace. Reviewed deterministic implementation is blocked on command-responsive loaded-save and low-resolution recording evidence.
+- [ ] `TWF-089`: tune fuel burn-down duration. Reviewed deterministic implementation is blocked on `TWF-088` live acceptance and burn-duration recording evidence.
+- [ ] `TWF-090`: tune water suppression behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and suppression recording evidence.
+- [ ] `TWF-091`: tune structure vertical fire behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and structure recording evidence.
+- [ ] `TWF-092`: tune burnout cooling behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and burnout/cooling recording evidence.
 
-After the loop feels coherent, harden the mod against real saves, settings changes, compatibility drift, and failure modes.
+### Sprint 7: World Consequence Core
 
-- `TWF-047`: validate save, reload, disable, and re-enable behavior.
-- `TWF-048`: add release settings with conservative defaults.
-- `TWF-049`: add Timberborn compatibility probes and degraded-mode logs.
-- `TWF-050`: harden GPU and asset failure modes.
-- `TWF-051`: make the performance promotion decision for active frontier optimization.
+Goal: make fire damage the world in durable, resource-accounted ways.
 
-### Sprint 6: Release Prep And Steam Workshop
+First ready wave:
 
-After hardening, prepare the project for a public release through Steam Workshop as the official first distribution channel.
+- [x] `TWF-075`: add burn damage state foundation.
+- [ ] `TWF-076`: apply crop burn consequences. Reviewed deterministic implementation is blocked on live crop-burn QA evidence.
+- [ ] `TWF-084`: apply tree burn consequences. Reviewed deterministic implementation is blocked on live tree-burn QA evidence.
+- [ ] `TWF-116`: define explosive storage fire behavior. Awaiting contract review after research-only pass.
+- [ ] `TWF-117`: classify infrastructure burn behavior. Awaiting classification review after research-only pass.
 
-- `TWF-052`: set up baseline GitHub CI.
-- `TWF-053`: add release packaging workflow.
-- `TWF-054`: add tagged-release GitHub CD workflow.
-- `TWF-055`: create release graphic and store metadata.
-- `TWF-056`: write player-facing README and install docs.
-- `TWF-057`: add changelog and versioning discipline.
-- `TWF-058`: validate cross-platform asset bundles.
-- `TWF-059`: run release-candidate clean install QA.
-- `TWF-060`: scrub debug and developer surfaces for release.
-- `TWF-061`: add license and attribution pass.
-- `TWF-062`: add issue templates and support diagnostics.
-- `TWF-063`: prepare Steam Workshop distribution.
+Follow-on gates:
+
+- [ ] `TWF-077`: apply structure burn damage rollback. Blocked on `TWF-064` live investigation.
+- [ ] `TWF-115`: apply stored goods burn consequences. Blocked on `TWF-116` contract acceptance and safe inventory APIs.
+
+### Later Sprints
+
+- Sprint 8: ash, contamination, and persistence.
+- Sprint 9: beavers and player feedback.
+- Sprint 10: release packaging and Steam Workshop.

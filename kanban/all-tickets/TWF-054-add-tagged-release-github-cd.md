@@ -5,13 +5,13 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-052
-   - TWF-053
+  - TWF-052
+  - TWF-053
 write_scope:
-   - .github/**
-   - scripts/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-054-add-tagged-release-github-cd.md
+  - .github/**
+  - scripts/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-054-add-tagged-release-github-cd.md
 ---
 
 # TWF-054: Add Tagged Release GitHub CD

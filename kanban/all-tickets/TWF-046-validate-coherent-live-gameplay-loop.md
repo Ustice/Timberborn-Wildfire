@@ -5,12 +5,12 @@ role: qa
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-043
-   - TWF-045
+  - TWF-043
+  - TWF-045
 write_scope:
-   - docs/TEST_PLAN.md
-   - docs/HANDOFF.md
-   - kanban/all-tickets/TWF-046-validate-coherent-live-gameplay-loop.md
+  - docs/TEST_PLAN.md
+  - docs/HANDOFF.md
+  - kanban/all-tickets/TWF-046-validate-coherent-live-gameplay-loop.md
 ---
 
 # TWF-046: Validate Coherent Live Gameplay Loop

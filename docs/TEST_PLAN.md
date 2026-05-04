@@ -16,6 +16,8 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Unity batchmode shader execution harness: opt-in local test loads `FireSim.compute`, dispatches a seeded `TWF-000` fixture, reads back final packed cells, compact deltas, and visual-field checksum through the existing shader snapshot harness.
 - GPU visual field wrapper contract: `wildfire.visual_fields` is allocated as one `float4`-equivalent entry per packed cell, full-grid dispatch receives the visual buffer, shader source writes visual samples from post-step packed cell values, and deterministic tests cover fire, smoke, ash, and visibility derivation.
 - Timberborn cell mapping scaffold: deterministic terrain/building/resource/water source folding into packed cells, named material bands for stockpile resources, vegetation, wood-like buildings, and non-burnable buildings, sorted `SetCell` change emission, field-width clamping, wet-cell overlay behavior, vertical footprint expansion, material priority, and out-of-bounds source rejection.
+- Timberborn resource fuel catalog: adapter-owned lookup for shipped `Good.*` ids maps `fuelValue`, `flammability`, `smokeProfile`, `residueQuality`, and `hazardClass` without leaking Timberborn ids into `Wildfire.Core`; tests cover unknown defaults, inert resources, dry burnable goods, food and medicine-like goods, volatile/explosive goods, and stockpile-source mapping.
+- Timberborn burn damage foundation: adapter-owned descriptor lookup, resource-catalog-backed damage capacity, stable target/cell ownership, changed-cell-to-single-owner resolution, multi-cell and vertical duplicate suppression, unknown-resource fail-closed behavior, optional delta-consumer sink telemetry, resource-accounting snapshot fields, and state capture/restore.
 - Timberborn QA command bridge scaffold: read-only `status` and `help` commands, simulator runtime state when available, searchable command request/result tokens, and explicit no-arbitrary-execution command dispatch.
 - Timberborn deploy pipeline scaffold: Bun/TypeScript deploy script, generated Wildfire manifest, managed assembly staging into `~/Documents/Timberborn/Mods/Wildfire/Scripts`, private FireSim and diagnostic AssetBundle staging into `~/Documents/Timberborn/Mods/Wildfire/ComputeShaders`, local build/deploy lock, dry-run/help output, and running-game guard for real deploy/remove.
 - Timberborn fixed-cadence dispatch scaffold: adapter initialization from mapped cells through an injected GPU simulator factory, external change registration through `IGpuFireSimulator.RegisterChange`, centralized cadence options, one dispatch per processed game update, compact-delta return/subscription surface, command-bridge status fields, and lifecycle log tokens for attach/init/change/wait/dispatch/readback/failure events.
@@ -28,6 +30,7 @@ Validation should prove the shared packed data model, deterministic scenario inp
 - Timberborn debug fire overlay state: the adapter consumes compact deltas, filters them to visual-state changes, stores the latest packed cell only for affected overlay indices, derives fuel/heat/water/burning/spent state from that packed cell, and exposes per-dispatch updated-cell counters separately from the persistent overlay cell count.
 - Timberborn player-facing fire alert state: compact delta alert events are aggregated into at most one native quick warning per dispatch, warning text reports new fire cells, burned-out cells, and max heat, and status telemetry exposes the last player alert tick, counts, notification send state, and presentation failures.
 - Runtime diagnostics: Unity and Timberborn GPU paths emit concise `wildfire_*` tokens for simulator initialization/disposal, queued change batches, dispatch kernel start/completion with elapsed milliseconds, compact delta readback counts, listener notification counts, and adapter startup/shutdown without logging per-cell changes.
+- Release enablement setting: `JasonKleinberg.Wildfire.release.wildfire_enabled` defaults to enabled when missing, accepts stable integer values `1` and `0`, falls back disabled for malformed or out-of-range values, reports invalid settings through `wildfire_release_setting_invalid`, exposes `wildfire_enabled` through status and `qa-readiness`, and deterministically gates QA simulator-change commands plus fixed-cadence dispatch when disabled.
 
 Run:
 
@@ -46,6 +49,41 @@ Run the real Unity compute-shader execution harness locally:
 ```bash
 WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
 ```
+
+## Resource Fuel Catalog
+
+`TWF-114` inspected installed Timberborn blueprints under `~/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/StreamingAssets/Modding/Blueprints`. The adapter catalog covers the 60 shipped `Good.*` resource ids found there, including materials, food, ingredients, liquids, medicine-like goods, volatile goods, and explosive goods. Unknown ids intentionally map to fuel `1`, flammability `0`, unresolved residue, and `Unknown` hazard so downstream destruction logic can stay conservative until the adapter resolves the name.
+
+Construction blueprint text scans found `GoodId` references for `Dirt`, `Extract`, `Fireworks`, `Log`, and `Water`; all are covered by the catalog. Natural-resource template scans found crop, bush, and tree templates that either map through their yielded goods or through the existing vegetation material band: `Birch`, `BlueberryBush`, `Canola`, `Carrot`, `Cassava`, `Cattail`, `ChestnutTree`, `CoffeeBush`, `Corn`, `Dandelion`, `Eggplant`, `Kohlrabi`, `Mangrove`, `Maple`, `Oak`, `Pine`, `Potato`, `Soybean`, `Spadderdock`, `Sunflower`, and `Wheat`.
+
+Deferred names for downstream tickets:
+
+- `TWF-115` should consume `TimberbornResourceFuelCatalog` for stored-good destruction and preserve unknown ids as searchable unresolved cases instead of escalating them to high hazard.
+- `TWF-116` owns explosive pulse behavior for `Explosives`, `Fireworks`, firework variants, and dynamite-like content; this catalog only marks hazard and packed-cell fuel/flammability.
+- `TWF-117` owns building and infrastructure classification for explosive-like or trigger-like building ids such as `Dynamite`, `DoubleDynamite`, `TripleDynamite`, and `Detonator`.
+- Recipe-only or pseudo ids remain unresolved until a downstream adapter observes them as stored goods: `BadwaterExtracted`, `Biofuel.Carrot`, `Biofuel.Potato`, `Biofuel.Spadderdock`, `Bot.Folktails`, `Bot.IronTeeth`, `BotChassis.Folktails`, `BotChassis.IronTeeth`, `BotHead.Folktails`, `BotHead.IronTeeth`, `BotLimb.Folktails`, `BotLimb.IronTeeth`, `FlowingBadwater`, `FlowingWater`, `SciencePoints`, `SciencePointsNumbercruncher`, `SciencePointsObservatory`, `ScrapMetal.Efficient`, and `Water.Efficient`.
+- Firework variant ids remain deferred to `TWF-116`: `CometBlue`, `CometRed`, `CometWhite`, `Fish`, `KamuroBlue`, `KamuroOrange`, `KamuroPink`, `KamuroRed`, `KamuroWhite`, `PalmBlue`, `PalmGold`, `PalmGreen`, `PeonyRedBlue`, `PeonyViolet`, `PeonyYellowGreen`, `Sparks`, and `Willow`.
+
+## Burn Damage Foundation
+
+`TWF-075` keeps burn-damage state deterministic and Timberborn-local. Automated coverage should prove that static descriptors do not store per-instance damage, target registration owns the stable entity/cell mapping, and downstream consequence tickets can consume bounded state without adding host-owned spread rules.
+
+Run:
+
+```bash
+dotnet test --filter FullyQualifiedName~TimberbornBurnDamageStateTests
+```
+
+Required deterministic evidence:
+
+- Descriptor lookup returns known static descriptors and safe unknown descriptors.
+- Damage capacity uses yielded goods and construction investment through `TimberbornResourceFuelCatalog`.
+- Unknown resource ids contribute no capacity and remain searchable in state/telemetry.
+- Resource-accounting fields, including `FuelValue`, `Flammability`, and `AccountedResourceIds`, survive into exposed state snapshots.
+- Changed simulation cells resolve to one owning target when footprints overlap.
+- Multi-cell and vertical footprints suppress duplicate damage within one dispatch.
+- Damage is bounded by target capacity and state can be captured/restored.
+- The optional delta-consumer burn-damage sink reports telemetry while remaining separate from crop, tree, structure, storage, explosive, ash, beaver, and UI consequences.
 
 ## Release Simulation Decision Validation
 
@@ -78,6 +116,25 @@ The JSON fixture contains:
 - Full-grid packed cell `values` in flat index order.
 
 Fixture files are deterministic for the same scenario, seed, dimensions, and layer. Shader harnesses should load the JSON, upload the `values` array as the initial packed grid, and use the selected layer metadata only as the preview or snapshot slice.
+
+## World Consequence Scenario Saves
+
+Use the TWF-118 generator to prepare copied Timberborn save archives for live world-consequence validation without writing directly into user saves:
+
+```bash
+bun scripts/generate-wildfire-scenario-save.ts --template "$HOME/Documents/Timberborn/ExperimentalSaves/Wildfire testing/Wildfire testing.timber" --dry-run
+bun scripts/generate-wildfire-scenario-save.ts --template /path/to/template-copy.timber --output-dir "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios/twf-118-check"
+```
+
+The adjacent `wildfire-scenario-manifest.json` is the validation contract for `TWF-119`. QA should inspect `template.entries`, `template.mapSize`, generated entity counts, and `result.schemaBlockers` before attempting a live load. Passing TWF-118 only proves archive inspection, structured JSON handling, overwrite protection, generated output writing, and manifest evidence; live Timberborn loading belongs to TWF-119.
+
+`TWF-119` live QA on 2026-05-03 used evidence root `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/TWF-119-qa-20260503T152225Z` and fixed artifact `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios/twf-131-generated-metadata-fix-20260503T1423Z/wildfire-world-consequence-scenario.timber`. Under active `caffeinate -disu`, Timberborn reached startup dialogs, main menu, Load Game UI, and loaded the exact generated save. The exact save then raised Timberborn Loading issues and deleted the generated manifest objects as invalid locations: badwater sources, water sources, Birch/Oak/Pine trees, Path, Small Tank, Large Pile, and Medium Warehouse. After Continue playing and unpause, `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=20 --require-advanced-tick` passed with `loaded_game_ready=true`, `width=128`, `height=128`, `depth=23`, and `tick_count=4`, but the scenario-content gate failed because the generated checkpoints were removed by Timberborn before validation.
+
+`TWF-132` changes the generator contract after that failure: while terrain/channel/support mutation is still unresolved, the generator no longer clones planned checkpoints into unvalidated coordinates. Instead, it emits survivor-expected checkpoints at existing template-supported BlockObject coordinates when enough matching template entities already exist, and records any shortage as `result.blockedPlacements`. The accepted worker artifact is `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios/twf-132-template-supported-checkpoints-20260503T154213Z`. Its manifest uses generator version `TWF-132.0`, reports 24 generated survivor-expected checkpoints, records six blocked placements, and preserves the Timberborn `save_metadata.json.Timestamp` format. Archive inspection showed the generated archive still has `2246` world entities because the survivor checkpoints refer to existing template-supported coordinates rather than injected clones. Generated checkpoints cover two badwater sources, four water sources, 12 tree checkpoints, one warehouse, one pile, one tank, and three path tiles; the remaining blockers are two missing additional badwater-source checkpoints and four missing carrot crop checkpoints.
+
+`TWF-119` narrowed live QA on 2026-05-03 used evidence root `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/TWF-119-qa-20260503T154926Z` and the reviewed `TWF-132` artifact. Under active `caffeinate -disu` PID `94422`, the artifact checksum matched the installed save at `~/Documents/Timberborn/ExperimentalSaves/Wildfire generated QA/Wildfire world consequence scenario TWF-119.timber`; static archive inspection matched all 24 manifest-declared survivor checkpoints before load. Load Game selection proof is `05-load-dialog-opened.png`, and `Player.log` confirms `Opening file: .../Wildfire world consequence scenario TWF-119.timber`. Timberborn loaded directly into the save with no Loading issues dialog, and the post-load log scan found no checkpoint deletion or invalid-location tokens. After unpause, `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=20 --require-advanced-tick` passed with `loaded_game_ready=true`, `simulator_integrated=true`, `width=128`, `height=128`, `depth=23`, and `tick_count=5`; `status` also passed. Treat this as a pass for the narrowed load-survival and manifest-checkpoint gate only. The original 50 by 50 layout, crop pads, full badwater source count, water/badwater flow layout, and storage inventory remain outside this accepted rerun because the manifest still records those blockers.
+
+Overwrite safety is part of the generator contract. The tool only writes under the real `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios` tree, validates `--name` as a lowercase slug, rejects `~/Documents/Timberborn` save roots, refuses symlinked output ancestors, and accepts `--overwrite` only when the existing output folder already contains a `wildfire-scenario-manifest.json` marker from `wildfire-scenario-save-generator`.
 
 ## Shader Snapshot Coverage
 
@@ -200,19 +257,81 @@ WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unit
 
 Live Timberborn QA for this tuning pass should deploy the mod, load and unpause a save, run `qa-delta-stimulus` or `qa-building-burnout-stimulus` for visible fire, run `qa-water-suppression-stimulus` plus `qa-readiness --require-advanced-tick --require-water-changed` for suppression proof, capture screenshots of the visible loop, and copy `Player.log` tokens showing the command request/result, queued GPU changes, compute dispatch/readback, visual/presentation update, and water-change consumer count.
 
+## TWF-088 Spread Pace Evidence
+
+`TWF-088` tunes only spread pace by changing `FIRE_BURNING_NEIGHBOR_HEAT_BONUS` from `3` to `5` in `FireSim.compute`. The shader still reads only the six cardinal 3D neighbors; ignition threshold, burn pressure, fuel duration, water suppression, structure behavior, burnout cooling, visual scale, prefab choice, and player alerts are unchanged.
+
+Accepted deterministic shader evidence for this tuning pass lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-088-spread-pace/`:
+
+- `single-ignition`, seed `21`, grid `5x5x1`, ticks `2`: per-tick deltas `[5, 5]`, final hot cells `5`, burning cells `0`, max heat `7`, fuel total `175`, checksum `visual-fnv1a32:F37C248E`.
+- `line-of-fuel`, seed `42`, grid `12x5x1`, ticks `4`: per-tick deltas `[5, 5, 5, 5]`, final hot cells `5`, burning cells `2`, max heat `12`, fuel total `103`, checksum `visual-fnv1a32:5F54D28E`.
+- `sparse-forest`, seed `73`, grid `16x10x1`, ticks `3`: per-tick deltas `[5, 5, 5]`, final hot cells `5`, burning cells `1`, max heat `12`, fuel total `978`, checksum `visual-fnv1a32:82C9CDCA`.
+- `building-cluster`, seed `91`, grid `14x10x1`, ticks `3`: per-tick deltas `[5, 5, 5]`, final hot cells `1`, burning cells `0`, max heat `2`, fuel total `1179`, checksum `visual-fnv1a32:5D5FCA57`.
+- `water-barrier`, seed `42`, grid `12x5x1`, ticks `4`: per-tick deltas `[5, 5, 5, 5]`, final hot cells `1`, burning cells `0`, max heat `3`, water cells `5`, fuel total `385`, checksum `visual-fnv1a32:5947E999`.
+
+Interpretation:
+
+- Dry contiguous fuel has a livelier edge: `line-of-fuel` now keeps changing through tick `4` and ends with two burning cells instead of one.
+- Broad single ignition and sparse forest remain bounded at the accepted snapshot tick counts rather than becoming immediate runaway fires.
+- The building-cluster scenario records persistent neighbor heat through every tick, but does not change structure behavior or fuel duration in this ticket.
+- The water barrier remains a barrier at the accepted tick count: one hot cell, zero burning cells, and all five water cells still present.
+
+Accepted live Timberborn QA evidence for the low-resolution spread recording lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-088-live-20260503T161336Z/`. The rerun deployed `~/repos/wildfire-TWF-088` at commit `8eff5cf6adf85cf8729ab19c1abdb592a7f549e3`, launched and loaded the latest save, unpaused successfully, and proved command responsiveness with `qa-readiness --require-advanced-tick` at `tick_count=13`. During `scripts/record-timberborn-qa.ts --mode low --duration=20`, `qa-delta-stimulus` queued center cell `188480` at `x=64 y=64 z=11`, and follow-up `qa-readiness --require-advanced-tick --require-nonzero-delta` passed at `tick_count=33` with `last_delta_count=1`, `last_delta_consumer_changed_cells=1`, `last_delta_consumer_gameplay_consequences=1`, `updated_visual_regions=1`, `player_fire_alert_notification_sent=true`, and `pooled_fire_effects_native_prefab=CampfireFire`.
+
+Live artifact highlights:
+
+- Deploy transcript: `twf-088-live-20260503T161336Z/deploy-transcript.txt`.
+- Load/unpause transcript and screenshots: `twf-088-live-20260503T161336Z/latest-save-startup/`.
+- Command transcripts: `qa-readiness-before-stimulus.txt`, `spread-stimulus-and-readiness-transcript.txt`, and `final-status-transcript.txt`.
+- Recording metadata and movie: `screen-recordings/2026-05-03T16-15-07-544Z-low/recording-metadata.json` and `recording.mov`.
+- Copied `Player.log` and token excerpts: `Player.log`, `player-log-spread-tokens.txt`, and `player-log-stimulus-focused-tokens.txt`.
+- Final state: `caffeinate -disu` PID `94422` remained active, Timberborn PID `50103` remained running, and no shared QA lock file was present in either lock root.
+
+## TWF-089 Fuel Burn-Duration Evidence
+
+TWF-089 deterministic shader evidence lives in the ticket worktree and remains the accepted proof for low, medium, and high burn-duration constants until the live bridge exposes selectable fuel-duration targets. The reviewed implementation in `~/repos/wildfire-TWF-089` at commit `082077d2b99819c4b448b0ba9fe758ed81f4f412` accepts depletion ticks of low fuel `7`, medium fuel `15`, and high fuel `27` in `tests/Wildfire.Core.Tests/ShaderSnapshots/twf-089/`.
+
+Live QA on 2026-05-03 deployed `~/repos/wildfire-TWF-089`, loaded and unpaused a command-responsive save, and preserved evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-089-live-20260503T162018Z/`. The run proved deploy/readiness and captured a normal-angle 35 second recording at `recordings/2026-05-03T16-22-04-247Z-high/recording.mov`; `qa-readiness --require-advanced-tick` passed at `tick_count=18`, and `qa-delta-stimulus` queued the fixed center cell `188480` at `x=64 y=64 z=11` with `set_cell=13311`. Follow-up status showed the visible/readable medium fixed-stimulus path at tick `39`: `last_delta_consumer_started_burning=1`, `active_pooled_fire_effects=1`, native prefab `CampfireFire`, `player_fire_alert_notification_sent=true`, and max heat `15`.
+
+Do not treat that live run as accepting the low/medium/high burn-duration gate. That run used only the old fixed `qa-delta-stimulus` path, which did not allow QA to select low, medium, and high fuel inputs or read durable per-target burn start/depletion ticks. The sampled status window from tick `38` through `77` never reported `last_delta_consumer_fuel_depleted>0`.
+
+Live QA retry preflight on 2026-05-03 stopped before low/medium/high sampling because no verified deploy source contained both sides of the gate. Evidence lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-089-live-retry-preflight-20260503T163733Z/`. `main` contained the TWF-134 command bridge fields but not the TWF-089 `FireSim.compute` fuel-burn-down tuning; `~/repos/wildfire-TWF-089` contained the accepted shader tuning at `082077d2b99819c4b448b0ba9fe758ed81f4f412` but not `qa-burn-duration-stimulus` or `burn_duration_proof_*`. The loaded Timberborn save was command-responsive under `caffeinate -disu` PID `94422`, but deployed `help` still listed only `help,qa-building-burnout-stimulus,qa-delta-stimulus,qa-readiness,qa-water-suppression-stimulus,status`, and `qa-readiness` had no durable burn-duration proof fields. Do not rerun this live gate until the deploy source is a single reconciled tree containing both the TWF-089 shader tuning and the TWF-134 proof command.
+
+`TWF-135` reconciles that split deploy source by importing the reviewed `TWF-089` shader tuning and deterministic shader artifacts into the checkout that already has the reviewed `TWF-134` command bridge. After `TWF-135` review passes, use this reconciled tree for the low, medium, and high live proof retry.
+
+The live proof retry should use the QA-only command `qa-burn-duration-stimulus <target>`, where `<target>` is exactly `low`, `medium`, or `high`. The command queues one bounded target cell through the existing safe simulator change path and does not accept arbitrary coordinates or packed-cell values. The target bands are low fuel `4`, medium fuel `9`, and high fuel `15`; each command result reports `target_index`, `target_x`, `target_y`, `target_z`, `initial_fuel`, `set_cell`, and `timeout_ticks`.
+
+After recording, QA should sample `status` or `qa-readiness` and preserve the durable `burn_duration_proof_*` fields:
+
+- `burn_duration_proof_target`
+- `burn_duration_proof_target_index`
+- `burn_duration_proof_target_x`
+- `burn_duration_proof_target_y`
+- `burn_duration_proof_target_z`
+- `burn_duration_proof_initial_fuel`
+- `burn_duration_proof_queued_tick`
+- `burn_duration_proof_burn_start_tick`
+- `burn_duration_proof_depletion_tick`
+- `burn_duration_proof_elapsed_burn_ticks`
+- `burn_duration_proof_timeout_ticks`
+- `burn_duration_proof_timed_out`
+- `burn_duration_proof_status`
+
+A passing live burn-duration proof needs one recorded run per target or an equivalent bounded sequence, copied `Player.log`, command output for the stimulus, and final `status` or `qa-readiness` output showing `burn_duration_proof_status=depleted` with non-placeholder burn start, depletion, and elapsed tick fields. If depletion is not observed by the timeout window, the status surface reports `burn_duration_proof_status=no_depletion_timeout` and `burn_duration_proof_timed_out=true`, which is evidence but not acceptance for `TWF-089`.
+
 ## Release Shader Snapshot Evidence
 
 `TWF-045` accepts the release shader snapshot set after the `TWF-043` game-feel tuning and `TWF-044` conservative release decisions. Exact accepted capture JSONs are committed under `tests/Wildfire.Core.Tests/ShaderSnapshots/release/`; those files contain the durable `finalPackedCells` arrays and every per-tick delta record with `cellIndex`, `oldCell`, and `newCell`. Local fixture, capture, and Unity log mirrors live under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-045-release-snapshots/`.
 
-| Scenario | Seed | Grid | Ticks | Per-tick deltas | Final semantic summary | Visual checksum | Accepted files |
-| --- | ---: | --- | ---: | --- | --- | --- | --- |
-| `single-ignition` | `21` | `5x5x1` | `2` | `[5, 5]` | hot `5`, burning `0`, max heat `7`, water cells `0`, fuel total `175` | `visual-fnv1a32:50C4978E` | `single-ignition-seed21-5x5x1.fixture.json`, `single-ignition-seed21-5x5x1-tick2.capture.json`, `single-ignition-unity.log` |
-| `line-of-fuel` | `42` | `12x5x1` | `4` | `[5, 5, 5, 2]` | hot `5`, burning `1`, max heat `12`, water cells `0`, fuel total `104` | `visual-fnv1a32:120F70AE` | `line-of-fuel-seed42-12x5x1.fixture.json`, `line-of-fuel-seed42-12x5x1-tick4.capture.json`, `line-of-fuel-unity.log` |
-| `water-barrier` | `42` | `12x5x1` | `4` | `[5, 5, 5, 5]` | hot `1`, burning `0`, max heat `2`, water cells `5`, fuel total `385` | `visual-fnv1a32:40818F57` | `water-barrier-seed42-12x5x1.fixture.json`, `water-barrier-seed42-12x5x1-tick4.capture.json`, `water-barrier-unity.log` |
-| `vertical-fuel-column` | `17` | `5x5x4` | `4` | `[6, 6, 2, 1]` | hot `6`, burning `1`, max heat `11`, water cells `0`, fuel total `44` | `visual-fnv1a32:5F05530F` | `vertical-fuel-column-seed17-5x5x4.fixture.json`, `vertical-fuel-column-seed17-5x5x4-tick4.capture.json`, `vertical-fuel-column-unity.log` |
-| `sparse-forest` | `73` | `16x10x1` | `3` | `[5, 5, 5]` | hot `5`, burning `1`, max heat `12`, water cells `0`, fuel total `978` | `visual-fnv1a32:E4355BFA` | `sparse-forest-seed73-16x10x1.fixture.json`, `sparse-forest-seed73-16x10x1-tick3.capture.json`, `sparse-forest-tick3-unity.log` |
-| `building-cluster` | `91` | `14x10x1` | `3` | `[5, 1, 5]` | hot `1`, burning `0`, max heat `1`, water cells `0`, fuel total `1179` | `visual-fnv1a32:D12ED5D7` | `building-cluster-seed91-14x10x1.fixture.json`, `building-cluster-seed91-14x10x1-tick3.capture.json`, `building-cluster-tick3-unity.log` |
-| `mixed-terrain` | `123` | `16x10x3` | `3` | `[6, 6, 6]` | hot `5`, burning `0`, max heat `4`, water cells `10`, fuel total `3286` | `visual-fnv1a32:67BFDEEA` | `mixed-terrain-seed123-16x10x3.fixture.json`, `mixed-terrain-seed123-16x10x3-tick3.capture.json`, `mixed-terrain-tick3-unity.log` |
+| Scenario               |  Seed | Grid      | Ticks | Per-tick deltas | Final semantic summary                                                  | Visual checksum           | Accepted files                                                                                                                             |
+| ---------------------- | ----: | --------- | ----: | --------------- | ----------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `single-ignition`      |  `21` | `5x5x1`   |   `2` | `[5, 5]`        | hot `5`, burning `0`, max heat `7`, water cells `0`, fuel total `175`   | `visual-fnv1a32:50C4978E` | `single-ignition-seed21-5x5x1.fixture.json`, `single-ignition-seed21-5x5x1-tick2.capture.json`, `single-ignition-unity.log`                |
+| `line-of-fuel`         |  `42` | `12x5x1`  |   `4` | `[5, 5, 5, 2]`  | hot `5`, burning `1`, max heat `12`, water cells `0`, fuel total `104`  | `visual-fnv1a32:120F70AE` | `line-of-fuel-seed42-12x5x1.fixture.json`, `line-of-fuel-seed42-12x5x1-tick4.capture.json`, `line-of-fuel-unity.log`                       |
+| `water-barrier`        |  `42` | `12x5x1`  |   `4` | `[5, 5, 5, 5]`  | hot `1`, burning `0`, max heat `2`, water cells `5`, fuel total `385`   | `visual-fnv1a32:40818F57` | `water-barrier-seed42-12x5x1.fixture.json`, `water-barrier-seed42-12x5x1-tick4.capture.json`, `water-barrier-unity.log`                    |
+| `vertical-fuel-column` |  `17` | `5x5x4`   |   `4` | `[6, 6, 2, 1]`  | hot `6`, burning `1`, max heat `11`, water cells `0`, fuel total `44`   | `visual-fnv1a32:5F05530F` | `vertical-fuel-column-seed17-5x5x4.fixture.json`, `vertical-fuel-column-seed17-5x5x4-tick4.capture.json`, `vertical-fuel-column-unity.log` |
+| `sparse-forest`        |  `73` | `16x10x1` |   `3` | `[5, 5, 5]`     | hot `5`, burning `1`, max heat `12`, water cells `0`, fuel total `978`  | `visual-fnv1a32:E4355BFA` | `sparse-forest-seed73-16x10x1.fixture.json`, `sparse-forest-seed73-16x10x1-tick3.capture.json`, `sparse-forest-tick3-unity.log`            |
+| `building-cluster`     |  `91` | `14x10x1` |   `3` | `[5, 1, 5]`     | hot `1`, burning `0`, max heat `1`, water cells `0`, fuel total `1179`  | `visual-fnv1a32:D12ED5D7` | `building-cluster-seed91-14x10x1.fixture.json`, `building-cluster-seed91-14x10x1-tick3.capture.json`, `building-cluster-tick3-unity.log`   |
+| `mixed-terrain`        | `123` | `16x10x3` |   `3` | `[6, 6, 6]`     | hot `5`, burning `0`, max heat `4`, water cells `10`, fuel total `3286` | `visual-fnv1a32:67BFDEEA` | `mixed-terrain-seed123-16x10x3.fixture.json`, `mixed-terrain-seed123-16x10x3-tick3.capture.json`, `mixed-terrain-tick3-unity.log`          |
 
 Each Unity log has `phase=compile`, `phase=buffer`, per-tick `phase=dispatch`, and per-tick `phase=readback` `status=ok` tokens. The opt-in test `UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled` regenerates each scenario through real Unity compute execution and compares the full capture against the committed JSON with `ShaderSnapshotComparison`, so a moved heat/fuel/water value or changed old/new delta record fails even if aggregate totals remain unchanged. Per-tick GPU append order is not part of the production contract; comparison sorts expected and actual delta records by `cellIndex`, `oldCell`, and `newCell` before comparing the record set. The Unity batchmode runner resets the append-buffer counter with `deltas.SetCounterValue(0)` before every tick dispatch, reads it with `ComputeBuffer.CopyCount`, and the non-Unity wrapper test `TickResetsAppendCounterBeforeEveryFullGridDispatch` keeps the repeated-tick reset contract covered in normal `dotnet test`.
 
@@ -259,7 +378,54 @@ Accepted evidence:
 - Copied log evidence includes `Player.log`, the baseline-bounded `Player-run-window.log`, `Player-run-window-wildfire-events.txt`, and `twf-046-live-loop-summary.txt`. The strict run-window failure scan in `Player-run-window-failures.txt` has `0` lines.
 - Final QA lock state: no lock files under `~/Library/Application Support/Timberborn/WildfireQA/locks` or `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/locks`. Timberborn remained running because QA attached to a pre-existing process.
 
-Follow-up note: two direct `qa-building-burnout-stimulus` attempts produced burned-out alert/status evidence and matched one building cell on the first attempt, but `building_burnout_applied_consequences` remained `0`. This did not block `TWF-046` because the live loop already produced compact-delta gameplay consequences from fire start/stop decisions, but a later hardening ticket should investigate why the pausable-building pause consequence was not applied in this loaded save.
+Follow-up note: `TWF-064` re-read the preserved building-burnout evidence and found that the first direct `qa-building-burnout-stimulus` did apply one pause consequence at dispatch tick `1768`, but the later `qa-readiness` proof point was sampled at tick `1770` after volatile last-dispatch fields had returned to `0`. Building-burnout proof should therefore use durable `last_positive_building_burnout_applied_*` status fields plus the original nonzero `Player.log` consumer token, not only the latest `last_delta_consumer_building_burnout_*` values.
+
+## Enabled Save Reload Evidence
+
+`TWF-093` accepts the baseline enabled-mod save/reload path. Live QA on 2026-05-03 triggered fire activity, saved `Wildfire testing (7)` at `Cycle 23, day 14`, reloaded `/Users/jasonkleinberg/Documents/Timberborn/ExperimentalSaves/Wildfire testing/Wildfire testing (7).timber` with Wildfire still enabled, and preserved evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-093-enabled-save-reload-20260503T040447Z`.
+
+Accepted evidence:
+
+- Pre-save `qa-delta-stimulus` and readiness output reported `last_delta_count=2`, `started_burning=1`, `visual_effect_events=2`, `gameplay_consequences=1`, and `alerts=1`.
+- `Player.log` recorded the save as `Saving game to Wildfire testing - Wildfire testing (7) at 2026-05-03 00:06:57Z` followed by `Saved game in 0.39s`.
+- Post-reload attach reached the loaded save, unpaused, and recovered command/status output with `loaded_game_ready=true`, `simulator_integrated=true`, `visual_field_surface_bound=true`, dimensions `128x128x23`, and fresh dispatch ticks.
+- Post-reload stimulus proved the visual, alert, and command paths again with `last_delta_count=2`, `visual_effect_events=2`, `alerts=1`, `active_pooled_fire_effects=1`, `notification_sent=true`, and `pooled_fire_effect_presentation_failures=0`.
+- `Player-run-window-critical-scan.txt` had `0` lines. A transient first post-reload nonzero-delta check missed the narrow `last_delta_count` window, and rerun evidence in `18-post-reload-second-after-delta-readiness.txt` passed the same gate.
+
+Use this evidence as the enabled-save baseline before disabled-mod recovery (`TWF-094`) and re-enable rebuild validation (`TWF-095`).
+
+## Disabled Mod Recovery Evidence
+
+`TWF-094` accepts the disabled-mod recovery path for the current local player-facing workflow. Live QA on 2026-05-03 used Timberborn's main-menu `Mods` dialog to disable `Wildfire v0.1.0.0`, relaunched with Wildfire still unchecked, loaded `Wildfire testing (7)`, accepted Timberborn's missing-mod warning, and preserved evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-094-disabled-mod-recovery-20260503T041547Z`.
+
+Accepted evidence:
+
+- Pre-disable `qa-readiness` proved the save was loaded with Wildfire enabled and the simulator integrated.
+- The disable path used Timberborn UI state, not deploy-folder cleanup: `13-main-menu-mods-dialog-before-disable.png`, `14-main-menu-mods-dialog-wildfire-disabled.png`, `15-after-mods-ok.png`, and `16-main-menu-after-disable-ok.png`.
+- After relaunch, Wildfire remained unchecked in the Mods dialog, and `Player.log` active-mod output excluded Wildfire.
+- Loading `Wildfire testing (7)` with Wildfire disabled produced Timberborn's missing-mod warning: `You are trying to load a game without mods that it was saved with.` Choosing `Yes` loaded the save into gameplay.
+- `qa-readiness` timed out waiting for `command-outbox.txt`, which is expected with Wildfire disabled because the Wildfire runtime and QA bridge are absent.
+- Copied disabled-load logs had no critical exception, error, or crash scan hits.
+
+This is recoverable disabled-load evidence, not re-enable evidence. `TWF-095` should start from the preserved disabled/missing loaded state when possible.
+
+## Reenable Runtime Rebuild Evidence
+
+`TWF-095` accepts the re-enable runtime rebuild path after disabled-mod recovery. QA artifacts on 2026-05-03 show Wildfire re-enabled through Timberborn's Mods dialog, Timberborn restarted, and `Wildfire testing (7)` loaded again with runtime state rebuilt. Evidence lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-095-reenable-runtime-rebuild-20260503T050000Z`.
+
+Accepted evidence:
+
+- The run started from the preserved `TWF-094` disabled/missing loaded state and re-enabled `Wildfire v0.1.0.0` through screenshots `06-main-menu-mods-before-reenable.png`, `07-main-menu-mods-wildfire-reenabled.png`, and `08-after-mods-ok-reenabled.png`.
+- After restart, `Player-after-explicit-wildfire-testing-7-load.log` listed `Wildfire (v0.1.0.0)`, loaded compute and diagnostic assets, bound the visual-field surface, initialized the simulator at `128x128x23`, and completed runtime initialization.
+- A transient malformed command race appears in `23-qa-readiness-after-reenable-explicit-save.txt` and `24-status-after-reenable-explicit-save.txt` as `Unknown_command_'qa-read...'`; recovery command `25-status-after-command-race-recovery.txt` passed with `runtime_loaded=true`, `loaded_game_ready=true`, `simulator_integrated=true`, dimensions `128x128x23`, and `visual_field_surface_bound=true`.
+- After unpause, `27-qa-readiness-after-unpause-advanced-tick.txt` passed with `tick_count=4`, `queued_changes=0`, `visual_field_surface_cells=376832`, and `message=loaded_game_ready`.
+- Passive log scan found only existing non-Wildfire Unity `gpath.c:115` assertions; no stale simulator crash or Wildfire runtime failure was present in the accepted re-enable evidence.
+
+Use this as the child evidence for parent lifecycle gate `TWF-047`.
+
+## Save Lifecycle Parent Acceptance
+
+`TWF-047` accepts the save lifecycle gate from the three child runs above. The coherent story uses `Wildfire testing (7)` across enabled save/reload, local player-facing Mods-dialog disable, missing-mod warning recovery, Mods-dialog re-enable, restart, explicit reload, runtime rebuild, and post-unpause readiness. No save lifecycle defect was exposed, so the accepted parent gate requires no production-code change.
 
 ## Timberborn Validation
 
@@ -287,6 +453,12 @@ The Timberborn adapter polls that inbox from `TimberbornQaCommandFileBridge`, fo
 Current `TWF-008` coverage adds a Timberborn game-context runtime singleton for fixed-cadence dispatch. `TimberbornFireRuntime` is the command-bridge state provider, so `status` and `qa-readiness` report `bridge_alive=true`, `runtime_loaded`, `loaded_game_ready`, `simulator_integrated`, dimensions, `tick_count`, `queued_changes`, and `last_delta_count` after a simulator is attached. When no simulator factory has been attached by the live host yet, simulator fields intentionally return `placeholder` and `loaded_game_ready=false`.
 
 `qa-readiness` is intentionally a loaded-game readiness probe, not a UI automation command. It does not navigate menus, click Timberborn UI, load saves, delete saves, invoke arbitrary `VisualElement` callbacks, mutate the Wildfire grid, or trigger debug/destructive actions. Treat `success=true` as "the command was handled safely"; treat `loaded_game_ready=true` plus numeric dimensions and tick fields as the loaded-game readiness signal. For live QA that needs to prove fixed-cadence dispatch is advancing, unpause the loaded save first and add `--require-advanced-tick`; the command script then fails unless the result includes `tick_count` greater than `0`.
+
+`TWF-097` adds the release safety switch `JasonKleinberg.Wildfire.release.wildfire_enabled`. Missing settings should report `wildfire_enabled=true` to preserve default enabled behavior. A stored value of `0` should report `wildfire_enabled=false`, `loaded_game_ready=false`, and `message=wildfire_disabled` from `qa-readiness` while still allowing `status`, `qa-readiness`, and `help` to return command/status output. Live disabled-state QA should load a save, capture `status` or `qa-readiness` output with `wildfire_enabled=false`, attempt `qa-delta-stimulus` and confirm it fails with `message=wildfire_disabled` without increasing `queued_changes`, then wait longer than one cadence interval and confirm no new `wildfire_timberborn_dispatch_completed` token appears after the disabled-state status token. The searchable disabled dispatch token is `wildfire_timberborn_dispatch_skipped_disabled`. Re-enable lifecycle evidence remains covered by `TWF-095`; do not treat this setting ticket as full save/re-enable lifecycle proof.
+
+`TWF-049` adds startup compatibility probes before the runtime enters normal loaded-save evidence collection. QA should capture `Player.log` `wildfire_timberborn_compatibility_probe_summary ... status=<compatible|degraded|failed> ... required_passed=<n>/<n> ... optional_passed=<n>/<n> ... degraded_features=<tokens>` and at least one `wildfire_timberborn_compatibility_probe_result` token for each release-facing lane: `terrain`, `building_burnout`, `compute`, `diagnostic_assets`, `visual_effects`, and `player_alerts`. A release-compatible live run should show `compatibility_probe_status=compatible` or an intentionally accepted `compatibility_probe_status=degraded` in a follow-up `qa-readiness` or `status` result; `compatibility_probe_status=failed` is a blocker because the required compute-backed runtime path or required Timberborn terrain surface is unavailable. Required failures must also produce `wildfire_timberborn_runtime_initialization_blocked` or `wildfire_timberborn_runtime_initialize_rejected`, and `qa-readiness` must report `loaded_game_ready=false`.
+
+The building-burnout probes are optional compatibility probes. Missing or changed `IBlockService` or `PausableBuilding` surfaces should degrade the `building_burnout` lane and become follow-up evidence for `TWF-064`, but they should not block healthy terrain mapping or compute dispatch by themselves. The compute bundle probe is intentionally stronger than `File.Exists`: it checks that the selected private bundle exists, is non-empty, and starts with a Unity AssetBundle header such as `UnityFS`. This catches missing, empty, or plainly wrong content in `TWF-049`; full AssetBundle loading, FireSim asset lookup, and kernel validation remain the runtime load path and should be hardened further by `TWF-050`. Optional degradation, such as missing native visual-effect prefabs or the diagnostic bundle, must be called out in the QA notes with the exact `compatibility_probe_degraded_features` token.
 
 `TWF-031` adds one non-read-only QA stimulus command: `qa-delta-stimulus`. This command has no user-supplied coordinates or parameters. It requires an initialized `TimberbornFireRuntime`, chooses the deterministic center cell of the current fire grid, and queues one fixed `SetCell` external change through `IGpuFireSimulator.RegisterChange`; it does not mutate Timberborn terrain, buildings, saves, UI state, or simulator buffers directly. The command result message includes `target_index`, `target_x`, `target_y`, `target_z`, and `set_cell`; the same result token also reports current `queued_changes` and `tick_count` so QA can tie the request to the next simulator dispatch.
 
@@ -320,7 +492,11 @@ The first command queues the bounded water change and should report `queued_chan
 
 `TWF-040` consumes that surface from the presentation lane. The pooled effect sink is bound as the Timberborn visual-effect sink, uses compact delta events only to choose candidate visual regions, reads at most the configured number of changed-cell visual samples per dispatch, and keeps active effect anchors capped by `MaxActiveEffects` instead of creating one Timberborn object per simulated cell. Visual presentation exceptions are caught and logged as `wildfire_timberborn_visual_effect_sink_failed` or `wildfire_timberborn_pooled_fire_effects_failed`; compact-delta gameplay, building, alert, and dispatch telemetry must continue after those presentation failures. The live presenter searches loaded Timberborn/Unity resources for native-looking fire or smoke prefabs such as `CampfireFire`, `Sparks_Trail`, `SmelterSmoke`, and `SteamEngineSmoke`. If no native prefab is resolved, visible effects are disabled honestly instead of creating invisible fallback anchors; QA should treat `pooled_fire_effects_visible_enabled=false` or `pooled_fire_effects_native_prefab_resolved=false` as a visible-effects blocker, not a screenshot pass. `status` and `qa-readiness` should include `active_pooled_fire_effects`, `updated_visual_regions`, `last_nonzero_updated_visual_regions`, `last_nonzero_updated_visual_regions_tick`, `max_pooled_fire_effects`, `max_updated_visual_regions`, `pooled_fire_effect_presentation_failures`, `pooled_fire_effects_visible_enabled`, `pooled_fire_effects_native_prefab_resolved`, and `pooled_fire_effects_native_prefab`. Passing live QA should capture a screenshot or visual artifact after `qa-delta-stimulus`, copy `Player.log`, and include log tokens for `wildfire_timberborn_delta_consequence_sink_bound lane=pooled_fire_smoke_ash_effects`, either `wildfire_timberborn_pooled_fire_effect_native_prefab_resolved ... prefab=<name>` or the explicit unavailable token, `wildfire_timberborn_pooled_fire_effects_updated ... active_pooled_effects=<count> ... last_nonzero_updated_visual_regions=<count>`, the TWF-039 surface bind/update tokens, and the final QA lock state. Screenshot approval remains a QA step because unit tests prove selection, routing, pooling limits, exception isolation, native-resolution telemetry, and counters, not rendered-pixel quality.
 
-`TWF-036` binds the first building burnout consequence to the same compact-delta consumer pass. The Timberborn adapter considers only changed cells delivered by compact deltas, checks the live `IBlockService` for pausable buildings at each changed fire-grid coordinate, and calls `PausableBuilding.Pause()` only when a matched building cell reaches fuel depletion. This is intentionally bounded and reversible: it does not destroy buildings, mutate the fire grid, or write simulator state from Timberborn. The QA-only `qa-building-burnout-stimulus` bridge command has no user-supplied coordinates. It scans the current fire grid for the first unpaused pausable building cell, then queues exactly two ordered `SetCell` changes through `IGpuFireSimulator.RegisterChange` for that one cell: a building-like primed cell followed by a fuel-zero cell. If every scanned pausable building is already paused, the command reports no usable target instead of queueing a stimulus that cannot increment `building_burnout_applied_consequences`. This keeps the target discoverable without arbitrary coordinate mutation and lets the next dispatch emit a fuel-depleted compact delta on a known pausable building cell. Until the helper script allowlist is expanded, invoke the bridge directly with `printf 'qa-building-burnout-stimulus\n' > "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt"`, then read `command-outbox.txt` after it updates. Capture the command result message fields `target_index`, `target_x`, `target_y`, `target_z`, `scanned_cells`, `primed_cell`, `set_cell`, and `queued_set_cell_changes=2`. Live QA should then capture `Player.log` `wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause`, `wildfire_timberborn_qa_building_burnout_stimulus_queued`, `wildfire_timberborn_changes_registered source=qa_building_burnout_prime`, `wildfire_timberborn_changes_registered source=qa_building_burnout_stimulus`, and `wildfire_timberborn_delta_consumer_completed ... building_burnout_considered_deltas=<nonzero> ... building_burnout_matched_cells=<nonzero> ... building_burnout_applied_consequences=<nonzero>`. The follow-up `qa-readiness` or `status` result must include `last_delta_consumer_building_burnout_considered_deltas`, `last_delta_consumer_building_burnout_matched_cells`, and `last_delta_consumer_building_burnout_applied_consequences`, with all three above zero for pass evidence.
+`TWF-066` live QA on 2026-05-03 proved the command-responsive and native-prefab portions of the fire-effect gate but did not accept the visual readability gate. Evidence from `~/repos/wildfire-TWF-066` branch `codex/TWF-066-visible-fire-effect` commit `199047d8b7ac854d102c708854506a1bc1b6e62e` lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-live-rapid-20260503T153723Z`, `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-recording-20260503T153735Z/2026-05-03T15-37-36-337Z-high`, and `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-recording-command-20260503T153750Z`. Rapid `status` polling after `qa-delta-stimulus` reported `active_pooled_fire_effects=1`, `pooled_fire_effects_visible_enabled=true`, `pooled_fire_effects_native_prefab_resolved=true`, `pooled_fire_effects_native_prefab=CampfireFire`, and `pooled_fire_effect_presentation_failures=0`, with matching `wildfire_timberborn_pooled_fire_effects_updated` tokens in `Player.log`. The captured normal-camera screenshots still showed only a tiny fire spark, not a legible fire effect, so this run is blocker evidence rather than accepted fire-effect tuning evidence.
+
+`TWF-066` Fire-only readability follow-up live QA on 2026-05-03 also remains blocker evidence, not acceptance. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-live-readable-20260503T160350Z` proves deployment, command-responsive loaded-save startup, high-resolution recording, copied `Player.log`, and no presentation failures. `Player.log` reported `active_pooled_effects=1`, `visible_effects_enabled=true`, `native_effect_prefab_resolved=true`, `native_effect_prefab=CampfireFire`, and `presentation_failures=0` during active fire ticks `35`, `36`, and `73`, but extracted normal-camera frames `recording-second-frame-5s.png` and `recording-second-frame-6s.png` still show only a small orange flicker in the trees. Future TWF-066 acceptance must produce high-resolution recording and screenshots where the fire effect itself is plainly legible at normal gameplay camera angles, not merely active in counters or visible as alert text.
+
+`TWF-036` binds the first building burnout consequence to the same compact-delta consumer pass. The Timberborn adapter considers only changed cells delivered by compact deltas, checks the live `IBlockService` for pausable buildings at each changed fire-grid coordinate, and calls `PausableBuilding.Pause()` only when a matched building cell reaches fuel depletion. This is intentionally bounded and reversible: it does not destroy buildings, mutate the fire grid, or write simulator state from Timberborn. The QA-only `qa-building-burnout-stimulus` bridge command has no user-supplied coordinates. It scans the current fire grid for the first unpaused pausable building cell, then queues exactly two ordered `SetCell` changes through `IGpuFireSimulator.RegisterChange` for that one cell: a building-like primed cell followed by a fuel-zero cell. If every scanned pausable building is already paused, the command reports no usable target instead of queueing a stimulus that cannot increment `building_burnout_applied_consequences`. This keeps the target discoverable without arbitrary coordinate mutation and lets the next dispatch emit a fuel-depleted compact delta on a known pausable building cell. Until the helper script allowlist is expanded, invoke the bridge directly with `printf 'qa-building-burnout-stimulus\n' > "$HOME/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt"`, then read `command-outbox.txt` after it updates. Capture the command result message fields `target_index`, `target_x`, `target_y`, `target_z`, `scanned_cells`, `primed_cell`, `set_cell`, and `queued_set_cell_changes=2`. Live QA should then capture `Player.log` `wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause`, `wildfire_timberborn_qa_building_burnout_stimulus_queued`, `wildfire_timberborn_changes_registered source=qa_building_burnout_prime`, `wildfire_timberborn_changes_registered source=qa_building_burnout_stimulus`, and `wildfire_timberborn_delta_consumer_completed ... building_burnout_considered_deltas=<nonzero> ... building_burnout_matched_cells=<nonzero> ... building_burnout_applied_consequences=<nonzero>`. The follow-up `qa-readiness` or `status` result must include `last_positive_building_burnout_applied_tick` and `last_positive_building_burnout_applied_count`, with the count above zero for pass evidence; the volatile `last_delta_consumer_building_burnout_*` fields may return to zero after later settled dispatches and should be used only to correlate the most recent dispatch when the command is read immediately.
 
 `TWF-042` adds the first player-facing alert loop. The alert sink is still compact-delta driven: it consumes only `TimberbornFireAlertEvent` values derived from changed simulator cells, aggregates them per dispatch, and sends at most one native Timberborn quick warning with new-fire count, burned-out-cell count, and max heat. It does not add command UI, arbitrary coordinates, or core gameplay rules. Live QA should use an existing stimulus that causes alert deltas, such as `qa-delta-stimulus` for new fire cells or `qa-building-burnout-stimulus` for fuel depletion, then capture a screenshot showing the quick warning in the native Timberborn notification area. Capture `Player.log` tokens for `wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert`, `wildfire_timberborn_delta_consumer_completed ... alerts=<nonzero>`, and `wildfire_timberborn_player_fire_alert_updated ... notification_sent=true ... fire_started=<count> ... fuel_spent=<count> ... max_heat=<heat>`. A follow-up `qa-readiness` or `status` result must include `last_delta_consumer_alerts=<nonzero>`, `last_player_fire_alert_tick`, `last_player_fire_alert_started_fires`, `last_player_fire_alert_fuel_spent`, `last_player_fire_alert_max_heat`, `player_fire_alert_notifications`, `player_fire_alert_notification_sent=true`, and `player_fire_alert_presentation_failures=0`. Screenshot approval remains a QA step because unit tests prove aggregation, notification routing, failure isolation, and status telemetry, not the rendered on-screen placement.
 
@@ -369,6 +545,65 @@ Default required startup tokens are:
 - `wildfire_timberborn_runtime_simulator_initialized`.
 
 Use `--require-command-status` only when a save is already loaded and the command bridge is expected to answer a read-only `status` request with `success=true` and `simulator_integrated=true`. Failure tokens after the `Player.log` baseline fail the run even when all success tokens are present. The startup harness does not click through the startup Mods dialog, load saves, unpause the simulation, or replace the live gameplay validation owned by later QA tickets. Screenshots are captured only on failure by default, or when explicitly requested with `--screenshot=always`.
+
+## Timberborn Screen Recording QA
+
+Use the screen recording utility when visual tuning or behavior tuning needs time-based evidence instead of still screenshots. The utility wraps macOS `screencapture -v`, stays outside Timberborn UI automation, and writes a timestamped evidence directory under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/screen-recordings/` by default.
+
+High-resolution mode records the full selected display and is intended for fire, smoke, ash, steam, and alert readability:
+
+```bash
+bun scripts/record-timberborn-qa.ts --mode high --duration=10 --save-name <save-name> --command "qa-delta-stimulus then qa-readiness --require-nonzero-delta"
+```
+
+Low-resolution mode records a centered `1280x720` rectangle by default and is intended for faster comparison of spread, suppression, burnout, and pacing:
+
+```bash
+bun scripts/record-timberborn-qa.ts --mode low --duration=20 --scenario-name <scenario-name> --command "qa-water-suppression-stimulus then qa-readiness --require-water-changed"
+```
+
+Use dry-run mode before live capture to confirm the source, duration, output path, Timberborn PID, and exact `screencapture` command:
+
+```bash
+bun scripts/record-timberborn-qa.ts --dry-run --mode high --duration=6 --save-name <save-name>
+bun scripts/record-timberborn-qa.ts --dry-run --mode low --duration=6 --scenario-name <scenario-name>
+```
+
+Each live capture writes:
+
+- `recording.mov`: the macOS screen recording.
+- `recording-metadata.json`: mode, duration, display or rectangle/window bounds, frame-rate note, save/scenario name, Timberborn PID, command sequence, output path, file size, command bridge inbox/outbox paths, copied Player.log paths, bounded log-tail path, and final QA lock-state path.
+- `recording-plan.txt`: human-readable plan and replay command.
+- `command-sequence.txt`: reviewer-facing command or action sequence supplied through repeated `--command` flags or `--commands-file`.
+- `Player.log`: a best-effort copy of the current Timberborn log when available.
+- `Player-run-window-tail.log`: a best-effort bounded tail of the current Timberborn log for quick review.
+- `command-outbox.txt`: a best-effort copy of the current command bridge outbox when available.
+- `final-qa-lock-state.txt`: the final state of the known Wildfire QA lock roots.
+
+The companion files are intentionally best-effort because the recording tool does not own the command bridge sequence. QA must still attach the command output that created the visible state, and should replace or supplement `Player-run-window-tail.log` with a tighter bounded run-window excerpt when a long-running `Player.log` makes the tail ambiguous.
+
+Pass `--rect x,y,w,h` for an explicit crop, `--source window` to resolve the current Timberborn window bounds, `--display <number>` for a non-default display, and `--include-cursor` or `--show-clicks` only when the pointer is relevant to the evidence. `--dry-run --source window` and `--no-activate --source window` resolve bounds through System Events without activating Timberborn; if bounds cannot be resolved without activation, dry-run reports `window_bounds_status=unresolved_without_activation` and live no-activate capture fails before recording. The tool can record default input audio with `--audio`, but release QA should prefer silent clips unless narration is intentionally part of the evidence.
+
+Display metadata records the `system_profiler` display order and resolution for the selected display when available. macOS does not expose global multi-display origins through that source, so explicit `--rect` remains the reviewable source of truth for multi-display crops.
+
+Live acceptance for recording-dependent tuning requires at least one short high-resolution clip and one short low-resolution clip, the command output that created the visible state, copied `Player.log` or bounded log excerpts for the same run window, and the final shared QA lock state. The recording tool does not run `qa-*` commands by itself; run the guarded command bridge utilities before or during capture and put the exact sequence in metadata.
+
+## Release Settings Framework
+
+Wildfire release settings are owned by `src/Wildfire.Timberborn/WildfireReleaseSettings.cs`. The settings owner is Timberborn-facing and adapter-local: it reads player preferences from Timberborn settings, never from save data, and does not introduce Timberborn dependencies into `Wildfire.Core`.
+
+The stable key shape is:
+
+| Key                                                       | Type  | Default | Invalid Value Behavior                                      |
+| --------------------------------------------------------- | ----- | ------- | ----------------------------------------------------------- |
+| `JasonKleinberg.Wildfire.release.settings_schema_version` | `int` | `1`     | Fall back to `1` and log `wildfire_release_setting_invalid` |
+| `JasonKleinberg.Wildfire.release.wildfire_enabled`        | `int` | `1`     | Fall back to disabled (`0`) and log `wildfire_release_setting_invalid` |
+
+The key prefix for later child settings is `JasonKleinberg.Wildfire.release.`. Missing keys use defaults without warning. Present but malformed or unsupported values fall back to conservative defaults and surface through `wildfire_release_settings ... invalid_values=<n>` plus one warning token per invalid key.
+
+The current native API decision is deliberately narrow. Installed Timberborn exposes `Timberborn.SettingsSystem.ISettings` with safe typed getters, so the framework reads through that first-party backend. Declared integer keys, including the schema key and `JasonKleinberg.Wildfire.release.wildfire_enabled`, use `GetSafeInt` so Timberborn `PlayerPrefs` integer storage is authoritative. The richer community-style `ModSettingsOwner` / `ModSetting<T>` UI types were not present in the installed Timberborn managed assemblies or local mod DLLs during `TWF-096`; child tickets that need an in-game settings UI should either add that dependency explicitly or bind a native Timberborn UI surface without duplicating settings storage.
+
+Deterministic coverage lives in `tests/Wildfire.Core.Tests/WildfireReleaseSettingsTests.cs` and must cover missing defaults, malformed values, unsupported schema values, and log severity for invalid values. Live Timberborn QA is not required for this framework ticket; future child settings can add live proof for their user-facing controls.
 
 ## Timberborn QA Utilities
 

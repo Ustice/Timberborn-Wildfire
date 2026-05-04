@@ -75,14 +75,14 @@ bit  12:    terrain       0-1
 bits 13-15: heatLoss      0-7
 ```
 
-| Property | Range | Meaning |
-| --- | --- | --- |
-| fuel | 0-15 | Remaining burnable material. |
-| heat | 0-15 | Local thermal energy band. |
-| flammability | 0-3 | How easily the cell ignites. |
-| water | 0-3 | Local wetness / suppression level. |
-| terrain | 0-1 | Whether the cell represents solid terrain/building material. |
-| heatLoss | 0-7 | How quickly the cell loses heat. |
+| Property     | Range | Meaning                                                      |
+| ------------ | ----- | ------------------------------------------------------------ |
+| fuel         | 0-15  | Remaining burnable material.                                 |
+| heat         | 0-15  | Local thermal energy band.                                   |
+| flammability | 0-3   | How easily the cell ignites.                                 |
+| water        | 0-3   | Local wetness / suppression level.                           |
+| terrain      | 0-1   | Whether the cell represents solid terrain/building material. |
+| heatLoss     | 0-7   | How quickly the cell loses heat.                             |
 
 The following values are derived, not stored:
 
@@ -453,6 +453,10 @@ Current derivation:
 - Ash intensity comes from terrain cells with low/no fuel and residual heat. Because `PackedCell` has no burn-history field, ash disappears after heat decays; this is a temporary approximation, not stored ash state.
 - Alpha is visibility, the maximum of heat, fire, smoke, and ash intensity.
 
+Fire and smoke presentation should be field-based rather than per-tile. The visual field is still sampled at cell resolution, but renderer and effect systems should cluster, blur, threshold, or otherwise aggregate neighboring intensity into larger coherent regions. A convincing fire front should look like connected flames and smoke volumes, not hundreds of small independent tile effects.
+
+Compact deltas should wake or bound visual regions, but they should not dictate one effect object per changed cell. The presentation layer can place a small number of pooled anchors, meshes, particles, or material-driven volumes over active field regions and scale them by sampled intensity, spread, and region size.
+
 Rule:
 
 Visual effects can be GPU-driven. Gameplay/entity changes remain C#-driven through deltas.
@@ -535,7 +539,94 @@ if (VisualStateChanged(delta.OldCell, delta.NewCell))
 }
 ```
 
-## 20. Implementation Phases
+## 20. World Consequence Design
+
+Fire consumes burnable world value. The simulator owns fire fields and compact deltas; Timberborn-owned consequence services translate those deltas into resource loss, disabled work, construction rollback, beaver status effects, ash fields, alerts, visuals, and persistence.
+
+The current first-pass planning bridge for stored goods, scenario-save generation, and faction fire-response ideas lives in [world-consequence-first-pass.md](world-consequence-first-pass.md).
+
+### Burn Damage State
+
+Burn damage is instance state attached to spec-backed entities, not static spec data. `BuildingSpec`, `HarvestableSpec`, `CuttableSpec`, and similar Timberborn specs can declare static burn material descriptors, but each live building, plant, crop, or tree needs its own persisted burn damage state.
+
+For plants, crops, and trees, damage capacity is based on resource yield. As fuel burns away, the corresponding harvest or cutting yield is reduced. Full burn damage destroys the remaining yield, kills the plant, and switches the entity to its accepted dead, burned, or charred presentation.
+
+For buildings, damage capacity is based on the resources invested in construction. Each consumed resource should have a fuel score and flammability score so wood, planks, treated planks, paper, food, metal, contaminated goods, and non-burnable materials can be tuned independently. As building fuel is consumed, the building loses construction value rather than simply disappearing.
+
+Once a building is damaged or on fire, it should close and become unusable. Beavers should not repair it while fire or dangerous heat remains. After the fire is out, repair should work like construction: missing resources must be delivered again, and graphics should return through construction-stage visuals as each repaired level is reached. Burned incomplete forms can be retextured to show charred aftermath.
+
+Stored items burn as inventory contents, not as part of the storage building's construction value. A warehouse, pile, or tank can therefore lose structural construction value through building burn damage while also losing stored logs, planks, paper, food, explosives, or other goods through inventory accounting. Explosives and volatile goods should start as bounded hazardous contents: high flammability, a short unstable threshold, stock destruction, and a limited heat or fire pulse into nearby simulation cells. They should not start as arbitrary physics blasts, terrain mutation, or direct entity deletion.
+
+Multi-cell entities need mapping in both directions. A Timberborn entity can occupy several simulation cells, and a changed cell must be able to resolve back to the owning burn-damage entity without applying duplicate damage. Tall buildings, large buildings, large plants, and vertical footprints should roll up cell damage into one coherent instance state.
+
+### Beaver Field Effects
+
+Beaver effects are split by danger type.
+
+Smoke and toxic air use a respiratory progression:
+
+- Coughing: slowdown and work inefficiency.
+- Choking: incapacitated behavior, preferably using a sleep-like state if that is the safest Timberborn API path.
+- Death: only after sustained severe exposure, trapped behavior, or accepted live evidence that the transition is safe.
+
+Heat and flame use a burn progression:
+
+- Singed: normal injury-style debuff.
+- Burned: contamination-like severe injury that prevents work until treated or healed.
+- Death: only after sustained direct heat or flame exposure, and only after avoidance, work cancellation, debuff, and incapacitation paths are tested.
+
+Active fire cells should be forbidden or heavily avoided pathing zones when Timberborn exposes a safe pathing hook. Hot, smoky, or toxic cells should interrupt work and increase path cost. Beavers assigned to burning buildings, crops, or trees should abandon the job. The implementation should prove exposure telemetry first, then debuffs, then incapacitation, then death. Because the fire simulation advances across multiple game ticks, these tests can be staged across separate evidence passes.
+
+### Ash And Fertility
+
+Visual ash and gameplay ash are separate concepts.
+
+The existing GPU visual-field ash channel remains temporary output derived from heat, fuel, and terrain. It should not be treated as durable gameplay storage.
+
+Persistent ash and fertility should live in a Timberborn-side ash field service. The service owns where ash exists, how strong it is, how long it lasts, whether it boosts plants, and whether it can later be collected as a good. Plant specs can declare that a plant responds to ash fertility, but the ash field service owns the field.
+
+Ash quality should be explicit:
+
+- `none`: no ash effect.
+- `fertile`: boosts plant growth.
+- `spent`: visible or historical ash without growth benefit.
+- `tainted`: contaminated ash with no fertility benefit unless a later decontamination mechanic says otherwise.
+
+For the first gameplay pass, fertile ash can increase plant growth speed. Later work may allow beavers to collect fertile ash and place it in fields. Controlled burns can become a useful strategy for fuel management and soil improvement, but the field should have caps, decay, or application limits so burning land is not always optimal.
+
+Underbrush, grass, and overgrowth are future fuel-load mechanics. A later design can model overgrown trees or irrigated fields as fast-burning surface fuel while mature trees burn more slowly. That should stay separate from the first ash-field implementation.
+
+### Contamination Interaction
+
+Fire never reduces contamination.
+
+Contaminated burnable material can burn, but it should produce toxic smoke and tainted ash instead of fertile ash. Contaminated plants, crops, and trees lose their resources and die like normal plants, but their aftermath should not create a growth bonus while contamination remains. Contaminated buildings and contaminated stored goods can contribute tainted residue or exposure when burned.
+
+Contaminated soil remains contaminated after fire. Ash deposited on contaminated soil should be `tainted`, not `fertile`, unless a later explicit decontamination mechanic changes that.
+
+Water suppresses fire and can create steam. Badwater or contaminated water should also suppress fire, but heating it should create toxic steam or toxic smoke exposure. Fire should not turn badwater into safe water.
+
+Beavers exposed to contaminated smoke, toxic steam, or tainted aftermath can advance the respiratory or burn progressions faster and may also use Timberborn-native badwater contamination effects if live API tests prove that path safe. Wildfire should reuse native contamination graphics and treatment flows where possible, but it should not silently conflate ordinary smoke, burn injury, and native contamination if the player needs to understand the cause.
+
+### Player Feedback
+
+Player feedback should aggregate consequences instead of spamming one alert per burned tree or crop. Alerts and status surfaces should distinguish at least these classes:
+
+- Active fire or new fire.
+- Building damaged or closed by fire.
+- Plant, crop, or resource loss.
+- Beaver danger, injury, incapacitation, or death.
+- Fertile ash or tainted ash aftermath when that becomes gameplay-relevant.
+
+### Active Fire Response
+
+Active suppression is future work, but it should preserve faction identity and use simulation inputs rather than giving Timberborn adapter code ownership of fire rules.
+
+Ironteeth should favor Fire Wardens: higher construction and resource cost, fewer beavers required, protective clothing, and sprayer-like water application. Folktails should favor Fire Bells and bucket brigades: lower resource cost, more beaver labor, nearest natural water first, stored water fallback, and one-beaver-per-dump suppression. Emberpelts should favor direct tail-stamping suppression that is effective but carries higher singed or burned injury risk.
+
+Fans and constructible fire berms are separate tactical tools. Fans should interact with smoke fields first and only later with fire airflow if the simulation can express the tradeoff. Fire berms are a cleaner spread-control mechanic and can block or reduce spread through a non-burnable constructed barrier.
+
+## 21. Implementation Phases
 
 ### Phase 1: Core Data Contracts
 
@@ -576,7 +667,7 @@ if (VisualStateChanged(delta.OldCell, delta.NewCell))
 - Tune gameplay delta readback.
 - Add runtime diagnostics.
 
-## 21. Testing Strategy
+## 22. Testing Strategy
 
 ### Unit Tests
 
@@ -613,7 +704,7 @@ Keep seeded scenarios for:
 - Building cluster.
 - Mixed terrain/fuel/water.
 
-## 22. Important Design Rules
+## 23. Important Design Rules
 
 1. The sim owns mutation.
 
@@ -647,22 +738,23 @@ Keep seeded scenarios for:
 
    It adapts to the simulator; it does not own fire rules.
 
-## 23. Release Simulation Decisions
+## 24. Release Simulation Decisions
 
 The initial release should stay conservative and ship the already-proven GPU path unless later live evidence creates a specific blocker. These decisions close the release-blocking questions from `TWF-044`; deferred items remain valid future work but should not block Sprint 4 or the first public release.
 
-| Topic | Initial Release Decision | Evidence And Follow-Up |
-| --- | --- | --- |
-| Tick cadence | Keep Timberborn dispatch on the centralized fixed cadence, currently one simulator tick per second of accumulated game time. | `TimberbornFireCadence.Default` is one second, live QA/readiness tokens already report advancing dispatch ticks, and `TWF-043` may tune constants inside that cadence without changing the boundary. A release setting can expose cadence later through `TWF-048` only after live-loop validation proves it is safe. |
-| Diagonal spread | Keep the 6-neighbor 3D model: left, right, north, south, below, and above. Do not add diagonal neighbors for the first release. | `FireSim.compute` implements exactly these six in-bounds reads. Diagonal spread would change scenario behavior, tuning, and snapshot expectations, so it is deferred until after release unless a specific accepted design ticket promotes it. |
-| Wind | Do not include wind in the release simulation. | There is no current wind input, storage field, shader rule, or Timberborn adapter contract. Wind remains a future mechanic and must not be smuggled into host-owned fire rules. |
-| Ash storage | Keep ash derived from heat, fuel, and terrain; do not add persistent ash storage for release. | `PackedCell` has no burn-history field, `TWF-041` accepted derived ash as a visual approximation, and adding storage would change the packed-cell contract. Persistent ash needs a future packed-format/design ticket. |
-| Vertical building mapping | Keep current footprint expansion across explicit `x`, `y`, and `z` cells. Each occupied vertical cell maps to a packed simulation cell through the Timberborn adapter. | `TimberbornCellFootprint` and mapper tests already cover vertical expansion. This keeps tall structures understandable without adding building-specific fire rules to Timberborn. |
-| Water semantics | Treat water as a bounded suppression/wetness band, not fluid simulation. It may come from standing water, wet terrain, or queued suppression changes, but in all cases it only writes the packed `water` field and reduces heat/ignition pressure. | `TWF-038` live evidence proves queued `SetWater=3` suppression through the GPU path. The project non-goals still exclude fluid dynamics and continuous water values. |
-| Heat-loss source | Keep heat loss material-driven for release. Timberborn terrain, resource, vegetation, and building adapters choose deterministic heat-loss bands before packing cells. | The mapper already centralizes material bands and clamps them to the packed field width. Biome, weather, or season-driven heat loss should be future adapter input that registers changes, not core rule ownership. |
-| Full-grid versus active frontier | Keep full-grid dispatch as the Sprint 4 release baseline. Active-frontier optimization remains deferred until profiling shows a measured bottleneck, with the final release-scope decision owned by `TWF-051` after coherent live-loop validation. | `TWF-034` profiling on the current `128x128x23` live save found full-grid dispatch acceptable. `TWF-011` stays deferred, and `TWF-051` may revisit only with `TWF-046` evidence. |
+| Topic                            | Initial Release Decision                                                                                                                                                                                                                           | Evidence And Follow-Up                                                                                                                                                                                                                                                                                               |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tick cadence                     | Keep Timberborn dispatch on the centralized fixed cadence, currently one simulator tick per second of accumulated game time.                                                                                                                       | `TimberbornFireCadence.Default` is one second, live QA/readiness tokens already report advancing dispatch ticks, and `TWF-043` may tune constants inside that cadence without changing the boundary. A release setting can expose cadence later through `TWF-048` only after live-loop validation proves it is safe. |
+| Diagonal spread                  | Keep the 6-neighbor 3D model: left, right, north, south, below, and above. Do not add diagonal neighbors for the first release.                                                                                                                    | `FireSim.compute` implements exactly these six in-bounds reads. Diagonal spread would change scenario behavior, tuning, and snapshot expectations, so it is deferred until after release unless a specific accepted design ticket promotes it.                                                                       |
+| Wind                             | Do not include wind in the release simulation.                                                                                                                                                                                                     | There is no current wind input, storage field, shader rule, or Timberborn adapter contract. Wind remains a future mechanic and must not be smuggled into host-owned fire rules.                                                                                                                                      |
+| Visual ash storage               | Keep the GPU visual ash channel derived from heat, fuel, and terrain; do not add persistent ash storage to `PackedCell` for release visuals.                                                                                                       | `PackedCell` has no burn-history field, `TWF-041` accepted derived ash as a visual approximation, and adding storage would change the packed-cell contract. Gameplay ash and fertility belong in a Timberborn-side ash field service, not in the visual-field channel.                                               |
+| Contamination and fire           | Fire never reduces contamination.                                                                                                                                                                                                                  | Contaminated fuel may burn, contaminated water may suppress, and contaminated aftermath may be tainted, but soil, water, goods, plants, buildings, and beavers are not cleansed by fire. Any future decontamination mechanic must be explicit and separate from wildfire behavior.                                   |
+| Vertical building mapping        | Keep current footprint expansion across explicit `x`, `y`, and `z` cells. Each occupied vertical cell maps to a packed simulation cell through the Timberborn adapter.                                                                             | `TimberbornCellFootprint` and mapper tests already cover vertical expansion. This keeps tall structures understandable without adding building-specific fire rules to Timberborn.                                                                                                                                    |
+| Water semantics                  | Treat water as a bounded suppression/wetness band, not fluid simulation. It may come from standing water, wet terrain, or queued suppression changes, but in all cases it only writes the packed `water` field and reduces heat/ignition pressure. | `TWF-038` live evidence proves queued `SetWater=3` suppression through the GPU path. The project non-goals still exclude fluid dynamics and continuous water values.                                                                                                                                                 |
+| Heat-loss source                 | Keep heat loss material-driven for release. Timberborn terrain, resource, vegetation, and building adapters choose deterministic heat-loss bands before packing cells.                                                                             | The mapper already centralizes material bands and clamps them to the packed field width. Biome, weather, or season-driven heat loss should be future adapter input that registers changes, not core rule ownership.                                                                                                  |
+| Full-grid versus active frontier | Keep full-grid dispatch as the Sprint 4 release baseline. Active-frontier optimization remains deferred until profiling shows a measured bottleneck, with the final release-scope decision owned by `TWF-051` after coherent live-loop validation. | `TWF-034` profiling on the current `128x128x23` live save found full-grid dispatch acceptable. `TWF-011` stays deferred, and `TWF-051` may revisit only with `TWF-046` evidence.                                                                                                                                     |
 
-## 24. Summary
+## 25. Summary
 
 The fire simulator should be a compact, deterministic, tick-based cellular automata system with a packed 16-bit cell format and one authoritative GPU execution path. It should expose a clean change-registration and delta-notification API so Timberborn entities can interact with it without owning simulation state.
 

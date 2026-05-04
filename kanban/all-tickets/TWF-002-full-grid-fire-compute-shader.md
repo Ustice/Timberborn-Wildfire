@@ -5,11 +5,11 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-001
+  - TWF-001
 write_scope:
-   - src/Wildfire.Unity/**
-   - docs/DESIGN.md
-   - docs/TEST_PLAN.md
+  - src/Wildfire.Unity/**
+  - docs/DESIGN.md
+  - docs/TEST_PLAN.md
 ---
 
 # TWF-002: Implement Full-Grid Fire Shader

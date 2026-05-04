@@ -5,10 +5,10 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-025
+  - TWF-025
 write_scope:
-   - docs/timberborn-debug-panels.md
-   - docs/reference/screenshots/timberborn-debug-panels/**
+  - docs/timberborn-debug-panels.md
+  - docs/reference/screenshots/timberborn-debug-panels/**
 ---
 
 # TWF-027: Document Timberborn Debug Panels

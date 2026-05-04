@@ -5,12 +5,12 @@ role: worker
 requires_qa: false
 doc_only: false
 dependencies:
-   - TWF-053
+  - TWF-053
 write_scope:
-   - CHANGELOG.md
-   - scripts/**
-   - docs/**
-   - kanban/all-tickets/TWF-057-add-changelog-versioning-discipline.md
+  - CHANGELOG.md
+  - scripts/**
+  - docs/**
+  - kanban/all-tickets/TWF-057-add-changelog-versioning-discipline.md
 ---
 
 # TWF-057: Add Changelog Versioning Discipline

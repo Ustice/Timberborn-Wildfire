@@ -5,12 +5,12 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-071
+  - TWF-071
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-072-add-beaver-field-exposure-telemetry.md
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-072-add-beaver-field-exposure-telemetry.md
 ---
 
 # TWF-072: Add Beaver Field Exposure Telemetry
@@ -27,6 +27,7 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 
 - Implement the narrowest safe Timberborn adapter surface that can identify beaver positions or beaver-adjacent cells.
 - Sample accepted wildfire fields from the existing visual-field or packed-cell surfaces without mutating the simulation grid.
+- Classify exposure separately for respiratory danger, burn danger, contaminated smoke, toxic steam, and tainted aftermath where field data can support it.
 - Report bounded telemetry for exposed beavers or candidate cells through status, `qa-readiness`, logs, or a dedicated QA command.
 - Avoid per-beaver spam; aggregate counts and only include bounded sample details.
 - Add deterministic tests for exposure classification where possible.
@@ -41,6 +42,14 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 - Worker.
 - Follow [worker.md](../roles/worker.md).
 
+## Implementation Notes
+
+- Start with the safest read-only beaver position surface available in the Timberborn adapter.
+- Exposure can be sampled over multiple game ticks; it does not need to process every beaver in the same tick if batching avoids frame spikes.
+- Keep detail samples bounded, such as a few beaver IDs, cells, and classifications, with aggregate counts for the rest.
+- Expected counters include sampled beavers, exposed beavers, respiratory exposure cells, heat exposure cells, toxic exposure cells, tainted aftermath cells, batching skips, and unavailable API skips.
+- Safe no-op behavior should report that beaver position sampling is unavailable without changing simulation or beaver state.
+
 ## Verification
 
 - Run `git diff --check`.
@@ -50,3 +59,4 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 ## Notes
 
 - This ticket should not alter beaver behavior. It is the instrumentation layer for later behavior changes.
+- Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects" and "Contamination Interaction".

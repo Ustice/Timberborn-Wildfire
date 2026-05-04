@@ -1,0 +1,1 @@
+../../all-tickets/TWF-115-apply-stored-goods-burn-consequences.md

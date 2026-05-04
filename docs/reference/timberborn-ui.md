@@ -98,13 +98,13 @@ Use this root for most Wildfire fragments:
 
 Use `bg-sub-box` variants intentionally:
 
-| Base | Modifier | Use |
-| --- | --- | --- |
-| `bg-sub-box` | `--green` | Ordinary settings/status fragment |
-| `bg-sub-box` | `--blue` | Descriptive/info fragment |
-| `bg-sub-box` | `--red-striped` | Danger, blocked, error, destructive warning |
-| `bg-sub-box` | `--purple-striped` | Header-like or selected-object context |
-| `bg-sub-box` | `--frame` | Outer frame only, not a nested fragment default |
+| Base         | Modifier           | Use                                             |
+| ------------ | ------------------ | ----------------------------------------------- |
+| `bg-sub-box` | `--green`          | Ordinary settings/status fragment               |
+| `bg-sub-box` | `--blue`           | Descriptive/info fragment                       |
+| `bg-sub-box` | `--red-striped`    | Danger, blocked, error, destructive warning     |
+| `bg-sub-box` | `--purple-striped` | Header-like or selected-object context          |
+| `bg-sub-box` | `--frame`          | Outer frame only, not a nested fragment default |
 
 Do not put a second framed card inside an `entity-sub-panel`. Use rows directly inside the fragment.
 
@@ -155,12 +155,12 @@ Use `entity-panel__button-wrapper` and `entity-fragment__button`:
 
 Use these `entity-fragment__button` modifiers for action-button variants:
 
-| Base | Modifier | Use |
-| --- | --- | --- |
-| `entity-fragment__button` | `--green` | Positive or ordinary action |
-| `entity-fragment__button` | `--red` | Destructive, stop, or danger action |
-| `entity-fragment__button` | `--narrow` | Small secondary action in a row |
-| `entity-fragment__button` | `--silent` | No click sound |
+| Base                      | Modifier   | Use                                 |
+| ------------------------- | ---------- | ----------------------------------- |
+| `entity-fragment__button` | `--green`  | Positive or ordinary action         |
+| `entity-fragment__button` | `--red`    | Destructive, stop, or danger action |
+| `entity-fragment__button` | `--narrow` | Small secondary action in a row     |
+| `entity-fragment__button` | `--silent` | No click sound                      |
 
 ### Header Icon Button
 
@@ -192,9 +192,9 @@ Tool panels are narrow and centered. Use them for active-tool options, placement
 
 Use these `tool-panel-item` modifiers for tool-panel variants:
 
-| Base | Modifier | Use |
-| --- | --- | --- |
-| `tool-panel-item` | `--warning` | Warning panel |
+| Base              | Modifier       | Use                        |
+| ----------------- | -------------- | -------------------------- |
+| `tool-panel-item` | `--warning`    | Warning panel              |
 | `tool-panel-item` | `--map-editor` | Map-editor tool panel only |
 
 ### Placement Controls
@@ -229,21 +229,21 @@ Bottom-bar buttons are layered images. Keep the nested structure or the active/l
 
 Add these state classes at runtime:
 
-| Base | Modifier | Use |
-| --- | --- | --- |
-| `button` | `--active` | Active tool |
-| `button` | `--locked` | Locked tool |
+| Base            | Modifier        | Use               |
+| --------------- | --------------- | ----------------- |
+| `button`        | `--active`      | Active tool       |
+| `button`        | `--locked`      | Locked tool       |
 | `tutorial-tool` | `--highlighted` | Tutorial emphasis |
 
 For a hex tool, apply the hex modifier to the relevant bottom-bar block and elements:
 
-| Base | Modifier |
-| --- | --- |
-| `bottom-bar-button` | `--hex-tool` |
-| `bottom-bar-button__background` | `--hex` |
-| `bottom-bar-button__icon` | `--hex` |
-| `bottom-bar-button__inner-item` | `--hex` |
-| `bottom-bar-button__frame` | `--hex` |
+| Base                            | Modifier     |
+| ------------------------------- | ------------ |
+| `bottom-bar-button`             | `--hex-tool` |
+| `bottom-bar-button__background` | `--hex`      |
+| `bottom-bar-button__icon`       | `--hex`      |
+| `bottom-bar-button__inner-item` | `--hex`      |
+| `bottom-bar-button__frame`      | `--hex`      |
 
 ## Modal And Box UI
 
@@ -313,12 +313,12 @@ Dropdown
 
 For dropdown item variants:
 
-| Base | Modifier | Use |
-| --- | --- | --- |
-| `dropdown-item` | `--medium` | Medium icon/item density |
-| `dropdown-item` | `--large` | Large icon/item density |
-| `dropdown-item` | `--none` | Empty or none option |
-| `dropdown-item` | `--selected` | Current selection |
+| Base            | Modifier     | Use                      |
+| --------------- | ------------ | ------------------------ |
+| `dropdown-item` | `--medium`   | Medium icon/item density |
+| `dropdown-item` | `--large`    | Large icon/item density  |
+| `dropdown-item` | `--none`     | Empty or none option     |
+| `dropdown-item` | `--selected` | Current selection        |
 
 ## Progress Bars
 
@@ -334,12 +334,12 @@ ProgressBar
 
 Use these progress-bar color modifiers:
 
-| Base | Modifier |
-| --- | --- |
-| `progress-bar` | `--teal` |
-| `progress-bar` | `--blue` |
+| Base           | Modifier  |
+| -------------- | --------- |
+| `progress-bar` | `--teal`  |
+| `progress-bar` | `--blue`  |
 | `progress-bar` | `--green` |
-| `progress-bar` | `--red` |
+| `progress-bar` | `--red`   |
 
 Put text and icons in `ContentContainer`, not beside the progress bar.
 
@@ -351,20 +351,20 @@ Good:
 
 ```css
 .wildfire-row {
-    flex-direction: row;
-    align-items: center;
+  flex-direction: row;
+  align-items: center;
 }
 
 .wildfire-row__icon {
-    width: 20px;
-    height: 20px;
-    margin-right: 4px;
-    background-image: resource('UI/Images/Game/your-icon');
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  background-image: resource("UI/Images/Game/your-icon");
 }
 
 .wildfire-row__value {
-    min-width: 40px;
-    -unity-text-align: middle-right;
+  min-width: 40px;
+  -unity-text-align: middle-right;
 }
 ```
 
@@ -372,9 +372,9 @@ Avoid:
 
 ```css
 .wildfire-panel {
-    background-color: #123456;
-    border-radius: 8px;
-    padding: 24px;
+  background-color: #123456;
+  border-radius: 8px;
+  padding: 24px;
 }
 ```
 
@@ -449,197 +449,197 @@ Use modifiers as state and variant classes. When discussing one block or element
 
 ### Layout And Text
 
-| Base | Modifiers |
-| --- | --- |
-| `content-row-centered` | `--no-grow` |
-| `bottom-padding` | `--medium` |
-| `box__text` | `--centered` |
-| `capsule-header` | `--lower` |
-| `description-panel-section` | `--prioritized` |
-| `description-text` | `--single-section` |
-| `game-text` | `--black`, `--red` |
-| `game-text-separator` | `--small` |
-| `list-view__label` | `--padding` |
-| `text` | `--big`, `--bold`, `--centered`, `--default`, `--grey`, `--header`, `--yellow` |
-| `tooltip` | `--not-centered` |
-| `unity-text` | `--shaded` |
+| Base                        | Modifiers                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `content-row-centered`      | `--no-grow`                                                                    |
+| `bottom-padding`            | `--medium`                                                                     |
+| `box__text`                 | `--centered`                                                                   |
+| `capsule-header`            | `--lower`                                                                      |
+| `description-panel-section` | `--prioritized`                                                                |
+| `description-text`          | `--single-section`                                                             |
+| `game-text`                 | `--black`, `--red`                                                             |
+| `game-text-separator`       | `--small`                                                                      |
+| `list-view__label`          | `--padding`                                                                    |
+| `text`                      | `--big`, `--bold`, `--centered`, `--default`, `--grey`, `--header`, `--yellow` |
+| `tooltip`                   | `--not-centered`                                                               |
+| `unity-text`                | `--shaded`                                                                     |
 
 ### Backgrounds And Frames
 
-| Base | Modifiers |
-| --- | --- |
-| `bg-box` | `--brown`, `--green`, `--red` |
-| `bg-striped` | `--green`, `--red` |
-| `bg-sub-box` | `--blue`, `--frame`, `--green`, `--pale-purple`, `--purple-striped`, `--red-striped` |
-| `square-large` | `--brown`, `--green`, `--light-red`, `--red`, `--transparent-purple` |
-| `sliced-border` | `--nontransparent` |
+| Base            | Modifiers                                                                            |
+| --------------- | ------------------------------------------------------------------------------------ |
+| `bg-box`        | `--brown`, `--green`, `--red`                                                        |
+| `bg-striped`    | `--green`, `--red`                                                                   |
+| `bg-sub-box`    | `--blue`, `--frame`, `--green`, `--pale-purple`, `--purple-striped`, `--red-striped` |
+| `square-large`  | `--brown`, `--green`, `--light-red`, `--red`, `--transparent-purple`                 |
+| `sliced-border` | `--nontransparent`                                                                   |
 
 ### Buttons
 
-| Base | Modifiers |
-| --- | --- |
-| `button` | `--active`, `--locked` |
-| `button-arrow-down` | `--inverted` |
-| `button-arrow-left` | `--inverted` |
-| `button-arrow-right` | `--inverted` |
-| `button-arrow-up` | `--inverted` |
-| `button-checkmark` | `--bare` |
-| `button-cross` | `--bare` |
-| `button-minus` | `--bare`, `--inverted` |
-| `button-plus` | `--bare`, `--inverted`, `--margin` |
-| `button-reset` | `--bare` |
-| `button-square` | `--large`, `--small` |
-| `menu-button` | `--centered`, `--large-text`, `--medium`, `--stretched` |
-| `reset-button` | `--highlighted` |
+| Base                 | Modifiers                                               |
+| -------------------- | ------------------------------------------------------- |
+| `button`             | `--active`, `--locked`                                  |
+| `button-arrow-down`  | `--inverted`                                            |
+| `button-arrow-left`  | `--inverted`                                            |
+| `button-arrow-right` | `--inverted`                                            |
+| `button-arrow-up`    | `--inverted`                                            |
+| `button-checkmark`   | `--bare`                                                |
+| `button-cross`       | `--bare`                                                |
+| `button-minus`       | `--bare`, `--inverted`                                  |
+| `button-plus`        | `--bare`, `--inverted`, `--margin`                      |
+| `button-reset`       | `--bare`                                                |
+| `button-square`      | `--large`, `--small`                                    |
+| `menu-button`        | `--centered`, `--large-text`, `--medium`, `--stretched` |
+| `reset-button`       | `--highlighted`                                         |
 
 ### Entity Panel
 
-| Base | Modifiers |
-| --- | --- |
-| `clickable` | `--alternate` |
-| `debug-fragment` | `--margin` |
-| `entity-fragment__button` | `--green`, `--narrow`, `--red`, `--silent` |
-| `entity-panel__button` | `--green`, `--red` |
-| `entity-panel__buttons` | `--left`, `--middle`, `--right` |
-| `entity-panel__description` | `--hidden`, `--none` |
-| `entity-panel__description-hider` | `--none`, `--show-icon` |
-| `entity-panel__text` | `--centered`, `--highlight-white` |
-| `entity-panel__toggle` | `--centered` |
+| Base                              | Modifiers                                  |
+| --------------------------------- | ------------------------------------------ |
+| `clickable`                       | `--alternate`                              |
+| `debug-fragment`                  | `--margin`                                 |
+| `entity-fragment__button`         | `--green`, `--narrow`, `--red`, `--silent` |
+| `entity-panel__button`            | `--green`, `--red`                         |
+| `entity-panel__buttons`           | `--left`, `--middle`, `--right`            |
+| `entity-panel__description`       | `--hidden`, `--none`                       |
+| `entity-panel__description-hider` | `--none`, `--show-icon`                    |
+| `entity-panel__text`              | `--centered`, `--highlight-white`          |
+| `entity-panel__toggle`            | `--centered`                               |
 
 ### Bottom Bar
 
-| Base | Modifiers |
-| --- | --- |
-| `bottom-bar-button` | `--blue`, `--clickable`, `--green`, `--hex-tool`, `--main`, `--red`, `--tool` |
-| `bottom-bar-button__background` | `--hex` |
-| `bottom-bar-button__frame` | `--hex` |
-| `bottom-bar-button__icon` | `--hex` |
-| `bottom-bar-button__inner-item` | `--hex` |
-| `bottom-bar-button__lock-icon` | `--hex` |
-| `tutorial-tool` | `--highlighted` |
+| Base                            | Modifiers                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `bottom-bar-button`             | `--blue`, `--clickable`, `--green`, `--hex-tool`, `--main`, `--red`, `--tool` |
+| `bottom-bar-button__background` | `--hex`                                                                       |
+| `bottom-bar-button__frame`      | `--hex`                                                                       |
+| `bottom-bar-button__icon`       | `--hex`                                                                       |
+| `bottom-bar-button__inner-item` | `--hex`                                                                       |
+| `bottom-bar-button__lock-icon`  | `--hex`                                                                       |
+| `tutorial-tool`                 | `--highlighted`                                                               |
 
 ### Inputs, Toggles, Sliders, Dropdowns, And Scrolls
 
-| Base | Modifiers |
-| --- | --- |
-| `dropdown-item` | `--large`, `--medium`, `--none`, `--selected` |
-| `export-threshold-slider` | `--highlighted` |
-| `game-toggle` | `--small` |
-| `new-game-mode-panel__setting-input` | `--invalid` |
-| `progress-bar` | `--blue`, `--green`, `--no-grow`, `--red`, `--teal` |
-| `scroll` | `--green-decorated` |
-| `slider-toggle` | `--locked` |
-| `slider-toggle__button` | `--disabled` |
-| `slider-toggle__element` | `--active` |
-| `text-field` | `--large` |
+| Base                                 | Modifiers                                           |
+| ------------------------------------ | --------------------------------------------------- |
+| `dropdown-item`                      | `--large`, `--medium`, `--none`, `--selected`       |
+| `export-threshold-slider`            | `--highlighted`                                     |
+| `game-toggle`                        | `--small`                                           |
+| `new-game-mode-panel__setting-input` | `--invalid`                                         |
+| `progress-bar`                       | `--blue`, `--green`, `--no-grow`, `--red`, `--teal` |
+| `scroll`                             | `--green-decorated`                                 |
+| `slider-toggle`                      | `--locked`                                          |
+| `slider-toggle__button`              | `--disabled`                                        |
+| `slider-toggle__element`             | `--active`                                          |
+| `text-field`                         | `--large`                                           |
 
 ### Tool Panel And Placement
 
-| Base | Modifiers |
-| --- | --- |
+| Base                                         | Modifiers                                                       |
+| -------------------------------------------- | --------------------------------------------------------------- |
 | `block-object-placement-panel__button-image` | `--clockwise`, `--counterclockwise`, `--flipped`, `--unflipped` |
-| `materials-section__tool-icon` | `--cost` |
-| `tool-panel-item` | `--map-editor`, `--warning` |
-| `tool-panel-item__text-wrapper` | `--numberless` |
+| `materials-section__tool-icon`               | `--cost`                                                        |
+| `tool-panel-item`                            | `--map-editor`, `--warning`                                     |
+| `tool-panel-item__text-wrapper`              | `--numberless`                                                  |
 
 ### Status And Alert
 
-| Base | Modifiers |
-| --- | --- |
-| `alert-panel-row` | `--blink` |
-| `automation-state-icon` | `--indicator`, `--large`, `--on`, `--small`, `--small-indicator`, `--unfinished` |
-| `date-panel` | `--badtide`, `--drought` |
-| `hazardous-weather-notification__background` | `--badtide`, `--dry`, `--wet` |
-| `hazardous-weather-notification__fade` | `--enabled` |
-| `hazardous-weather-toggle__icon` | `--badtide`, `--drought`, `--temperate` |
-| `icon` | `--hidden`, `--plus` |
-| `level-visibility-panel` | `--game`, `--map-editor` |
-| `level-visibility-panel__level-button` | `--held` |
-| `manual-migration-row__highlight` | `--on` |
-| `panel` | `--district` |
-| `task-view` | `--transparent` |
-| `top-bar-counter__wrapper` | `--district` |
-| `top-right-item` | `--first-column` |
-| `weather-panel` | `--badtide`, `--blink`, `--dry` |
-| `wellbeing` | `--negative`, `--positive` |
-| `wellbeing-score` | `--small` |
+| Base                                         | Modifiers                                                                        |
+| -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `alert-panel-row`                            | `--blink`                                                                        |
+| `automation-state-icon`                      | `--indicator`, `--large`, `--on`, `--small`, `--small-indicator`, `--unfinished` |
+| `date-panel`                                 | `--badtide`, `--drought`                                                         |
+| `hazardous-weather-notification__background` | `--badtide`, `--dry`, `--wet`                                                    |
+| `hazardous-weather-notification__fade`       | `--enabled`                                                                      |
+| `hazardous-weather-toggle__icon`             | `--badtide`, `--drought`, `--temperate`                                          |
+| `icon`                                       | `--hidden`, `--plus`                                                             |
+| `level-visibility-panel`                     | `--game`, `--map-editor`                                                         |
+| `level-visibility-panel__level-button`       | `--held`                                                                         |
+| `manual-migration-row__highlight`            | `--on`                                                                           |
+| `panel`                                      | `--district`                                                                     |
+| `task-view`                                  | `--transparent`                                                                  |
+| `top-bar-counter__wrapper`                   | `--district`                                                                     |
+| `top-right-item`                             | `--first-column`                                                                 |
+| `weather-panel`                              | `--badtide`, `--blink`, `--dry`                                                  |
+| `wellbeing`                                  | `--negative`, `--positive`                                                       |
+| `wellbeing-score`                            | `--small`                                                                        |
 
 ### Production, Resource, Inventory, And Population
 
-| Base | Modifiers |
-| --- | --- |
-| `beaver-buildings-batch-control-row-item__icon` | `--empty`, `--homeless`, `--jobless` |
-| `beaver-buildings-fragment__icon` | `--empty`, `--homeless`, `--jobless` |
-| `beaver-buildings-fragment__item` | `--bottom` |
-| `described-amount` | `--power`, `--science`, `--workers` |
-| `good-selection-box-row` | `--no-margin` |
-| `good-stockpile-tooltip_text` | `--margin-between` |
-| `import-background` | `--auto`, `--disabled`, `--forced` |
-| `import-icon` | `--auto`, `--disabled`, `--export-all`, `--export-none`, `--forced`, `--reset` |
-| `inventory-row` | `--informational` |
-| `inventory-row-informational__type` | `--input`, `--output` |
-| `need-view` | `--green`, `--red` |
-| `need-view__image` | `--critical`, `--marker` |
-| `population-counter__icon` | `--adult`, `--beds`, `--bot`, `--child`, `--contamination`, `--employment-beaver`, `--employment-bot`, `--homeless`, `--housing`, `--science`, `--unemployed-beaver`, `--unemployed-bot`, `--vacancy-beaver`, `--vacancy-bot` |
-| `priority-toggle` | `--checked` |
-| `production-item` | `--shaded` |
-| `production-item__arrow-wrapper` | `--left`, `--right` |
-| `production-item__icon` | `--or-icon` |
-| `production-item__items` | `--input` |
-| `productivity-batch-control-row-item__icon` | `--high`, `--low`, `--medium`, `--very-high`, `--very-low` |
-| `recoverable-good-content` | `--in-box` |
-| `resource-yield` | `--inactive` |
-| `resource-yield-tooltip__text` | `--margin` |
-| `resource-yield__icon` | `--calendar`, `--calendar-cycle` |
-| `stockpile-priority-toggle__icon` | `--accept`, `--empty`, `--obtain`, `--supply` |
-| `wellbeing-bonus-tooltip__next` | `--background` |
-| `wellbeing-summary__bonus` | `--icon`, `--text` |
-| `worker-type-toggle__icon` | `--beaver`, `--bot` |
+| Base                                            | Modifiers                                                                                                                                                                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beaver-buildings-batch-control-row-item__icon` | `--empty`, `--homeless`, `--jobless`                                                                                                                                                                                          |
+| `beaver-buildings-fragment__icon`               | `--empty`, `--homeless`, `--jobless`                                                                                                                                                                                          |
+| `beaver-buildings-fragment__item`               | `--bottom`                                                                                                                                                                                                                    |
+| `described-amount`                              | `--power`, `--science`, `--workers`                                                                                                                                                                                           |
+| `good-selection-box-row`                        | `--no-margin`                                                                                                                                                                                                                 |
+| `good-stockpile-tooltip_text`                   | `--margin-between`                                                                                                                                                                                                            |
+| `import-background`                             | `--auto`, `--disabled`, `--forced`                                                                                                                                                                                            |
+| `import-icon`                                   | `--auto`, `--disabled`, `--export-all`, `--export-none`, `--forced`, `--reset`                                                                                                                                                |
+| `inventory-row`                                 | `--informational`                                                                                                                                                                                                             |
+| `inventory-row-informational__type`             | `--input`, `--output`                                                                                                                                                                                                         |
+| `need-view`                                     | `--green`, `--red`                                                                                                                                                                                                            |
+| `need-view__image`                              | `--critical`, `--marker`                                                                                                                                                                                                      |
+| `population-counter__icon`                      | `--adult`, `--beds`, `--bot`, `--child`, `--contamination`, `--employment-beaver`, `--employment-bot`, `--homeless`, `--housing`, `--science`, `--unemployed-beaver`, `--unemployed-bot`, `--vacancy-beaver`, `--vacancy-bot` |
+| `priority-toggle`                               | `--checked`                                                                                                                                                                                                                   |
+| `production-item`                               | `--shaded`                                                                                                                                                                                                                    |
+| `production-item__arrow-wrapper`                | `--left`, `--right`                                                                                                                                                                                                           |
+| `production-item__icon`                         | `--or-icon`                                                                                                                                                                                                                   |
+| `production-item__items`                        | `--input`                                                                                                                                                                                                                     |
+| `productivity-batch-control-row-item__icon`     | `--high`, `--low`, `--medium`, `--very-high`, `--very-low`                                                                                                                                                                    |
+| `recoverable-good-content`                      | `--in-box`                                                                                                                                                                                                                    |
+| `resource-yield`                                | `--inactive`                                                                                                                                                                                                                  |
+| `resource-yield-tooltip__text`                  | `--margin`                                                                                                                                                                                                                    |
+| `resource-yield__icon`                          | `--calendar`, `--calendar-cycle`                                                                                                                                                                                              |
+| `stockpile-priority-toggle__icon`               | `--accept`, `--empty`, `--obtain`, `--supply`                                                                                                                                                                                 |
+| `wellbeing-bonus-tooltip__next`                 | `--background`                                                                                                                                                                                                                |
+| `wellbeing-summary__bonus`                      | `--icon`, `--text`                                                                                                                                                                                                            |
+| `worker-type-toggle__icon`                      | `--beaver`, `--bot`                                                                                                                                                                                                           |
 
 ### Mechanical, Automation, And Water
 
-| Base | Modifiers |
-| --- | --- |
-| `clutch-toggle__icon` | `--automated`, `--disengaged`, `--engaged` |
-| `farmhouse-toggle__icon` | `--harvesting`, `--planting` |
-| `gate-toggle__icon` | `--automated`, `--closed`, `--open` |
-| `sluice-toggle__icon` | `--auto`, `--close`, `--open` |
-| `timer-fragment__timer-progress` | `--flipped` |
-| `transmitter-fragment__state-label` | `--unfinished` |
-| `transmitter-selector` | `--automatable`, `--automatable-none` |
-| `water-mover-toggle__icon` | `--unfiltered` |
-| `water-source-regulator-toggle__icon` | `--automated`, `--closed`, `--open` |
+| Base                                  | Modifiers                                  |
+| ------------------------------------- | ------------------------------------------ |
+| `clutch-toggle__icon`                 | `--automated`, `--disengaged`, `--engaged` |
+| `farmhouse-toggle__icon`              | `--harvesting`, `--planting`               |
+| `gate-toggle__icon`                   | `--automated`, `--closed`, `--open`        |
+| `sluice-toggle__icon`                 | `--auto`, `--close`, `--open`              |
+| `timer-fragment__timer-progress`      | `--flipped`                                |
+| `transmitter-fragment__state-label`   | `--unfinished`                             |
+| `transmitter-selector`                | `--automatable`, `--automatable-none`      |
+| `water-mover-toggle__icon`            | `--unfiltered`                             |
+| `water-source-regulator-toggle__icon` | `--automated`, `--closed`, `--open`        |
 
 ### Menu, Options, Map, Modding, And Debug
 
-| Base | Modifiers |
-| --- | --- |
-| `batch-control-box__border` | `--middle`, `--right` |
-| `batch-control-box__row` | `--highlighted` |
-| `batch-control-box__row-item-group` | `--green` |
-| `batch-control-panel__tab-button` | `--active` |
-| `batch-control-row-item__change-button` | `--decrease`, `--increase` |
-| `console-panel` | `--collapsed`, `--expanded` |
-| `crash-screen__input` | `--comment`, `--exception` |
-| `credits__label` | `--supporter` |
-| `credits__name` | `--centered`, `--supporter` |
-| `customizable-illuminator-fragment__color-hashtag` | `--invisible` |
-| `customizable-illuminator-preset` | `--selected` |
-| `decal-button__frame` | `--fade` |
-| `dev-panel-button` | `--title` |
-| `fixed-key-binding__item` | `--direction`, `--mouse-button` |
-| `map-item__icon` | `--recommended`, `--unconventional` |
-| `map-selection__map-type-button` | `--flipped` |
-| `mod-item__icon` | `--cloud`, `--local` |
-| `mod-item__priority` | `--decrease`, `--increase` |
-| `new-game-mode-panel__mode` | `--selected` |
-| `object-viewer-foldout` | `--odd` |
-| `speed-button` | `--0`, `--1`, `--2`, `--3`, `--big`, `--custom`, `--highlighted`, `--small` |
-| `square-toggle` | `--construction-guidelines`, `--natural-resources`, `--stockpile-overlay`, `--water-opacity` |
-| `steam-workshop-tag` | `--margin` |
-| `tutorial-panel` | `--highlighted` |
-| `tutorial-step-view` | `--finished` |
-| `tutorial-step-view__key-binding` | `--text` |
+| Base                                               | Modifiers                                                                                    |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `batch-control-box__border`                        | `--middle`, `--right`                                                                        |
+| `batch-control-box__row`                           | `--highlighted`                                                                              |
+| `batch-control-box__row-item-group`                | `--green`                                                                                    |
+| `batch-control-panel__tab-button`                  | `--active`                                                                                   |
+| `batch-control-row-item__change-button`            | `--decrease`, `--increase`                                                                   |
+| `console-panel`                                    | `--collapsed`, `--expanded`                                                                  |
+| `crash-screen__input`                              | `--comment`, `--exception`                                                                   |
+| `credits__label`                                   | `--supporter`                                                                                |
+| `credits__name`                                    | `--centered`, `--supporter`                                                                  |
+| `customizable-illuminator-fragment__color-hashtag` | `--invisible`                                                                                |
+| `customizable-illuminator-preset`                  | `--selected`                                                                                 |
+| `decal-button__frame`                              | `--fade`                                                                                     |
+| `dev-panel-button`                                 | `--title`                                                                                    |
+| `fixed-key-binding__item`                          | `--direction`, `--mouse-button`                                                              |
+| `map-item__icon`                                   | `--recommended`, `--unconventional`                                                          |
+| `map-selection__map-type-button`                   | `--flipped`                                                                                  |
+| `mod-item__icon`                                   | `--cloud`, `--local`                                                                         |
+| `mod-item__priority`                               | `--decrease`, `--increase`                                                                   |
+| `new-game-mode-panel__mode`                        | `--selected`                                                                                 |
+| `object-viewer-foldout`                            | `--odd`                                                                                      |
+| `speed-button`                                     | `--0`, `--1`, `--2`, `--3`, `--big`, `--custom`, `--highlighted`, `--small`                  |
+| `square-toggle`                                    | `--construction-guidelines`, `--natural-resources`, `--stockpile-overlay`, `--water-opacity` |
+| `steam-workshop-tag`                               | `--margin`                                                                                   |
+| `tutorial-panel`                                   | `--highlighted`                                                                              |
+| `tutorial-step-view`                               | `--finished`                                                                                 |
+| `tutorial-step-view__key-binding`                  | `--text`                                                                                     |
 
 ## Wildfire-Specific USS Rules
 

@@ -5,12 +5,12 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-032
+  - TWF-032
 write_scope:
-   - scripts/**
-   - docs/TEST_PLAN.md
-   - docs/HANDOFF.md
-   - kanban/all-tickets/TWF-034-live-dispatch-profiling-report.md
+  - scripts/**
+  - docs/TEST_PLAN.md
+  - docs/HANDOFF.md
+  - kanban/all-tickets/TWF-034-live-dispatch-profiling-report.md
 ---
 
 # TWF-034: Record Live Dispatch Profiling
@@ -30,10 +30,9 @@ Capture enough live profiling evidence to decide whether active-frontier optimiz
 - Capture dispatch elapsed time, readback elapsed time if available, tick counts, delta counts, queued changes, and relevant consumer counters.
 - Summarize whether current full-grid dispatch is acceptable for the observed map size and workload.
 - Recommend one of:
-
-   - Keep full-grid dispatch for now.
-   - Add more diagnostics before deciding.
-   - Promote `TWF-011` to ready with specific performance evidence.
+  - Keep full-grid dispatch for now.
+  - Add more diagnostics before deciding.
+  - Promote `TWF-011` to ready with specific performance evidence.
 
 - Document commands, artifact paths, and interpretation in `docs/TEST_PLAN.md` or `docs/HANDOFF.md`.
 - Add a small helper script only if existing logs/status commands are not enough.
@@ -66,39 +65,37 @@ Capture enough live profiling evidence to decide whether active-frontier optimiz
 - Added `scripts/summarize-dispatch-profile.ts` to extract aggregate dispatch timing, kernel timing, delta/readback counts, command fields, and delta-consumer counters from a preserved `Player.log`.
 - Profiling command:
 
-   ```bash
-   bun scripts/summarize-dispatch-profile.ts ~/Library/Application\ Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z
-   ```
+  ```bash
+  bun scripts/summarize-dispatch-profile.ts ~/Library/Application\ Support/Mechanistry/Timberborn/WildfireQA/twf-031-live-20260502T143543Z
+  ```
 
 - Summary output from the preserved artifact:
 
-   ```text
-   map=128x128x23
-   ticks_observed=1..43
-   dispatch_elapsed_ms count=43 min=0.469 median=2.737 p95=4.846 max=6.014 avg=2.84
-   kernel SimulateFullGrid elapsed_ms count=43 min=0.015 median=0.019 p95=0.039 max=0.057 avg=0.021
-   kernel ApplyExternalChanges elapsed_ms count=1 min=0.041 median=0.041 p95=0.041 max=0.041 avg=0.041
-   readbacks count=43 nonzero=5 max_delta_count=2
-   dispatches count=43 nonzero=5 max_delta_count=2
-   consumers count=43 nonzero_changed_cells=5 max_changed_cells=2 max_visual_effect_events=2 max_gameplay_consequences=1 max_alerts=1
-   commands_seen=status,status,qa-readiness,qa-delta-stimulus,qa-readiness
-   latest_command_tick=34 queued_changes=0 last_delta_count=1 last_delta_consumer_changed_cells=1
-   nonzero_dispatch_ticks=30:2@5.937ms,31:1@4.308ms,32:1@1.86ms,33:1@3.055ms,34:1@4.178ms
-   ```
+  ```text
+  map=128x128x23
+  ticks_observed=1..43
+  dispatch_elapsed_ms count=43 min=0.469 median=2.737 p95=4.846 max=6.014 avg=2.84
+  kernel SimulateFullGrid elapsed_ms count=43 min=0.015 median=0.019 p95=0.039 max=0.057 avg=0.021
+  kernel ApplyExternalChanges elapsed_ms count=1 min=0.041 median=0.041 p95=0.041 max=0.041 avg=0.041
+  readbacks count=43 nonzero=5 max_delta_count=2
+  dispatches count=43 nonzero=5 max_delta_count=2
+  consumers count=43 nonzero_changed_cells=5 max_changed_cells=2 max_visual_effect_events=2 max_gameplay_consequences=1 max_alerts=1
+  commands_seen=status,status,qa-readiness,qa-delta-stimulus,qa-readiness
+  latest_command_tick=34 queued_changes=0 last_delta_count=1 last_delta_consumer_changed_cells=1
+  nonzero_dispatch_ticks=30:2@5.937ms,31:1@4.308ms,32:1@1.86ms,33:1@3.055ms,34:1@4.178ms
+  ```
 
 - Command evidence:
-
-   - `qa-readiness-before-stimulus.txt` reported `tick_count=22`, `queued_changes=0`, and `last_delta_count=0`.
-   - `qa-delta-stimulus.txt` reported `tick_count=29`, `queued_changes=1`, target `x=64 y=64 z=11`, and `set_cell=13311`.
-   - `qa-readiness-after-stimulus-require-nonzero.txt` reported `tick_count=34`, `queued_changes=0`, `last_delta_count=1`, `last_delta_consumer_changed_cells=1`, and `last_delta_consumer_visual_effect_events=1`.
-   - `status-after-nonzero-readiness.txt` later reported `tick_count=43`, `queued_changes=0`, and `last_delta_count=0`.
+  - `qa-readiness-before-stimulus.txt` reported `tick_count=22`, `queued_changes=0`, and `last_delta_count=0`.
+  - `qa-delta-stimulus.txt` reported `tick_count=29`, `queued_changes=1`, target `x=64 y=64 z=11`, and `set_cell=13311`.
+  - `qa-readiness-after-stimulus-require-nonzero.txt` reported `tick_count=34`, `queued_changes=0`, `last_delta_count=1`, `last_delta_consumer_changed_cells=1`, and `last_delta_consumer_visual_effect_events=1`.
+  - `status-after-nonzero-readiness.txt` later reported `tick_count=43`, `queued_changes=0`, and `last_delta_count=0`.
 
 - `Player.log` evidence:
-
-   - Tick `30` applied the stimulus with `wildfire_timberborn_gpu_queued_changes tick=30 queued_changes=1 valid_changes=1 ignored_changes=0`.
-   - Tick `30` recorded `ApplyExternalChanges elapsed_ms=0.041`, `SimulateFullGrid elapsed_ms=0.016`, `wildfire_timberborn_gpu_readback_completed tick=30 delta_count=2`, and `wildfire_timberborn_dispatch_completed tick=30 delta_count=2 elapsed_ms=5.937`.
-   - Tick `30` consumer telemetry recorded `changed_cells=2`, `visual_effect_events=2`, `gameplay_consequences=1`, and `alerts=1`.
-   - Ticks `31..34` continued reporting non-zero deltas with wrapper elapsed times below `4.308 ms`.
+  - Tick `30` applied the stimulus with `wildfire_timberborn_gpu_queued_changes tick=30 queued_changes=1 valid_changes=1 ignored_changes=0`.
+  - Tick `30` recorded `ApplyExternalChanges elapsed_ms=0.041`, `SimulateFullGrid elapsed_ms=0.016`, `wildfire_timberborn_gpu_readback_completed tick=30 delta_count=2`, and `wildfire_timberborn_dispatch_completed tick=30 delta_count=2 elapsed_ms=5.937`.
+  - Tick `30` consumer telemetry recorded `changed_cells=2`, `visual_effect_events=2`, `gameplay_consequences=1`, and `alerts=1`.
+  - Ticks `31..34` continued reporting non-zero deltas with wrapper elapsed times below `4.308 ms`.
 
 - Interpretation: full-grid dispatch remains acceptable for this observed live workload. The total wrapper timing includes dispatch, readback, listener/consumer work, and logging; even there, p95 was under `5 ms` across `43` ticks and the single non-zero stimulus spike stayed near `6 ms`. The actual `SimulateFullGrid` kernel timing was far below the wrapper cost on this map.
 - `TWF-011` recommendation: keep deferred for now. Do not promote active-frontier buffers until a larger map, sustained high-delta workload, or later consequence-heavy run shows full-grid dispatch or readback/consumer work as a measured bottleneck.

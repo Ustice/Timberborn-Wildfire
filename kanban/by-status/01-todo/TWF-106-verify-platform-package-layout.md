@@ -1,0 +1,1 @@
+../../all-tickets/TWF-106-verify-platform-package-layout.md

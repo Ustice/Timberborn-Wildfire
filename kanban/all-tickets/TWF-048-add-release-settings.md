@@ -5,20 +5,24 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-046
+  - TWF-046
+  - TWF-096
+  - TWF-097
+  - TWF-098
+  - TWF-099
 write_scope:
-   - src/Wildfire.Timberborn/**
-   - tests/Wildfire.Core.Tests/**
-   - docs/reference/timberborn-ui.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-048-add-release-settings.md
+  - src/Wildfire.Timberborn/**
+  - tests/Wildfire.Core.Tests/**
+  - docs/reference/timberborn-ui.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-048-add-release-settings.md
 ---
 
 # TWF-048: Add Release Settings
 
 ## Goal
 
-Add the minimum useful release settings with stable keys, conservative defaults, and live validation.
+Integrate the minimum useful release settings after the settings framework, enable/disable control, behavior tuning settings, and visual/debug settings are implemented.
 
 ## Why
 
@@ -26,8 +30,10 @@ Settings are part of the compatibility contract. Players need a safe way to disa
 
 ## Requirements
 
-- Add a stable settings owner or equivalent Timberborn-native settings surface.
-- Include conservative settings such as enable Wildfire, fire intensity or spread rate, visual intensity, and debug visibility only if each can be implemented safely.
+- Confirm `TWF-096` adds a stable settings owner or equivalent Timberborn-native settings surface.
+- Confirm `TWF-097` adds safe enable/disable behavior.
+- Confirm `TWF-098` adds conservative behavior tuning settings.
+- Confirm `TWF-099` adds visual/debug settings where safe.
 - Keep player preferences in settings, not save data.
 - Give settings stable keys and defaults.
 - Ensure disabling the feature leaves the current save recoverable and stops new fire work safely.
@@ -53,3 +59,4 @@ Settings are part of the compatibility contract. Players need a safe way to disa
 ## Notes
 
 - Do not add a broad custom configuration UI if Timberborn-native settings are enough.
+- Child tickets: `TWF-096`, `TWF-097`, `TWF-098`, and `TWF-099`.

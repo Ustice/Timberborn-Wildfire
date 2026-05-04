@@ -5,12 +5,12 @@ role: worker
 requires_qa: true
 doc_only: false
 dependencies:
-   - TWF-031
+  - TWF-031
 write_scope:
-   - src/Wildfire.Unity/**
-   - src/Wildfire.Timberborn/**
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-032-prove-live-nonzero-gpu-deltas.md
+  - src/Wildfire.Unity/**
+  - src/Wildfire.Timberborn/**
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-032-prove-live-nonzero-gpu-deltas.md
 ---
 
 # TWF-032: Prove Live Non-Zero GPU Deltas

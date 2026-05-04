@@ -5,12 +5,12 @@ role: researcher
 requires_qa: false
 doc_only: true
 dependencies:
-   - TWF-046
+  - TWF-046
 write_scope:
-   - docs/DESIGN.md
-   - docs/ARCHITECTURE.md
-   - docs/TEST_PLAN.md
-   - kanban/all-tickets/TWF-071-define-beaver-field-effects.md
+  - docs/DESIGN.md
+  - docs/ARCHITECTURE.md
+  - docs/TEST_PLAN.md
+  - kanban/all-tickets/TWF-071-define-beaver-field-effects.md
 ---
 
 # TWF-071: Define Beaver Field Effects
@@ -23,11 +23,15 @@ Define what fire, smoke, ash, steam, heat, and water-suppression fields mean for
 
 Wildfire currently defines fire simulation, visual fields, alerts, and building consequences, but it does not define how beavers should perceive or react to those fields. Release needs a clear behavior contract so beavers do not ignore dangerous cells, and so implementation does not smuggle fire rules into Timberborn adapter code.
 
+`docs/DESIGN.md` section 20 now accepts two beaver danger progressions: respiratory exposure (`coughing` to `choking` to `death`) and heat/flame exposure (`singed` to `burned` to `death`). This ticket should turn that accepted direction into an implementable release contract.
+
 ## Requirements
 
-- Define beaver-facing effects for active fire, heat, smoke, steam, ash or aftermath, and wet suppression fields.
+- Define beaver-facing effects for active fire, heat, smoke, toxic smoke, steam, toxic steam, ash or aftermath, and wet suppression fields.
 - Decide which effects are release scope and which are deferred.
-- Define behavior expectations such as avoidance, path cost, interruption, panic, work cancellation, injury, death, or safe no-op.
+- Define the respiratory progression: coughing slowdown, choking incapacitation or sleep-like behavior, and death after sustained severe exposure.
+- Define the burn progression: singed injury, burned work-preventing severe injury, and death after sustained direct heat or flame exposure.
+- Define behavior expectations such as avoidance, path cost, interruption, panic, work cancellation, injury, incapacitation, death, or safe no-op.
 - Keep initial release conservative and reversible unless Timberborn APIs make deeper behavior safe.
 - Preserve host boundaries: the GPU owns fire fields, Timberborn reads field exposure and applies beaver-facing consequences.
 - Document what must be observable in logs, status, screenshots, or recordings.
@@ -52,3 +56,4 @@ Wildfire currently defines fire simulation, visual fields, alerts, and building 
 
 - Prefer visible, understandable beaver behavior over hidden stat changes for the first implementation.
 - If Timberborn exposes no safe API for a desired beaver consequence, defer that consequence explicitly instead of forcing it through reflection.
+- Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects".
