@@ -1,43 +1,92 @@
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
+using Timberborn.BaseComponentSystem;
+using Timberborn.EntitySystem;
 using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
+using Timberborn.Stockpiles;
 using Timberborn.TerrainSystem;
 using UnityEngine;
 using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
 
-public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
+public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpdatableSingleton
 {
+    private const int TerrainOnlyFallbackAttempt = 120;
+
     private readonly TimberbornFireRuntime _runtime;
     private readonly ITimberbornFireSimulatorFactory _simulatorFactory;
     private readonly MapSize _mapSize;
     private readonly ITerrainService _terrainService;
     private readonly IBlockService _blockService;
+    private readonly EntityRegistry _entityRegistry;
     private readonly ITimberbornFireLogSink _logSink;
+    private bool _initialized;
+    private int _initializationAttempt;
 
     public TimberbornFireRuntimeInitializer(
         TimberbornFireRuntime runtime,
         ITimberbornFireSimulatorFactory simulatorFactory,
         MapSize mapSize,
         ITerrainService terrainService,
-        IBlockService blockService)
+        IBlockService blockService,
+        EntityRegistry entityRegistry)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _simulatorFactory = simulatorFactory ?? throw new ArgumentNullException(nameof(simulatorFactory));
         _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
         _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
         _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
         _logSink = new UnityTimberbornFireLogSink();
     }
 
     public void Load()
     {
+        _initializationAttempt = 0;
+        TryInitializeRuntime();
+    }
+
+    public void UpdateSingleton()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        _initializationAttempt++;
+        TryInitializeRuntime();
+    }
+
+    private void TryInitializeRuntime()
+    {
         try
         {
+            int entityCount = TimberbornEntityComponentCells.EntityCount(_entityRegistry);
+            bool allowTerrainOnly = _initializationAttempt >= TerrainOnlyFallbackAttempt;
+            if (entityCount == 0 && !allowTerrainOnly)
+            {
+                if (_initializationAttempt is 0 || _initializationAttempt % 30 == 0)
+                {
+                    _logSink.Info(
+                        "wildfire_timberborn_runtime_initialize_waiting_for_entities " +
+                        $"attempt={_initializationAttempt} " +
+                        $"entity_count={entityCount}");
+                }
+
+                return;
+            }
+
             Vector3Int terrainSize = _mapSize.TerrainSize;
             FireGrid grid = new(terrainSize.x, terrainSize.y, terrainSize.z);
+            BlockObject[] blockObjects = TimberbornEntityComponentCells.BlockObjects(_entityRegistry).ToArray();
+            _logSink.Info(
+                "wildfire_timberborn_world_import_entity_snapshot " +
+                $"attempt={_initializationAttempt} " +
+                $"entity_count={entityCount} " +
+                $"block_object_count={blockObjects.Length} " +
+                $"sample_block_objects={TimberbornQaCommandBridge.FormatToken(TimberbornEntityComponentCells.FormatSampleBlockObjectNames(blockObjects))}");
             TimberbornWorldCellImporter importer = new(CreateLiveWorldCellSourceProviders());
             TimberbornWorldCellImportResult importResult = importer.Import(grid);
             TimberbornCellSource[] sources = importResult.Sources.ToArray();
@@ -65,6 +114,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
             _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
             _runtime.Initialize(grid, sources, importResult.CompanionFields, importResult.Summary, _simulatorFactory);
+            _initialized = true;
             _logSink.Info(
                 $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
         }
@@ -79,14 +129,250 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
         return new ITimberbornWorldCellSourceProvider[]
         {
             new TimberbornTerrainWorldCellSourceProvider(_mapSize, _terrainService),
-            new TimberbornSafeUnavailableCellSourceProvider("trees", "safe_live_tree_enumeration_unavailable"),
-            new TimberbornSafeUnavailableCellSourceProvider("crops", "safe_live_crop_enumeration_unavailable"),
-            new TimberbornPausableBuildingCellSourceProvider(_blockService, _mapSize, _terrainService),
-            new TimberbornSafeUnavailableCellSourceProvider("storage", "safe_live_storage_enumeration_unavailable"),
-            new TimberbornSafeUnavailableCellSourceProvider("infrastructure", "safe_live_infrastructure_enumeration_unavailable"),
-            new TimberbornSafeUnavailableCellSourceProvider("water", "safe_live_water_enumeration_unavailable"),
-            new TimberbornSafeUnavailableCellSourceProvider("badwater", "safe_live_badwater_enumeration_unavailable"),
+            new TimberbornNaturalResourceCellSourceProvider(_entityRegistry),
+            new TimberbornBuildingCellSourceProvider(_entityRegistry),
+            new TimberbornStorageCellSourceProvider(_entityRegistry),
+            new TimberbornWaterSourceCellSourceProvider(_entityRegistry),
         };
+    }
+}
+
+public sealed class TimberbornBuildingCellSourceProvider : ITimberbornWorldCellSourceProvider
+{
+    private readonly EntityRegistry _entityRegistry;
+    private readonly TimberbornBuildingAdapter _buildingAdapter = new();
+
+    public TimberbornBuildingCellSourceProvider(EntityRegistry entityRegistry)
+    {
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        TimberbornCellSource[] sources = TimberbornEntityComponentCells.ComponentsWithBlockObject<Building>(_entityRegistry)
+            .SelectMany((building, buildingIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(building)
+                .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                .Select(coordinates => _buildingAdapter.CreateWoodLikeSource(coordinates.x, coordinates.y, coordinates.z) with
+                {
+                    CompanionTargetId = checked((uint)buildingIndex + 1u),
+                }))
+            .ToArray();
+
+        return new TimberbornWorldCellImportProviderResult("buildings", sources);
+    }
+}
+
+public sealed class TimberbornNaturalResourceCellSourceProvider : ITimberbornWorldCellSourceProvider
+{
+    private readonly EntityRegistry _entityRegistry;
+    private readonly TimberbornResourceAdapter _resourceAdapter = new();
+
+    public TimberbornNaturalResourceCellSourceProvider(EntityRegistry entityRegistry)
+    {
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        BlockObject[] blockObjects = TimberbornEntityComponentCells.BlockObjects(_entityRegistry).ToArray();
+        TimberbornCellSource[] treeSources = blockObjects
+            .Where(static resource => TimberbornEntityComponentCells.IsTreeName(resource.Name))
+            .SelectMany((resource, resourceIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(resource)
+                .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                .Select(coordinates => _resourceAdapter.CreateTreeSource(
+                    coordinates.x,
+                    coordinates.y,
+                    coordinates.z,
+                    checked((uint)resourceIndex + 1u))))
+            .ToArray();
+        TimberbornCellSource[] cropSources = blockObjects
+            .Where(static resource => TimberbornEntityComponentCells.IsCropName(resource.Name))
+            .SelectMany((resource, resourceIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(resource)
+                .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                .Select(coordinates => _resourceAdapter.CreateCropSource(
+                    coordinates.x,
+                    coordinates.y,
+                    coordinates.z,
+                    checked((uint)resourceIndex + 1u))))
+            .ToArray();
+
+        return new TimberbornWorldCellImportProviderResult("natural_resources", treeSources.Concat(cropSources).ToArray());
+    }
+}
+
+public sealed class TimberbornStorageCellSourceProvider : ITimberbornWorldCellSourceProvider
+{
+    private readonly EntityRegistry _entityRegistry;
+    private readonly TimberbornResourceAdapter _resourceAdapter = new();
+
+    public TimberbornStorageCellSourceProvider(EntityRegistry entityRegistry)
+    {
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        TimberbornCellSource[] sources = TimberbornEntityComponentCells.ComponentsWithBlockObject<Stockpile>(_entityRegistry)
+            .SelectMany((stockpile, stockpileIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(stockpile)
+                .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                .Select(coordinates => _resourceAdapter.CreateStockpileResourceSource(
+                    coordinates.x,
+                    coordinates.y,
+                    coordinates.z,
+                    stockpile.WhitelistedGoodType,
+                    checked((uint)stockpileIndex + 1u))))
+            .ToArray();
+
+        return new TimberbornWorldCellImportProviderResult("storage", sources);
+    }
+}
+
+public sealed class TimberbornWaterSourceCellSourceProvider : ITimberbornWorldCellSourceProvider
+{
+    private readonly EntityRegistry _entityRegistry;
+    private readonly TimberbornWaterAdapter _waterAdapter = new();
+
+    public TimberbornWaterSourceCellSourceProvider(EntityRegistry entityRegistry)
+    {
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        BlockObject[] blockObjects = TimberbornEntityComponentCells.BlockObjects(_entityRegistry).ToArray();
+        TimberbornCellSource[] waterSources = blockObjects
+            .Where(static source => TimberbornEntityComponentCells.IsWaterSourceName(source.Name))
+            .SelectMany(TimberbornEntityComponentCells.OccupiedCoordinates)
+            .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+            .Select(coordinates => _waterAdapter.CreateSource(coordinates.x, coordinates.y, coordinates.z, 3))
+            .ToArray();
+        TimberbornCellSource[] badwaterSources = blockObjects
+            .Where(static source => TimberbornEntityComponentCells.IsBadwaterSourceName(source.Name))
+            .SelectMany(TimberbornEntityComponentCells.OccupiedCoordinates)
+            .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+            .Select(coordinates => new TimberbornCellSource(
+                new TimberbornCellCoordinates(coordinates.x, coordinates.y, coordinates.z),
+                Water: new TimberbornWaterCell(3),
+                MaterialClass: WildfireMaterialClass.Badwater))
+            .ToArray();
+
+        return new TimberbornWorldCellImportProviderResult("water_sources", waterSources.Concat(badwaterSources).ToArray());
+    }
+}
+
+public static class TimberbornEntityComponentCells
+{
+    private static readonly string[] TreeNameTokens =
+    {
+        "Birch",
+        "Chestnut",
+        "Mangrove",
+        "Maple",
+        "Oak",
+        "Pine",
+    };
+
+    private static readonly string[] CropNameTokens =
+    {
+        "Canola",
+        "Carrot",
+        "Cassava",
+        "Cattail",
+        "Coffee",
+        "Corn",
+        "Dandelion",
+        "Eggplant",
+        "Kohlrabi",
+        "Potato",
+        "Soybean",
+        "Spadderdock",
+        "Sunflower",
+        "Wheat",
+    };
+
+    public static bool IsTreeName(string name)
+    {
+        return TreeNameTokens.Any(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static bool IsCropName(string name)
+    {
+        return CropNameTokens.Any(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static bool IsWaterSourceName(string name)
+    {
+        return (name.Contains("WaterSource", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("Water Source", StringComparison.OrdinalIgnoreCase)) &&
+            !IsBadwaterSourceName(name);
+    }
+
+    public static bool IsBadwaterSourceName(string name)
+    {
+        return name.Contains("BadwaterSource", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Badwater Source", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Badtide", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static int EntityCount(EntityRegistry entityRegistry)
+    {
+        return entityRegistry.Entities.Count;
+    }
+
+    public static IEnumerable<BlockObject> BlockObjects(EntityRegistry entityRegistry)
+    {
+        return entityRegistry.Entities
+            .Select(entity => TryGetComponent<BlockObject>(entity, out BlockObject blockObject)
+                ? blockObject
+                : null)
+            .Where(static blockObject => blockObject is not null)!;
+    }
+
+    public static IEnumerable<T> ComponentsWithBlockObject<T>(EntityRegistry entityRegistry)
+        where T : BaseComponent
+    {
+        return entityRegistry.Entities
+            .Select(entity => TryGetComponent<T>(entity, out T component) &&
+                TryGetComponent<BlockObject>(entity, out _)
+                    ? component
+                    : null)
+            .Where(static component => component is not null)!;
+    }
+
+    public static string FormatSampleBlockObjectNames(IEnumerable<BlockObject> blockObjects)
+    {
+        string[] names = blockObjects
+            .Select(static blockObject => blockObject.Name)
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase)
+            .Take(16)
+            .ToArray();
+
+        return names.Length == 0
+            ? "none"
+            : string.Join("|", names);
+    }
+
+    public static IEnumerable<Vector3Int> OccupiedCoordinates(BaseComponent component)
+    {
+        BlockObject blockObject = component.GetComponent<BlockObject>();
+        return blockObject.PositionedBlocks.GetOccupiedCoordinates();
+    }
+
+    private static bool TryGetComponent<T>(BaseComponent component, out T result)
+    {
+        return component.TryGetComponent(out result);
+    }
+
+    public static bool IsInsideGrid(Vector3Int coordinates, FireGrid grid)
+    {
+        return coordinates.x >= 0 &&
+            coordinates.y >= 0 &&
+            coordinates.z >= 0 &&
+            coordinates.x < grid.Width &&
+            coordinates.y < grid.Height &&
+            coordinates.z < grid.Depth;
     }
 }
 
