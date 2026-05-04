@@ -120,12 +120,54 @@ describe("generate-wildfire-scenario-save placement validity", () => {
 
     expect(mutation.generated).toEqual([{ category: "water-channel-source", coordinate: { x: 81, y: 80, z: 2 }, template: "WaterSource" }]);
     expect(mutation.blockers).toContainEqual({
-      blockedReason: "template entity Carrot was not found in world.json Entities with valid BlockObject coordinates",
+      blockedReason: "template entity Carrot or Potato or Wheat or Sunflower was not found in world.json Entities with valid BlockObject coordinates",
       category: "crop-pad",
       coordinate: { x: 3, y: 5, z: 2 },
       template: "Carrot",
     });
     expect(mutation.blockers.filter((blocker) => blocker.template === "WaterSource")).toHaveLength(3);
     expect(mutation.blockers.filter((blocker) => blocker.template === "WaterSource").every((blocker) => blocker.blockedReason?.includes("only 1 existing template-supported WaterSource"))).toBe(true);
+  });
+
+  test("uses modern Folktails path and harvestable crop fallbacks", () => {
+    const world = {
+      Entities: [
+        ...Array.from({ length: 4 }, (_, index) => prototypeEntity("WaterSource", 90 + index, 80, 2)),
+        ...Array.from({ length: 4 }, (_, index) => prototypeEntity("BadwaterSource", 80 + index, 80, 2)),
+        ...["Pine", "Birch", "Oak"].flatMap((template, templateIndex) =>
+          Array.from({ length: 4 }, (_, index) => prototypeEntity(template, 80 + index, 81 + templateIndex, 2)),
+        ),
+        ...Array.from({ length: 4 }, (_, index) => prototypeEntity("Potato", 80 + index, 85, 2)),
+        prototypeEntity("MediumWarehouse.Folktails", 80, 86, 2),
+        prototypeEntity("LargePile.Folktails", 81, 86, 2),
+        prototypeEntity("SmallTank.Folktails", 82, 86, 2),
+        ...Array.from({ length: 3 }, (_, index) => prototypeEntity("Path.Folktails", 80 + index, 87, 2)),
+      ],
+      Singletons: {
+        MapSize: {
+          Size: { X: 128, Y: 128 },
+        },
+        TerrainMap: {
+          Voxels: {
+            Array: "0 0 0 0",
+          },
+        },
+      },
+    };
+
+    const mutation = mutateWorldEntities(world);
+
+    expect(mutation.blockers).toEqual([]);
+    expect(mutation.generated.filter((checkpoint) => checkpoint.category === "crop-pad").map((checkpoint) => checkpoint.template)).toEqual([
+      "Potato",
+      "Potato",
+      "Potato",
+      "Potato",
+    ]);
+    expect(mutation.generated.filter((checkpoint) => checkpoint.category === "central-camera-lane").map((checkpoint) => checkpoint.template)).toEqual([
+      "Path.Folktails",
+      "Path.Folktails",
+      "Path.Folktails",
+    ]);
   });
 });

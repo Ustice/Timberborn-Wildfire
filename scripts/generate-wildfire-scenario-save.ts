@@ -71,6 +71,11 @@ type Manifest = {
   };
   result: {
     blockedPlacements: EntityPlacement[];
+    evidence: {
+      badwaterFlow: string;
+      storageInventory: string;
+      waterFlow: string;
+    };
     generatedEntityCountsByCategory: Record<string, number>;
     generatedEntities: EntityRequest[];
     schemaBlockers: string[];
@@ -397,6 +402,13 @@ const createLayoutRequests = (): EntityRequest[] => [
   ],
 ];
 
+const templateCandidatesByRequestTemplate: Record<string, string[]> = {
+  Carrot: ["Carrot", "Potato", "Wheat", "Sunflower"],
+  Path: ["Path", "Path.Folktails"],
+};
+
+const templateCandidatesFor = (template: string): string[] => templateCandidatesByRequestTemplate[template] ?? [template];
+
 const countByCategory = (requests: EntityRequest[]): Record<string, number> =>
   requests.reduce<Record<string, number>>(
     (counts, request) => ({ ...counts, [request.category]: (counts[request.category] ?? 0) + 1 }),
@@ -438,6 +450,39 @@ const existingSupportedPlacements = (entities: JsonValue[]): Record<string, Enti
     };
   }, {});
 
+const takeSupportedPlacement = (
+  supportedPlacements: Record<string, EntityRequest[]>,
+  nextSupportedIndexByTemplate: Record<string, number>,
+  template: string,
+): { nextSupportedIndexByTemplate: Record<string, number>; supportedPlacement: EntityRequest | null } =>
+  templateCandidatesFor(template).reduce<{ nextSupportedIndexByTemplate: Record<string, number>; supportedPlacement: EntityRequest | null }>(
+    (state, candidate) => {
+      if (state.supportedPlacement) {
+        return state;
+      }
+
+      const supportedForTemplate = supportedPlacements[candidate] ?? [];
+      const nextSupportedIndex = state.nextSupportedIndexByTemplate[candidate] ?? 0;
+      const supportedPlacement = supportedForTemplate[nextSupportedIndex] ?? null;
+
+      return supportedPlacement
+        ? {
+            nextSupportedIndexByTemplate: {
+              ...state.nextSupportedIndexByTemplate,
+              [candidate]: nextSupportedIndex + 1,
+            },
+            supportedPlacement,
+          }
+        : state;
+    },
+    { nextSupportedIndexByTemplate, supportedPlacement: null },
+  );
+
+const supportedCandidateCount = (supportedPlacements: Record<string, EntityRequest[]>, template: string): number =>
+  templateCandidatesFor(template).reduce((count, candidate) => count + (supportedPlacements[candidate]?.length ?? 0), 0);
+
+const requestTemplateLabel = (template: string): string => templateCandidatesFor(template).join(" or ");
+
 export const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlacement[]; generated: EntityRequest[]; nextWorld: JsonValue } => {
   const nextWorld = cloneJson(world);
   const entities = asArray(asObject(nextWorld)?.Entities);
@@ -463,11 +508,13 @@ export const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlaceme
   const coordinateBlocker = plannedCoordinateBlocker(nextWorld);
   const placements = planned.reduce<{ blockers: EntityPlacement[]; generated: EntityRequest[]; nextEntities: JsonValue[]; nextSupportedIndexByTemplate: Record<string, number> }>(
     (state, request) => {
-      const supportedForTemplate = supportedPlacements[request.template] ?? [];
-      const nextSupportedIndex = state.nextSupportedIndexByTemplate[request.template] ?? 0;
-      const supportedPlacement = supportedForTemplate[nextSupportedIndex];
+      const placement = takeSupportedPlacement(supportedPlacements, state.nextSupportedIndexByTemplate, request.template);
+      const supportedPlacement = placement.supportedPlacement;
       const key = coordinateKey(request.coordinate);
       if (!supportedPlacement) {
+        const supportedCount = supportedCandidateCount(supportedPlacements, request.template);
+        const templateLabel = requestTemplateLabel(request.template);
+
         return {
           ...state,
           blockers: [
@@ -475,9 +522,9 @@ export const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlaceme
             {
               ...request,
               blockedReason:
-                supportedForTemplate.length === 0
-                  ? `template entity ${request.template} was not found in world.json Entities with valid BlockObject coordinates`
-                  : `only ${supportedForTemplate.length} existing template-supported ${request.template} checkpoint(s) were found; planned coordinate ${key} is blocked because ${coordinateBlocker}`,
+                supportedCount === 0
+                  ? `template entity ${templateLabel} was not found in world.json Entities with valid BlockObject coordinates`
+                  : `only ${supportedCount} existing template-supported ${templateLabel} checkpoint(s) were found; planned coordinate ${key} is blocked because ${coordinateBlocker}`,
             },
           ],
         };
@@ -485,11 +532,8 @@ export const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlaceme
 
       return {
         ...state,
-        generated: [...state.generated, { ...request, coordinate: supportedPlacement.coordinate }],
-        nextSupportedIndexByTemplate: {
-          ...state.nextSupportedIndexByTemplate,
-          [request.template]: nextSupportedIndex + 1,
-        },
+        generated: [...state.generated, { ...request, coordinate: supportedPlacement.coordinate, template: supportedPlacement.template }],
+        nextSupportedIndexByTemplate: placement.nextSupportedIndexByTemplate,
       };
     },
     { blockers: [], generated: [], nextEntities: entities, nextSupportedIndexByTemplate: {} },
@@ -562,6 +606,64 @@ export const updateMetadata = (metadata: JsonValue | undefined, generatedAt: Dat
 const replaceEntry = (entries: ZipEntry[], name: string, data: Buffer): ZipEntry[] =>
   entries.map((entry) => (entry.name === name ? { ...entry, data, uncompressedSize: data.length } : entry));
 
+const entityAt = (entities: JsonValue[], coordinate: Coordinate): JsonObject | null =>
+  (entities.find((entity) => {
+    const existingCoordinate = entityCoordinate(entity);
+    return existingCoordinate ? coordinateKey(existingCoordinate) === coordinateKey(coordinate) : false;
+  }) ?? null) as JsonObject | null;
+
+const collectStringProperties = (value: JsonValue, keys: Set<string>): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectStringProperties(item, keys));
+  }
+  const object = asObject(value);
+  if (!object) {
+    return [];
+  }
+
+  return Object.entries(object).flatMap(([key, child]) => [
+    ...(keys.has(key) && typeof child === "string" ? [child] : []),
+    ...collectStringProperties(child, keys),
+  ]);
+};
+
+const describeFlowEvidence = (generated: EntityRequest[], category: string): string => {
+  const coordinates = generated.filter((request) => request.category === category).map((request) => request.coordinate);
+  if (coordinates.length < 2) {
+    return `${category} has ${coordinates.length} checkpoint(s); static archive inspection cannot prove a channel or flow direction.`;
+  }
+
+  const xValues = coordinates.map((coordinate) => coordinate.x);
+  const yValues = coordinates.map((coordinate) => coordinate.y);
+  const zValues = coordinates.map((coordinate) => coordinate.z);
+
+  return `${category} checkpoints span x=${Math.min(...xValues)}..${Math.max(...xValues)}, y=${Math.min(...yValues)}..${Math.max(...yValues)}, z=${Math.min(...zValues)}..${Math.max(...zValues)}; live QA must confirm actual north-to-south flow.`;
+};
+
+const describeStorageInventoryEvidence = (world: JsonValue | undefined, generated: EntityRequest[]): string => {
+  const entities = asArray(getPath(world ?? null, ["Entities"])) ?? [];
+  const storageEntities = generated
+    .filter((request) => ["mixed-material-structure-pad", "stored-water-pad", "wood-heavy-structure-pad"].includes(request.category))
+    .map((request) => entityAt(entities, request.coordinate))
+    .filter((entity): entity is JsonObject => entity !== null);
+  const goods = Array.from(
+    new Set(storageEntities.flatMap((entity) => collectStringProperties(entity, new Set(["AllowedGood", "CurrentGood", "Good", "GoodId"])))),
+  ).sort();
+
+  return goods.length > 0
+    ? `storage/structure checkpoints reference goods: ${goods.join(", ")}`
+    : "storage/structure checkpoints expose no inventory goods in static archive inspection; live QA or a purpose-built stocked template must prove contents.";
+};
+
+const buildEvidence = (
+  world: JsonValue | undefined,
+  generated: EntityRequest[],
+): { badwaterFlow: string; storageInventory: string; waterFlow: string } => ({
+  badwaterFlow: describeFlowEvidence(generated, "badwater-channel-source"),
+  storageInventory: describeStorageInventoryEvidence(world, generated),
+  waterFlow: describeFlowEvidence(generated, "water-channel-source"),
+});
+
 const buildManifest = (
   options: Options,
   inspection: ArchiveInspection,
@@ -605,6 +707,7 @@ const buildManifest = (
     },
     result: {
       blockedPlacements,
+      evidence: buildEvidence(world, generated),
       generatedEntityCountsByCategory: countByCategory(generated),
       generatedEntities: generated,
       schemaBlockers,
