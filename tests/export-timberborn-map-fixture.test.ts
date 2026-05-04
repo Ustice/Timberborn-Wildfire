@@ -72,6 +72,23 @@ describe("export-timberborn-map-fixture", () => {
       packCompanion(0, 0, 0, 0),
       packCompanion(0, 0, 0, 0),
     ]);
+    expect(fixture.parityCounts.sourceCountsByMaterialClass).toMatchObject({
+      infrastructure: 1,
+      terrain: 1,
+      tree: 1,
+      water: 1,
+    });
+    expect(fixture.parityCounts.resolvedCellCountsByMaterialClass).toMatchObject({
+      empty: 5,
+      infrastructure: 1,
+      terrain: 1,
+      tree: 1,
+    });
+    expect(fixture.parityCounts).toMatchObject({
+      entitySourceCount: 2,
+      terrainSolidVoxelCount: 1,
+      waterColumnSourceCount: 1,
+    });
     expect(summary).toMatchObject({
       cellCount: 8,
       infrastructureSources: 1,

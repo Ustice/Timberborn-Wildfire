@@ -62,3 +62,5 @@ Make `.timber` snapshot export and live Timberborn import classify terrain, enti
 ## Notes
 
 - 2026-05-04 `TWF-141` evidence showed the generated `TWF-133` scenario exports as `256x256x23` and exceeds the live auto-dispatch cap, while the closest accepted 50x50 Diorama save has matching dimensions but mismatched material counts between snapshot export and live import.
+- 2026-05-04 first worker slice added explicit `parityCounts` to snapshot fixtures: `sourceCountsByMaterialClass`, `resolvedCellCountsByMaterialClass`, `terrainSolidVoxelCount`, `waterColumnSourceCount`, and `entitySourceCount`.
+- Regenerated 50x50 Diorama fixture now proves the snapshot summary was source-oriented for entities/water and voxel-oriented for terrain. Live import still reports runtime source counts from occupied coordinates, so the remaining implementation choice is whether to align source models or expose comparable live resolved-cell counts.

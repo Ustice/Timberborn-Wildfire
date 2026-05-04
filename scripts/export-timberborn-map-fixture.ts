@@ -48,6 +48,13 @@ type PackedFixture = {
   };
   formatVersion: 1;
   grid: Grid;
+  parityCounts: {
+    entitySourceCount: number;
+    resolvedCellCountsByMaterialClass: Record<MaterialClass, number>;
+    sourceCountsByMaterialClass: Record<MaterialClass, number>;
+    terrainSolidVoxelCount: number;
+    waterColumnSourceCount: number;
+  };
   packedCellValues: {
     indexOrder: "x + y * width + z * width * height";
     valueType: "uint16";
@@ -107,6 +114,20 @@ const materialClassValues = new Map<MaterialClass, number>([
   ["badwater", 9],
   ["unknown", 10],
 ]);
+const materialClasses: MaterialClass[] = [
+  "empty",
+  "terrain",
+  "vegetation",
+  "crop",
+  "tree",
+  "building",
+  "storage",
+  "infrastructure",
+  "water",
+  "badwater",
+  "unknown",
+];
+const materialClassByValue = new Map<number, MaterialClass>(Array.from(materialClassValues.entries()).map(([key, value]) => [value, key]));
 
 const home = process.env.HOME ?? "";
 const timberbornRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn");
@@ -347,6 +368,29 @@ const companionStateFromProfile = (profile: MaterialFieldProfile): number =>
 
 const companionStateOf = (materialClass: MaterialClass): number => companionStateFromProfile(lookupMaterialProfile(materialClass));
 
+const emptyMaterialCounts = (): Record<MaterialClass, number> =>
+  materialClasses.reduce<Record<MaterialClass, number>>(
+    (counts, materialClass) => ({ ...counts, [materialClass]: 0 }),
+    {} as Record<MaterialClass, number>,
+  );
+
+const incrementMaterialCount = (
+  counts: Record<MaterialClass, number>,
+  materialClass: MaterialClass,
+  amount = 1,
+): Record<MaterialClass, number> => ({
+  ...counts,
+  [materialClass]: counts[materialClass] + amount,
+});
+
+const materialClassFromCompanionState = (state: number): MaterialClass => materialClassByValue.get(state & 0xff) ?? "unknown";
+
+const resolvedCellCountsByMaterialClass = (companionStates: number[]): Record<MaterialClass, number> =>
+  companionStates.reduce<Record<MaterialClass, number>>(
+    (counts, state) => incrementMaterialCount(counts, materialClassFromCompanionState(state)),
+    emptyMaterialCounts(),
+  );
+
 const waterOf = (cell: number): number => (cell >> 10) & 0b11;
 
 const withWater = (cell: number, water: number): number => (cell & ~0b0000_1100_0000_0000) | ((Math.max(waterOf(cell), water) & 0b11) << 10);
@@ -536,6 +580,19 @@ export const buildFixtureFromWorld = (
   if (selectedLayer < 0 || selectedLayer >= grid.depth) {
     fail(`Selected layer ${selectedLayer} is outside grid depth ${grid.depth}.`);
   }
+  const solidTerrainSources = terrainValues.filter((value) => value > 0).length;
+  const sourceCountsByMaterialClass: Record<MaterialClass, number> = {
+    ...emptyMaterialCounts(),
+    badwater: entityStats.badwaterSources,
+    building: entityStats.buildingSources,
+    crop: entityStats.cropSources,
+    infrastructure: entityStats.infrastructureSources,
+    storage: entityStats.storageSources,
+    terrain: solidTerrainSources,
+    tree: entityStats.treeSources,
+    vegetation: entityStats.vegetationSources,
+    water: waterSources,
+  };
 
   return {
     fixture: {
@@ -548,6 +605,13 @@ export const buildFixtureFromWorld = (
       },
       formatVersion: 1,
       grid,
+      parityCounts: {
+        entitySourceCount: entitySources.length,
+        resolvedCellCountsByMaterialClass: resolvedCellCountsByMaterialClass(companionStates),
+        sourceCountsByMaterialClass,
+        terrainSolidVoxelCount: solidTerrainSources,
+        waterColumnSourceCount: waterSources,
+      },
       packedCellValues: {
         indexOrder: "x + y * width + z * width * height",
         valueType: "uint16",
@@ -570,7 +634,7 @@ export const buildFixtureFromWorld = (
       entitySources: entitySources.length,
       height: grid.height,
       infrastructureSources: entityStats.infrastructureSources,
-      solidTerrainSources: terrainValues.filter((value) => value > 0).length,
+      solidTerrainSources,
       storageSources: entityStats.storageSources,
       treeSources: entityStats.treeSources,
       unresolvedTemplateSources: entityStats.unresolvedTemplateSources,
