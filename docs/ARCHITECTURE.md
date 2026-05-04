@@ -58,6 +58,13 @@ Unity has compute-facing scaffolds, and Timberborn has adapter-facing names so c
 
 Initial fixture-style `ushort` packed cells are uploaded to current and next cell buffers as `uint` values. The packed cell payload remains in the lower 16 bits, leaving the upper bits available for future GPU-side bookkeeping without changing the core `PackedCell` contract.
 
+The grid also allocates companion field buffers beside packed cells:
+
+- `wildfire.companion_target_ids` stores one stable target id per cell for imported world ownership.
+- `wildfire.companion_fields` stores one packed 32-bit companion state per cell: material class, burn capacity, burn history, ash strength, ash quality, and contamination behavior.
+
+Default initialization uploads empty companion state for every cell. Real importers replace that default with material and target data, while shader and renderer follow-up tickets decide which companion fields are consumed on GPU.
+
 The plain solution build does not reference UnityEngine APIs yet. Buffer allocation therefore flows through `IComputeBufferAllocator` and `IComputeBufferHandle`, so Unity can later provide real compute-buffer handles while tests use deterministic recording handles. Fire-spread rules are still owned by future compute shaders, not by the C# scaffold.
 
 ## Timberborn Cell Mapping Scaffold

@@ -57,3 +57,7 @@ Add companion field storage beside `PackedCell` for data that does not belong in
 ## Notes
 
 - This ticket is the reason we do not expand `PackedCell`: packed cells stay fast, while real-world identity and aftermath state stay explicit.
+- 2026-05-04 worker result: added `WildfireCompanionFieldState` and `WildfireCompanionField` in `Wildfire.Core`, plus `wildfire.companion_target_ids` and `wildfire.companion_fields` allocation/upload in `ComputeBufferGrid`.
+- 2026-05-04 worker scope note: this slice initializes and uploads companion fields for GPU-owned buffers but does not yet mutate burn history or wire shader/renderer consumption. Those remain for downstream tickets.
+- 2026-05-04 worker docs: updated `docs/ARCHITECTURE.md` and `docs/TEST_PLAN.md` with the companion field buffer contract.
+- 2026-05-04 worker verification: `git diff --check`, `bun run typecheck`, `bun test`, `dotnet test Wildfire.slnx`, and `dotnet build Wildfire.slnx` passed. A filtered concurrent .NET test attempt was discarded after a compile fix; final .NET verification was rerun sequentially.

@@ -65,6 +65,8 @@ public sealed class ComputeBufferGridTests
                 "wildfire.deltas",
                 "wildfire.generations",
                 "wildfire.visual_fields",
+                "wildfire.companion_target_ids",
+                "wildfire.companion_fields",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
         Assert.All(allocator.Handles, static handle => Assert.Equal(2, handle.Count));
@@ -75,8 +77,67 @@ public sealed class ComputeBufferGridTests
         Assert.True(((RecordingComputeBufferHandle)grid.Deltas).IsAppend);
         Assert.Equal(ComputeBufferGrid.GenerationStrideBytes, grid.Generations.StrideBytes);
         Assert.Equal(ComputeBufferGrid.VisualFieldStrideBytes, grid.VisualFields.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.CompanionTargetIdStrideBytes, grid.CompanionTargetIds.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.CompanionFieldStrideBytes, grid.CompanionFields.StrideBytes);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.CurrentCells).UploadedValues);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.NextCells).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CompanionTargetIds).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues);
+    }
+
+    [Fact]
+    public void GridUploadsCompanionFieldsAsUInts()
+    {
+        ushort[] cells =
+        [
+            PackedCell.Pack(12, 0, 2, 0, 1, 1),
+            PackedCell.Pack(0, 0, 0, 3, 0, 7),
+        ];
+        WildfireCompanionField[] companionFields =
+        [
+            new(
+                TargetId: 42,
+                WildfireCompanionFieldState.FromMaterialProfile(
+                    WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Tree))),
+            new(
+                TargetId: 0,
+                WildfireCompanionFieldState.FromMaterialProfile(
+                    WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Badwater))),
+        ];
+        RecordingComputeBufferAllocator allocator = new();
+
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 2,
+            height: 1,
+            depth: 1,
+            cells,
+            companionFields,
+            allocator);
+
+        Assert.Equal([42u, 0u], ((RecordingComputeBufferHandle)grid.CompanionTargetIds).UploadedValues);
+        Assert.Equal(
+            companionFields.Select(static field => field.State.Pack()).ToArray(),
+            ((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues);
+        Assert.Equal(WildfireMaterialClass.Tree, WildfireCompanionFieldState.Unpack(((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues[0]).MaterialClass);
+        Assert.Equal(WildfireContaminationBehavior.TaintedSource, WildfireCompanionFieldState.Unpack(((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues[1]).ContaminationBehavior);
+    }
+
+    [Fact]
+    public void GridRejectsCompanionFieldCountMismatch()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => ComputeBufferGrid.FromCells(
+                width: 2,
+                height: 2,
+                depth: 1,
+                [1, 2, 3, 4],
+                [WildfireCompanionField.Empty],
+                allocator));
+
+        Assert.Contains("Expected 4, got 1", exception.Message);
+        Assert.Empty(allocator.Handles);
     }
 
     [Fact]
@@ -133,6 +194,8 @@ public sealed class ComputeBufferGridTests
                 "wildfire.deltas",
                 "wildfire.generations",
                 "wildfire.visual_fields",
+                "wildfire.companion_target_ids",
+                "wildfire.companion_fields",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
         Assert.All(allocator.Handles, static handle => Assert.Equal(1, handle.DisposeCalls));
