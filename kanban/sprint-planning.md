@@ -93,7 +93,19 @@ Include:
 
 Why: ash depends on crop, tree, and structure burn outcomes. Contamination depends on ash and exposure classification. Persistence should validate the integrated world-consequence state, not isolated stubs.
 
-### Sprint 9: Beavers And Player Feedback
+### Sprint 9: Real Field Replacement
+
+Goal: replace fake field inputs, fixed-cell stimuli, shader-constant tuning, and prefab-only large-area visuals with real imported fields, runtime parameters, generated-scenario evidence, GPU field rendering, and consequence gates.
+
+Include:
+
+- `TWF-137` through `TWF-150`: shared field schema, companion fields, live and snapshot importers, importer parity, runtime parameters, internal presets, tuning gates, real-field QA controls, generated scenario checkpoints, GPU field renderer, consequence gate, and scaffold cleanup.
+- `TWF-133`: generated scenario layout dependency.
+- Existing consequence tickets only as downstream gates when their implementation is ready.
+
+Why: the project has proven the GPU loop and QA bridge. Further gameplay tuning from fixed cells would be misleading because it cannot answer whether real Timberborn trees, crops, storage, water, structures, and aftermath behave correctly.
+
+### Sprint 10: Beavers And Player Feedback
 
 Goal: make beavers respond to danger and make the result understandable to players.
 
@@ -111,7 +123,7 @@ Include:
 
 Why: this work is API-risky and player-visible. Keep the ladder explicit: telemetry, harness, lower-risk states, severe states, recordings, then aggregated feedback.
 
-### Sprint 10: Release Packaging
+### Sprint 11: Release Packaging
 
 Goal: turn the proven gameplay into a distributable mod.
 
