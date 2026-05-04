@@ -573,12 +573,24 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
             _companionFields.SetData(companionValues.Select(static field => field.State.Pack()).ToArray());
             _readCells = _currentCells;
             _writeCells = _nextCells;
-            _visualFieldBindingLifecycle = new TimberbornGpuVisualFieldSurfaceBindingLifecycle(
-                _visualFieldSurface,
-                _visualFields,
-                grid,
-                VisualFieldStrideBytes);
-            _visualFieldBindingLifecycle.Bind();
+            if (TimberbornAutoDispatchPolicy.IsAllowedCellCount(grid.CellCount))
+            {
+                _visualFieldBindingLifecycle = new TimberbornGpuVisualFieldSurfaceBindingLifecycle(
+                    _visualFieldSurface,
+                    _visualFields,
+                    grid,
+                    VisualFieldStrideBytes);
+                _visualFieldBindingLifecycle.Bind();
+            }
+            else
+            {
+                _logSink.Warning(
+                    "wildfire_timberborn_gpu_visual_field_surface_disabled " +
+                    "reason=map_too_large " +
+                    $"cell_count={grid.CellCount} " +
+                    $"limit={TimberbornAutoDispatchPolicy.CellLimit}");
+            }
+
             _logSink.Info(
                 $"wildfire_timberborn_gpu_simulator_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
         }

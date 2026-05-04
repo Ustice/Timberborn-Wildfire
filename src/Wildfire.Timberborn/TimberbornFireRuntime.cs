@@ -30,6 +30,7 @@ public sealed class TimberbornFireRuntime :
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
     private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
     private bool _compatibilityProbesRan;
+    private string? _autoDispatchDisabledReason;
     private long _gameUpdateId;
     private bool _isLoaded;
 
@@ -78,6 +79,7 @@ public sealed class TimberbornFireRuntime :
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
+        _autoDispatchDisabledReason = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
         _compatibilityProbesRan = false;
         _gameUpdateId = 0;
@@ -178,6 +180,30 @@ public sealed class TimberbornFireRuntime :
         }
 
         RequireFireSystem().RegisterChange(change);
+    }
+
+    public void SkipInitializeForOversizedGrid(FireGrid grid, TimberbornWorldCellImportSummary worldImportSummary)
+    {
+        if (grid.CellCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(grid), grid, "Fire grid cell count cannot be negative.");
+        }
+
+        _fireSystem?.Dispose();
+        _dispatcher = null;
+        _fireSystem = null;
+        _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
+        _autoDispatchDisabledReason =
+            $"map_too_large:cell_count={grid.CellCount}:limit={TimberbornAutoDispatchPolicy.CellLimit}";
+        _logSink.Warning(
+            "wildfire_timberborn_runtime_initialize_skipped " +
+            "reason=map_too_large " +
+            $"width={grid.Width} " +
+            $"height={grid.Height} " +
+            $"depth={grid.Depth} " +
+            $"cell_count={grid.CellCount} " +
+            $"limit={TimberbornAutoDispatchPolicy.CellLimit} " +
+            $"{_lastWorldImportSummary.StatusToken}");
     }
 
     public void RegisterMappedCellChanges(IEnumerable<TimberbornCellSource> sources)
@@ -426,11 +452,27 @@ public sealed class TimberbornFireRuntime :
                 fireSystem.Height ?? throw new InvalidOperationException("Fire system height is unavailable."),
                 fireSystem.Depth ?? throw new InvalidOperationException("Fire system depth is unavailable.")));
         _fireSystem = fireSystem;
+        int cellCount = checked(
+            (fireSystem.Width ?? throw new InvalidOperationException("Fire system width is unavailable.")) *
+            (fireSystem.Height ?? throw new InvalidOperationException("Fire system height is unavailable.")) *
+            (fireSystem.Depth ?? throw new InvalidOperationException("Fire system depth is unavailable.")));
+        _autoDispatchDisabledReason = TimberbornAutoDispatchPolicy.IsAllowedCellCount(cellCount)
+            ? null
+            : $"map_too_large:cell_count={cellCount}:limit={TimberbornAutoDispatchPolicy.CellLimit}";
+        if (_autoDispatchDisabledReason is not null)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_auto_dispatch_disabled " +
+                "reason=map_too_large " +
+                $"cell_count={cellCount} " +
+                $"limit={TimberbornAutoDispatchPolicy.CellLimit}");
+        }
+
         _dispatcher = new TimberbornFixedCadenceFireDispatcher(
             fireSystem,
             cadence ?? TimberbornFireCadence.Default,
             _logSink,
-            IsWildfireEnabled);
+            IsAutoDispatchEnabled);
         _gameUpdateId = 0;
         _logSink.Info(
             $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
@@ -471,6 +513,11 @@ public sealed class TimberbornFireRuntime :
     private bool IsWildfireEnabled()
     {
         return _releaseSettings.GetSnapshot().IsWildfireEnabled;
+    }
+
+    private bool IsAutoDispatchEnabled()
+    {
+        return IsWildfireEnabled() && _autoDispatchDisabledReason is null;
     }
 
     private TimberbornFireSystem RequireFireSystem()

@@ -44,6 +44,22 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
 
             _logSink.Info(
                 $"wildfire_timberborn_runtime_initialize_started width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
+            if (!TimberbornAutoDispatchPolicy.IsAllowedCellCount(grid.CellCount))
+            {
+                _runtime.SkipInitializeForOversizedGrid(grid, importResult.Summary);
+                _logSink.Warning(
+                    "wildfire_timberborn_runtime_initialize_completed " +
+                    "status=skipped " +
+                    "reason=map_too_large " +
+                    $"width={grid.Width} " +
+                    $"height={grid.Height} " +
+                    $"depth={grid.Depth} " +
+                    $"cell_count={grid.CellCount} " +
+                    $"limit={TimberbornAutoDispatchPolicy.CellLimit} " +
+                    $"{importResult.Summary.StatusToken}");
+                return;
+            }
+
             TimberbornPausableBuildingBurnoutConsequenceApi buildingBurnoutApi =
                 new(grid, _blockService);
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);

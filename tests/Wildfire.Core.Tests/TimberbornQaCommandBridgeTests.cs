@@ -800,6 +800,14 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void TimberbornRuntimeAutoDispatchGuardDisablesLargeLiveMaps()
+    {
+        Assert.True(TimberbornAutoDispatchPolicy.IsAllowedCellCount(TimberbornAutoDispatchPolicy.CellLimit));
+        Assert.False(TimberbornAutoDispatchPolicy.IsAllowedCellCount(TimberbornAutoDispatchPolicy.CellLimit + 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TimberbornAutoDispatchPolicy.IsAllowedCellCount(-1));
+    }
+
+    [Fact]
     public void FindBuildingBurnoutQaTargetSkipsUnusableCellsAndReportsScannedCount()
     {
         FireGrid grid = new(4, 3, 2);

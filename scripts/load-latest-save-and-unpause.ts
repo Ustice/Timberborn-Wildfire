@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
-import { inflateSync } from "node:zlib";
+import { inflateRawSync, inflateSync } from "node:zlib";
 import { fileURLToPath } from "url";
 
 type Mode = "attach" | "launch";
@@ -21,6 +21,7 @@ type Options = {
   mode: Mode;
   playerLogPath: string;
   postStatus: boolean;
+  skipLatestSavePreflight: boolean;
   skipResolutionCheck: boolean;
   waitSeconds: number;
 };
@@ -34,6 +35,13 @@ type ShellResult = {
   exitCode: number;
   stderr: string;
   stdout: string;
+};
+
+type SavePreflight = {
+  cellCount: number | null;
+  height: number | null;
+  path: string;
+  width: number | null;
 };
 
 type CoordinateTarget = {
@@ -113,6 +121,8 @@ Options:
   --expected-resolution <WxH> Display resolution required by the coordinate guide. Default: 1920x1080.
   --skip-resolution-check   Skip display validation. Use only for local script checks, not live UI automation.
   --skip-post-status        Do not require post-unpause read-only status evidence.
+  --skip-latest-save-preflight
+                            Do not inspect the newest .timber save before clicking Continue.
   --lock-timeout <seconds>  Seconds to wait for the shared deploy/QA lock. Default: 0.
   --force-lock              Remove an existing shared lock before acquiring it.
   --dry-run                 Print the plan and validate local preconditions without launching or clicking.
@@ -177,6 +187,7 @@ const parseArgs = (args: string[]): Options => {
     mode: "launch",
     playerLogPath: playerLogDefault,
     postStatus: true,
+    skipLatestSavePreflight: false,
     skipResolutionCheck: false,
     waitSeconds: 180,
   };
@@ -230,6 +241,8 @@ const parseArgs = (args: string[]): Options => {
       options.playerLogPath = resolve(arg.slice("--player-log=".length));
     } else if (arg === "--skip-post-status") {
       options.postStatus = false;
+    } else if (arg === "--skip-latest-save-preflight") {
+      options.skipLatestSavePreflight = true;
     } else if (arg === "--skip-resolution-check") {
       options.skipResolutionCheck = true;
     } else if (arg === "--wait") {
@@ -267,6 +280,141 @@ const commandFailureText = (result: ShellResult): string => result.stderr.trim()
 const formatError = (error: unknown): string => error instanceof Error ? error.message : String(error);
 
 const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
+
+const defaultTimberbornGridDepth = 23;
+const maxContinueCellCount = 500_000;
+const timberbornExperimentalSavesDir = join(home, "Documents", "Timberborn", "ExperimentalSaves");
+
+const viewOf = (buffer: Buffer): DataView => new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+const readUtf8 = (buffer: Buffer, offset: number, length: number): string => buffer.subarray(offset, offset + length).toString("utf8");
+
+const findZipEndOfCentralDirectory = (bytes: Buffer): number | null => {
+  let offset = bytes.length - 22;
+  while (offset >= 0) {
+    if (viewOf(bytes).getUint32(offset, true) === 0x06054b50) {
+      return offset;
+    }
+    offset -= 1;
+  }
+
+  return null;
+};
+
+const readZipEntry = (archivePath: string, entryName: string): Buffer | null => {
+  const bytes = readFileSync(archivePath);
+  const view = viewOf(bytes);
+  const eocdOffset = findZipEndOfCentralDirectory(bytes);
+  if (eocdOffset === null) {
+    return null;
+  }
+
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  const centralDirectoryOffset = view.getUint32(eocdOffset + 16, true);
+  const entries = Array.from({ length: entryCount }).reduce<{ data: Buffer | null; offset: number }>(
+    (state) => {
+      if (state.data !== null) {
+        return state;
+      }
+      if (view.getUint32(state.offset, true) !== 0x02014b50) {
+        return state;
+      }
+
+      const compressionMethod = view.getUint16(state.offset + 10, true);
+      const compressedSize = view.getUint32(state.offset + 20, true);
+      const fileNameLength = view.getUint16(state.offset + 28, true);
+      const extraLength = view.getUint16(state.offset + 30, true);
+      const commentLength = view.getUint16(state.offset + 32, true);
+      const localHeaderOffset = view.getUint32(state.offset + 42, true);
+      const name = readUtf8(bytes, state.offset + 46, fileNameLength);
+      const nextOffset = state.offset + 46 + fileNameLength + extraLength + commentLength;
+      if (name !== entryName || view.getUint32(localHeaderOffset, true) !== 0x04034b50) {
+        return { data: null, offset: nextOffset };
+      }
+
+      const localNameLength = view.getUint16(localHeaderOffset + 26, true);
+      const localExtraLength = view.getUint16(localHeaderOffset + 28, true);
+      const dataOffset = localHeaderOffset + 30 + localNameLength + localExtraLength;
+      const compressedData = bytes.subarray(dataOffset, dataOffset + compressedSize);
+      const data =
+        compressionMethod === 0
+          ? Buffer.from(compressedData)
+          : compressionMethod === 8
+            ? inflateRawSync(compressedData)
+            : null;
+
+      return { data, offset: nextOffset };
+    },
+    { data: null, offset: centralDirectoryOffset },
+  );
+
+  return entries.data;
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+
+const readNestedNumber = (value: unknown, path: string[]): number | null => {
+  const found = path.reduce<unknown>((current, key) => asRecord(current)?.[key], value);
+  return typeof found === "number" ? found : null;
+};
+
+const findTimberbornSaves = (root: string): string[] => {
+  if (!existsSync(root)) {
+    return [];
+  }
+
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      return findTimberbornSaves(path);
+    }
+
+    return entry.isFile() && entry.name.endsWith(".timber") ? [path] : [];
+  });
+};
+
+const latestTimberbornSavePath = (): string | null =>
+  findTimberbornSaves(timberbornExperimentalSavesDir)
+    .map((path) => ({ modified: statSync(path).mtimeMs, path }))
+    .sort((left, right) => right.modified - left.modified)
+    .at(0)?.path ?? null;
+
+const inspectSaveForPreflight = (path: string): SavePreflight => {
+  const worldEntry = readZipEntry(path, "world.json");
+  if (worldEntry === null) {
+    return { cellCount: null, height: null, path, width: null };
+  }
+
+  const world = JSON.parse(worldEntry.toString("utf8")) as unknown;
+  const width = readNestedNumber(world, ["Singletons", "MapSize", "Size", "X"]);
+  const height = readNestedNumber(world, ["Singletons", "MapSize", "Size", "Y"]);
+  const cellCount = width !== null && height !== null ? width * height * defaultTimberbornGridDepth : null;
+  return { cellCount, height, path, width };
+};
+
+const assertLatestSaveCanBeLoadedByContinue = (options: Options): void => {
+  if (options.skipLatestSavePreflight) {
+    log("latest_save_preflight=skipped");
+    return;
+  }
+
+  const path = latestTimberbornSavePath();
+  if (path === null) {
+    log(`latest_save_preflight=not_found root=${timberbornExperimentalSavesDir}`);
+    return;
+  }
+
+  const preflight = inspectSaveForPreflight(path);
+  log(
+    `latest_save_preflight path=${preflight.path} width=${preflight.width ?? "unknown"} height=${preflight.height ?? "unknown"} depth=${defaultTimberbornGridDepth} cell_count=${preflight.cellCount ?? "unknown"} limit=${maxContinueCellCount}`,
+  );
+  if (preflight.cellCount !== null && preflight.cellCount > maxContinueCellCount) {
+    fail(
+      `Refusing to click Continue because the newest save is too large for the live QA harness: ${preflight.path} has ${preflight.cellCount} cells at ${preflight.width}x${preflight.height}x${defaultTimberbornGridDepth}. Move that save out of the newest slot or pass --skip-latest-save-preflight for an intentional manual stress run.`,
+    );
+  }
+};
 
 const getFrontmostBundleId = (): string | null => {
   const result = run("osascript", [
@@ -1109,6 +1257,7 @@ const printPlan = (options: Options): void => {
   log(`wait_seconds=${options.waitSeconds}`);
   log(`expected_resolution=${options.skipResolutionCheck ? "skipped" : options.expectedResolution}`);
   log(`post_status=${options.postStatus}`);
+  log(`latest_save_preflight=${options.skipLatestSavePreflight ? "skipped" : "enabled"}`);
   if (options.mode === "launch") {
     log(`fast_startup_timing_ms=frame_interval:${fastFrameIntervalMs}`);
   }
@@ -1124,6 +1273,7 @@ const validateDryRunPreconditions = (options: Options): void => {
   if (!options.skipResolutionCheck) {
     assertResolution(options.expectedResolution);
   }
+  assertLatestSaveCanBeLoadedByContinue(options);
   log(options.dryRun ? "dry_run_complete" : "preconditions_ok");
 };
 
@@ -1152,6 +1302,7 @@ const runClassifierStartupPath = async (
   }
 
   if (current.screen === "main-menu") {
+    assertLatestSaveCanBeLoadedByContinue(options);
     clickTarget(targets.mainContinue);
     await waitForLoadedSaveAfterContinue(artifactDir, options, "03-after-main-continue");
     observedScreens.push("loaded-save");
@@ -1201,6 +1352,7 @@ const runFastRecordedStartupPath = async (
     }
 
     if (current.screen === "main-menu") {
+      assertLatestSaveCanBeLoadedByContinue(options);
       clickTarget(targets.mainContinue);
       await waitForLoadedSaveAfterContinue(artifactDir, options, "03-after-main-continue");
       observedScreens.push("loaded-save");
