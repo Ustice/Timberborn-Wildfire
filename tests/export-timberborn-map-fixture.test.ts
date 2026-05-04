@@ -10,6 +10,12 @@ const packCell = (fuel: number, heat: number, flammability: number, water: numbe
   ((terrain & 0b1) << 12) |
   ((heatLoss & 0b111) << 13);
 
+const packCompanion = (material: number, burnCapacity: number, ashQuality: number, contaminationBehavior: number): number =>
+  (material & 0xff) |
+  ((burnCapacity & 0xf) << 8) |
+  ((ashQuality & 0b11) << 20) |
+  ((contaminationBehavior & 0b111) << 22);
+
 describe("export-timberborn-map-fixture", () => {
   test("maps Timberborn terrain and entities into shader fixture packed cells", () => {
     const { fixture, summary } = buildFixtureFromWorld({
@@ -48,18 +54,29 @@ describe("export-timberborn-map-fixture", () => {
     expect(fixture.packedCellValues.values).toEqual([
       packCell(0, 0, 0, 0, 1, 6),
       0xe000,
-      packCell(0, 0, 0, 0, 1, 7),
+      packCell(0, 0, 0, 0, 1, 5),
       0xe000,
       0xe000,
-      packCell(10, 0, 3, 3, 1, 1),
+      packCell(12, 0, 2, 3, 1, 1),
       0xe000,
       0xe000,
     ]);
+    expect(fixture.companionFieldValues.targetIds).toEqual([0, 0, 2, 0, 0, 1, 0, 0]);
+    expect(fixture.companionFieldValues.packedStateValues).toEqual([
+      packCompanion(1, 0, 0, 0),
+      packCompanion(0, 0, 0, 0),
+      packCompanion(7, 0, 1, 1),
+      packCompanion(0, 0, 0, 0),
+      packCompanion(0, 0, 0, 0),
+      packCompanion(4, 12, 1, 1),
+      packCompanion(0, 0, 0, 0),
+      packCompanion(0, 0, 0, 0),
+    ]);
     expect(summary).toMatchObject({
-      buildingSources: 1,
       cellCount: 8,
+      infrastructureSources: 1,
       solidTerrainSources: 1,
-      vegetationSources: 1,
+      treeSources: 1,
       waterSources: 1,
     });
   });

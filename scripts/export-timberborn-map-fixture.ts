@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs
 import { dirname, join, resolve } from "path";
 import { inflateRawSync } from "node:zlib";
 
+import { lookupMaterialProfile, type MaterialClass, type MaterialFieldProfile } from "./material-field-schema.ts";
+
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
 
@@ -37,6 +39,13 @@ type Grid = {
 };
 
 type PackedFixture = {
+  companionFieldValues: {
+    indexOrder: "x + y * width + z * width * height";
+    packedStateValues: number[];
+    statePacking: "material:0-7,burnCapacity:8-11,burnHistory:12-15,ashStrength:16-19,ashQuality:20-21,contamination:22-24";
+    targetIds: number[];
+    valueType: "uint32";
+  };
   formatVersion: 1;
   grid: Grid;
   packedCellValues: {
@@ -54,11 +63,17 @@ type PackedFixture = {
 };
 
 type ExportSummary = {
+  badwaterSources: number;
   buildingSources: number;
   cellCount: number;
+  cropSources: number;
   depth: number;
   entitySources: number;
+  infrastructureSources: number;
+  storageSources: number;
   solidTerrainSources: number;
+  treeSources: number;
+  unresolvedTemplateSources: number;
   vegetationSources: number;
   waterSources: number;
   width: number;
@@ -66,17 +81,32 @@ type ExportSummary = {
 };
 
 const emptyCell = 0xe000;
-const solidTerrainHeatLoss = 6;
-const vegetationFuel = 10;
-const vegetationFlammability = 3;
-const vegetationHeatLoss = 1;
-const woodLikeFuel = 15;
-const woodLikeFlammability = 1;
-const woodLikeHeatLoss = 3;
-const nonBurnableHeatLoss = 7;
-const stockpileFuel = 8;
-const stockpileFlammability = 2;
-const stockpileHeatLoss = 3;
+const ashQualityValues = new Map([
+  ["none", 0],
+  ["fertile", 1],
+  ["spent", 2],
+  ["tainted", 3],
+]);
+const contaminationBehaviorValues = new Map([
+  ["none", 0],
+  ["taint-if-source-contaminated", 1],
+  ["tainted-source", 2],
+  ["suppresses-without-cleaning", 3],
+  ["fail-closed", 4],
+]);
+const materialClassValues = new Map<MaterialClass, number>([
+  ["empty", 0],
+  ["terrain", 1],
+  ["vegetation", 2],
+  ["crop", 3],
+  ["tree", 4],
+  ["building", 5],
+  ["storage", 6],
+  ["infrastructure", 7],
+  ["water", 8],
+  ["badwater", 9],
+  ["unknown", 10],
+]);
 
 const home = process.env.HOME ?? "";
 const timberbornRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn");
@@ -96,6 +126,30 @@ const knownVegetationTemplates = new Set([
   "Sunflower",
   "Wheat",
 ]);
+const knownTreeTemplates = new Set([
+  "Birch",
+  "ChestnutTree",
+  "Mangrove",
+  "Maple",
+  "Oak",
+  "Pine",
+]);
+const knownCropTemplates = new Set([
+  "Canola",
+  "Carrot",
+  "Cassava",
+  "Cattail",
+  "CoffeeBush",
+  "Corn",
+  "Dandelion",
+  "Eggplant",
+  "Kohlrabi",
+  "Potato",
+  "Soybean",
+  "Spadderdock",
+  "Sunflower",
+  "Wheat",
+]);
 const knownInertTemplates = new Set([
   "BadwaterSource",
   "BadtideDrain",
@@ -104,6 +158,10 @@ const knownInertTemplates = new Set([
   "Slope",
   "UndergroundRuins",
   "WaterSource",
+]);
+const knownInfrastructureTemplates = new Set([
+  "Path",
+  "Slope",
 ]);
 
 const usage = `Usage:
@@ -276,15 +334,18 @@ const packCell = (fuel: number, heat: number, flammability: number, water: numbe
   ((terrain & 0b1) << 12) |
   ((heatLoss & 0b111) << 13);
 
-const terrainCell = (): number => packCell(0, 0, 0, 0, 1, solidTerrainHeatLoss);
+const cellFromProfile = (profile: MaterialFieldProfile, water: number): number =>
+  packCell(profile.fuel, 0, profile.flammability, Math.max(profile.water, water), profile.terrain, profile.heatLoss);
 
-const vegetationCell = (water: number): number => packCell(vegetationFuel, 0, vegetationFlammability, water, 1, vegetationHeatLoss);
+const terrainCell = (): number => cellFromProfile(lookupMaterialProfile("terrain"), 0);
 
-const woodLikeCell = (water: number): number => packCell(woodLikeFuel, 0, woodLikeFlammability, water, 1, woodLikeHeatLoss);
+const companionStateFromProfile = (profile: MaterialFieldProfile): number =>
+  (materialClassValues.get(profile.materialClass) ?? materialClassValues.get("unknown")!) |
+  ((Math.min(15, Math.max(0, profile.burnCapacity)) & 0xf) << 8) |
+  ((ashQualityValues.get(profile.ashQuality) ?? 0) << 20) |
+  ((contaminationBehaviorValues.get(profile.contaminationBehavior) ?? 0) << 22);
 
-const nonBurnableCell = (water: number): number => packCell(0, 0, 0, water, 1, nonBurnableHeatLoss);
-
-const stockpileCell = (water: number): number => packCell(stockpileFuel, 0, stockpileFlammability, water, 1, stockpileHeatLoss);
+const companionStateOf = (materialClass: MaterialClass): number => companionStateFromProfile(lookupMaterialProfile(materialClass));
 
 const waterOf = (cell: number): number => (cell >> 10) & 0b11;
 
@@ -328,20 +389,49 @@ const isVegetation = (template: string, components: string[]): boolean =>
 const isStockpile = (template: string, components: string[]): boolean =>
   template.includes("Pile") || template.includes("Warehouse") || components.includes("Inventory");
 
+const isBadwater = (template: string): boolean => template.includes("Badwater");
+
+const isInfrastructure = (template: string): boolean =>
+  knownInfrastructureTemplates.has(template) ||
+  template.includes("Path") ||
+  template.includes("Platform") ||
+  template.includes("Bridge") ||
+  template.includes("Stair") ||
+  template.includes("Fence");
+
 const isInert = (template: string): boolean =>
   knownInertTemplates.has(template) || template.includes("Source") || template.includes("Drain") || template.includes("Ruins");
 
-const entityCell = (template: string, components: string[], existingWater: number): number => {
+const materialClassOfEntity = (template: string, components: string[]): MaterialClass => {
+  if (isBadwater(template)) {
+    return "badwater";
+  }
+
+  if (knownTreeTemplates.has(template)) {
+    return "tree";
+  }
+
+  if (knownCropTemplates.has(template)) {
+    return "crop";
+  }
+
   if (isVegetation(template, components)) {
-    return vegetationCell(existingWater);
+    return "vegetation";
   }
 
   if (isStockpile(template, components)) {
-    return stockpileCell(existingWater);
+    return "storage";
   }
 
-  return isInert(template) ? nonBurnableCell(existingWater) : woodLikeCell(existingWater);
+  if (isInfrastructure(template)) {
+    return "infrastructure";
+  }
+
+  return isInert(template) ? "terrain" : "building";
 };
+
+const entityCell = (template: string, components: string[], existingWater: number): number =>
+  cellFromProfile(lookupMaterialProfile(materialClassOfEntity(template, components)), existingWater);
 
 const validCoordinate = (grid: Grid, coordinate: Coordinate): boolean =>
   coordinate.x >= 0 && coordinate.x < grid.width && coordinate.y >= 0 && coordinate.y < grid.height && coordinate.z >= 0 && coordinate.z < grid.depth;
@@ -384,11 +474,27 @@ export const buildFixtureFromWorld = (
   const terrainValues = terrainValuesOf(world);
   const grid = gridOf(world, terrainValues);
   const cells = terrainValues.map((value) => (value > 0 ? terrainCell() : emptyCell));
+  const targetIds = Array.from({ length: cells.length }, () => 0);
+  const companionStates = terrainValues.map((value) => companionStateOf(value > 0 ? "terrain" : "empty"));
   const waterSources = applyWaterColumns(world, grid, cells);
+  waterColumnsOf(world).forEach((token, flatIndex) => {
+    const coordinate = waterCoordinateOf(grid, token, flatIndex);
+    if (!coordinate || !validCoordinate(grid, coordinate)) {
+      return;
+    }
+
+    const index = indexOf(grid, coordinate);
+    if (cells[index] === emptyCell) {
+      companionStates[index] = companionStateOf("water");
+    }
+  });
   const entities = asArray(world.Entities) ?? [];
   const entitySources = entities
-    .map((entity) => ({ entity: asObject(entity), coordinate: coordinateOf(entity) }))
-    .filter((source): source is { entity: JsonObject; coordinate: Coordinate } => source.entity !== null && source.coordinate !== null)
+    .map((entity, entityIndex) => ({ entity: asObject(entity), entityIndex, coordinate: coordinateOf(entity) }))
+    .filter(
+      (source): source is { entity: JsonObject; entityIndex: number; coordinate: Coordinate } =>
+        source.entity !== null && source.coordinate !== null,
+    )
     .filter((source) => validCoordinate(grid, source.coordinate));
   const entityStats = entitySources.reduce(
     (stats, source) => {
@@ -396,14 +502,32 @@ export const buildFixtureFromWorld = (
       const components = componentsOf(source.entity);
       const index = indexOf(grid, source.coordinate);
       const water = waterOf(cells[index] ?? emptyCell);
+      const materialClass = materialClassOfEntity(template, components);
       cells[index] = entityCell(template, components, water);
+      targetIds[index] = source.entityIndex + 1;
+      companionStates[index] = companionStateOf(materialClass);
 
       return {
-        buildingSources: stats.buildingSources + (!isVegetation(template, components) ? 1 : 0),
-        vegetationSources: stats.vegetationSources + (isVegetation(template, components) ? 1 : 0),
+        badwaterSources: stats.badwaterSources + (materialClass === "badwater" ? 1 : 0),
+        buildingSources: stats.buildingSources + (materialClass === "building" ? 1 : 0),
+        cropSources: stats.cropSources + (materialClass === "crop" ? 1 : 0),
+        infrastructureSources: stats.infrastructureSources + (materialClass === "infrastructure" ? 1 : 0),
+        storageSources: stats.storageSources + (materialClass === "storage" ? 1 : 0),
+        treeSources: stats.treeSources + (materialClass === "tree" ? 1 : 0),
+        unresolvedTemplateSources: stats.unresolvedTemplateSources + (materialClass === "building" && template.length === 0 ? 1 : 0),
+        vegetationSources: stats.vegetationSources + (materialClass === "vegetation" ? 1 : 0),
       };
     },
-    { buildingSources: 0, vegetationSources: 0 },
+    {
+      badwaterSources: 0,
+      buildingSources: 0,
+      cropSources: 0,
+      infrastructureSources: 0,
+      storageSources: 0,
+      treeSources: 0,
+      unresolvedTemplateSources: 0,
+      vegetationSources: 0,
+    },
   );
   const selectedLayer =
     selectedLayerOverride ??
@@ -415,6 +539,13 @@ export const buildFixtureFromWorld = (
 
   return {
     fixture: {
+      companionFieldValues: {
+        indexOrder: "x + y * width + z * width * height",
+        packedStateValues: companionStates,
+        statePacking: "material:0-7,burnCapacity:8-11,burnHistory:12-15,ashStrength:16-19,ashQuality:20-21,contamination:22-24",
+        targetIds,
+        valueType: "uint32",
+      },
       formatVersion: 1,
       grid,
       packedCellValues: {
@@ -431,12 +562,18 @@ export const buildFixtureFromWorld = (
       },
     },
     summary: {
+      badwaterSources: entityStats.badwaterSources,
       buildingSources: entityStats.buildingSources,
       cellCount: cells.length,
+      cropSources: entityStats.cropSources,
       depth: grid.depth,
       entitySources: entitySources.length,
       height: grid.height,
+      infrastructureSources: entityStats.infrastructureSources,
       solidTerrainSources: terrainValues.filter((value) => value > 0).length,
+      storageSources: entityStats.storageSources,
+      treeSources: entityStats.treeSources,
+      unresolvedTemplateSources: entityStats.unresolvedTemplateSources,
       vegetationSources: entityStats.vegetationSources,
       waterSources,
       width: grid.width,
@@ -482,7 +619,7 @@ const main = (): void => {
   console.log(`[timberborn-map-fixture] read ${savePath}`);
   console.log(`[timberborn-map-fixture] wrote ${outputPath}`);
   console.log(
-    `[timberborn-map-fixture] grid=${summary.width}x${summary.height}x${summary.depth} cells=${summary.cellCount} terrain=${summary.solidTerrainSources} vegetation=${summary.vegetationSources} buildings=${summary.buildingSources} water=${summary.waterSources}`,
+    `[timberborn-map-fixture] grid=${summary.width}x${summary.height}x${summary.depth} cells=${summary.cellCount} terrain=${summary.solidTerrainSources} trees=${summary.treeSources} crops=${summary.cropSources} vegetation=${summary.vegetationSources} buildings=${summary.buildingSources} storage=${summary.storageSources} infrastructure=${summary.infrastructureSources} water=${summary.waterSources} badwater=${summary.badwaterSources} unresolved_templates=${summary.unresolvedTemplateSources}`,
   );
 };
 

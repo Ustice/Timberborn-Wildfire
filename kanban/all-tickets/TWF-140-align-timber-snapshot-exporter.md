@@ -53,3 +53,7 @@ Replace the heuristic `.timber` exporter with snapshot export that follows the s
 ## Notes
 
 - This ticket makes offline tests meaningful. Snapshot fixtures should stop being a different fake world from live Timberborn.
+- 2026-05-04 worker result: `scripts/export-timberborn-map-fixture.ts` now consumes the shared material field schema, classifies trees, crops, vegetation, storage, infrastructure, buildings, water, badwater, terrain, and unknowns, and emits `companionFieldValues` alongside existing `packedCellValues`.
+- 2026-05-04 compatibility note: existing packed-cell JSON remains present for shader fixtures and binary conversion. Companion fields are additive in this slice.
+- 2026-05-04 worker docs: updated `docs/TEST_PLAN.md` with the snapshot companion-field contract.
+- 2026-05-04 worker verification: `git diff --check`, `bun run typecheck`, and `bun test` passed.
