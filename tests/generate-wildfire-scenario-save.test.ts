@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  buildFieldCheckpoints,
   buildSaveMetadataShapeBlockers,
   formatTimberbornSaveTimestamp,
   isTimberbornSaveTimestamp,
@@ -56,6 +57,50 @@ describe("generate-wildfire-scenario-save metadata", () => {
     });
 
     expect(blockers).toContain("save_metadata.json Timestamp must use Timberborn save format MM/dd/yyyy HH:mm:ss");
+  });
+});
+
+describe("generate-wildfire-scenario-save field checkpoints", () => {
+  test("emits deterministic checkpoints with material bands and companion expectations", () => {
+    const checkpoints = buildFieldCheckpoints([
+      { category: "tree-pad", coordinate: { x: 3, y: 45, z: 2 }, template: "Pine" },
+      { category: "crop-pad", coordinate: { x: 3, y: 5, z: 2 }, template: "Carrot" },
+      { category: "wood-heavy-structure-pad", coordinate: { x: 21, y: 25, z: 2 }, template: "MediumWarehouse.Folktails" },
+      { category: "mixed-material-structure-pad", coordinate: { x: 26, y: 25, z: 2 }, template: "LargePile.Folktails" },
+      { category: "central-camera-lane", coordinate: { x: 24, y: 20, z: 2 }, template: "Path.Folktails" },
+      { category: "water-channel-source", coordinate: { x: 31, y: 48, z: 2 }, template: "WaterSource" },
+      { category: "badwater-channel-source", coordinate: { x: 12, y: 48, z: 2 }, template: "BadwaterSource" },
+    ]);
+
+    expect(checkpoints.map((checkpoint) => checkpoint.category)).toEqual([
+      "terrain-control",
+      "empty-control",
+      "tree-pad",
+      "crop-pad",
+      "wood-heavy-structure-pad",
+      "mixed-material-structure-pad",
+      "central-camera-lane",
+      "water-channel-source",
+      "badwater-channel-source",
+    ]);
+    expect(checkpoints.find((checkpoint) => checkpoint.category === "tree-pad")).toMatchObject({
+      companionField: { consequenceTargetKind: "tree" },
+      expectedCellMaterialClass: "tree",
+      expectedPackedCellBand: { fuel: 12, flammability: 2 },
+      expectedSourceMaterialClass: "tree",
+      id: "tree-pad-1",
+      template: "Pine",
+    });
+    expect(checkpoints.find((checkpoint) => checkpoint.category === "mixed-material-structure-pad")).toMatchObject({
+      companionField: { consequenceTargetKind: "structure" },
+      expectedCellMaterialClass: "building",
+      expectedSourceMaterialClass: "storage",
+      id: "mixed-material-structure-pad-1",
+    });
+    expect(checkpoints.find((checkpoint) => checkpoint.category === "water-channel-source")).toMatchObject({
+      companionField: { consequenceTargetKind: "water" },
+      expectedPackedCellBand: { water: 3 },
+    });
   });
 });
 

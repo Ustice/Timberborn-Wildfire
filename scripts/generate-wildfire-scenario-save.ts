@@ -3,6 +3,7 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "fs";
 import { dirname, join, relative, resolve } from "path";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
+import { lookupMaterialProfile, type MaterialClass, type MaterialFieldProfile } from "./material-field-schema";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
@@ -42,6 +43,29 @@ type EntityPlacement = EntityRequest & {
   blockedReason: string | null;
 };
 
+type ScenarioCheckpoint = {
+  category: string;
+  companionField: {
+    ashQuality: string;
+    burnCapacity: number;
+    contaminationBehavior: string;
+    consequenceTargetKind: string;
+    resourcePolicy: string;
+  };
+  coordinate: Coordinate;
+  expectedCellMaterialClass: MaterialClass;
+  expectedPackedCellBand: {
+    flammability: number;
+    fuel: number;
+    heatLoss: number;
+    terrain: number;
+    water: number;
+  };
+  expectedSourceMaterialClass: MaterialClass;
+  id: string;
+  template: string | null;
+};
+
 type ArchiveInspection = {
   entries: ZipEntry[];
   jsonFiles: Record<string, JsonValue>;
@@ -76,6 +100,7 @@ type Manifest = {
       storageInventory: string;
       waterFlow: string;
     };
+    fieldCheckpoints: ScenarioCheckpoint[];
     generatedEntityCountsByCategory: Record<string, number>;
     generatedEntities: EntityRequest[];
     schemaBlockers: string[];
@@ -483,6 +508,109 @@ const supportedCandidateCount = (supportedPlacements: Record<string, EntityReque
 
 const requestTemplateLabel = (template: string): string => templateCandidatesFor(template).join(" or ");
 
+const sourceMaterialClassByCategory: Record<string, MaterialClass> = {
+  "badwater-channel-source": "badwater",
+  "central-camera-lane": "infrastructure",
+  "crop-pad": "crop",
+  "mixed-material-structure-pad": "storage",
+  "stored-water-pad": "storage",
+  "tree-pad": "tree",
+  "water-channel-source": "water",
+  "wood-heavy-structure-pad": "building",
+};
+
+const cellMaterialClassFor = (request: EntityRequest): MaterialClass =>
+  ["mixed-material-structure-pad", "stored-water-pad"].includes(request.category) ? "building" : sourceMaterialClassByCategory[request.category] ?? "unknown";
+
+const expectedBandFor = (profile: MaterialFieldProfile): ScenarioCheckpoint["expectedPackedCellBand"] => ({
+  flammability: profile.flammability,
+  fuel: profile.fuel,
+  heatLoss: profile.heatLoss,
+  terrain: profile.terrain,
+  water: profile.water,
+});
+
+const checkpointForGeneratedEntity = (request: EntityRequest, categoryOrdinal: number): ScenarioCheckpoint => {
+  const expectedSourceMaterialClass = sourceMaterialClassByCategory[request.category] ?? "unknown";
+  const expectedCellMaterialClass = cellMaterialClassFor(request);
+  const cellProfile = lookupMaterialProfile(expectedCellMaterialClass);
+
+  return {
+    category: request.category,
+    companionField: {
+      ashQuality: cellProfile.ashQuality,
+      burnCapacity: cellProfile.burnCapacity,
+      contaminationBehavior: cellProfile.contaminationBehavior,
+      consequenceTargetKind: cellProfile.consequenceTargetKind,
+      resourcePolicy: cellProfile.resourcePolicy,
+    },
+    coordinate: request.coordinate,
+    expectedCellMaterialClass,
+    expectedPackedCellBand: expectedBandFor(cellProfile),
+    expectedSourceMaterialClass,
+    id: `${request.category}-${categoryOrdinal}`,
+    template: request.template,
+  };
+};
+
+const staticFieldCheckpoints = (): ScenarioCheckpoint[] => {
+  const terrainProfile = lookupMaterialProfile("terrain");
+  const emptyProfile = lookupMaterialProfile("empty");
+
+  return [
+    {
+      category: "terrain-control",
+      companionField: {
+        ashQuality: terrainProfile.ashQuality,
+        burnCapacity: terrainProfile.burnCapacity,
+        contaminationBehavior: terrainProfile.contaminationBehavior,
+        consequenceTargetKind: terrainProfile.consequenceTargetKind,
+        resourcePolicy: terrainProfile.resourcePolicy,
+      },
+      coordinate: { x: 1, y: 1, z: 2 },
+      expectedCellMaterialClass: "terrain",
+      expectedPackedCellBand: expectedBandFor(terrainProfile),
+      expectedSourceMaterialClass: "terrain",
+      id: "terrain-control-1",
+      template: null,
+    },
+    {
+      category: "empty-control",
+      companionField: {
+        ashQuality: emptyProfile.ashQuality,
+        burnCapacity: emptyProfile.burnCapacity,
+        contaminationBehavior: emptyProfile.contaminationBehavior,
+        consequenceTargetKind: emptyProfile.consequenceTargetKind,
+        resourcePolicy: emptyProfile.resourcePolicy,
+      },
+      coordinate: { x: 1, y: 1, z: 8 },
+      expectedCellMaterialClass: "empty",
+      expectedPackedCellBand: expectedBandFor(emptyProfile),
+      expectedSourceMaterialClass: "empty",
+      id: "empty-control-1",
+      template: null,
+    },
+  ];
+};
+
+export const buildFieldCheckpoints = (generated: EntityRequest[]): ScenarioCheckpoint[] => [
+  ...staticFieldCheckpoints(),
+  ...generated.reduce<{ checkpoints: ScenarioCheckpoint[]; countsByCategory: Record<string, number> }>(
+    (state, request) => {
+      const nextOrdinal = (state.countsByCategory[request.category] ?? 0) + 1;
+
+      return {
+        checkpoints: [...state.checkpoints, checkpointForGeneratedEntity(request, nextOrdinal)],
+        countsByCategory: {
+          ...state.countsByCategory,
+          [request.category]: nextOrdinal,
+        },
+      };
+    },
+    { checkpoints: [], countsByCategory: {} },
+  ).checkpoints,
+];
+
 export const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlacement[]; generated: EntityRequest[]; nextWorld: JsonValue } => {
   const nextWorld = cloneJson(world);
   const entities = asArray(asObject(nextWorld)?.Entities);
@@ -708,6 +836,7 @@ const buildManifest = (
     result: {
       blockedPlacements,
       evidence: buildEvidence(world, generated),
+      fieldCheckpoints: buildFieldCheckpoints(generated),
       generatedEntityCountsByCategory: countByCategory(generated),
       generatedEntities: generated,
       schemaBlockers,

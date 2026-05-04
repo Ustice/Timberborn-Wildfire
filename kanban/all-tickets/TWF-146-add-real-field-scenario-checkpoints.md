@@ -54,3 +54,5 @@ Extend the generated QA scenario manifest so importer, tuning, visual, and conse
 ## Notes
 
 - This ticket makes the generated QA map useful as an acceptance fixture instead of just a load-survival artifact.
+- 2026-05-04 worker pass added manifest `fieldCheckpoints` for terrain, empty controls, tree, crop, building, storage-origin structure, infrastructure, water, and badwater categories. Each checkpoint includes coordinates, template identity where known, expected source material class, expected resolved cell material class, packed-cell band values from `MaterialFieldSchema.v1`, and companion-field expectations.
+- Dry-run against `Wildfire world consequence scenario TWF-133.timber` produced checkpoints for every required category except the already-blocked fourth badwater source placement. The manifest still reports the generator's known blockers: terrain/channel carving is not implemented, storage inventory is template-dependent, crop pads depend on crop prototypes, and only three valid badwater-source prototypes were available in that template.
