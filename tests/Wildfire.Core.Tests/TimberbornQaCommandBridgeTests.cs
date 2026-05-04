@@ -599,7 +599,14 @@ public sealed class TimberbornQaCommandBridgeTests
             PooledFireEffectPresentationFailureCount: 33,
             PooledFireEffectsVisibleEnabled: true,
             PooledFireEffectsNativePrefabResolved: true,
-            PooledFireEffectsNativePrefabName: "CampfireFire");
+            PooledFireEffectsNativePrefabName: "CampfireFire",
+            CompatibilityProbeStatus: "degraded",
+            CompatibilityProbeDegraded: true,
+            CompatibilityProbeRequiredPassed: 6,
+            CompatibilityProbeRequiredTotal: 6,
+            CompatibilityProbeOptionalPassed: 2,
+            CompatibilityProbeOptionalTotal: 4,
+            CompatibilityProbeDegradedFeatures: "visual_effects,diagnostic_assets");
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -650,6 +657,38 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("pooled_fire_effects_visible_enabled=true", result.ResultToken);
         Assert.Contains("pooled_fire_effects_native_prefab_resolved=true", result.ResultToken);
         Assert.Contains("pooled_fire_effects_native_prefab=CampfireFire", result.ResultToken);
+        Assert.Contains("compatibility_probe_status=degraded", result.ResultToken);
+        Assert.Contains("compatibility_probe_degraded=true", result.ResultToken);
+        Assert.Contains("compatibility_probe_required_passed=6", result.ResultToken);
+        Assert.Contains("compatibility_probe_required_total=6", result.ResultToken);
+        Assert.Contains("compatibility_probe_optional_passed=2", result.ResultToken);
+        Assert.Contains("compatibility_probe_optional_total=4", result.ResultToken);
+        Assert.Contains("compatibility_probe_degraded_features=visual_effects,diagnostic_assets", result.ResultToken);
+    }
+
+    [Fact]
+    public void FailedRequiredCompatibilityProbeBlocksLoadedGameReadyToken()
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 4,
+            Height: 5,
+            Depth: 6,
+            TickCount: 7,
+            CompatibilityProbeStatus: "failed",
+            CompatibilityProbeDegraded: true,
+            CompatibilityProbeRequiredPassed: 4,
+            CompatibilityProbeRequiredTotal: 5,
+            CompatibilityProbeDegradedFeatures: "compute");
+        TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-readiness");
+
+        Assert.False(result.State.IsLoadedGameReady);
+        Assert.Contains("loaded_game_ready=false", result.ResultToken);
+        Assert.Contains("compatibility_probe_status=failed", result.ResultToken);
+        Assert.Contains("compatibility_probe_degraded_features=compute", result.ResultToken);
     }
 
     [Fact]
@@ -665,6 +704,8 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("tick_count=placeholder", result.ResultToken);
         Assert.Contains("queued_changes=placeholder", result.ResultToken);
         Assert.Contains("last_delta_count=placeholder", result.ResultToken);
+        Assert.Contains("compatibility_probe_status=placeholder", result.ResultToken);
+        Assert.Contains("compatibility_probe_required_passed=placeholder", result.ResultToken);
     }
 
     private sealed class RecordingStateProvider(TimberbornQaCommandState state) : ITimberbornQaCommandStateProvider

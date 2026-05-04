@@ -673,8 +673,21 @@ public static class TimberbornNativeFireEffectPrefabCatalog
 
     public static TimberbornNativeFireEffectPrefabResolution Resolve(TimberbornPooledFireEffectKind kind)
     {
+        return ResolveFromPrefabs(kind, LoadPrefabs());
+    }
+
+    public static TimberbornNativeFireEffectPrefabResolution Probe(TimberbornPooledFireEffectKind kind)
+    {
+        return ResolveFromPrefabs(kind, Resources.LoadAll<GameObject>(string.Empty));
+    }
+
+    private static TimberbornNativeFireEffectPrefabResolution ResolveFromPrefabs(
+        TimberbornPooledFireEffectKind kind,
+        IEnumerable<GameObject> prefabs)
+    {
         string[] preferredNames = PreferredNames(kind);
-        GameObject[] exactMatches = LoadPrefabs()
+        GameObject[] loadedPrefabs = prefabs.ToArray();
+        GameObject[] exactMatches = loadedPrefabs
             .Where(prefab => preferredNames.Any(name => string.Equals(prefab.name, name, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
         if (exactMatches.Length > 0)
@@ -687,7 +700,7 @@ public static class TimberbornNativeFireEffectPrefabCatalog
         }
 
         string[] broadNames = BroadNames(kind);
-        GameObject? broadMatch = LoadPrefabs()
+        GameObject? broadMatch = loadedPrefabs
             .FirstOrDefault(prefab => broadNames.Any(name =>
                 prefab.name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0));
         if (broadMatch is not null)

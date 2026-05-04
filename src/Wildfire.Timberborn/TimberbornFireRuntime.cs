@@ -22,6 +22,8 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
+    private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
+    private bool _compatibilityProbesRan;
     private long _gameUpdateId;
     private bool _isLoaded;
 
@@ -42,10 +44,13 @@ public sealed class TimberbornFireRuntime :
     public void Load()
     {
         _isLoaded = true;
+        RunCompatibilityProbesIfNeeded();
         _logSink.Info(
             $"wildfire_timberborn_adapter_started cadence_interval_ms={TimberbornFireCadence.Default.Interval.TotalMilliseconds:F0}");
-        _logSink.Info(
-            $"wildfire_timberborn_runtime_ready cadence_interval_ms={TimberbornFireCadence.Default.Interval.TotalMilliseconds:F0}");
+        TimberbornCompatibilityRuntimeGate.LogLoadState(
+            _compatibilityReport,
+            _logSink,
+            TimberbornFireCadence.Default);
     }
 
     public void Unload()
@@ -57,6 +62,8 @@ public sealed class TimberbornFireRuntime :
         _playerFireAlerts.Clear();
         _dispatcher = null;
         _fireSystem = null;
+        _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
+        _compatibilityProbesRan = false;
         _gameUpdateId = 0;
         _isLoaded = false;
         _logSink.Info("wildfire_timberborn_adapter_stopped");
@@ -121,6 +128,8 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(simulatorFactory));
         }
 
+        RunCompatibilityProbesIfNeeded();
+        TimberbornCompatibilityRuntimeGate.ThrowIfRequiredProbesFailed(_compatibilityReport, _logSink);
         TimberbornFireSystem fireSystem = new(
             simulatorFactory,
             new TimberbornFireCellMapper(),
@@ -205,7 +214,14 @@ public sealed class TimberbornFireRuntime :
         {
             return new TimberbornQaCommandState(
                 IsSimulatorIntegrated: false,
-                IsGameContextRuntimeLoaded: _isLoaded);
+                IsGameContextRuntimeLoaded: _isLoaded,
+                CompatibilityProbeStatus: _compatibilityReport.StatusToken,
+                CompatibilityProbeDegraded: _compatibilityReport.IsDegraded,
+                CompatibilityProbeRequiredPassed: _compatibilityReport.PassedRequiredProbeCount,
+                CompatibilityProbeRequiredTotal: _compatibilityReport.RequiredProbeCount,
+                CompatibilityProbeOptionalPassed: _compatibilityReport.PassedOptionalProbeCount,
+                CompatibilityProbeOptionalTotal: _compatibilityReport.OptionalProbeCount,
+                CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken);
         }
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
@@ -257,7 +273,14 @@ public sealed class TimberbornFireRuntime :
             PooledFireEffectPresentationFailureCount: pooledEffectCounters.PresentationFailureCount,
             PooledFireEffectsVisibleEnabled: pooledEffectCounters.VisibleEffectsEnabled,
             PooledFireEffectsNativePrefabResolved: pooledEffectCounters.NativeEffectPrefabResolved,
-            PooledFireEffectsNativePrefabName: pooledEffectCounters.LastNativeEffectPrefabName);
+            PooledFireEffectsNativePrefabName: pooledEffectCounters.LastNativeEffectPrefabName,
+            CompatibilityProbeStatus: _compatibilityReport.StatusToken,
+            CompatibilityProbeDegraded: _compatibilityReport.IsDegraded,
+            CompatibilityProbeRequiredPassed: _compatibilityReport.PassedRequiredProbeCount,
+            CompatibilityProbeRequiredTotal: _compatibilityReport.RequiredProbeCount,
+            CompatibilityProbeOptionalPassed: _compatibilityReport.PassedOptionalProbeCount,
+            CompatibilityProbeOptionalTotal: _compatibilityReport.OptionalProbeCount,
+            CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken);
     }
 
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
@@ -310,5 +333,17 @@ public sealed class TimberbornFireRuntime :
     {
         return _fireSystem ??
             throw new InvalidOperationException("Timberborn fire runtime must be initialized before registering simulator changes.");
+    }
+
+    private void RunCompatibilityProbesIfNeeded()
+    {
+        if (_compatibilityProbesRan)
+        {
+            return;
+        }
+
+        _compatibilityReport = TimberbornCompatibilityProbeCatalog.RunReleasePathProbes();
+        _compatibilityProbesRan = true;
+        TimberbornCompatibilityProbeLogger.Log(_compatibilityReport, _logSink);
     }
 }

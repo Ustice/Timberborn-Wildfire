@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -48,7 +49,7 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
     public const string WindowsBundleName = "wildfire_compute_win";
     public const string MacDiagnosticBundleName = "wildfire_diagnostic_mac";
     public const string WindowsDiagnosticBundleName = "wildfire_diagnostic_win";
-    private const string PrivateBundleDirectoryName = "ComputeShaders";
+    public const string PrivateBundleDirectoryName = "ComputeShaders";
 
     private readonly ITimberbornFireLogSink _logSink;
     private AssetBundle? _assetBundle;
@@ -130,6 +131,65 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
     public void Dispose()
     {
         UnloadOwnedAssetBundle();
+    }
+
+    public static TimberbornComputeShaderBundleProbe ProbeDeployedBundles()
+    {
+        string computeBundleName = GetPlatformBundleName();
+        string diagnosticBundleName = GetPlatformDiagnosticBundleName();
+        string computeBundlePath = GetBundlePath(computeBundleName);
+        string diagnosticBundlePath = GetBundlePath(diagnosticBundleName);
+        TimberbornAssetBundleFileProbe computeProbe = ProbeAssetBundleFile(computeBundlePath);
+        TimberbornAssetBundleFileProbe diagnosticProbe = ProbeAssetBundleFile(diagnosticBundlePath);
+
+        return new TimberbornComputeShaderBundleProbe(
+            computeBundleName,
+            computeBundlePath,
+            computeProbe.Exists,
+            computeProbe.SizeBytes,
+            computeProbe.Header,
+            computeProbe.ReadError,
+            diagnosticBundleName,
+            diagnosticBundlePath,
+            diagnosticProbe.Exists,
+            diagnosticProbe.SizeBytes,
+            diagnosticProbe.Header,
+            diagnosticProbe.ReadError);
+    }
+
+    private static TimberbornAssetBundleFileProbe ProbeAssetBundleFile(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return new TimberbornAssetBundleFileProbe(
+                Exists: false,
+                SizeBytes: null,
+                Header: null,
+                ReadError: null);
+        }
+
+        try
+        {
+            FileInfo fileInfo = new(path);
+            byte[] headerBytes = new byte[16];
+            using FileStream stream = File.OpenRead(path);
+            int bytesRead = stream.Read(headerBytes, 0, headerBytes.Length);
+            string header = Encoding.ASCII.GetString(headerBytes, 0, bytesRead).TrimEnd('\0');
+
+            return new TimberbornAssetBundleFileProbe(
+                Exists: true,
+                SizeBytes: fileInfo.Length,
+                Header: header,
+                ReadError: null);
+        }
+        catch (Exception exception)
+        {
+            return new TimberbornAssetBundleFileProbe(
+                Exists: true,
+                SizeBytes: null,
+                Header: null,
+                ReadError: exception.Message);
+        }
     }
 
     private AssetBundle? TryFindLoadedComputeBundle(string bundleName)
@@ -337,6 +397,26 @@ public sealed class TimberbornComputeShaderLoader : IDisposable
         }
     }
 }
+
+public sealed record TimberbornComputeShaderBundleProbe(
+    string ComputeBundleName,
+    string ComputeBundlePath,
+    bool ComputeBundleExists,
+    long? ComputeBundleSizeBytes,
+    string? ComputeBundleHeader,
+    string? ComputeBundleReadError,
+    string DiagnosticBundleName,
+    string DiagnosticBundlePath,
+    bool DiagnosticBundleExists,
+    long? DiagnosticBundleSizeBytes,
+    string? DiagnosticBundleHeader,
+    string? DiagnosticBundleReadError);
+
+public sealed record TimberbornAssetBundleFileProbe(
+    bool Exists,
+    long? SizeBytes,
+    string? Header,
+    string? ReadError);
 
 public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberbornGpuVisualFieldStateProvider, IDisposable
 {

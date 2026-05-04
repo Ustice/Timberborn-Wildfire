@@ -154,6 +154,18 @@ public sealed class TimberbornResourceAdapter
     public const byte VegetationFlammability = 3;
     public const byte VegetationHeatLoss = 1;
 
+    private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
+
+    public TimberbornResourceAdapter()
+        : this(TimberbornResourceFuelCatalog.Default)
+    {
+    }
+
+    public TimberbornResourceAdapter(TimberbornResourceFuelCatalog resourceFuelCatalog)
+    {
+        _resourceFuelCatalog = resourceFuelCatalog ?? throw new ArgumentNullException(nameof(resourceFuelCatalog));
+    }
+
     public TimberbornCellSource CreateSource(
         int x,
         int y,
@@ -178,6 +190,24 @@ public sealed class TimberbornResourceAdapter
             StockpileResourceFlammability,
             StockpileResourceHeatLoss,
             TimberbornResourceKind.StockpileResource);
+    }
+
+    public TimberbornCellSource CreateStockpileResourceSource(int x, int y, int z, string resourceId)
+    {
+        TimberbornResourceFuelProfile profile = _resourceFuelCatalog.Lookup(resourceId);
+        return CreateSource(
+            x,
+            y,
+            z,
+            profile.FuelValue,
+            profile.Flammability,
+            StockpileResourceHeatLoss,
+            TimberbornResourceKind.StockpileResource);
+    }
+
+    public TimberbornResourceFuelProfile LookupFuelProfile(string resourceId)
+    {
+        return _resourceFuelCatalog.Lookup(resourceId);
     }
 
     public TimberbornCellSource CreateVegetationSource(int x, int y, int z)

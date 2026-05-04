@@ -473,13 +473,21 @@ public sealed record TimberbornQaCommandState(
     int? PooledFireEffectPresentationFailureCount = null,
     bool PooledFireEffectsVisibleEnabled = false,
     bool PooledFireEffectsNativePrefabResolved = false,
-    string? PooledFireEffectsNativePrefabName = null)
+    string? PooledFireEffectsNativePrefabName = null,
+    string CompatibilityProbeStatus = "placeholder",
+    bool CompatibilityProbeDegraded = false,
+    int? CompatibilityProbeRequiredPassed = null,
+    int? CompatibilityProbeRequiredTotal = null,
+    int? CompatibilityProbeOptionalPassed = null,
+    int? CompatibilityProbeOptionalTotal = null,
+    string CompatibilityProbeDegradedFeatures = "placeholder")
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
     public bool IsLoadedGameReady =>
         IsGameContextRuntimeLoaded &&
         IsSimulatorIntegrated &&
+        !StringComparer.OrdinalIgnoreCase.Equals(CompatibilityProbeStatus, "failed") &&
         Width.HasValue &&
         Height.HasValue &&
         Depth.HasValue &&
@@ -545,6 +553,13 @@ public sealed record TimberbornQaCommandResult(
         $"pooled_fire_effects_visible_enabled={State.PooledFireEffectsVisibleEnabled.ToString().ToLowerInvariant()} " +
         $"pooled_fire_effects_native_prefab_resolved={State.PooledFireEffectsNativePrefabResolved.ToString().ToLowerInvariant()} " +
         $"pooled_fire_effects_native_prefab={TimberbornQaCommandBridge.FormatToken(State.PooledFireEffectsNativePrefabName)} " +
+        $"compatibility_probe_status={TimberbornQaCommandBridge.FormatToken(State.CompatibilityProbeStatus)} " +
+        $"compatibility_probe_degraded={State.CompatibilityProbeDegraded.ToString().ToLowerInvariant()} " +
+        $"compatibility_probe_required_passed={FormatNumber(State.CompatibilityProbeRequiredPassed)} " +
+        $"compatibility_probe_required_total={FormatNumber(State.CompatibilityProbeRequiredTotal)} " +
+        $"compatibility_probe_optional_passed={FormatNumber(State.CompatibilityProbeOptionalPassed)} " +
+        $"compatibility_probe_optional_total={FormatNumber(State.CompatibilityProbeOptionalTotal)} " +
+        $"compatibility_probe_degraded_features={TimberbornQaCommandBridge.FormatToken(State.CompatibilityProbeDegradedFeatures)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
     public static TimberbornQaCommandResult CreateSuccess(
