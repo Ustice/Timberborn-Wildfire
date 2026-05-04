@@ -29,6 +29,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             fireRuntime,
             fireRuntime,
             fireRuntime,
+            fireRuntime,
             new UnityTimberbornQaCommandLogSink());
     }
 

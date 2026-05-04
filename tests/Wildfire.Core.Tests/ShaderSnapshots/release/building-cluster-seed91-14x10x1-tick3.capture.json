@@ -86,7 +86,7 @@
     20999,
     28943,
     28943,
-    28958,
+    28974,
     28943,
     28943,
     20999,
@@ -152,7 +152,7 @@
   ],
   "perTickDeltaCounts": [
     5,
-    1,
+    5,
     5
   ],
   "perTickDeltas": [
@@ -160,6 +160,11 @@
       "tick": 1,
       "deltaCount": 5,
       "deltas": [
+        {
+          "cellIndex": 78,
+          "oldCell": 28943,
+          "newCell": 28959
+        },
         {
           "cellIndex": 63,
           "oldCell": 28943,
@@ -179,22 +184,37 @@
           "cellIndex": 91,
           "oldCell": 28943,
           "newCell": 28959
-        },
-        {
-          "cellIndex": 78,
-          "oldCell": 28943,
-          "newCell": 28959
         }
       ]
     },
     {
       "tick": 2,
-      "deltaCount": 1,
+      "deltaCount": 5,
       "deltas": [
+        {
+          "cellIndex": 78,
+          "oldCell": 28959,
+          "newCell": 28975
+        },
+        {
+          "cellIndex": 63,
+          "oldCell": 28959,
+          "newCell": 28975
+        },
+        {
+          "cellIndex": 76,
+          "oldCell": 28959,
+          "newCell": 28975
+        },
         {
           "cellIndex": 77,
           "oldCell": 29102,
           "newCell": 29022
+        },
+        {
+          "cellIndex": 91,
+          "oldCell": 28959,
+          "newCell": 28975
         }
       ]
     },
@@ -204,33 +224,33 @@
       "deltas": [
         {
           "cellIndex": 78,
-          "oldCell": 28959,
+          "oldCell": 28975,
           "newCell": 28943
         },
         {
           "cellIndex": 63,
-          "oldCell": 28959,
+          "oldCell": 28975,
           "newCell": 28943
         },
         {
           "cellIndex": 76,
-          "oldCell": 28959,
+          "oldCell": 28975,
           "newCell": 28943
         },
         {
           "cellIndex": 77,
           "oldCell": 29022,
-          "newCell": 28958
+          "newCell": 28974
         },
         {
           "cellIndex": 91,
-          "oldCell": 28959,
+          "oldCell": 28975,
           "newCell": 28943
         }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:D12ED5D7"
+    "checksum": "visual-fnv1a32:5D5FCA57"
   }
 }

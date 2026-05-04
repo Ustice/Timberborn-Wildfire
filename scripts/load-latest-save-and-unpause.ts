@@ -264,6 +264,30 @@ const isTimberbornRunning = (): boolean => run("pgrep", ["-x", processName]).exi
 
 const commandFailureText = (result: ShellResult): string => result.stderr.trim() || result.stdout.trim() || "(no stderr/stdout)";
 
+const formatError = (error: unknown): string => error instanceof Error ? error.message : String(error);
+
+const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
+
+const getFrontmostBundleId = (): string | null => {
+  const result = run("osascript", [
+    "-e",
+    'tell application "System Events" to get bundle identifier of first application process whose frontmost is true',
+  ]);
+
+  return result.exitCode === 0 ? result.stdout.trim() || null : null;
+};
+
+const assertTimberbornForeground = (label: string): void => {
+  const frontmostBundleId = getFrontmostBundleId() ?? "unknown";
+  if (frontmostBundleId !== bundleId) {
+    fail(`Expected Timberborn foreground for ${label}, got frontmost_bundle_id=${frontmostBundleId}.`);
+  }
+};
+
+const isTransientForegroundFailure = (message: string): boolean =>
+  message.includes("frontmost_bundle_id=") ||
+  message.includes(`Could not activate Timberborn bundle ${bundleId}`);
+
 const assertToolExists = (tool: string): void => {
   const result = run("/usr/bin/which", [tool]);
   if (result.exitCode !== 0) {
@@ -364,24 +388,41 @@ const activateTimberborn = (label = "activate", timeoutMs = activationRetryTimeo
   const startedAt = Date.now();
   let attempts = 0;
   let lastFailure = "(activation was not attempted)";
+  let lastFrontmostBundleId = getFrontmostBundleId() ?? "unknown";
 
   while (Date.now() - startedAt <= timeoutMs) {
     attempts += 1;
     const result = run("osascript", ["-e", `tell application id "${bundleId}" to activate`]);
     if (result.exitCode === 0) {
-      if (attempts > 1) {
-        log(`activation_ok label=${label} attempts=${attempts}`);
+      lastFrontmostBundleId = getFrontmostBundleId() ?? "unknown";
+      if (lastFrontmostBundleId === bundleId) {
+        if (attempts > 1) {
+          log(`activation_ok label=${label} attempts=${attempts}`);
+        }
+        return;
       }
-      return;
+
+      lastFailure = `frontmost_bundle_id=${lastFrontmostBundleId}`;
+    } else {
+      lastFailure = commandFailureText(result);
     }
 
-    lastFailure = commandFailureText(result);
     Bun.sleepSync(activationRetryIntervalMs);
   }
 
   fail(
     `Could not activate Timberborn bundle ${bundleId} for ${label} after ${attempts} attempts over ${Date.now() - startedAt}ms: ${lastFailure}`,
   );
+};
+
+const tryActivateTimberborn = (label = "activate", timeoutMs = activationRetryTimeoutMs): boolean => {
+  try {
+    activateTimberborn(label, timeoutMs);
+    return true;
+  } catch (error) {
+    log(`activation_pending label=${label} error=${compactLogToken(formatError(error))}`);
+    return false;
+  }
 };
 
 const launchOrAttach = async (options: Options): Promise<void> => {
@@ -403,7 +444,9 @@ const launchOrAttach = async (options: Options): Promise<void> => {
   const startedAt = Date.now();
   while (Date.now() - startedAt <= options.waitSeconds * 1000) {
     if (isTimberbornRunning()) {
-      activateTimberborn("launch");
+      if (!tryActivateTimberborn("launch")) {
+        log("launch_activation_deferred=true reason=timberborn_running_but_not_foreground");
+      }
       log("timberborn_running=true");
       return;
     }
@@ -653,6 +696,8 @@ const assertScreenshotSize = (path: string, image: PngImage, expectedResolution:
 };
 
 const captureScreenshot = (artifactDir: string, name: string, expectedResolution: string): Screenshot => {
+  activateTimberborn(`screenshot:${name}`);
+  assertTimberbornForeground(`screenshot:${name}`);
   const path = join(artifactDir, `${name}.png`);
   const result = run("screencapture", ["-x", path]);
   if (result.exitCode !== 0 || !existsSync(path)) {
@@ -665,6 +710,24 @@ const captureScreenshot = (artifactDir: string, name: string, expectedResolution
   const blockingOverlay = detectBlockingOverlay(image);
   log(`screenshot name=${name} path=${path} screen=${screen} blocking_overlay=${blockingOverlay ?? "none"}`);
   return { blockingOverlay, image, path, screen };
+};
+
+const captureScreenshotForWait = (
+  artifactDir: string,
+  name: string,
+  expectedResolution: string,
+): Screenshot | null => {
+  try {
+    return captureScreenshot(artifactDir, name, expectedResolution);
+  } catch (error) {
+    const message = formatError(error);
+    if (isTransientForegroundFailure(message)) {
+      log(`screenshot_wait_deferred name=${name} reason=${compactLogToken(message)}`);
+      return null;
+    }
+
+    throw error;
+  }
 };
 
 const failOnBlockingOverlay = (screenshot: Screenshot): void => {
@@ -786,7 +849,16 @@ const waitForKnownScreen = async (artifactDir: string, options: Options, prefix:
 
   while (Date.now() - startedAt <= options.waitSeconds * 1000) {
     attempts += 1;
-    const screenshot = captureScreenshot(artifactDir, `${prefix}-${String(attempts).padStart(2, "0")}`, options.expectedResolution);
+    const screenshot = captureScreenshotForWait(
+      artifactDir,
+      `${prefix}-${String(attempts).padStart(2, "0")}`,
+      options.expectedResolution,
+    );
+    if (screenshot === null) {
+      await Bun.sleep(1000);
+      continue;
+    }
+
     if (screenshot.screen !== "unknown" || screenshot.blockingOverlay !== null) {
       return screenshot;
     }
@@ -809,7 +881,16 @@ const waitForKnownScreenChange = async (
 
   while (Date.now() - startedAt <= options.waitSeconds * 1000) {
     attempts += 1;
-    const screenshot = captureScreenshot(artifactDir, `${prefix}-${String(attempts).padStart(2, "0")}`, options.expectedResolution);
+    const screenshot = captureScreenshotForWait(
+      artifactDir,
+      `${prefix}-${String(attempts).padStart(2, "0")}`,
+      options.expectedResolution,
+    );
+    if (screenshot === null) {
+      await Bun.sleep(1000);
+      continue;
+    }
+
     failOnBlockingOverlay(screenshot);
     if (screenshot.screen !== "unknown" && screenshot.screen !== previousScreen) {
       return screenshot;
@@ -835,7 +916,16 @@ const waitForLoadedSaveAfterContinue = async (
 
   while (Date.now() - startedAt <= options.waitSeconds * 1000) {
     attempts += 1;
-    const screenshot = captureScreenshot(artifactDir, `${prefix}-${String(attempts).padStart(2, "0")}`, options.expectedResolution);
+    const screenshot = captureScreenshotForWait(
+      artifactDir,
+      `${prefix}-${String(attempts).padStart(2, "0")}`,
+      options.expectedResolution,
+    );
+    if (screenshot === null) {
+      await Bun.sleep(1000);
+      continue;
+    }
+
     failOnBlockingOverlay(screenshot);
     if (screenshot.screen === "loaded-save") {
       return screenshot;
@@ -864,7 +954,16 @@ const waitForScreen = async (
 
   while (Date.now() - startedAt <= options.waitSeconds * 1000) {
     attempts += 1;
-    const screenshot = captureScreenshot(artifactDir, `${prefix}-${String(attempts).padStart(2, "0")}`, options.expectedResolution);
+    const screenshot = captureScreenshotForWait(
+      artifactDir,
+      `${prefix}-${String(attempts).padStart(2, "0")}`,
+      options.expectedResolution,
+    );
+    if (screenshot === null) {
+      await Bun.sleep(1000);
+      continue;
+    }
+
     failOnBlockingOverlay(screenshot);
     if (screenshot.screen === expectedScreen) {
       return screenshot;

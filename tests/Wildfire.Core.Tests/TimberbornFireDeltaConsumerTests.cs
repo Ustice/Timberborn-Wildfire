@@ -233,6 +233,27 @@ public sealed class TimberbornFireDeltaConsumerTests
     }
 
     [Fact]
+    public void ConsumeRetainsLastPositiveBuildingBurnoutEvidenceAfterZeroAppliedDispatch()
+    {
+        RecordingBuildingBurnoutConsequenceApi consequenceApi = new(
+            static consequence => new TimberbornBuildingBurnoutConsequenceResult(
+                MatchedBuildingCell: true,
+                AppliedConsequence: consequence.ShouldApplyBurnout));
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(
+                buildingBurnoutConsequenceSink: new TimberbornBuildingBurnoutConsequenceSink(consequenceApi)));
+
+        consumer.Consume(41, [new CellDelta(6, Cell(fuel: 2, heat: 10), Cell(fuel: 0, heat: 10))]);
+        TimberbornFireDeltaConsumerSummary zeroAppliedSummary =
+            consumer.Consume(42, [new CellDelta(7, Cell(fuel: 4, heat: 1), Cell(fuel: 3, heat: 1))]);
+
+        Assert.Equal(0, zeroAppliedSummary.BuildingBurnoutAppliedConsequenceCount);
+        Assert.Equal(41u, consumer.LastPositiveBuildingBurnoutAppliedTick);
+        Assert.Equal(1, consumer.LastPositiveBuildingBurnoutAppliedCount);
+    }
+
+    [Fact]
     public void ConsumeUpdatesOnlyLatestOverlayStatesForRoutedChangedCells()
     {
         RecordingFireDeltaSinks recordingSinks = new();

@@ -36,7 +36,7 @@
     20999,
     20999,
     20999,
-    21031,
+    21047,
     20999,
     20999,
     48128,
@@ -115,12 +115,12 @@
         {
           "cellIndex": 15,
           "oldCell": 21031,
-          "newCell": 21047
+          "newCell": 21063
         },
         {
           "cellIndex": 26,
           "oldCell": 21031,
-          "newCell": 21047
+          "newCell": 21063
         },
         {
           "cellIndex": 27,
@@ -130,12 +130,12 @@
         {
           "cellIndex": 28,
           "oldCell": 21031,
-          "newCell": 21047
+          "newCell": 21063
         },
         {
           "cellIndex": 39,
           "oldCell": 21031,
-          "newCell": 21047
+          "newCell": 21063
         }
       ]
     },
@@ -145,28 +145,28 @@
       "deltas": [
         {
           "cellIndex": 15,
-          "oldCell": 21047,
-          "newCell": 21015
+          "oldCell": 21063,
+          "newCell": 21031
         },
         {
           "cellIndex": 26,
-          "oldCell": 21047,
-          "newCell": 21015
+          "oldCell": 21063,
+          "newCell": 21031
         },
         {
           "cellIndex": 27,
           "oldCell": 21111,
-          "newCell": 21063
+          "newCell": 21079
         },
         {
           "cellIndex": 28,
-          "oldCell": 21047,
-          "newCell": 21015
+          "oldCell": 21063,
+          "newCell": 21031
         },
         {
           "cellIndex": 39,
-          "oldCell": 21047,
-          "newCell": 21015
+          "oldCell": 21063,
+          "newCell": 21031
         }
       ]
     },
@@ -176,33 +176,33 @@
       "deltas": [
         {
           "cellIndex": 15,
-          "oldCell": 21015,
+          "oldCell": 21031,
           "newCell": 20999
         },
         {
           "cellIndex": 26,
-          "oldCell": 21015,
+          "oldCell": 21031,
           "newCell": 20999
         },
         {
           "cellIndex": 27,
-          "oldCell": 21063,
-          "newCell": 21031
+          "oldCell": 21079,
+          "newCell": 21047
         },
         {
           "cellIndex": 28,
-          "oldCell": 21015,
+          "oldCell": 21031,
           "newCell": 20999
         },
         {
           "cellIndex": 39,
-          "oldCell": 21015,
+          "oldCell": 21031,
           "newCell": 20999
         }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:40818F57"
+    "checksum": "visual-fnv1a32:5947E999"
   }
 }

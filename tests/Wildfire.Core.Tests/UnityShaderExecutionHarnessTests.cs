@@ -17,6 +17,28 @@ public sealed class UnityShaderExecutionHarnessTests
         new("mixed-terrain", 123, 16, 10, 3, 3, "mixed-terrain-seed123-16x10x3-tick3.capture.json"),
     ];
 
+    private static readonly FuelBurnDownScenario[] FuelBurnDownScenarios =
+    [
+        new(
+            "low-fuel-burn-down",
+            89,
+            "low-fuel-burn-down-seed89-5x5x1.fixture.json",
+            "low-fuel-burn-down-seed89-5x5x1-tick7.capture.json",
+            [57, 38, 19, 8, 3, 2, 0]),
+        new(
+            "medium-fuel-burn-down",
+            89,
+            "medium-fuel-burn-down-seed89-5x5x1.fixture.json",
+            "medium-fuel-burn-down-seed89-5x5x1-tick15.capture.json",
+            [182, 163, 144, 127, 109, 92, 75, 56, 42, 31, 19, 9, 3, 1, 0]),
+        new(
+            "high-fuel-burn-down",
+            89,
+            "high-fuel-burn-down-seed89-5x5x1.fixture.json",
+            "high-fuel-burn-down-seed89-5x5x1-tick27.capture.json",
+            [357, 338, 319, 302, 284, 267, 250, 231, 216, 201, 182, 167, 147, 127, 108, 89, 69, 50, 38, 27, 16, 9, 6, 4, 2, 1, 0]),
+    ];
+
     [Fact]
     public void UnityExecutorReportsMissingUnityAsEnvironmentFailure()
     {
@@ -106,6 +128,45 @@ public sealed class UnityShaderExecutionHarnessTests
     }
 
     [Fact]
+    public void AcceptedReleaseShaderSnapshotsReflectTunedSpreadPaceAndFuelDuration()
+    {
+        AssertScenarioSummary(
+            "single-ignition",
+            perTickDeltas: [5, 5],
+            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 0, MaxHeat: 7, WaterCells: 0, FuelTotal: 176));
+        AssertScenarioSummary(
+            "line-of-fuel",
+            perTickDeltas: [5, 5, 4, 5],
+            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 2, MaxHeat: 12, WaterCells: 0, FuelTotal: 104));
+        AssertScenarioSummary(
+            "sparse-forest",
+            perTickDeltas: [5, 5, 5],
+            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 1, MaxHeat: 12, WaterCells: 0, FuelTotal: 979));
+        AssertScenarioSummary(
+            "building-cluster",
+            perTickDeltas: [5, 5, 5],
+            summary: new ShaderSemanticSummary(HotCells: 1, BurningCells: 0, MaxHeat: 2, WaterCells: 0, FuelTotal: 1179));
+        AssertScenarioSummary(
+            "water-barrier",
+            perTickDeltas: [5, 5, 5, 5],
+            summary: new ShaderSemanticSummary(HotCells: 1, BurningCells: 0, MaxHeat: 3, WaterCells: 5, FuelTotal: 385));
+        AssertScenarioSummary(
+            "vertical-fuel-column",
+            perTickDeltas: [6, 6, 6, 6],
+            summary: new ShaderSemanticSummary(HotCells: 6, BurningCells: 1, MaxHeat: 12, WaterCells: 0, FuelTotal: 45));
+    }
+
+    [Fact]
+    public void AcceptedFuelBurnDownSnapshotsCompareLowMediumAndHighFuelInputs()
+    {
+        int[] depletedTicks = FuelBurnDownScenarios
+            .Select(AssertFuelBurnDownSummary)
+            .ToArray();
+
+        Assert.Equal([7, 15, 27], depletedTicks);
+    }
+
+    [Fact]
     public void UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled()
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("WILDFIRE_RUN_UNITY_SHADER_HARNESS"), "1", StringComparison.Ordinal))
@@ -126,6 +187,11 @@ public sealed class UnityShaderExecutionHarnessTests
         {
             AssertReleaseShaderScenario(harness, scenario);
         }
+
+        foreach (FuelBurnDownScenario scenario in FuelBurnDownScenarios)
+        {
+            AssertFuelBurnDownScenario(harness, scenario);
+        }
     }
 
     private static void AssertReleaseShaderScenario(ShaderSnapshotHarness harness, ReleaseShaderScenario scenario)
@@ -143,6 +209,61 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(comparison.Matches, string.Join(Environment.NewLine, comparison.Differences));
     }
 
+    private static void AssertFuelBurnDownScenario(ShaderSnapshotHarness harness, FuelBurnDownScenario scenario)
+    {
+        ShaderSnapshotFixture fixture = LoadFuelBurnDownFixture(scenario);
+        ShaderSnapshotCapture expected = LoadExpectedFuelBurnDownCapture(scenario);
+        ShaderSnapshotCapture capture = harness.Capture(fixture, scenario.ExpectedFuelTotalsByTick.Length);
+        ShaderSnapshotComparison comparison = ShaderSnapshotComparison.Create(expected, capture, maxDifferences: 32);
+
+        Assert.True(comparison.Matches, string.Join(Environment.NewLine, comparison.Differences));
+    }
+
+    private static void AssertScenarioSummary(
+        string scenarioName,
+        int[] perTickDeltas,
+        ShaderSemanticSummary summary)
+    {
+        ReleaseShaderScenario scenario = ReleaseScenarios.Single(releaseScenario => releaseScenario.Name == scenarioName);
+        ShaderSnapshotCapture capture = LoadExpectedCapture(scenario);
+
+        Assert.Equal(perTickDeltas, capture.Ticks.Select(static tick => tick.DeltaCount).ToArray());
+        Assert.Equal(summary, ShaderSemanticSummary.Create(capture.FinalPackedCells));
+    }
+
+    private static int AssertFuelBurnDownSummary(FuelBurnDownScenario scenario)
+    {
+        ShaderSnapshotFixture fixture = LoadFuelBurnDownFixture(scenario);
+        ShaderSnapshotCapture capture = LoadExpectedFuelBurnDownCapture(scenario);
+        int[] fuelTotals = FuelTotalsByTick(fixture, capture);
+
+        Assert.Equal(scenario.Name, capture.Scenario);
+        Assert.Equal(scenario.Seed, capture.Seed);
+        Assert.Equal(fixture.Grid, capture.Grid);
+        Assert.Equal(scenario.ExpectedFuelTotalsByTick.Length, capture.TickCount);
+        Assert.Equal(scenario.ExpectedFuelTotalsByTick, fuelTotals);
+        Assert.Equal(0, fuelTotals[^1]);
+
+        return Array.FindIndex(fuelTotals, static total => total == 0) + 1;
+    }
+
+    private static int[] FuelTotalsByTick(ShaderSnapshotFixture fixture, ShaderSnapshotCapture capture)
+    {
+        ushort[] cells = fixture.InitialCells.ToArray();
+
+        return capture.Ticks
+            .Select(tick =>
+            {
+                foreach (ShaderSnapshotDelta delta in tick.Deltas)
+                {
+                    cells[delta.CellIndex] = delta.NewCell;
+                }
+
+                return cells.Sum(static cell => PackedCell.Fuel(cell));
+            })
+            .ToArray();
+    }
+
     private static void AssertExpectedCaptureMetadata(ShaderSnapshotCapture capture, ReleaseShaderScenario scenario)
     {
         Assert.Equal(scenario.Name, capture.Scenario);
@@ -156,6 +277,24 @@ public sealed class UnityShaderExecutionHarnessTests
         string path = Path.Combine(
             FindRepoRoot(),
             "tests/Wildfire.Core.Tests/ShaderSnapshots/release",
+            scenario.ExpectedCaptureFile);
+        return ShaderSnapshotJson.LoadFile(path);
+    }
+
+    private static ShaderSnapshotFixture LoadFuelBurnDownFixture(FuelBurnDownScenario scenario)
+    {
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "tests/Wildfire.Core.Tests/ShaderSnapshots/twf-089",
+            scenario.FixtureFile);
+        return ShaderSnapshotFixtureLoader.LoadFile(path);
+    }
+
+    private static ShaderSnapshotCapture LoadExpectedFuelBurnDownCapture(FuelBurnDownScenario scenario)
+    {
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "tests/Wildfire.Core.Tests/ShaderSnapshots/twf-089",
             scenario.ExpectedCaptureFile);
         return ShaderSnapshotJson.LoadFile(path);
     }
@@ -204,4 +343,43 @@ public sealed class UnityShaderExecutionHarnessTests
         int Depth,
         int TickCount,
         string ExpectedCaptureFile);
+
+    private sealed record FuelBurnDownScenario(
+        string Name,
+        uint Seed,
+        string FixtureFile,
+        string ExpectedCaptureFile,
+        int[] ExpectedFuelTotalsByTick);
+
+    private sealed record ShaderSemanticSummary(int HotCells, int BurningCells, int MaxHeat, int WaterCells, int FuelTotal)
+    {
+        public static ShaderSemanticSummary Create(ushort[] cells)
+        {
+            return cells
+                .Select(ShaderCellFields.Create)
+                .Aggregate(
+                    new ShaderSemanticSummary(HotCells: 0, BurningCells: 0, MaxHeat: 0, WaterCells: 0, FuelTotal: 0),
+                    static (summary, cell) => new ShaderSemanticSummary(
+                        summary.HotCells + (cell.Heat > 0 ? 1 : 0),
+                        summary.BurningCells + (cell.IsBurning ? 1 : 0),
+                        Math.Max(summary.MaxHeat, cell.Heat),
+                        summary.WaterCells + (cell.Water > 0 ? 1 : 0),
+                        summary.FuelTotal + cell.Fuel));
+        }
+    }
+
+    private sealed record ShaderCellFields(int Fuel, int Heat, int Flammability, int Water, int Terrain)
+    {
+        public bool IsBurning => Terrain == 1 && Fuel > 0 && Heat >= 11 - Flammability + (Water * 2);
+
+        public static ShaderCellFields Create(ushort cell)
+        {
+            return new ShaderCellFields(
+                Fuel: cell & 0xF,
+                Heat: (cell >> 4) & 0xF,
+                Flammability: (cell >> 8) & 0x3,
+                Water: (cell >> 10) & 0x3,
+                Terrain: (cell >> 12) & 0x1);
+        }
+    }
 }

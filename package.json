@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "kanban:audit": "bun scripts/audit-kanban.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

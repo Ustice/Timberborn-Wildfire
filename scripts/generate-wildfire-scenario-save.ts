@@ -3,7 +3,6 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "fs";
 import { dirname, join, relative, resolve } from "path";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
-import { randomUUID } from "crypto";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
@@ -107,9 +106,10 @@ Examples:
 const home = process.env.HOME ?? "";
 const defaultQaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
 const generatedScenariosRoot = join(defaultQaRoot, "generated-scenarios");
-const generatorVersion = "TWF-118.1";
+const generatorVersion = "TWF-132.0";
 const generatorTool = "wildfire-scenario-save-generator";
 const manifestFileName = "wildfire-scenario-manifest.json";
+const timberbornSaveTimestampPattern = /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/u;
 
 const log = (message: string): void => {
   console.log(`[wildfire-scenario-save] ${message}`);
@@ -208,20 +208,18 @@ const asString = (value: JsonValue | undefined): string | null => (typeof value 
 
 const cloneJson = <T extends JsonValue>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+const twoDigit = (value: number): string => value.toString().padStart(2, "0");
+
+export const formatTimberbornSaveTimestamp = (date: Date): string =>
+  `${twoDigit(date.getMonth() + 1)}/${twoDigit(date.getDate())}/${date.getFullYear()} ${twoDigit(date.getHours())}:${twoDigit(
+    date.getMinutes(),
+  )}:${twoDigit(date.getSeconds())}`;
+
+export const isTimberbornSaveTimestamp = (value: JsonValue | undefined): boolean =>
+  typeof value === "string" && timberbornSaveTimestampPattern.test(value);
+
 const getPath = (value: JsonValue, path: string[]): JsonValue | undefined =>
   path.reduce<JsonValue | undefined>((current, key) => asObject(current)?.[key], value);
-
-const setPath = (value: JsonValue, path: string[], next: JsonValue): boolean => {
-  const parent = path.slice(0, -1).reduce<JsonValue | undefined>((current, key) => asObject(current)?.[key], value);
-  const parentObject = asObject(parent);
-  const finalKey = path.at(-1);
-  if (!parentObject || !finalKey) {
-    return false;
-  }
-
-  parentObject[finalKey] = next;
-  return true;
-};
 
 const viewOf = (buffer: Buffer): DataView => new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 
@@ -418,19 +416,29 @@ const entityCoordinate = (entity: JsonValue): Coordinate | null => {
 
 const entityTemplate = (entity: JsonValue): string | null => asString(asObject(entity)?.Template);
 
-const cloneEntityAt = (entity: JsonValue, request: EntityRequest): JsonValue => {
-  const clone = cloneJson(entity);
-  setPath(clone, ["Id"], randomUUID());
-  setPath(clone, ["Components", "BlockObject", "Coordinates"], {
-    X: request.coordinate.x,
-    Y: request.coordinate.y,
-    Z: request.coordinate.z,
-  });
+const plannedCoordinateBlocker = (world: JsonValue): string => {
+  const terrainVoxels = getPath(world, ["Singletons", "TerrainMap", "Voxels", "Array"]);
 
-  return clone;
+  return typeof terrainVoxels === "string"
+    ? "planned coordinate requires matching terrain/channel/support mutation, but this generator leaves TerrainMap.Voxels.Array unchanged; using existing template-supported coordinates when available"
+    : "planned coordinate requires terrain/channel/support validation, but Singletons.TerrainMap.Voxels.Array is missing or not a string";
 };
 
-const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlacement[]; generated: EntityRequest[]; nextWorld: JsonValue } => {
+const existingSupportedPlacements = (entities: JsonValue[]): Record<string, EntityRequest[]> =>
+  entities.reduce<Record<string, EntityRequest[]>>((placements, entity) => {
+    const template = entityTemplate(entity);
+    const coordinate = entityCoordinate(entity);
+    if (!template || !coordinate) {
+      return placements;
+    }
+
+    return {
+      ...placements,
+      [template]: [...(placements[template] ?? []), { category: "template-supported-checkpoint", coordinate, template }],
+    };
+  }, {});
+
+export const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlacement[]; generated: EntityRequest[]; nextWorld: JsonValue } => {
   const nextWorld = cloneJson(world);
   const entities = asArray(asObject(nextWorld)?.Entities);
   if (!entities) {
@@ -451,36 +459,40 @@ const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlacement[]; g
     };
   }
 
-  const prototypes = entities.reduce<Record<string, JsonValue>>((byTemplate, entity) => {
-    const template = entityTemplate(entity);
-    return template && !byTemplate[template] ? { ...byTemplate, [template]: entity } : byTemplate;
-  }, {});
-  const occupied = new Set(entities.map(entityCoordinate).filter((coordinate): coordinate is Coordinate => coordinate !== null).map(coordinateKey));
-  const placements = planned.reduce<{ blockers: EntityPlacement[]; generated: EntityRequest[]; nextEntities: JsonValue[]; occupied: Set<string> }>(
+  const supportedPlacements = existingSupportedPlacements(entities);
+  const coordinateBlocker = plannedCoordinateBlocker(nextWorld);
+  const placements = planned.reduce<{ blockers: EntityPlacement[]; generated: EntityRequest[]; nextEntities: JsonValue[]; nextSupportedIndexByTemplate: Record<string, number> }>(
     (state, request) => {
-      const prototype = prototypes[request.template];
+      const supportedForTemplate = supportedPlacements[request.template] ?? [];
+      const nextSupportedIndex = state.nextSupportedIndexByTemplate[request.template] ?? 0;
+      const supportedPlacement = supportedForTemplate[nextSupportedIndex];
       const key = coordinateKey(request.coordinate);
-      if (!prototype) {
+      if (!supportedPlacement) {
         return {
           ...state,
-          blockers: [...state.blockers, { ...request, blockedReason: `template entity ${request.template} was not found in world.json Entities` }],
-        };
-      }
-      if (state.occupied.has(key)) {
-        return {
-          ...state,
-          blockers: [...state.blockers, { ...request, blockedReason: `target coordinate ${key} is already occupied in the template` }],
+          blockers: [
+            ...state.blockers,
+            {
+              ...request,
+              blockedReason:
+                supportedForTemplate.length === 0
+                  ? `template entity ${request.template} was not found in world.json Entities with valid BlockObject coordinates`
+                  : `only ${supportedForTemplate.length} existing template-supported ${request.template} checkpoint(s) were found; planned coordinate ${key} is blocked because ${coordinateBlocker}`,
+            },
+          ],
         };
       }
 
-      state.occupied.add(key);
       return {
         ...state,
-        generated: [...state.generated, request],
-        nextEntities: [...state.nextEntities, cloneEntityAt(prototype, request)],
+        generated: [...state.generated, { ...request, coordinate: supportedPlacement.coordinate }],
+        nextSupportedIndexByTemplate: {
+          ...state.nextSupportedIndexByTemplate,
+          [request.template]: nextSupportedIndex + 1,
+        },
       };
     },
-    { blockers: [], generated: [], nextEntities: entities, occupied },
+    { blockers: [], generated: [], nextEntities: entities, nextSupportedIndexByTemplate: {} },
   );
 
   asObject(nextWorld)!.Entities = placements.nextEntities;
@@ -488,7 +500,30 @@ const mutateWorldEntities = (world: JsonValue): { blockers: EntityPlacement[]; g
   return { blockers: placements.blockers, generated: placements.generated, nextWorld };
 };
 
-const buildSchemaBlockers = (inspection: ArchiveInspection, world: JsonValue | undefined, entityBlockers: EntityPlacement[]): string[] => {
+export const buildSaveMetadataShapeBlockers = (metadata: JsonValue | undefined): string[] => {
+  const object = asObject(metadata);
+  const timestamp = object?.Timestamp;
+  const cycle = object?.Cycle;
+  const day = object?.Day;
+  const mods = object?.Mods;
+
+  return [
+    !object ? "save_metadata.json root is missing or not an object" : null,
+    object && !isTimberbornSaveTimestamp(timestamp)
+      ? "save_metadata.json Timestamp must use Timberborn save format MM/dd/yyyy HH:mm:ss"
+      : null,
+    object && typeof cycle !== "number" ? "save_metadata.json Cycle must be a number" : null,
+    object && typeof day !== "number" ? "save_metadata.json Day must be a number" : null,
+    object && !Array.isArray(mods) ? "save_metadata.json Mods must be an array" : null,
+  ].filter((message): message is string => message !== null);
+};
+
+const buildSchemaBlockers = (
+  inspection: ArchiveInspection,
+  world: JsonValue | undefined,
+  metadata: JsonValue | undefined,
+  entityBlockers: EntityPlacement[],
+): string[] => {
   const entries = new Set(inspection.entries.map((entry) => entry.name));
   const terrainVoxels = getPath(world ?? null, ["Singletons", "TerrainMap", "Voxels", "Array"]);
   const entities = asArray(getPath(world ?? null, ["Entities"]));
@@ -497,11 +532,12 @@ const buildSchemaBlockers = (inspection: ArchiveInspection, world: JsonValue | u
     !entries.has("world.json") ? "archive member world.json is missing" : null,
     !entries.has("save_metadata.json") ? "archive member save_metadata.json is missing" : null,
     typeof terrainVoxels === "string"
-      ? "Singletons.TerrainMap.Voxels.Array is a space-delimited voxel string; generator leaves terrain height/channel carving unchanged until the encoding is validated by TWF-119"
-      : "Singletons.TerrainMap.Voxels.Array is missing or not a string; terrain layout mutation is blocked",
+      ? "Singletons.TerrainMap.Voxels.Array is a space-delimited voxel string; generator does not carve planned terrain/channels and instead emits existing template-supported checkpoint coordinates when available"
+      : "Singletons.TerrainMap.Voxels.Array is missing or not a string; terrain layout mutation and entity placement are blocked",
     entities ? null : "world.json path Entities is missing or not an array; entity placement is blocked",
     "Storage inventory contents are not mutated because the inspected storage prototypes are unfinished construction sites without inventory payloads",
     "Crop pads depend on crop entity prototypes in the template; missing prototypes are recorded per placement",
+    ...buildSaveMetadataShapeBlockers(metadata),
     ...entityBlockers.map(
       (blocker) =>
         `${blocker.category} ${blocker.template} at (${blocker.coordinate.x},${blocker.coordinate.y},${blocker.coordinate.z}): ${blocker.blockedReason}`,
@@ -509,7 +545,7 @@ const buildSchemaBlockers = (inspection: ArchiveInspection, world: JsonValue | u
   ].filter((message): message is string => message !== null);
 };
 
-const updateMetadata = (metadata: JsonValue | undefined, generatedAt: string): JsonValue | undefined => {
+export const updateMetadata = (metadata: JsonValue | undefined, generatedAt: Date): JsonValue | undefined => {
   if (!metadata) {
     return undefined;
   }
@@ -517,7 +553,7 @@ const updateMetadata = (metadata: JsonValue | undefined, generatedAt: string): J
   const nextMetadata = cloneJson(metadata);
   const object = asObject(nextMetadata);
   if (object) {
-    object.Timestamp = generatedAt;
+    object.Timestamp = formatTimberbornSaveTimestamp(generatedAt);
   }
 
   return nextMetadata;
@@ -808,12 +844,14 @@ const run = (): void => {
     fail(`Template archive does not exist: ${templatePath}`);
   }
 
-  const generatedAt = new Date().toISOString();
+  const generatedAtDate = new Date();
+  const generatedAt = generatedAtDate.toISOString();
   const paths = outputPathsFor(options);
   const inspection = inspectArchive(templatePath);
   const world = inspection.jsonFiles["world.json"];
   const mutation = options.mutateEntities && world ? mutateWorldEntities(world) : { blockers: [], generated: [], nextWorld: world };
-  const schemaBlockers = buildSchemaBlockers(inspection, world, mutation.blockers);
+  const metadata = updateMetadata(inspection.jsonFiles["save_metadata.json"], generatedAtDate);
+  const schemaBlockers = buildSchemaBlockers(inspection, world, metadata, mutation.blockers);
   const manifest = buildManifest(options, inspection, generatedAt, paths.archivePath, paths.manifestPath, mutation.generated, mutation.blockers, schemaBlockers);
 
   log(`template=${templatePath}`);
@@ -838,8 +876,8 @@ const run = (): void => {
     world && mutation.nextWorld
       ? replaceEntry(inspection.entries, "world.json", Buffer.from(JSON.stringify(mutation.nextWorld), "utf8"))
       : inspection.entries;
-  const entriesWithMetadata = updateMetadata(inspection.jsonFiles["save_metadata.json"], generatedAt)
-    ? replaceEntry(entriesWithWorld, "save_metadata.json", Buffer.from(JSON.stringify(updateMetadata(inspection.jsonFiles["save_metadata.json"], generatedAt)), "utf8"))
+  const entriesWithMetadata = metadata
+    ? replaceEntry(entriesWithWorld, "save_metadata.json", Buffer.from(JSON.stringify(metadata), "utf8"))
     : entriesWithWorld;
 
   writeZip(paths.archivePath, entriesWithMetadata);
@@ -848,9 +886,11 @@ const run = (): void => {
   log(`wrote_manifest=${paths.manifestPath}`);
 };
 
-try {
-  run();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+if (import.meta.main) {
+  try {
+    run();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }

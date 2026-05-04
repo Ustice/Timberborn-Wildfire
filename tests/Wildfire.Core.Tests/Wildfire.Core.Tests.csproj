@@ -25,4 +25,11 @@
     <ProjectReference Include="..\..\src\Wildfire.Unity\Wildfire.Unity.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Timberborn.SettingsSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SettingsSystem.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
 </Project>

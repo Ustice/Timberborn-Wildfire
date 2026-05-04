@@ -35,6 +35,8 @@ public sealed class TimberbornFireSystem : IDisposable
     private IGpuFireSimulator? _fireSimulator;
     private FireGrid? _grid;
     private int _registeredChangeCountSinceLastDispatch;
+    private TimberbornQaBurnDurationProofState _burnDurationProofState =
+        TimberbornQaBurnDurationProofState.Placeholder;
 
     public TimberbornFireSystem(IGpuFireSimulator fireSimulator)
         : this(fireSimulator, new TimberbornFireCellMapper(), NullTimberbornFireLogSink.Instance)
@@ -130,9 +132,15 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public int LastPositiveWaterChangedCount => _deltaConsumer.LastPositiveWaterChangedCount;
 
+    public uint LastPositiveBuildingBurnoutAppliedTick => _deltaConsumer.LastPositiveBuildingBurnoutAppliedTick;
+
+    public int LastPositiveBuildingBurnoutAppliedCount => _deltaConsumer.LastPositiveBuildingBurnoutAppliedCount;
+
     public TimberbornGpuVisualFieldSurfaceState VisualFieldSurfaceState =>
         (_fireSimulator as ITimberbornGpuVisualFieldStateProvider)?.VisualFieldSurfaceState ??
         TimberbornGpuVisualFieldSurfaceState.Unbound;
+
+    public TimberbornQaBurnDurationProofState BurnDurationProofState => _burnDurationProofState;
 
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
@@ -153,6 +161,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _registeredChangeCountSinceLastDispatch = 0;
         LastTick = 0;
         LastDeltaCount = 0;
+        _burnDurationProofState = TimberbornQaBurnDurationProofState.Placeholder;
         _deltaConsumer.Reset();
         _logSink.Info(
             $"wildfire_timberborn_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
@@ -173,6 +182,7 @@ public sealed class TimberbornFireSystem : IDisposable
             LastTick = result.Tick;
             LastDeltaCount = result.Deltas.Count;
             _deltaConsumer.Consume(result.Tick, result.Deltas.ToArray());
+            UpdateBurnDurationProof(result.Tick, result.Deltas);
             _logSink.Info(
                 $"wildfire_timberborn_dispatch_completed tick={result.Tick} delta_count={result.Deltas.Count} elapsed_ms={stopwatch.Elapsed.TotalMilliseconds:F3}");
 
@@ -276,6 +286,45 @@ public sealed class TimberbornFireSystem : IDisposable
             QueuedWaterChangeCount: 1);
     }
 
+    public TimberbornQaBurnDurationStimulusResult QueueBurnDurationQaStimulus(string target)
+    {
+        FireGrid grid = RequireGrid();
+        TimberbornQaBurnDurationStimulusTarget selectedTarget =
+            TimberbornQaBurnDurationStimulusTargets.SelectTarget(grid, target);
+        ushort setCell = PackedCell.Pack(
+            fuel: selectedTarget.InitialFuel,
+            heat: 15,
+            flammability: 3,
+            water: 0,
+            terrain: 1,
+            heatLoss: 1);
+        RegisterChange(
+            new FireSimChange(CellIndex: selectedTarget.CellIndex, SetCell: setCell),
+            "qa_burn_duration_stimulus");
+
+        _burnDurationProofState = new TimberbornQaBurnDurationProofState(
+            selectedTarget.Target,
+            selectedTarget.CellIndex,
+            selectedTarget.X,
+            selectedTarget.Y,
+            selectedTarget.Z,
+            selectedTarget.InitialFuel,
+            LastTick ?? 0,
+            TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks);
+        _logSink.Info(ToBurnDurationProofLogToken());
+
+        return new TimberbornQaBurnDurationStimulusResult(
+            selectedTarget.Target,
+            selectedTarget.CellIndex,
+            selectedTarget.X,
+            selectedTarget.Y,
+            selectedTarget.Z,
+            selectedTarget.InitialFuel,
+            setCell,
+            TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks,
+            QueuedSetCellChangeCount: 1);
+    }
+
     public IDisposable Subscribe(IFireSimListener listener)
     {
         return RequireSimulator().Subscribe(listener);
@@ -290,6 +339,91 @@ public sealed class TimberbornFireSystem : IDisposable
             _logSink.Info(
                 $"wildfire_timberborn_changes_registered source={source} count=1 pending_changes={_registeredChangeCountSinceLastDispatch}");
         }
+    }
+
+    private void UpdateBurnDurationProof(uint tick, IReadOnlyList<CellDelta> deltas)
+    {
+        if (_burnDurationProofState.Status == "placeholder" ||
+            _burnDurationProofState.DepletionTick.HasValue ||
+            _burnDurationProofState.TimedOut)
+        {
+            return;
+        }
+
+        CellDelta? targetDelta = deltas
+            .Select(delta => (CellDelta?)delta)
+            .FirstOrDefault(delta => delta?.CellIndex == _burnDurationProofState.CellIndex);
+        TimberbornQaBurnDurationProofState nextState = _burnDurationProofState;
+
+        if (targetDelta is { } delta)
+        {
+            bool isBurning = PackedCell.IsBurning(delta.NewCell);
+            int oldFuel = PackedCell.Fuel(delta.OldCell);
+            int newFuel = PackedCell.Fuel(delta.NewCell);
+            uint? burnStartTick = nextState.BurnStartTick;
+            if (!burnStartTick.HasValue && isBurning)
+            {
+                burnStartTick = tick;
+            }
+
+            uint? depletionTick = nextState.DepletionTick;
+            uint? elapsedBurnTicks = nextState.ElapsedBurnTicks;
+            if (burnStartTick.HasValue && oldFuel > 0 && newFuel == 0)
+            {
+                depletionTick = tick;
+                elapsedBurnTicks = checked((tick - burnStartTick.Value) + 1);
+            }
+
+            nextState = nextState with
+            {
+                BurnStartTick = burnStartTick,
+                DepletionTick = depletionTick,
+                ElapsedBurnTicks = elapsedBurnTicks,
+                Status = depletionTick.HasValue
+                    ? "depleted"
+                    : burnStartTick.HasValue ? "burning" : "queued",
+            };
+        }
+
+        if (nextState is { BurnStartTick: not null, DepletionTick: null } &&
+            tick - nextState.BurnStartTick.Value >= nextState.TimeoutTicks)
+        {
+            nextState = nextState with
+            {
+                TimedOut = true,
+                ElapsedBurnTicks = checked((tick - nextState.BurnStartTick.Value) + 1),
+                Status = "no_depletion_timeout",
+            };
+        }
+
+        if (!Equals(nextState, _burnDurationProofState))
+        {
+            _burnDurationProofState = nextState;
+            _logSink.Info(ToBurnDurationProofLogToken());
+        }
+    }
+
+    private string ToBurnDurationProofLogToken()
+    {
+        return "wildfire_timberborn_qa_burn_duration_status " +
+            $"target={_burnDurationProofState.Target} " +
+            $"cell_index={_burnDurationProofState.CellIndex} " +
+            $"x={_burnDurationProofState.X} " +
+            $"y={_burnDurationProofState.Y} " +
+            $"z={_burnDurationProofState.Z} " +
+            $"initial_fuel={_burnDurationProofState.InitialFuel} " +
+            $"queued_tick={_burnDurationProofState.QueuedTick} " +
+            $"burn_start_tick={FormatNumber(_burnDurationProofState.BurnStartTick)} " +
+            $"depletion_tick={FormatNumber(_burnDurationProofState.DepletionTick)} " +
+            $"elapsed_burn_ticks={FormatNumber(_burnDurationProofState.ElapsedBurnTicks)} " +
+            $"timeout_ticks={_burnDurationProofState.TimeoutTicks} " +
+            $"timed_out={_burnDurationProofState.TimedOut.ToString().ToLowerInvariant()} " +
+            $"status={_burnDurationProofState.Status}";
+    }
+
+    private static string FormatNumber(uint? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
     }
 
     private IGpuFireSimulator RequireSimulator()
@@ -350,9 +484,11 @@ public sealed class TimberbornFixedCadenceFireDispatcher
     private readonly TimberbornFireSystem _fireSystem;
     private readonly TimberbornFireCadence _cadence;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly Func<bool> _isDispatchEnabled;
     private TimeSpan _accumulatedElapsed = TimeSpan.Zero;
     private long? _lastProcessedGameUpdateId;
     private bool _loggedWaitingForCurrentInterval;
+    private bool _loggedDisabled;
 
     public TimberbornFixedCadenceFireDispatcher(TimberbornFireSystem fireSystem)
         : this(fireSystem, TimberbornFireCadence.Default, NullTimberbornFireLogSink.Instance)
@@ -362,7 +498,8 @@ public sealed class TimberbornFixedCadenceFireDispatcher
     public TimberbornFixedCadenceFireDispatcher(
         TimberbornFireSystem fireSystem,
         TimberbornFireCadence cadence,
-        ITimberbornFireLogSink logSink)
+        ITimberbornFireLogSink logSink,
+        Func<bool>? isDispatchEnabled = null)
     {
         if (fireSystem is null)
         {
@@ -377,6 +514,7 @@ public sealed class TimberbornFixedCadenceFireDispatcher
         _fireSystem = fireSystem;
         _cadence = cadence;
         _logSink = logSink;
+        _isDispatchEnabled = isDispatchEnabled ?? (() => true);
         _logSink.Info($"wildfire_timberborn_cadence_configured interval_ms={_cadence.Interval.TotalMilliseconds:F0}");
     }
 
@@ -389,6 +527,22 @@ public sealed class TimberbornFixedCadenceFireDispatcher
         }
 
         _lastProcessedGameUpdateId = update.GameUpdateId;
+
+        if (!_isDispatchEnabled())
+        {
+            _accumulatedElapsed = TimeSpan.Zero;
+            _loggedWaitingForCurrentInterval = false;
+            if (!_loggedDisabled)
+            {
+                _logSink.Info(
+                    $"wildfire_timberborn_dispatch_skipped_disabled game_update_id={update.GameUpdateId}");
+                _loggedDisabled = true;
+            }
+
+            return TimberbornFireDispatchResult.Skipped("wildfire-disabled", _accumulatedElapsed);
+        }
+
+        _loggedDisabled = false;
         _accumulatedElapsed += update.Elapsed;
 
         if (_accumulatedElapsed < _cadence.Interval)

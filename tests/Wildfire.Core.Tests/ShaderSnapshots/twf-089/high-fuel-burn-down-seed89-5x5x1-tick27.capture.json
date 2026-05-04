@@ -1,0 +1,2564 @@
+{
+  "formatVersion": 1,
+  "scenario": "high-fuel-burn-down",
+  "seed": 89,
+  "grid": {
+    "width": 5,
+    "height": 5,
+    "depth": 1
+  },
+  "tickCount": 27,
+  "finalPackedCells": [
+    4992,
+    4992,
+    4992,
+    5008,
+    5008,
+    4992,
+    4992,
+    5008,
+    5008,
+    5008,
+    4992,
+    5008,
+    5024,
+    5024,
+    5008,
+    5088,
+    5040,
+    5040,
+    5024,
+    5008,
+    5088,
+    5088,
+    5040,
+    5024,
+    5008
+  ],
+  "perTickDeltaCounts": [
+    25,
+    19,
+    19,
+    17,
+    18,
+    17,
+    17,
+    19,
+    15,
+    15,
+    19,
+    15,
+    20,
+    20,
+    19,
+    19,
+    20,
+    19,
+    12,
+    11,
+    12,
+    10,
+    9,
+    16,
+    18,
+    23,
+    23
+  ],
+  "perTickDeltas": [
+    {
+      "tick": 1,
+      "deltaCount": 25,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5119,
+          "newCell": 5103
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5119,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5119,
+          "newCell": 5102
+        }
+      ]
+    },
+    {
+      "tick": 2,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5102,
+          "newCell": 5101
+        }
+      ]
+    },
+    {
+      "tick": 3,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5103,
+          "newCell": 5102
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5101,
+          "newCell": 5100
+        }
+      ]
+    },
+    {
+      "tick": 4,
+      "deltaCount": 17,
+      "deltas": [
+        {
+          "cellIndex": 21,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5100,
+          "newCell": 5099
+        }
+      ]
+    },
+    {
+      "tick": 5,
+      "deltaCount": 18,
+      "deltas": [
+        {
+          "cellIndex": 21,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5102,
+          "newCell": 5101
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5100,
+          "newCell": 5099
+        }
+      ]
+    },
+    {
+      "tick": 6,
+      "deltaCount": 17,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5099,
+          "newCell": 5098
+        }
+      ]
+    },
+    {
+      "tick": 7,
+      "deltaCount": 17,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5101,
+          "newCell": 5100
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5098,
+          "newCell": 5097
+        }
+      ]
+    },
+    {
+      "tick": 8,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 21,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5100,
+          "newCell": 5099
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5097,
+          "newCell": 5096
+        }
+      ]
+    },
+    {
+      "tick": 9,
+      "deltaCount": 15,
+      "deltas": [
+        {
+          "cellIndex": 22,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5096,
+          "newCell": 5095
+        }
+      ]
+    },
+    {
+      "tick": 10,
+      "deltaCount": 15,
+      "deltas": [
+        {
+          "cellIndex": 0,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5099,
+          "newCell": 5098
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5097,
+          "newCell": 5096
+        }
+      ]
+    },
+    {
+      "tick": 11,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 21,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5094,
+          "newCell": 5093
+        }
+      ]
+    },
+    {
+      "tick": 12,
+      "deltaCount": 15,
+      "deltas": [
+        {
+          "cellIndex": 0,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 20,
+          "oldCell": 5098,
+          "newCell": 5097
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5095,
+          "newCell": 5094
+        }
+      ]
+    },
+    {
+      "tick": 13,
+      "deltaCount": 20,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5097,
+          "newCell": 5096
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5093,
+          "newCell": 5092
+        }
+      ]
+    },
+    {
+      "tick": 14,
+      "deltaCount": 20,
+      "deltas": [
+        {
+          "cellIndex": 1,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5093,
+          "newCell": 5092
+        }
+      ]
+    },
+    {
+      "tick": 15,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 0,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 20,
+          "oldCell": 5096,
+          "newCell": 5095
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5092,
+          "newCell": 5091
+        }
+      ]
+    },
+    {
+      "tick": 16,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 23,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5091,
+          "newCell": 5090
+        }
+      ]
+    },
+    {
+      "tick": 17,
+      "deltaCount": 20,
+      "deltas": [
+        {
+          "cellIndex": 0,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 20,
+          "oldCell": 5095,
+          "newCell": 5094
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5090,
+          "newCell": 5089
+        }
+      ]
+    },
+    {
+      "tick": 18,
+      "deltaCount": 19,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5094,
+          "newCell": 5093
+        },
+        {
+          "cellIndex": 21,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5089,
+          "newCell": 5088
+        }
+      ]
+    },
+    {
+      "tick": 19,
+      "deltaCount": 12,
+      "deltas": [
+        {
+          "cellIndex": 21,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5090,
+          "newCell": 5089
+        }
+      ]
+    },
+    {
+      "tick": 20,
+      "deltaCount": 11,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5093,
+          "newCell": 5092
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 15,
+          "oldCell": 5089,
+          "newCell": 5088
+        }
+      ]
+    },
+    {
+      "tick": 21,
+      "deltaCount": 12,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5092,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5091,
+          "newCell": 5090
+        }
+      ]
+    },
+    {
+      "tick": 22,
+      "deltaCount": 10,
+      "deltas": [
+        {
+          "cellIndex": 21,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5072,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5090,
+          "newCell": 5089
+        }
+      ]
+    },
+    {
+      "tick": 23,
+      "deltaCount": 9,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5091,
+          "newCell": 5075
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5072,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5072,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5089,
+          "newCell": 5088
+        }
+      ]
+    },
+    {
+      "tick": 24,
+      "deltaCount": 16,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5075,
+          "newCell": 5091
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5072,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5072,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5089,
+          "newCell": 5088
+        }
+      ]
+    },
+    {
+      "tick": 25,
+      "deltaCount": 18,
+      "deltas": [
+        {
+          "cellIndex": 20,
+          "oldCell": 5091,
+          "newCell": 5090
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 0,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5072,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5056,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5072,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5072,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5088,
+          "newCell": 5056
+        }
+      ]
+    },
+    {
+      "tick": 26,
+      "deltaCount": 23,
+      "deltas": [
+        {
+          "cellIndex": 0,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5040,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5040,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5056,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5088,
+          "newCell": 5072
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 20,
+          "oldCell": 5090,
+          "newCell": 5089
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5088,
+          "newCell": 5056
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5040,
+          "newCell": 5024
+        }
+      ]
+    },
+    {
+      "tick": 27,
+      "deltaCount": 23,
+      "deltas": [
+        {
+          "cellIndex": 0,
+          "oldCell": 5008,
+          "newCell": 4992
+        },
+        {
+          "cellIndex": 1,
+          "oldCell": 5008,
+          "newCell": 4992
+        },
+        {
+          "cellIndex": 2,
+          "oldCell": 5024,
+          "newCell": 4992
+        },
+        {
+          "cellIndex": 3,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 4,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 5,
+          "oldCell": 5008,
+          "newCell": 4992
+        },
+        {
+          "cellIndex": 6,
+          "oldCell": 5008,
+          "newCell": 4992
+        },
+        {
+          "cellIndex": 7,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 8,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 9,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 10,
+          "oldCell": 5008,
+          "newCell": 4992
+        },
+        {
+          "cellIndex": 11,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 12,
+          "oldCell": 5056,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 13,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 14,
+          "oldCell": 5024,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 16,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 17,
+          "oldCell": 5072,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 18,
+          "oldCell": 5056,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 19,
+          "oldCell": 5040,
+          "newCell": 5008
+        },
+        {
+          "cellIndex": 20,
+          "oldCell": 5089,
+          "newCell": 5088
+        },
+        {
+          "cellIndex": 22,
+          "oldCell": 5056,
+          "newCell": 5040
+        },
+        {
+          "cellIndex": 23,
+          "oldCell": 5040,
+          "newCell": 5024
+        },
+        {
+          "cellIndex": 24,
+          "oldCell": 5024,
+          "newCell": 5008
+        }
+      ]
+    }
+  ],
+  "visual": {
+    "checksum": "visual-fnv1a32:FB517DE9"
+  }
+}

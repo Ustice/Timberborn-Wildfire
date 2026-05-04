@@ -81,7 +81,7 @@
     13068,
     13068,
     13065,
-    13129,
+    13145,
     13068,
     20480,
     13068,
@@ -96,9 +96,9 @@
     13068,
     13065,
     13068,
-    20544,
-    13257,
-    20544,
+    20560,
+    13258,
+    20560,
     13068,
     20480,
     13068,
@@ -113,7 +113,7 @@
     20480,
     13065,
     20480,
-    13132,
+    13148,
     20480,
     20480,
     13065,
@@ -181,6 +181,11 @@
       "deltaCount": 5,
       "deltas": [
         {
+          "cellIndex": 87,
+          "oldCell": 20480,
+          "newCell": 20512
+        },
+        {
           "cellIndex": 72,
           "oldCell": 13065,
           "newCell": 13097
@@ -199,11 +204,6 @@
           "cellIndex": 104,
           "oldCell": 13068,
           "newCell": 13100
-        },
-        {
-          "cellIndex": 87,
-          "oldCell": 20480,
-          "newCell": 20512
         }
       ]
     },
@@ -212,29 +212,29 @@
       "deltaCount": 5,
       "deltas": [
         {
+          "cellIndex": 87,
+          "oldCell": 20512,
+          "newCell": 20544
+        },
+        {
           "cellIndex": 72,
           "oldCell": 13097,
-          "newCell": 13113
+          "newCell": 13129
         },
         {
           "cellIndex": 88,
           "oldCell": 13275,
-          "newCell": 13258
+          "newCell": 13259
         },
         {
           "cellIndex": 89,
           "oldCell": 20512,
-          "newCell": 20528
+          "newCell": 20544
         },
         {
           "cellIndex": 104,
           "oldCell": 13100,
-          "newCell": 13116
-        },
-        {
-          "cellIndex": 87,
-          "oldCell": 20512,
-          "newCell": 20528
+          "newCell": 13132
         }
       ]
     },
@@ -243,34 +243,34 @@
       "deltaCount": 5,
       "deltas": [
         {
+          "cellIndex": 87,
+          "oldCell": 20544,
+          "newCell": 20560
+        },
+        {
           "cellIndex": 72,
-          "oldCell": 13113,
-          "newCell": 13129
+          "oldCell": 13129,
+          "newCell": 13145
         },
         {
           "cellIndex": 88,
-          "oldCell": 13258,
-          "newCell": 13257
+          "oldCell": 13259,
+          "newCell": 13258
         },
         {
           "cellIndex": 89,
-          "oldCell": 20528,
-          "newCell": 20544
+          "oldCell": 20544,
+          "newCell": 20560
         },
         {
           "cellIndex": 104,
-          "oldCell": 13116,
-          "newCell": 13132
-        },
-        {
-          "cellIndex": 87,
-          "oldCell": 20528,
-          "newCell": 20544
+          "oldCell": 13132,
+          "newCell": 13148
         }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:E4355BFA"
+    "checksum": "visual-fnv1a32:E1655290"
   }
 }

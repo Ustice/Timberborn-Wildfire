@@ -9,21 +9,20 @@ public sealed class WildfireReleaseSettings
     public const string ModId = "JasonKleinberg.Wildfire";
     public const string KeyPrefix = ModId + ".release.";
     public const string SettingsSchemaVersionKey = KeyPrefix + "settings_schema_version";
+    public const string WildfireEnabledKey = KeyPrefix + "wildfire_enabled";
     public const int CurrentSettingsSchemaVersion = 1;
+    public const bool DefaultWildfireEnabled = true;
+    public const bool InvalidWildfireEnabled = false;
 
     public static readonly IReadOnlyList<string> StableKeys = new[]
     {
         SettingsSchemaVersionKey,
+        WildfireEnabledKey,
     };
 
     private readonly IWildfireReleaseSettingsStore _store;
 
-    public WildfireReleaseSettings(ISettings settings)
-        : this(new TimberbornSettingsSystemWildfireReleaseSettingsStore(settings))
-    {
-    }
-
-    private WildfireReleaseSettings(IWildfireReleaseSettingsStore store)
+    public WildfireReleaseSettings(IWildfireReleaseSettingsStore store)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
     }
@@ -36,11 +35,13 @@ public sealed class WildfireReleaseSettings
     public WildfireReleaseSettingsSnapshot GetSnapshot()
     {
         WildfireReleaseSettingsIntValue schemaVersion = ReadSchemaVersion();
+        WildfireReleaseSettingsBoolValue wildfireEnabled = ReadWildfireEnabled();
 
         return new WildfireReleaseSettingsSnapshot(
             schemaVersion.Value,
+            wildfireEnabled.Value,
             _store.SourceName,
-            schemaVersion.InvalidValues);
+            schemaVersion.InvalidValues.Concat(wildfireEnabled.InvalidValues).ToArray());
     }
 
     private WildfireReleaseSettingsIntValue ReadSchemaVersion()
@@ -75,32 +76,70 @@ public sealed class WildfireReleaseSettings
             $"outside_supported_range_1_to_{CurrentSettingsSchemaVersion}");
     }
 
-    private sealed class TimberbornSettingsSystemWildfireReleaseSettingsStore : IWildfireReleaseSettingsStore
+    private WildfireReleaseSettingsBoolValue ReadWildfireEnabled()
     {
-        private readonly ISettings _settings;
+        WildfireReleaseSettingReadResult result = _store.ReadInt32(WildfireEnabledKey);
 
-        public TimberbornSettingsSystemWildfireReleaseSettingsStore(ISettings settings)
+        if (result.Status == WildfireReleaseSettingReadStatus.Missing)
         {
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            return WildfireReleaseSettingsBoolValue.Valid(DefaultWildfireEnabled);
         }
 
-        public string SourceName => "Timberborn.SettingsSystem.ISettings";
-
-        public WildfireReleaseSettingReadResult ReadInt32(string key)
+        if (result.Status == WildfireReleaseSettingReadStatus.Invalid)
         {
-            if (!_settings.Has(key))
-            {
-                return WildfireReleaseSettingReadResult.Missing();
-            }
-
-            string rawValue = _settings.GetSafeString(
-                key,
-                CurrentSettingsSchemaVersion.ToString(CultureInfo.InvariantCulture));
-
-            return int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
-                ? WildfireReleaseSettingReadResult.Valid(value, rawValue)
-                : WildfireReleaseSettingReadResult.Invalid(rawValue);
+            return WildfireReleaseSettingsBoolValue.Defaulted(
+                InvalidWildfireEnabled,
+                WildfireEnabledKey,
+                result.RawValue,
+                FormatBoolSetting(InvalidWildfireEnabled),
+                "not_an_integer");
         }
+
+        if (result.Value is 0 or 1)
+        {
+            return WildfireReleaseSettingsBoolValue.Valid(result.Value == 1);
+        }
+
+        return WildfireReleaseSettingsBoolValue.Defaulted(
+            InvalidWildfireEnabled,
+            WildfireEnabledKey,
+            result.RawValue,
+            FormatBoolSetting(InvalidWildfireEnabled),
+            "outside_supported_range_0_to_1");
+    }
+
+    private static string FormatBoolSetting(bool value)
+    {
+        return value ? "1" : "0";
+    }
+
+}
+
+public sealed class TimberbornSettingsSystemWildfireReleaseSettingsStore : IWildfireReleaseSettingsStore
+{
+    private const int InvalidIntegerSentinel = int.MinValue;
+
+    private readonly ISettings _settings;
+
+    public TimberbornSettingsSystemWildfireReleaseSettingsStore(ISettings settings)
+    {
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+    }
+
+    public string SourceName => "Timberborn.SettingsSystem.ISettings";
+
+    public WildfireReleaseSettingReadResult ReadInt32(string key)
+    {
+        if (!_settings.Has(key))
+        {
+            return WildfireReleaseSettingReadResult.Missing();
+        }
+
+        int value = _settings.GetSafeInt(key, InvalidIntegerSentinel);
+
+        return value == InvalidIntegerSentinel
+            ? WildfireReleaseSettingReadResult.Invalid("<unreadable_integer>")
+            : WildfireReleaseSettingReadResult.Valid(value);
     }
 }
 
@@ -109,13 +148,10 @@ public sealed class WildfireReleaseSettingsInitializer : ILoadableSingleton
     private readonly WildfireReleaseSettingsLogReporter _logReporter;
 
     public WildfireReleaseSettingsInitializer(WildfireReleaseSettings settings)
-        : this(new WildfireReleaseSettingsLogReporter(settings, new UnityTimberbornFireLogSink()))
     {
-    }
-
-    public WildfireReleaseSettingsInitializer(WildfireReleaseSettingsLogReporter logReporter)
-    {
-        _logReporter = logReporter ?? throw new ArgumentNullException(nameof(logReporter));
+        _logReporter = new WildfireReleaseSettingsLogReporter(
+            settings ?? throw new ArgumentNullException(nameof(settings)),
+            new UnityTimberbornFireLogSink());
     }
 
     public void Load()
@@ -202,6 +238,7 @@ public enum WildfireReleaseSettingReadStatus
 
 public sealed record WildfireReleaseSettingsSnapshot(
     int SettingsSchemaVersion,
+    bool IsWildfireEnabled,
     string SourceName,
     IReadOnlyList<WildfireReleaseSettingInvalidValue> InvalidValues)
 {
@@ -212,7 +249,9 @@ public sealed record WildfireReleaseSettingsSnapshot(
         $"source={FormatToken(SourceName)} " +
         $"key_prefix={WildfireReleaseSettings.KeyPrefix} " +
         $"schema_key={WildfireReleaseSettings.SettingsSchemaVersionKey} " +
+        $"wildfire_enabled_key={WildfireReleaseSettings.WildfireEnabledKey} " +
         $"settings_schema_version={SettingsSchemaVersion} " +
+        $"wildfire_enabled={IsWildfireEnabled.ToString().ToLowerInvariant()} " +
         $"invalid_values={InvalidValues.Count} " +
         $"invalid_keys={FormatInvalidKeys(InvalidValues)}";
 
@@ -272,6 +311,33 @@ internal sealed record WildfireReleaseSettingsIntValue(
         string reason)
     {
         return new WildfireReleaseSettingsIntValue(
+            value,
+            new[]
+            {
+                new WildfireReleaseSettingInvalidValue(key, rawValue, defaultValue, reason),
+            });
+    }
+}
+
+internal sealed record WildfireReleaseSettingsBoolValue(
+    bool Value,
+    IReadOnlyList<WildfireReleaseSettingInvalidValue> InvalidValues)
+{
+    public static WildfireReleaseSettingsBoolValue Valid(bool value)
+    {
+        return new WildfireReleaseSettingsBoolValue(
+            value,
+            Array.Empty<WildfireReleaseSettingInvalidValue>());
+    }
+
+    public static WildfireReleaseSettingsBoolValue Defaulted(
+        bool value,
+        string key,
+        string rawValue,
+        string defaultValue,
+        string reason)
+    {
+        return new WildfireReleaseSettingsBoolValue(
             value,
             new[]
             {

@@ -29,13 +29,16 @@
 #define FIRE_WATER_IGNITION_PENALTY 2u
 #define FIRE_RETAINED_HEAT_WEIGHT 2u
 #define FIRE_SPREAD_HEAT_WEIGHT 1u
-#define FIRE_BURNING_NEIGHBOR_HEAT_BONUS 3u
+#define FIRE_BURNING_NEIGHBOR_HEAT_BONUS 5u
 #define FIRE_BURNING_NEIGHBOR_DIRECT_HEAT 1u
 #define FIRE_WATER_SUPPRESSION_HEAT 2u
 #define FIRE_WATER_EVAPORATION_HEAT 10u
 #define FIRE_FLAMMABILITY_BURN_PRESSURE 2u
 #define FIRE_WATER_BURN_PRESSURE_PENALTY 3u
 #define FIRE_BURN_HEAT_BASE 1u
+#define FIRE_FUEL_BURN_DOWN_PRESSURE_NUMERATOR 3u
+#define FIRE_FUEL_BURN_DOWN_PRESSURE_DENOMINATOR 4u
+#define FIRE_FUEL_BURN_DOWN_ROLL_SEED 0x9E3779B9u
 
 struct CellDeltaGpu
 {
@@ -287,7 +290,18 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
 
         if (roll < burnChance)
         {
-            fuel = fuel > 0u ? fuel - 1u : 0u;
+            uint fuelBurnDownChance = min(
+                15u,
+                ((burnChance * FIRE_FUEL_BURN_DOWN_PRESSURE_NUMERATOR) +
+                    (FIRE_FUEL_BURN_DOWN_PRESSURE_DENOMINATOR - 1u)) /
+                    FIRE_FUEL_BURN_DOWN_PRESSURE_DENOMINATOR);
+            uint fuelRoll = Hash(index, Tick, Seed ^ FIRE_FUEL_BURN_DOWN_ROLL_SEED) & 15u;
+
+            if (fuelRoll < fuelBurnDownChance)
+            {
+                fuel = fuel > 0u ? fuel - 1u : 0u;
+            }
+
             heat = min(15u, heat + FIRE_BURN_HEAT_BASE + flammability);
         }
     }

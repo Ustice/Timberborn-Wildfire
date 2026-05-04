@@ -10,11 +10,13 @@ public sealed class TimberbornQaCommandBridge
     public const string QaDeltaStimulusCommand = "qa-delta-stimulus";
     public const string QaBuildingBurnoutStimulusCommand = "qa-building-burnout-stimulus";
     public const string QaWaterSuppressionStimulusCommand = "qa-water-suppression-stimulus";
+    public const string QaBurnDurationStimulusCommand = "qa-burn-duration-stimulus";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
     private readonly ITimberbornQaBuildingBurnoutStimulus _buildingBurnoutStimulus;
     private readonly ITimberbornQaWaterSuppressionStimulus _waterSuppressionStimulus;
+    private readonly ITimberbornQaBurnDurationStimulus _burnDurationStimulus;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -24,6 +26,7 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaCommandLogSink.Instance)
     {
     }
@@ -36,6 +39,7 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
             logSink)
     {
     }
@@ -49,6 +53,7 @@ public sealed class TimberbornQaCommandBridge
             deltaStimulus,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
             logSink)
     {
     }
@@ -63,6 +68,7 @@ public sealed class TimberbornQaCommandBridge
             deltaStimulus,
             buildingBurnoutStimulus,
             NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
             logSink)
     {
     }
@@ -72,6 +78,23 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
+        ITimberbornQaCommandLogSink logSink)
+        : this(
+            stateProvider,
+            deltaStimulus,
+            buildingBurnoutStimulus,
+            waterSuppressionStimulus,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            logSink)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaDeltaStimulus deltaStimulus,
+        ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
+        ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
+        ITimberbornQaBurnDurationStimulus burnDurationStimulus,
         ITimberbornQaCommandLogSink logSink)
     {
         if (stateProvider is null)
@@ -94,6 +117,11 @@ public sealed class TimberbornQaCommandBridge
             throw new ArgumentNullException(nameof(waterSuppressionStimulus));
         }
 
+        if (burnDurationStimulus is null)
+        {
+            throw new ArgumentNullException(nameof(burnDurationStimulus));
+        }
+
         if (logSink is null)
         {
             throw new ArgumentNullException(nameof(logSink));
@@ -103,6 +131,7 @@ public sealed class TimberbornQaCommandBridge
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
         _waterSuppressionStimulus = waterSuppressionStimulus;
+        _burnDurationStimulus = burnDurationStimulus;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -124,6 +153,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(waterSuppressionStimulus, NullTimberbornQaWaterSuppressionStimulus.Instance))
         {
             commands[QaWaterSuppressionStimulusCommand] = ExecuteQaWaterSuppressionStimulus;
+        }
+
+        if (!ReferenceEquals(burnDurationStimulus, NullTimberbornQaBurnDurationStimulus.Instance))
+        {
+            commands[QaBurnDurationStimulusCommand] = () => ExecuteQaBurnDurationStimulus(null);
         }
 
         _commands = commands;
@@ -159,7 +193,7 @@ public sealed class TimberbornQaCommandBridge
             return failure;
         }
 
-        if (IsSimulatorChangeCommand(command) && HasArguments(commandText))
+        if (IsSimulatorChangeCommand(command) && !CanAcceptArguments(command, commandText) && HasArguments(commandText))
         {
             TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
                 command,
@@ -170,18 +204,45 @@ public sealed class TimberbornQaCommandBridge
             return failure;
         }
 
+        if (IsSimulatorChangeCommand(command))
+        {
+            TimberbornQaCommandState state = _stateProvider.GetState();
+            if (!state.WildfireEnabled)
+            {
+                TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                    command,
+                    "wildfire_disabled",
+                    state,
+                    KnownCommands);
+                _logSink.Warning(failure.ResultToken);
+                return failure;
+            }
+        }
+
         try
         {
-            TimberbornQaCommandResult result = handler();
+            TimberbornQaCommandResult result = StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand)
+                ? ExecuteQaBurnDurationStimulus(commandText)
+                : handler();
             _logSink.Info(result.ResultToken);
             return result;
         }
         catch (Exception exception)
         {
+            TimberbornQaCommandState state;
+            try
+            {
+                state = _stateProvider.GetState();
+            }
+            catch
+            {
+                state = TimberbornQaCommandState.Placeholder;
+            }
+
             TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
                 command,
                 exception.Message,
-                TimberbornQaCommandState.Placeholder,
+                state,
                 KnownCommands);
             _logSink.Warning(failure.ResultToken);
             return failure;
@@ -221,7 +282,9 @@ public sealed class TimberbornQaCommandBridge
             QaReadinessCommand,
             state,
             KnownCommands,
-            state.IsLoadedGameReady ? "loaded_game_ready" : "loaded_game_not_ready");
+            state.WildfireEnabled
+                ? state.IsLoadedGameReady ? "loaded_game_ready" : "loaded_game_not_ready"
+                : "wildfire_disabled");
     }
 
     private TimberbornQaCommandResult ExecuteQaDeltaStimulus()
@@ -281,6 +344,38 @@ public sealed class TimberbornQaCommandBridge
             $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}");
     }
 
+    private TimberbornQaCommandResult ExecuteQaBurnDurationStimulus(string? commandText)
+    {
+        string? target = ParseBurnDurationTarget(commandText);
+        if (target is null)
+        {
+            return TimberbornQaCommandResult.CreateFailure(
+                QaBurnDurationStimulusCommand,
+                "Command 'qa-burn-duration-stimulus' requires one target: low, medium, or high.",
+                _stateProvider.GetState(),
+                KnownCommands);
+        }
+
+        TimberbornQaBurnDurationStimulusResult stimulusResult =
+            _burnDurationStimulus.QueueBurnDurationStimulus(target);
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaBurnDurationStimulusCommand,
+            state,
+            KnownCommands,
+            "queued_burn_duration_stimulus_" +
+            $"target={stimulusResult.Target}_" +
+            $"target_index={stimulusResult.CellIndex}_" +
+            $"target_x={stimulusResult.X}_" +
+            $"target_y={stimulusResult.Y}_" +
+            $"target_z={stimulusResult.Z}_" +
+            $"initial_fuel={stimulusResult.InitialFuel}_" +
+            $"set_cell={stimulusResult.SetCell}_" +
+            $"timeout_ticks={stimulusResult.TimeoutTicks}_" +
+            $"queued_set_cell_changes={stimulusResult.QueuedSetCellChangeCount}");
+    }
+
     private static string NormalizeCommand(string commandText)
     {
         string command = commandText.Trim();
@@ -301,11 +396,33 @@ public sealed class TimberbornQaCommandBridge
             .Any();
     }
 
+    private static bool CanAcceptArguments(string command, string commandText)
+    {
+        return StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) &&
+            ParseBurnDurationTarget(commandText) is not null;
+    }
+
+    private static string? ParseBurnDurationTarget(string? commandText)
+    {
+        string[] tokens = (commandText ?? string.Empty)
+            .Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length != 2)
+        {
+            return null;
+        }
+
+        string target = tokens[1].Trim().ToLowerInvariant();
+        return TimberbornQaBurnDurationStimulusTargets.IsKnownTarget(target) ? target : null;
+    }
+
     private static bool IsSimulatorChangeCommand(string command)
     {
         return StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBuildingBurnoutStimulusCommand) ||
-            StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand);
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand);
     }
 
     internal static string FormatToken(string? value)
@@ -363,6 +480,112 @@ public sealed record TimberbornQaWaterSuppressionStimulusResult(
     byte SetWater,
     int QueuedWaterChangeCount);
 
+public interface ITimberbornQaBurnDurationStimulus
+{
+    TimberbornQaBurnDurationStimulusResult QueueBurnDurationStimulus(string target);
+}
+
+public sealed record TimberbornQaBurnDurationStimulusResult(
+    string Target,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    byte InitialFuel,
+    ushort SetCell,
+    uint TimeoutTicks,
+    int QueuedSetCellChangeCount);
+
+public sealed record TimberbornQaBurnDurationProofState(
+    string Target,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    byte InitialFuel,
+    uint QueuedTick,
+    uint TimeoutTicks,
+    uint? BurnStartTick = null,
+    uint? DepletionTick = null,
+    uint? ElapsedBurnTicks = null,
+    bool TimedOut = false,
+    string Status = "queued")
+{
+    public static readonly TimberbornQaBurnDurationProofState Placeholder = new(
+        "placeholder",
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        Status: "placeholder");
+}
+
+public static class TimberbornQaBurnDurationStimulusTargets
+{
+    public const string Low = "low";
+    public const string Medium = "medium";
+    public const string High = "high";
+    public const uint DefaultTimeoutTicks = 64;
+
+    private static readonly IReadOnlyDictionary<string, byte> InitialFuelByTarget =
+        new Dictionary<string, byte>(StringComparer.OrdinalIgnoreCase)
+        {
+            [Low] = 4,
+            [Medium] = 9,
+            [High] = 15,
+        };
+
+    public static bool IsKnownTarget(string target)
+    {
+        return InitialFuelByTarget.ContainsKey(target);
+    }
+
+    public static byte InitialFuel(string target)
+    {
+        return InitialFuelByTarget.TryGetValue(target, out byte fuel)
+            ? fuel
+            : throw new ArgumentException("Burn-duration QA target must be low, medium, or high.", nameof(target));
+    }
+
+    public static TimberbornQaBurnDurationStimulusTarget SelectTarget(FireGrid grid, string target)
+    {
+        if (!IsKnownTarget(target))
+        {
+            throw new ArgumentException("Burn-duration QA target must be low, medium, or high.", nameof(target));
+        }
+
+        int centerX = grid.Width / 2;
+        int x = target.ToLowerInvariant() switch
+        {
+            Low => Math.Max(0, centerX - 1),
+            Medium => centerX,
+            High => Math.Min(grid.Width - 1, centerX + 1),
+            _ => centerX,
+        };
+        int y = grid.Height / 2;
+        int z = grid.Depth / 2;
+
+        return new TimberbornQaBurnDurationStimulusTarget(
+            target.ToLowerInvariant(),
+            grid.ToIndex(x, y, z),
+            x,
+            y,
+            z,
+            InitialFuel(target));
+    }
+}
+
+public sealed record TimberbornQaBurnDurationStimulusTarget(
+    string Target,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    byte InitialFuel);
+
 public interface ITimberbornQaBuildingBurnoutStimulusTargetProvider
 {
     TimberbornQaBuildingBurnoutStimulusTarget FindTarget(FireGrid grid);
@@ -412,6 +635,21 @@ public sealed class NullTimberbornQaWaterSuppressionStimulus : ITimberbornQaWate
     }
 }
 
+public sealed class NullTimberbornQaBurnDurationStimulus : ITimberbornQaBurnDurationStimulus
+{
+    public static readonly NullTimberbornQaBurnDurationStimulus Instance = new();
+
+    private NullTimberbornQaBurnDurationStimulus()
+    {
+    }
+
+    public TimberbornQaBurnDurationStimulusResult QueueBurnDurationStimulus(string target)
+    {
+        throw new InvalidOperationException(
+            "QA burn-duration stimulus is unavailable until the Timberborn fire runtime is initialized.");
+    }
+}
+
 public sealed class TimberbornQaCommandStateProvider : ITimberbornQaCommandStateProvider
 {
     public static readonly TimberbornQaCommandStateProvider Placeholder = new(TimberbornQaCommandState.Placeholder);
@@ -432,6 +670,7 @@ public sealed class TimberbornQaCommandStateProvider : ITimberbornQaCommandState
 public sealed record TimberbornQaCommandState(
     bool IsSimulatorIntegrated,
     bool IsGameContextRuntimeLoaded = false,
+    bool WildfireEnabled = true,
     int? Width = null,
     int? Height = null,
     int? Depth = null,
@@ -452,6 +691,8 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerBuildingBurnoutConsideredDeltaCount = null,
     int? LastDeltaConsumerBuildingBurnoutMatchedCellCount = null,
     int? LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount = null,
+    uint? LastPositiveBuildingBurnoutAppliedTick = null,
+    int? LastPositiveBuildingBurnoutAppliedCount = null,
     int? LastDeltaConsumerAlertCount = null,
     uint? LastPlayerFireAlertTick = null,
     int? LastPlayerFireAlertStartedFireCount = null,
@@ -474,6 +715,19 @@ public sealed record TimberbornQaCommandState(
     bool PooledFireEffectsVisibleEnabled = false,
     bool PooledFireEffectsNativePrefabResolved = false,
     string? PooledFireEffectsNativePrefabName = null,
+    string? BurnDurationProofTarget = null,
+    int? BurnDurationProofTargetIndex = null,
+    int? BurnDurationProofTargetX = null,
+    int? BurnDurationProofTargetY = null,
+    int? BurnDurationProofTargetZ = null,
+    int? BurnDurationProofInitialFuel = null,
+    uint? BurnDurationProofQueuedTick = null,
+    uint? BurnDurationProofBurnStartTick = null,
+    uint? BurnDurationProofDepletionTick = null,
+    uint? BurnDurationProofElapsedBurnTicks = null,
+    uint? BurnDurationProofTimeoutTicks = null,
+    bool BurnDurationProofTimedOut = false,
+    string? BurnDurationProofStatus = null,
     string CompatibilityProbeStatus = "placeholder",
     bool CompatibilityProbeDegraded = false,
     int? CompatibilityProbeRequiredPassed = null,
@@ -485,6 +739,7 @@ public sealed record TimberbornQaCommandState(
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
     public bool IsLoadedGameReady =>
+        WildfireEnabled &&
         IsGameContextRuntimeLoaded &&
         IsSimulatorIntegrated &&
         !StringComparer.OrdinalIgnoreCase.Equals(CompatibilityProbeStatus, "failed") &&
@@ -508,6 +763,7 @@ public sealed record TimberbornQaCommandResult(
         $"success={Success.ToString().ToLowerInvariant()} " +
         $"status={Status} " +
         "bridge_alive=true " +
+        $"wildfire_enabled={State.WildfireEnabled.ToString().ToLowerInvariant()} " +
         $"runtime_loaded={State.IsGameContextRuntimeLoaded.ToString().ToLowerInvariant()} " +
         $"loaded_game_ready={State.IsLoadedGameReady.ToString().ToLowerInvariant()} " +
         $"simulator_integrated={State.IsSimulatorIntegrated.ToString().ToLowerInvariant()} " +
@@ -531,6 +787,8 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_building_burnout_considered_deltas={FormatNumber(State.LastDeltaConsumerBuildingBurnoutConsideredDeltaCount)} " +
         $"last_delta_consumer_building_burnout_matched_cells={FormatNumber(State.LastDeltaConsumerBuildingBurnoutMatchedCellCount)} " +
         $"last_delta_consumer_building_burnout_applied_consequences={FormatNumber(State.LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount)} " +
+        $"last_positive_building_burnout_applied_tick={FormatNumber(State.LastPositiveBuildingBurnoutAppliedTick)} " +
+        $"last_positive_building_burnout_applied_count={FormatNumber(State.LastPositiveBuildingBurnoutAppliedCount)} " +
         $"last_delta_consumer_alerts={FormatNumber(State.LastDeltaConsumerAlertCount)} " +
         $"last_player_fire_alert_tick={FormatNumber(State.LastPlayerFireAlertTick)} " +
         $"last_player_fire_alert_started_fires={FormatNumber(State.LastPlayerFireAlertStartedFireCount)} " +
@@ -553,6 +811,19 @@ public sealed record TimberbornQaCommandResult(
         $"pooled_fire_effects_visible_enabled={State.PooledFireEffectsVisibleEnabled.ToString().ToLowerInvariant()} " +
         $"pooled_fire_effects_native_prefab_resolved={State.PooledFireEffectsNativePrefabResolved.ToString().ToLowerInvariant()} " +
         $"pooled_fire_effects_native_prefab={TimberbornQaCommandBridge.FormatToken(State.PooledFireEffectsNativePrefabName)} " +
+        $"burn_duration_proof_target={TimberbornQaCommandBridge.FormatToken(State.BurnDurationProofTarget)} " +
+        $"burn_duration_proof_target_index={FormatNumber(State.BurnDurationProofTargetIndex)} " +
+        $"burn_duration_proof_target_x={FormatNumber(State.BurnDurationProofTargetX)} " +
+        $"burn_duration_proof_target_y={FormatNumber(State.BurnDurationProofTargetY)} " +
+        $"burn_duration_proof_target_z={FormatNumber(State.BurnDurationProofTargetZ)} " +
+        $"burn_duration_proof_initial_fuel={FormatNumber(State.BurnDurationProofInitialFuel)} " +
+        $"burn_duration_proof_queued_tick={FormatNumber(State.BurnDurationProofQueuedTick)} " +
+        $"burn_duration_proof_burn_start_tick={FormatNumber(State.BurnDurationProofBurnStartTick)} " +
+        $"burn_duration_proof_depletion_tick={FormatNumber(State.BurnDurationProofDepletionTick)} " +
+        $"burn_duration_proof_elapsed_burn_ticks={FormatNumber(State.BurnDurationProofElapsedBurnTicks)} " +
+        $"burn_duration_proof_timeout_ticks={FormatNumber(State.BurnDurationProofTimeoutTicks)} " +
+        $"burn_duration_proof_timed_out={State.BurnDurationProofTimedOut.ToString().ToLowerInvariant()} " +
+        $"burn_duration_proof_status={TimberbornQaCommandBridge.FormatToken(State.BurnDurationProofStatus)} " +
         $"compatibility_probe_status={TimberbornQaCommandBridge.FormatToken(State.CompatibilityProbeStatus)} " +
         $"compatibility_probe_degraded={State.CompatibilityProbeDegraded.ToString().ToLowerInvariant()} " +
         $"compatibility_probe_required_passed={FormatNumber(State.CompatibilityProbeRequiredPassed)} " +
