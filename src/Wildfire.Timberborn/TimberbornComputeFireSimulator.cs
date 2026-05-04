@@ -442,6 +442,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
     private readonly ComputeBuffer _deltas;
     private readonly ComputeBuffer _visualFields;
     private readonly ComputeBuffer _deltaCounter;
+    private readonly FireSimParameters _parameters;
     private readonly int _applyExternalChangesKernel;
     private readonly int _fullGridKernel;
     private TimberbornGpuVisualFieldSurfaceBindingLifecycle? _visualFieldBindingLifecycle;
@@ -465,6 +466,17 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
         ComputeShader shader,
         ITimberbornFireLogSink logSink,
         ITimberbornGpuVisualFieldSurface visualFieldSurface)
+        : this(grid, initialCells, shader, logSink, visualFieldSurface, FireSimParameters.Default)
+    {
+    }
+
+    public TimberbornComputeFireSimulator(
+        FireGrid grid,
+        ReadOnlySpan<ushort> initialCells,
+        ComputeShader shader,
+        ITimberbornFireLogSink logSink,
+        ITimberbornGpuVisualFieldSurface visualFieldSurface,
+        FireSimParameters parameters)
     {
         if (grid.CellCount <= 0)
         {
@@ -481,6 +493,7 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
         _shader = shader ?? throw new ArgumentNullException(nameof(shader));
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
         _visualFieldSurface = visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface));
+        _parameters = parameters;
         Grid = grid;
         _applyExternalChangesKernel = _shader.FindKernel(ApplyExternalChangesKernelName);
         _fullGridKernel = _shader.FindKernel(FullGridKernelName);
@@ -638,11 +651,43 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
         _shader.SetInt("Tick", unchecked((int)tick));
         _shader.SetInt("Seed", 0);
         _shader.SetInt("ChangeCount", unchecked((int)changeCount));
+        BindParameters();
         _shader.SetBuffer(kernel, "CurrentCells", _readCells);
         _shader.SetBuffer(kernel, "NextCells", _writeCells);
         _shader.SetBuffer(kernel, "ExternalChanges", _externalChanges);
         _shader.SetBuffer(kernel, "Deltas", _deltas);
         _shader.SetBuffer(kernel, "VisualFields", _visualFields);
+    }
+
+    private void BindParameters()
+    {
+        _shader.SetFloat("VisualFireBaseIntensity", _parameters.VisualFireBaseIntensity);
+        _shader.SetFloat("VisualFireHeatWeight", _parameters.VisualFireHeatWeight);
+        _shader.SetFloat("VisualSmokeBaseIntensity", _parameters.VisualSmokeBaseIntensity);
+        _shader.SetFloat("VisualSmokeFuelWeight", _parameters.VisualSmokeFuelWeight);
+        _shader.SetFloat("VisualSmokeHeatWeight", _parameters.VisualSmokeHeatWeight);
+        _shader.SetFloat("VisualAshBaseIntensity", _parameters.VisualAshBaseIntensity);
+        _shader.SetFloat("VisualAshFuelWeight", _parameters.VisualAshFuelWeight);
+        _shader.SetFloat("VisualAshHeatWeight", _parameters.VisualAshHeatWeight);
+        _shader.SetFloat("VisualVisibilityHeatWeight", _parameters.VisualVisibilityHeatWeight);
+        _shader.SetFloat("VisualVisibilitySmokeWeight", _parameters.VisualVisibilitySmokeWeight);
+        _shader.SetFloat("VisualVisibilityAshWeight", _parameters.VisualVisibilityAshWeight);
+        _shader.SetInt("FireIgnitionBaseHeat", unchecked((int)_parameters.FireIgnitionBaseHeat));
+        _shader.SetInt("FireWaterIgnitionPenalty", unchecked((int)_parameters.FireWaterIgnitionPenalty));
+        _shader.SetInt("FireRetainedHeatWeight", unchecked((int)_parameters.FireRetainedHeatWeight));
+        _shader.SetInt("FireSpreadHeatWeight", unchecked((int)_parameters.FireSpreadHeatWeight));
+        _shader.SetInt("FireBurningNeighborHeatBonus", unchecked((int)_parameters.FireBurningNeighborHeatBonus));
+        _shader.SetInt("FireBurningNeighborDirectHeat", unchecked((int)_parameters.FireBurningNeighborDirectHeat));
+        _shader.SetInt("FireWaterSuppressionHeat", unchecked((int)_parameters.FireWaterSuppressionHeat));
+        _shader.SetInt("FireWaterEvaporationHeat", unchecked((int)_parameters.FireWaterEvaporationHeat));
+        _shader.SetInt("FireFlammabilityBurnPressure", unchecked((int)_parameters.FireFlammabilityBurnPressure));
+        _shader.SetInt("FireWaterBurnPressurePenalty", unchecked((int)_parameters.FireWaterBurnPressurePenalty));
+        _shader.SetInt("FireBurnHeatBase", unchecked((int)_parameters.FireBurnHeatBase));
+        _shader.SetInt("FireCoolingBase", unchecked((int)_parameters.FireCoolingBase));
+        _shader.SetInt("FireHeatLossCoolingDivisor", unchecked((int)_parameters.FireHeatLossCoolingDivisor));
+        _shader.SetInt("FireFuelBurnDownPressureNumerator", unchecked((int)_parameters.FireFuelBurnDownPressureNumerator));
+        _shader.SetInt("FireFuelBurnDownPressureDenominator", unchecked((int)_parameters.FireFuelBurnDownPressureDenominator));
+        _shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)_parameters.FireFuelBurnDownRollSeed));
     }
 
     private CellDelta[] ReadDeltas()

@@ -16,6 +16,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     private readonly List<IFireSimListener> _listeners = [];
     private readonly IFireSimComputeDispatcher? _dispatcher;
     private readonly IFireSimDiagnosticSink _diagnostics;
+    private readonly FireSimParameters _parameters;
     private readonly uint _seed;
     private uint _tick;
 
@@ -54,7 +55,8 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         ComputeBufferGrid grid,
         IFireSimComputeDispatcher dispatcher,
         IFireSimDiagnosticSink diagnostics,
-        uint seed = 0)
+        uint seed = 0,
+        FireSimParameters? parameters = null)
     {
         ArgumentNullException.ThrowIfNull(grid);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -63,6 +65,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         Dimensions = grid.Dimensions;
         _dispatcher = dispatcher;
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        _parameters = parameters ?? FireSimParameters.Default;
         _seed = seed;
         LogInitialized();
     }
@@ -133,6 +136,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
             BufferGrid.VisualFields,
+            _parameters,
             0u,
             GetThreadGroups(Dimensions.Width, ThreadGroupSizeX),
             GetThreadGroups(Dimensions.Height, ThreadGroupSizeY),
@@ -175,6 +179,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
             BufferGrid.VisualFields,
+            _parameters,
             checked((uint)changeCount),
             1,
             1,

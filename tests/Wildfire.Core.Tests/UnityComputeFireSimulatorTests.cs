@@ -42,12 +42,37 @@ public sealed class UnityComputeFireSimulatorTests
         Assert.Same(grid.QueuedChanges, dispatch.QueuedChanges);
         Assert.Same(grid.Deltas, dispatch.Deltas);
         Assert.Same(grid.VisualFields, dispatch.VisualFields);
+        Assert.Equal(FireSimParameters.Default, dispatch.Parameters);
         Assert.Equal(0u, dispatch.ChangeCount);
         Assert.Equal(3, dispatch.ThreadGroupsX);
         Assert.Equal(2, dispatch.ThreadGroupsY);
         Assert.Equal(2, dispatch.ThreadGroupsZ);
         Assert.Same(originalNextCells, grid.CurrentCells);
         Assert.Same(originalCurrentCells, grid.NextCells);
+    }
+
+    [Fact]
+    public void TickCarriesCustomRuntimeParametersToDispatch()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [PackedCell.Pack(15, 15, 3, 0, 1, 1)],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        FireSimParameters parameters = FireSimParameters.Default.WithFuelBurnDown(numerator: 1, denominator: 8);
+        UnityComputeFireSimulator simulator = new(
+            grid,
+            dispatcher,
+            NullFireSimDiagnosticSink.Instance,
+            seed: 0,
+            parameters);
+
+        simulator.Tick();
+
+        Assert.Equal(parameters, Assert.Single(dispatcher.Dispatches).Parameters);
     }
 
     [Fact]

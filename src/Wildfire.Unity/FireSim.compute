@@ -13,32 +13,34 @@
 #define CHANGE_SET_HEAT_LOSS 32u
 #define CHANGE_SET_TERRAIN 64u
 
-#define VISUAL_FIRE_BASE_INTENSITY 0.45f
-#define VISUAL_FIRE_HEAT_WEIGHT 0.55f
-#define VISUAL_SMOKE_BASE_INTENSITY 0.12f
-#define VISUAL_SMOKE_FUEL_WEIGHT 0.52f
-#define VISUAL_SMOKE_HEAT_WEIGHT 0.24f
-#define VISUAL_ASH_BASE_INTENSITY 0.18f
-#define VISUAL_ASH_FUEL_WEIGHT 0.5f
-#define VISUAL_ASH_HEAT_WEIGHT 0.32f
-#define VISUAL_VISIBILITY_HEAT_WEIGHT 0.55f
-#define VISUAL_VISIBILITY_SMOKE_WEIGHT 0.9f
-#define VISUAL_VISIBILITY_ASH_WEIGHT 0.8f
+float VisualFireBaseIntensity;
+float VisualFireHeatWeight;
+float VisualSmokeBaseIntensity;
+float VisualSmokeFuelWeight;
+float VisualSmokeHeatWeight;
+float VisualAshBaseIntensity;
+float VisualAshFuelWeight;
+float VisualAshHeatWeight;
+float VisualVisibilityHeatWeight;
+float VisualVisibilitySmokeWeight;
+float VisualVisibilityAshWeight;
 
-#define FIRE_IGNITION_BASE_HEAT 11u
-#define FIRE_WATER_IGNITION_PENALTY 2u
-#define FIRE_RETAINED_HEAT_WEIGHT 2u
-#define FIRE_SPREAD_HEAT_WEIGHT 1u
-#define FIRE_BURNING_NEIGHBOR_HEAT_BONUS 5u
-#define FIRE_BURNING_NEIGHBOR_DIRECT_HEAT 1u
-#define FIRE_WATER_SUPPRESSION_HEAT 2u
-#define FIRE_WATER_EVAPORATION_HEAT 10u
-#define FIRE_FLAMMABILITY_BURN_PRESSURE 2u
-#define FIRE_WATER_BURN_PRESSURE_PENALTY 3u
-#define FIRE_BURN_HEAT_BASE 1u
-#define FIRE_FUEL_BURN_DOWN_PRESSURE_NUMERATOR 3u
-#define FIRE_FUEL_BURN_DOWN_PRESSURE_DENOMINATOR 4u
-#define FIRE_FUEL_BURN_DOWN_ROLL_SEED 0x9E3779B9u
+uint FireIgnitionBaseHeat;
+uint FireWaterIgnitionPenalty;
+uint FireRetainedHeatWeight;
+uint FireSpreadHeatWeight;
+uint FireBurningNeighborHeatBonus;
+uint FireBurningNeighborDirectHeat;
+uint FireWaterSuppressionHeat;
+uint FireWaterEvaporationHeat;
+uint FireFlammabilityBurnPressure;
+uint FireWaterBurnPressurePenalty;
+uint FireBurnHeatBase;
+uint FireCoolingBase;
+uint FireHeatLossCoolingDivisor;
+uint FireFuelBurnDownPressureNumerator;
+uint FireFuelBurnDownPressureDenominator;
+uint FireFuelBurnDownRollSeed;
 
 struct CellDeltaGpu
 {
@@ -173,7 +175,7 @@ uint ToIndex(uint3 coordinate)
 
 bool IsBurning(uint cell)
 {
-    uint ignitionThreshold = FIRE_IGNITION_BASE_HEAT - Flammability(cell) + (Water(cell) * FIRE_WATER_IGNITION_PENALTY);
+    uint ignitionThreshold = FireIgnitionBaseHeat - Flammability(cell) + (Water(cell) * FireWaterIgnitionPenalty);
     return Terrain(cell) == 1u && Fuel(cell) > 0u && Heat(cell) >= ignitionThreshold;
 }
 
@@ -190,12 +192,12 @@ float4 BuildVisualSample(uint cell)
     bool burning = IsBurning(cell);
     bool ashCandidate = terrain && Fuel(cell) <= 2u && Heat(cell) > 0u;
 
-    float fire = burning ? SaturateUnit(VISUAL_FIRE_BASE_INTENSITY + (heat * VISUAL_FIRE_HEAT_WEIGHT)) : 0.0f;
-    float smoke = burning ? SaturateUnit(VISUAL_SMOKE_BASE_INTENSITY + (fuel * VISUAL_SMOKE_FUEL_WEIGHT) + (heat * VISUAL_SMOKE_HEAT_WEIGHT)) : 0.0f;
-    float ash = ashCandidate ? SaturateUnit(VISUAL_ASH_BASE_INTENSITY + ((1.0f - fuel) * VISUAL_ASH_FUEL_WEIGHT) + (heat * VISUAL_ASH_HEAT_WEIGHT)) : 0.0f;
+    float fire = burning ? SaturateUnit(VisualFireBaseIntensity + (heat * VisualFireHeatWeight)) : 0.0f;
+    float smoke = burning ? SaturateUnit(VisualSmokeBaseIntensity + (fuel * VisualSmokeFuelWeight) + (heat * VisualSmokeHeatWeight)) : 0.0f;
+    float ash = ashCandidate ? SaturateUnit(VisualAshBaseIntensity + ((1.0f - fuel) * VisualAshFuelWeight) + (heat * VisualAshHeatWeight)) : 0.0f;
     float visibility = max(
-        heat * VISUAL_VISIBILITY_HEAT_WEIGHT,
-        max(fire, max(smoke * VISUAL_VISIBILITY_SMOKE_WEIGHT, ash * VISUAL_VISIBILITY_ASH_WEIGHT)));
+        heat * VisualVisibilityHeatWeight,
+        max(fire, max(smoke * VisualVisibilitySmokeWeight, ash * VisualVisibilityAshWeight)));
 
     return float4(fire, smoke, ash, visibility);
 }
@@ -260,31 +262,31 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
     }
 
     uint neighborHeat = neighborCount > 0u ? neighborHeatSum / neighborCount : 0u;
-    uint spreadHeat = (neighborHeat * FIRE_SPREAD_HEAT_WEIGHT) +
-        (burningNeighborCount * FIRE_BURNING_NEIGHBOR_HEAT_BONUS);
-    heat = ((heat * FIRE_RETAINED_HEAT_WEIGHT) + spreadHeat) /
-        (FIRE_RETAINED_HEAT_WEIGHT + FIRE_SPREAD_HEAT_WEIGHT);
-    heat = min(15u, heat + min(3u, burningNeighborCount * FIRE_BURNING_NEIGHBOR_DIRECT_HEAT));
+    uint spreadHeat = (neighborHeat * FireSpreadHeatWeight) +
+        (burningNeighborCount * FireBurningNeighborHeatBonus);
+    heat = ((heat * FireRetainedHeatWeight) + spreadHeat) /
+        max(1u, FireRetainedHeatWeight + FireSpreadHeatWeight);
+    heat = min(15u, heat + min(3u, burningNeighborCount * FireBurningNeighborDirectHeat));
 
     if (water > 0u)
     {
-        uint suppression = water * FIRE_WATER_SUPPRESSION_HEAT;
+        uint suppression = water * FireWaterSuppressionHeat;
         heat = heat > suppression ? heat - suppression : 0u;
 
-        if (heat > FIRE_WATER_EVAPORATION_HEAT)
+        if (heat > FireWaterEvaporationHeat)
         {
             water -= 1u;
         }
     }
 
     bool canBurn = terrain == 1u && fuel > 0u;
-    uint ignitionThreshold = FIRE_IGNITION_BASE_HEAT - flammability + (water * FIRE_WATER_IGNITION_PENALTY);
+    uint ignitionThreshold = FireIgnitionBaseHeat - flammability + (water * FireWaterIgnitionPenalty);
 
     if (canBurn && heat >= ignitionThreshold)
     {
         uint roll = Hash(index, Tick, Seed) & 15u;
-        uint burnPressure = heat + (flammability * FIRE_FLAMMABILITY_BURN_PRESSURE);
-        uint waterPenalty = water * FIRE_WATER_BURN_PRESSURE_PENALTY;
+        uint burnPressure = heat + (flammability * FireFlammabilityBurnPressure);
+        uint waterPenalty = water * FireWaterBurnPressurePenalty;
         burnPressure = burnPressure > waterPenalty ? burnPressure - waterPenalty : 0u;
         uint burnChance = min(15u, burnPressure);
 
@@ -292,21 +294,21 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
         {
             uint fuelBurnDownChance = min(
                 15u,
-                ((burnChance * FIRE_FUEL_BURN_DOWN_PRESSURE_NUMERATOR) +
-                    (FIRE_FUEL_BURN_DOWN_PRESSURE_DENOMINATOR - 1u)) /
-                    FIRE_FUEL_BURN_DOWN_PRESSURE_DENOMINATOR);
-            uint fuelRoll = Hash(index, Tick, Seed ^ FIRE_FUEL_BURN_DOWN_ROLL_SEED) & 15u;
+                ((burnChance * FireFuelBurnDownPressureNumerator) +
+                    (max(1u, FireFuelBurnDownPressureDenominator) - 1u)) /
+                    max(1u, FireFuelBurnDownPressureDenominator));
+            uint fuelRoll = Hash(index, Tick, Seed ^ FireFuelBurnDownRollSeed) & 15u;
 
             if (fuelRoll < fuelBurnDownChance)
             {
                 fuel = fuel > 0u ? fuel - 1u : 0u;
             }
 
-            heat = min(15u, heat + FIRE_BURN_HEAT_BASE + flammability);
+            heat = min(15u, heat + FireBurnHeatBase + flammability);
         }
     }
 
-    uint cooling = 1u + (heatLoss / 3u);
+    uint cooling = FireCoolingBase + (heatLoss / max(1u, FireHeatLossCoolingDivisor));
     heat = heat > cooling ? heat - cooling : 0u;
 
     return Pack(fuel, heat, flammability, water, terrain, heatLoss);

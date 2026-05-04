@@ -148,11 +148,43 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("Tick", tick);
             shader.SetInt("Seed", unchecked((int)fixture.seed));
             shader.SetInt("ChangeCount", 0);
+            BindDefaultParameters(shader);
             shader.SetBuffer(kernel, "CurrentCells", currentCells);
             shader.SetBuffer(kernel, "NextCells", nextCells);
             shader.SetBuffer(kernel, "ExternalChanges", externalChanges);
             shader.SetBuffer(kernel, "Deltas", deltas);
             shader.SetBuffer(kernel, "VisualFields", visualFields);
+        }
+
+        private static void BindDefaultParameters(ComputeShader shader)
+        {
+            shader.SetFloat("VisualFireBaseIntensity", 0.45f);
+            shader.SetFloat("VisualFireHeatWeight", 0.55f);
+            shader.SetFloat("VisualSmokeBaseIntensity", 0.12f);
+            shader.SetFloat("VisualSmokeFuelWeight", 0.52f);
+            shader.SetFloat("VisualSmokeHeatWeight", 0.24f);
+            shader.SetFloat("VisualAshBaseIntensity", 0.18f);
+            shader.SetFloat("VisualAshFuelWeight", 0.5f);
+            shader.SetFloat("VisualAshHeatWeight", 0.32f);
+            shader.SetFloat("VisualVisibilityHeatWeight", 0.55f);
+            shader.SetFloat("VisualVisibilitySmokeWeight", 0.9f);
+            shader.SetFloat("VisualVisibilityAshWeight", 0.8f);
+            shader.SetInt("FireIgnitionBaseHeat", 11);
+            shader.SetInt("FireWaterIgnitionPenalty", 2);
+            shader.SetInt("FireRetainedHeatWeight", 2);
+            shader.SetInt("FireSpreadHeatWeight", 1);
+            shader.SetInt("FireBurningNeighborHeatBonus", 5);
+            shader.SetInt("FireBurningNeighborDirectHeat", 1);
+            shader.SetInt("FireWaterSuppressionHeat", 2);
+            shader.SetInt("FireWaterEvaporationHeat", 10);
+            shader.SetInt("FireFlammabilityBurnPressure", 2);
+            shader.SetInt("FireWaterBurnPressurePenalty", 3);
+            shader.SetInt("FireBurnHeatBase", 1);
+            shader.SetInt("FireCoolingBase", 1);
+            shader.SetInt("FireHeatLossCoolingDivisor", 3);
+            shader.SetInt("FireFuelBurnDownPressureNumerator", 3);
+            shader.SetInt("FireFuelBurnDownPressureDenominator", 4);
+            shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)0x9E3779B9u));
         }
 
         private static DeltaSnapshot[] ReadDeltas(ComputeBuffer deltas, ComputeBuffer deltaCounter, int capacity)

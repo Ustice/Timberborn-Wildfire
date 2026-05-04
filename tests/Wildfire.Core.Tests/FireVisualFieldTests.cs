@@ -40,6 +40,23 @@ public sealed class FireVisualFieldTests
     }
 
     [Fact]
+    public void VisualSampleUsesRuntimeParameters()
+    {
+        ushort cell = PackedCell.Pack(fuel: 15, heat: 9, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+        FireSimParameters parameters = FireSimParameters.Default with
+        {
+            VisualSmokeFuelWeight = 0.1f,
+            VisualFireHeatWeight = 0.25f,
+        };
+
+        FireVisualSample sample = FireVisualField.FromPackedCell(cell, parameters);
+
+        Assert.Equal(0.6f, sample.Fire, precision: 4);
+        Assert.Equal(0.364f, sample.Smoke, precision: 4);
+        Assert.Equal(sample.Fire, sample.Visibility);
+    }
+
+    [Fact]
     public void VisualSampleApproximatesAshOnlyFromTerrainLowFuelAndResidualHeat()
     {
         ushort spentTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 1, heatLoss: 2);
@@ -61,10 +78,12 @@ public sealed class FireVisualFieldTests
 
         Assert.Contains("RWStructuredBuffer<float4> VisualFields;", shader);
         Assert.Contains("float4 BuildVisualSample(uint cell)", shader);
-        Assert.Contains("#define VISUAL_FIRE_BASE_INTENSITY 0.45f", shader);
-        Assert.Contains("#define VISUAL_SMOKE_FUEL_WEIGHT 0.52f", shader);
-        Assert.Contains("#define VISUAL_ASH_BASE_INTENSITY 0.18f", shader);
-        Assert.Contains("#define VISUAL_VISIBILITY_SMOKE_WEIGHT 0.9f", shader);
+        Assert.Contains("float VisualFireBaseIntensity;", shader);
+        Assert.Contains("float VisualSmokeFuelWeight;", shader);
+        Assert.Contains("float VisualAshBaseIntensity;", shader);
+        Assert.Contains("float VisualVisibilitySmokeWeight;", shader);
+        Assert.Contains("uint FireCoolingBase;", shader);
+        Assert.Contains("uint FireHeatLossCoolingDivisor;", shader);
         Assert.Contains("WriteVisualField(index, newCell);", shader);
         Assert.DoesNotContain("Flame", shader);
     }

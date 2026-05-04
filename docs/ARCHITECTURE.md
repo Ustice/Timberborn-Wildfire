@@ -65,6 +65,8 @@ The grid also allocates companion field buffers beside packed cells:
 
 Default initialization uploads empty companion state for every cell. Real importers replace that default with material and target data, while shader and renderer follow-up tickets decide which companion fields are consumed on GPU.
 
+`FireSimParameters` is the runtime tuning contract for the compute path. It lives in `Wildfire.Core`, is carried through `FireSimComputeDispatch`, is bound by the Timberborn compute simulator before each kernel dispatch, and has default values that preserve the accepted release-tuning behavior. The object covers visual field weights, ignition, spread, water suppression, burn pressure, fuel burn-down, deterministic burn-roll seed, and heat-loss cooling behavior. CPU mirrors such as `FireVisualField` consume the same contract so deterministic tests can prove a non-default preset changes field output before live Timberborn validation.
+
 The plain solution build does not reference UnityEngine APIs yet. Buffer allocation therefore flows through `IComputeBufferAllocator` and `IComputeBufferHandle`, so Unity can later provide real compute-buffer handles while tests use deterministic recording handles. Fire-spread rules are still owned by future compute shaders, not by the C# scaffold.
 
 ## Timberborn Cell Mapping Scaffold

@@ -1,3 +1,5 @@
+using Wildfire.Core;
+
 namespace Wildfire.Unity;
 
 public interface IFireSimComputeDispatcher
@@ -15,6 +17,7 @@ public readonly record struct FireSimComputeDispatch(
     IComputeBufferHandle QueuedChanges,
     IAppendComputeBufferHandle Deltas,
     IComputeBufferHandle VisualFields,
+    FireSimParameters Parameters,
     uint ChangeCount,
     int ThreadGroupsX,
     int ThreadGroupsY,
