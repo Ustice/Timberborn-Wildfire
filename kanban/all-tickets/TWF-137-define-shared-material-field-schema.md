@@ -60,3 +60,6 @@ Define one shared schema for converting Timberborn world objects into Wildfire s
 ## Notes
 
 - This ticket replaces duplicated hardcoded bands like vegetation fuel `10` in TypeScript and C# with one source of truth.
+- 2026-05-04 worker result: added `WildfireMaterialFieldSchema` in `Wildfire.Core`, shared fixture `src/Wildfire.Core/MaterialFieldSchema.v1.json`, Bun loader `scripts/material-field-schema.ts`, and C#/Bun tests that prove the v1 material classes, water/badwater behavior, JSON parity, and fail-closed unknown profile.
+- 2026-05-04 worker docs: updated `docs/ARCHITECTURE.md` and `docs/TEST_PLAN.md` to make the shared material field schema part of the real-field replacement architecture.
+- 2026-05-04 worker verification: `git diff --check`, `bun run typecheck`, `bun test`, `dotnet test Wildfire.slnx`, and `dotnet build Wildfire.slnx` passed.

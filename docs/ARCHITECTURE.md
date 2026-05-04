@@ -77,6 +77,28 @@ The mapping is deterministic and intentionally rule-free:
 
 Timberborn systems should use this layer to translate game state, then register changes through `IGpuFireSimulator.RegisterChange`. The Timberborn project still does not own fire-spread rules or mutate Unity/GPU buffers directly.
 
+## Shared Material Field Schema
+
+`Wildfire.Core` owns the versioned material field contract used by both live Timberborn import and offline `.timber` snapshot export. The current v1 schema lives in code as `WildfireMaterialFieldSchema` and as the shared fixture `src/Wildfire.Core/MaterialFieldSchema.v1.json`.
+
+The schema classifies observed map inputs into material classes before they become packed simulation cells or companion fields:
+
+- Empty.
+- Terrain.
+- Vegetation.
+- Crop.
+- Tree.
+- Building.
+- Storage.
+- Infrastructure.
+- Water.
+- Badwater.
+- Unknown.
+
+Each profile defines the packed fuel, flammability, heat loss, terrain bit, water band, burn capacity, consequence target kind, ash quality, contamination behavior, and resource policy. Packed bands remain small and deterministic; resource-specific detail still flows through adapter catalogs such as `TimberbornResourceFuelCatalog`.
+
+Unknown materials fail closed. They do not invent fuel, burn capacity, consequence targets, or clean aftermath. This is deliberate: importer gaps should become explicit telemetry and ticket blockers instead of another layer of fake fuel.
+
 ## Timberborn Consequence Services
 
 Timberborn consequence services consume compact deltas and visual or exposure samples after a simulator tick. They may register follow-up `FireSimChange` records, but those changes apply on the next tick.
