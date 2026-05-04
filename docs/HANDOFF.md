@@ -88,6 +88,8 @@
 - `TWF-084` passed deterministic review for tree/cuttable consequences on `codex/TWF-084-tree-burn-consequences` at commit `5788353736103ee249c24103b195f9909fe259d1` after a failed-review fix loop; it is blocked on live tree-burn QA evidence.
 - `TWF-117` is accepted as the infrastructure classification contract. Jason accepted zero-cost paths as non-burnable safe no-ops, burnable construction-resource infrastructure as burnable or partially burnable, water-passing infrastructure as difficult to burn, and tunnels/dynamite/detonators as separate explosive or destruction cases.
 - Follow-up tickets `TWF-127` through `TWF-130` now cover path infrastructure fire effects, power infrastructure fire effects, water infrastructure fire effects, and tunnel/dynamite destruction design.
+- `TWF-139` and `TWF-146` are done. Live 50x50 Diorama import proved real entity-backed counts, and generated scenario manifests now include real field checkpoints with packed-cell and companion expectations.
+- `TWF-141` is blocked by importer-parity mismatches. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-141-parity-20260504/` shows the generated `TWF-133` scenario exports as `256x256x23` and exceeds the live cap, while the closest 50x50 Diorama target has matching dimensions but divergent snapshot versus live material counts. `TWF-151` owns aligning live and snapshot importer semantics.
 - Sprint 7 is closed as mixed done/blocked. `TWF-077` is blocked on `TWF-064` live building-burnout investigation, and `TWF-115` is now unblocked from the `TWF-116` decision but must still find a safe Timberborn inventory accounting path before claiming stored-goods destruction.
 - `TWF-051` and `TWF-071` are dependency-ready according to the audit but intentionally remain in `01-todo/`; they belong to later sprint slices unless Jason explicitly pulls them forward.
 - `TWF-052` through `TWF-063` remain release-packaging work and should wait until gameplay consequences, evidence, and release media are stable.
@@ -101,6 +103,7 @@
 ## Next Exact Action
 
 - Sprint 8 live-QA recovery lives in `kanban/sprints/sprint-08.md`; continue from the live board in `kanban/by-status/`.
+- If continuing the real-field pipeline, work `TWF-151` before retrying `TWF-141`; do not tune from `TWF-144` or replace fixed QA stimuli from `TWF-145` until importer parity has an accepted count/field comparison.
 - Keep live-QA tickets blocked until Timberborn is closed/restarted normally and `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` returns from a loaded save.
 - Current Sprint 6 blocked tickets are `TWF-066`, `TWF-088`, `TWF-089`, `TWF-090`, `TWF-091`, and `TWF-092`. Sprint 7 can proceed only through deterministic foundation/research lanes until live Timberborn evidence is available.
 - Next exact unblock is environmental: close/restart the current normal-launched but command-unresponsive Timberborn session, then rerun the `TWF-050` healthy gate before any missing-compute mutation or downstream live QA.

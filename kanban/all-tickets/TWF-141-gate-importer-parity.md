@@ -8,6 +8,7 @@ dependencies:
   - TWF-146
   - TWF-139
   - TWF-140
+  - TWF-151
 write_scope:
   - docs/TEST_PLAN.md
   - docs/HANDOFF.md
@@ -34,6 +35,7 @@ Prove that live Timberborn import and `.timber` snapshot export classify the gen
 - `TWF-146` provides generated scenario checkpoints and manifests.
 - `TWF-139` provides live import.
 - `TWF-140` provides snapshot export.
+- `TWF-151` aligns live and snapshot count semantics after this gate found mismatches.
 
 ## Role
 
@@ -58,3 +60,7 @@ Prove that live Timberborn import and `.timber` snapshot export classify the gen
 ## Notes
 
 - This is a gate ticket. It should not implement importer fixes except tiny evidence-documentation changes.
+- 2026-05-04 QA result: blocked. Evidence root: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-141-parity-20260504/`.
+- Generated scenario path `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios/twf-141-parity-20260504/twf-141-parity.timber` exported successfully, but it is `256x256x23` with `1507328` cells, above the live auto-dispatch cap of `500000`, so it cannot be the live parity target yet.
+- Closest live target was `Wildfire Diorama 50 QA/2026-05-04 19h47m, Day 3-9.autosave.timber`. Snapshot export and live import both reported `50x50x23` and `57500` cells, but material counts diverged: snapshot export reported `terrain=12576`, `trees=494`, `buildings=44`, `storage=2`, `infrastructure=137`, `water=289`, `badwater=1`; live import reported `terrain=2503`, `trees=1305`, `buildings=335`, `storage=23`, `infrastructure=0`, `water=32`, `badwater=90`.
+- `TWF-151` was created to align or explicitly split source-count versus resolved-cell-count semantics before this parity gate can pass.
