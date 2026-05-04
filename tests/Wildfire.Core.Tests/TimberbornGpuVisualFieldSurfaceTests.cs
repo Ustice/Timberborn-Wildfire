@@ -188,12 +188,17 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
     {
         object visualFieldsBuffer = new();
         TimberbornGpuVisualFieldSurface consumerSurface = new(new RecordingFireLogSink());
-        TimberbornComputeFireSimulatorFactory factory = new(consumerSurface);
+        TimberbornFireSimParameterPresetState presetState = new();
+        presetState.SelectFireSimParameterPreset("harsh");
+        TimberbornComputeFireSimulatorFactory factory = new(consumerSurface, presetState);
         TimberbornGpuVisualFieldSurfaceBindingLifecycle lifecycle = new(
             factory.VisualFieldSurface,
             visualFieldsBuffer,
             new FireGrid(3, 2, 2),
             strideBytes: 16);
+
+        Assert.Equal("harsh", factory.CurrentPreset.Name);
+        Assert.Equal(7u, factory.CurrentPreset.Parameters.FireBurningNeighborHeatBonus);
 
         lifecycle.Bind();
         lifecycle.MarkUpdated(33);

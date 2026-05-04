@@ -13,7 +13,8 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaDeltaStimulus,
     ITimberbornQaBuildingBurnoutStimulus,
     ITimberbornQaWaterSuppressionStimulus,
-    ITimberbornQaBurnDurationStimulus
+    ITimberbornQaBurnDurationStimulus,
+    ITimberbornQaFireSimParameterPresetSelector
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
@@ -21,6 +22,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornPlayerFireAlertSink _playerFireAlerts;
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
     private readonly WildfireReleaseSettings _releaseSettings;
+    private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private TimberbornFireSystem? _fireSystem;
@@ -34,9 +36,12 @@ public sealed class TimberbornFireRuntime :
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
         QuickNotificationService quickNotificationService,
         TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,
-        WildfireReleaseSettings releaseSettings)
+        WildfireReleaseSettings releaseSettings,
+        TimberbornFireSimParameterPresetState fireSimParameterPresetState)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
+        _fireSimParameterPresetState = fireSimParameterPresetState ??
+            throw new ArgumentNullException(nameof(fireSimParameterPresetState));
         _playerFireAlertCameraFocus = playerFireAlertCameraFocus ??
             throw new ArgumentNullException(nameof(playerFireAlertCameraFocus));
         _logSink = new UnityTimberbornFireLogSink();
@@ -251,8 +256,24 @@ public sealed class TimberbornFireRuntime :
         return result;
     }
 
+    public TimberbornQaFireSimParameterPresetResult SelectFireSimParameterPreset(string presetName)
+    {
+        TimberbornQaFireSimParameterPresetResult result =
+            _fireSimParameterPresetState.SelectFireSimParameterPreset(presetName);
+        _logSink.Info(
+            "wildfire_timberborn_fire_sim_preset_selected " +
+            $"preset={TimberbornQaCommandBridge.FormatToken(result.Name)} " +
+            $"ignition={result.Parameters.FireIgnitionBaseHeat} " +
+            $"neighbor_bonus={result.Parameters.FireBurningNeighborHeatBonus} " +
+            $"water_suppression={result.Parameters.FireWaterSuppressionHeat}");
+
+        return result;
+    }
+
     public TimberbornQaCommandState GetState()
     {
+        TimberbornFireSimParameterPreset currentPreset = _fireSimParameterPresetState.CurrentPreset;
+
         if (_fireSystem is not { IsInitialized: true } fireSystem)
         {
             return new TimberbornQaCommandState(
@@ -265,7 +286,13 @@ public sealed class TimberbornFireRuntime :
                 CompatibilityProbeRequiredTotal: _compatibilityReport.RequiredProbeCount,
                 CompatibilityProbeOptionalPassed: _compatibilityReport.PassedOptionalProbeCount,
                 CompatibilityProbeOptionalTotal: _compatibilityReport.OptionalProbeCount,
-                CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken);
+                CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken,
+                FireSimPresetName: currentPreset.Name,
+                FireSimPresetIgnitionBaseHeat: currentPreset.Parameters.FireIgnitionBaseHeat,
+                FireSimPresetBurningNeighborHeatBonus: currentPreset.Parameters.FireBurningNeighborHeatBonus,
+                FireSimPresetWaterSuppressionHeat: currentPreset.Parameters.FireWaterSuppressionHeat,
+                FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
+                FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator);
         }
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
@@ -341,7 +368,13 @@ public sealed class TimberbornFireRuntime :
             CompatibilityProbeRequiredTotal: _compatibilityReport.RequiredProbeCount,
             CompatibilityProbeOptionalPassed: _compatibilityReport.PassedOptionalProbeCount,
             CompatibilityProbeOptionalTotal: _compatibilityReport.OptionalProbeCount,
-            CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken);
+            CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken,
+            FireSimPresetName: currentPreset.Name,
+            FireSimPresetIgnitionBaseHeat: currentPreset.Parameters.FireIgnitionBaseHeat,
+            FireSimPresetBurningNeighborHeatBonus: currentPreset.Parameters.FireBurningNeighborHeatBonus,
+            FireSimPresetWaterSuppressionHeat: currentPreset.Parameters.FireWaterSuppressionHeat,
+            FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
+            FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator);
     }
 
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)

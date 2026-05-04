@@ -54,3 +54,7 @@ Add internal QA/debug presets for tuning wildfire behavior without recompiling s
 ## Notes
 
 - This ticket is intentionally safer than arbitrary parameter editing. Presets make QA evidence reproducible.
+- 2026-05-04 worker pass added named presets in `TimberbornFireSimParameterPresets`, shared mutable preset state, a QA-only `qa-fire-preset <name>` command, status/readiness tokens for the active preset and major knobs, and compute-factory wiring so the selected preset is used when the Timberborn GPU simulator is created.
+- Raw parameter input remains rejected: the command bridge accepts known preset names only and does not expose arbitrary field assignment.
+- Verification passed: focused `TimberbornQaCommandBridgeTests`, `TimberbornPooledFireSmokeAshEffectTests`, and `TimberbornGpuVisualFieldSurfaceTests`, plus `git diff --check`, `bun run typecheck`, `bun test`, `dotnet test Wildfire.slnx`, `dotnet build Wildfire.slnx`, and `bun run kanban:audit`.
+- `bun run kanban:audit` still reports the two pre-existing sibling-worktree kanban edits for `TWF-066`; no duplicate statuses, broken links, missing statuses, or missing dependency files were introduced by this ticket.

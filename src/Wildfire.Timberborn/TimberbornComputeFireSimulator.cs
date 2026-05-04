@@ -11,15 +11,22 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornComputeShaderLoader _shaderLoader;
     private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
+    private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
 
-    public TimberbornComputeFireSimulatorFactory(ITimberbornGpuVisualFieldSurface visualFieldSurface)
+    public TimberbornComputeFireSimulatorFactory(
+        ITimberbornGpuVisualFieldSurface visualFieldSurface,
+        TimberbornFireSimParameterPresetState fireSimParameterPresetState)
     {
         _logSink = new UnityTimberbornFireLogSink();
         _shaderLoader = new TimberbornComputeShaderLoader(_logSink);
         _visualFieldSurface = visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface));
+        _fireSimParameterPresetState = fireSimParameterPresetState ??
+            throw new ArgumentNullException(nameof(fireSimParameterPresetState));
     }
 
     public ITimberbornGpuVisualFieldSurface VisualFieldSurface => _visualFieldSurface;
+
+    public TimberbornFireSimParameterPreset CurrentPreset => _fireSimParameterPresetState.CurrentPreset;
 
     public IGpuFireSimulator Create(FireGrid grid, ReadOnlySpan<ushort> initialCells)
     {
@@ -30,7 +37,20 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
 
         _logSink.Info("wildfire_timberborn_gpu_factory_created backend=unity_compute");
         ComputeShader shader = _shaderLoader.Load();
-        TimberbornComputeFireSimulator simulator = new(grid, initialCells, shader, _logSink, _visualFieldSurface);
+        TimberbornFireSimParameterPreset preset = _fireSimParameterPresetState.CurrentPreset;
+        _logSink.Info(
+            "wildfire_timberborn_gpu_factory_preset " +
+            $"preset={TimberbornQaCommandBridge.FormatToken(preset.Name)} " +
+            $"ignition={preset.Parameters.FireIgnitionBaseHeat} " +
+            $"neighbor_bonus={preset.Parameters.FireBurningNeighborHeatBonus} " +
+            $"water_suppression={preset.Parameters.FireWaterSuppressionHeat}");
+        TimberbornComputeFireSimulator simulator = new(
+            grid,
+            initialCells,
+            shader,
+            _logSink,
+            _visualFieldSurface,
+            preset.Parameters);
         _logSink.Info(
             $"wildfire_timberborn_gpu_simulator_created width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
 

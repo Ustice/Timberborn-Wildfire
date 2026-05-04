@@ -184,6 +184,75 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void FirePresetBindingExpandsAllowlistAndHelpMessage()
+    {
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            new RecordingFireSimParameterPresetSelector(),
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("help");
+
+        Assert.True(result.Success);
+        Assert.Equal(["help", "qa-fire-preset", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Contains("qa-fire-preset", result.Message);
+        Assert.Contains("QA-only simulator change", result.Message);
+    }
+
+    [Fact]
+    public void ExecuteQaFirePresetSelectsNamedPresetWithoutRawParameters()
+    {
+        RecordingFireSimParameterPresetSelector selector = new();
+        RecordingStateProvider stateProvider = new(
+            new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: true));
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            selector,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-fire-preset slow-reactable");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-fire-preset", result.Command);
+        Assert.Equal(["help", "qa-fire-preset", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal(["slow-reactable"], selector.PresetNames);
+        Assert.Contains("selected_fire_sim_preset_name=slow-reactable", result.Message);
+        Assert.Contains("ignition=12", result.Message);
+        Assert.Equal(2, stateProvider.CallCount);
+    }
+
+    [Fact]
+    public void ExecuteQaFirePresetRejectsInvalidNamesBeforeSelectorRuns()
+    {
+        RecordingFireSimParameterPresetSelector selector = new();
+        RecordingStateProvider stateProvider = new(TimberbornQaCommandState.Placeholder);
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            selector,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-fire-preset FireIgnitionBaseHeat=1");
+
+        Assert.False(result.Success);
+        Assert.Equal("failure", result.Status);
+        Assert.Contains("does not accept arguments", result.Message);
+        Assert.Empty(selector.PresetNames);
+        Assert.Equal(0, stateProvider.CallCount);
+    }
+
+    [Fact]
     public void ExecuteQaReadinessReturnsSafeLoadedGameReadinessState()
     {
         TimberbornQaCommandState state = new(
@@ -887,7 +956,13 @@ public sealed class TimberbornQaCommandBridgeTests
             CompatibilityProbeRequiredTotal: 6,
             CompatibilityProbeOptionalPassed: 2,
             CompatibilityProbeOptionalTotal: 4,
-            CompatibilityProbeDegradedFeatures: "visual_effects,diagnostic_assets");
+            CompatibilityProbeDegradedFeatures: "visual_effects,diagnostic_assets",
+            FireSimPresetName: "slow-reactable",
+            FireSimPresetIgnitionBaseHeat: 12,
+            FireSimPresetBurningNeighborHeatBonus: 3,
+            FireSimPresetWaterSuppressionHeat: 2,
+            FireSimPresetFuelBurnDownNumerator: 1,
+            FireSimPresetFuelBurnDownDenominator: 2);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -961,6 +1036,11 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("compatibility_probe_optional_passed=2", result.ResultToken);
         Assert.Contains("compatibility_probe_optional_total=4", result.ResultToken);
         Assert.Contains("compatibility_probe_degraded_features=visual_effects,diagnostic_assets", result.ResultToken);
+        Assert.Contains("fire_sim_preset=slow-reactable", result.ResultToken);
+        Assert.Contains("fire_ignition_base_heat=12", result.ResultToken);
+        Assert.Contains("fire_burning_neighbor_heat_bonus=3", result.ResultToken);
+        Assert.Contains("fire_water_suppression_heat=2", result.ResultToken);
+        Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
     }
 
     [Fact]
@@ -1003,6 +1083,37 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_count=placeholder", result.ResultToken);
         Assert.Contains("compatibility_probe_status=placeholder", result.ResultToken);
         Assert.Contains("compatibility_probe_required_passed=placeholder", result.ResultToken);
+    }
+
+    [Fact]
+    public void FireSimParameterPresetsExposeExpectedNamedProfiles()
+    {
+        string[] names = TimberbornFireSimParameterPresets.All
+            .Select(static preset => preset.Name)
+            .ToArray();
+
+        Assert.Equal(["default", "slow-reactable", "harsh", "conservative"], names);
+        Assert.True(TimberbornFireSimParameterPresets.TryGet("slow-reactable", out TimberbornFireSimParameterPreset? preset));
+        Assert.Equal(12u, preset.Parameters.FireIgnitionBaseHeat);
+        Assert.Equal(3u, preset.Parameters.FireBurningNeighborHeatBonus);
+        Assert.Equal(1u, preset.Parameters.FireFuelBurnDownPressureNumerator);
+        Assert.Equal(2u, preset.Parameters.FireFuelBurnDownPressureDenominator);
+        Assert.False(TimberbornFireSimParameterPresets.TryGet("FireIgnitionBaseHeat=1", out _));
+    }
+
+    [Fact]
+    public void FireSimPresetStateRejectsUnknownNamesAndKeepsCurrentPreset()
+    {
+        TimberbornFireSimParameterPresetState state = new();
+
+        TimberbornQaFireSimParameterPresetResult selected =
+            state.SelectFireSimParameterPreset("harsh");
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => state.SelectFireSimParameterPreset("raw=1"));
+
+        Assert.Equal("harsh", selected.Name);
+        Assert.Equal("harsh", state.CurrentPreset.Name);
+        Assert.Contains("Known presets", exception.Message);
     }
 
     private sealed class RecordingStateProvider(TimberbornQaCommandState state) : ITimberbornQaCommandStateProvider
@@ -1060,6 +1171,21 @@ public sealed class TimberbornQaCommandBridgeTests
         {
             Targets.Add(target);
             return result;
+        }
+    }
+
+    private sealed class RecordingFireSimParameterPresetSelector : ITimberbornQaFireSimParameterPresetSelector
+    {
+        public List<string> PresetNames { get; } = [];
+
+        public TimberbornQaFireSimParameterPresetResult SelectFireSimParameterPreset(string presetName)
+        {
+            PresetNames.Add(presetName);
+            return new TimberbornQaFireSimParameterPresetResult(
+                presetName,
+                TimberbornFireSimParameterPresets.All
+                    .Single(preset => string.Equals(preset.Name, presetName, StringComparison.OrdinalIgnoreCase))
+                    .Parameters);
         }
     }
 

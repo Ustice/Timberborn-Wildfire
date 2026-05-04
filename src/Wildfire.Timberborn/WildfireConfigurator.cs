@@ -12,6 +12,7 @@ public sealed class WildfireConfigurator : Configurator
             .AsSingleton();
         Bind<WildfireReleaseSettings>().AsSingleton();
         Bind<WildfireReleaseSettingsInitializer>().AsSingleton();
+        Bind<TimberbornFireSimParameterPresetState>().AsSingleton();
         Bind<ITimberbornGpuVisualFieldSurface>().To<TimberbornLiveGpuVisualFieldSurface>().AsSingleton();
         Bind<ITimberbornFireSimulatorFactory>().To<TimberbornComputeFireSimulatorFactory>().AsSingleton();
         Bind<TimberbornPlayerFireAlertCameraFocus>().AsSingleton();
