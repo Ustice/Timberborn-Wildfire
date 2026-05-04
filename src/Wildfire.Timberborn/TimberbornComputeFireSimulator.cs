@@ -28,7 +28,10 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
 
     public TimberbornFireSimParameterPreset CurrentPreset => _fireSimParameterPresetState.CurrentPreset;
 
-    public IGpuFireSimulator Create(FireGrid grid, ReadOnlySpan<ushort> initialCells)
+    public IGpuFireSimulator Create(
+        FireGrid grid,
+        ReadOnlySpan<ushort> initialCells,
+        ReadOnlySpan<WildfireCompanionField> companionFields)
     {
         if (!SystemInfo.supportsComputeShaders)
         {
@@ -50,7 +53,8 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
             shader,
             _logSink,
             _visualFieldSurface,
-            preset.Parameters);
+            preset.Parameters,
+            companionFields);
         _logSink.Info(
             $"wildfire_timberborn_gpu_simulator_created width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
 
@@ -450,6 +454,8 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
     private const int ChangeStrideBytes = sizeof(uint) * 4;
     private const int DeltaStrideBytes = sizeof(uint) * 4;
     private const int VisualFieldStrideBytes = sizeof(float) * 4;
+    private const int CompanionTargetIdStrideBytes = sizeof(uint);
+    private const int CompanionFieldStrideBytes = sizeof(uint);
 
     private readonly ComputeShader _shader;
     private readonly ITimberbornFireLogSink _logSink;
@@ -461,6 +467,8 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
     private readonly ComputeBuffer _externalChanges;
     private readonly ComputeBuffer _deltas;
     private readonly ComputeBuffer _visualFields;
+    private readonly ComputeBuffer _companionTargetIds;
+    private readonly ComputeBuffer _companionFields;
     private readonly ComputeBuffer _deltaCounter;
     private readonly FireSimParameters _parameters;
     private readonly int _applyExternalChangesKernel;
@@ -497,6 +505,25 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
         ITimberbornFireLogSink logSink,
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
         FireSimParameters parameters)
+        : this(
+            grid,
+            initialCells,
+            shader,
+            logSink,
+            visualFieldSurface,
+            parameters,
+            ReadOnlySpan<WildfireCompanionField>.Empty)
+    {
+    }
+
+    public TimberbornComputeFireSimulator(
+        FireGrid grid,
+        ReadOnlySpan<ushort> initialCells,
+        ComputeShader shader,
+        ITimberbornFireLogSink logSink,
+        ITimberbornGpuVisualFieldSurface visualFieldSurface,
+        FireSimParameters parameters,
+        ReadOnlySpan<WildfireCompanionField> companionFields)
     {
         if (grid.CellCount <= 0)
         {
@@ -508,6 +535,13 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
             throw new ArgumentException(
                 $"Initial cell count {initialCells.Length} must match grid cell count {grid.CellCount}.",
                 nameof(initialCells));
+        }
+
+        if (!companionFields.IsEmpty && companionFields.Length != grid.CellCount)
+        {
+            throw new ArgumentException(
+                $"Companion field count {companionFields.Length} must match grid cell count {grid.CellCount}.",
+                nameof(companionFields));
         }
 
         _shader = shader ?? throw new ArgumentNullException(nameof(shader));
@@ -525,11 +559,18 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
             _externalChanges = CreateBuffer(grid.CellCount, ChangeStrideBytes, ComputeBufferType.Structured);
             _deltas = CreateBuffer(grid.CellCount, DeltaStrideBytes, ComputeBufferType.Append);
             _visualFields = CreateBuffer(grid.CellCount, VisualFieldStrideBytes, ComputeBufferType.Structured);
+            _companionTargetIds = CreateBuffer(grid.CellCount, CompanionTargetIdStrideBytes, ComputeBufferType.Structured);
+            _companionFields = CreateBuffer(grid.CellCount, CompanionFieldStrideBytes, ComputeBufferType.Structured);
             _deltaCounter = CreateBuffer(1, sizeof(uint), ComputeBufferType.Raw);
 
             uint[] packedCells = initialCells.ToArray().Select(static cell => (uint)cell).ToArray();
+            WildfireCompanionField[] companionValues = companionFields.IsEmpty
+                ? Enumerable.Repeat(WildfireCompanionField.Empty, grid.CellCount).ToArray()
+                : companionFields.ToArray();
             _currentCells.SetData(packedCells);
             _nextCells.SetData(packedCells);
+            _companionTargetIds.SetData(companionValues.Select(static field => field.TargetId).ToArray());
+            _companionFields.SetData(companionValues.Select(static field => field.State.Pack()).ToArray());
             _readCells = _currentCells;
             _writeCells = _nextCells;
             _visualFieldBindingLifecycle = new TimberbornGpuVisualFieldSurfaceBindingLifecycle(
@@ -641,6 +682,8 @@ public sealed class TimberbornComputeFireSimulator : IGpuFireSimulator, ITimberb
             _externalChanges,
             _deltas,
             _visualFields,
+            _companionTargetIds,
+            _companionFields,
             _deltaCounter,
         }
             .Where(static buffer => buffer != null)

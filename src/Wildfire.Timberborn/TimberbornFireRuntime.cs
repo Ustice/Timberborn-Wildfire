@@ -27,6 +27,7 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
+    private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
     private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
     private bool _compatibilityProbesRan;
     private long _gameUpdateId;
@@ -76,6 +77,7 @@ public sealed class TimberbornFireRuntime :
         _playerFireAlertCameraFocus.Clear();
         _dispatcher = null;
         _fireSystem = null;
+        _lastWorldImportSummary = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
         _compatibilityProbesRan = false;
         _gameUpdateId = 0;
@@ -129,6 +131,8 @@ public sealed class TimberbornFireRuntime :
     public void Initialize(
         FireGrid grid,
         IEnumerable<TimberbornCellSource> sources,
+        ReadOnlySpan<WildfireCompanionField> companionFields,
+        TimberbornWorldCellImportSummary worldImportSummary,
         ITimberbornFireSimulatorFactory simulatorFactory,
         TimberbornFireCadence? cadence = null)
     {
@@ -149,10 +153,11 @@ public sealed class TimberbornFireRuntime :
             new TimberbornFireCellMapper(),
             _logSink,
             CreateDeltaConsumerSinks());
-        fireSystem.Initialize(grid, sources);
+        fireSystem.Initialize(grid, sources, companionFields);
+        _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
         Configure(fireSystem, cadence);
         _logSink.Info(
-            $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth}");
+            $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth} {_lastWorldImportSummary.StatusToken}");
     }
 
     public void RegisterHeat(int cellIndex, byte heat)
@@ -292,7 +297,17 @@ public sealed class TimberbornFireRuntime :
                 FireSimPresetBurningNeighborHeatBonus: currentPreset.Parameters.FireBurningNeighborHeatBonus,
                 FireSimPresetWaterSuppressionHeat: currentPreset.Parameters.FireWaterSuppressionHeat,
                 FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
-                FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator);
+                FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
+                WorldImportTotalSources: _lastWorldImportSummary?.TotalSources,
+                WorldImportTerrainSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Terrain),
+                WorldImportTreeSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Tree),
+                WorldImportCropSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Crop),
+                WorldImportBuildingSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Building),
+                WorldImportStorageSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Storage),
+                WorldImportInfrastructureSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Infrastructure),
+                WorldImportWaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Water),
+                WorldImportBadwaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Badwater),
+                WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
         }
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
@@ -374,7 +389,17 @@ public sealed class TimberbornFireRuntime :
             FireSimPresetBurningNeighborHeatBonus: currentPreset.Parameters.FireBurningNeighborHeatBonus,
             FireSimPresetWaterSuppressionHeat: currentPreset.Parameters.FireWaterSuppressionHeat,
             FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
-            FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator);
+            FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
+            WorldImportTotalSources: _lastWorldImportSummary?.TotalSources,
+            WorldImportTerrainSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Terrain),
+            WorldImportTreeSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Tree),
+            WorldImportCropSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Crop),
+            WorldImportBuildingSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Building),
+            WorldImportStorageSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Storage),
+            WorldImportInfrastructureSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Infrastructure),
+            WorldImportWaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Water),
+            WorldImportBadwaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Badwater),
+            WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
     }
 
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)

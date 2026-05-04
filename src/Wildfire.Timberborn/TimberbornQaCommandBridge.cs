@@ -848,7 +848,17 @@ public sealed record TimberbornQaCommandState(
     uint? FireSimPresetBurningNeighborHeatBonus = null,
     uint? FireSimPresetWaterSuppressionHeat = null,
     uint? FireSimPresetFuelBurnDownNumerator = null,
-    uint? FireSimPresetFuelBurnDownDenominator = null)
+    uint? FireSimPresetFuelBurnDownDenominator = null,
+    int? WorldImportTotalSources = null,
+    int? WorldImportTerrainSources = null,
+    int? WorldImportTreeSources = null,
+    int? WorldImportCropSources = null,
+    int? WorldImportBuildingSources = null,
+    int? WorldImportStorageSources = null,
+    int? WorldImportInfrastructureSources = null,
+    int? WorldImportWaterSources = null,
+    int? WorldImportBadwaterSources = null,
+    int? WorldImportSafeUnavailableCount = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
@@ -950,6 +960,16 @@ public sealed record TimberbornQaCommandResult(
         $"fire_burning_neighbor_heat_bonus={FormatNumber(State.FireSimPresetBurningNeighborHeatBonus)} " +
         $"fire_water_suppression_heat={FormatNumber(State.FireSimPresetWaterSuppressionHeat)} " +
         $"fire_fuel_burn_down={FormatFraction(State.FireSimPresetFuelBurnDownNumerator, State.FireSimPresetFuelBurnDownDenominator)} " +
+        $"world_import_total_sources={FormatNumber(State.WorldImportTotalSources)} " +
+        $"world_import_terrain_sources={FormatNumber(State.WorldImportTerrainSources)} " +
+        $"world_import_tree_sources={FormatNumber(State.WorldImportTreeSources)} " +
+        $"world_import_crop_sources={FormatNumber(State.WorldImportCropSources)} " +
+        $"world_import_building_sources={FormatNumber(State.WorldImportBuildingSources)} " +
+        $"world_import_storage_sources={FormatNumber(State.WorldImportStorageSources)} " +
+        $"world_import_infrastructure_sources={FormatNumber(State.WorldImportInfrastructureSources)} " +
+        $"world_import_water_sources={FormatNumber(State.WorldImportWaterSources)} " +
+        $"world_import_badwater_sources={FormatNumber(State.WorldImportBadwaterSources)} " +
+        $"world_import_safe_unavailable={FormatNumber(State.WorldImportSafeUnavailableCount)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
     public static TimberbornQaCommandResult CreateSuccess(

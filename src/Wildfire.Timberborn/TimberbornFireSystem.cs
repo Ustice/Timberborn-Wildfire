@@ -144,6 +144,15 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
+        TimberbornCellSource[] sourceValues = (sources ?? throw new ArgumentNullException(nameof(sources))).ToArray();
+        Initialize(grid, sourceValues, _cellMapper.CreateCompanionFields(grid, sourceValues));
+    }
+
+    public void Initialize(
+        FireGrid grid,
+        IEnumerable<TimberbornCellSource> sources,
+        ReadOnlySpan<WildfireCompanionField> companionFields)
+    {
         if (sources is null)
         {
             throw new ArgumentNullException(nameof(sources));
@@ -156,7 +165,7 @@ public sealed class TimberbornFireSystem : IDisposable
 
         ushort[] initialCells = _cellMapper.CreateInitialCells(grid, sources);
         DisposeSimulator();
-        _fireSimulator = _simulatorFactory.Create(grid, initialCells);
+        _fireSimulator = _simulatorFactory.Create(grid, initialCells, companionFields);
         _grid = grid;
         _registeredChangeCountSinceLastDispatch = 0;
         LastTick = 0;
@@ -469,7 +478,10 @@ public sealed class TimberbornFireSystem : IDisposable
 
 public interface ITimberbornFireSimulatorFactory
 {
-    IGpuFireSimulator Create(FireGrid grid, ReadOnlySpan<ushort> initialCells);
+    IGpuFireSimulator Create(
+        FireGrid grid,
+        ReadOnlySpan<ushort> initialCells,
+        ReadOnlySpan<WildfireCompanionField> companionFields);
 }
 
 public interface ITimberbornFireLogSink

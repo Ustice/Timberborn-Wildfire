@@ -962,7 +962,17 @@ public sealed class TimberbornQaCommandBridgeTests
             FireSimPresetBurningNeighborHeatBonus: 3,
             FireSimPresetWaterSuppressionHeat: 2,
             FireSimPresetFuelBurnDownNumerator: 1,
-            FireSimPresetFuelBurnDownDenominator: 2);
+            FireSimPresetFuelBurnDownDenominator: 2,
+            WorldImportTotalSources: 50,
+            WorldImportTerrainSources: 44,
+            WorldImportTreeSources: 2,
+            WorldImportCropSources: 1,
+            WorldImportBuildingSources: 1,
+            WorldImportStorageSources: 1,
+            WorldImportInfrastructureSources: 1,
+            WorldImportWaterSources: 0,
+            WorldImportBadwaterSources: 0,
+            WorldImportSafeUnavailableCount: 3);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -1041,6 +1051,10 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("fire_burning_neighbor_heat_bonus=3", result.ResultToken);
         Assert.Contains("fire_water_suppression_heat=2", result.ResultToken);
         Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
+        Assert.Contains("world_import_total_sources=50", result.ResultToken);
+        Assert.Contains("world_import_terrain_sources=44", result.ResultToken);
+        Assert.Contains("world_import_tree_sources=2", result.ResultToken);
+        Assert.Contains("world_import_safe_unavailable=3", result.ResultToken);
     }
 
     [Fact]

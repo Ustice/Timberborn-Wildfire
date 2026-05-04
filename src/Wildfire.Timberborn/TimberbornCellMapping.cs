@@ -66,7 +66,9 @@ public readonly record struct TimberbornCellSource(
     TimberbornTerrainCell? Terrain = null,
     TimberbornBuildingCell? Building = null,
     TimberbornResourceCell? Resource = null,
-    TimberbornWaterCell? Water = null);
+    TimberbornWaterCell? Water = null,
+    WildfireMaterialClass MaterialClass = WildfireMaterialClass.Empty,
+    uint CompanionTargetId = 0);
 
 public sealed class TimberbornTerrainAdapter
 {
@@ -74,9 +76,11 @@ public sealed class TimberbornTerrainAdapter
 
     public TimberbornCellSource CreateSource(int x, int y, int z, bool isSolid, byte wetness = 0)
     {
+        WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Terrain);
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Terrain: new TimberbornTerrainCell(isSolid, wetness));
+            Terrain: new TimberbornTerrainCell(isSolid, wetness),
+            MaterialClass: isSolid ? profile.MaterialClass : WildfireMaterialClass.Empty);
     }
 }
 
@@ -101,11 +105,17 @@ public sealed class TimberbornBuildingAdapter
         byte fuel,
         byte flammability,
         byte heatLoss,
-        TimberbornBuildingMaterialKind kind)
+        TimberbornBuildingMaterialKind kind,
+        uint companionTargetId = 0)
     {
+        WildfireMaterialClass materialClass = kind == TimberbornBuildingMaterialKind.NonBurnable
+            ? WildfireMaterialClass.Infrastructure
+            : WildfireMaterialClass.Building;
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Building: new TimberbornBuildingCell(fuel, flammability, heatLoss, kind));
+            Building: new TimberbornBuildingCell(fuel, flammability, heatLoss, kind),
+            MaterialClass: materialClass,
+            CompanionTargetId: companionTargetId);
     }
 
     public TimberbornCellSource CreateWoodLikeSource(int x, int y, int z)
@@ -189,10 +199,11 @@ public sealed class TimberbornResourceAdapter
             StockpileResourceFuel,
             StockpileResourceFlammability,
             StockpileResourceHeatLoss,
-            TimberbornResourceKind.StockpileResource);
+            TimberbornResourceKind.StockpileResource,
+            WildfireMaterialClass.Storage);
     }
 
-    public TimberbornCellSource CreateStockpileResourceSource(int x, int y, int z, string resourceId)
+    public TimberbornCellSource CreateStockpileResourceSource(int x, int y, int z, string resourceId, uint companionTargetId = 0)
     {
         TimberbornResourceFuelProfile profile = _resourceFuelCatalog.Lookup(resourceId);
         return CreateSource(
@@ -202,7 +213,9 @@ public sealed class TimberbornResourceAdapter
             profile.FuelValue,
             profile.Flammability,
             StockpileResourceHeatLoss,
-            TimberbornResourceKind.StockpileResource);
+            TimberbornResourceKind.StockpileResource,
+            WildfireMaterialClass.Storage,
+            companionTargetId);
     }
 
     public TimberbornResourceFuelProfile LookupFuelProfile(string resourceId)
@@ -219,7 +232,56 @@ public sealed class TimberbornResourceAdapter
             VegetationFuel,
             VegetationFlammability,
             VegetationHeatLoss,
-            TimberbornResourceKind.Vegetation);
+            TimberbornResourceKind.Vegetation,
+            WildfireMaterialClass.Vegetation);
+    }
+
+    public TimberbornCellSource CreateTreeSource(int x, int y, int z, uint companionTargetId = 0)
+    {
+        WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Tree);
+        return CreateSource(
+            x,
+            y,
+            z,
+            profile.Fuel,
+            profile.Flammability,
+            profile.HeatLoss,
+            TimberbornResourceKind.Vegetation,
+            WildfireMaterialClass.Tree,
+            companionTargetId);
+    }
+
+    public TimberbornCellSource CreateCropSource(int x, int y, int z, uint companionTargetId = 0)
+    {
+        WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Crop);
+        return CreateSource(
+            x,
+            y,
+            z,
+            profile.Fuel,
+            profile.Flammability,
+            profile.HeatLoss,
+            TimberbornResourceKind.Vegetation,
+            WildfireMaterialClass.Crop,
+            companionTargetId);
+    }
+
+    public TimberbornCellSource CreateSource(
+        int x,
+        int y,
+        int z,
+        byte fuel,
+        byte flammability,
+        byte heatLoss,
+        TimberbornResourceKind kind,
+        WildfireMaterialClass materialClass,
+        uint companionTargetId = 0)
+    {
+        return new TimberbornCellSource(
+            new TimberbornCellCoordinates(x, y, z),
+            Resource: new TimberbornResourceCell(fuel, flammability, heatLoss, kind),
+            MaterialClass: materialClass,
+            CompanionTargetId: companionTargetId);
     }
 
     public IEnumerable<TimberbornCellSource> CreateStockpileResourceSources(TimberbornCellFootprint footprint)
@@ -241,7 +303,8 @@ public sealed class TimberbornWaterAdapter
     {
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Water: new TimberbornWaterCell(water));
+            Water: new TimberbornWaterCell(water),
+            MaterialClass: WildfireMaterialClass.Water);
     }
 }
 
@@ -292,6 +355,37 @@ public sealed class TimberbornFireCellMapper
             .ToArray();
     }
 
+    public WildfireCompanionField[] CreateCompanionFields(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
+    {
+        if (sources is null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
+
+        WildfireCompanionField[] fields = Enumerable.Repeat(WildfireCompanionField.Empty, grid.CellCount).ToArray();
+        sources
+            .Select(source => new IndexedSource(ToIndex(grid, source), source))
+            .GroupBy(static indexedSource => indexedSource.CellIndex)
+            .ToList()
+            .ForEach(group =>
+            {
+                TimberbornCellSource[] cellSources = group.Select(static indexedSource => indexedSource.Source).ToArray();
+                WildfireMaterialClass materialClass = SelectMaterialClass(cellSources);
+                WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(materialClass);
+                uint targetId = cellSources
+                    .Where(static source => source.CompanionTargetId != 0u)
+                    .OrderByDescending(static source => SourcePriority(source))
+                    .Select(static source => source.CompanionTargetId)
+                    .DefaultIfEmpty(0u)
+                    .First();
+                fields[group.Key] = new WildfireCompanionField(
+                    targetId,
+                    WildfireCompanionFieldState.FromMaterialProfile(profile));
+            });
+
+        return fields;
+    }
+
     private static int ToIndex(FireGrid grid, TimberbornCellSource source)
     {
         return grid.ToIndex(source.Coordinates.X, source.Coordinates.Y, source.Coordinates.Z);
@@ -322,6 +416,37 @@ public sealed class TimberbornFireCellMapper
             .ThenByDescending(static contribution => contribution.Flammability)
             .ThenBy(static contribution => contribution.HeatLoss)
             .First();
+    }
+
+    private static WildfireMaterialClass SelectMaterialClass(IReadOnlyList<TimberbornCellSource> sources)
+    {
+        return sources
+            .Where(static source => source.MaterialClass != WildfireMaterialClass.Empty)
+            .OrderByDescending(static source => SourcePriority(source))
+            .ThenByDescending(static source => source.CompanionTargetId)
+            .Select(static source => source.MaterialClass)
+            .DefaultIfEmpty(WildfireMaterialClass.Empty)
+            .First();
+    }
+
+    private static int SourcePriority(TimberbornCellSource source)
+    {
+        if (source.Building.HasValue)
+        {
+            return 3;
+        }
+
+        if (source.Resource.HasValue)
+        {
+            return 2;
+        }
+
+        if (source.Water.HasValue)
+        {
+            return 2;
+        }
+
+        return source.Terrain is { IsSolid: true } ? 1 : 0;
     }
 
     private static IEnumerable<MaterialContribution> EnumerateMaterialContributions(TimberbornCellSource source)

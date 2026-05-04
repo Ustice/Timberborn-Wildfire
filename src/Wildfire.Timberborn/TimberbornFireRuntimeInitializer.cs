@@ -1,4 +1,5 @@
 using Timberborn.BlockSystem;
+using Timberborn.Buildings;
 using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
 using Timberborn.TerrainSystem;
@@ -14,7 +15,6 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
     private readonly MapSize _mapSize;
     private readonly ITerrainService _terrainService;
     private readonly IBlockService _blockService;
-    private readonly TimberbornTerrainCellSourceProvider _cellSourceProvider;
     private readonly ITimberbornFireLogSink _logSink;
 
     public TimberbornFireRuntimeInitializer(
@@ -29,7 +29,6 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
         _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
         _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
         _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
-        _cellSourceProvider = new TimberbornTerrainCellSourceProvider();
         _logSink = new UnityTimberbornFireLogSink();
     }
 
@@ -39,28 +38,132 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton
         {
             Vector3Int terrainSize = _mapSize.TerrainSize;
             FireGrid grid = new(terrainSize.x, terrainSize.y, terrainSize.z);
-            TimberbornCellSource[] sources = _cellSourceProvider.CreateTerrainSources(_mapSize, _terrainService).ToArray();
+            TimberbornWorldCellImporter importer = new(CreateLiveWorldCellSourceProviders());
+            TimberbornWorldCellImportResult importResult = importer.Import(grid);
+            TimberbornCellSource[] sources = importResult.Sources.ToArray();
 
             _logSink.Info(
-                $"wildfire_timberborn_runtime_initialize_started width={grid.Width} height={grid.Height} depth={grid.Depth} terrain_sources={sources.Length}");
+                $"wildfire_timberborn_runtime_initialize_started width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
             TimberbornPausableBuildingBurnoutConsequenceApi buildingBurnoutApi =
                 new(grid, _blockService);
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
             _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
-            _runtime.Initialize(grid, sources, _simulatorFactory);
+            _runtime.Initialize(grid, sources, importResult.CompanionFields, importResult.Summary, _simulatorFactory);
             _logSink.Info(
-                $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} terrain_sources={sources.Length}");
+                $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
         }
         catch (Exception exception)
         {
             _logSink.Warning($"wildfire_timberborn_runtime_initialize_failed message=\"{exception.Message}\"");
         }
     }
+
+    private IEnumerable<ITimberbornWorldCellSourceProvider> CreateLiveWorldCellSourceProviders()
+    {
+        return new ITimberbornWorldCellSourceProvider[]
+        {
+            new TimberbornTerrainWorldCellSourceProvider(_mapSize, _terrainService),
+            new TimberbornSafeUnavailableCellSourceProvider("trees", "safe_live_tree_enumeration_unavailable"),
+            new TimberbornSafeUnavailableCellSourceProvider("crops", "safe_live_crop_enumeration_unavailable"),
+            new TimberbornPausableBuildingCellSourceProvider(_blockService, _mapSize, _terrainService),
+            new TimberbornSafeUnavailableCellSourceProvider("storage", "safe_live_storage_enumeration_unavailable"),
+            new TimberbornSafeUnavailableCellSourceProvider("infrastructure", "safe_live_infrastructure_enumeration_unavailable"),
+            new TimberbornSafeUnavailableCellSourceProvider("water", "safe_live_water_enumeration_unavailable"),
+            new TimberbornSafeUnavailableCellSourceProvider("badwater", "safe_live_badwater_enumeration_unavailable"),
+        };
+    }
 }
 
-public sealed class TimberbornTerrainCellSourceProvider
+public sealed class TimberbornPausableBuildingCellSourceProvider : ITimberbornWorldCellSourceProvider
+{
+    private readonly IBlockService _blockService;
+    private readonly MapSize _mapSize;
+    private readonly ITerrainService _terrainService;
+    private readonly TimberbornBuildingAdapter _buildingAdapter = new();
+
+    public TimberbornPausableBuildingCellSourceProvider(
+        IBlockService blockService,
+        MapSize mapSize,
+        ITerrainService terrainService)
+    {
+        _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
+        _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
+        _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        TimberbornCellSource[] sources = EnumerateSurfaceCandidates(grid)
+            .Where(cell => _blockService.GetObjectsWithComponentAt<PausableBuilding>(cell.Coordinates).Any())
+            .Select(cell => _buildingAdapter.CreateWoodLikeSource(cell.X, cell.Y, cell.Z) with
+            {
+                CompanionTargetId = checked((uint)cell.Index + 1u),
+            })
+            .ToArray();
+
+        return new TimberbornWorldCellImportProviderResult("buildings", sources);
+    }
+
+    private IEnumerable<BuildingImportCandidate> EnumerateSurfaceCandidates(FireGrid grid)
+    {
+        Vector2Int terrainSize2D = _mapSize.TerrainSize2D;
+        Vector3Int terrainSize = _mapSize.TerrainSize;
+
+        return Enumerable.Range(0, terrainSize2D.x)
+            .SelectMany(x => Enumerable.Range(0, terrainSize2D.y)
+                .SelectMany(y => _terrainService.GetAllHeightsInCell(new Vector2Int(x, y))))
+            .Where(coordinates => IsInsideTerrain(coordinates, terrainSize))
+            .SelectMany(coordinates => new[]
+            {
+                coordinates,
+                new Vector3Int(coordinates.x, coordinates.y, coordinates.z + 1),
+            })
+            .Where(coordinates => IsInsideTerrain(coordinates, terrainSize))
+            .Distinct()
+            .Select(coordinates => new BuildingImportCandidate(
+                grid.ToIndex(coordinates.x, coordinates.y, coordinates.z),
+                coordinates,
+                coordinates.x,
+                coordinates.y,
+                coordinates.z));
+    }
+
+    private static bool IsInsideTerrain(Vector3Int coordinates, Vector3Int terrainSize)
+    {
+        return coordinates.x >= 0 &&
+            coordinates.y >= 0 &&
+            coordinates.z >= 0 &&
+            coordinates.x < terrainSize.x &&
+            coordinates.y < terrainSize.y &&
+            coordinates.z < terrainSize.z;
+    }
+
+    private readonly record struct BuildingImportCandidate(
+        int Index,
+        Vector3Int Coordinates,
+        int X,
+        int Y,
+        int Z);
+}
+
+public sealed class TimberbornTerrainWorldCellSourceProvider : ITimberbornWorldCellSourceProvider
 {
     private readonly TimberbornTerrainAdapter _terrainAdapter = new();
+    private readonly MapSize _mapSize;
+    private readonly ITerrainService _terrainService;
+
+    public TimberbornTerrainWorldCellSourceProvider(MapSize mapSize, ITerrainService terrainService)
+    {
+        _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
+        _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        return new TimberbornWorldCellImportProviderResult(
+            "terrain",
+            CreateTerrainSources(_mapSize, _terrainService).ToArray());
+    }
 
     public IEnumerable<TimberbornCellSource> CreateTerrainSources(MapSize mapSize, ITerrainService terrainService)
     {
