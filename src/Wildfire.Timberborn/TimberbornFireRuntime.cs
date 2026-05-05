@@ -18,6 +18,7 @@ public sealed class TimberbornFireRuntime :
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
+    private readonly TimberbornGpuFieldRendererSink _gpuFieldRenderer;
     private readonly TimberbornPooledFireSmokeAshEffectSink _pooledFireEffects;
     private readonly TimberbornPlayerFireAlertSink _playerFireAlerts;
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
@@ -48,8 +49,11 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(playerFireAlertCameraFocus));
         _logSink = new UnityTimberbornFireLogSink();
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
-        _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
+        _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
+            _logSink);
+        _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
+            visualFieldSurface,
             _logSink);
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
@@ -73,6 +77,7 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         _fireSystem?.Dispose();
+        _gpuFieldRenderer.Clear();
         _pooledFireEffects.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.Clear();
@@ -361,6 +366,7 @@ public sealed class TimberbornFireRuntime :
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
+        TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPooledFireEffectCounters pooledEffectCounters = _pooledFireEffects.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
@@ -403,6 +409,17 @@ public sealed class TimberbornFireRuntime :
             VisualFieldSurfaceBound: visualFieldSurfaceState.IsBound,
             VisualFieldSurfaceCellCount: visualFieldSurfaceState.CellCount,
             VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick,
+            GpuFieldRendererEnabled: gpuFieldRendererCounters.RendererEnabled,
+            GpuFieldRendererMaterialReady: gpuFieldRendererCounters.MaterialReady,
+            GpuFieldRendererSurfaceBound: gpuFieldRendererCounters.VisualFieldSurfaceBound,
+            GpuFieldRendererVisibleRegionCount: gpuFieldRendererCounters.VisibleRegionCount,
+            GpuFieldRendererUpdatedRegionCount: gpuFieldRendererCounters.UpdatedRegionCount,
+            GpuFieldRendererLastNonZeroUpdatedRegionCount: gpuFieldRendererCounters.LastNonZeroUpdatedRegionCount,
+            GpuFieldRendererLastNonZeroUpdatedRegionTick: gpuFieldRendererCounters.LastNonZeroUpdatedRegionTick,
+            GpuFieldRendererMaxUpdatedRegionCount: gpuFieldRendererCounters.MaxUpdatedRegionCount,
+            GpuFieldRendererDroppedRegionCount: gpuFieldRendererCounters.DroppedRegionCount,
+            GpuFieldRendererMaterialFailureCount: gpuFieldRendererCounters.MaterialFailureCount,
+            GpuFieldRendererLastUpdatedTick: gpuFieldRendererCounters.LastUpdatedTick,
             ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,
             UpdatedVisualRegionCount: pooledEffectCounters.UpdatedVisualRegionCount,
             LastNonZeroUpdatedVisualRegionCount: pooledEffectCounters.LastNonZeroUpdatedVisualRegionCount,
@@ -478,6 +495,7 @@ public sealed class TimberbornFireRuntime :
     {
         _fireSystem?.Dispose();
         _debugVisualSink.Clear();
+        _gpuFieldRenderer.Clear();
         _pooledFireEffects.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.ConfigureGrid(
@@ -511,6 +529,7 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state");
+        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=gpu_field_renderer");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=pooled_fire_smoke_ash_effects");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert");
         if (_buildingBurnoutConsequenceApi is not null)
@@ -523,7 +542,7 @@ public sealed class TimberbornFireRuntime :
     {
         return new TimberbornFireDeltaConsumerSinks(
             debugVisualSink: _debugVisualSink,
-            visualEffectSink: _pooledFireEffects,
+            visualEffectSink: new TimberbornCompositeFireVisualEffectSink(_gpuFieldRenderer, _pooledFireEffects),
             alertSink: _playerFireAlerts,
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
                 ? null

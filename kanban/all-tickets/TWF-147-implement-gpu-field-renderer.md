@@ -56,3 +56,7 @@ Replace large-area dependence on pooled native prefabs with a renderer driven by
 ## Notes
 
 - The old pooled effect proved visibility could happen. This ticket makes visibility scale with the field.
+- 2026-05-05: Started the primary GPU field renderer path. `TimberbornGpuFieldRendererSink` now samples the bound GPU visual-field surface, batches changed cells into bounded regions, derives steam and heat-haze channels from visual samples, and sends those regions to a single Unity mesh presenter. The pooled native-prefab path remains wired in parallel as an optional debug or special-case highlight.
+- 2026-05-05: Added renderer telemetry to `status` and `qa-readiness`: renderer enabled, material ready, surface bound, visible regions, updated regions, last nonzero updated regions/tick, max regions, dropped regions, material failures, and last updated tick.
+- 2026-05-05 deterministic verification passed: `git diff --check`, focused renderer/visual-field/pooled-effect tests, `bun run typecheck`, `bun test`, `dotnet test Wildfire.slnx`, and `dotnet build Wildfire.slnx`.
+- 2026-05-05 moved to `04-verify` for the required live QA screenshot or recording gate. Do not mark done until Timberborn evidence proves visible field rendering over a real imported area with the new `gpu_field_renderer_*` status counters.
