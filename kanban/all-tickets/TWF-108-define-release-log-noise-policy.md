@@ -52,3 +52,4 @@ Wildfire needs useful diagnostics for support, but release logs should not be fl
 ## Notes
 
 - Player alert aggregation belongs to `TWF-080`.
+- 2026-05-05 reviewer: added `TimberbornReleaseLogNoisePolicy`, tests for token classification and quiet consequence dispatch behavior, and the release log-noise policy in `docs/TEST_PLAN.md`. Empty per-dispatch summaries for stored goods, path infrastructure, power infrastructure, water infrastructure, and structure rollback now stay out of `Info` logs unless a target matched or an actionable outcome occurred; status and `qa-readiness` counters remain the detailed evidence surface.

@@ -142,6 +142,28 @@ Automated coverage for downstream implementation tickets must prove:
 
 Live QA for the first accepted beaver behavior must use a real fire or suppression event, then capture `status` or `qa-readiness` fields showing nonzero exposure telemetry for at least one field class. If an implementation applies a native debuff, the evidence must also show the matching safe wrapper result and recovery path.
 
+## Release Log Noise Policy
+
+`TWF-108` classifies release logs into errors, warnings, diagnostics, QA-only tokens, and too-noisy consequence chatter. Release errors include failed, blocked, invalid, and failure tokens. Release warnings include skipped, missing, unavailable, and disabled tokens. Release diagnostics include lifecycle, configuration, dispatch, binding, registration, and compatibility summaries. QA-only tokens include `wildfire_command_*` and QA stimulus/proof tokens. Per-dispatch consequence summaries are too noisy when they have no matched target or actionable outcome.
+
+Release logs should preserve:
+
+- Startup, compatibility, asset, and initialization diagnostics.
+- Dispatch failures, blocked initialization, invalid settings, and presentation failures.
+- Bounded dispatch-completed summaries, because they prove cadence and delta counts.
+- Sink-bound tokens, because they prove feature wiring once per runtime configuration.
+- QA command request/result tokens, but only for QA sessions and support captures.
+- Consequence summaries only when a target matched or an action, safe limitation, repair state, destruction, hazardous result, or mutation attempt happened.
+
+Release logs should avoid:
+
+- One line per cell, per beaver, per stored stack, or per visual sample.
+- Empty consequence summary logs from every dispatch.
+- Repeated unavailable-path chatter after status already exposes the current unavailable field.
+- Debug-only surface inspection dumps unless a QA command requested them.
+
+Automated coverage must prove `TimberbornReleaseLogNoisePolicy` classification and at least one quiet consequence dispatch that still returns status counters without writing an info log. Live QA and support captures should prefer `status` or `qa-readiness` for detailed counters, and use `Player.log` for lifecycle, failure, compatibility, and nonzero consequence events.
+
 ## Release Simulation Decision Validation
 
 `TWF-044` closes the release-blocking simulation design questions without adding runtime mechanics. Validation for the initial release should prove the conservative path, not speculative variants:

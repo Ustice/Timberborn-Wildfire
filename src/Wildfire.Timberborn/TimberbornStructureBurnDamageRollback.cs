@@ -196,7 +196,15 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             VisualRollbackAppliedCount: outcomes.Count(static outcome => outcome.ApplyResult.VisualRollbackApplied),
             SkippedNoSafeApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNoSafeApi),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.Request.DamageApplied));
-        _logSink.Info(summary.ToLogToken(tick));
+        if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
+            summary.MatchedStructureCellCount,
+            summary.ClosedStructureCount,
+            summary.RepairEligibleCount,
+            summary.VisualRollbackAppliedCount,
+            summary.SkippedNoSafeApiCount))
+        {
+            _logSink.Info(summary.ToLogToken(tick));
+        }
         return summary;
     }
 

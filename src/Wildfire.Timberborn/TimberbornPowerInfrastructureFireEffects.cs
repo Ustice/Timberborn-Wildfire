@@ -147,7 +147,14 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
             SkippedNoSafeApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNoSafeApi),
             RepairEligibleTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.RepairEligible),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.DamageApplied));
-        _logSink.Info(summary.ToLogToken(tick));
+        if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
+            summary.MatchedTargetCellCount,
+            summary.DamagedTargetCount,
+            summary.DisabledOrDisconnectedTargetCount,
+            summary.SkippedNoSafeApiCount))
+        {
+            _logSink.Info(summary.ToLogToken(tick));
+        }
         return summary;
     }
 

@@ -156,7 +156,15 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
             SkippedNoInventoryApiCount: results.Sum(static result => result.SkippedNoInventoryApiCount),
             SkippedUnknownResourceCount: results.Sum(static result => result.SkippedUnknownResourceCount),
             SkippedNonBurnableItemCount: results.Sum(static result => result.SkippedNonBurnableItemCount));
-        _logSink.Info(summary.ToLogToken(tick));
+        if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
+            summary.MatchedStorageCellCount,
+            summary.DestroyedItemCount,
+            summary.HazardousGoodCount,
+            summary.SkippedNoInventoryApiCount,
+            summary.SkippedUnknownResourceCount))
+        {
+            _logSink.Info(summary.ToLogToken(tick));
+        }
 
         return summary;
     }
