@@ -26,6 +26,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
+    private ITimberbornStructureBurnDamageRollbackTargetApi? _structureBurnDamageRollbackTargetApi;
     private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
     private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
@@ -405,6 +406,20 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: deltaConsumerSummary.BuildingBurnoutConsideredDeltaCount,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: deltaConsumerSummary.BuildingBurnoutMatchedCellCount,
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: deltaConsumerSummary.BuildingBurnoutAppliedConsequenceCount,
+            LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount: deltaConsumerSummary.StructureBurnDamageRollbackConsideredDeltaCount,
+            LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount: deltaConsumerSummary.StructureBurnDamageRollbackMatchedStructureCellCount,
+            LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount: deltaConsumerSummary.StructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount,
+            LastDeltaConsumerStructureBurnDamageRollbackZeroBurnableCapacityTargetCount: deltaConsumerSummary.StructureBurnDamageRollbackZeroBurnableCapacityTargetCount,
+            LastDeltaConsumerStructureBurnDamageRollbackMaterialValueLost: deltaConsumerSummary.StructureBurnDamageRollbackMaterialValueLost,
+            LastDeltaConsumerStructureBurnDamageRollbackClosedStructureCount: deltaConsumerSummary.StructureBurnDamageRollbackClosedStructureCount,
+            LastDeltaConsumerStructureBurnDamageRollbackRepairBlockedCount: deltaConsumerSummary.StructureBurnDamageRollbackRepairBlockedCount,
+            LastDeltaConsumerStructureBurnDamageRollbackRepairEligibleCount: deltaConsumerSummary.StructureBurnDamageRollbackRepairEligibleCount,
+            LastDeltaConsumerStructureBurnDamageRollbackScorchedStageCount: deltaConsumerSummary.StructureBurnDamageRollbackScorchedStageCount,
+            LastDeltaConsumerStructureBurnDamageRollbackPartialConstructionStageCount: deltaConsumerSummary.StructureBurnDamageRollbackPartialConstructionStageCount,
+            LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount: deltaConsumerSummary.StructureBurnDamageRollbackUnfinishedStageCount,
+            LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount: deltaConsumerSummary.StructureBurnDamageRollbackVisualRollbackAppliedCount,
+            LastDeltaConsumerStructureBurnDamageRollbackSkippedNoSafeApiCount: deltaConsumerSummary.StructureBurnDamageRollbackSkippedNoSafeApiCount,
+            LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied: deltaConsumerSummary.StructureBurnDamageRollbackTotalDamageApplied,
             LastPositiveBuildingBurnoutAppliedTick: fireSystem.LastPositiveBuildingBurnoutAppliedTick,
             LastPositiveBuildingBurnoutAppliedCount: fireSystem.LastPositiveBuildingBurnoutAppliedCount,
             LastDeltaConsumerStoredGoodBurnConsideredDeltaCount: deltaConsumerSummary.StoredGoodBurnConsideredDeltaCount,
@@ -570,6 +585,11 @@ public sealed class TimberbornFireRuntime :
             targetProvider ?? throw new ArgumentNullException(nameof(targetProvider));
     }
 
+    public void AttachStructureBurnDamageRollbackTargetApi(ITimberbornStructureBurnDamageRollbackTargetApi targetApi)
+    {
+        _structureBurnDamageRollbackTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
+    }
+
     public void AttachStoredGoodBurnInventoryApi(ITimberbornStoredGoodBurnInventoryApi inventoryApi)
     {
         _storedGoodBurnInventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
@@ -651,6 +671,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause");
         }
+        if (_structureBurnDamageRollbackTargetApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=structure_burn_damage_rollback");
+        }
         if (_storedGoodBurnInventoryApi is not null)
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn");
@@ -690,6 +714,11 @@ public sealed class TimberbornFireRuntime :
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
                 ? null
                 : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi),
+            structureBurnDamageRollbackSink: _structureBurnDamageRollbackTargetApi is null
+                ? null
+                : new TimberbornStructureBurnDamageRollbackSink(
+                    _structureBurnDamageRollbackTargetApi,
+                    logSink: _logSink),
             storedGoodBurnConsequenceSink: _storedGoodBurnInventoryApi is null
                 ? null
                 : new TimberbornStoredGoodBurnConsequenceSink(_storedGoodBurnInventoryApi, logSink: _logSink),

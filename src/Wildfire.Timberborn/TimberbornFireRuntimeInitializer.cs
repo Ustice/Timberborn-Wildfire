@@ -113,6 +113,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                 new(grid, _blockService);
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
             _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
+            _runtime.AttachStructureBurnDamageRollbackTargetApi(
+                new TimberbornStructureBurnDamageRollbackTargetApi(grid, _blockService));
             _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService));
             _runtime.AttachExplosiveInfrastructureTargetApi(
                 new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));

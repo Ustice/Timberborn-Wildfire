@@ -74,6 +74,8 @@ public sealed class TimberbornFireDeltaConsumer
 
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary =
             _sinks.BuildingBurnoutConsequenceSink.ApplyConsequences(tick, decisions);
+        TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary =
+            _sinks.StructureBurnDamageRollbackSink.ApplyConsequences(tick, decisions);
         TimberbornBurnDamageApplySummary burnDamageSummary = _sinks.BurnDamageSink.ApplyDamage(tick, decisions);
         TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary =
             _sinks.StoredGoodBurnConsequenceSink.ApplyConsequences(tick, decisions);
@@ -105,6 +107,7 @@ public sealed class TimberbornFireDeltaConsumer
             visualEffectFailureCount,
             gameplayConsequences.Length,
             buildingBurnoutSummary,
+            structureBurnDamageRollbackSummary,
             burnDamageSummary,
             storedGoodBurnSummary,
             explosiveInfrastructureSummary,
@@ -526,6 +529,20 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int BuildingBurnoutConsideredDeltaCount,
     int BuildingBurnoutMatchedCellCount,
     int BuildingBurnoutAppliedConsequenceCount,
+    int StructureBurnDamageRollbackConsideredDeltaCount,
+    int StructureBurnDamageRollbackMatchedStructureCellCount,
+    int StructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount,
+    int StructureBurnDamageRollbackZeroBurnableCapacityTargetCount,
+    int StructureBurnDamageRollbackMaterialValueLost,
+    int StructureBurnDamageRollbackClosedStructureCount,
+    int StructureBurnDamageRollbackRepairBlockedCount,
+    int StructureBurnDamageRollbackRepairEligibleCount,
+    int StructureBurnDamageRollbackScorchedStageCount,
+    int StructureBurnDamageRollbackPartialConstructionStageCount,
+    int StructureBurnDamageRollbackUnfinishedStageCount,
+    int StructureBurnDamageRollbackVisualRollbackAppliedCount,
+    int StructureBurnDamageRollbackSkippedNoSafeApiCount,
+    int StructureBurnDamageRollbackTotalDamageApplied,
     int BurnDamageConsideredCellCount,
     int BurnDamageResolvedTargetCellCount,
     int BurnDamageDuplicateCellSuppressedCount,
@@ -619,6 +636,20 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         BuildingBurnoutConsideredDeltaCount: 0,
         BuildingBurnoutMatchedCellCount: 0,
         BuildingBurnoutAppliedConsequenceCount: 0,
+        StructureBurnDamageRollbackConsideredDeltaCount: 0,
+        StructureBurnDamageRollbackMatchedStructureCellCount: 0,
+        StructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount: 0,
+        StructureBurnDamageRollbackZeroBurnableCapacityTargetCount: 0,
+        StructureBurnDamageRollbackMaterialValueLost: 0,
+        StructureBurnDamageRollbackClosedStructureCount: 0,
+        StructureBurnDamageRollbackRepairBlockedCount: 0,
+        StructureBurnDamageRollbackRepairEligibleCount: 0,
+        StructureBurnDamageRollbackScorchedStageCount: 0,
+        StructureBurnDamageRollbackPartialConstructionStageCount: 0,
+        StructureBurnDamageRollbackUnfinishedStageCount: 0,
+        StructureBurnDamageRollbackVisualRollbackAppliedCount: 0,
+        StructureBurnDamageRollbackSkippedNoSafeApiCount: 0,
+        StructureBurnDamageRollbackTotalDamageApplied: 0,
         BurnDamageConsideredCellCount: 0,
         BurnDamageResolvedTargetCellCount: 0,
         BurnDamageDuplicateCellSuppressedCount: 0,
@@ -705,6 +736,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         int visualEffectFailureCount,
         int gameplayConsequenceCount,
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary,
+        TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary,
         TimberbornBurnDamageApplySummary burnDamageSummary,
         TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary,
         TimberbornExplosiveInfrastructureConsequenceSummary explosiveInfrastructureSummary,
@@ -731,6 +763,20 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             buildingBurnoutSummary.ConsideredDeltaCount,
             buildingBurnoutSummary.MatchedBuildingCellCount,
             buildingBurnoutSummary.AppliedConsequenceCount,
+            structureBurnDamageRollbackSummary.ConsideredDeltaCount,
+            structureBurnDamageRollbackSummary.MatchedStructureCellCount,
+            structureBurnDamageRollbackSummary.DuplicateStructureTargetSuppressedCount,
+            structureBurnDamageRollbackSummary.ZeroBurnableCapacityTargetCount,
+            structureBurnDamageRollbackSummary.MaterialValueLost,
+            structureBurnDamageRollbackSummary.ClosedStructureCount,
+            structureBurnDamageRollbackSummary.RepairBlockedCount,
+            structureBurnDamageRollbackSummary.RepairEligibleCount,
+            structureBurnDamageRollbackSummary.ScorchedStageCount,
+            structureBurnDamageRollbackSummary.PartialConstructionStageCount,
+            structureBurnDamageRollbackSummary.UnfinishedStageCount,
+            structureBurnDamageRollbackSummary.VisualRollbackAppliedCount,
+            structureBurnDamageRollbackSummary.SkippedNoSafeApiCount,
+            structureBurnDamageRollbackSummary.TotalDamageApplied,
             burnDamageSummary.ConsideredCellCount,
             burnDamageSummary.ResolvedTargetCellCount,
             burnDamageSummary.DuplicateCellSuppressedCount,
@@ -827,6 +873,20 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"building_burnout_considered_deltas={BuildingBurnoutConsideredDeltaCount} " +
             $"building_burnout_matched_cells={BuildingBurnoutMatchedCellCount} " +
             $"building_burnout_applied_consequences={BuildingBurnoutAppliedConsequenceCount} " +
+            $"structure_burn_damage_rollback_considered_deltas={StructureBurnDamageRollbackConsideredDeltaCount} " +
+            $"structure_burn_damage_rollback_matched_structure_cells={StructureBurnDamageRollbackMatchedStructureCellCount} " +
+            $"structure_burn_damage_rollback_duplicate_structure_targets_suppressed={StructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount} " +
+            $"structure_burn_damage_rollback_zero_burnable_capacity_targets={StructureBurnDamageRollbackZeroBurnableCapacityTargetCount} " +
+            $"structure_burn_damage_rollback_material_value_lost={StructureBurnDamageRollbackMaterialValueLost} " +
+            $"structure_burn_damage_rollback_closed_structures={StructureBurnDamageRollbackClosedStructureCount} " +
+            $"structure_burn_damage_rollback_repair_blocked={StructureBurnDamageRollbackRepairBlockedCount} " +
+            $"structure_burn_damage_rollback_repair_eligible={StructureBurnDamageRollbackRepairEligibleCount} " +
+            $"structure_burn_damage_rollback_stage_scorched={StructureBurnDamageRollbackScorchedStageCount} " +
+            $"structure_burn_damage_rollback_stage_partial_construction={StructureBurnDamageRollbackPartialConstructionStageCount} " +
+            $"structure_burn_damage_rollback_stage_unfinished={StructureBurnDamageRollbackUnfinishedStageCount} " +
+            $"structure_burn_damage_rollback_visual_applied={StructureBurnDamageRollbackVisualRollbackAppliedCount} " +
+            $"structure_burn_damage_rollback_skipped_no_safe_api={StructureBurnDamageRollbackSkippedNoSafeApiCount} " +
+            $"structure_burn_damage_rollback_total_damage_applied={StructureBurnDamageRollbackTotalDamageApplied} " +
             $"burn_damage_considered_cells={BurnDamageConsideredCellCount} " +
             $"burn_damage_resolved_target_cells={BurnDamageResolvedTargetCellCount} " +
             $"burn_damage_duplicate_cells_suppressed={BurnDamageDuplicateCellSuppressedCount} " +
@@ -915,6 +975,7 @@ public sealed class TimberbornFireDeltaConsumerSinks
         ITimberbornFireVisualEffectSink? visualEffectSink = null,
         ITimberbornFireGameplayConsequenceSink? gameplayConsequenceSink = null,
         ITimberbornBuildingBurnoutConsequenceSink? buildingBurnoutConsequenceSink = null,
+        ITimberbornStructureBurnDamageRollbackSink? structureBurnDamageRollbackSink = null,
         ITimberbornBurnDamageSink? burnDamageSink = null,
         ITimberbornStoredGoodBurnConsequenceSink? storedGoodBurnConsequenceSink = null,
         ITimberbornExplosiveInfrastructureConsequenceSink? explosiveInfrastructureConsequenceSink = null,
@@ -930,6 +991,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
         GameplayConsequenceSink = gameplayConsequenceSink ?? NullTimberbornFireGameplayConsequenceSink.Instance;
         BuildingBurnoutConsequenceSink =
             buildingBurnoutConsequenceSink ?? NullTimberbornBuildingBurnoutConsequenceSink.Instance;
+        StructureBurnDamageRollbackSink =
+            structureBurnDamageRollbackSink ?? NullTimberbornStructureBurnDamageRollbackSink.Instance;
         BurnDamageSink = burnDamageSink ?? NullTimberbornBurnDamageSink.Instance;
         StoredGoodBurnConsequenceSink =
             storedGoodBurnConsequenceSink ?? NullTimberbornStoredGoodBurnConsequenceSink.Instance;
@@ -954,6 +1017,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornFireGameplayConsequenceSink GameplayConsequenceSink { get; }
 
     public ITimberbornBuildingBurnoutConsequenceSink BuildingBurnoutConsequenceSink { get; }
+
+    public ITimberbornStructureBurnDamageRollbackSink StructureBurnDamageRollbackSink { get; }
 
     public ITimberbornBurnDamageSink BurnDamageSink { get; }
 
