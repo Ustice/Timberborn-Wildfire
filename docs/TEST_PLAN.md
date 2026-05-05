@@ -102,6 +102,8 @@ Automated coverage for `TWF-154` must prove the behavior setting gate, duplicate
 
 `TWF-127` adds the first path-infrastructure consequence lane. It consumes compact deltas as burn-damage units, resolves path-like targets, deduplicates by stable target id, calculates damage capacity from construction resources through `TimberbornBurnDamageCapacityCalculator`, treats zero-cost paths as non-burnable safe no-ops, and reports safe-unavailable passability mutation instead of blocking Timberborn paths. Live QA can accept either a safe damaged/repair-eligible target or an explicit `path_infrastructure_skipped_no_safe_api` result; path blocking must remain zero until a recoverable native pathing wrapper is proven.
 
+`TWF-128` adds the first power-infrastructure consequence lane. It consumes compact deltas as burn-damage units, resolves power-like targets, deduplicates by stable target id, calculates construction-resource burn capacity through `TimberbornBurnDamageCapacityCalculator`, treats metal-only infrastructure as safe no-op, and reports safe-unavailable network mutation instead of faking a power outage. Live QA can accept a safely damaged/repair-eligible power target or an explicit `power_infrastructure_skipped_no_safe_api` result; disconnect counters must stay zero until a recoverable Timberborn power-network wrapper is proven.
+
 Run:
 
 ```bash

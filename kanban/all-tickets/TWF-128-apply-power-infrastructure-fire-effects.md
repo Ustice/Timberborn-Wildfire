@@ -64,3 +64,4 @@ Make fire damage power infrastructure through burn damage and safe Timberborn po
 
 - Keep power mutation separate from path, water, tunnel, and dynamite behavior.
 - Do not fake network disruption through status counters alone.
+- 2026-05-05 worker: implemented the first power-infrastructure fire lane. Compact fire deltas now resolve power-like infrastructure targets, suppress duplicate cells by stable target id, calculate construction-resource burn capacity through the existing burn-damage capacity calculator, keep metal-only targets as safe no-ops, and expose `power_infrastructure_*` telemetry plus QA status fields. The live Timberborn adapter currently reports safe-unavailable mutation instead of faking network disconnection.
