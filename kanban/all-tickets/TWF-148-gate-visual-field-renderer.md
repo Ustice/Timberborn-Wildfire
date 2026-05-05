@@ -5,6 +5,7 @@ role: qa
 requires_qa: true
 doc_only: false
 dependencies:
+  - TWF-133
   - TWF-147
 write_scope:
   - docs/TEST_PLAN.md
@@ -29,6 +30,7 @@ Accept or block the GPU field renderer from normal gameplay recordings.
 
 ## Dependencies
 
+- `TWF-133` provides the generated QA scenario required for normal and wide camera renderer gates.
 - `TWF-147` implements the renderer.
 
 ## Role
@@ -52,3 +54,4 @@ Accept or block the GPU field renderer from normal gameplay recordings.
 ## Notes
 
 - This gate decides whether visual tuning can proceed on the field renderer instead of the old prefab scaffold.
+- 2026-05-05 coordinator correction: added missing `TWF-133` dependency. This ticket explicitly requires the generated QA scenario, and `TWF-133` is still the owner for making that generated scenario loadable and suitable for full-layout visual checks. The `TWF-147` Diorama proof accepts the renderer pipeline, but it is not a substitute for this gate's generated-scenario recording requirement.

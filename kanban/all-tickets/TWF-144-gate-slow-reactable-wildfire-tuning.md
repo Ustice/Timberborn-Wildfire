@@ -5,6 +5,7 @@ role: qa
 requires_qa: true
 doc_only: false
 dependencies:
+  - TWF-133
   - TWF-141
   - TWF-143
 write_scope:
@@ -32,6 +33,7 @@ Accept or block the first real tuning target: a readable wildfire that spreads t
 
 ## Dependencies
 
+- `TWF-133` provides the generated QA scenario used for tuning comparisons.
 - `TWF-141` proves real importer parity.
 - `TWF-143` provides the tuning preset.
 
@@ -59,3 +61,4 @@ Accept or block the first real tuning target: a readable wildfire that spreads t
 - This gate replaces accepting behavior from fixed center-cell proof commands.
 - 2026-05-05 live QA attempt blocked before tuning evidence. `bun scripts/deploy-timberborn-mod.ts --apply --clean` passed, then `bun scripts/load-latest-save-and-unpause.ts --launch --wait=60` reached startup Mods, Experimental Mode, and main menu, preflighted the 50x50 Diorama autosave at `57500` cells, and clicked Continue. Timberborn then sat without a loaded-save signal for more than the 30-second lock threshold. Evidence was captured under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-144-live-blocked-20260505T014152Z/`.
 - 2026-05-05 blocker detail: copied `Player.log` only reached early game/Steam startup and did not emit Wildfire runtime initialization tokens. No `slow-reactable` preset, ignition, spread, suppression, burnout, recording, or final status evidence was collected. Do not accept or reject tuning from this run.
+- 2026-05-05 coordinator correction: added missing `TWF-133` dependency because this gate requires the same generated QA scenario for tuning comparisons. A healthy Diorama save can prove live command responsiveness, but it should not be treated as this gate's final tuning scenario.
