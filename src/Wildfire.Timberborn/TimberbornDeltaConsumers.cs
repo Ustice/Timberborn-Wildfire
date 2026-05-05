@@ -75,6 +75,8 @@ public sealed class TimberbornFireDeltaConsumer
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary =
             _sinks.BuildingBurnoutConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornBurnDamageApplySummary burnDamageSummary = _sinks.BurnDamageSink.ApplyDamage(tick, decisions);
+        TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary =
+            _sinks.StoredGoodBurnConsequenceSink.ApplyConsequences(tick, decisions);
 
         TimberbornFireAlertEvent[] alertEvents = decisions
             .Where(static decision => decision.ShouldEmitAlert)
@@ -92,6 +94,7 @@ public sealed class TimberbornFireDeltaConsumer
             gameplayConsequences.Length,
             buildingBurnoutSummary,
             burnDamageSummary,
+            storedGoodBurnSummary,
             alertEvents.Length);
         if (LastSummary.WaterChangedCount > 0)
         {
@@ -510,6 +513,15 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int BurnDamageDuplicateCellSuppressedCount,
     int BurnDamageAppliedTargetCount,
     int BurnDamageTotalDamageApplied,
+    int StoredGoodBurnConsideredDeltaCount,
+    int StoredGoodBurnMatchedStorageCellCount,
+    int StoredGoodBurnDuplicateStorageTargetSuppressedCount,
+    int StoredGoodBurnableStackCount,
+    int StoredGoodBurnDestroyedItemCount,
+    int StoredGoodBurnHazardousGoodCount,
+    int StoredGoodBurnSkippedNoInventoryApiCount,
+    int StoredGoodBurnSkippedUnknownResourceCount,
+    int StoredGoodBurnSkippedNonBurnableItemCount,
     int AlertCount,
     int MaxHeat)
 {
@@ -534,6 +546,15 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         BurnDamageDuplicateCellSuppressedCount: 0,
         BurnDamageAppliedTargetCount: 0,
         BurnDamageTotalDamageApplied: 0,
+        StoredGoodBurnConsideredDeltaCount: 0,
+        StoredGoodBurnMatchedStorageCellCount: 0,
+        StoredGoodBurnDuplicateStorageTargetSuppressedCount: 0,
+        StoredGoodBurnableStackCount: 0,
+        StoredGoodBurnDestroyedItemCount: 0,
+        StoredGoodBurnHazardousGoodCount: 0,
+        StoredGoodBurnSkippedNoInventoryApiCount: 0,
+        StoredGoodBurnSkippedUnknownResourceCount: 0,
+        StoredGoodBurnSkippedNonBurnableItemCount: 0,
         AlertCount: 0,
         MaxHeat: 0);
 
@@ -547,6 +568,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         int gameplayConsequenceCount,
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary,
         TimberbornBurnDamageApplySummary burnDamageSummary,
+        TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary,
         int alertCount)
     {
         return new TimberbornFireDeltaConsumerSummary(
@@ -570,6 +592,15 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             burnDamageSummary.DuplicateCellSuppressedCount,
             burnDamageSummary.DamageAppliedTargetCount,
             burnDamageSummary.TotalDamageApplied,
+            storedGoodBurnSummary.ConsideredDeltaCount,
+            storedGoodBurnSummary.MatchedStorageCellCount,
+            storedGoodBurnSummary.DuplicateStorageTargetSuppressedCount,
+            storedGoodBurnSummary.BurnableStackCount,
+            storedGoodBurnSummary.DestroyedItemCount,
+            storedGoodBurnSummary.HazardousGoodCount,
+            storedGoodBurnSummary.SkippedNoInventoryApiCount,
+            storedGoodBurnSummary.SkippedUnknownResourceCount,
+            storedGoodBurnSummary.SkippedNonBurnableItemCount,
             alertCount,
             decisions.Select(static decision => decision.NewHeat).DefaultIfEmpty(0).Max());
     }
@@ -597,6 +628,15 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"burn_damage_duplicate_cells_suppressed={BurnDamageDuplicateCellSuppressedCount} " +
             $"burn_damage_applied_targets={BurnDamageAppliedTargetCount} " +
             $"burn_damage_total_damage_applied={BurnDamageTotalDamageApplied} " +
+            $"stored_good_burn_considered_deltas={StoredGoodBurnConsideredDeltaCount} " +
+            $"stored_good_burn_matched_storage_cells={StoredGoodBurnMatchedStorageCellCount} " +
+            $"stored_good_burn_duplicate_storage_targets_suppressed={StoredGoodBurnDuplicateStorageTargetSuppressedCount} " +
+            $"stored_good_burnable_stacks={StoredGoodBurnableStackCount} " +
+            $"stored_good_burn_destroyed_items={StoredGoodBurnDestroyedItemCount} " +
+            $"stored_good_burn_hazardous_goods={StoredGoodBurnHazardousGoodCount} " +
+            $"stored_good_burn_skipped_no_inventory_api={StoredGoodBurnSkippedNoInventoryApiCount} " +
+            $"stored_good_burn_skipped_unknown_resources={StoredGoodBurnSkippedUnknownResourceCount} " +
+            $"stored_good_burn_skipped_non_burnable_items={StoredGoodBurnSkippedNonBurnableItemCount} " +
             $"alerts={AlertCount} " +
             $"max_heat={MaxHeat}";
     }
@@ -612,6 +652,7 @@ public sealed class TimberbornFireDeltaConsumerSinks
         ITimberbornFireGameplayConsequenceSink? gameplayConsequenceSink = null,
         ITimberbornBuildingBurnoutConsequenceSink? buildingBurnoutConsequenceSink = null,
         ITimberbornBurnDamageSink? burnDamageSink = null,
+        ITimberbornStoredGoodBurnConsequenceSink? storedGoodBurnConsequenceSink = null,
         ITimberbornFireAlertSink? alertSink = null)
     {
         DebugVisualSink = debugVisualSink ?? NullTimberbornFireDebugVisualSink.Instance;
@@ -620,6 +661,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
         BuildingBurnoutConsequenceSink =
             buildingBurnoutConsequenceSink ?? NullTimberbornBuildingBurnoutConsequenceSink.Instance;
         BurnDamageSink = burnDamageSink ?? NullTimberbornBurnDamageSink.Instance;
+        StoredGoodBurnConsequenceSink =
+            storedGoodBurnConsequenceSink ?? NullTimberbornStoredGoodBurnConsequenceSink.Instance;
         AlertSink = alertSink ?? NullTimberbornFireAlertSink.Instance;
     }
 
@@ -632,6 +675,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornBuildingBurnoutConsequenceSink BuildingBurnoutConsequenceSink { get; }
 
     public ITimberbornBurnDamageSink BurnDamageSink { get; }
+
+    public ITimberbornStoredGoodBurnConsequenceSink StoredGoodBurnConsequenceSink { get; }
 
     public ITimberbornFireAlertSink AlertSink { get; }
 }

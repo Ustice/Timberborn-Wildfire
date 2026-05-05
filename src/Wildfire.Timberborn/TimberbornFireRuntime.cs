@@ -26,6 +26,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
+    private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -397,6 +398,15 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: deltaConsumerSummary.BuildingBurnoutAppliedConsequenceCount,
             LastPositiveBuildingBurnoutAppliedTick: fireSystem.LastPositiveBuildingBurnoutAppliedTick,
             LastPositiveBuildingBurnoutAppliedCount: fireSystem.LastPositiveBuildingBurnoutAppliedCount,
+            LastDeltaConsumerStoredGoodBurnConsideredDeltaCount: deltaConsumerSummary.StoredGoodBurnConsideredDeltaCount,
+            LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount: deltaConsumerSummary.StoredGoodBurnMatchedStorageCellCount,
+            LastDeltaConsumerStoredGoodBurnDuplicateStorageTargetSuppressedCount: deltaConsumerSummary.StoredGoodBurnDuplicateStorageTargetSuppressedCount,
+            LastDeltaConsumerStoredGoodBurnableStackCount: deltaConsumerSummary.StoredGoodBurnableStackCount,
+            LastDeltaConsumerStoredGoodBurnDestroyedItemCount: deltaConsumerSummary.StoredGoodBurnDestroyedItemCount,
+            LastDeltaConsumerStoredGoodBurnHazardousGoodCount: deltaConsumerSummary.StoredGoodBurnHazardousGoodCount,
+            LastDeltaConsumerStoredGoodBurnSkippedNoInventoryApiCount: deltaConsumerSummary.StoredGoodBurnSkippedNoInventoryApiCount,
+            LastDeltaConsumerStoredGoodBurnSkippedUnknownResourceCount: deltaConsumerSummary.StoredGoodBurnSkippedUnknownResourceCount,
+            LastDeltaConsumerStoredGoodBurnSkippedNonBurnableItemCount: deltaConsumerSummary.StoredGoodBurnSkippedNonBurnableItemCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -491,6 +501,11 @@ public sealed class TimberbornFireRuntime :
             targetProvider ?? throw new ArgumentNullException(nameof(targetProvider));
     }
 
+    public void AttachStoredGoodBurnInventoryApi(ITimberbornStoredGoodBurnInventoryApi inventoryApi)
+    {
+        _storedGoodBurnInventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
@@ -536,6 +551,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause");
         }
+        if (_storedGoodBurnInventoryApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -546,7 +565,10 @@ public sealed class TimberbornFireRuntime :
             alertSink: _playerFireAlerts,
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
                 ? null
-                : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi));
+                : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi),
+            storedGoodBurnConsequenceSink: _storedGoodBurnInventoryApi is null
+                ? null
+                : new TimberbornStoredGoodBurnConsequenceSink(_storedGoodBurnInventoryApi, logSink: _logSink));
     }
 
     private bool TryAllowExternalChange(string source, int? count)
