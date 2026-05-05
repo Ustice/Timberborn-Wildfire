@@ -31,6 +31,7 @@ public sealed class TimberbornFireRuntime :
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
     private ITimberbornDetonatorFireSafetyTargetApi? _detonatorFireSafetyTargetApi;
     private ITimberbornTunnelFireTargetApi? _tunnelFireTargetApi;
+    private ITimberbornPathInfrastructureFireTargetApi? _pathInfrastructureFireTargetApi;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -444,6 +445,15 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerTunnelFireSkippedNoSafeApiCount: deltaConsumerSummary.TunnelFireSkippedNoSafeApiCount,
             LastDeltaConsumerTunnelFireRecoverabilityPreservedCount: deltaConsumerSummary.TunnelFireRecoverabilityPreservedCount,
             LastDeltaConsumerTunnelFireRecoverabilityUnknownCount: deltaConsumerSummary.TunnelFireRecoverabilityUnknownCount,
+            LastDeltaConsumerPathInfrastructureConsideredDeltaCount: deltaConsumerSummary.PathInfrastructureConsideredDeltaCount,
+            LastDeltaConsumerPathInfrastructureMatchedTargetCellCount: deltaConsumerSummary.PathInfrastructureMatchedTargetCellCount,
+            LastDeltaConsumerPathInfrastructureDuplicateTargetSuppressedCount: deltaConsumerSummary.PathInfrastructureDuplicateTargetSuppressedCount,
+            LastDeltaConsumerPathInfrastructureZeroCostTargetCount: deltaConsumerSummary.PathInfrastructureZeroCostTargetCount,
+            LastDeltaConsumerPathInfrastructureDamagedTargetCount: deltaConsumerSummary.PathInfrastructureDamagedTargetCount,
+            LastDeltaConsumerPathInfrastructureBlockedTargetCount: deltaConsumerSummary.PathInfrastructureBlockedTargetCount,
+            LastDeltaConsumerPathInfrastructureSkippedNoSafeApiCount: deltaConsumerSummary.PathInfrastructureSkippedNoSafeApiCount,
+            LastDeltaConsumerPathInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.PathInfrastructureRepairEligibleTargetCount,
+            LastDeltaConsumerPathInfrastructureTotalDamageApplied: deltaConsumerSummary.PathInfrastructureTotalDamageApplied,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -558,6 +568,11 @@ public sealed class TimberbornFireRuntime :
         _tunnelFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
     }
 
+    public void AttachPathInfrastructureFireTargetApi(ITimberbornPathInfrastructureFireTargetApi targetApi)
+    {
+        _pathInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
@@ -620,6 +635,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=tunnel_fire");
         }
+        if (_pathInfrastructureFireTargetApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=path_infrastructure_fire");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -654,7 +673,12 @@ public sealed class TimberbornFireRuntime :
                 : new TimberbornTunnelFireSink(
                     () => TimberbornTunnelFireSettings.FromSnapshot(_releaseSettings.GetSnapshot()),
                     _tunnelFireTargetApi,
-                    _logSink));
+                    _logSink),
+            pathInfrastructureFireSink: _pathInfrastructureFireTargetApi is null
+                ? null
+                : new TimberbornPathInfrastructureFireSink(
+                    _pathInfrastructureFireTargetApi,
+                    logSink: _logSink));
     }
 
     private bool TryAllowExternalChange(string source, int? count)

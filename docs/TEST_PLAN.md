@@ -100,6 +100,8 @@ Automated coverage for `TWF-154` must prove the behavior setting gate, duplicate
 
 `TWF-075` keeps burn-damage state deterministic and Timberborn-local. Automated coverage should prove that static descriptors do not store per-instance damage, target registration owns the stable entity/cell mapping, and downstream consequence tickets can consume bounded state without adding host-owned spread rules.
 
+`TWF-127` adds the first path-infrastructure consequence lane. It consumes compact deltas as burn-damage units, resolves path-like targets, deduplicates by stable target id, calculates damage capacity from construction resources through `TimberbornBurnDamageCapacityCalculator`, treats zero-cost paths as non-burnable safe no-ops, and reports safe-unavailable passability mutation instead of blocking Timberborn paths. Live QA can accept either a safe damaged/repair-eligible target or an explicit `path_infrastructure_skipped_no_safe_api` result; path blocking must remain zero until a recoverable native pathing wrapper is proven.
+
 Run:
 
 ```bash

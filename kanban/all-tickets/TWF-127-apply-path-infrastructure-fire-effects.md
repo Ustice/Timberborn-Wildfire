@@ -65,3 +65,5 @@ Make fire damage path-like infrastructure in a bounded way without corrupting Ti
 
 - Keep path mutation separate from power, water, tunnel, and dynamite behavior.
 - Do not mutate Timberborn pathing unless the safe API and recovery path are proven.
+- 2026-05-05 worker: implemented the first path-infrastructure fire lane. Compact fire deltas now resolve path-like infrastructure targets, suppress duplicate cells by stable target id, calculate construction-resource burn capacity through the existing burn-damage capacity calculator, keep zero-cost paths as safe no-ops, and expose `path_infrastructure_*` telemetry plus QA status fields. The live Timberborn adapter currently reports safe-unavailable mutation instead of blocking passability.
+- 2026-05-05 worker learning: production `Wildfire.Timberborn` still compiles as C# 10, so collection expressions cannot be used in shipped adapter code even though tests may accept newer syntax.

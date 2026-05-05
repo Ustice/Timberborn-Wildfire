@@ -119,6 +119,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             _runtime.AttachDetonatorFireSafetyTargetApi(
                 new TimberbornDetonatorFireSafetyTargetApi(grid, _blockService));
             _runtime.AttachTunnelFireTargetApi(new TimberbornTunnelFireTargetApi(grid, _blockService));
+            _runtime.AttachPathInfrastructureFireTargetApi(
+                new TimberbornPathInfrastructureFireTargetApi(grid, _blockService));
             _runtime.Initialize(grid, sources, importResult.CompanionFields, importResult.Summary, _simulatorFactory);
             _initialized = true;
             _logSink.Info(
