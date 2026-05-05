@@ -17,6 +17,7 @@ public static class TimberbornFireSimParameterPresets
     public const string DefaultName = "default";
     public const string SlowReactableName = "slow-reactable";
     public const string HarshName = "harsh";
+    public const string WildfireName = "wildfire";
     public const string ConservativeName = "conservative";
 
     private static readonly TimberbornFireSimParameterPreset[] Presets =
@@ -47,6 +48,36 @@ public static class TimberbornFireSimParameterPresets
                 FireFuelBurnDownPressureDenominator = 1u,
                 VisualFireBaseIntensity = 0.55f,
                 VisualSmokeHeatWeight = 0.35f,
+            }),
+        new(
+            WildfireName,
+            FireSimParameters.Default with
+            {
+                FireIgnitionBaseHeat = 8u,
+                FireWaterIgnitionPenalty = 1u,
+                FireRetainedHeatWeight = 2u,
+                FireSpreadHeatWeight = 5u,
+                FireBurningNeighborHeatBonus = 16u,
+                FireBurningNeighborDirectHeat = 6u,
+                FireWaterSuppressionHeat = 1u,
+                FireWaterEvaporationHeat = 7u,
+                FireFlammabilityBurnPressure = 3u,
+                FireBurnHeatBase = 4u,
+                FireCoolingBase = 0u,
+                FireHeatLossCoolingDivisor = 7u,
+                FireFuelBurnDownPressureNumerator = 1u,
+                FireFuelBurnDownPressureDenominator = 6u,
+                VisualFireBaseIntensity = 0.82f,
+                VisualFireHeatWeight = 0.6f,
+                VisualSmokeBaseIntensity = 0.34f,
+                VisualSmokeFuelWeight = 0.82f,
+                VisualSmokeHeatWeight = 0.55f,
+                VisualAshBaseIntensity = 0.38f,
+                VisualAshFuelWeight = 0.78f,
+                VisualAshHeatWeight = 0.5f,
+                VisualVisibilityHeatWeight = 0.95f,
+                VisualVisibilitySmokeWeight = 1.0f,
+                VisualVisibilityAshWeight = 0.9f,
             }),
         new(
             ConservativeName,

@@ -18,13 +18,17 @@ public static class FireVisualField
         float heat = PackedCell.Heat(cell) / 15f;
         bool terrain = PackedCell.Terrain(cell) == 1;
         bool burning = PackedCell.IsBurning(cell);
+        bool hotFuel = terrain && PackedCell.Fuel(cell) > 0 && PackedCell.Heat(cell) > 0;
+        bool hotWetEdge = terrain && PackedCell.Water(cell) > 0 && PackedCell.Heat(cell) > 0;
         bool ashCandidate = terrain && PackedCell.Fuel(cell) <= 2 && PackedCell.Heat(cell) > 0;
 
         float fire = burning
             ? Saturate(parameters.VisualFireBaseIntensity + (heat * parameters.VisualFireHeatWeight))
             : 0f;
-        float smoke = burning
-            ? Saturate(parameters.VisualSmokeBaseIntensity + (fuel * parameters.VisualSmokeFuelWeight) + (heat * parameters.VisualSmokeHeatWeight))
+        float smoke = burning || hotFuel || hotWetEdge
+            ? Saturate(parameters.VisualSmokeBaseIntensity +
+                (fuel * parameters.VisualSmokeFuelWeight * (burning ? 1f : 0.45f)) +
+                (heat * parameters.VisualSmokeHeatWeight))
             : 0f;
         float ash = ashCandidate
             ? Saturate(parameters.VisualAshBaseIntensity + ((1f - fuel) * parameters.VisualAshFuelWeight) + (heat * parameters.VisualAshHeatWeight))

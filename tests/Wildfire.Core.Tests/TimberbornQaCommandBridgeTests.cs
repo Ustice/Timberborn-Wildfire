@@ -483,6 +483,7 @@ public sealed class TimberbornQaCommandBridgeTests
 
     [Theory]
     [InlineData("qa-delta-stimulus tree", "tree")]
+    [InlineData("qa-delta-stimulus selected-tree", "selected-tree")]
     [InlineData("qa-water-suppression-stimulus storage", "storage")]
     public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)
     {
@@ -590,7 +591,7 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueQaDeltaStimulusRegistersExactlyOneImportedTargetHeatChange()
+    public void QueueQaDeltaStimulusRegistersExactlyOneImportedTargetIgnitionChange()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
@@ -608,13 +609,42 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(change.SetCell);
         Assert.Null(change.AddHeat);
         Assert.Null(change.AddFuel);
-        Assert.Null(change.SetWater);
-        Assert.Null(change.SetFuel);
+        Assert.Equal((byte)0, change.SetWater);
+        Assert.Equal((byte)15, change.SetFuel);
         Assert.Equal((byte)15, change.SetHeat);
-        Assert.Null(change.SetFlammability);
-        Assert.Null(change.SetHeatLoss);
-        Assert.Null(change.SetTerrain);
+        Assert.Equal((byte)3, change.SetFlammability);
+        Assert.Equal((byte)1, change.SetHeatLoss);
+        Assert.Equal((byte)1, change.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void QueueQaSelectedTreeDeltaStimulusRegistersSelectedImportedTreeHeatChange()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(1, 1, 0, companionTargetId: 11u),
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaSelectedTreeDeltaStimulus(
+            new RecordingSelectedTreeTargetProvider(38));
+
+        Assert.Equal(TimberbornQaFieldTargetSelectors.SelectedTree, result.TargetSelector);
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Tree, result.MaterialClass);
+        Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Contains(simulator.RegisteredChanges, static change => change.CellIndex == 38);
+        Assert.All(simulator.RegisteredChanges, static change =>
+        {
+            Assert.Equal((byte)15, change.SetHeat);
+            Assert.Equal((byte)15, change.SetFuel);
+            Assert.Equal((byte)3, change.SetFlammability);
+            Assert.Equal((byte)1, change.SetHeatLoss);
+            Assert.Equal((byte)1, change.SetTerrain);
+            Assert.Equal((byte)0, change.SetWater);
+        });
+        Assert.Equal(simulator.RegisteredChanges.Count, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
     [Fact]
@@ -1225,7 +1255,7 @@ public sealed class TimberbornQaCommandBridgeTests
             .Select(static preset => preset.Name)
             .ToArray();
 
-        Assert.Equal(["default", "slow-reactable", "harsh", "conservative"], names);
+        Assert.Equal(["default", "slow-reactable", "harsh", "wildfire", "conservative"], names);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("slow-reactable", out TimberbornFireSimParameterPreset? preset));
         Assert.Equal(12u, preset.Parameters.FireIgnitionBaseHeat);
         Assert.Equal(3u, preset.Parameters.FireBurningNeighborHeatBonus);
@@ -1357,6 +1387,21 @@ public sealed class TimberbornQaCommandBridgeTests
         public void Warning(string message)
         {
             WarningMessages.Add(message);
+        }
+    }
+
+    private sealed class RecordingSelectedTreeTargetProvider(int selectedCellIndex)
+        : ITimberbornQaSelectedTreeTargetProvider
+    {
+        public TimberbornImportedFieldTarget FindSelectedTreeTarget(
+            FireGrid grid,
+            IReadOnlyList<TimberbornImportedFieldTarget> importedTargets)
+        {
+            return importedTargets
+                .Where(target => target.CellIndex == selectedCellIndex)
+                .Select(static target => (TimberbornImportedFieldTarget?)target)
+                .FirstOrDefault() ??
+                throw new InvalidOperationException("Expected selected imported target was not found.");
         }
     }
 

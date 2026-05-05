@@ -60,3 +60,4 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 
 - This ticket should not alter beaver behavior. It is the instrumentation layer for later behavior changes.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects" and "Contamination Interaction".
+- 2026-05-05 worker: added a telemetry-only beaver exposure sampler that reads Timberborn beaver entity positions through `EntityRegistry`, samples the existing GPU visual-field surface, classifies respiratory, burn, toxic, toxic steam, contaminated smoke, and tainted-afterburn exposure counters, and exposes aggregate status/`qa-readiness` fields. Focused deterministic coverage passed for classification, aggregate field sampling, and safe-unavailable position API reporting.

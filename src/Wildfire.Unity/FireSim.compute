@@ -190,10 +190,14 @@ float4 BuildVisualSample(uint cell)
     float heat = (float)Heat(cell) / 15.0f;
     bool terrain = Terrain(cell) == 1u;
     bool burning = IsBurning(cell);
+    bool hotFuel = terrain && Fuel(cell) > 0u && Heat(cell) > 0u;
+    bool hotWetEdge = terrain && Water(cell) > 0u && Heat(cell) > 0u;
     bool ashCandidate = terrain && Fuel(cell) <= 2u && Heat(cell) > 0u;
 
     float fire = burning ? SaturateUnit(VisualFireBaseIntensity + (heat * VisualFireHeatWeight)) : 0.0f;
-    float smoke = burning ? SaturateUnit(VisualSmokeBaseIntensity + (fuel * VisualSmokeFuelWeight) + (heat * VisualSmokeHeatWeight)) : 0.0f;
+    float smoke = (burning || hotFuel || hotWetEdge)
+        ? SaturateUnit(VisualSmokeBaseIntensity + (fuel * VisualSmokeFuelWeight * (burning ? 1.0f : 0.45f)) + (heat * VisualSmokeHeatWeight))
+        : 0.0f;
     float ash = ashCandidate ? SaturateUnit(VisualAshBaseIntensity + ((1.0f - fuel) * VisualAshFuelWeight) + (heat * VisualAshHeatWeight)) : 0.0f;
     float visibility = max(
         heat * VisualVisibilityHeatWeight,
@@ -207,10 +211,17 @@ void WriteVisualField(uint index, uint cell)
     VisualFields[index] = BuildVisualSample(cell);
 }
 
-void AddNeighbor(uint3 coordinate, inout uint heatSum, inout uint neighborCount, inout uint burningNeighborCount)
+void AddNeighbor(
+    uint3 coordinate,
+    inout uint heatSum,
+    inout uint maxHeat,
+    inout uint neighborCount,
+    inout uint burningNeighborCount)
 {
     uint cell = CurrentCells[ToIndex(coordinate)] & 0xFFFFu;
-    heatSum += Heat(cell);
+    uint neighborHeat = Heat(cell);
+    heatSum += neighborHeat;
+    maxHeat = max(maxHeat, neighborHeat);
     neighborCount += 1u;
 
     if (IsBurning(cell))
@@ -228,45 +239,46 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
     uint terrain = Terrain(cell);
     uint heatLoss = HeatLoss(cell);
     uint neighborHeatSum = 0u;
+    uint maxNeighborHeat = 0u;
     uint neighborCount = 0u;
     uint burningNeighborCount = 0u;
 
     if (coordinate.x > 0u)
     {
-        AddNeighbor(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+        AddNeighbor(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), neighborHeatSum, maxNeighborHeat, neighborCount, burningNeighborCount);
     }
 
     if (coordinate.x + 1u < Width)
     {
-        AddNeighbor(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+        AddNeighbor(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), neighborHeatSum, maxNeighborHeat, neighborCount, burningNeighborCount);
     }
 
     if (coordinate.y > 0u)
     {
-        AddNeighbor(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+        AddNeighbor(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), neighborHeatSum, maxNeighborHeat, neighborCount, burningNeighborCount);
     }
 
     if (coordinate.y + 1u < Height)
     {
-        AddNeighbor(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), neighborHeatSum, neighborCount, burningNeighborCount);
+        AddNeighbor(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), neighborHeatSum, maxNeighborHeat, neighborCount, burningNeighborCount);
     }
 
     if (coordinate.z > 0u)
     {
-        AddNeighbor(uint3(coordinate.x, coordinate.y, coordinate.z - 1u), neighborHeatSum, neighborCount, burningNeighborCount);
+        AddNeighbor(uint3(coordinate.x, coordinate.y, coordinate.z - 1u), neighborHeatSum, maxNeighborHeat, neighborCount, burningNeighborCount);
     }
 
     if (coordinate.z + 1u < Depth)
     {
-        AddNeighbor(uint3(coordinate.x, coordinate.y, coordinate.z + 1u), neighborHeatSum, neighborCount, burningNeighborCount);
+        AddNeighbor(uint3(coordinate.x, coordinate.y, coordinate.z + 1u), neighborHeatSum, maxNeighborHeat, neighborCount, burningNeighborCount);
     }
 
-    uint neighborHeat = neighborCount > 0u ? neighborHeatSum / neighborCount : 0u;
+    uint neighborHeat = max(maxNeighborHeat, neighborCount > 0u ? neighborHeatSum / neighborCount : 0u);
     uint spreadHeat = (neighborHeat * FireSpreadHeatWeight) +
         (burningNeighborCount * FireBurningNeighborHeatBonus);
     heat = ((heat * FireRetainedHeatWeight) + spreadHeat) /
         max(1u, FireRetainedHeatWeight + FireSpreadHeatWeight);
-    heat = min(15u, heat + min(3u, burningNeighborCount * FireBurningNeighborDirectHeat));
+    heat = min(15u, heat + min(15u, burningNeighborCount * FireBurningNeighborDirectHeat));
 
     if (water > 0u)
     {

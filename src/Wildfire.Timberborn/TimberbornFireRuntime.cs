@@ -1,5 +1,7 @@
 using Timberborn.SingletonSystem;
 using Timberborn.QuickNotificationSystem;
+using Timberborn.EntitySystem;
+using Timberborn.SelectionSystem;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -22,6 +24,8 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornPooledFireSmokeAshEffectSink _pooledFireEffects;
     private readonly TimberbornPlayerFireAlertSink _playerFireAlerts;
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
+    private readonly TimberbornBeaverFieldExposureTelemetry _beaverFieldExposureTelemetry;
+    private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
@@ -46,6 +50,8 @@ public sealed class TimberbornFireRuntime :
 
     public TimberbornFireRuntime(
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
+        EntityRegistry entityRegistry,
+        EntitySelectionService entitySelectionService,
         QuickNotificationService quickNotificationService,
         TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,
         WildfireReleaseSettings releaseSettings,
@@ -60,13 +66,21 @@ public sealed class TimberbornFireRuntime :
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
-            _logSink);
+            _logSink,
+            TimberbornGpuFieldRendererOptions.Default,
+            NullTimberbornGpuFieldRendererPresenter.Instance);
         _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
             visualFieldSurface,
             _logSink);
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
             _logSink);
+        _beaverFieldExposureTelemetry = new TimberbornBeaverFieldExposureTelemetry(
+            new TimberbornEntityRegistryBeaverPositionProvider(entityRegistry),
+            visualFieldSurface,
+            _logSink);
+        _selectedTreeTargetProvider = new TimberbornSelectedTreeTargetProvider(
+            entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService)));
     }
 
     public void Load()
@@ -234,7 +248,10 @@ public sealed class TimberbornFireRuntime :
 
     public TimberbornQaDeltaStimulusResult QueueDeltaStimulus(string targetSelector)
     {
-        TimberbornQaDeltaStimulusResult result = RequireFireSystem().QueueQaDeltaStimulus(targetSelector);
+        string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
+        TimberbornQaDeltaStimulusResult result = normalizedSelector == TimberbornQaFieldTargetSelectors.SelectedTree
+            ? RequireFireSystem().QueueQaSelectedTreeDeltaStimulus(_selectedTreeTargetProvider)
+            : RequireFireSystem().QueueQaDeltaStimulus(normalizedSelector);
         _logSink.Info(
             "wildfire_timberborn_qa_delta_stimulus_queued " +
             $"target_selector={result.TargetSelector} " +
@@ -381,6 +398,9 @@ public sealed class TimberbornFireRuntime :
         TimberbornPooledFireEffectCounters pooledEffectCounters = _pooledFireEffects.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
+        TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.Sample(
+            new FireGrid(fireSystem.Width!.Value, fireSystem.Height!.Value, fireSystem.Depth!.Value),
+            fireSystem.LastTick);
 
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
@@ -515,6 +535,17 @@ public sealed class TimberbornFireRuntime :
             GpuFieldRendererInvisibleRegionCount: gpuFieldRendererCounters.InvisibleRegionCount,
             GpuFieldRendererMaterialFailureCount: gpuFieldRendererCounters.MaterialFailureCount,
             GpuFieldRendererLastUpdatedTick: gpuFieldRendererCounters.LastUpdatedTick,
+            BeaverFieldExposureAvailable: beaverExposure.IsAvailable,
+            BeaverFieldExposureSampledBeavers: beaverExposure.SampledBeavers,
+            BeaverFieldExposureExposedBeavers: beaverExposure.ExposedBeavers,
+            BeaverFieldExposureRespiratoryCells: beaverExposure.RespiratoryExposureCells,
+            BeaverFieldExposureBurnCells: beaverExposure.BurnExposureCells,
+            BeaverFieldExposureContaminatedSmokeCells: beaverExposure.ContaminatedSmokeCells,
+            BeaverFieldExposureToxicCells: beaverExposure.ToxicExposureCells,
+            BeaverFieldExposureToxicSteamCells: beaverExposure.ToxicSteamCells,
+            BeaverFieldExposureTaintedAftermathCells: beaverExposure.TaintedAftermathCells,
+            BeaverFieldExposureSkippedNoPositionApi: beaverExposure.SkippedNoPositionApi,
+            BeaverFieldExposureUnavailableReason: beaverExposure.UnavailableReason,
             ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,
             UpdatedVisualRegionCount: pooledEffectCounters.UpdatedVisualRegionCount,
             LastNonZeroUpdatedVisualRegionCount: pooledEffectCounters.LastNonZeroUpdatedVisualRegionCount,

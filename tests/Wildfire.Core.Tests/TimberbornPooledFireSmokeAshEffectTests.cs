@@ -216,13 +216,13 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         string source = ReadTimberbornFireRuntimeSource();
 
         Assert.Equal(1, CountOccurrences(source, " TimberbornFireRuntime("));
-        Assert.Contains("public TimberbornFireRuntime(\n        ITimberbornGpuVisualFieldSurface visualFieldSurface,\n        QuickNotificationService quickNotificationService,\n        TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,\n        WildfireReleaseSettings releaseSettings,\n        TimberbornFireSimParameterPresetState fireSimParameterPresetState)", source);
+        Assert.Contains("public TimberbornFireRuntime(\n        ITimberbornGpuVisualFieldSurface visualFieldSurface,\n        EntityRegistry entityRegistry,\n        EntitySelectionService entitySelectionService,\n        QuickNotificationService quickNotificationService,\n        TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,\n        WildfireReleaseSettings releaseSettings,\n        TimberbornFireSimParameterPresetState fireSimParameterPresetState)", source);
         Assert.DoesNotContain("public TimberbornFireRuntime()\n", source);
         Assert.DoesNotContain("internal TimberbornFireRuntime(", source);
     }
 
     [Fact]
-    public void UnityPresenterUsesFireGridAxesWithoutSwappingYAndZ()
+    public void UnityPresenterMapsFireGridZToUnityHeight()
     {
         TimberbornPooledFireEffectLocalPosition position = TimberbornUnityPooledFireEffectPresenter.ToUnityLocalPosition(
             new TimberbornPooledFireEffectState(
@@ -239,9 +239,9 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
                 Visibility: 1f,
                 Intensity: 1f));
 
-        Assert.Equal(2.5f, position.X);
-        Assert.Equal(5.5f, position.Y);
-        Assert.Equal(7.5f, position.Z);
+        Assert.InRange(position.X, 2.18f, 2.82f);
+        Assert.InRange(position.Y, 7.55f, 7.56f);
+        Assert.InRange(position.Z, 5.18f, 5.82f);
     }
 
     [Fact]

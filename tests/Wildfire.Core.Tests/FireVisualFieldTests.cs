@@ -57,6 +57,18 @@ public sealed class FireVisualFieldTests
     }
 
     [Fact]
+    public void VisualSampleShowsSmokeForHotEdgeFuelBeforeIgnition()
+    {
+        ushort cell = PackedCell.Pack(fuel: 12, heat: 4, flammability: 2, water: 0, terrain: 1, heatLoss: 1);
+
+        FireVisualSample sample = FireVisualField.FromPackedCell(cell);
+
+        Assert.Equal(0f, sample.Fire);
+        Assert.True(sample.Smoke > 0.3f);
+        Assert.True(sample.Visibility > 0.25f);
+    }
+
+    [Fact]
     public void VisualSampleApproximatesAshOnlyFromTerrainLowFuelAndResidualHeat()
     {
         ushort spentTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 1, heatLoss: 2);

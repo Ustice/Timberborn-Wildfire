@@ -140,6 +140,8 @@ Automated coverage for downstream implementation tickets must prove:
 - Safe no-op counters identify missing pathing, status, incapacitation, contamination, and death APIs.
 - Player feedback aggregates beaver danger instead of emitting one alert per beaver per tick.
 
+`TWF-072` adds the first telemetry-only bridge. `status` and `qa-readiness` should include `beaver_field_exposure_available`, `beaver_field_exposure_sampled_beavers`, `beaver_field_exposure_exposed_beavers`, `beaver_field_exposure_respiratory_cells`, `beaver_field_exposure_burn_cells`, `beaver_field_exposure_contaminated_smoke_cells`, `beaver_field_exposure_toxic_cells`, `beaver_field_exposure_toxic_steam_cells`, `beaver_field_exposure_tainted_aftermath_cells`, `beaver_field_exposure_skipped_no_position_api`, and `beaver_field_exposure_unavailable_reason`. This pass is telemetry-only; it must not alter beaver pathing, work, health, contamination, or the simulation grid.
+
 Live QA for the first accepted beaver behavior must use a real fire or suppression event, then capture `status` or `qa-readiness` fields showing nonzero exposure telemetry for at least one field class. If an implementation applies a native debuff, the evidence must also show the matching safe wrapper result and recovery path.
 
 ## Release Log Noise Policy

@@ -775,6 +775,8 @@ public static class TimberbornQaFieldTargetSelectors
 {
     public const string Default = "burnable";
     public const string Tree = "tree";
+    public const string SelectedTree = "selected-tree";
+    public const string CenterTree = "center-tree";
     public const string Vegetation = "vegetation";
     public const string Crop = "crop";
     public const string Storage = "storage";
@@ -784,6 +786,8 @@ public static class TimberbornQaFieldTargetSelectors
     {
         Default,
         Tree,
+        SelectedTree,
+        CenterTree,
         Vegetation,
         Crop,
         Storage,
@@ -811,6 +815,8 @@ public static class TimberbornQaFieldTargetSelectors
         {
             Default => true,
             Tree => materialClass == WildfireMaterialClass.Tree,
+            SelectedTree => materialClass == WildfireMaterialClass.Tree,
+            CenterTree => materialClass == WildfireMaterialClass.Tree,
             Vegetation => materialClass == WildfireMaterialClass.Vegetation,
             Crop => materialClass == WildfireMaterialClass.Crop,
             Storage => materialClass == WildfireMaterialClass.Storage,
@@ -1059,6 +1065,17 @@ public sealed record TimberbornQaCommandState(
     int? GpuFieldRendererInvisibleRegionCount = null,
     int? GpuFieldRendererMaterialFailureCount = null,
     uint? GpuFieldRendererLastUpdatedTick = null,
+    bool BeaverFieldExposureAvailable = false,
+    int? BeaverFieldExposureSampledBeavers = null,
+    int? BeaverFieldExposureExposedBeavers = null,
+    int? BeaverFieldExposureRespiratoryCells = null,
+    int? BeaverFieldExposureBurnCells = null,
+    int? BeaverFieldExposureContaminatedSmokeCells = null,
+    int? BeaverFieldExposureToxicCells = null,
+    int? BeaverFieldExposureToxicSteamCells = null,
+    int? BeaverFieldExposureTaintedAftermathCells = null,
+    int? BeaverFieldExposureSkippedNoPositionApi = null,
+    string? BeaverFieldExposureUnavailableReason = null,
     int? ActivePooledFireEffectCount = null,
     int? UpdatedVisualRegionCount = null,
     int? LastNonZeroUpdatedVisualRegionCount = null,
@@ -1277,6 +1294,17 @@ public sealed record TimberbornQaCommandResult(
         $"gpu_field_renderer_invisible_regions={FormatNumber(State.GpuFieldRendererInvisibleRegionCount)} " +
         $"gpu_field_renderer_material_failures={FormatNumber(State.GpuFieldRendererMaterialFailureCount)} " +
         $"gpu_field_renderer_updated_tick={FormatNumber(State.GpuFieldRendererLastUpdatedTick)} " +
+        $"beaver_field_exposure_available={State.BeaverFieldExposureAvailable.ToString().ToLowerInvariant()} " +
+        $"beaver_field_exposure_sampled_beavers={FormatNumber(State.BeaverFieldExposureSampledBeavers)} " +
+        $"beaver_field_exposure_exposed_beavers={FormatNumber(State.BeaverFieldExposureExposedBeavers)} " +
+        $"beaver_field_exposure_respiratory_cells={FormatNumber(State.BeaverFieldExposureRespiratoryCells)} " +
+        $"beaver_field_exposure_burn_cells={FormatNumber(State.BeaverFieldExposureBurnCells)} " +
+        $"beaver_field_exposure_contaminated_smoke_cells={FormatNumber(State.BeaverFieldExposureContaminatedSmokeCells)} " +
+        $"beaver_field_exposure_toxic_cells={FormatNumber(State.BeaverFieldExposureToxicCells)} " +
+        $"beaver_field_exposure_toxic_steam_cells={FormatNumber(State.BeaverFieldExposureToxicSteamCells)} " +
+        $"beaver_field_exposure_tainted_aftermath_cells={FormatNumber(State.BeaverFieldExposureTaintedAftermathCells)} " +
+        $"beaver_field_exposure_skipped_no_position_api={FormatNumber(State.BeaverFieldExposureSkippedNoPositionApi)} " +
+        $"beaver_field_exposure_unavailable_reason={TimberbornQaCommandBridge.FormatToken(State.BeaverFieldExposureUnavailableReason)} " +
         $"active_pooled_fire_effects={FormatNumber(State.ActivePooledFireEffectCount)} " +
         $"updated_visual_regions={FormatNumber(State.UpdatedVisualRegionCount)} " +
         $"last_nonzero_updated_visual_regions={FormatNumber(State.LastNonZeroUpdatedVisualRegionCount)} " +

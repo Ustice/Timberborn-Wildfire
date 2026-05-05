@@ -14,8 +14,8 @@ public sealed class TimberbornPooledFireEffectOptions
     public static readonly TimberbornPooledFireEffectOptions Default = new();
 
     public TimberbornPooledFireEffectOptions(
-        int MaxActiveEffects = 64,
-        int MaxUpdatedVisualRegionsPerDispatch = 128,
+        int MaxActiveEffects = 256,
+        int MaxUpdatedVisualRegionsPerDispatch = 512,
         float MinimumVisibleIntensity = 0.01f)
     {
         if (MaxActiveEffects <= 0)
@@ -435,7 +435,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             X: x,
             Y: y,
             Z: z,
-            Kind: SelectKind(fire, smoke, ash),
+            Kind: SelectKind(sample.CellIndex, fire, smoke, ash),
             Fire: fire,
             Smoke: smoke,
             Ash: ash,
@@ -444,8 +444,13 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         return true;
     }
 
-    private static TimberbornPooledFireEffectKind SelectKind(float fire, float smoke, float ash)
+    private static TimberbornPooledFireEffectKind SelectKind(int cellIndex, float fire, float smoke, float ash)
     {
+        if (smoke > 0.35f && fire > 0.2f && smoke >= fire * 0.6f && Hash01(cellIndex, 29) < 0.34f)
+        {
+            return TimberbornPooledFireEffectKind.Smoke;
+        }
+
         if (fire >= smoke && fire >= ash)
         {
             return TimberbornPooledFireEffectKind.Fire;
@@ -469,6 +474,21 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
     private static float Clamp01(float value)
     {
         return Math.Clamp(value, 0f, 1f);
+    }
+
+    private static float Hash01(int cellIndex, int salt)
+    {
+        unchecked
+        {
+            uint value = (uint)cellIndex;
+            value ^= (uint)salt * 0x9E3779B9u;
+            value ^= value >> 16;
+            value *= 0x7FEB352Du;
+            value ^= value >> 15;
+            value *= 0x846CA68Bu;
+            value ^= value >> 16;
+            return (value & 0xFFFFu) / 65535f;
+        }
     }
 
     private static string FormatNumber(uint? value)
@@ -534,6 +554,7 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         instance.SetActive(true);
         TimberbornPooledFireEffectLocalPosition position = ToUnityLocalPosition(state);
         instance.transform.localPosition = new Vector3(position.X, position.Y, position.Z);
+        instance.transform.localScale = Vector3.one;
         _lastNativeEffectPrefabName = resolution.PrefabName;
         return TimberbornPooledFireEffectPresentationResult.Applied(resolution.PrefabName);
     }
@@ -565,7 +586,19 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
 
     public static TimberbornPooledFireEffectLocalPosition ToUnityLocalPosition(TimberbornPooledFireEffectState state)
     {
-        return new TimberbornPooledFireEffectLocalPosition(state.X + 0.5f, state.Y + 0.5f, state.Z + 0.5f);
+        float jitterRadius = state.Kind == TimberbornPooledFireEffectKind.Smoke ? 0.42f : 0.32f;
+        float jitterX = (Hash01(state.CellIndex, 11) - 0.5f) * jitterRadius * 2f;
+        float jitterZ = (Hash01(state.CellIndex, 23) - 0.5f) * jitterRadius * 2f;
+        float verticalLift = state.Kind switch
+        {
+            TimberbornPooledFireEffectKind.Smoke => 0.45f,
+            TimberbornPooledFireEffectKind.Ash => 0.2f,
+            _ => 0.05f,
+        };
+        return new TimberbornPooledFireEffectLocalPosition(
+            state.X + 0.5f + jitterX,
+            state.Z + 0.5f + verticalLift,
+            state.Y + 0.5f + jitterZ);
     }
 
     public static bool CanReuseInstance(
@@ -628,7 +661,9 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             return resolution;
         }
 
-        resolution = TimberbornNativeFireEffectPrefabCatalog.Resolve(kind);
+        resolution = kind == TimberbornPooledFireEffectKind.Fire
+            ? TimberbornNativeFireEffectPrefabCatalog.Resolve(kind)
+            : TimberbornProceduralSmokeEffectPrefabCatalog.Resolve(kind);
         _resolutionByKind[kind] = resolution;
         if (resolution.IsResolved)
         {
@@ -655,10 +690,100 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             : value.Replace(' ', '_').Replace('"', '\'');
     }
 
+    private static float Hash01(int cellIndex, int salt)
+    {
+        unchecked
+        {
+            uint value = (uint)cellIndex;
+            value ^= (uint)salt * 0x9E3779B9u;
+            value ^= value >> 16;
+            value *= 0x7FEB352Du;
+            value ^= value >> 15;
+            value *= 0x846CA68Bu;
+            value ^= value >> 16;
+            return (value & 0xFFFFu) / 65535f;
+        }
+    }
+
     private sealed record TimberbornPooledFireEffectInstance(
         GameObject GameObject,
         TimberbornPooledFireEffectKind Kind,
         string? PrefabName);
+}
+
+public static class TimberbornProceduralSmokeEffectPrefabCatalog
+{
+    public static TimberbornNativeFireEffectPrefabResolution Resolve(TimberbornPooledFireEffectKind kind)
+    {
+        GameObject prefab = CreatePrefab(kind);
+        return new TimberbornNativeFireEffectPrefabResolution(
+            IsResolved: true,
+            Prefab: prefab,
+            PrefabName: prefab.name,
+            PreferredNames: new[] { prefab.name });
+    }
+
+    private static GameObject CreatePrefab(TimberbornPooledFireEffectKind kind)
+    {
+        GameObject prefab = new($"WildfireProcedural{kind}Particles")
+        {
+            hideFlags = HideFlags.DontSave,
+        };
+        prefab.SetActive(false);
+
+        ParticleSystem particleSystem = prefab.AddComponent<ParticleSystem>();
+        ParticleSystem.MainModule main = particleSystem.main;
+        main.loop = true;
+        main.playOnAwake = true;
+        main.duration = 3f;
+        main.startLifetime = kind == TimberbornPooledFireEffectKind.Smoke ? 2.4f : 1.8f;
+        main.startSpeed = kind == TimberbornPooledFireEffectKind.Smoke ? 0.55f : 0.25f;
+        main.startSize = kind == TimberbornPooledFireEffectKind.Smoke ? 0.95f : 0.55f;
+        main.startColor = kind == TimberbornPooledFireEffectKind.Smoke
+            ? new ParticleSystem.MinMaxGradient(new Color(0.78f, 0.78f, 0.72f, 0.62f))
+            : new ParticleSystem.MinMaxGradient(new Color(0.42f, 0.42f, 0.39f, 0.46f));
+        main.simulationSpace = ParticleSystemSimulationSpace.Local;
+
+        ParticleSystem.EmissionModule emission = particleSystem.emission;
+        emission.enabled = true;
+        emission.rateOverTime = kind == TimberbornPooledFireEffectKind.Smoke ? 16f : 8f;
+
+        ParticleSystem.ShapeModule shape = particleSystem.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Sphere;
+        shape.radius = kind == TimberbornPooledFireEffectKind.Smoke ? 0.45f : 0.28f;
+
+        ParticleSystem.ColorOverLifetimeModule colorOverLifetime = particleSystem.colorOverLifetime;
+        colorOverLifetime.enabled = true;
+        Gradient gradient = new();
+        Color start = kind == TimberbornPooledFireEffectKind.Smoke
+            ? new Color(0.9f, 0.9f, 0.84f, 0.62f)
+            : new Color(0.46f, 0.46f, 0.42f, 0.42f);
+        Color end = kind == TimberbornPooledFireEffectKind.Smoke
+            ? new Color(0.62f, 0.62f, 0.58f, 0f)
+            : new Color(0.32f, 0.32f, 0.3f, 0f);
+        gradient.SetKeys(
+            new[] { new GradientColorKey(start, 0f), new GradientColorKey(end, 1f) },
+            new[] { new GradientAlphaKey(start.a, 0f), new GradientAlphaKey(0f, 1f) });
+        colorOverLifetime.color = gradient;
+
+        ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particleSystem.sizeOverLifetime;
+        sizeOverLifetime.enabled = true;
+        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.55f, 1f, 1.45f));
+
+        ParticleSystemRenderer renderer = prefab.GetComponent<ParticleSystemRenderer>();
+        renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        Shader? shader = Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default");
+        if (shader is not null)
+        {
+            renderer.sharedMaterial = new Material(shader)
+            {
+                hideFlags = HideFlags.DontSave,
+            };
+        }
+
+        return prefab;
+    }
 }
 
 public sealed record TimberbornNativeFireEffectPrefabResolution(

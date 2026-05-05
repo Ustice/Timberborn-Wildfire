@@ -81,6 +81,14 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BaseComponentSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.Beavers">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Beavers.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.SelectionSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SelectionSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.TerrainSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TerrainSystem.dll</HintPath>
       <Private>false</Private>
@@ -91,6 +99,10 @@
     </Reference>
     <Reference Include="UnityEngine.AssetBundleModule">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.ParticleSystemModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UIElementsModule">
