@@ -18,36 +18,41 @@ const packCompanion = (material: number, burnCapacity: number, ashQuality: numbe
 
 describe("export-timberborn-map-fixture", () => {
   test("maps Timberborn terrain and entities into shader fixture packed cells", () => {
-    const { fixture, summary } = buildFixtureFromWorld({
-      Entities: [
-        {
-          Components: {
-            BlockObject: { Coordinates: { X: 1, Y: 0, Z: 1 } },
-            LivingNaturalResource: {},
+    const { fixture, summary } = buildFixtureFromWorld(
+      {
+        Entities: [
+          {
+            Components: {
+              BlockObject: { Coordinates: { X: 1, Y: 0, Z: 1 } },
+              LivingNaturalResource: {},
+            },
+            Template: "Pine",
           },
-          Template: "Pine",
-        },
-        {
-          Components: {
-            BlockObject: { Coordinates: { X: 0, Y: 1, Z: 0 } },
+          {
+            Components: {
+              BlockObject: { Coordinates: { X: 0, Y: 1, Z: 0 } },
+            },
+            Template: "Path",
           },
-          Template: "Path",
-        },
-      ],
-      Singletons: {
-        MapSize: { Size: { X: 2, Y: 2 } },
-        TerrainMap: {
-          Voxels: {
-            Array: "1 0 0 0 0 0 0 0",
+        ],
+        Singletons: {
+          MapSize: { Size: { X: 2, Y: 2 } },
+          TerrainMap: {
+            Voxels: {
+              Array: "1 0 0 0 0 0 0 0",
+            },
           },
-        },
-        WaterMapNew: {
-          WaterColumns: {
-            Array: "0 1.0:1.0:0:1 0 0",
+          WaterMapNew: {
+            WaterColumns: {
+              Array: "0 1.0:1.0:0:1 0 0",
+            },
           },
         },
       },
-    });
+      "timberborn-map-state",
+      null,
+      {},
+    );
 
     expect(fixture.grid).toEqual({ depth: 2, height: 2, width: 2 });
     expect(fixture.selectedLayer).toEqual({ cellCount: 4, index: 0, offset: 0 });
@@ -101,17 +106,22 @@ describe("export-timberborn-map-fixture", () => {
   });
 
   test("counts terrain sources as exposed surface cells while preserving solid voxel diagnostics", () => {
-    const { fixture, summary } = buildFixtureFromWorld({
-      Entities: [],
-      Singletons: {
-        MapSize: { Size: { X: 2, Y: 1 } },
-        TerrainMap: {
-          Voxels: {
-            Array: "1 1 1 0 0 1",
+    const { fixture, summary } = buildFixtureFromWorld(
+      {
+        Entities: [],
+        Singletons: {
+          MapSize: { Size: { X: 2, Y: 1 } },
+          TerrainMap: {
+            Voxels: {
+              Array: "1 1 1 0 0 1",
+            },
           },
         },
       },
-    });
+      "timberborn-map-state",
+      null,
+      {},
+    );
 
     expect(fixture.parityCounts.sourceCountsByMaterialClass).toMatchObject({
       terrain: 3,
@@ -127,6 +137,50 @@ describe("export-timberborn-map-fixture", () => {
     expect(summary).toMatchObject({
       solidTerrainSources: 4,
       terrainSurfaceSources: 3,
+    });
+  });
+
+  test("expands saved entity coordinates through blueprint footprints", () => {
+    const { fixture, summary } = buildFixtureFromWorld(
+      {
+        Entities: [
+          {
+            Components: {
+              BlockObject: { Coordinates: { X: 0, Y: 0, Z: 0 } },
+            },
+            Template: "Pine",
+          },
+        ],
+        Singletons: {
+          MapSize: { Size: { X: 1, Y: 1 } },
+          TerrainMap: {
+            Voxels: {
+              Array: "0 0 0",
+            },
+          },
+        },
+      },
+      "timberborn-map-state",
+      null,
+      {
+        Pine: { sizeX: 1, sizeY: 1, sizeZ: 3 },
+      },
+    );
+
+    expect(fixture.parityCounts.sourceCountsByMaterialClass).toMatchObject({
+      tree: 3,
+    });
+    expect(fixture.parityCounts.resolvedCellCountsByMaterialClass).toMatchObject({
+      tree: 3,
+    });
+    expect(fixture.parityCounts).toMatchObject({
+      entityObjectCount: 1,
+      entitySourceCount: 3,
+    });
+    expect(summary).toMatchObject({
+      entityObjects: 1,
+      entitySources: 3,
+      treeSources: 3,
     });
   });
 });

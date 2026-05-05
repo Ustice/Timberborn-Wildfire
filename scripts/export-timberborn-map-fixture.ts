@@ -49,6 +49,7 @@ type PackedFixture = {
   formatVersion: 1;
   grid: Grid;
   parityCounts: {
+    entityObjectCount: number;
     entitySourceCount: number;
     resolvedCellCountsByMaterialClass: Record<MaterialClass, number>;
     sourceCountsByMaterialClass: Record<MaterialClass, number>;
@@ -77,6 +78,7 @@ type ExportSummary = {
   cropSources: number;
   depth: number;
   entitySources: number;
+  entityObjects: number;
   infrastructureSources: number;
   storageSources: number;
   terrainSurfaceSources: number;
@@ -87,6 +89,12 @@ type ExportSummary = {
   waterSources: number;
   width: number;
   height: number;
+};
+
+type BlueprintFootprint = {
+  sizeX: number;
+  sizeY: number;
+  sizeZ: number;
 };
 
 const emptyCell = 0xe000;
@@ -134,6 +142,22 @@ const materialClassByValue = new Map<number, MaterialClass>(Array.from(materialC
 const home = process.env.HOME ?? "";
 const timberbornRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn");
 const defaultOutputPath = join(timberbornRoot, "WildfireQA", "fixtures", "timberborn-map.fixture.json");
+const defaultBlueprintRoot = join(
+  home,
+  "Library",
+  "Application Support",
+  "Steam",
+  "steamapps",
+  "common",
+  "Timberborn",
+  "Timberborn.app",
+  "Contents",
+  "Resources",
+  "Data",
+  "StreamingAssets",
+  "Modding",
+  "Blueprints",
+);
 const knownVegetationTemplates = new Set([
   "Birch",
   "BlueberryBush",
@@ -426,6 +450,8 @@ const coordinateOf = (entity: JsonValue): Coordinate | null => {
 
 const componentsOf = (entity: JsonObject): string[] => Object.keys(asObject(entity.Components) ?? {});
 
+const orientationOf = (entity: JsonObject): string => asString(getPath(entity, ["Components", "BlockObject", "Orientation"])) ?? "";
+
 const isVegetation = (template: string, components: string[]): boolean =>
   knownVegetationTemplates.has(template) ||
   components.includes("LivingNaturalResource") ||
@@ -493,6 +519,64 @@ const terrainSurfaceCoordinatesOf = (grid: Grid, terrainValues: number[]): Coord
     ),
   );
 
+const footprintCoordinatesOf = (
+  origin: Coordinate,
+  footprint: BlueprintFootprint | undefined,
+  orientation: string,
+): Coordinate[] => {
+  const size = footprint ?? { sizeX: 1, sizeY: 1, sizeZ: 1 };
+  const offsets = Array.from({ length: size.sizeX }, (_, x) => x).flatMap((x) =>
+    Array.from({ length: size.sizeY }, (_, y) => y).flatMap((y) => Array.from({ length: size.sizeZ }, (_, z) => ({ x, y, z }))),
+  );
+
+  return offsets.map((offset) => {
+    if (orientation === "Cw90" || orientation === "Cw270") {
+      return { x: origin.x + offset.y, y: origin.y + offset.x, z: origin.z + offset.z };
+    }
+
+    return { x: origin.x + offset.x, y: origin.y + offset.y, z: origin.z + offset.z };
+  });
+};
+
+const blueprintFootprintOf = (blueprint: JsonObject): BlueprintFootprint | null => {
+  const size = asObject(getPath(blueprint, ["BlockObjectSpec", "Size"]));
+  const sizeX = asNumber(size?.X);
+  const sizeY = asNumber(size?.Y);
+  const sizeZ = asNumber(size?.Z);
+
+  return sizeX === null || sizeY === null || sizeZ === null ? null : { sizeX, sizeY, sizeZ };
+};
+
+const blueprintNamesOf = (path: string, blueprint: JsonObject): string[] => {
+  const templateName = asString(getPath(blueprint, ["TemplateSpec", "TemplateName"]));
+  const backwardCompatibleNames = asArray(getPath(blueprint, ["TemplateSpec", "BackwardCompatibleTemplateNames"]))
+    ?.map(asString)
+    .filter((name): name is string => name !== null) ?? [];
+  const fallbackName = path.split("/").at(-1)?.replace(/\.blueprint\.json$/u, "") ?? "";
+
+  return [templateName, fallbackName, ...backwardCompatibleNames].filter((name): name is string => Boolean(name));
+};
+
+const loadBlueprintFootprints = (root = defaultBlueprintRoot): Record<string, BlueprintFootprint> => {
+  if (!existsSync(root)) {
+    return {};
+  }
+
+  const glob = new Bun.Glob("**/*.blueprint.json");
+  return Array.from(glob.scanSync({ cwd: root, absolute: true })).reduce<Record<string, BlueprintFootprint>>((footprints, path) => {
+    const blueprint = asObject(JSON.parse(readFileSync(path, "utf8").replace(/^\uFEFF/u, "")) as JsonValue);
+    const footprint = blueprint ? blueprintFootprintOf(blueprint) : null;
+    if (!blueprint || !footprint) {
+      return footprints;
+    }
+
+    return blueprintNamesOf(path, blueprint).reduce<Record<string, BlueprintFootprint>>(
+      (nextFootprints, name) => ({ ...nextFootprints, [name]: footprint }),
+      footprints,
+    );
+  }, {});
+};
+
 const waterColumnsOf = (world: JsonObject): string[] => {
   const waterArray = asString(getPath(world, ["Singletons", "WaterMapNew", "WaterColumns", "Array"]));
   return waterArray?.trim().split(/\s+/u).filter(Boolean) ?? [];
@@ -527,6 +611,7 @@ export const buildFixtureFromWorld = (
   world: JsonObject,
   scenario = "timberborn-map-state",
   selectedLayerOverride: number | null = null,
+  blueprintFootprintsByTemplate: Record<string, BlueprintFootprint> = loadBlueprintFootprints(),
 ): { fixture: PackedFixture; summary: ExportSummary } => {
   const terrainValues = terrainValuesOf(world);
   const grid = gridOf(world, terrainValues);
@@ -554,27 +639,39 @@ export const buildFixtureFromWorld = (
       (source): source is { entity: JsonObject; entityIndex: number; coordinate: Coordinate } =>
         source.entity !== null && source.coordinate !== null,
     )
-    .filter((source) => validCoordinate(grid, source.coordinate));
+    .map((source) => {
+      const template = asString(source.entity.Template) ?? "";
+      const footprint = footprintCoordinatesOf(
+        source.coordinate,
+        blueprintFootprintsByTemplate[template],
+        orientationOf(source.entity),
+      ).filter((coordinate) => validCoordinate(grid, coordinate));
+
+      return { ...source, footprint };
+    })
+    .filter((source) => source.footprint.length > 0);
   const entityStats = entitySources.reduce(
     (stats, source) => {
       const template = asString(source.entity.Template) ?? "";
       const components = componentsOf(source.entity);
-      const index = indexOf(grid, source.coordinate);
-      const water = waterOf(cells[index] ?? emptyCell);
       const materialClass = materialClassOfEntity(template, components);
-      cells[index] = entityCell(template, components, water);
-      targetIds[index] = source.entityIndex + 1;
-      companionStates[index] = companionStateOf(materialClass);
+      source.footprint.forEach((coordinate) => {
+        const index = indexOf(grid, coordinate);
+        const water = waterOf(cells[index] ?? emptyCell);
+        cells[index] = entityCell(template, components, water);
+        targetIds[index] = source.entityIndex + 1;
+        companionStates[index] = companionStateOf(materialClass);
+      });
 
       return {
-        badwaterSources: stats.badwaterSources + (materialClass === "badwater" ? 1 : 0),
-        buildingSources: stats.buildingSources + (materialClass === "building" ? 1 : 0),
-        cropSources: stats.cropSources + (materialClass === "crop" ? 1 : 0),
-        infrastructureSources: stats.infrastructureSources + (materialClass === "infrastructure" ? 1 : 0),
-        storageSources: stats.storageSources + (materialClass === "storage" ? 1 : 0),
-        treeSources: stats.treeSources + (materialClass === "tree" ? 1 : 0),
+        badwaterSources: stats.badwaterSources + (materialClass === "badwater" ? source.footprint.length : 0),
+        buildingSources: stats.buildingSources + (materialClass === "building" ? source.footprint.length : 0),
+        cropSources: stats.cropSources + (materialClass === "crop" ? source.footprint.length : 0),
+        infrastructureSources: stats.infrastructureSources + (materialClass === "infrastructure" ? source.footprint.length : 0),
+        storageSources: stats.storageSources + (materialClass === "storage" ? source.footprint.length : 0),
+        treeSources: stats.treeSources + (materialClass === "tree" ? source.footprint.length : 0),
         unresolvedTemplateSources: stats.unresolvedTemplateSources + (materialClass === "building" && template.length === 0 ? 1 : 0),
-        vegetationSources: stats.vegetationSources + (materialClass === "vegetation" ? 1 : 0),
+        vegetationSources: stats.vegetationSources + (materialClass === "vegetation" ? source.footprint.length : 0),
       };
     },
     {
@@ -622,7 +719,8 @@ export const buildFixtureFromWorld = (
       formatVersion: 1,
       grid,
       parityCounts: {
-        entitySourceCount: entitySources.length,
+        entityObjectCount: entitySources.length,
+        entitySourceCount: entitySources.reduce((count, source) => count + source.footprint.length, 0),
         resolvedCellCountsByMaterialClass: resolvedCellCountsByMaterialClass(companionStates),
         sourceCountsByMaterialClass,
         terrainSurfaceSourceCount: terrainSurfaceSources,
@@ -648,7 +746,8 @@ export const buildFixtureFromWorld = (
       cellCount: cells.length,
       cropSources: entityStats.cropSources,
       depth: grid.depth,
-      entitySources: entitySources.length,
+      entityObjects: entitySources.length,
+      entitySources: entitySources.reduce((count, source) => count + source.footprint.length, 0),
       height: grid.height,
       infrastructureSources: entityStats.infrastructureSources,
       solidTerrainSources,
