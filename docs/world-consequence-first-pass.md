@@ -66,6 +66,8 @@ Follow-up implementation should split into separate tickets for native dynamite 
 
 `TWF-153` implements the first detonator lane as fire safety, not fire spread. Exposed detonators are resolved and deduplicated, then disarmed through a wrapped `Disarm()` path when `detonator_fire_safety_enabled` is true. The lane records recoverability telemetry and intentionally never calls `Arm()`, `Evaluate()`, adjacent dynamite triggers, terrain mutation, or heat-pulse output.
 
+`TWF-154` implements the first tunnel lane as instability/deferred-destruction telemetry. Exposed tunnels are resolved and deduplicated, then marked unstable while `tunnel_terrain_destruction_enabled` remains false by default. The native `Tunnel.Explode()` wrapper is isolated behind that setting and is not part of generic fire deltas, because it can mutate terrain and must be live-proven with save/reload and rebuild evidence before release.
+
 ## Scenario Save Generator
 
 The first generated scenario tool is `scripts/generate-wildfire-scenario-save.ts`, run with Bun. It inspects a selected known-good `.timber` archive, parses JSON through structured APIs, writes a generated output folder under the real Wildfire QA generated-scenarios root, refuses unsafe overwrites, and writes a manifest next to the generated archive.

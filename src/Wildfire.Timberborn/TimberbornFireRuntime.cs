@@ -30,6 +30,7 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
     private ITimberbornDetonatorFireSafetyTargetApi? _detonatorFireSafetyTargetApi;
+    private ITimberbornTunnelFireTargetApi? _tunnelFireTargetApi;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -432,6 +433,17 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerDetonatorFireSafetySkippedNoSafeApiCount: deltaConsumerSummary.DetonatorFireSafetySkippedNoSafeApiCount,
             LastDeltaConsumerDetonatorFireSafetyRecoverabilityPreservedCount: deltaConsumerSummary.DetonatorFireSafetyRecoverabilityPreservedCount,
             LastDeltaConsumerDetonatorFireSafetyRecoverabilityUnknownCount: deltaConsumerSummary.DetonatorFireSafetyRecoverabilityUnknownCount,
+            LastDeltaConsumerTunnelFireConsideredDeltaCount: deltaConsumerSummary.TunnelFireConsideredDeltaCount,
+            LastDeltaConsumerTunnelFireMatchedTargetCellCount: deltaConsumerSummary.TunnelFireMatchedTargetCellCount,
+            LastDeltaConsumerTunnelFireDuplicateTargetSuppressedCount: deltaConsumerSummary.TunnelFireDuplicateTargetSuppressedCount,
+            LastDeltaConsumerTunnelFireUnstableTargetCount: deltaConsumerSummary.TunnelFireUnstableTargetCount,
+            LastDeltaConsumerTunnelFireNativeExplodeAttemptedCount: deltaConsumerSummary.TunnelFireNativeExplodeAttemptedCount,
+            LastDeltaConsumerTunnelFireNativeExplodeAppliedCount: deltaConsumerSummary.TunnelFireNativeExplodeAppliedCount,
+            LastDeltaConsumerTunnelFireDestructionDeferredCount: deltaConsumerSummary.TunnelFireDestructionDeferredCount,
+            LastDeltaConsumerTunnelFireSkippedSettingDisabledCount: deltaConsumerSummary.TunnelFireSkippedSettingDisabledCount,
+            LastDeltaConsumerTunnelFireSkippedNoSafeApiCount: deltaConsumerSummary.TunnelFireSkippedNoSafeApiCount,
+            LastDeltaConsumerTunnelFireRecoverabilityPreservedCount: deltaConsumerSummary.TunnelFireRecoverabilityPreservedCount,
+            LastDeltaConsumerTunnelFireRecoverabilityUnknownCount: deltaConsumerSummary.TunnelFireRecoverabilityUnknownCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -541,6 +553,11 @@ public sealed class TimberbornFireRuntime :
         _detonatorFireSafetyTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
     }
 
+    public void AttachTunnelFireTargetApi(ITimberbornTunnelFireTargetApi targetApi)
+    {
+        _tunnelFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
@@ -599,6 +616,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=detonator_fire_safety");
         }
+        if (_tunnelFireTargetApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=tunnel_fire");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -627,6 +648,12 @@ public sealed class TimberbornFireRuntime :
                 : new TimberbornDetonatorFireSafetySink(
                     () => _releaseSettings.GetSnapshot().IsDetonatorFireSafetyEnabled,
                     _detonatorFireSafetyTargetApi,
+                    _logSink),
+            tunnelFireSink: _tunnelFireTargetApi is null
+                ? null
+                : new TimberbornTunnelFireSink(
+                    () => TimberbornTunnelFireSettings.FromSnapshot(_releaseSettings.GetSnapshot()),
+                    _tunnelFireTargetApi,
                     _logSink));
     }
 

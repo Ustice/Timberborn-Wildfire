@@ -17,6 +17,8 @@ public sealed class WildfireReleaseSettings
     public const string ExplosiveInfrastructurePulseHeatKey = KeyPrefix + "explosive_infrastructure_pulse_heat";
     public const string ExplosiveInfrastructurePulseRadiusKey = KeyPrefix + "explosive_infrastructure_pulse_radius";
     public const string DetonatorFireSafetyEnabledKey = KeyPrefix + "detonator_fire_safety_enabled";
+    public const string TunnelFireBehaviorEnabledKey = KeyPrefix + "tunnel_fire_behavior_enabled";
+    public const string TunnelTerrainDestructionEnabledKey = KeyPrefix + "tunnel_terrain_destruction_enabled";
     public const int CurrentSettingsSchemaVersion = 1;
     public const bool DefaultWildfireEnabled = true;
     public const bool InvalidWildfireEnabled = false;
@@ -26,6 +28,8 @@ public sealed class WildfireReleaseSettings
     public const int DefaultExplosiveInfrastructurePulseHeat = 15;
     public const int DefaultExplosiveInfrastructurePulseRadius = 1;
     public const bool DefaultDetonatorFireSafetyEnabled = true;
+    public const bool DefaultTunnelFireBehaviorEnabled = true;
+    public const bool DefaultTunnelTerrainDestructionEnabled = false;
 
     public static readonly IReadOnlyList<string> StableKeys = new[]
     {
@@ -37,6 +41,8 @@ public sealed class WildfireReleaseSettings
         ExplosiveInfrastructurePulseHeatKey,
         ExplosiveInfrastructurePulseRadiusKey,
         DetonatorFireSafetyEnabledKey,
+        TunnelFireBehaviorEnabledKey,
+        TunnelTerrainDestructionEnabledKey,
     };
 
     private readonly IWildfireReleaseSettingsStore _store;
@@ -82,6 +88,14 @@ public sealed class WildfireReleaseSettings
             DetonatorFireSafetyEnabledKey,
             DefaultDetonatorFireSafetyEnabled,
             invalidDefault: false);
+        WildfireReleaseSettingsBoolValue tunnelFireBehaviorEnabled = ReadBoolSetting(
+            TunnelFireBehaviorEnabledKey,
+            DefaultTunnelFireBehaviorEnabled,
+            invalidDefault: false);
+        WildfireReleaseSettingsBoolValue tunnelTerrainDestructionEnabled = ReadBoolSetting(
+            TunnelTerrainDestructionEnabledKey,
+            DefaultTunnelTerrainDestructionEnabled,
+            invalidDefault: false);
 
         return new WildfireReleaseSettingsSnapshot(
             schemaVersion.Value,
@@ -92,6 +106,8 @@ public sealed class WildfireReleaseSettings
             pulseHeat.Value,
             pulseRadius.Value,
             detonatorFireSafetyEnabled.Value,
+            tunnelFireBehaviorEnabled.Value,
+            tunnelTerrainDestructionEnabled.Value,
             _store.SourceName,
             schemaVersion.InvalidValues
                 .Concat(wildfireEnabled.InvalidValues)
@@ -101,6 +117,8 @@ public sealed class WildfireReleaseSettings
                 .Concat(pulseHeat.InvalidValues)
                 .Concat(pulseRadius.InvalidValues)
                 .Concat(detonatorFireSafetyEnabled.InvalidValues)
+                .Concat(tunnelFireBehaviorEnabled.InvalidValues)
+                .Concat(tunnelTerrainDestructionEnabled.InvalidValues)
                 .ToArray());
     }
 
@@ -346,6 +364,8 @@ public sealed record WildfireReleaseSettingsSnapshot(
     int ExplosiveInfrastructurePulseHeat,
     int ExplosiveInfrastructurePulseRadius,
     bool IsDetonatorFireSafetyEnabled,
+    bool IsTunnelFireBehaviorEnabled,
+    bool IsTunnelTerrainDestructionEnabled,
     string SourceName,
     IReadOnlyList<WildfireReleaseSettingInvalidValue> InvalidValues)
 {
@@ -365,6 +385,8 @@ public sealed record WildfireReleaseSettingsSnapshot(
         $"explosive_infrastructure_pulse_heat={ExplosiveInfrastructurePulseHeat} " +
         $"explosive_infrastructure_pulse_radius={ExplosiveInfrastructurePulseRadius} " +
         $"detonator_fire_safety_enabled={IsDetonatorFireSafetyEnabled.ToString().ToLowerInvariant()} " +
+        $"tunnel_fire_behavior_enabled={IsTunnelFireBehaviorEnabled.ToString().ToLowerInvariant()} " +
+        $"tunnel_terrain_destruction_enabled={IsTunnelTerrainDestructionEnabled.ToString().ToLowerInvariant()} " +
         $"invalid_values={InvalidValues.Count} " +
         $"invalid_keys={FormatInvalidKeys(InvalidValues)}";
 

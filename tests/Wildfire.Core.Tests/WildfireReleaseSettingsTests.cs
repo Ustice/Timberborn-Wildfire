@@ -52,6 +52,8 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Equal(15, snapshot.ExplosiveInfrastructurePulseHeat);
         Assert.Equal(1, snapshot.ExplosiveInfrastructurePulseRadius);
         Assert.True(snapshot.IsDetonatorFireSafetyEnabled);
+        Assert.True(snapshot.IsTunnelFireBehaviorEnabled);
+        Assert.False(snapshot.IsTunnelTerrainDestructionEnabled);
         Assert.Equal("test", snapshot.SourceName);
         Assert.Empty(snapshot.InvalidValues);
         Assert.Equal(
@@ -64,6 +66,8 @@ public sealed class WildfireReleaseSettingsTests
                 WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey,
                 WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey,
                 WildfireReleaseSettings.DetonatorFireSafetyEnabledKey,
+                WildfireReleaseSettings.TunnelFireBehaviorEnabledKey,
+                WildfireReleaseSettings.TunnelTerrainDestructionEnabledKey,
             ],
             WildfireReleaseSettings.StableKeys);
         Assert.Contains("wildfire_release_settings", snapshot.StatusToken);
@@ -72,6 +76,8 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Contains("explosive_infrastructure_enabled=true", snapshot.StatusToken);
         Assert.Contains("native_dynamite_trigger_enabled=false", snapshot.StatusToken);
         Assert.Contains("detonator_fire_safety_enabled=true", snapshot.StatusToken);
+        Assert.Contains("tunnel_fire_behavior_enabled=true", snapshot.StatusToken);
+        Assert.Contains("tunnel_terrain_destruction_enabled=false", snapshot.StatusToken);
         Assert.Contains("invalid_values=0", snapshot.StatusToken);
     }
 
@@ -108,6 +114,8 @@ public sealed class WildfireReleaseSettingsTests
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey] = 15,
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey] = 1,
                 [WildfireReleaseSettings.DetonatorFireSafetyEnabledKey] = 1,
+                [WildfireReleaseSettings.TunnelFireBehaviorEnabledKey] = 1,
+                [WildfireReleaseSettings.TunnelTerrainDestructionEnabledKey] = 0,
             },
             new Dictionary<string, string>
             {
@@ -143,6 +151,8 @@ public sealed class WildfireReleaseSettingsTests
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey] = 15,
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey] = 1,
                 [WildfireReleaseSettings.DetonatorFireSafetyEnabledKey] = 1,
+                [WildfireReleaseSettings.TunnelFireBehaviorEnabledKey] = 1,
+                [WildfireReleaseSettings.TunnelTerrainDestructionEnabledKey] = 0,
             },
             new Dictionary<string, string>
             {

@@ -81,6 +81,8 @@ public sealed class TimberbornFireDeltaConsumer
             _sinks.ExplosiveInfrastructureConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornDetonatorFireSafetySummary detonatorFireSafetySummary =
             _sinks.DetonatorFireSafetySink.ApplyConsequences(tick, decisions);
+        TimberbornTunnelFireSummary tunnelFireSummary =
+            _sinks.TunnelFireSink.ApplyConsequences(tick, decisions);
 
         TimberbornFireAlertEvent[] alertEvents = decisions
             .Where(static decision => decision.ShouldEmitAlert)
@@ -101,6 +103,7 @@ public sealed class TimberbornFireDeltaConsumer
             storedGoodBurnSummary,
             explosiveInfrastructureSummary,
             detonatorFireSafetySummary,
+            tunnelFireSummary,
             alertEvents.Length);
         if (LastSummary.WaterChangedCount > 0)
         {
@@ -548,6 +551,17 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int DetonatorFireSafetySkippedNoSafeApiCount,
     int DetonatorFireSafetyRecoverabilityPreservedCount,
     int DetonatorFireSafetyRecoverabilityUnknownCount,
+    int TunnelFireConsideredDeltaCount,
+    int TunnelFireMatchedTargetCellCount,
+    int TunnelFireDuplicateTargetSuppressedCount,
+    int TunnelFireUnstableTargetCount,
+    int TunnelFireNativeExplodeAttemptedCount,
+    int TunnelFireNativeExplodeAppliedCount,
+    int TunnelFireDestructionDeferredCount,
+    int TunnelFireSkippedSettingDisabledCount,
+    int TunnelFireSkippedNoSafeApiCount,
+    int TunnelFireRecoverabilityPreservedCount,
+    int TunnelFireRecoverabilityUnknownCount,
     int AlertCount,
     int MaxHeat)
 {
@@ -601,6 +615,17 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         DetonatorFireSafetySkippedNoSafeApiCount: 0,
         DetonatorFireSafetyRecoverabilityPreservedCount: 0,
         DetonatorFireSafetyRecoverabilityUnknownCount: 0,
+        TunnelFireConsideredDeltaCount: 0,
+        TunnelFireMatchedTargetCellCount: 0,
+        TunnelFireDuplicateTargetSuppressedCount: 0,
+        TunnelFireUnstableTargetCount: 0,
+        TunnelFireNativeExplodeAttemptedCount: 0,
+        TunnelFireNativeExplodeAppliedCount: 0,
+        TunnelFireDestructionDeferredCount: 0,
+        TunnelFireSkippedSettingDisabledCount: 0,
+        TunnelFireSkippedNoSafeApiCount: 0,
+        TunnelFireRecoverabilityPreservedCount: 0,
+        TunnelFireRecoverabilityUnknownCount: 0,
         AlertCount: 0,
         MaxHeat: 0);
 
@@ -617,6 +642,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary,
         TimberbornExplosiveInfrastructureConsequenceSummary explosiveInfrastructureSummary,
         TimberbornDetonatorFireSafetySummary detonatorFireSafetySummary,
+        TimberbornTunnelFireSummary tunnelFireSummary,
         int alertCount)
     {
         return new TimberbornFireDeltaConsumerSummary(
@@ -669,6 +695,17 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             detonatorFireSafetySummary.SkippedNoSafeApiCount,
             detonatorFireSafetySummary.RecoverabilityPreservedCount,
             detonatorFireSafetySummary.RecoverabilityUnknownCount,
+            tunnelFireSummary.ConsideredDeltaCount,
+            tunnelFireSummary.MatchedTargetCellCount,
+            tunnelFireSummary.DuplicateTargetSuppressedCount,
+            tunnelFireSummary.UnstableTargetCount,
+            tunnelFireSummary.NativeExplodeAttemptedCount,
+            tunnelFireSummary.NativeExplodeAppliedCount,
+            tunnelFireSummary.DestructionDeferredCount,
+            tunnelFireSummary.SkippedSettingDisabledCount,
+            tunnelFireSummary.SkippedNoSafeApiCount,
+            tunnelFireSummary.RecoverabilityPreservedCount,
+            tunnelFireSummary.RecoverabilityUnknownCount,
             alertCount,
             decisions.Select(static decision => decision.NewHeat).DefaultIfEmpty(0).Max());
     }
@@ -725,6 +762,17 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"detonator_fire_safety_skipped_no_safe_api={DetonatorFireSafetySkippedNoSafeApiCount} " +
             $"detonator_fire_safety_recoverability_preserved={DetonatorFireSafetyRecoverabilityPreservedCount} " +
             $"detonator_fire_safety_recoverability_unknown={DetonatorFireSafetyRecoverabilityUnknownCount} " +
+            $"tunnel_fire_considered_deltas={TunnelFireConsideredDeltaCount} " +
+            $"tunnel_fire_matched_target_cells={TunnelFireMatchedTargetCellCount} " +
+            $"tunnel_fire_duplicate_targets_suppressed={TunnelFireDuplicateTargetSuppressedCount} " +
+            $"tunnel_fire_unstable_targets={TunnelFireUnstableTargetCount} " +
+            $"tunnel_fire_native_explode_attempted={TunnelFireNativeExplodeAttemptedCount} " +
+            $"tunnel_fire_native_explode_applied={TunnelFireNativeExplodeAppliedCount} " +
+            $"tunnel_fire_destruction_deferred={TunnelFireDestructionDeferredCount} " +
+            $"tunnel_fire_skipped_setting_disabled={TunnelFireSkippedSettingDisabledCount} " +
+            $"tunnel_fire_skipped_no_safe_api={TunnelFireSkippedNoSafeApiCount} " +
+            $"tunnel_fire_recoverability_preserved={TunnelFireRecoverabilityPreservedCount} " +
+            $"tunnel_fire_recoverability_unknown={TunnelFireRecoverabilityUnknownCount} " +
             $"alerts={AlertCount} " +
             $"max_heat={MaxHeat}";
     }
@@ -743,6 +791,7 @@ public sealed class TimberbornFireDeltaConsumerSinks
         ITimberbornStoredGoodBurnConsequenceSink? storedGoodBurnConsequenceSink = null,
         ITimberbornExplosiveInfrastructureConsequenceSink? explosiveInfrastructureConsequenceSink = null,
         ITimberbornDetonatorFireSafetySink? detonatorFireSafetySink = null,
+        ITimberbornTunnelFireSink? tunnelFireSink = null,
         ITimberbornFireAlertSink? alertSink = null)
     {
         DebugVisualSink = debugVisualSink ?? NullTimberbornFireDebugVisualSink.Instance;
@@ -757,6 +806,7 @@ public sealed class TimberbornFireDeltaConsumerSinks
             explosiveInfrastructureConsequenceSink ?? NullTimberbornExplosiveInfrastructureConsequenceSink.Instance;
         DetonatorFireSafetySink =
             detonatorFireSafetySink ?? NullTimberbornDetonatorFireSafetySink.Instance;
+        TunnelFireSink = tunnelFireSink ?? NullTimberbornTunnelFireSink.Instance;
         AlertSink = alertSink ?? NullTimberbornFireAlertSink.Instance;
     }
 
@@ -775,6 +825,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornExplosiveInfrastructureConsequenceSink ExplosiveInfrastructureConsequenceSink { get; }
 
     public ITimberbornDetonatorFireSafetySink DetonatorFireSafetySink { get; }
+
+    public ITimberbornTunnelFireSink TunnelFireSink { get; }
 
     public ITimberbornFireAlertSink AlertSink { get; }
 }

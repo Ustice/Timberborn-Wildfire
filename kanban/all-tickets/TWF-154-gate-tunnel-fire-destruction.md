@@ -56,3 +56,5 @@ Handle fire-damaged `Tunnel` infrastructure conservatively and keep native `Tunn
 - Do not terrain-mutate through generic fire deltas.
 - Do not call `Tunnel.Explode()` unless the setting is enabled and QA has accepted the wrapper.
 - Keep placed dynamite and detonators in their own tickets.
+- 2026-05-05 worker: implemented conservative tunnel fire lane. Compact fire deltas now resolve tunnel targets through an adapter API, suppress duplicate cells by stable target id, mark tunnels unstable, defer terrain destruction by default, and expose `tunnel_fire_*` summary plus QA status fields. The native `Tunnel.Explode()` wrapper exists only behind `tunnel_terrain_destruction_enabled`, which defaults disabled.
+- 2026-05-05 worker learning: Timberborn's `Tunnel` runtime type is present in `Timberborn.Explosions.dll` but is not publicly accessible to the mod assembly. The live adapter uses reflection to resolve `GetObjectsWithComponentAt<Tunnel>`, read `BottomLevel`, and call public `Explode()` only when the explicit terrain-destruction setting is enabled.

@@ -92,6 +92,10 @@ Live QA must prove each native wrapper independently. Dynamite triggering eviden
 
 Automated coverage for `TWF-153` must prove the disabled setting gate, duplicate target suppression, disabled behavior, unavailable wrapper telemetry, zero armed targets, recoverability counters, and `last_delta_consumer_detonator_fire_safety_*` QA/status tokens.
 
+`TWF-154` adds the first tunnel fire lane. Compact fire deltas are converted into tunnel fire decisions, deduplicated by stable target id, and handled as terrain-affecting infrastructure. The default behavior marks targets unstable and reports deferred destruction through `tunnel_fire_*` telemetry. Native `Tunnel.Explode()` is wrapped but only runs when `tunnel_terrain_destruction_enabled` is explicitly true; it remains disabled by default because terrain mutation needs live save/reload and rebuild evidence. The live adapter resolves `Tunnel` through a reflection wrapper around `Timberborn.Explosions.Tunnel`, because the type is not public to the mod assembly.
+
+Automated coverage for `TWF-154` must prove the behavior setting gate, duplicate target suppression, default deferred destruction, native wrapper gating, unavailable wrapper telemetry, no generic terrain mutation, recoverability counters, and `last_delta_consumer_tunnel_fire_*` QA/status tokens.
+
 ## Burn Damage Foundation
 
 `TWF-075` keeps burn-damage state deterministic and Timberborn-local. Automated coverage should prove that static descriptors do not store per-instance damage, target registration owns the stable entity/cell mapping, and downstream consequence tickets can consume bounded state without adding host-owned spread rules.
