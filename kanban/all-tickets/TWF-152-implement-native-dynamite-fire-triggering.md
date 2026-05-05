@@ -56,3 +56,5 @@ Make placed `Dynamite`, `DoubleDynamite`, and `TripleDynamite` respond to sustai
 - Do not call `Detonate()` directly from generic fire deltas.
 - Do not mutate terrain outside the named native dynamite wrapper.
 - Keep detonators and tunnels out of this ticket.
+- 2026-05-05 worker: implemented deterministic explosive-infrastructure consequence path. Compact fire deltas now resolve placed native `Dynamite` targets through an adapter API, read target depth, suppress duplicate cells by stable target id, track sustained exposure against release settings, enqueue bounded heat pulses as `FireSimChange` values, and expose `explosive_infrastructure_*` summary plus QA status fields. Native `Dynamite.TriggerDelayed(...)` is wrapped but remains disabled by default through `native_dynamite_trigger_enabled`; disabled native triggering currently produces the pulse-only path plus skipped-native telemetry.
+- 2026-05-05 worker learning: referencing Timberborn native `Dynamite` requires both `Timberborn.Explosions.dll` and `Timberborn.TickSystem.dll`; `Dynamite` derives through Timberborn's tickable component stack.

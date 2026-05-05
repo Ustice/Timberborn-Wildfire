@@ -49,6 +49,14 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Goods.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.Explosions">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Explosions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.TickSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TickSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.QuickNotificationSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.QuickNotificationSystem.dll</HintPath>
       <Private>false</Private>

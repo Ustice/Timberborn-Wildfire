@@ -82,6 +82,10 @@ Automated coverage should prove partial-stack destruction, duplicate target supp
 
 `TWF-130` accepts a separate explosive-infrastructure contract for placed `Dynamite`, `DoubleDynamite`, `TripleDynamite`, `Detonator`, and `Tunnel` targets. Automated tests for implementation tickets should start with descriptor classification, sustained-heat arming thresholds, duplicate target suppression, setting gates, bounded heat-pulse output, and safe unavailable wrappers before any live native explosion is attempted.
 
+`TWF-152` adds the first dynamite implementation lane. Compact fire deltas are converted into explosive-infrastructure exposure decisions, resolved through a Timberborn adapter target API, deduplicated by target stable id, and tracked against `explosive_infrastructure_armed_threshold_ticks`. Once armed, the sink enqueues a bounded `FireSimChange` heat pulse through the simulator external-change path. Native `Dynamite.TriggerDelayed(...)` is wrapped, but `native_dynamite_trigger_enabled` defaults to disabled; the default behavior is pulse-only plus skipped-native telemetry. Building against native `Dynamite` also requires explicit `Timberborn.Explosions.dll` and `Timberborn.TickSystem.dll` references.
+
+Automated coverage for `TWF-152` must prove the disabled setting gate, sustained threshold progression, duplicate target suppression, bounded 3D pulse cells, native-wrapper enabled and unavailable paths, release-setting defaults, and `last_delta_consumer_explosive_infrastructure_*` QA/status tokens.
+
 Live QA must prove each native wrapper independently. Dynamite triggering evidence must show the target id and depth, the arming threshold, the selected native call (`TriggerDelayed` or `Trigger`), bounded Wildfire heat-pulse cells, and final status counters. Detonator evidence must show disable or arming behavior without corrupting automation state. Tunnel terrain destruction must stay disabled until a later ticket captures native `Tunnel.Explode()` proof, terrain/object impact evidence, save/reload behavior, and a player-recoverable rollback or rebuild path.
 
 ## Burn Damage Foundation

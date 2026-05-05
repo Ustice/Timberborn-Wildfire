@@ -10,14 +10,30 @@ public sealed class WildfireReleaseSettings
     public const string KeyPrefix = ModId + ".release.";
     public const string SettingsSchemaVersionKey = KeyPrefix + "settings_schema_version";
     public const string WildfireEnabledKey = KeyPrefix + "wildfire_enabled";
+    public const string ExplosiveInfrastructureEnabledKey = KeyPrefix + "explosive_infrastructure_enabled";
+    public const string NativeDynamiteTriggerEnabledKey = KeyPrefix + "native_dynamite_trigger_enabled";
+    public const string ExplosiveInfrastructureArmedThresholdTicksKey =
+        KeyPrefix + "explosive_infrastructure_armed_threshold_ticks";
+    public const string ExplosiveInfrastructurePulseHeatKey = KeyPrefix + "explosive_infrastructure_pulse_heat";
+    public const string ExplosiveInfrastructurePulseRadiusKey = KeyPrefix + "explosive_infrastructure_pulse_radius";
     public const int CurrentSettingsSchemaVersion = 1;
     public const bool DefaultWildfireEnabled = true;
     public const bool InvalidWildfireEnabled = false;
+    public const bool DefaultExplosiveInfrastructureEnabled = true;
+    public const bool DefaultNativeDynamiteTriggerEnabled = false;
+    public const int DefaultExplosiveInfrastructureArmedThresholdTicks = 2;
+    public const int DefaultExplosiveInfrastructurePulseHeat = 15;
+    public const int DefaultExplosiveInfrastructurePulseRadius = 1;
 
     public static readonly IReadOnlyList<string> StableKeys = new[]
     {
         SettingsSchemaVersionKey,
         WildfireEnabledKey,
+        ExplosiveInfrastructureEnabledKey,
+        NativeDynamiteTriggerEnabledKey,
+        ExplosiveInfrastructureArmedThresholdTicksKey,
+        ExplosiveInfrastructurePulseHeatKey,
+        ExplosiveInfrastructurePulseRadiusKey,
     };
 
     private readonly IWildfireReleaseSettingsStore _store;
@@ -36,12 +52,47 @@ public sealed class WildfireReleaseSettings
     {
         WildfireReleaseSettingsIntValue schemaVersion = ReadSchemaVersion();
         WildfireReleaseSettingsBoolValue wildfireEnabled = ReadWildfireEnabled();
+        WildfireReleaseSettingsBoolValue explosiveInfrastructureEnabled = ReadBoolSetting(
+            ExplosiveInfrastructureEnabledKey,
+            DefaultExplosiveInfrastructureEnabled,
+            invalidDefault: false);
+        WildfireReleaseSettingsBoolValue nativeDynamiteTriggerEnabled = ReadBoolSetting(
+            NativeDynamiteTriggerEnabledKey,
+            DefaultNativeDynamiteTriggerEnabled,
+            invalidDefault: false);
+        WildfireReleaseSettingsIntValue armedThresholdTicks = ReadBoundedIntSetting(
+            ExplosiveInfrastructureArmedThresholdTicksKey,
+            DefaultExplosiveInfrastructureArmedThresholdTicks,
+            minimum: 1,
+            maximum: 120);
+        WildfireReleaseSettingsIntValue pulseHeat = ReadBoundedIntSetting(
+            ExplosiveInfrastructurePulseHeatKey,
+            DefaultExplosiveInfrastructurePulseHeat,
+            minimum: 0,
+            maximum: byte.MaxValue);
+        WildfireReleaseSettingsIntValue pulseRadius = ReadBoundedIntSetting(
+            ExplosiveInfrastructurePulseRadiusKey,
+            DefaultExplosiveInfrastructurePulseRadius,
+            minimum: 0,
+            maximum: 8);
 
         return new WildfireReleaseSettingsSnapshot(
             schemaVersion.Value,
             wildfireEnabled.Value,
+            explosiveInfrastructureEnabled.Value,
+            nativeDynamiteTriggerEnabled.Value,
+            armedThresholdTicks.Value,
+            pulseHeat.Value,
+            pulseRadius.Value,
             _store.SourceName,
-            schemaVersion.InvalidValues.Concat(wildfireEnabled.InvalidValues).ToArray());
+            schemaVersion.InvalidValues
+                .Concat(wildfireEnabled.InvalidValues)
+                .Concat(explosiveInfrastructureEnabled.InvalidValues)
+                .Concat(nativeDynamiteTriggerEnabled.InvalidValues)
+                .Concat(armedThresholdTicks.InvalidValues)
+                .Concat(pulseHeat.InvalidValues)
+                .Concat(pulseRadius.InvalidValues)
+                .ToArray());
     }
 
     private WildfireReleaseSettingsIntValue ReadSchemaVersion()
@@ -78,20 +129,25 @@ public sealed class WildfireReleaseSettings
 
     private WildfireReleaseSettingsBoolValue ReadWildfireEnabled()
     {
-        WildfireReleaseSettingReadResult result = _store.ReadInt32(WildfireEnabledKey);
+        return ReadBoolSetting(WildfireEnabledKey, DefaultWildfireEnabled, InvalidWildfireEnabled);
+    }
+
+    private WildfireReleaseSettingsBoolValue ReadBoolSetting(string key, bool defaultValue, bool invalidDefault)
+    {
+        WildfireReleaseSettingReadResult result = _store.ReadInt32(key);
 
         if (result.Status == WildfireReleaseSettingReadStatus.Missing)
         {
-            return WildfireReleaseSettingsBoolValue.Valid(DefaultWildfireEnabled);
+            return WildfireReleaseSettingsBoolValue.Valid(defaultValue);
         }
 
         if (result.Status == WildfireReleaseSettingReadStatus.Invalid)
         {
             return WildfireReleaseSettingsBoolValue.Defaulted(
-                InvalidWildfireEnabled,
-                WildfireEnabledKey,
+                invalidDefault,
+                key,
                 result.RawValue,
-                FormatBoolSetting(InvalidWildfireEnabled),
+                FormatBoolSetting(invalidDefault),
                 "not_an_integer");
         }
 
@@ -101,11 +157,47 @@ public sealed class WildfireReleaseSettings
         }
 
         return WildfireReleaseSettingsBoolValue.Defaulted(
-            InvalidWildfireEnabled,
-            WildfireEnabledKey,
+            invalidDefault,
+            key,
             result.RawValue,
-            FormatBoolSetting(InvalidWildfireEnabled),
+            FormatBoolSetting(invalidDefault),
             "outside_supported_range_0_to_1");
+    }
+
+    private WildfireReleaseSettingsIntValue ReadBoundedIntSetting(
+        string key,
+        int defaultValue,
+        int minimum,
+        int maximum)
+    {
+        WildfireReleaseSettingReadResult result = _store.ReadInt32(key);
+
+        if (result.Status == WildfireReleaseSettingReadStatus.Missing)
+        {
+            return WildfireReleaseSettingsIntValue.Valid(defaultValue);
+        }
+
+        if (result.Status == WildfireReleaseSettingReadStatus.Invalid)
+        {
+            return WildfireReleaseSettingsIntValue.Defaulted(
+                defaultValue,
+                key,
+                result.RawValue,
+                defaultValue.ToString(CultureInfo.InvariantCulture),
+                "not_an_integer");
+        }
+
+        if (result.Value >= minimum && result.Value <= maximum)
+        {
+            return WildfireReleaseSettingsIntValue.Valid(result.Value);
+        }
+
+        return WildfireReleaseSettingsIntValue.Defaulted(
+            defaultValue,
+            key,
+            result.RawValue,
+            defaultValue.ToString(CultureInfo.InvariantCulture),
+            $"outside_supported_range_{minimum}_to_{maximum}");
     }
 
     private static string FormatBoolSetting(bool value)
@@ -239,6 +331,11 @@ public enum WildfireReleaseSettingReadStatus
 public sealed record WildfireReleaseSettingsSnapshot(
     int SettingsSchemaVersion,
     bool IsWildfireEnabled,
+    bool IsExplosiveInfrastructureEnabled,
+    bool IsNativeDynamiteTriggerEnabled,
+    int ExplosiveInfrastructureArmedThresholdTicks,
+    int ExplosiveInfrastructurePulseHeat,
+    int ExplosiveInfrastructurePulseRadius,
     string SourceName,
     IReadOnlyList<WildfireReleaseSettingInvalidValue> InvalidValues)
 {
@@ -252,6 +349,11 @@ public sealed record WildfireReleaseSettingsSnapshot(
         $"wildfire_enabled_key={WildfireReleaseSettings.WildfireEnabledKey} " +
         $"settings_schema_version={SettingsSchemaVersion} " +
         $"wildfire_enabled={IsWildfireEnabled.ToString().ToLowerInvariant()} " +
+        $"explosive_infrastructure_enabled={IsExplosiveInfrastructureEnabled.ToString().ToLowerInvariant()} " +
+        $"native_dynamite_trigger_enabled={IsNativeDynamiteTriggerEnabled.ToString().ToLowerInvariant()} " +
+        $"explosive_infrastructure_armed_threshold_ticks={ExplosiveInfrastructureArmedThresholdTicks} " +
+        $"explosive_infrastructure_pulse_heat={ExplosiveInfrastructurePulseHeat} " +
+        $"explosive_infrastructure_pulse_radius={ExplosiveInfrastructurePulseRadius} " +
         $"invalid_values={InvalidValues.Count} " +
         $"invalid_keys={FormatInvalidKeys(InvalidValues)}";
 

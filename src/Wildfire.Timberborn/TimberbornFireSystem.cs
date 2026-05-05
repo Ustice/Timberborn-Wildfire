@@ -198,6 +198,22 @@ public sealed class TimberbornFireSystem : IDisposable
         RegisterChange(change, "external");
     }
 
+    public void RegisterChange(FireSimChange change, string source, bool shouldLog = true)
+    {
+        RequireSimulator().RegisterChange(change);
+        _registeredChangeCountSinceLastDispatch++;
+        if (shouldLog)
+        {
+            LogRegisteredChanges(source, 1);
+        }
+    }
+
+    public void LogRegisteredChanges(string source, int count)
+    {
+        _logSink.Info(
+            $"wildfire_timberborn_changes_registered source={source} count={count} pending_changes={_registeredChangeCountSinceLastDispatch}");
+    }
+
     public void RegisterMappedCellChanges(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
         if (sources is null)
@@ -332,17 +348,6 @@ public sealed class TimberbornFireSystem : IDisposable
     public IDisposable Subscribe(IFireSimListener listener)
     {
         return RequireSimulator().Subscribe(listener);
-    }
-
-    private void RegisterChange(FireSimChange change, string source, bool shouldLog = true)
-    {
-        RequireSimulator().RegisterChange(change);
-        _registeredChangeCountSinceLastDispatch++;
-        if (shouldLog)
-        {
-            _logSink.Info(
-                $"wildfire_timberborn_changes_registered source={source} count=1 pending_changes={_registeredChangeCountSinceLastDispatch}");
-        }
     }
 
     private TimberbornImportedFieldTarget FindImportedTarget(

@@ -46,14 +46,29 @@ public sealed class WildfireReleaseSettingsTests
 
         Assert.Equal(1, snapshot.SettingsSchemaVersion);
         Assert.True(snapshot.IsWildfireEnabled);
+        Assert.True(snapshot.IsExplosiveInfrastructureEnabled);
+        Assert.False(snapshot.IsNativeDynamiteTriggerEnabled);
+        Assert.Equal(2, snapshot.ExplosiveInfrastructureArmedThresholdTicks);
+        Assert.Equal(15, snapshot.ExplosiveInfrastructurePulseHeat);
+        Assert.Equal(1, snapshot.ExplosiveInfrastructurePulseRadius);
         Assert.Equal("test", snapshot.SourceName);
         Assert.Empty(snapshot.InvalidValues);
         Assert.Equal(
-            [WildfireReleaseSettings.SettingsSchemaVersionKey, WildfireReleaseSettings.WildfireEnabledKey],
+            [
+                WildfireReleaseSettings.SettingsSchemaVersionKey,
+                WildfireReleaseSettings.WildfireEnabledKey,
+                WildfireReleaseSettings.ExplosiveInfrastructureEnabledKey,
+                WildfireReleaseSettings.NativeDynamiteTriggerEnabledKey,
+                WildfireReleaseSettings.ExplosiveInfrastructureArmedThresholdTicksKey,
+                WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey,
+                WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey,
+            ],
             WildfireReleaseSettings.StableKeys);
         Assert.Contains("wildfire_release_settings", snapshot.StatusToken);
         Assert.Contains("settings_schema_version=1", snapshot.StatusToken);
         Assert.Contains("wildfire_enabled=true", snapshot.StatusToken);
+        Assert.Contains("explosive_infrastructure_enabled=true", snapshot.StatusToken);
+        Assert.Contains("native_dynamite_trigger_enabled=false", snapshot.StatusToken);
         Assert.Contains("invalid_values=0", snapshot.StatusToken);
     }
 
@@ -84,6 +99,11 @@ public sealed class WildfireReleaseSettingsTests
             {
                 [WildfireReleaseSettings.SettingsSchemaVersionKey] = 1,
                 [WildfireReleaseSettings.WildfireEnabledKey] = 0,
+                [WildfireReleaseSettings.ExplosiveInfrastructureEnabledKey] = 1,
+                [WildfireReleaseSettings.NativeDynamiteTriggerEnabledKey] = 0,
+                [WildfireReleaseSettings.ExplosiveInfrastructureArmedThresholdTicksKey] = 2,
+                [WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey] = 15,
+                [WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey] = 1,
             },
             new Dictionary<string, string>
             {
@@ -99,7 +119,7 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Equal(1, snapshot.SettingsSchemaVersion);
         Assert.Empty(snapshot.InvalidValues);
         Assert.Equal(
-            [WildfireReleaseSettings.SettingsSchemaVersionKey, WildfireReleaseSettings.WildfireEnabledKey],
+            WildfireReleaseSettings.StableKeys,
             settingsStore.SafeIntReads);
         Assert.Empty(settingsStore.SafeStringReads);
         Assert.Contains("wildfire_enabled=false", snapshot.StatusToken);
@@ -113,6 +133,11 @@ public sealed class WildfireReleaseSettingsTests
             {
                 [WildfireReleaseSettings.SettingsSchemaVersionKey] = 2,
                 [WildfireReleaseSettings.WildfireEnabledKey] = 1,
+                [WildfireReleaseSettings.ExplosiveInfrastructureEnabledKey] = 1,
+                [WildfireReleaseSettings.NativeDynamiteTriggerEnabledKey] = 0,
+                [WildfireReleaseSettings.ExplosiveInfrastructureArmedThresholdTicksKey] = 2,
+                [WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey] = 15,
+                [WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey] = 1,
             },
             new Dictionary<string, string>
             {
@@ -131,7 +156,7 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Equal("2", invalidValue.RawValue);
         Assert.Equal("outside_supported_range_1_to_1", invalidValue.Reason);
         Assert.Equal(
-            [WildfireReleaseSettings.SettingsSchemaVersionKey, WildfireReleaseSettings.WildfireEnabledKey],
+            WildfireReleaseSettings.StableKeys,
             settingsStore.SafeIntReads);
         Assert.Empty(settingsStore.SafeStringReads);
     }

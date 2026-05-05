@@ -27,6 +27,8 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
+    private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
+    private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -78,6 +80,7 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         _fireSystem?.Dispose();
+        _explosiveInfrastructureHeatPulseSink?.Detach();
         _gpuFieldRenderer.Clear();
         _pooledFireEffects.Clear();
         _playerFireAlerts.Clear();
@@ -156,6 +159,7 @@ public sealed class TimberbornFireRuntime :
 
         RunCompatibilityProbesIfNeeded();
         TimberbornCompatibilityRuntimeGate.ThrowIfRequiredProbesFailed(_compatibilityReport, _logSink);
+        _explosiveInfrastructureHeatPulseSink = new TimberbornQueuedFireSimHeatPulseSink(grid);
         TimberbornFireSystem fireSystem = new(
             simulatorFactory,
             new TimberbornFireCellMapper(),
@@ -407,6 +411,17 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerStoredGoodBurnSkippedNoInventoryApiCount: deltaConsumerSummary.StoredGoodBurnSkippedNoInventoryApiCount,
             LastDeltaConsumerStoredGoodBurnSkippedUnknownResourceCount: deltaConsumerSummary.StoredGoodBurnSkippedUnknownResourceCount,
             LastDeltaConsumerStoredGoodBurnSkippedNonBurnableItemCount: deltaConsumerSummary.StoredGoodBurnSkippedNonBurnableItemCount,
+            LastDeltaConsumerExplosiveInfrastructureConsideredDeltaCount: deltaConsumerSummary.ExplosiveInfrastructureConsideredDeltaCount,
+            LastDeltaConsumerExplosiveInfrastructureMatchedTargetCellCount: deltaConsumerSummary.ExplosiveInfrastructureMatchedTargetCellCount,
+            LastDeltaConsumerExplosiveInfrastructureDuplicateTargetSuppressedCount: deltaConsumerSummary.ExplosiveInfrastructureDuplicateTargetSuppressedCount,
+            LastDeltaConsumerExplosiveInfrastructureArmedTargetCount: deltaConsumerSummary.ExplosiveInfrastructureArmedTargetCount,
+            LastDeltaConsumerExplosiveInfrastructureTriggeredTargetCount: deltaConsumerSummary.ExplosiveInfrastructureTriggeredTargetCount,
+            LastDeltaConsumerExplosiveInfrastructureNativeTriggeredTargetCount: deltaConsumerSummary.ExplosiveInfrastructureNativeTriggeredTargetCount,
+            LastDeltaConsumerExplosiveInfrastructureHeatPulseCellCount: deltaConsumerSummary.ExplosiveInfrastructureHeatPulseCellCount,
+            LastDeltaConsumerExplosiveInfrastructureSkippedSettingDisabledCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedSettingDisabledCount,
+            LastDeltaConsumerExplosiveInfrastructureSkippedNoSafeApiCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedNoSafeApiCount,
+            LastDeltaConsumerExplosiveInfrastructureSkippedAlreadyTriggeredCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedAlreadyTriggeredCount,
+            LastDeltaConsumerExplosiveInfrastructureLastTriggeredDepth: deltaConsumerSummary.ExplosiveInfrastructureLastTriggeredDepth,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -506,9 +521,15 @@ public sealed class TimberbornFireRuntime :
         _storedGoodBurnInventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
     }
 
+    public void AttachExplosiveInfrastructureTargetApi(ITimberbornExplosiveInfrastructureTargetApi targetApi)
+    {
+        _explosiveInfrastructureTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
+        _explosiveInfrastructureHeatPulseSink?.Attach(fireSystem);
         _debugVisualSink.Clear();
         _gpuFieldRenderer.Clear();
         _pooledFireEffects.Clear();
@@ -555,6 +576,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn");
         }
+        if (_explosiveInfrastructureTargetApi is not null && _explosiveInfrastructureHeatPulseSink is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=explosive_infrastructure");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -568,7 +593,16 @@ public sealed class TimberbornFireRuntime :
                 : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi),
             storedGoodBurnConsequenceSink: _storedGoodBurnInventoryApi is null
                 ? null
-                : new TimberbornStoredGoodBurnConsequenceSink(_storedGoodBurnInventoryApi, logSink: _logSink));
+                : new TimberbornStoredGoodBurnConsequenceSink(_storedGoodBurnInventoryApi, logSink: _logSink),
+            explosiveInfrastructureConsequenceSink:
+                _explosiveInfrastructureTargetApi is null || _explosiveInfrastructureHeatPulseSink is null
+                    ? null
+                    : new TimberbornExplosiveInfrastructureConsequenceSink(
+                        () => TimberbornExplosiveInfrastructureConsequenceSettings.FromSnapshot(
+                            _releaseSettings.GetSnapshot()),
+                        _explosiveInfrastructureTargetApi,
+                        _explosiveInfrastructureHeatPulseSink,
+                        _logSink));
     }
 
     private bool TryAllowExternalChange(string source, int? count)

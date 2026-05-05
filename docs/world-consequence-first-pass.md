@@ -62,6 +62,8 @@ Required telemetry:
 
 Follow-up implementation should split into separate tickets for native dynamite triggering, detonator safety behavior, and tunnel instability or terrain-destruction gating.
 
+`TWF-152` implements the first dynamite lane with native triggering disabled by default. The adapter resolves placed `Dynamite` components from exposed compact deltas, reads native `Dynamite.Depth`, tracks sustained exposure by stable target id, suppresses duplicate cells in one dispatch, and pushes a bounded heat pulse back into Wildfire through queued `FireSimChange` values. `Dynamite.TriggerDelayed(...)` is present only behind `native_dynamite_trigger_enabled`; `Detonate()` remains out of bounds for generic fire deltas.
+
 ## Scenario Save Generator
 
 The first generated scenario tool is `scripts/generate-wildfire-scenario-save.ts`, run with Bun. It inspects a selected known-good `.timber` archive, parses JSON through structured APIs, writes a generated output folder under the real Wildfire QA generated-scenarios root, refuses unsafe overwrites, and writes a manifest next to the generated archive.
