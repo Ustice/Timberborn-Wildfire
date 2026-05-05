@@ -86,6 +86,7 @@ describe("export-timberborn-map-fixture", () => {
     });
     expect(fixture.parityCounts).toMatchObject({
       entitySourceCount: 2,
+      terrainSurfaceSourceCount: 1,
       terrainSolidVoxelCount: 1,
       waterColumnSourceCount: 1,
     });
@@ -93,8 +94,39 @@ describe("export-timberborn-map-fixture", () => {
       cellCount: 8,
       infrastructureSources: 1,
       solidTerrainSources: 1,
+      terrainSurfaceSources: 1,
       treeSources: 1,
       waterSources: 1,
+    });
+  });
+
+  test("counts terrain sources as exposed surface cells while preserving solid voxel diagnostics", () => {
+    const { fixture, summary } = buildFixtureFromWorld({
+      Entities: [],
+      Singletons: {
+        MapSize: { Size: { X: 2, Y: 1 } },
+        TerrainMap: {
+          Voxels: {
+            Array: "1 1 1 0 0 1",
+          },
+        },
+      },
+    });
+
+    expect(fixture.parityCounts.sourceCountsByMaterialClass).toMatchObject({
+      terrain: 3,
+    });
+    expect(fixture.parityCounts.resolvedCellCountsByMaterialClass).toMatchObject({
+      empty: 3,
+      terrain: 3,
+    });
+    expect(fixture.parityCounts).toMatchObject({
+      terrainSurfaceSourceCount: 3,
+      terrainSolidVoxelCount: 4,
+    });
+    expect(summary).toMatchObject({
+      solidTerrainSources: 4,
+      terrainSurfaceSources: 3,
     });
   });
 });

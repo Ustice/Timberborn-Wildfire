@@ -52,6 +52,7 @@ type PackedFixture = {
     entitySourceCount: number;
     resolvedCellCountsByMaterialClass: Record<MaterialClass, number>;
     sourceCountsByMaterialClass: Record<MaterialClass, number>;
+    terrainSurfaceSourceCount: number;
     terrainSolidVoxelCount: number;
     waterColumnSourceCount: number;
   };
@@ -78,6 +79,7 @@ type ExportSummary = {
   entitySources: number;
   infrastructureSources: number;
   storageSources: number;
+  terrainSurfaceSources: number;
   solidTerrainSources: number;
   treeSources: number;
   unresolvedTemplateSources: number;
@@ -480,6 +482,17 @@ const entityCell = (template: string, components: string[], existingWater: numbe
 const validCoordinate = (grid: Grid, coordinate: Coordinate): boolean =>
   coordinate.x >= 0 && coordinate.x < grid.width && coordinate.y >= 0 && coordinate.y < grid.height && coordinate.z >= 0 && coordinate.z < grid.depth;
 
+const terrainSurfaceCoordinatesOf = (grid: Grid, terrainValues: number[]): Coordinate[] =>
+  Array.from({ length: grid.width }, (_, x) => x).flatMap((x) =>
+    Array.from({ length: grid.height }, (_, y) => y).flatMap((y) =>
+      Array.from({ length: grid.depth }, (_, z) => ({ x, y, z })).filter((coordinate) => {
+        const index = indexOf(grid, coordinate);
+        const aboveIndex = coordinate.z + 1 >= grid.depth ? -1 : indexOf(grid, { ...coordinate, z: coordinate.z + 1 });
+        return terrainValues[index] > 0 && (aboveIndex < 0 || terrainValues[aboveIndex] <= 0);
+      }),
+    ),
+  );
+
 const waterColumnsOf = (world: JsonObject): string[] => {
   const waterArray = asString(getPath(world, ["Singletons", "WaterMapNew", "WaterColumns", "Array"]));
   return waterArray?.trim().split(/\s+/u).filter(Boolean) ?? [];
@@ -517,9 +530,11 @@ export const buildFixtureFromWorld = (
 ): { fixture: PackedFixture; summary: ExportSummary } => {
   const terrainValues = terrainValuesOf(world);
   const grid = gridOf(world, terrainValues);
-  const cells = terrainValues.map((value) => (value > 0 ? terrainCell() : emptyCell));
+  const terrainSurfaceCoordinates = terrainSurfaceCoordinatesOf(grid, terrainValues);
+  const terrainSurfaceIndices = new Set(terrainSurfaceCoordinates.map((coordinate) => indexOf(grid, coordinate)));
+  const cells = terrainValues.map((_, index) => (terrainSurfaceIndices.has(index) ? terrainCell() : emptyCell));
   const targetIds = Array.from({ length: cells.length }, () => 0);
-  const companionStates = terrainValues.map((value) => companionStateOf(value > 0 ? "terrain" : "empty"));
+  const companionStates = terrainValues.map((_, index) => companionStateOf(terrainSurfaceIndices.has(index) ? "terrain" : "empty"));
   const waterSources = applyWaterColumns(world, grid, cells);
   waterColumnsOf(world).forEach((token, flatIndex) => {
     const coordinate = waterCoordinateOf(grid, token, flatIndex);
@@ -581,6 +596,7 @@ export const buildFixtureFromWorld = (
     fail(`Selected layer ${selectedLayer} is outside grid depth ${grid.depth}.`);
   }
   const solidTerrainSources = terrainValues.filter((value) => value > 0).length;
+  const terrainSurfaceSources = terrainSurfaceCoordinates.length;
   const sourceCountsByMaterialClass: Record<MaterialClass, number> = {
     ...emptyMaterialCounts(),
     badwater: entityStats.badwaterSources,
@@ -588,7 +604,7 @@ export const buildFixtureFromWorld = (
     crop: entityStats.cropSources,
     infrastructure: entityStats.infrastructureSources,
     storage: entityStats.storageSources,
-    terrain: solidTerrainSources,
+    terrain: terrainSurfaceSources,
     tree: entityStats.treeSources,
     vegetation: entityStats.vegetationSources,
     water: waterSources,
@@ -609,6 +625,7 @@ export const buildFixtureFromWorld = (
         entitySourceCount: entitySources.length,
         resolvedCellCountsByMaterialClass: resolvedCellCountsByMaterialClass(companionStates),
         sourceCountsByMaterialClass,
+        terrainSurfaceSourceCount: terrainSurfaceSources,
         terrainSolidVoxelCount: solidTerrainSources,
         waterColumnSourceCount: waterSources,
       },
@@ -635,6 +652,7 @@ export const buildFixtureFromWorld = (
       height: grid.height,
       infrastructureSources: entityStats.infrastructureSources,
       solidTerrainSources,
+      terrainSurfaceSources,
       storageSources: entityStats.storageSources,
       treeSources: entityStats.treeSources,
       unresolvedTemplateSources: entityStats.unresolvedTemplateSources,
@@ -683,7 +701,7 @@ const main = (): void => {
   console.log(`[timberborn-map-fixture] read ${savePath}`);
   console.log(`[timberborn-map-fixture] wrote ${outputPath}`);
   console.log(
-    `[timberborn-map-fixture] grid=${summary.width}x${summary.height}x${summary.depth} cells=${summary.cellCount} terrain=${summary.solidTerrainSources} trees=${summary.treeSources} crops=${summary.cropSources} vegetation=${summary.vegetationSources} buildings=${summary.buildingSources} storage=${summary.storageSources} infrastructure=${summary.infrastructureSources} water=${summary.waterSources} badwater=${summary.badwaterSources} unresolved_templates=${summary.unresolvedTemplateSources}`,
+    `[timberborn-map-fixture] grid=${summary.width}x${summary.height}x${summary.depth} cells=${summary.cellCount} terrain=${summary.terrainSurfaceSources} terrain_solid_voxels=${summary.solidTerrainSources} trees=${summary.treeSources} crops=${summary.cropSources} vegetation=${summary.vegetationSources} buildings=${summary.buildingSources} storage=${summary.storageSources} infrastructure=${summary.infrastructureSources} water=${summary.waterSources} badwater=${summary.badwaterSources} unresolved_templates=${summary.unresolvedTemplateSources}`,
   );
 };
 
