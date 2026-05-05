@@ -176,6 +176,8 @@ Responsibilities:
 
 The beaver exposure service translates fire, heat, smoke, steam, toxic steam, ash, and contamination-adjacent fields into beaver-facing effects. It should be built as an evidence ladder: exposure telemetry first, then debuffs, then incapacitation, then death.
 
+The service reads sampled simulator fields and compact-delta-driven field summaries. It does not write packed cells and does not infer alternate spread rules. Timberborn-owned behavior adapters can cancel unsafe work, apply native status effects, change path costs, or report safe no-op outcomes, but only through narrow wrappers with telemetry.
+
 Respiratory progression:
 
 - Coughing: slowdown and work inefficiency.
@@ -189,6 +191,8 @@ Burn progression:
 - Death: sustained direct heat or flame exposure after safer states are proven.
 
 The service should cancel or interrupt unsafe work, increase path costs or avoidance where Timberborn supports it, and aggregate danger telemetry for player feedback. It should reuse native injury, sleep, contamination, treatment, and death APIs only after live tests prove the paths safe.
+
+Release scope is telemetry, avoidance/work interruption, coughing, singed, and burned behavior when API-safe. Choking, death, native badwater contamination coupling, ash collection, and faction response are later gates unless a ticket proves the API path and recoverability.
 
 ### Active Suppression Services
 

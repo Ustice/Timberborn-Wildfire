@@ -57,3 +57,4 @@ Wildfire currently defines fire simulation, visual fields, alerts, and building 
 - Prefer visible, understandable beaver behavior over hidden stat changes for the first implementation.
 - If Timberborn exposes no safe API for a desired beaver consequence, defer that consequence explicitly instead of forcing it through reflection.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects".
+- 2026-05-05 researcher: expanded the accepted beaver field contract. Release scope is exposure telemetry, work interruption or avoidance, safe no-op counters, aggregated player feedback, and reversible coughing/singed/burned effects only when a native API is proven safe. Choking, death, native contamination coupling, ash collection, faction response, panic, and arbitrary path graph mutation are deferred gates. Downstream implementation must consume real field samples or deterministic field fixtures rather than hard-coded beaver triggers.

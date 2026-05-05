@@ -125,6 +125,23 @@ Required deterministic evidence:
 - Damage is bounded by target capacity and state can be captured/restored.
 - The optional delta-consumer burn-damage sink reports telemetry while remaining separate from crop, tree, structure, storage, explosive, ash, beaver, and UI consequences.
 
+## Beaver Field Effects
+
+`TWF-071` accepts a conservative beaver-facing field contract. Fire, heat, smoke, toxic smoke, steam, toxic steam, ash aftermath, and wet suppression are field inputs from the simulator or Timberborn-side consequence fields. The release ladder is exposure telemetry, avoidance or work interruption, reversible debuffs, incapacitation, then death. Automatic death, forced incapacitation, native contamination coupling, ash collection behavior, firefighting panic, faction-specific response behavior, and arbitrary path graph mutation are deferred until separate tickets prove safe APIs and recoverability.
+
+Automated coverage for downstream implementation tickets must prove:
+
+- Exposure samples come from real field values or deterministic field fixtures, not hard-coded beaver triggers.
+- Field classes remain distinguishable in telemetry: fire, heat, smoke, toxic smoke, steam, toxic steam, ash, and wet suppression.
+- Respiratory progression moves through coughing, choking-candidate, and death-candidate counters without applying unsafe native effects by default.
+- Burn progression moves through singed, burned, and death-candidate counters without applying unsafe native effects by default.
+- Work interruption and avoidance are reported separately from injury or incapacitation.
+- Hysteresis prevents a beaver from flickering between exposed and recovered states across adjacent ticks.
+- Safe no-op counters identify missing pathing, status, incapacitation, contamination, and death APIs.
+- Player feedback aggregates beaver danger instead of emitting one alert per beaver per tick.
+
+Live QA for the first accepted beaver behavior must use a real fire or suppression event, then capture `status` or `qa-readiness` fields showing nonzero exposure telemetry for at least one field class. If an implementation applies a native debuff, the evidence must also show the matching safe wrapper result and recovery path.
+
 ## Release Simulation Decision Validation
 
 `TWF-044` closes the release-blocking simulation design questions without adding runtime mechanics. Validation for the initial release should prove the conservative path, not speculative variants:

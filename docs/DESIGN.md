@@ -565,7 +565,28 @@ Multi-cell entities need mapping in both directions. A Timberborn entity can occ
 
 ### Beaver Field Effects
 
-Beaver effects are split by danger type.
+Beaver effects are split by danger type and by release risk. The simulator owns the fire, smoke, ash, steam, heat, and wetness fields; Timberborn reads those fields and applies beaver-facing consequences. Timberborn must not infer new fire rules, mutate packed cells, or use hidden status changes that the player cannot understand.
+
+The first release should implement a staged evidence ladder:
+
+1. Exposure telemetry and player feedback.
+2. Work interruption and avoidance.
+3. Reversible debuffs.
+4. Incapacitation.
+5. Death.
+
+Each later stage requires deterministic coverage plus live proof that the Timberborn API path is recoverable and understandable. If a desired consequence has no safe native API, it should remain a logged safe no-op instead of going through reflection.
+
+Field meanings for beavers:
+
+- Active fire: immediate life-threatening zone. Release scope is avoidance, work cancellation, alert telemetry, singed or burned exposure, and later death only after sustained exposure proof.
+- Heat: non-flame thermal danger. Release scope is path-cost or avoidance telemetry, work interruption, singed exposure at high heat, and recovery once heat falls.
+- Smoke: respiratory danger from burning fuel. Release scope is exposure telemetry and coughing slowdown if a safe debuff path exists.
+- Toxic smoke: respiratory danger from contaminated burn sources or badwater-adjacent fire. Release scope is stronger exposure weighting and explicit toxic telemetry; native contamination effects are allowed only after live API proof.
+- Steam: white smoke-like suppression byproduct from heated water. Release scope is visual and mild respiratory/visibility telemetry, not injury by default.
+- Toxic steam: badwater or contaminated-water steam. Release scope is toxic respiratory telemetry and optional native contamination path after proof.
+- Ash aftermath: ground aftermath. Release scope is path/feedback telemetry only; fertile, spent, and tainted ash gameplay belongs to the ash field service.
+- Wet suppression fields: safer from flame but may create steam. Release scope is reduced burn danger plus steam exposure, not a beaver penalty by itself.
 
 Smoke and toxic air use a respiratory progression:
 
@@ -579,7 +600,15 @@ Heat and flame use a burn progression:
 - Burned: contamination-like severe injury that prevents work until treated or healed.
 - Death: only after sustained direct heat or flame exposure, and only after avoidance, work cancellation, debuff, and incapacitation paths are tested.
 
-Active fire cells should be forbidden or heavily avoided pathing zones when Timberborn exposes a safe pathing hook. Hot, smoky, or toxic cells should interrupt work and increase path cost. Beavers assigned to burning buildings, crops, or trees should abandon the job. The implementation should prove exposure telemetry first, then debuffs, then incapacitation, then death. Because the fire simulation advances across multiple game ticks, these tests can be staged across separate evidence passes.
+Active fire cells should be forbidden or heavily avoided pathing zones when Timberborn exposes a safe pathing hook. Hot, smoky, or toxic cells should interrupt work and increase path cost. Beavers assigned to burning buildings, crops, trees, storage, or infrastructure should abandon the job when their target footprint is actively dangerous. The first implementation should aggregate exposure by beaver and tick, apply hysteresis so beavers do not flicker between states, and expose status counters for observed, avoided, interrupted, coughing, choking, singed, burned, death-candidate, skipped-no-safe-api, and recovered beavers.
+
+Release-scope behavior is conservative:
+
+- Required: exposure telemetry by field class, work-cancellation decisions, safe no-op counters, and player-facing aggregated danger feedback.
+- Accepted if API-safe: avoidance/path-cost hints, coughing slowdown, singed injury, and burned severe injury.
+- Deferred: automatic death, forced incapacitation, native contamination coupling, ash collection behavior, firefighting panic, faction-specific response behavior, and arbitrary path graph mutation.
+
+Validation should use the real field outputs, not hard-coded per-beaver triggers. Deterministic tests can emulate field samples, but live QA must prove that a real fire or suppression event produces beaver exposure telemetry before any behavior is accepted.
 
 ### Ash And Fertility
 
