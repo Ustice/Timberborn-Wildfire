@@ -104,6 +104,7 @@
 
 - Sprint 8 live-QA recovery lives in `kanban/sprints/sprint-08.md`; continue from the live board in `kanban/by-status/`.
 - If continuing the real-field pipeline, `TWF-141` no longer blocks source-count importer parity. The next real-field unblock is to move onto the dependent gate work (`TWF-144`, `TWF-145`, or `TWF-149`) while keeping resolved-cell replay as diagnostic-only unless a future ticket explicitly needs cell-identity-perfect snapshot parity.
+- `TWF-144` is blocked on live Timberborn loading as of 2026-05-05. Deploy passed, but the guarded `load-latest-save-and-unpause --launch --wait=60` path reached main menu, clicked Continue on the 50x50 Diorama autosave, and then exceeded the 30-second loading-lock threshold with no Wildfire runtime tokens. Evidence is under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-144-live-blocked-20260505T014152Z/`.
 - Keep live-QA tickets blocked until Timberborn is closed/restarted normally and `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` returns from a loaded save.
 - Current Sprint 6 blocked tickets are `TWF-066`, `TWF-088`, `TWF-089`, `TWF-090`, `TWF-091`, and `TWF-092`. Sprint 7 can proceed only through deterministic foundation/research lanes until live Timberborn evidence is available.
 - Next exact unblock is environmental: close/restart the current normal-launched but command-unresponsive Timberborn session, then rerun the `TWF-050` healthy gate before any missing-compute mutation or downstream live QA.
