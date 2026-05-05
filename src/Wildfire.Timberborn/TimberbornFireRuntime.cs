@@ -216,16 +216,21 @@ public sealed class TimberbornFireRuntime :
         RequireFireSystem().RegisterMappedCellChanges(sources);
     }
 
-    public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
+    public TimberbornQaDeltaStimulusResult QueueDeltaStimulus(string targetSelector)
     {
-        TimberbornQaDeltaStimulusResult result = RequireFireSystem().QueueFixedQaDeltaStimulus();
+        TimberbornQaDeltaStimulusResult result = RequireFireSystem().QueueQaDeltaStimulus(targetSelector);
         _logSink.Info(
             "wildfire_timberborn_qa_delta_stimulus_queued " +
+            $"target_selector={result.TargetSelector} " +
             $"cell_index={result.CellIndex} " +
             $"x={result.X} " +
             $"y={result.Y} " +
             $"z={result.Z} " +
-            $"set_cell={result.SetCell}");
+            $"target_material={result.MaterialClass} " +
+            $"companion_target_id={result.CompanionTargetId} " +
+            $"initial_cell={result.InitialCell} " +
+            $"set_heat={result.SetHeat} " +
+            $"queued_heat_changes={result.QueuedHeatChangeCount}");
 
         return result;
     }
@@ -245,23 +250,27 @@ public sealed class TimberbornFireRuntime :
             $"y={result.Y} " +
             $"z={result.Z} " +
             $"scanned_cells={result.ScannedCellCount} " +
-            $"primed_cell={result.PrimedCell} " +
-            $"set_cell={result.SetCell} " +
-            $"queued_set_cell_changes={result.QueuedSetCellChangeCount}");
+            $"set_heat={result.SetHeat} " +
+            $"set_fuel={result.SetFuel} " +
+            $"queued_field_changes={result.QueuedFieldChangeCount}");
 
         return result;
     }
 
-    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus()
+    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus(string targetSelector)
     {
         TimberbornQaWaterSuppressionStimulusResult result =
-            RequireFireSystem().QueueWaterSuppressionQaStimulus();
+            RequireFireSystem().QueueWaterSuppressionQaStimulus(targetSelector);
         _logSink.Info(
             "wildfire_timberborn_qa_water_suppression_queued " +
+            $"target_selector={result.TargetSelector} " +
             $"cell_index={result.CellIndex} " +
             $"x={result.X} " +
             $"y={result.Y} " +
             $"z={result.Z} " +
+            $"target_material={result.MaterialClass} " +
+            $"companion_target_id={result.CompanionTargetId} " +
+            $"initial_cell={result.InitialCell} " +
             $"set_water={result.SetWater} " +
             $"queued_water_changes={result.QueuedWaterChangeCount}");
 
@@ -279,10 +288,13 @@ public sealed class TimberbornFireRuntime :
             $"x={result.X} " +
             $"y={result.Y} " +
             $"z={result.Z} " +
+            $"target_material={result.MaterialClass} " +
+            $"companion_target_id={result.CompanionTargetId} " +
+            $"initial_cell={result.InitialCell} " +
             $"initial_fuel={result.InitialFuel} " +
-            $"set_cell={result.SetCell} " +
+            $"set_heat={result.SetHeat} " +
             $"timeout_ticks={result.TimeoutTicks} " +
-            $"queued_set_cell_changes={result.QueuedSetCellChangeCount}");
+            $"queued_heat_changes={result.QueuedHeatChangeCount}");
 
         return result;
     }

@@ -5,27 +5,8 @@ namespace Wildfire.Timberborn;
 
 public sealed class TimberbornFireSystem : IDisposable
 {
-    private static readonly ushort QaDeltaStimulusCell = PackedCell.Pack(
-        fuel: 15,
-        heat: 15,
-        flammability: 3,
-        water: 0,
-        terrain: 1,
-        heatLoss: 1);
-    private static readonly ushort QaBuildingBurnoutPrimedCell = PackedCell.Pack(
-        fuel: TimberbornBuildingAdapter.WoodLikeFuel,
-        heat: 15,
-        flammability: TimberbornBuildingAdapter.WoodLikeFlammability,
-        water: 0,
-        terrain: 1,
-        heatLoss: TimberbornBuildingAdapter.WoodLikeHeatLoss);
-    private static readonly ushort QaBuildingBurnoutSpentCell = PackedCell.Pack(
-        fuel: 0,
-        heat: 15,
-        flammability: TimberbornBuildingAdapter.WoodLikeFlammability,
-        water: 0,
-        terrain: 1,
-        heatLoss: TimberbornBuildingAdapter.WoodLikeHeatLoss);
+    private const byte QaIgnitionHeat = 15;
+    private const byte QaSpentFuel = 0;
     private const byte QaWaterSuppressionWater = 3;
 
     private readonly TimberbornFireCellMapper _cellMapper;
@@ -34,6 +15,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private readonly TimberbornFireDeltaConsumer _deltaConsumer;
     private IGpuFireSimulator? _fireSimulator;
     private FireGrid? _grid;
+    private TimberbornImportedFieldTarget[] _importedTargets = Array.Empty<TimberbornImportedFieldTarget>();
     private int _registeredChangeCountSinceLastDispatch;
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
@@ -164,9 +146,11 @@ public sealed class TimberbornFireSystem : IDisposable
         }
 
         ushort[] initialCells = _cellMapper.CreateInitialCells(grid, sources);
+        WildfireCompanionField[] companionFieldValues = companionFields.ToArray();
         DisposeSimulator();
-        _fireSimulator = _simulatorFactory.Create(grid, initialCells, companionFields);
+        _fireSimulator = _simulatorFactory.Create(grid, initialCells, companionFieldValues);
         _grid = grid;
+        _importedTargets = CreateImportedTargets(grid, initialCells, companionFieldValues);
         _registeredChangeCountSinceLastDispatch = 0;
         LastTick = 0;
         LastDeltaCount = 0;
@@ -236,16 +220,28 @@ public sealed class TimberbornFireSystem : IDisposable
         RegisterMappedCellChanges(RequireGrid(), sources);
     }
 
-    public TimberbornQaDeltaStimulusResult QueueFixedQaDeltaStimulus()
+    public TimberbornQaDeltaStimulusResult QueueQaDeltaStimulus(
+        string targetSelector = TimberbornQaFieldTargetSelectors.Default)
     {
-        FireGrid grid = RequireGrid();
-        int x = grid.Width / 2;
-        int y = grid.Height / 2;
-        int z = grid.Depth / 2;
-        int cellIndex = grid.ToIndex(x, y, z);
-        RegisterChange(new FireSimChange(CellIndex: cellIndex, SetCell: QaDeltaStimulusCell), "qa_delta_stimulus");
+        _ = RequireGrid();
+        string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
+        TimberbornImportedFieldTarget target = FindImportedTarget(
+            candidate => IsBurnableImportedTarget(candidate) &&
+                TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector),
+            $"No imported burnable field target was found for QA delta stimulus selector '{normalizedSelector}'.");
+        RegisterChange(new FireSimChange(CellIndex: target.CellIndex, SetHeat: QaIgnitionHeat), "qa_delta_stimulus");
 
-        return new TimberbornQaDeltaStimulusResult(cellIndex, x, y, z, QaDeltaStimulusCell);
+        return new TimberbornQaDeltaStimulusResult(
+            normalizedSelector,
+            target.CellIndex,
+            target.X,
+            target.Y,
+            target.Z,
+            target.MaterialClass,
+            target.CompanionTargetId,
+            target.InitialCell,
+            QaIgnitionHeat,
+            QueuedHeatChangeCount: 1);
     }
 
     public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutQaStimulus(
@@ -257,12 +253,8 @@ public sealed class TimberbornFireSystem : IDisposable
         }
 
         TimberbornQaBuildingBurnoutStimulusTarget target = targetProvider.FindTarget(RequireGrid());
-        RegisterChange(
-            new FireSimChange(CellIndex: target.CellIndex, SetCell: QaBuildingBurnoutPrimedCell),
-            "qa_building_burnout_prime");
-        RegisterChange(
-            new FireSimChange(CellIndex: target.CellIndex, SetCell: QaBuildingBurnoutSpentCell),
-            "qa_building_burnout_stimulus");
+        RegisterChange(new FireSimChange(CellIndex: target.CellIndex, SetHeat: QaIgnitionHeat), "qa_building_burnout_heat");
+        RegisterChange(new FireSimChange(CellIndex: target.CellIndex, SetFuel: QaSpentFuel), "qa_building_burnout_stimulus");
 
         return new TimberbornQaBuildingBurnoutStimulusResult(
             target.CellIndex,
@@ -270,27 +262,34 @@ public sealed class TimberbornFireSystem : IDisposable
             target.Y,
             target.Z,
             target.ScannedCellCount,
-            QaBuildingBurnoutPrimedCell,
-            QaBuildingBurnoutSpentCell,
-            QueuedSetCellChangeCount: 2);
+            QaIgnitionHeat,
+            QaSpentFuel,
+            QueuedFieldChangeCount: 2);
     }
 
-    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionQaStimulus()
+    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionQaStimulus(
+        string targetSelector = TimberbornQaFieldTargetSelectors.Default)
     {
-        FireGrid grid = RequireGrid();
-        int x = grid.Width / 2;
-        int y = grid.Height / 2;
-        int z = grid.Depth / 2;
-        int cellIndex = grid.ToIndex(x, y, z);
+        _ = RequireGrid();
+        string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
+        TimberbornImportedFieldTarget target = FindImportedTarget(
+            candidate => IsBurnableImportedTarget(candidate) &&
+                TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector) &&
+                PackedCell.Water(candidate.InitialCell) < QaWaterSuppressionWater,
+            $"No imported burnable field target without maximum water was found for QA water suppression selector '{normalizedSelector}'.");
         RegisterChange(
-            new FireSimChange(CellIndex: cellIndex, SetWater: QaWaterSuppressionWater),
+            new FireSimChange(CellIndex: target.CellIndex, SetWater: QaWaterSuppressionWater),
             "qa_water_suppression");
 
         return new TimberbornQaWaterSuppressionStimulusResult(
-            cellIndex,
-            x,
-            y,
-            z,
+            normalizedSelector,
+            target.CellIndex,
+            target.X,
+            target.Y,
+            target.Z,
+            target.MaterialClass,
+            target.CompanionTargetId,
+            target.InitialCell,
             QaWaterSuppressionWater,
             QueuedWaterChangeCount: 1);
     }
@@ -299,16 +298,9 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         FireGrid grid = RequireGrid();
         TimberbornQaBurnDurationStimulusTarget selectedTarget =
-            TimberbornQaBurnDurationStimulusTargets.SelectTarget(grid, target);
-        ushort setCell = PackedCell.Pack(
-            fuel: selectedTarget.InitialFuel,
-            heat: 15,
-            flammability: 3,
-            water: 0,
-            terrain: 1,
-            heatLoss: 1);
+            TimberbornQaBurnDurationStimulusTargets.SelectTarget(grid, _importedTargets, target);
         RegisterChange(
-            new FireSimChange(CellIndex: selectedTarget.CellIndex, SetCell: setCell),
+            new FireSimChange(CellIndex: selectedTarget.CellIndex, SetHeat: QaIgnitionHeat),
             "qa_burn_duration_stimulus");
 
         _burnDurationProofState = new TimberbornQaBurnDurationProofState(
@@ -328,10 +320,13 @@ public sealed class TimberbornFireSystem : IDisposable
             selectedTarget.X,
             selectedTarget.Y,
             selectedTarget.Z,
+            selectedTarget.MaterialClass,
+            selectedTarget.CompanionTargetId,
+            selectedTarget.InitialCell,
             selectedTarget.InitialFuel,
-            setCell,
+            QaIgnitionHeat,
             TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks,
-            QueuedSetCellChangeCount: 1);
+            QueuedHeatChangeCount: 1);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)
@@ -348,6 +343,50 @@ public sealed class TimberbornFireSystem : IDisposable
             _logSink.Info(
                 $"wildfire_timberborn_changes_registered source={source} count=1 pending_changes={_registeredChangeCountSinceLastDispatch}");
         }
+    }
+
+    private TimberbornImportedFieldTarget FindImportedTarget(
+        Func<TimberbornImportedFieldTarget, bool> predicate,
+        string notFoundMessage)
+    {
+        return _importedTargets
+            .Where(predicate)
+            .Select(static target => (TimberbornImportedFieldTarget?)target)
+            .FirstOrDefault() ?? throw new InvalidOperationException(notFoundMessage);
+    }
+
+    private static TimberbornImportedFieldTarget[] CreateImportedTargets(
+        FireGrid grid,
+        IReadOnlyList<ushort> initialCells,
+        IReadOnlyList<WildfireCompanionField> companionFields)
+    {
+        return Enumerable.Range(0, grid.CellCount)
+            .Select(index =>
+            {
+                (int x, int y, int z) = grid.FromIndex(index);
+                return new TimberbornImportedFieldTarget(
+                    index,
+                    x,
+                    y,
+                    z,
+                    companionFields[index].State.MaterialClass,
+                    companionFields[index].TargetId,
+                    initialCells[index]);
+            })
+            .Where(static target => target.MaterialClass != WildfireMaterialClass.Empty)
+            .ToArray();
+    }
+
+    private static bool IsBurnableImportedTarget(TimberbornImportedFieldTarget target)
+    {
+        return PackedCell.Terrain(target.InitialCell) == 1 &&
+            PackedCell.Fuel(target.InitialCell) > 0 &&
+            PackedCell.Flammability(target.InitialCell) > 0 &&
+            target.MaterialClass is WildfireMaterialClass.Tree or
+                WildfireMaterialClass.Vegetation or
+                WildfireMaterialClass.Crop or
+                WildfireMaterialClass.Building or
+                WildfireMaterialClass.Storage;
     }
 
     private void UpdateBurnDurationProof(uint tick, IReadOnlyList<CellDelta> deltas)
@@ -483,6 +522,15 @@ public interface ITimberbornFireSimulatorFactory
         ReadOnlySpan<ushort> initialCells,
         ReadOnlySpan<WildfireCompanionField> companionFields);
 }
+
+public readonly record struct TimberbornImportedFieldTarget(
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    WildfireMaterialClass MaterialClass,
+    uint CompanionTargetId,
+    ushort InitialCell);
 
 public interface ITimberbornFireLogSink
 {

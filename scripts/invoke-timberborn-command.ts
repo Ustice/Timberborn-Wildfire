@@ -17,7 +17,16 @@ const home = process.env.HOME ?? "";
 const defaultCommandDir = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
 const inboxFileName = "command-inbox.txt";
 const outboxFileName = "command-outbox.txt";
-const knownCommands = ["help", "qa-delta-stimulus", "qa-readiness", "qa-water-suppression-stimulus", "status"];
+const knownCommands = [
+  "help",
+  "qa-building-burnout-stimulus",
+  "qa-burn-duration-stimulus",
+  "qa-delta-stimulus",
+  "qa-fire-preset",
+  "qa-readiness",
+  "qa-water-suppression-stimulus",
+  "status",
+];
 
 const usage = `Usage:
   bun scripts/invoke-timberborn-command.ts [command] [options]
@@ -25,9 +34,15 @@ const usage = `Usage:
 Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
-  qa-delta-stimulus         Queue one fixed QA-only simulator cell change.
-  qa-water-suppression-stimulus
-                            Queue one fixed QA-only water suppression change.
+  qa-delta-stimulus [burnable|tree|vegetation|crop|storage|building]
+                            Queue heat on an imported burnable field target.
+  qa-building-burnout-stimulus
+                            Queue heat and fuel depletion on a real pausable building target.
+  qa-burn-duration-stimulus <low|medium|high>
+                            Queue heat on an imported burnable target in the selected fuel band.
+  qa-fire-preset <preset>   Select an allowlisted fire-simulation tuning preset.
+  qa-water-suppression-stimulus [burnable|tree|vegetation|crop|storage|building]
+                            Queue water on an imported burnable field target.
   help                      Read-only command list.
 
 Options:
@@ -72,6 +87,7 @@ const parseArgs = (args: string[]): InvokeOptions => {
     waitSeconds: 5,
   };
   let skipNext = false;
+  const commandParts: string[] = [];
 
   args.reduce((_, arg, index) => {
     if (skipNext) {
@@ -100,14 +116,18 @@ const parseArgs = (args: string[]): InvokeOptions => {
     } else if (arg.startsWith("--")) {
       fail(`Unknown argument: ${arg}`);
     } else {
-      options.command = arg;
+      commandParts.push(arg);
     }
 
     return undefined;
   }, undefined);
 
+  options.command = commandParts.length > 0 ? commandParts.join(" ") : options.command;
+
   return options;
 };
+
+const commandName = (command: string): string => command.trim().split(/\s+/u)[0]?.toLowerCase() ?? "";
 
 const waitForOutbox = async (outboxPath: string, previousModified: number, waitSeconds: number): Promise<string | null> => {
   const startedAt = Date.now();
@@ -167,7 +187,8 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  if (!knownCommands.includes(options.command.toLowerCase())) {
+  const requestedCommandName = commandName(options.command);
+  if (!knownCommands.includes(requestedCommandName)) {
     fail(`Unknown command: ${options.command}. Known commands: ${knownCommands.join(", ")}.`);
   }
 

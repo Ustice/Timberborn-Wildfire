@@ -174,7 +174,7 @@ public sealed class TimberbornQaCommandBridge
 
         if (!ReferenceEquals(deltaStimulus, NullTimberbornQaDeltaStimulus.Instance))
         {
-            commands[QaDeltaStimulusCommand] = ExecuteQaDeltaStimulus;
+            commands[QaDeltaStimulusCommand] = () => ExecuteQaDeltaStimulus(null);
         }
 
         if (!ReferenceEquals(buildingBurnoutStimulus, NullTimberbornQaBuildingBurnoutStimulus.Instance))
@@ -184,7 +184,7 @@ public sealed class TimberbornQaCommandBridge
 
         if (!ReferenceEquals(waterSuppressionStimulus, NullTimberbornQaWaterSuppressionStimulus.Instance))
         {
-            commands[QaWaterSuppressionStimulusCommand] = ExecuteQaWaterSuppressionStimulus;
+            commands[QaWaterSuppressionStimulusCommand] = () => ExecuteQaWaterSuppressionStimulus(null);
         }
 
         if (!ReferenceEquals(burnDurationStimulus, NullTimberbornQaBurnDurationStimulus.Instance))
@@ -263,7 +263,11 @@ public sealed class TimberbornQaCommandBridge
                     ? ExecuteQaBurnDurationStimulus(commandText)
                     : StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand)
                         ? ExecuteQaFirePreset(commandText)
-                        : handler();
+                        : StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand)
+                            ? ExecuteQaDeltaStimulus(commandText)
+                            : StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand)
+                                ? ExecuteQaWaterSuppressionStimulus(commandText)
+                                : handler();
             _logSink.Info(result.ResultToken);
             return result;
         }
@@ -327,21 +331,27 @@ public sealed class TimberbornQaCommandBridge
                 : "wildfire_disabled");
     }
 
-    private TimberbornQaCommandResult ExecuteQaDeltaStimulus()
+    private TimberbornQaCommandResult ExecuteQaDeltaStimulus(string? commandText)
     {
-        TimberbornQaDeltaStimulusResult stimulusResult = _deltaStimulus.QueueFixedDeltaStimulus();
+        string targetSelector = ParseFieldTargetSelector(commandText) ?? TimberbornQaFieldTargetSelectors.Default;
+        TimberbornQaDeltaStimulusResult stimulusResult = _deltaStimulus.QueueDeltaStimulus(targetSelector);
         TimberbornQaCommandState state = _stateProvider.GetState();
 
         return TimberbornQaCommandResult.CreateSuccess(
             QaDeltaStimulusCommand,
             state,
             KnownCommands,
-            "queued_fixed_center_stimulus_" +
+            "queued_imported_field_stimulus_" +
+            $"target_selector={stimulusResult.TargetSelector}_" +
+            $"target_material={stimulusResult.MaterialClass}_" +
+            $"companion_target_id={stimulusResult.CompanionTargetId}_" +
             $"target_index={stimulusResult.CellIndex}_" +
             $"target_x={stimulusResult.X}_" +
             $"target_y={stimulusResult.Y}_" +
             $"target_z={stimulusResult.Z}_" +
-            $"set_cell={stimulusResult.SetCell}");
+            $"initial_cell={stimulusResult.InitialCell}_" +
+            $"set_heat={stimulusResult.SetHeat}_" +
+            $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}");
     }
 
     private TimberbornQaCommandResult ExecuteQaBuildingBurnoutStimulus()
@@ -360,15 +370,16 @@ public sealed class TimberbornQaCommandBridge
             $"target_y={stimulusResult.Y}_" +
             $"target_z={stimulusResult.Z}_" +
             $"scanned_cells={stimulusResult.ScannedCellCount}_" +
-            $"primed_cell={stimulusResult.PrimedCell}_" +
-            $"set_cell={stimulusResult.SetCell}_" +
-            $"queued_set_cell_changes={stimulusResult.QueuedSetCellChangeCount}");
+            $"set_heat={stimulusResult.SetHeat}_" +
+            $"set_fuel={stimulusResult.SetFuel}_" +
+            $"queued_field_changes={stimulusResult.QueuedFieldChangeCount}");
     }
 
-    private TimberbornQaCommandResult ExecuteQaWaterSuppressionStimulus()
+    private TimberbornQaCommandResult ExecuteQaWaterSuppressionStimulus(string? commandText)
     {
+        string targetSelector = ParseFieldTargetSelector(commandText) ?? TimberbornQaFieldTargetSelectors.Default;
         TimberbornQaWaterSuppressionStimulusResult stimulusResult =
-            _waterSuppressionStimulus.QueueWaterSuppressionStimulus();
+            _waterSuppressionStimulus.QueueWaterSuppressionStimulus(targetSelector);
         TimberbornQaCommandState state = _stateProvider.GetState();
 
         return TimberbornQaCommandResult.CreateSuccess(
@@ -376,10 +387,14 @@ public sealed class TimberbornQaCommandBridge
             state,
             KnownCommands,
             "queued_water_suppression_stimulus_" +
+            $"target_selector={stimulusResult.TargetSelector}_" +
             $"target_index={stimulusResult.CellIndex}_" +
             $"target_x={stimulusResult.X}_" +
             $"target_y={stimulusResult.Y}_" +
             $"target_z={stimulusResult.Z}_" +
+            $"target_material={stimulusResult.MaterialClass}_" +
+            $"companion_target_id={stimulusResult.CompanionTargetId}_" +
+            $"initial_cell={stimulusResult.InitialCell}_" +
             $"set_water={stimulusResult.SetWater}_" +
             $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}");
     }
@@ -410,10 +425,13 @@ public sealed class TimberbornQaCommandBridge
             $"target_x={stimulusResult.X}_" +
             $"target_y={stimulusResult.Y}_" +
             $"target_z={stimulusResult.Z}_" +
+            $"target_material={stimulusResult.MaterialClass}_" +
+            $"companion_target_id={stimulusResult.CompanionTargetId}_" +
+            $"initial_cell={stimulusResult.InitialCell}_" +
             $"initial_fuel={stimulusResult.InitialFuel}_" +
-            $"set_cell={stimulusResult.SetCell}_" +
+            $"set_heat={stimulusResult.SetHeat}_" +
             $"timeout_ticks={stimulusResult.TimeoutTicks}_" +
-            $"queued_set_cell_changes={stimulusResult.QueuedSetCellChangeCount}");
+            $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}");
     }
 
     private TimberbornQaCommandResult ExecuteQaFirePreset(string? commandText)
@@ -465,10 +483,33 @@ public sealed class TimberbornQaCommandBridge
 
     private static bool CanAcceptArguments(string command, string commandText)
     {
-        return StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) &&
+        return (StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand)) &&
+            ParseFieldTargetSelector(commandText) is not null ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) &&
             ParseBurnDurationTarget(commandText) is not null ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) &&
             ParseFirePresetName(commandText) is not null;
+    }
+
+    private static string? ParseFieldTargetSelector(string? commandText)
+    {
+        string[] tokens = (commandText ?? string.Empty)
+            .Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length == 1)
+        {
+            return TimberbornQaFieldTargetSelectors.Default;
+        }
+
+        if (tokens.Length != 2)
+        {
+            return null;
+        }
+
+        string selector = tokens[1].Trim().ToLowerInvariant();
+        return TimberbornQaFieldTargetSelectors.IsKnown(selector) ? selector : null;
     }
 
     private static string? ParseBurnDurationTarget(string? commandText)
@@ -527,10 +568,20 @@ public interface ITimberbornQaCommandStateProvider
 
 public interface ITimberbornQaDeltaStimulus
 {
-    TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus();
+    TimberbornQaDeltaStimulusResult QueueDeltaStimulus(string targetSelector);
 }
 
-public sealed record TimberbornQaDeltaStimulusResult(int CellIndex, int X, int Y, int Z, ushort SetCell);
+public sealed record TimberbornQaDeltaStimulusResult(
+    string TargetSelector,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    WildfireMaterialClass MaterialClass,
+    uint CompanionTargetId,
+    ushort InitialCell,
+    byte SetHeat,
+    int QueuedHeatChangeCount);
 
 public interface ITimberbornQaBuildingBurnoutStimulus
 {
@@ -550,20 +601,24 @@ public sealed record TimberbornQaBuildingBurnoutStimulusResult(
     int Y,
     int Z,
     int ScannedCellCount,
-    ushort PrimedCell,
-    ushort SetCell,
-    int QueuedSetCellChangeCount);
+    byte SetHeat,
+    byte SetFuel,
+    int QueuedFieldChangeCount);
 
 public interface ITimberbornQaWaterSuppressionStimulus
 {
-    TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus();
+    TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus(string targetSelector);
 }
 
 public sealed record TimberbornQaWaterSuppressionStimulusResult(
+    string TargetSelector,
     int CellIndex,
     int X,
     int Y,
     int Z,
+    WildfireMaterialClass MaterialClass,
+    uint CompanionTargetId,
+    ushort InitialCell,
     byte SetWater,
     int QueuedWaterChangeCount);
 
@@ -585,10 +640,13 @@ public sealed record TimberbornQaBurnDurationStimulusResult(
     int X,
     int Y,
     int Z,
+    WildfireMaterialClass MaterialClass,
+    uint CompanionTargetId,
+    ushort InitialCell,
     byte InitialFuel,
-    ushort SetCell,
+    byte SetHeat,
     uint TimeoutTicks,
-    int QueuedSetCellChangeCount);
+    int QueuedHeatChangeCount);
 
 public sealed record TimberbornQaBurnDurationProofState(
     string Target,
@@ -644,31 +702,121 @@ public static class TimberbornQaBurnDurationStimulusTargets
             : throw new ArgumentException("Burn-duration QA target must be low, medium, or high.", nameof(target));
     }
 
-    public static TimberbornQaBurnDurationStimulusTarget SelectTarget(FireGrid grid, string target)
+    public static TimberbornQaBurnDurationStimulusTarget SelectTarget(
+        FireGrid grid,
+        IReadOnlyList<TimberbornImportedFieldTarget> importedTargets,
+        string target)
     {
         if (!IsKnownTarget(target))
         {
             throw new ArgumentException("Burn-duration QA target must be low, medium, or high.", nameof(target));
         }
 
-        int centerX = grid.Width / 2;
-        int x = target.ToLowerInvariant() switch
+        if (importedTargets is null)
         {
-            Low => Math.Max(0, centerX - 1),
-            Medium => centerX,
-            High => Math.Min(grid.Width - 1, centerX + 1),
-            _ => centerX,
-        };
-        int y = grid.Height / 2;
-        int z = grid.Depth / 2;
+            throw new ArgumentNullException(nameof(importedTargets));
+        }
+
+        TimberbornImportedFieldTarget? selectedTarget = importedTargets
+            .Where(static candidate => PackedCell.Terrain(candidate.InitialCell) == 1)
+            .Where(static candidate => PackedCell.Flammability(candidate.InitialCell) > 0)
+            .Where(static candidate => PackedCell.Fuel(candidate.InitialCell) > 0)
+            .Where(candidate => IsTargetFuelBand(target, PackedCell.Fuel(candidate.InitialCell)))
+            .OrderBy(static candidate => TargetPriority(candidate.MaterialClass))
+            .ThenBy(static candidate => candidate.CellIndex)
+            .Select(static candidate => (TimberbornImportedFieldTarget?)candidate)
+            .FirstOrDefault();
+
+        if (!selectedTarget.HasValue)
+        {
+            throw new InvalidOperationException(
+                $"No imported burn-duration field target was found for fuel band '{target}'.");
+        }
+        TimberbornImportedFieldTarget selectedTargetValue = selectedTarget.Value;
 
         return new TimberbornQaBurnDurationStimulusTarget(
             target.ToLowerInvariant(),
-            grid.ToIndex(x, y, z),
-            x,
-            y,
-            z,
-            InitialFuel(target));
+            selectedTargetValue.CellIndex,
+            selectedTargetValue.X,
+            selectedTargetValue.Y,
+            selectedTargetValue.Z,
+            selectedTargetValue.MaterialClass,
+            selectedTargetValue.CompanionTargetId,
+            selectedTargetValue.InitialCell,
+            (byte)PackedCell.Fuel(selectedTargetValue.InitialCell));
+    }
+
+    private static bool IsTargetFuelBand(string target, int fuel)
+    {
+        return target.ToLowerInvariant() switch
+        {
+            Low => fuel is > 0 and <= 4,
+            Medium => fuel is >= 5 and <= 10,
+            High => fuel >= 11,
+            _ => false,
+        };
+    }
+
+    private static int TargetPriority(WildfireMaterialClass materialClass)
+    {
+        return materialClass switch
+        {
+            WildfireMaterialClass.Tree => 0,
+            WildfireMaterialClass.Vegetation => 1,
+            WildfireMaterialClass.Crop => 2,
+            WildfireMaterialClass.Storage => 3,
+            WildfireMaterialClass.Building => 4,
+            _ => 5,
+        };
+    }
+}
+
+public static class TimberbornQaFieldTargetSelectors
+{
+    public const string Default = "burnable";
+    public const string Tree = "tree";
+    public const string Vegetation = "vegetation";
+    public const string Crop = "crop";
+    public const string Storage = "storage";
+    public const string Building = "building";
+
+    private static readonly HashSet<string> KnownSelectors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        Default,
+        Tree,
+        Vegetation,
+        Crop,
+        Storage,
+        Building,
+    };
+
+    public static bool IsKnown(string selector)
+    {
+        return KnownSelectors.Contains(selector);
+    }
+
+    public static string Normalize(string selector)
+    {
+        string normalized = selector.Trim().ToLowerInvariant();
+        return IsKnown(normalized)
+            ? normalized
+            : throw new ArgumentException(
+                $"QA field target selector must be one of: {string.Join(", ", KnownSelectors.OrderBy(static value => value))}.",
+                nameof(selector));
+    }
+
+    public static bool Matches(WildfireMaterialClass materialClass, string selector)
+    {
+        return Normalize(selector) switch
+        {
+            Default => true,
+            Tree => materialClass == WildfireMaterialClass.Tree,
+            Vegetation => materialClass == WildfireMaterialClass.Vegetation,
+            Crop => materialClass == WildfireMaterialClass.Crop,
+            Storage => materialClass == WildfireMaterialClass.Storage,
+            Building => materialClass == WildfireMaterialClass.Building,
+            _ => false,
+        };
     }
 }
 
@@ -678,6 +826,9 @@ public sealed record TimberbornQaBurnDurationStimulusTarget(
     int X,
     int Y,
     int Z,
+    WildfireMaterialClass MaterialClass,
+    uint CompanionTargetId,
+    ushort InitialCell,
     byte InitialFuel);
 
 public interface ITimberbornQaBuildingBurnoutStimulusTargetProvider
@@ -693,7 +844,7 @@ public sealed class NullTimberbornQaDeltaStimulus : ITimberbornQaDeltaStimulus
     {
     }
 
-    public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
+    public TimberbornQaDeltaStimulusResult QueueDeltaStimulus(string targetSelector)
     {
         throw new InvalidOperationException("QA delta stimulus is unavailable until the Timberborn fire runtime is initialized.");
     }
@@ -722,7 +873,7 @@ public sealed class NullTimberbornQaWaterSuppressionStimulus : ITimberbornQaWate
     {
     }
 
-    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus()
+    public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus(string targetSelector)
     {
         throw new InvalidOperationException(
             "QA water suppression stimulus is unavailable until the Timberborn fire runtime is initialized.");

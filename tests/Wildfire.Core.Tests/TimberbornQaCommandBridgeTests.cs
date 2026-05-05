@@ -115,7 +115,8 @@ public sealed class TimberbornQaCommandBridgeTests
     {
         TimberbornQaCommandBridge bridge = new(
             new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
-            new RecordingDeltaStimulus(new TimberbornQaDeltaStimulusResult(0, 0, 0, 0, 1)),
+            new RecordingDeltaStimulus(
+                new TimberbornQaDeltaStimulusResult(TimberbornQaFieldTargetSelectors.Default, 0, 0, 0, 0, WildfireMaterialClass.Tree, 1u, 1, 15, 1)),
             new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("help");
@@ -133,7 +134,7 @@ public sealed class TimberbornQaCommandBridgeTests
             new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
             NullTimberbornQaDeltaStimulus.Instance,
             new RecordingBuildingBurnoutStimulus(
-                new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 1, 2, 2)),
+                new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 15, 0, 2)),
             new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("help");
@@ -152,7 +153,7 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             new RecordingWaterSuppressionStimulus(
-                new TimberbornQaWaterSuppressionStimulusResult(0, 0, 0, 0, 3, 1)),
+                new TimberbornQaWaterSuppressionStimulusResult(TimberbornQaFieldTargetSelectors.Default, 0, 0, 0, 0, WildfireMaterialClass.Tree, 1u, 1, 3, 1)),
             new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("help");
@@ -172,7 +173,19 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             new RecordingBurnDurationStimulus(
-                new TimberbornQaBurnDurationStimulusResult("medium", 0, 0, 0, 0, 9, 1, 64, 1)),
+                new TimberbornQaBurnDurationStimulusResult(
+                    "medium",
+                    0,
+                    0,
+                    0,
+                    0,
+                    WildfireMaterialClass.Tree,
+                    1u,
+                    1,
+                    9,
+                    15,
+                    64,
+                    1)),
             new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("help");
@@ -350,7 +363,8 @@ public sealed class TimberbornQaCommandBridgeTests
             QueuedChangeCount: 1,
             LastDeltaCount: 0);
         RecordingStateProvider stateProvider = new(state);
-        RecordingDeltaStimulus deltaStimulus = new(new TimberbornQaDeltaStimulusResult(91, 3, 4, 2, 498));
+        RecordingDeltaStimulus deltaStimulus = new(
+            new TimberbornQaDeltaStimulusResult(TimberbornQaFieldTargetSelectors.Default, 91, 3, 4, 2, WildfireMaterialClass.Tree, 77u, 498, 15, 1));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink);
 
@@ -360,12 +374,17 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal("qa-delta-stimulus", result.Command);
         Assert.Equal(["help", "qa-delta-stimulus", "qa-readiness", "status"], result.KnownCommands);
         Assert.Equal(1, deltaStimulus.CallCount);
+        Assert.Equal([TimberbornQaFieldTargetSelectors.Default], deltaStimulus.TargetSelectors);
         Assert.Equal(2, stateProvider.CallCount);
+        Assert.Contains("target_selector=burnable", result.Message);
         Assert.Contains("target_index=91", result.Message);
         Assert.Contains("target_x=3", result.Message);
         Assert.Contains("target_y=4", result.Message);
         Assert.Contains("target_z=2", result.Message);
-        Assert.Contains("set_cell=498", result.Message);
+        Assert.Contains("target_material=Tree", result.Message);
+        Assert.Contains("companion_target_id=77", result.Message);
+        Assert.Contains("initial_cell=498", result.Message);
+        Assert.Contains("set_heat=15", result.Message);
         Assert.Contains("queued_changes=1", result.ResultToken);
         Assert.Contains("tick_count=12", result.ResultToken);
         Assert.Contains("wildfire_command_request command=qa-delta-stimulus", logSink.InfoMessages);
@@ -386,7 +405,7 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaCount: 0);
         RecordingStateProvider stateProvider = new(state);
         RecordingBuildingBurnoutStimulus buildingBurnoutStimulus = new(
-            new TimberbornQaBuildingBurnoutStimulusResult(91, 3, 4, 2, 57, 498, 496, 2));
+            new TimberbornQaBuildingBurnoutStimulusResult(91, 3, 4, 2, 57, 15, 0, 2));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
@@ -406,9 +425,9 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("target_y=4", result.Message);
         Assert.Contains("target_z=2", result.Message);
         Assert.Contains("scanned_cells=57", result.Message);
-        Assert.Contains("primed_cell=498", result.Message);
-        Assert.Contains("set_cell=496", result.Message);
-        Assert.Contains("queued_set_cell_changes=2", result.Message);
+        Assert.Contains("set_heat=15", result.Message);
+        Assert.Contains("set_fuel=0", result.Message);
+        Assert.Contains("queued_field_changes=2", result.Message);
         Assert.Contains("queued_changes=2", result.ResultToken);
         Assert.Contains("tick_count=12", result.ResultToken);
         Assert.Contains("wildfire_command_request command=qa-building-burnout-stimulus", logSink.InfoMessages);
@@ -429,7 +448,7 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaCount: 0);
         RecordingStateProvider stateProvider = new(state);
         RecordingWaterSuppressionStimulus waterSuppressionStimulus = new(
-            new TimberbornQaWaterSuppressionStimulusResult(91, 3, 4, 2, 3, 1));
+            new TimberbornQaWaterSuppressionStimulusResult(TimberbornQaFieldTargetSelectors.Default, 91, 3, 4, 2, WildfireMaterialClass.Tree, 77u, 498, 3, 1));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
@@ -444,17 +463,60 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal("qa-water-suppression-stimulus", result.Command);
         Assert.Equal(["help", "qa-readiness", "qa-water-suppression-stimulus", "status"], result.KnownCommands);
         Assert.Equal(1, waterSuppressionStimulus.CallCount);
+        Assert.Equal([TimberbornQaFieldTargetSelectors.Default], waterSuppressionStimulus.TargetSelectors);
         Assert.Equal(2, stateProvider.CallCount);
+        Assert.Contains("target_selector=burnable", result.Message);
         Assert.Contains("target_index=91", result.Message);
         Assert.Contains("target_x=3", result.Message);
         Assert.Contains("target_y=4", result.Message);
         Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("target_material=Tree", result.Message);
+        Assert.Contains("companion_target_id=77", result.Message);
+        Assert.Contains("initial_cell=498", result.Message);
         Assert.Contains("set_water=3", result.Message);
         Assert.Contains("queued_water_changes=1", result.Message);
         Assert.Contains("queued_changes=1", result.ResultToken);
         Assert.Contains("tick_count=12", result.ResultToken);
         Assert.Contains("wildfire_command_request command=qa-water-suppression-stimulus", logSink.InfoMessages);
         Assert.Contains(result.ResultToken, logSink.InfoMessages);
+    }
+
+    [Theory]
+    [InlineData("qa-delta-stimulus tree", "tree")]
+    [InlineData("qa-water-suppression-stimulus storage", "storage")]
+    public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 8,
+            Height: 6,
+            Depth: 4,
+            TickCount: 12,
+            QueuedChangeCount: 1,
+            LastDeltaCount: 0);
+        RecordingStateProvider stateProvider = new(state);
+        RecordingDeltaStimulus deltaStimulus = new(
+            new TimberbornQaDeltaStimulusResult(selector, 91, 3, 4, 2, WildfireMaterialClass.Tree, 77u, 498, 15, 1));
+        RecordingWaterSuppressionStimulus waterSuppressionStimulus = new(
+            new TimberbornQaWaterSuppressionStimulusResult(selector, 91, 3, 4, 2, WildfireMaterialClass.Storage, 77u, 498, 3, 1));
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            deltaStimulus,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            waterSuppressionStimulus,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute(command);
+
+        Assert.True(result.Success);
+        Assert.Contains($"target_selector={selector}", result.Message);
+        Assert.Equal(
+            StringComparer.OrdinalIgnoreCase.Equals(result.Command, "qa-delta-stimulus") ? [selector] : [],
+            deltaStimulus.TargetSelectors);
+        Assert.Equal(
+            StringComparer.OrdinalIgnoreCase.Equals(result.Command, "qa-water-suppression-stimulus") ? [selector] : [],
+            waterSuppressionStimulus.TargetSelectors);
     }
 
     [Fact]
@@ -480,7 +542,19 @@ public sealed class TimberbornQaCommandBridgeTests
             BurnDurationProofStatus: "queued");
         RecordingStateProvider stateProvider = new(state);
         RecordingBurnDurationStimulus burnDurationStimulus = new(
-            new TimberbornQaBurnDurationStimulusResult("high", 91, 3, 4, 2, 15, 13311, 64, 1));
+            new TimberbornQaBurnDurationStimulusResult(
+                "high",
+                91,
+                3,
+                4,
+                2,
+                WildfireMaterialClass.Tree,
+                77u,
+                13311,
+                15,
+                15,
+                64,
+                1));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
@@ -502,8 +576,11 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("target_x=3", result.Message);
         Assert.Contains("target_y=4", result.Message);
         Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("target_material=Tree", result.Message);
+        Assert.Contains("companion_target_id=77", result.Message);
+        Assert.Contains("initial_cell=13311", result.Message);
         Assert.Contains("initial_fuel=15", result.Message);
-        Assert.Contains("set_cell=13311", result.Message);
+        Assert.Contains("set_heat=15", result.Message);
         Assert.Contains("timeout_ticks=64", result.Message);
         Assert.Contains("burn_duration_proof_target=high", result.ResultToken);
         Assert.Contains("burn_duration_proof_initial_fuel=15", result.ResultToken);
@@ -513,22 +590,27 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueFixedQaDeltaStimulusRegistersExactlyOneCenterSetCellChange()
+    public void QueueQaDeltaStimulusRegistersExactlyOneImportedTargetHeatChange()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
 
-        TimberbornQaDeltaStimulusResult result = fireSystem.QueueFixedQaDeltaStimulus();
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus();
 
-        Assert.Equal(new TimberbornQaDeltaStimulusResult(38, 2, 3, 1, PackedCell.Pack(15, 15, 3, 0, 1, 1)), result);
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Tree, result.MaterialClass);
+        Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Equal((byte)15, result.SetHeat);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(38, change.CellIndex);
-        Assert.Equal(PackedCell.Pack(15, 15, 3, 0, 1, 1), change.SetCell);
+        Assert.Null(change.SetCell);
         Assert.Null(change.AddHeat);
         Assert.Null(change.AddFuel);
         Assert.Null(change.SetWater);
         Assert.Null(change.SetFuel);
-        Assert.Null(change.SetHeat);
+        Assert.Equal((byte)15, change.SetHeat);
         Assert.Null(change.SetFlammability);
         Assert.Null(change.SetHeatLoss);
         Assert.Null(change.SetTerrain);
@@ -549,7 +631,8 @@ public sealed class TimberbornQaCommandBridgeTests
             QueuedChangeCount: 0,
             LastDeltaCount: 0);
         RecordingStateProvider stateProvider = new(state);
-        RecordingDeltaStimulus deltaStimulus = new(new TimberbornQaDeltaStimulusResult(91, 3, 4, 2, 498));
+        RecordingDeltaStimulus deltaStimulus = new(
+            new TimberbornQaDeltaStimulusResult(TimberbornQaFieldTargetSelectors.Default, 91, 3, 4, 2, WildfireMaterialClass.Tree, 77u, 498, 15, 1));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink);
 
@@ -566,27 +649,19 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueBuildingBurnoutQaStimulusRegistersOnlyTargetedSetCellChanges()
+    public void QueueBuildingBurnoutQaStimulusRegistersOnlyTargetedFieldChanges()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            CreateBurnDurationSource(1, 3, 1, 4));
         RecordingBuildingBurnoutTargetProvider targetProvider = new(
             new TimberbornQaBuildingBurnoutStimulusTarget(38, 2, 3, 1, 39));
 
         TimberbornQaBuildingBurnoutStimulusResult result =
             fireSystem.QueueBuildingBurnoutQaStimulus(targetProvider);
 
-        Assert.Equal(
-            new TimberbornQaBuildingBurnoutStimulusResult(
-                38,
-                2,
-                3,
-                1,
-                39,
-                PackedCell.Pack(15, 15, 1, 0, 1, 3),
-                PackedCell.Pack(0, 15, 1, 0, 1, 3),
-                2),
-            result);
+        Assert.Equal(new TimberbornQaBuildingBurnoutStimulusResult(38, 2, 3, 1, 39, 15, 0, 2), result);
         Assert.Equal(1, targetProvider.CallCount);
         Assert.Equal([new FireGrid(4, 6, 2)], targetProvider.Grids);
         Assert.Equal(2, simulator.RegisteredChanges.Count);
@@ -596,15 +671,13 @@ public sealed class TimberbornQaCommandBridgeTests
             Assert.Null(change.AddHeat);
             Assert.Null(change.AddFuel);
             Assert.Null(change.SetWater);
-            Assert.Null(change.SetFuel);
-            Assert.Null(change.SetHeat);
             Assert.Null(change.SetFlammability);
             Assert.Null(change.SetHeatLoss);
             Assert.Null(change.SetTerrain);
-            Assert.NotNull(change.SetCell);
+            Assert.Null(change.SetCell);
         });
-        Assert.Equal(PackedCell.Pack(15, 15, 1, 0, 1, 3), simulator.RegisteredChanges[0].SetCell);
-        Assert.Equal(PackedCell.Pack(0, 15, 1, 0, 1, 3), simulator.RegisteredChanges[1].SetCell);
+        Assert.Equal((byte)15, simulator.RegisteredChanges[0].SetHeat);
+        Assert.Equal((byte)0, simulator.RegisteredChanges[1].SetFuel);
         Assert.Equal(2, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
@@ -612,12 +685,17 @@ public sealed class TimberbornQaCommandBridgeTests
     public void QueueWaterSuppressionQaStimulusRegistersExactlyOneBoundSetWaterChange()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
 
         TimberbornQaWaterSuppressionStimulusResult result =
             fireSystem.QueueWaterSuppressionQaStimulus();
 
-        Assert.Equal(new TimberbornQaWaterSuppressionStimulusResult(38, 2, 3, 1, 3, 1), result);
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Tree, result.MaterialClass);
+        Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Equal((byte)3, result.SetWater);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(38, change.CellIndex);
         Assert.Null(change.SetCell);
@@ -636,7 +714,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [InlineData("low", 37, 1, 3, 1, 4)]
     [InlineData("medium", 38, 2, 3, 1, 9)]
     [InlineData("high", 39, 3, 3, 1, 15)]
-    public void QueueBurnDurationQaStimulusRegistersOneNamedBoundSetCellChange(
+    public void QueueBurnDurationQaStimulusRegistersOneNamedBoundHeatChange(
         string target,
         int expectedCellIndex,
         int expectedX,
@@ -645,32 +723,29 @@ public sealed class TimberbornQaCommandBridgeTests
         byte expectedFuel)
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            CreateBurnDurationSource(1, 3, 1, 4),
+            CreateBurnDurationSource(2, 3, 1, 9),
+            CreateBurnDurationSource(3, 3, 1, 15));
 
         TimberbornQaBurnDurationStimulusResult result =
             fireSystem.QueueBurnDurationQaStimulus(target);
 
-        ushort expectedCell = PackedCell.Pack(expectedFuel, 15, 3, 0, 1, 1);
-        Assert.Equal(
-            new TimberbornQaBurnDurationStimulusResult(
-                target,
-                expectedCellIndex,
-                expectedX,
-                expectedY,
-                expectedZ,
-                expectedFuel,
-                expectedCell,
-                64,
-                1),
-            result);
+        Assert.Equal(expectedCellIndex, result.CellIndex);
+        Assert.Equal(expectedX, result.X);
+        Assert.Equal(expectedY, result.Y);
+        Assert.Equal(expectedZ, result.Z);
+        Assert.Equal(expectedFuel, result.InitialFuel);
+        Assert.Equal((byte)15, result.SetHeat);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(expectedCellIndex, change.CellIndex);
-        Assert.Equal(expectedCell, change.SetCell);
+        Assert.Null(change.SetCell);
         Assert.Null(change.AddHeat);
         Assert.Null(change.AddFuel);
         Assert.Null(change.SetWater);
         Assert.Null(change.SetFuel);
-        Assert.Null(change.SetHeat);
+        Assert.Equal((byte)15, change.SetHeat);
         Assert.Null(change.SetFlammability);
         Assert.Null(change.SetHeatLoss);
         Assert.Null(change.SetTerrain);
@@ -691,7 +766,9 @@ public sealed class TimberbornQaCommandBridgeTests
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(37, coldCell, burningFuel4)], Tick: 5));
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(37, burningFuel4, burningFuel3)], Tick: 6));
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(37, burningFuel3, depletedCell)], Tick: 7));
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            CreateBurnDurationSource(1, 3, 1, 4));
 
         fireSystem.QueueBurnDurationQaStimulus("low");
         fireSystem.Tick();
@@ -717,7 +794,9 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(38, coldCell, burningFuel9)], Tick: 10));
         simulator.TickResults.Enqueue(new GpuFireStepResult([], Tick: 74));
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            CreateBurnDurationSource(2, 3, 1, 9));
 
         fireSystem.QueueBurnDurationQaStimulus("medium");
         fireSystem.Tick();
@@ -739,7 +818,9 @@ public sealed class TimberbornQaCommandBridgeTests
         ushort wetCell = PackedCell.SetWater(burningCell, 3);
         RecordingFireSimulator simulator = new(width: 1, height: 1, depth: 1);
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(0, burningCell, wetCell)], Tick: 1));
-        TimberbornFireSystem fireSystem = new(simulator);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(0, 0, 0, companionTargetId: 77u));
         TimberbornFixedCadenceFireDispatcher dispatcher = new(
             fireSystem,
             TimberbornFireCadence.FromSeconds(1),
@@ -869,8 +950,10 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Theory]
+    [InlineData("qa-delta-stimulus unknown")]
     [InlineData("qa-delta-stimulus 1 2 3")]
     [InlineData("qa-building-burnout-stimulus target=1")]
+    [InlineData("qa-water-suppression-stimulus unknown")]
     [InlineData("qa-water-suppression-stimulus x=1 y=2")]
     [InlineData("qa-burn-duration-stimulus x=1 y=2")]
     [InlineData("qa-burn-duration-stimulus extreme")]
@@ -879,13 +962,26 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingStateProvider stateProvider = new(TimberbornQaCommandState.Placeholder);
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
-            new RecordingDeltaStimulus(new TimberbornQaDeltaStimulusResult(0, 0, 0, 0, 1)),
+            new RecordingDeltaStimulus(
+                new TimberbornQaDeltaStimulusResult(TimberbornQaFieldTargetSelectors.Default, 0, 0, 0, 0, WildfireMaterialClass.Tree, 1u, 1, 15, 1)),
             new RecordingBuildingBurnoutStimulus(
-                new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 1, 2, 2)),
+                new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 15, 0, 2)),
             new RecordingWaterSuppressionStimulus(
-                new TimberbornQaWaterSuppressionStimulusResult(0, 0, 0, 0, 3, 1)),
+                new TimberbornQaWaterSuppressionStimulusResult(TimberbornQaFieldTargetSelectors.Default, 0, 0, 0, 0, WildfireMaterialClass.Tree, 1u, 1, 3, 1)),
             new RecordingBurnDurationStimulus(
-                new TimberbornQaBurnDurationStimulusResult("low", 0, 0, 0, 0, 4, 1, 64, 1)),
+                new TimberbornQaBurnDurationStimulusResult(
+                    "low",
+                    0,
+                    0,
+                    0,
+                    0,
+                    WildfireMaterialClass.Tree,
+                    1u,
+                    1,
+                    4,
+                    15,
+                    64,
+                    1)),
             new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute(command);
@@ -1168,11 +1264,14 @@ public sealed class TimberbornQaCommandBridgeTests
     {
         public int CallCount { get; private set; }
 
-        public TimberbornQaDeltaStimulusResult QueueFixedDeltaStimulus()
+        public TimberbornQaDeltaStimulusResult QueueDeltaStimulus(string targetSelector)
         {
             CallCount++;
+            TargetSelectors.Add(targetSelector);
             return result;
         }
+
+        public List<string> TargetSelectors { get; } = [];
     }
 
     private sealed class RecordingBuildingBurnoutStimulus(TimberbornQaBuildingBurnoutStimulusResult result)
@@ -1192,11 +1291,14 @@ public sealed class TimberbornQaCommandBridgeTests
     {
         public int CallCount { get; private set; }
 
-        public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus()
+        public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus(string targetSelector)
         {
             CallCount++;
+            TargetSelectors.Add(targetSelector);
             return result;
         }
+
+        public List<string> TargetSelectors { get; } = [];
     }
 
     private sealed class RecordingBurnDurationStimulus(TimberbornQaBurnDurationStimulusResult result)
@@ -1272,6 +1374,44 @@ public sealed class TimberbornQaCommandBridgeTests
         public void Warning(string message)
         {
             WarningMessages.Add(message);
+        }
+    }
+
+    private static TimberbornFireSystem CreateInitializedFireSystem(
+        RecordingFireSimulator simulator,
+        params TimberbornCellSource[] sources)
+    {
+        TimberbornFireSystem fireSystem = new(new RecordingFireSimulatorFactory(simulator));
+        fireSystem.Initialize(new FireGrid(simulator.Width, simulator.Height, simulator.Depth), sources);
+        simulator.RegisteredChanges.Clear();
+        return fireSystem;
+    }
+
+    private static TimberbornCellSource CreateBurnDurationSource(int x, int y, int z, byte fuel)
+    {
+        return new TimberbornResourceAdapter().CreateSource(
+            x,
+            y,
+            z,
+            fuel,
+            flammability: 3,
+            heatLoss: 1,
+            TimberbornResourceKind.Vegetation,
+            WildfireMaterialClass.Tree,
+            companionTargetId: (uint)fuel);
+    }
+
+    private sealed class RecordingFireSimulatorFactory(RecordingFireSimulator simulator) : ITimberbornFireSimulatorFactory
+    {
+        public IGpuFireSimulator Create(
+            FireGrid grid,
+            ReadOnlySpan<ushort> initialCells,
+            ReadOnlySpan<WildfireCompanionField> companionFields)
+        {
+            Assert.Equal(simulator.Width, grid.Width);
+            Assert.Equal(simulator.Height, grid.Height);
+            Assert.Equal(simulator.Depth, grid.Depth);
+            return simulator;
         }
     }
 
