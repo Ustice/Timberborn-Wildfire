@@ -16,6 +16,7 @@ public sealed class WildfireReleaseSettings
         KeyPrefix + "explosive_infrastructure_armed_threshold_ticks";
     public const string ExplosiveInfrastructurePulseHeatKey = KeyPrefix + "explosive_infrastructure_pulse_heat";
     public const string ExplosiveInfrastructurePulseRadiusKey = KeyPrefix + "explosive_infrastructure_pulse_radius";
+    public const string DetonatorFireSafetyEnabledKey = KeyPrefix + "detonator_fire_safety_enabled";
     public const int CurrentSettingsSchemaVersion = 1;
     public const bool DefaultWildfireEnabled = true;
     public const bool InvalidWildfireEnabled = false;
@@ -24,6 +25,7 @@ public sealed class WildfireReleaseSettings
     public const int DefaultExplosiveInfrastructureArmedThresholdTicks = 2;
     public const int DefaultExplosiveInfrastructurePulseHeat = 15;
     public const int DefaultExplosiveInfrastructurePulseRadius = 1;
+    public const bool DefaultDetonatorFireSafetyEnabled = true;
 
     public static readonly IReadOnlyList<string> StableKeys = new[]
     {
@@ -34,6 +36,7 @@ public sealed class WildfireReleaseSettings
         ExplosiveInfrastructureArmedThresholdTicksKey,
         ExplosiveInfrastructurePulseHeatKey,
         ExplosiveInfrastructurePulseRadiusKey,
+        DetonatorFireSafetyEnabledKey,
     };
 
     private readonly IWildfireReleaseSettingsStore _store;
@@ -75,6 +78,10 @@ public sealed class WildfireReleaseSettings
             DefaultExplosiveInfrastructurePulseRadius,
             minimum: 0,
             maximum: 8);
+        WildfireReleaseSettingsBoolValue detonatorFireSafetyEnabled = ReadBoolSetting(
+            DetonatorFireSafetyEnabledKey,
+            DefaultDetonatorFireSafetyEnabled,
+            invalidDefault: false);
 
         return new WildfireReleaseSettingsSnapshot(
             schemaVersion.Value,
@@ -84,6 +91,7 @@ public sealed class WildfireReleaseSettings
             armedThresholdTicks.Value,
             pulseHeat.Value,
             pulseRadius.Value,
+            detonatorFireSafetyEnabled.Value,
             _store.SourceName,
             schemaVersion.InvalidValues
                 .Concat(wildfireEnabled.InvalidValues)
@@ -92,6 +100,7 @@ public sealed class WildfireReleaseSettings
                 .Concat(armedThresholdTicks.InvalidValues)
                 .Concat(pulseHeat.InvalidValues)
                 .Concat(pulseRadius.InvalidValues)
+                .Concat(detonatorFireSafetyEnabled.InvalidValues)
                 .ToArray());
     }
 
@@ -336,6 +345,7 @@ public sealed record WildfireReleaseSettingsSnapshot(
     int ExplosiveInfrastructureArmedThresholdTicks,
     int ExplosiveInfrastructurePulseHeat,
     int ExplosiveInfrastructurePulseRadius,
+    bool IsDetonatorFireSafetyEnabled,
     string SourceName,
     IReadOnlyList<WildfireReleaseSettingInvalidValue> InvalidValues)
 {
@@ -354,6 +364,7 @@ public sealed record WildfireReleaseSettingsSnapshot(
         $"explosive_infrastructure_armed_threshold_ticks={ExplosiveInfrastructureArmedThresholdTicks} " +
         $"explosive_infrastructure_pulse_heat={ExplosiveInfrastructurePulseHeat} " +
         $"explosive_infrastructure_pulse_radius={ExplosiveInfrastructurePulseRadius} " +
+        $"detonator_fire_safety_enabled={IsDetonatorFireSafetyEnabled.ToString().ToLowerInvariant()} " +
         $"invalid_values={InvalidValues.Count} " +
         $"invalid_keys={FormatInvalidKeys(InvalidValues)}";
 

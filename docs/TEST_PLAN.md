@@ -88,6 +88,10 @@ Automated coverage for `TWF-152` must prove the disabled setting gate, sustained
 
 Live QA must prove each native wrapper independently. Dynamite triggering evidence must show the target id and depth, the arming threshold, the selected native call (`TriggerDelayed` or `Trigger`), bounded Wildfire heat-pulse cells, and final status counters. Detonator evidence must show disable or arming behavior without corrupting automation state. Tunnel terrain destruction must stay disabled until a later ticket captures native `Tunnel.Explode()` proof, terrain/object impact evidence, save/reload behavior, and a player-recoverable rollback or rebuild path.
 
+`TWF-153` adds the first detonator fire-safety lane. Compact fire deltas are converted into detonator safety decisions, deduplicated by stable target id, and handled as trigger-device safety consequences rather than fuel or heat-pulse sources. The current accepted behavior is `Disarm()` only, never `Arm()` or `Evaluate()`, behind `detonator_fire_safety_enabled`. Timberborn's `Detonator` type is present in `Timberborn.AutomationBuildings.dll` but is not publicly accessible to the mod assembly, so the live adapter uses a reflection wrapper around `GetObjectsWithComponentAt<Detonator>` and `Disarm()` while deterministic tests stay on the typed adapter interface.
+
+Automated coverage for `TWF-153` must prove the disabled setting gate, duplicate target suppression, disabled behavior, unavailable wrapper telemetry, zero armed targets, recoverability counters, and `last_delta_consumer_detonator_fire_safety_*` QA/status tokens.
+
 ## Burn Damage Foundation
 
 `TWF-075` keeps burn-damage state deterministic and Timberborn-local. Automated coverage should prove that static descriptors do not store per-instance damage, target registration owns the stable entity/cell mapping, and downstream consequence tickets can consume bounded state without adding host-owned spread rules.

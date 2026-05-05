@@ -29,6 +29,7 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
     private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
+    private ITimberbornDetonatorFireSafetyTargetApi? _detonatorFireSafetyTargetApi;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -422,6 +423,15 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerExplosiveInfrastructureSkippedNoSafeApiCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedNoSafeApiCount,
             LastDeltaConsumerExplosiveInfrastructureSkippedAlreadyTriggeredCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedAlreadyTriggeredCount,
             LastDeltaConsumerExplosiveInfrastructureLastTriggeredDepth: deltaConsumerSummary.ExplosiveInfrastructureLastTriggeredDepth,
+            LastDeltaConsumerDetonatorFireSafetyConsideredDeltaCount: deltaConsumerSummary.DetonatorFireSafetyConsideredDeltaCount,
+            LastDeltaConsumerDetonatorFireSafetyMatchedTargetCellCount: deltaConsumerSummary.DetonatorFireSafetyMatchedTargetCellCount,
+            LastDeltaConsumerDetonatorFireSafetyDuplicateTargetSuppressedCount: deltaConsumerSummary.DetonatorFireSafetyDuplicateTargetSuppressedCount,
+            LastDeltaConsumerDetonatorFireSafetyDisabledTargetCount: deltaConsumerSummary.DetonatorFireSafetyDisabledTargetCount,
+            LastDeltaConsumerDetonatorFireSafetyArmedTargetCount: deltaConsumerSummary.DetonatorFireSafetyArmedTargetCount,
+            LastDeltaConsumerDetonatorFireSafetySkippedSettingDisabledCount: deltaConsumerSummary.DetonatorFireSafetySkippedSettingDisabledCount,
+            LastDeltaConsumerDetonatorFireSafetySkippedNoSafeApiCount: deltaConsumerSummary.DetonatorFireSafetySkippedNoSafeApiCount,
+            LastDeltaConsumerDetonatorFireSafetyRecoverabilityPreservedCount: deltaConsumerSummary.DetonatorFireSafetyRecoverabilityPreservedCount,
+            LastDeltaConsumerDetonatorFireSafetyRecoverabilityUnknownCount: deltaConsumerSummary.DetonatorFireSafetyRecoverabilityUnknownCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -526,6 +536,11 @@ public sealed class TimberbornFireRuntime :
         _explosiveInfrastructureTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
     }
 
+    public void AttachDetonatorFireSafetyTargetApi(ITimberbornDetonatorFireSafetyTargetApi targetApi)
+    {
+        _detonatorFireSafetyTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
@@ -580,6 +595,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=explosive_infrastructure");
         }
+        if (_detonatorFireSafetyTargetApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=detonator_fire_safety");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -602,7 +621,13 @@ public sealed class TimberbornFireRuntime :
                             _releaseSettings.GetSnapshot()),
                         _explosiveInfrastructureTargetApi,
                         _explosiveInfrastructureHeatPulseSink,
-                        _logSink));
+                        _logSink),
+            detonatorFireSafetySink: _detonatorFireSafetyTargetApi is null
+                ? null
+                : new TimberbornDetonatorFireSafetySink(
+                    () => _releaseSettings.GetSnapshot().IsDetonatorFireSafetyEnabled,
+                    _detonatorFireSafetyTargetApi,
+                    _logSink));
     }
 
     private bool TryAllowExternalChange(string source, int? count)

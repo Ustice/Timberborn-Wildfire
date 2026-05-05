@@ -2,7 +2,6 @@ using Timberborn.BlockSystem;
 using Timberborn.Buildings;
 using Timberborn.BaseComponentSystem;
 using Timberborn.EntitySystem;
-using Timberborn.Explosions;
 using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
 using Timberborn.Stockpiles;
@@ -117,6 +116,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService));
             _runtime.AttachExplosiveInfrastructureTargetApi(
                 new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));
+            _runtime.AttachDetonatorFireSafetyTargetApi(
+                new TimberbornDetonatorFireSafetyTargetApi(grid, _blockService));
             _runtime.Initialize(grid, sources, importResult.CompanionFields, importResult.Summary, _simulatorFactory);
             _initialized = true;
             _logSink.Info(

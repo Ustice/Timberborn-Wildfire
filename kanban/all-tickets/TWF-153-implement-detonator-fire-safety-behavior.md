@@ -54,3 +54,5 @@ Define and implement conservative fire behavior for placed `Detonator` targets w
 - Do not use detonator behavior to trigger dynamite until a separate accepted proof says that path is safe.
 - Keep native dynamite triggering in `TWF-152`.
 - Keep tunnel destruction in `TWF-154`.
+- 2026-05-05 worker: implemented a conservative detonator fire-safety consequence lane. Compact fire deltas now resolve placed detonator targets through an adapter API, suppress duplicate cells by stable target id, call only a wrapped disable/disarm behavior, and report `detonator_fire_safety_*` summary plus QA status fields. The lane never arms, evaluates, triggers adjacent dynamite, emits heat pulses, or mutates terrain.
+- 2026-05-05 worker learning: Timberborn's `Detonator` runtime type is present in `Timberborn.AutomationBuildings.dll`, but it is not publicly accessible to the mod assembly. The live adapter therefore uses reflection to resolve `GetObjectsWithComponentAt<Detonator>` and call public `Disarm()`, while the deterministic sink remains typed behind `ITimberbornDetonatorFireSafetyTargetApi`.

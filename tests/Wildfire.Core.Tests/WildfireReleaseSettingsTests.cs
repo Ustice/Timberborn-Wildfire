@@ -51,6 +51,7 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Equal(2, snapshot.ExplosiveInfrastructureArmedThresholdTicks);
         Assert.Equal(15, snapshot.ExplosiveInfrastructurePulseHeat);
         Assert.Equal(1, snapshot.ExplosiveInfrastructurePulseRadius);
+        Assert.True(snapshot.IsDetonatorFireSafetyEnabled);
         Assert.Equal("test", snapshot.SourceName);
         Assert.Empty(snapshot.InvalidValues);
         Assert.Equal(
@@ -62,6 +63,7 @@ public sealed class WildfireReleaseSettingsTests
                 WildfireReleaseSettings.ExplosiveInfrastructureArmedThresholdTicksKey,
                 WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey,
                 WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey,
+                WildfireReleaseSettings.DetonatorFireSafetyEnabledKey,
             ],
             WildfireReleaseSettings.StableKeys);
         Assert.Contains("wildfire_release_settings", snapshot.StatusToken);
@@ -69,6 +71,7 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Contains("wildfire_enabled=true", snapshot.StatusToken);
         Assert.Contains("explosive_infrastructure_enabled=true", snapshot.StatusToken);
         Assert.Contains("native_dynamite_trigger_enabled=false", snapshot.StatusToken);
+        Assert.Contains("detonator_fire_safety_enabled=true", snapshot.StatusToken);
         Assert.Contains("invalid_values=0", snapshot.StatusToken);
     }
 
@@ -104,6 +107,7 @@ public sealed class WildfireReleaseSettingsTests
                 [WildfireReleaseSettings.ExplosiveInfrastructureArmedThresholdTicksKey] = 2,
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey] = 15,
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey] = 1,
+                [WildfireReleaseSettings.DetonatorFireSafetyEnabledKey] = 1,
             },
             new Dictionary<string, string>
             {
@@ -138,6 +142,7 @@ public sealed class WildfireReleaseSettingsTests
                 [WildfireReleaseSettings.ExplosiveInfrastructureArmedThresholdTicksKey] = 2,
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseHeatKey] = 15,
                 [WildfireReleaseSettings.ExplosiveInfrastructurePulseRadiusKey] = 1,
+                [WildfireReleaseSettings.DetonatorFireSafetyEnabledKey] = 1,
             },
             new Dictionary<string, string>
             {

@@ -53,6 +53,10 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Explosions.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.AutomationBuildings">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.AutomationBuildings.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.TickSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TickSystem.dll</HintPath>
       <Private>false</Private>
