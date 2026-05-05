@@ -90,6 +90,8 @@ First ready wave:
 - [ ] `TWF-090`: tune water suppression behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and suppression recording evidence.
 - [ ] `TWF-091`: tune structure vertical fire behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and structure recording evidence.
 - [ ] `TWF-092`: tune burnout cooling behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and burnout/cooling recording evidence.
+- [x] `TWF-147`: implement GPU field renderer. Live 50x50 Diorama QA proved one visible rendered GPU field region with material-ready renderer telemetry and recording evidence.
+- [ ] `TWF-155`: clarify GPU renderer region telemetry. Split true dropped regions from below-threshold invisible regions before release diagnostics rely on the counter.
 
 ### Sprint 7: World Consequence Core
 
