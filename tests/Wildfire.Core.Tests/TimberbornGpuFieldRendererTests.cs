@@ -33,6 +33,7 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Equal(2, sink.Counters.VisibleRegionCount);
         Assert.Equal(2, sink.Counters.UpdatedRegionCount);
         Assert.Equal(0, sink.Counters.DroppedRegionCount);
+        Assert.Equal(0, sink.Counters.InvisibleRegionCount);
         Assert.Equal(0, sink.Counters.MaterialFailureCount);
         Assert.True(sink.Counters.RendererEnabled);
         Assert.True(sink.Counters.MaterialReady);
@@ -70,6 +71,63 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Equal(1, sink.Counters.VisibleRegionCount);
         Assert.Equal(1, sink.Counters.UpdatedRegionCount);
         Assert.Equal(1, sink.Counters.DroppedRegionCount);
+        Assert.Equal(0, sink.Counters.InvisibleRegionCount);
+    }
+
+    [Fact]
+    public void CountsBelowThresholdRegionsSeparatelyFromDroppedRegions()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f, visibility: 1f),
+            [3] = Sample(3, fire: 0.001f, smoke: 0f, ash: 0f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(RegionSize: 1, MaxUpdatedRegionsPerDispatch: 4),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(4);
+        sink.UpdateVisualEffect(EffectEvent(0, 4));
+        sink.UpdateVisualEffect(EffectEvent(3, 4));
+        sink.CompleteVisualEffectDispatch(4);
+
+        Assert.Single(presenter.RenderedRegions);
+        Assert.Equal(1, sink.Counters.VisibleRegionCount);
+        Assert.Equal(1, sink.Counters.UpdatedRegionCount);
+        Assert.Equal(0, sink.Counters.DroppedRegionCount);
+        Assert.Equal(1, sink.Counters.InvisibleRegionCount);
+        Assert.Contains(
+            logSink.InfoMessages,
+            message => message.Contains("dropped_regions=0 invisible_regions=1", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CountsMissingSurfaceBindingAsDroppedRegion()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>());
+        TimberbornGpuVisualFieldSurface surface = new(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(RegionSize: 1, MaxUpdatedRegionsPerDispatch: 4),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(6);
+        sink.UpdateVisualEffect(EffectEvent(0, 6));
+        sink.CompleteVisualEffectDispatch(6);
+
+        Assert.Empty(presenter.RenderedRegions);
+        Assert.Equal(0, sink.Counters.VisibleRegionCount);
+        Assert.Equal(0, sink.Counters.UpdatedRegionCount);
+        Assert.Equal(1, sink.Counters.DroppedRegionCount);
+        Assert.Equal(0, sink.Counters.InvisibleRegionCount);
     }
 
     [Fact]
@@ -88,6 +146,7 @@ public sealed class TimberbornGpuFieldRendererTests
             GpuFieldRendererLastNonZeroUpdatedRegionTick: 9,
             GpuFieldRendererMaxUpdatedRegionCount: 512,
             GpuFieldRendererDroppedRegionCount: 1,
+            GpuFieldRendererInvisibleRegionCount: 4,
             GpuFieldRendererMaterialFailureCount: 0,
             GpuFieldRendererLastUpdatedTick: 9);
 
@@ -101,6 +160,7 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("gpu_field_renderer_visible_regions=3", result.ResultToken);
         Assert.Contains("gpu_field_renderer_updated_regions=2", result.ResultToken);
         Assert.Contains("gpu_field_renderer_dropped_regions=1", result.ResultToken);
+        Assert.Contains("gpu_field_renderer_invisible_regions=4", result.ResultToken);
         Assert.Contains("gpu_field_renderer_material_failures=0", result.ResultToken);
     }
 

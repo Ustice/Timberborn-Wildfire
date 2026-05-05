@@ -48,3 +48,5 @@ Release diagnostics need this telemetry to be trustworthy, especially when QA is
 ## Notes
 
 - 2026-05-05 coordinator: created during `TWF-147` live QA. Evidence root `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-147-live-20260505T030230Z/` shows valid renderer proof at tick `260`, but also shows `dropped_regions` on follow-up ticks where the field intensity had already fallen below the visible threshold.
+- 2026-05-05 worker: split below-threshold renderer regions into `invisible_regions` / `gpu_field_renderer_invisible_regions`. `dropped_regions` now remains reserved for missing surface binding or capacity drops, while fadeout/threshold culls report separately. The same pass also aligns the status `gpu_field_renderer_updated_regions` counter with the log's rendered `updated_regions` value instead of reporting every sampled candidate region.
+- 2026-05-05 verification passed: `git diff --check`, focused `dotnet test --filter FullyQualifiedName~TimberbornGpuFieldRendererTests`, and full `dotnet test Wildfire.slnx` with 275 tests.

@@ -512,6 +512,7 @@ public sealed class TimberbornFireRuntime :
             GpuFieldRendererLastNonZeroUpdatedRegionTick: gpuFieldRendererCounters.LastNonZeroUpdatedRegionTick,
             GpuFieldRendererMaxUpdatedRegionCount: gpuFieldRendererCounters.MaxUpdatedRegionCount,
             GpuFieldRendererDroppedRegionCount: gpuFieldRendererCounters.DroppedRegionCount,
+            GpuFieldRendererInvisibleRegionCount: gpuFieldRendererCounters.InvisibleRegionCount,
             GpuFieldRendererMaterialFailureCount: gpuFieldRendererCounters.MaterialFailureCount,
             GpuFieldRendererLastUpdatedTick: gpuFieldRendererCounters.LastUpdatedTick,
             ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,

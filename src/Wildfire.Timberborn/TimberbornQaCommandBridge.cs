@@ -1056,6 +1056,7 @@ public sealed record TimberbornQaCommandState(
     uint? GpuFieldRendererLastNonZeroUpdatedRegionTick = null,
     int? GpuFieldRendererMaxUpdatedRegionCount = null,
     int? GpuFieldRendererDroppedRegionCount = null,
+    int? GpuFieldRendererInvisibleRegionCount = null,
     int? GpuFieldRendererMaterialFailureCount = null,
     uint? GpuFieldRendererLastUpdatedTick = null,
     int? ActivePooledFireEffectCount = null,
@@ -1273,6 +1274,7 @@ public sealed record TimberbornQaCommandResult(
         $"gpu_field_renderer_last_nonzero_updated_regions_tick={FormatNumber(State.GpuFieldRendererLastNonZeroUpdatedRegionTick)} " +
         $"gpu_field_renderer_max_updated_regions={FormatNumber(State.GpuFieldRendererMaxUpdatedRegionCount)} " +
         $"gpu_field_renderer_dropped_regions={FormatNumber(State.GpuFieldRendererDroppedRegionCount)} " +
+        $"gpu_field_renderer_invisible_regions={FormatNumber(State.GpuFieldRendererInvisibleRegionCount)} " +
         $"gpu_field_renderer_material_failures={FormatNumber(State.GpuFieldRendererMaterialFailureCount)} " +
         $"gpu_field_renderer_updated_tick={FormatNumber(State.GpuFieldRendererLastUpdatedTick)} " +
         $"active_pooled_fire_effects={FormatNumber(State.ActivePooledFireEffectCount)} " +

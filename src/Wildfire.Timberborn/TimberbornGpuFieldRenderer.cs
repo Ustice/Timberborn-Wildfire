@@ -71,6 +71,7 @@ public readonly record struct TimberbornGpuFieldRendererCounters(
     int LastNonZeroUpdatedRegionCount,
     int MaxUpdatedRegionCount,
     int DroppedRegionCount,
+    int InvisibleRegionCount,
     int MaterialFailureCount,
     uint? LastUpdatedTick,
     uint? LastNonZeroUpdatedRegionTick);
@@ -132,7 +133,9 @@ public sealed class TimberbornGpuFieldRendererSink :
     private readonly ITimberbornGpuFieldRendererPresenter _presenter;
     private readonly Dictionary<int, TimberbornGpuFieldRendererRegionAccumulator> _regionsThisDispatch = new();
     private readonly Dictionary<int, TimberbornGpuFieldRendererRegionState> _visibleRegions = new();
+    private int _updatedRegionsThisDispatch;
     private int _droppedRegionsThisDispatch;
+    private int _invisibleRegionsThisDispatch;
     private int _materialFailuresThisDispatch;
     private int _lastNonZeroUpdatedRegionCount;
     private uint? _lastNonZeroUpdatedRegionTick;
@@ -168,10 +171,11 @@ public sealed class TimberbornGpuFieldRendererSink :
         MaterialReady: _presenter.State.MaterialReady,
         VisualFieldSurfaceBound: _visualFieldSurface.State.IsBound,
         VisibleRegionCount: _visibleRegions.Count,
-        UpdatedRegionCount: _regionsThisDispatch.Count,
+        UpdatedRegionCount: _updatedRegionsThisDispatch,
         LastNonZeroUpdatedRegionCount: _lastNonZeroUpdatedRegionCount,
         MaxUpdatedRegionCount: Options.MaxUpdatedRegionsPerDispatch,
         DroppedRegionCount: _droppedRegionsThisDispatch,
+        InvisibleRegionCount: _invisibleRegionsThisDispatch,
         MaterialFailureCount: _materialFailuresThisDispatch,
         LastUpdatedTick: _currentTick,
         LastNonZeroUpdatedRegionTick: _lastNonZeroUpdatedRegionTick);
@@ -182,7 +186,9 @@ public sealed class TimberbornGpuFieldRendererSink :
     {
         _currentTick = tick;
         _regionsThisDispatch.Clear();
+        _updatedRegionsThisDispatch = 0;
         _droppedRegionsThisDispatch = 0;
+        _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
     }
 
@@ -205,19 +211,24 @@ public sealed class TimberbornGpuFieldRendererSink :
     public void CompleteVisualEffectDispatch(uint tick)
     {
         _currentTick = tick;
-        TimberbornGpuFieldRendererRegionState[] updatedRegions = _regionsThisDispatch.Values
+        TimberbornGpuFieldRendererRegionState[] candidateRegions = _regionsThisDispatch.Values
             .Select(static accumulator => accumulator.ToState())
+            .ToArray();
+        TimberbornGpuFieldRendererRegionState[] visibleCandidateRegions = candidateRegions
             .Where(region => region.Intensity >= Options.MinimumVisibleIntensity)
             .OrderByDescending(static region => region.Intensity)
             .ThenBy(static region => region.RegionId)
+            .ToArray();
+        TimberbornGpuFieldRendererRegionState[] updatedRegions = visibleCandidateRegions
             .Take(Options.MaxUpdatedRegionsPerDispatch)
             .ToArray();
-        int droppedByLimit = Math.Max(0, _regionsThisDispatch.Count - updatedRegions.Length);
+        _updatedRegionsThisDispatch = updatedRegions.Length;
+        int droppedByLimit = Math.Max(0, visibleCandidateRegions.Length - updatedRegions.Length);
         _droppedRegionsThisDispatch += droppedByLimit;
+        _invisibleRegionsThisDispatch = candidateRegions.Length - visibleCandidateRegions.Length;
 
         Array.ForEach(updatedRegions, region => _visibleRegions[region.RegionId] = region);
-        int[] invisibleRegionIds = _regionsThisDispatch.Values
-            .Select(static accumulator => accumulator.ToState())
+        int[] invisibleRegionIds = candidateRegions
             .Where(region => region.Intensity < Options.MinimumVisibleIntensity)
             .Select(static region => region.RegionId)
             .ToArray();
@@ -246,6 +257,7 @@ public sealed class TimberbornGpuFieldRendererSink :
             $"last_nonzero_updated_regions={_lastNonZeroUpdatedRegionCount} " +
             $"last_nonzero_updated_regions_tick={FormatNumber(_lastNonZeroUpdatedRegionTick)} " +
             $"dropped_regions={_droppedRegionsThisDispatch} " +
+            $"invisible_regions={_invisibleRegionsThisDispatch} " +
             $"material_failures={_materialFailuresThisDispatch} " +
             $"max_updated_regions={Options.MaxUpdatedRegionsPerDispatch} " +
             $"region_size={Options.RegionSize} " +
@@ -258,7 +270,9 @@ public sealed class TimberbornGpuFieldRendererSink :
     {
         _regionsThisDispatch.Clear();
         _visibleRegions.Clear();
+        _updatedRegionsThisDispatch = 0;
         _droppedRegionsThisDispatch = 0;
+        _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
         _lastNonZeroUpdatedRegionCount = 0;
         _lastNonZeroUpdatedRegionTick = null;
