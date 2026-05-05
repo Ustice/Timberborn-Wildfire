@@ -10,7 +10,9 @@ dependencies:
   - TWF-146
 write_scope:
   - scripts/export-timberborn-map-fixture.ts
+  - scripts/compare-importer-parity.ts
   - tests/export-timberborn-map-fixture.test.ts
+  - tests/compare-importer-parity.test.ts
   - src/Wildfire.Timberborn/**
   - tests/Wildfire.Core.Tests/**
   - docs/TEST_PLAN.md
@@ -65,3 +67,4 @@ Make `.timber` snapshot export and live Timberborn import classify terrain, enti
 - 2026-05-04 first worker slice added explicit `parityCounts` to snapshot fixtures: `sourceCountsByMaterialClass`, `resolvedCellCountsByMaterialClass`, `terrainSolidVoxelCount`, `waterColumnSourceCount`, and `entitySourceCount`.
 - Regenerated 50x50 Diorama fixture now proves the snapshot summary was source-oriented for entities/water and voxel-oriented for terrain. Live import still reports runtime source counts from occupied coordinates, so the remaining implementation choice is whether to align source models or expose comparable live resolved-cell counts.
 - 2026-05-04 follow-up slice added live resolved-cell counters to the Timberborn importer summary and QA bridge. Live proof on the 50x50 Diorama save after redeploy reported `world_import_total_sources=4294`, source counts of terrain `2503`, tree `1311`, building `335`, storage `23`, water `32`, and badwater `90`, plus resolved counts of empty `53981`, terrain `1751`, tree `1311`, building `335`, storage `0`, water `32`, and badwater `90`. The resolved counts sum to the full `50x50x23 = 57500` field, and the storage source/resolved split shows why parity must compare explicit units instead of one overloaded material summary.
+- 2026-05-04 added `scripts/compare-importer-parity.ts` so parity reports compare snapshot and live dimensions, source counts, and resolved-cell counts as separate units. Fresh comparison artifact: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-151-live-resolved-20260504/importer-parity-comparison.md`. It confirms dimensions match, but resolved cells still diverge because snapshot terrain is solid voxels while live terrain is terrain-service surface cells, and snapshot entities are mostly one saved `BlockObject.Coordinates` cell while live entities use runtime `PositionedBlocks.GetOccupiedCoordinates()`.
