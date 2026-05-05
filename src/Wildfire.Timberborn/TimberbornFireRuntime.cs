@@ -333,6 +333,15 @@ public sealed class TimberbornFireRuntime :
                 WorldImportInfrastructureSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Infrastructure),
                 WorldImportWaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Water),
                 WorldImportBadwaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Badwater),
+                WorldImportResolvedEmptyCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Empty),
+                WorldImportResolvedTerrainCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Terrain),
+                WorldImportResolvedTreeCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Tree),
+                WorldImportResolvedCropCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Crop),
+                WorldImportResolvedBuildingCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Building),
+                WorldImportResolvedStorageCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Storage),
+                WorldImportResolvedInfrastructureCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Infrastructure),
+                WorldImportResolvedWaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Water),
+                WorldImportResolvedBadwaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Badwater),
                 WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
         }
 
@@ -425,6 +434,15 @@ public sealed class TimberbornFireRuntime :
             WorldImportInfrastructureSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Infrastructure),
             WorldImportWaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Water),
             WorldImportBadwaterSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Badwater),
+            WorldImportResolvedEmptyCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Empty),
+            WorldImportResolvedTerrainCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Terrain),
+            WorldImportResolvedTreeCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Tree),
+            WorldImportResolvedCropCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Crop),
+            WorldImportResolvedBuildingCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Building),
+            WorldImportResolvedStorageCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Storage),
+            WorldImportResolvedInfrastructureCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Infrastructure),
+            WorldImportResolvedWaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Water),
+            WorldImportResolvedBadwaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Badwater),
             WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
     }
 

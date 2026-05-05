@@ -26,6 +26,7 @@ public sealed record TimberbornWorldCellImportProviderResult(
 public sealed record TimberbornWorldCellImportSummary(
     int TotalSources,
     IReadOnlyDictionary<WildfireMaterialClass, int> SourceCountsByMaterialClass,
+    IReadOnlyDictionary<WildfireMaterialClass, int> ResolvedCellCountsByMaterialClass,
     IReadOnlyDictionary<string, int> ProviderSourceCounts,
     IReadOnlyDictionary<string, int> ProviderSafeUnavailableCounts)
 {
@@ -40,12 +41,26 @@ public sealed record TimberbornWorldCellImportSummary(
         $"infrastructure_sources={Count(WildfireMaterialClass.Infrastructure)} " +
         $"water_sources={Count(WildfireMaterialClass.Water)} " +
         $"badwater_sources={Count(WildfireMaterialClass.Badwater)} " +
+        $"resolved_empty_cells={ResolvedCount(WildfireMaterialClass.Empty)} " +
+        $"resolved_terrain_cells={ResolvedCount(WildfireMaterialClass.Terrain)} " +
+        $"resolved_tree_cells={ResolvedCount(WildfireMaterialClass.Tree)} " +
+        $"resolved_crop_cells={ResolvedCount(WildfireMaterialClass.Crop)} " +
+        $"resolved_building_cells={ResolvedCount(WildfireMaterialClass.Building)} " +
+        $"resolved_storage_cells={ResolvedCount(WildfireMaterialClass.Storage)} " +
+        $"resolved_infrastructure_cells={ResolvedCount(WildfireMaterialClass.Infrastructure)} " +
+        $"resolved_water_cells={ResolvedCount(WildfireMaterialClass.Water)} " +
+        $"resolved_badwater_cells={ResolvedCount(WildfireMaterialClass.Badwater)} " +
         $"safe_unavailable={ProviderSafeUnavailableCounts.Values.Sum()} " +
         $"safe_unavailable_families={TimberbornQaCommandBridge.FormatToken(FormatSafeUnavailableFamilies())}";
 
     public int Count(WildfireMaterialClass materialClass)
     {
         return SourceCountsByMaterialClass.TryGetValue(materialClass, out int count) ? count : 0;
+    }
+
+    public int ResolvedCount(WildfireMaterialClass materialClass)
+    {
+        return ResolvedCellCountsByMaterialClass.TryGetValue(materialClass, out int count) ? count : 0;
     }
 
     private string FormatSafeUnavailableFamilies()
@@ -103,15 +118,19 @@ public sealed class TimberbornWorldCellImporter
         return new TimberbornWorldCellImportResult(
             sources,
             companionFields,
-            CreateSummary(providerResults, sources));
+            CreateSummary(providerResults, sources, companionFields));
     }
 
     private static TimberbornWorldCellImportSummary CreateSummary(
         IReadOnlyList<TimberbornWorldCellImportProviderResult> providerResults,
-        IReadOnlyList<TimberbornCellSource> sources)
+        IReadOnlyList<TimberbornCellSource> sources,
+        IReadOnlyList<WildfireCompanionField> companionFields)
     {
         IReadOnlyDictionary<WildfireMaterialClass, int> sourceCountsByMaterialClass = sources
             .GroupBy(static source => source.MaterialClass)
+            .ToDictionary(static group => group.Key, static group => group.Count());
+        IReadOnlyDictionary<WildfireMaterialClass, int> resolvedCountsByMaterialClass = companionFields
+            .GroupBy(static field => field.State.MaterialClass)
             .ToDictionary(static group => group.Key, static group => group.Count());
         IReadOnlyDictionary<string, int> providerSourceCounts = providerResults
             .ToDictionary(static result => result.Family, static result => result.Sources.Count, StringComparer.OrdinalIgnoreCase);
@@ -121,6 +140,7 @@ public sealed class TimberbornWorldCellImporter
         return new TimberbornWorldCellImportSummary(
             sources.Count,
             sourceCountsByMaterialClass,
+            resolvedCountsByMaterialClass,
             providerSourceCounts,
             providerSafeUnavailableCounts);
     }

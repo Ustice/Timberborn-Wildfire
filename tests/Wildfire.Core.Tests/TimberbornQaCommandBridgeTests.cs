@@ -980,6 +980,15 @@ public sealed class TimberbornQaCommandBridgeTests
             WorldImportInfrastructureSources: 1,
             WorldImportWaterSources: 0,
             WorldImportBadwaterSources: 0,
+            WorldImportResolvedEmptyCells: 45,
+            WorldImportResolvedTerrainCells: 1,
+            WorldImportResolvedTreeCells: 2,
+            WorldImportResolvedCropCells: 1,
+            WorldImportResolvedBuildingCells: 1,
+            WorldImportResolvedStorageCells: 0,
+            WorldImportResolvedInfrastructureCells: 0,
+            WorldImportResolvedWaterCells: 0,
+            WorldImportResolvedBadwaterCells: 0,
             WorldImportSafeUnavailableCount: 3);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
@@ -1062,6 +1071,8 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("world_import_total_sources=50", result.ResultToken);
         Assert.Contains("world_import_terrain_sources=44", result.ResultToken);
         Assert.Contains("world_import_tree_sources=2", result.ResultToken);
+        Assert.Contains("world_import_resolved_empty_cells=45", result.ResultToken);
+        Assert.Contains("world_import_resolved_tree_cells=2", result.ResultToken);
         Assert.Contains("world_import_safe_unavailable=3", result.ResultToken);
     }
 

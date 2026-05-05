@@ -858,6 +858,15 @@ public sealed record TimberbornQaCommandState(
     int? WorldImportInfrastructureSources = null,
     int? WorldImportWaterSources = null,
     int? WorldImportBadwaterSources = null,
+    int? WorldImportResolvedEmptyCells = null,
+    int? WorldImportResolvedTerrainCells = null,
+    int? WorldImportResolvedTreeCells = null,
+    int? WorldImportResolvedCropCells = null,
+    int? WorldImportResolvedBuildingCells = null,
+    int? WorldImportResolvedStorageCells = null,
+    int? WorldImportResolvedInfrastructureCells = null,
+    int? WorldImportResolvedWaterCells = null,
+    int? WorldImportResolvedBadwaterCells = null,
     int? WorldImportSafeUnavailableCount = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
@@ -969,6 +978,15 @@ public sealed record TimberbornQaCommandResult(
         $"world_import_infrastructure_sources={FormatNumber(State.WorldImportInfrastructureSources)} " +
         $"world_import_water_sources={FormatNumber(State.WorldImportWaterSources)} " +
         $"world_import_badwater_sources={FormatNumber(State.WorldImportBadwaterSources)} " +
+        $"world_import_resolved_empty_cells={FormatNumber(State.WorldImportResolvedEmptyCells)} " +
+        $"world_import_resolved_terrain_cells={FormatNumber(State.WorldImportResolvedTerrainCells)} " +
+        $"world_import_resolved_tree_cells={FormatNumber(State.WorldImportResolvedTreeCells)} " +
+        $"world_import_resolved_crop_cells={FormatNumber(State.WorldImportResolvedCropCells)} " +
+        $"world_import_resolved_building_cells={FormatNumber(State.WorldImportResolvedBuildingCells)} " +
+        $"world_import_resolved_storage_cells={FormatNumber(State.WorldImportResolvedStorageCells)} " +
+        $"world_import_resolved_infrastructure_cells={FormatNumber(State.WorldImportResolvedInfrastructureCells)} " +
+        $"world_import_resolved_water_cells={FormatNumber(State.WorldImportResolvedWaterCells)} " +
+        $"world_import_resolved_badwater_cells={FormatNumber(State.WorldImportResolvedBadwaterCells)} " +
         $"world_import_safe_unavailable={FormatNumber(State.WorldImportSafeUnavailableCount)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
