@@ -1,0 +1,1 @@
+../../all-tickets/TWF-153-implement-detonator-fire-safety-behavior.md

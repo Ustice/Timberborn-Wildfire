@@ -23,6 +23,45 @@ Explosives should be treated as hazardous stored goods, not ordinary fuel. The f
 
 We should not start with arbitrary physics blasts, displaced terrain, or direct entity deletion. Those can come later if the Timberborn API and balance design make them safe. The first version should be deterministic, bounded, logged, and easy to disable through release settings.
 
+## Dynamite, Detonators, And Tunnels
+
+Runtime survey found native Timberborn surfaces for the explosive infrastructure lane:
+
+- `Dynamite.Folktails`, `DoubleDynamite.Folktails`, and `TripleDynamite.Folktails` all carry `DynamiteSpec`, cost `Explosives`, and have native `Dynamite.Trigger()`, `TriggerDelayed(int)`, `Disarm()`, and `Detonate()` methods. Their blueprint depths are `1`, `2`, and `3`.
+- `Detonator.Folktails` carries `DetonatorSpec`, costs `MetalBlock`, `Explosives`, and `Extract`, and is constrained to sit on `Dynamite`, `DoubleDynamite`, or `TripleDynamite`. Runtime methods include `Arm()`, `Disarm()`, and `Evaluate()`.
+- `Tunnel.Folktails` costs `Explosives`, `Extract`, and `Plank`, carries `TunnelSpec`, has a native `Tunnel.Explode()` method, and names `Platform.Folktails` as its tunnel-support template.
+- `ExplosionService`, `ExplosionOutcomeGatherer`, and `ExplosionVulnerable` prove Timberborn owns real explosion, affected-tile, object-destruction, character, and terrain-physics behavior. Wildfire should not reimplement that as a fake delete path.
+
+Accepted first contract:
+
+- Stored `Explosives` and `Fireworks` remain the stored-goods lane from `TWF-116`.
+- Placed dynamite is an armed explosive infrastructure target. Fire exposure can advance an arming threshold and, if the release setting allows it, call a wrapped native `Dynamite.TriggerDelayed(...)` or `Trigger()` path. The same event should enqueue a bounded heat pulse into the Wildfire sim so the field remains visually and mechanically coherent.
+- Detonators are trigger devices, not fuel. Fire can disable them or mark them unsafe first; premature arming needs a separate wrapper because automation state and recoverability are risky.
+- Tunnels are special terrain-affecting infrastructure. Fire can damage or mark them unstable in the first implementation, but native `Tunnel.Explode()` and terrain mutation stay behind a separate opt-in ticket with live QA and rollback evidence.
+- Direct terrain deformation, broad physics blasts, and direct entity deletion are not allowed from generic fire deltas. Those behaviors must go through named native wrappers, settings, telemetry, and live proof.
+
+Required settings:
+
+- `explosive_infrastructure_enabled`
+- `native_dynamite_trigger_enabled`
+- `tunnel_terrain_destruction_enabled`
+- `explosive_infrastructure_armed_threshold_ticks`
+- `explosive_infrastructure_pulse_heat`
+- `explosive_infrastructure_pulse_radius`, initially fixed to `1`
+
+Required telemetry:
+
+- `explosive_infrastructure_considered`
+- `explosive_infrastructure_armed`
+- `explosive_infrastructure_triggered`
+- `explosive_infrastructure_native_triggered`
+- `explosive_infrastructure_heat_pulse_cells`
+- `explosive_infrastructure_skipped_no_safe_api`
+- `explosive_infrastructure_skipped_setting_disabled`
+- `tunnel_destruction_deferred`
+
+Follow-up implementation should split into separate tickets for native dynamite triggering, detonator safety behavior, and tunnel instability or terrain-destruction gating.
+
 ## Scenario Save Generator
 
 The first generated scenario tool is `scripts/generate-wildfire-scenario-save.ts`, run with Bun. It inspects a selected known-good `.timber` archive, parses JSON through structured APIs, writes a generated output folder under the real Wildfire QA generated-scenarios root, refuses unsafe overwrites, and writes a manifest next to the generated archive.

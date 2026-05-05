@@ -78,6 +78,12 @@ Deferred names for downstream tickets:
 
 Automated coverage should prove partial-stack destruction, duplicate target suppression, non-burnable and unknown resource handling, hazardous-good counting, and safe no-op behavior when no inventory API is available. Live QA must capture a storage fire where status or `qa-readiness` reports `last_delta_consumer_stored_good_burn_matched_storage_cells=<nonzero>` and `last_delta_consumer_stored_good_burn_destroyed_items=<nonzero>`, or a precise safe-unavailable result through `last_delta_consumer_stored_good_burn_skipped_no_inventory_api=<nonzero>`. Required log tokens are `wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn`, `wildfire_timberborn_stored_goods_burn_applied`, and the matching `wildfire_timberborn_delta_consumer_completed ... stored_good_burn_*` fields.
 
+## Explosive Infrastructure
+
+`TWF-130` accepts a separate explosive-infrastructure contract for placed `Dynamite`, `DoubleDynamite`, `TripleDynamite`, `Detonator`, and `Tunnel` targets. Automated tests for implementation tickets should start with descriptor classification, sustained-heat arming thresholds, duplicate target suppression, setting gates, bounded heat-pulse output, and safe unavailable wrappers before any live native explosion is attempted.
+
+Live QA must prove each native wrapper independently. Dynamite triggering evidence must show the target id and depth, the arming threshold, the selected native call (`TriggerDelayed` or `Trigger`), bounded Wildfire heat-pulse cells, and final status counters. Detonator evidence must show disable or arming behavior without corrupting automation state. Tunnel terrain destruction must stay disabled until a later ticket captures native `Tunnel.Explode()` proof, terrain/object impact evidence, save/reload behavior, and a player-recoverable rollback or rebuild path.
+
 ## Burn Damage Foundation
 
 `TWF-075` keeps burn-damage state deterministic and Timberborn-local. Automated coverage should prove that static descriptors do not store per-instance damage, target registration owns the stable entity/cell mapping, and downstream consequence tickets can consume bounded state without adding host-owned spread rules.
