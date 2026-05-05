@@ -76,9 +76,31 @@ describe("compare-importer-parity", () => {
     const report = renderImporterParityReport(compareImporterParity(fixture, liveOutput));
 
     expect(report).toContain("Status: pass");
+    expect(report).toContain("Source status: pass");
+    expect(report).toContain("Resolved-cell diagnostic status: pass");
     expect(report).toContain("## Source Counts");
     expect(report).toContain("| storage | 1 | 1 | 0 |");
     expect(report).toContain("## Resolved Cell Counts");
     expect(report).toContain("| storage | 0 | 0 | 0 |");
+  });
+
+  test("does not fail source parity when only resolved diagnostic counts differ", () => {
+    const liveOutput = [
+      "wildfire_command_result command=qa-readiness success=true width=4 height=2 depth=3",
+      "world_import_terrain_sources=8 world_import_vegetation_sources=1 world_import_crop_sources=0",
+      "world_import_tree_sources=3 world_import_building_sources=2 world_import_storage_sources=1",
+      "world_import_infrastructure_sources=0 world_import_water_sources=4 world_import_badwater_sources=1",
+      "world_import_resolved_empty_cells=11 world_import_resolved_terrain_cells=6",
+      "world_import_resolved_vegetation_cells=1 world_import_resolved_crop_cells=0",
+      "world_import_resolved_tree_cells=3 world_import_resolved_building_cells=2",
+      "world_import_resolved_storage_cells=0 world_import_resolved_infrastructure_cells=0",
+      "world_import_resolved_water_cells=0 world_import_resolved_badwater_cells=1",
+    ].join(" ");
+
+    const comparison = compareImporterParity(fixture, liveOutput);
+
+    expect(comparison.matching).toBe(true);
+    expect(comparison.sourceMatching).toBe(true);
+    expect(comparison.resolvedMatching).toBe(false);
   });
 });

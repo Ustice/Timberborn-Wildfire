@@ -973,6 +973,7 @@ public sealed class TimberbornQaCommandBridgeTests
             FireSimPresetFuelBurnDownDenominator: 2,
             WorldImportTotalSources: 50,
             WorldImportTerrainSources: 44,
+            WorldImportVegetationSources: 3,
             WorldImportTreeSources: 2,
             WorldImportCropSources: 1,
             WorldImportBuildingSources: 1,
@@ -982,6 +983,7 @@ public sealed class TimberbornQaCommandBridgeTests
             WorldImportBadwaterSources: 0,
             WorldImportResolvedEmptyCells: 45,
             WorldImportResolvedTerrainCells: 1,
+            WorldImportResolvedVegetationCells: 3,
             WorldImportResolvedTreeCells: 2,
             WorldImportResolvedCropCells: 1,
             WorldImportResolvedBuildingCells: 1,
@@ -1070,8 +1072,10 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
         Assert.Contains("world_import_total_sources=50", result.ResultToken);
         Assert.Contains("world_import_terrain_sources=44", result.ResultToken);
+        Assert.Contains("world_import_vegetation_sources=3", result.ResultToken);
         Assert.Contains("world_import_tree_sources=2", result.ResultToken);
         Assert.Contains("world_import_resolved_empty_cells=45", result.ResultToken);
+        Assert.Contains("world_import_resolved_vegetation_cells=3", result.ResultToken);
         Assert.Contains("world_import_resolved_tree_cells=2", result.ResultToken);
         Assert.Contains("world_import_safe_unavailable=3", result.ResultToken);
     }

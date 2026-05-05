@@ -81,7 +81,7 @@ describe("export-timberborn-map-fixture", () => {
       infrastructure: 1,
       terrain: 1,
       tree: 1,
-      water: 1,
+      water: 0,
     });
     expect(fixture.parityCounts.resolvedCellCountsByMaterialClass).toMatchObject({
       empty: 5,
@@ -101,7 +101,7 @@ describe("export-timberborn-map-fixture", () => {
       solidTerrainSources: 1,
       terrainSurfaceSources: 1,
       treeSources: 1,
-      waterSources: 1,
+      waterSources: 0,
     });
   });
 
@@ -163,7 +163,7 @@ describe("export-timberborn-map-fixture", () => {
       "timberborn-map-state",
       null,
       {
-        Pine: { sizeX: 1, sizeY: 1, sizeZ: 3 },
+        Pine: { occupyAllBelow: false, sizeX: 1, sizeY: 1, sizeZ: 3 },
       },
     );
 
@@ -181,6 +181,99 @@ describe("export-timberborn-map-fixture", () => {
       entityObjects: 1,
       entitySources: 3,
       treeSources: 3,
+    });
+  });
+
+  test("expands occupy-all-below water sources as entity source cells", () => {
+    const { fixture, summary } = buildFixtureFromWorld(
+      {
+        Entities: [
+          {
+            Components: {
+              BlockObject: { Coordinates: { X: 0, Y: 0, Z: 3 } },
+            },
+            Template: "WaterSource",
+          },
+        ],
+        Singletons: {
+          MapSize: { Size: { X: 1, Y: 1 } },
+          TerrainMap: {
+            Voxels: {
+              Array: "0 0 0 0",
+            },
+          },
+        },
+      },
+      "timberborn-map-state",
+      null,
+      {
+        WaterSource: { occupyAllBelow: true, sizeX: 1, sizeY: 1, sizeZ: 1 },
+      },
+    );
+
+    expect(fixture.parityCounts.sourceCountsByMaterialClass).toMatchObject({
+      water: 4,
+    });
+    expect(fixture.parityCounts.resolvedCellCountsByMaterialClass).toMatchObject({
+      water: 4,
+    });
+    expect(fixture.parityCounts).toMatchObject({
+      entityObjectCount: 1,
+      entitySourceCount: 4,
+      waterColumnSourceCount: 0,
+    });
+    expect(summary).toMatchObject({
+      entityObjects: 1,
+      entitySources: 4,
+      waterSources: 4,
+    });
+  });
+
+  test("uses occupied blueprint blocks instead of full bounding boxes", () => {
+    const { fixture, summary } = buildFixtureFromWorld(
+      {
+        Entities: [
+          {
+            Components: {
+              BlockObject: { Coordinates: { X: 0, Y: 0, Z: 0 } },
+            },
+            Template: "Building",
+          },
+        ],
+        Singletons: {
+          MapSize: { Size: { X: 1, Y: 1 } },
+          TerrainMap: {
+            Voxels: {
+              Array: "0 0",
+            },
+          },
+        },
+      },
+      "timberborn-map-state",
+      null,
+      {
+        Building: {
+          blocks: [
+            { occupyAllBelow: false, x: 0, y: 0, z: 0 },
+          ],
+          occupyAllBelow: false,
+          sizeX: 1,
+          sizeY: 1,
+          sizeZ: 2,
+        },
+      },
+    );
+
+    expect(fixture.parityCounts.sourceCountsByMaterialClass).toMatchObject({
+      building: 1,
+    });
+    expect(fixture.parityCounts.resolvedCellCountsByMaterialClass).toMatchObject({
+      building: 1,
+      empty: 1,
+    });
+    expect(summary).toMatchObject({
+      buildingSources: 1,
+      entitySources: 1,
     });
   });
 });

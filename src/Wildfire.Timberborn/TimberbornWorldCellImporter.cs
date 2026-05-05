@@ -34,6 +34,7 @@ public sealed record TimberbornWorldCellImportSummary(
         "wildfire_timberborn_world_import_summary " +
         $"total_sources={TotalSources} " +
         $"terrain_sources={Count(WildfireMaterialClass.Terrain)} " +
+        $"vegetation_sources={Count(WildfireMaterialClass.Vegetation)} " +
         $"tree_sources={Count(WildfireMaterialClass.Tree)} " +
         $"crop_sources={Count(WildfireMaterialClass.Crop)} " +
         $"building_sources={Count(WildfireMaterialClass.Building)} " +
@@ -43,6 +44,7 @@ public sealed record TimberbornWorldCellImportSummary(
         $"badwater_sources={Count(WildfireMaterialClass.Badwater)} " +
         $"resolved_empty_cells={ResolvedCount(WildfireMaterialClass.Empty)} " +
         $"resolved_terrain_cells={ResolvedCount(WildfireMaterialClass.Terrain)} " +
+        $"resolved_vegetation_cells={ResolvedCount(WildfireMaterialClass.Vegetation)} " +
         $"resolved_tree_cells={ResolvedCount(WildfireMaterialClass.Tree)} " +
         $"resolved_crop_cells={ResolvedCount(WildfireMaterialClass.Crop)} " +
         $"resolved_building_cells={ResolvedCount(WildfireMaterialClass.Building)} " +

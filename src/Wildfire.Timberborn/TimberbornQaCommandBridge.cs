@@ -851,6 +851,7 @@ public sealed record TimberbornQaCommandState(
     uint? FireSimPresetFuelBurnDownDenominator = null,
     int? WorldImportTotalSources = null,
     int? WorldImportTerrainSources = null,
+    int? WorldImportVegetationSources = null,
     int? WorldImportTreeSources = null,
     int? WorldImportCropSources = null,
     int? WorldImportBuildingSources = null,
@@ -860,6 +861,7 @@ public sealed record TimberbornQaCommandState(
     int? WorldImportBadwaterSources = null,
     int? WorldImportResolvedEmptyCells = null,
     int? WorldImportResolvedTerrainCells = null,
+    int? WorldImportResolvedVegetationCells = null,
     int? WorldImportResolvedTreeCells = null,
     int? WorldImportResolvedCropCells = null,
     int? WorldImportResolvedBuildingCells = null,
@@ -971,6 +973,7 @@ public sealed record TimberbornQaCommandResult(
         $"fire_fuel_burn_down={FormatFraction(State.FireSimPresetFuelBurnDownNumerator, State.FireSimPresetFuelBurnDownDenominator)} " +
         $"world_import_total_sources={FormatNumber(State.WorldImportTotalSources)} " +
         $"world_import_terrain_sources={FormatNumber(State.WorldImportTerrainSources)} " +
+        $"world_import_vegetation_sources={FormatNumber(State.WorldImportVegetationSources)} " +
         $"world_import_tree_sources={FormatNumber(State.WorldImportTreeSources)} " +
         $"world_import_crop_sources={FormatNumber(State.WorldImportCropSources)} " +
         $"world_import_building_sources={FormatNumber(State.WorldImportBuildingSources)} " +
@@ -980,6 +983,7 @@ public sealed record TimberbornQaCommandResult(
         $"world_import_badwater_sources={FormatNumber(State.WorldImportBadwaterSources)} " +
         $"world_import_resolved_empty_cells={FormatNumber(State.WorldImportResolvedEmptyCells)} " +
         $"world_import_resolved_terrain_cells={FormatNumber(State.WorldImportResolvedTerrainCells)} " +
+        $"world_import_resolved_vegetation_cells={FormatNumber(State.WorldImportResolvedVegetationCells)} " +
         $"world_import_resolved_tree_cells={FormatNumber(State.WorldImportResolvedTreeCells)} " +
         $"world_import_resolved_crop_cells={FormatNumber(State.WorldImportResolvedCropCells)} " +
         $"world_import_resolved_building_cells={FormatNumber(State.WorldImportResolvedBuildingCells)} " +

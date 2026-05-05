@@ -130,6 +130,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         {
             new TimberbornTerrainWorldCellSourceProvider(_mapSize, _terrainService),
             new TimberbornNaturalResourceCellSourceProvider(_entityRegistry),
+            new TimberbornInfrastructureCellSourceProvider(_entityRegistry),
             new TimberbornBuildingCellSourceProvider(_entityRegistry),
             new TimberbornStorageCellSourceProvider(_entityRegistry),
             new TimberbornWaterSourceCellSourceProvider(_entityRegistry),
@@ -149,8 +150,10 @@ public sealed class TimberbornBuildingCellSourceProvider : ITimberbornWorldCellS
 
     public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
     {
-        TimberbornCellSource[] sources = TimberbornEntityComponentCells.ComponentsWithBlockObject<Building>(_entityRegistry)
-            .SelectMany((building, buildingIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(building)
+        TimberbornCellSource[] sources = TimberbornEntityComponentCells.ComponentBlockObjects<Building>(_entityRegistry)
+            .Where(static building => !TimberbornEntityComponentCells.IsInfrastructureName(building.BlockObject.Name))
+            .Where(static building => !building.Component.TryGetComponent(out Stockpile _))
+            .SelectMany((building, buildingIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(building.Component)
                 .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
                 .Select(coordinates => _buildingAdapter.CreateWoodLikeSource(coordinates.x, coordinates.y, coordinates.z) with
                 {
@@ -195,8 +198,46 @@ public sealed class TimberbornNaturalResourceCellSourceProvider : ITimberbornWor
                     coordinates.z,
                     checked((uint)resourceIndex + 1u))))
             .ToArray();
+        TimberbornCellSource[] vegetationSources = blockObjects
+            .Where(static resource => TimberbornEntityComponentCells.IsVegetationName(resource.Name))
+            .SelectMany((resource, resourceIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(resource)
+                .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                .Select(coordinates => _resourceAdapter.CreateVegetationSource(
+                    coordinates.x,
+                    coordinates.y,
+                    coordinates.z) with
+                {
+                    CompanionTargetId = checked((uint)resourceIndex + 1u),
+                }))
+            .ToArray();
 
-        return new TimberbornWorldCellImportProviderResult("natural_resources", treeSources.Concat(cropSources).ToArray());
+        return new TimberbornWorldCellImportProviderResult("natural_resources", treeSources.Concat(cropSources).Concat(vegetationSources).ToArray());
+    }
+}
+
+public sealed class TimberbornInfrastructureCellSourceProvider : ITimberbornWorldCellSourceProvider
+{
+    private readonly EntityRegistry _entityRegistry;
+    private readonly TimberbornBuildingAdapter _buildingAdapter = new();
+
+    public TimberbornInfrastructureCellSourceProvider(EntityRegistry entityRegistry)
+    {
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+    }
+
+    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
+    {
+        TimberbornCellSource[] sources = TimberbornEntityComponentCells.BlockObjects(_entityRegistry)
+            .Where(static blockObject => TimberbornEntityComponentCells.IsInfrastructureName(blockObject.Name))
+            .SelectMany((blockObject, blockObjectIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(blockObject)
+                .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                .Select(coordinates => _buildingAdapter.CreateNonBurnableSource(coordinates.x, coordinates.y, coordinates.z) with
+                {
+                    CompanionTargetId = checked((uint)blockObjectIndex + 1u),
+                }))
+            .ToArray();
+
+        return new TimberbornWorldCellImportProviderResult("infrastructure", sources);
     }
 }
 
@@ -300,6 +341,23 @@ public static class TimberbornEntityComponentCells
         return CropNameTokens.Any(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
     }
 
+    public static bool IsVegetationName(string name)
+    {
+        return name.Contains("Blueberry", StringComparison.OrdinalIgnoreCase) &&
+            !IsTreeName(name) &&
+            !IsCropName(name);
+    }
+
+    public static bool IsInfrastructureName(string name)
+    {
+        return name.Contains("Path", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Slope", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Platform", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Bridge", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Stair", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Fence", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static bool IsWaterSourceName(string name)
     {
         return (name.Contains("WaterSource", StringComparison.OrdinalIgnoreCase) ||
@@ -339,6 +397,18 @@ public static class TimberbornEntityComponentCells
             .Where(static component => component is not null)!;
     }
 
+    public static IEnumerable<TimberbornEntityComponentBlockObject<T>> ComponentBlockObjects<T>(EntityRegistry entityRegistry)
+        where T : BaseComponent
+    {
+        return entityRegistry.Entities
+            .Select(entity => TryGetComponent<T>(entity, out T component) &&
+                TryGetComponent<BlockObject>(entity, out BlockObject blockObject)
+                    ? new TimberbornEntityComponentBlockObject<T>(component, blockObject)
+                    : (TimberbornEntityComponentBlockObject<T>?)null)
+            .Where(static component => component.HasValue)
+            .Select(static component => component!.Value);
+    }
+
     public static string FormatSampleBlockObjectNames(IEnumerable<BlockObject> blockObjects)
     {
         string[] names = blockObjects
@@ -374,6 +444,9 @@ public static class TimberbornEntityComponentCells
             coordinates.y < grid.Height &&
             coordinates.z < grid.Depth;
     }
+
+    public readonly record struct TimberbornEntityComponentBlockObject<T>(T Component, BlockObject BlockObject)
+        where T : BaseComponent;
 }
 
 public sealed class TimberbornPausableBuildingCellSourceProvider : ITimberbornWorldCellSourceProvider

@@ -37,7 +37,9 @@ type ComparisonRow = {
 type ParityComparison = {
   dimensions: ComparisonRow[];
   matching: boolean;
+  resolvedMatching: boolean;
   resolvedCells: ComparisonRow[];
+  sourceMatching: boolean;
   sourceCounts: ComparisonRow[];
 };
 
@@ -168,12 +170,14 @@ export const compareImporterParity = (fixtureText: string, liveOutputText: strin
     fixture.parityCounts.resolvedCellCountsByMaterialClass,
     (className) => tokenNumber(liveTokens, `world_import_resolved_${className}_cells`),
   );
-  const allRows = [...dimensions, ...sourceCounts, ...resolvedCells];
+  const sourceRows = [...dimensions, ...sourceCounts];
 
   return {
     dimensions,
-    matching: allRows.every((row) => row.delta === 0),
+    matching: sourceRows.every((row) => row.delta === 0),
+    resolvedMatching: resolvedCells.every((row) => row.delta === 0),
     resolvedCells,
+    sourceMatching: sourceCounts.every((row) => row.delta === 0),
     sourceCounts,
   };
 };
@@ -190,6 +194,8 @@ export const renderImporterParityReport = (comparison: ParityComparison): string
     "# Importer Parity Comparison",
     "",
     `Status: ${comparison.matching ? "pass" : "mismatch"}`,
+    `Source status: ${comparison.sourceMatching ? "pass" : "mismatch"}`,
+    `Resolved-cell diagnostic status: ${comparison.resolvedMatching ? "pass" : "mismatch"}`,
     "",
     "## Dimensions",
     "",

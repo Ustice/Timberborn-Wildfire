@@ -92,9 +92,18 @@ type ExportSummary = {
 };
 
 type BlueprintFootprint = {
+  blocks?: BlueprintFootprintBlock[];
+  occupyAllBelow: boolean;
   sizeX: number;
   sizeY: number;
   sizeZ: number;
+};
+
+type BlueprintFootprintBlock = {
+  occupyAllBelow: boolean;
+  x: number;
+  y: number;
+  z: number;
 };
 
 const emptyCell = 0xe000;
@@ -459,9 +468,14 @@ const isVegetation = (template: string, components: string[]): boolean =>
   components.some((component) => component.startsWith("Yielder:"));
 
 const isStockpile = (template: string, components: string[]): boolean =>
-  template.includes("Pile") || template.includes("Warehouse") || components.includes("Inventory");
+  template.includes("Pile") ||
+  template.includes("Tank") ||
+  template.includes("Warehouse") ||
+  components.some((component) => component.startsWith("Inventory:Stockpile"));
 
 const isBadwater = (template: string): boolean => template.includes("Badwater");
+
+const isWaterSource = (template: string): boolean => template.includes("WaterSource") && !isBadwater(template);
 
 const isInfrastructure = (template: string): boolean =>
   knownInfrastructureTemplates.has(template) ||
@@ -472,11 +486,15 @@ const isInfrastructure = (template: string): boolean =>
   template.includes("Fence");
 
 const isInert = (template: string): boolean =>
-  knownInertTemplates.has(template) || template.includes("Source") || template.includes("Drain") || template.includes("Ruins");
+  knownInertTemplates.has(template) || template.includes("Source") || template.includes("Drain") || template.includes("Ruin");
 
 const materialClassOfEntity = (template: string, components: string[]): MaterialClass => {
   if (isBadwater(template)) {
     return "badwater";
+  }
+
+  if (isWaterSource(template)) {
+    return "water";
   }
 
   if (knownTreeTemplates.has(template)) {
@@ -487,6 +505,14 @@ const materialClassOfEntity = (template: string, components: string[]): Material
     return "crop";
   }
 
+  if (isInfrastructure(template)) {
+    return "infrastructure";
+  }
+
+  if (isInert(template)) {
+    return "terrain";
+  }
+
   if (isVegetation(template, components)) {
     return "vegetation";
   }
@@ -495,11 +521,7 @@ const materialClassOfEntity = (template: string, components: string[]): Material
     return "storage";
   }
 
-  if (isInfrastructure(template)) {
-    return "infrastructure";
-  }
-
-  return isInert(template) ? "terrain" : "building";
+  return "building";
 };
 
 const entityCell = (template: string, components: string[], existingWater: number): number =>
@@ -524,18 +546,50 @@ const footprintCoordinatesOf = (
   footprint: BlueprintFootprint | undefined,
   orientation: string,
 ): Coordinate[] => {
-  const size = footprint ?? { sizeX: 1, sizeY: 1, sizeZ: 1 };
-  const offsets = Array.from({ length: size.sizeX }, (_, x) => x).flatMap((x) =>
-    Array.from({ length: size.sizeY }, (_, y) => y).flatMap((y) => Array.from({ length: size.sizeZ }, (_, z) => ({ x, y, z }))),
+  const size = footprint ?? { occupyAllBelow: false, sizeX: 1, sizeY: 1, sizeZ: 1 };
+  const offsets = size.blocks ?? Array.from({ length: size.sizeX }, (_, x) => x).flatMap((x) =>
+    Array.from({ length: size.sizeY }, (_, y) => y).flatMap((y) =>
+      Array.from({ length: size.sizeZ }, (_, z) => ({ occupyAllBelow: size.occupyAllBelow, x, y, z })),
+    ),
   );
 
-  return offsets.map((offset) => {
-    if (orientation === "Cw90" || orientation === "Cw270") {
-      return { x: origin.x + offset.y, y: origin.y + offset.x, z: origin.z + offset.z };
+  return offsets.flatMap((offset) => {
+    const coordinate =
+      orientation === "Cw90" || orientation === "Cw270"
+        ? { x: origin.x + offset.y, y: origin.y + offset.x, z: origin.z + offset.z }
+        : { x: origin.x + offset.x, y: origin.y + offset.y, z: origin.z + offset.z };
+
+    if (!offset.occupyAllBelow) {
+      return [coordinate];
     }
 
-    return { x: origin.x + offset.x, y: origin.y + offset.y, z: origin.z + offset.z };
+    return Array.from({ length: coordinate.z + 1 }, (_, z) => ({ ...coordinate, z }));
   });
+};
+
+const blueprintOccupiesAllBelow = (blueprint: JsonObject): boolean =>
+  asArray(getPath(blueprint, ["BlockObjectSpec", "Blocks"]))?.some((block) => asObject(block)?.OccupyAllBelow === true) ?? false;
+
+const blueprintOccupiedBlocksOf = (blueprint: JsonObject, sizeX: number, sizeY: number): BlueprintFootprintBlock[] | null => {
+  const blocks = asArray(getPath(blueprint, ["BlockObjectSpec", "Blocks"]));
+  if (!blocks) {
+    return null;
+  }
+
+  return blocks
+    .map(asObject)
+    .flatMap((block, index) => {
+      if (!block || asString(block.Occupations) === "None") {
+        return [];
+      }
+
+      return [{
+        occupyAllBelow: block.OccupyAllBelow === true,
+        x: index % sizeX,
+        y: Math.floor(index / sizeX) % sizeY,
+        z: Math.floor(index / (sizeX * sizeY)),
+      }];
+    });
 };
 
 const blueprintFootprintOf = (blueprint: JsonObject): BlueprintFootprint | null => {
@@ -544,7 +598,15 @@ const blueprintFootprintOf = (blueprint: JsonObject): BlueprintFootprint | null 
   const sizeY = asNumber(size?.Y);
   const sizeZ = asNumber(size?.Z);
 
-  return sizeX === null || sizeY === null || sizeZ === null ? null : { sizeX, sizeY, sizeZ };
+  return sizeX === null || sizeY === null || sizeZ === null
+    ? null
+    : {
+        blocks: blueprintOccupiedBlocksOf(blueprint, sizeX, sizeY) ?? undefined,
+        occupyAllBelow: blueprintOccupiesAllBelow(blueprint),
+        sizeX,
+        sizeY,
+        sizeZ,
+      };
 };
 
 const blueprintNamesOf = (path: string, blueprint: JsonObject): string[] => {
@@ -620,7 +682,7 @@ export const buildFixtureFromWorld = (
   const cells = terrainValues.map((_, index) => (terrainSurfaceIndices.has(index) ? terrainCell() : emptyCell));
   const targetIds = Array.from({ length: cells.length }, () => 0);
   const companionStates = terrainValues.map((_, index) => companionStateOf(terrainSurfaceIndices.has(index) ? "terrain" : "empty"));
-  const waterSources = applyWaterColumns(world, grid, cells);
+  const waterColumnSources = applyWaterColumns(world, grid, cells);
   waterColumnsOf(world).forEach((token, flatIndex) => {
     const coordinate = waterCoordinateOf(grid, token, flatIndex);
     if (!coordinate || !validCoordinate(grid, coordinate)) {
@@ -641,37 +703,37 @@ export const buildFixtureFromWorld = (
     )
     .map((source) => {
       const template = asString(source.entity.Template) ?? "";
+      const components = componentsOf(source.entity);
+      const materialClass = materialClassOfEntity(template, components);
       const footprint = footprintCoordinatesOf(
         source.coordinate,
         blueprintFootprintsByTemplate[template],
         orientationOf(source.entity),
       ).filter((coordinate) => validCoordinate(grid, coordinate));
 
-      return { ...source, footprint };
+      return { ...source, components, footprint, materialClass, template };
     })
-    .filter((source) => source.footprint.length > 0);
+    .filter((source) => source.materialClass !== "terrain" && source.footprint.length > 0);
   const entityStats = entitySources.reduce(
     (stats, source) => {
-      const template = asString(source.entity.Template) ?? "";
-      const components = componentsOf(source.entity);
-      const materialClass = materialClassOfEntity(template, components);
       source.footprint.forEach((coordinate) => {
         const index = indexOf(grid, coordinate);
         const water = waterOf(cells[index] ?? emptyCell);
-        cells[index] = entityCell(template, components, water);
+        cells[index] = entityCell(source.template, source.components, water);
         targetIds[index] = source.entityIndex + 1;
-        companionStates[index] = companionStateOf(materialClass);
+        companionStates[index] = companionStateOf(source.materialClass);
       });
 
       return {
-        badwaterSources: stats.badwaterSources + (materialClass === "badwater" ? source.footprint.length : 0),
-        buildingSources: stats.buildingSources + (materialClass === "building" ? source.footprint.length : 0),
-        cropSources: stats.cropSources + (materialClass === "crop" ? source.footprint.length : 0),
-        infrastructureSources: stats.infrastructureSources + (materialClass === "infrastructure" ? source.footprint.length : 0),
-        storageSources: stats.storageSources + (materialClass === "storage" ? source.footprint.length : 0),
-        treeSources: stats.treeSources + (materialClass === "tree" ? source.footprint.length : 0),
-        unresolvedTemplateSources: stats.unresolvedTemplateSources + (materialClass === "building" && template.length === 0 ? 1 : 0),
-        vegetationSources: stats.vegetationSources + (materialClass === "vegetation" ? source.footprint.length : 0),
+        badwaterSources: stats.badwaterSources + (source.materialClass === "badwater" ? source.footprint.length : 0),
+        buildingSources: stats.buildingSources + (source.materialClass === "building" ? source.footprint.length : 0),
+        cropSources: stats.cropSources + (source.materialClass === "crop" ? source.footprint.length : 0),
+        infrastructureSources: stats.infrastructureSources + (source.materialClass === "infrastructure" ? source.footprint.length : 0),
+        storageSources: stats.storageSources + (source.materialClass === "storage" ? source.footprint.length : 0),
+        treeSources: stats.treeSources + (source.materialClass === "tree" ? source.footprint.length : 0),
+        unresolvedTemplateSources: stats.unresolvedTemplateSources + (source.materialClass === "building" && source.template.length === 0 ? 1 : 0),
+        vegetationSources: stats.vegetationSources + (source.materialClass === "vegetation" ? source.footprint.length : 0),
+        waterSources: stats.waterSources + (source.materialClass === "water" ? source.footprint.length : 0),
       };
     },
     {
@@ -683,6 +745,7 @@ export const buildFixtureFromWorld = (
       treeSources: 0,
       unresolvedTemplateSources: 0,
       vegetationSources: 0,
+      waterSources: 0,
     },
   );
   const selectedLayer =
@@ -704,7 +767,7 @@ export const buildFixtureFromWorld = (
     terrain: terrainSurfaceSources,
     tree: entityStats.treeSources,
     vegetation: entityStats.vegetationSources,
-    water: waterSources,
+    water: entityStats.waterSources,
   };
 
   return {
@@ -725,7 +788,7 @@ export const buildFixtureFromWorld = (
         sourceCountsByMaterialClass,
         terrainSurfaceSourceCount: terrainSurfaceSources,
         terrainSolidVoxelCount: solidTerrainSources,
-        waterColumnSourceCount: waterSources,
+        waterColumnSourceCount: waterColumnSources,
       },
       packedCellValues: {
         indexOrder: "x + y * width + z * width * height",
@@ -756,7 +819,7 @@ export const buildFixtureFromWorld = (
       treeSources: entityStats.treeSources,
       unresolvedTemplateSources: entityStats.unresolvedTemplateSources,
       vegetationSources: entityStats.vegetationSources,
-      waterSources,
+      waterSources: entityStats.waterSources,
       width: grid.width,
     },
   };
