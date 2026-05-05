@@ -56,3 +56,4 @@ Full-grid dispatch is the right first baseline, but large maps may spend work on
 ## Notes
 
 - This ticket is intentionally later work. Do not implement it just because the design mentions frontier optimization.
+- 2026-05-05 TWF-051 release-scope decision: keep this ticket deferred until after the first release. `TWF-034` measured acceptable full-grid dispatch on the preserved `128x128x23` live save (`dispatch_elapsed_ms` median `2.737`, p95 `4.846`, max `6.014`; `SimulateFullGrid` kernel p95 `0.039`). `TWF-046` then proved the coherent live gameplay loop without dispatch/readback cost becoming player-visible. Promote this ticket only after larger-map, sustained high-delta, or consequence-heavy profiling shows full-grid dispatch or readback/consumer work as a measured bottleneck.

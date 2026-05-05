@@ -55,3 +55,4 @@ Active frontier is a real complexity increase. The design allows full-grid dispa
 ## Notes
 
 - Do not implement active frontier in this ticket.
+- 2026-05-05 reviewer decision: keep `TWF-011` deferred until after the first release. `TWF-034` profiling already showed acceptable full-grid dispatch on the preserved `128x128x23` live save, and `TWF-046` proved the coherent live gameplay loop without dispatch/readback becoming player-visible cost. No extra profiling ticket is needed for release. Revisit active frontier only after larger-map, sustained high-delta, or consequence-heavy profiling shows a measured bottleneck.

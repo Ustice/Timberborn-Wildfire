@@ -175,7 +175,7 @@ Automated coverage must prove `TimberbornReleaseLogNoisePolicy` classification a
 - Vertical building mapping: deterministic tests should keep covering multi-cell and vertical `TimberbornCellFootprint` expansion, sorted cell mapping, and out-of-bounds rejection. Live validation should use mapped building/consequence evidence rather than adding Timberborn-owned fire rules.
 - Water: water validation should continue to use `qa-water-suppression-stimulus` followed by `qa-readiness --require-advanced-tick --require-water-changed`, plus `Player.log` proof that the queued `SetWater=3` change produced a GPU delta and a water-change consumer count.
 - Heat loss: scenario snapshots and mapping tests should pin material-driven heat-loss bands for terrain, vegetation, stockpile resources, wood-like buildings, and non-burnable buildings. Weather, biome, or season-driven heat-loss changes are out of release scope unless a later adapter ticket adds explicit tests.
-- Dispatch strategy: keep full-grid dispatch as passing release behavior unless `TWF-051` changes the decision after `TWF-046`. Until then, validation should preserve `TWF-034` profiling evidence and watch live-loop dispatch/readback timing for regressions rather than requiring active-frontier buffers.
+- Dispatch strategy: full-grid dispatch is accepted for the first release. `TWF-051` reviewed `TWF-034` profiling and `TWF-046` live-loop evidence and keeps active-frontier optimization deferred. Release validation should watch dispatch/readback timing for regressions, but it must not require active-frontier buffers.
 
 ## CLI Fixture Export
 
