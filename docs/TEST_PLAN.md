@@ -104,6 +104,8 @@ Automated coverage for `TWF-154` must prove the behavior setting gate, duplicate
 
 `TWF-128` adds the first power-infrastructure consequence lane. It consumes compact deltas as burn-damage units, resolves power-like targets, deduplicates by stable target id, calculates construction-resource burn capacity through `TimberbornBurnDamageCapacityCalculator`, treats metal-only infrastructure as safe no-op, and reports safe-unavailable network mutation instead of faking a power outage. Live QA can accept a safely damaged/repair-eligible power target or an explicit `power_infrastructure_skipped_no_safe_api` result; disconnect counters must stay zero until a recoverable Timberborn power-network wrapper is proven.
 
+`TWF-129` adds the first water-infrastructure consequence lane. It consumes compact deltas as burn-damage units, resolves dam/levee/floodgate/valve/sluice-like targets, deduplicates by stable target id, calculates construction-resource burn capacity through `TimberbornBurnDamageCapacityCalculator`, treats water/dirt/metal-only infrastructure as inert safe no-op, and applies an explicit difficult-to-burn resistance before any damage is reported. Live QA can accept a safely damaged/repair-eligible water target or an explicit `water_infrastructure_skipped_no_safe_api` result; water-state mutation counters must stay zero until a recoverable Timberborn water-passage wrapper is proven.
+
 Run:
 
 ```bash

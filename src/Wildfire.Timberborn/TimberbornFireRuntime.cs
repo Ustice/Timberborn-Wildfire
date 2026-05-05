@@ -33,6 +33,7 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornTunnelFireTargetApi? _tunnelFireTargetApi;
     private ITimberbornPathInfrastructureFireTargetApi? _pathInfrastructureFireTargetApi;
     private ITimberbornPowerInfrastructureFireTargetApi? _powerInfrastructureFireTargetApi;
+    private ITimberbornWaterInfrastructureFireTargetApi? _waterInfrastructureFireTargetApi;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -464,6 +465,17 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerPowerInfrastructureSkippedNoSafeApiCount: deltaConsumerSummary.PowerInfrastructureSkippedNoSafeApiCount,
             LastDeltaConsumerPowerInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.PowerInfrastructureRepairEligibleTargetCount,
             LastDeltaConsumerPowerInfrastructureTotalDamageApplied: deltaConsumerSummary.PowerInfrastructureTotalDamageApplied,
+            LastDeltaConsumerWaterInfrastructureConsideredDeltaCount: deltaConsumerSummary.WaterInfrastructureConsideredDeltaCount,
+            LastDeltaConsumerWaterInfrastructureMatchedTargetCellCount: deltaConsumerSummary.WaterInfrastructureMatchedTargetCellCount,
+            LastDeltaConsumerWaterInfrastructureDuplicateTargetSuppressedCount: deltaConsumerSummary.WaterInfrastructureDuplicateTargetSuppressedCount,
+            LastDeltaConsumerWaterInfrastructureInertMaterialNoOpTargetCount: deltaConsumerSummary.WaterInfrastructureInertMaterialNoOpTargetCount,
+            LastDeltaConsumerWaterInfrastructureDifficultToBurnNoOpTargetCount: deltaConsumerSummary.WaterInfrastructureDifficultToBurnNoOpTargetCount,
+            LastDeltaConsumerWaterInfrastructureBurnableMaterialValue: deltaConsumerSummary.WaterInfrastructureBurnableMaterialValue,
+            LastDeltaConsumerWaterInfrastructureDamagedTargetCount: deltaConsumerSummary.WaterInfrastructureDamagedTargetCount,
+            LastDeltaConsumerWaterInfrastructureWaterStateMutationAttemptCount: deltaConsumerSummary.WaterInfrastructureWaterStateMutationAttemptCount,
+            LastDeltaConsumerWaterInfrastructureSkippedNoSafeApiCount: deltaConsumerSummary.WaterInfrastructureSkippedNoSafeApiCount,
+            LastDeltaConsumerWaterInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.WaterInfrastructureRepairEligibleTargetCount,
+            LastDeltaConsumerWaterInfrastructureTotalDamageApplied: deltaConsumerSummary.WaterInfrastructureTotalDamageApplied,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -588,6 +600,11 @@ public sealed class TimberbornFireRuntime :
         _powerInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
     }
 
+    public void AttachWaterInfrastructureFireTargetApi(ITimberbornWaterInfrastructureFireTargetApi targetApi)
+    {
+        _waterInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
@@ -658,6 +675,10 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=power_infrastructure_fire");
         }
+        if (_waterInfrastructureFireTargetApi is not null)
+        {
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=water_infrastructure_fire");
+        }
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -702,6 +723,11 @@ public sealed class TimberbornFireRuntime :
                 ? null
                 : new TimberbornPowerInfrastructureFireSink(
                     _powerInfrastructureFireTargetApi,
+                    logSink: _logSink),
+            waterInfrastructureFireSink: _waterInfrastructureFireTargetApi is null
+                ? null
+                : new TimberbornWaterInfrastructureFireSink(
+                    _waterInfrastructureFireTargetApi,
                     logSink: _logSink));
     }
 

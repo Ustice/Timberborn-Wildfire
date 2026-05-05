@@ -65,3 +65,4 @@ Jason accepted that water-passing infrastructure should likely be difficult to b
 
 - No terrain deformation belongs in this ticket.
 - Keep water infrastructure separate from path, power, tunnel, and dynamite behavior.
+- 2026-05-05 worker: implemented the first conservative water-infrastructure fire lane. Compact fire deltas now resolve water-passing infrastructure targets, suppress duplicate cells by stable target id, calculate burnable material value through the shared burn-damage capacity calculator, treat inert water/dirt/metal-only construction resources as safe no-ops, and apply a small difficult-to-burn resistance before damage. The live Timberborn adapter reports safe-unavailable water-state mutation instead of touching gates, passage, or water simulation.
