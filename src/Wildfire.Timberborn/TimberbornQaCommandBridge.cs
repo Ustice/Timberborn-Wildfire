@@ -865,6 +865,7 @@ public static class TimberbornQaFieldTargetSelectors
     public const string Crop = "crop";
     public const string Storage = "storage";
     public const string Building = "building";
+    public const string Infrastructure = "infrastructure";
 
     private static readonly HashSet<string> KnownSelectors = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -876,6 +877,7 @@ public static class TimberbornQaFieldTargetSelectors
         Crop,
         Storage,
         Building,
+        Infrastructure,
     };
 
     public static bool IsKnown(string selector)
@@ -905,8 +907,14 @@ public static class TimberbornQaFieldTargetSelectors
             Crop => materialClass == WildfireMaterialClass.Crop,
             Storage => materialClass == WildfireMaterialClass.Storage,
             Building => materialClass == WildfireMaterialClass.Building,
+            Infrastructure => materialClass == WildfireMaterialClass.Infrastructure,
             _ => false,
         };
+    }
+
+    public static bool IsBurnDamageProbeSelector(string selector)
+    {
+        return Normalize(selector) is Building or Storage or Infrastructure;
     }
 }
 

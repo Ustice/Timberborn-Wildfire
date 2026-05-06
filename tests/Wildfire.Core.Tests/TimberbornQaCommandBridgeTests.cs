@@ -663,6 +663,54 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void QueueQaDeltaStimulusInfrastructureStagesBurnDamageFuelSpend()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornBuildingAdapter().CreateNonBurnableSource(2, 3, 1) with
+            {
+                CompanionTargetId = 77u,
+            });
+
+        TimberbornQaDeltaStimulusResult result =
+            fireSystem.QueueQaDeltaStimulus(TimberbornQaFieldTargetSelectors.Infrastructure);
+
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Infrastructure, result.MaterialClass);
+        Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Equal((byte)15, result.SetHeat);
+        Assert.Equal(2, result.QueuedHeatChangeCount);
+        FireSimChange primeChange = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(38, primeChange.CellIndex);
+        Assert.Equal((byte)0, primeChange.SetWater);
+        Assert.Equal((byte)15, primeChange.SetFuel);
+        Assert.Equal((byte)15, primeChange.SetHeat);
+        Assert.Equal((byte)3, primeChange.SetFlammability);
+        Assert.Equal((byte)1, primeChange.SetHeatLoss);
+        Assert.Equal((byte)1, primeChange.SetTerrain);
+        Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+
+        fireSystem.Tick();
+
+        Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
+
+        fireSystem.Tick();
+
+        Assert.Equal(2, simulator.RegisteredChanges.Count);
+        FireSimChange spendChange = simulator.RegisteredChanges[1];
+        Assert.Equal(38, spendChange.CellIndex);
+        Assert.Equal((byte)0, spendChange.SetWater);
+        Assert.Equal((byte)0, spendChange.SetFuel);
+        Assert.Equal((byte)15, spendChange.SetHeat);
+        Assert.Equal((byte)3, spendChange.SetFlammability);
+        Assert.Equal((byte)1, spendChange.SetHeatLoss);
+        Assert.Equal((byte)1, spendChange.SetTerrain);
+        Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
     public void QueueQaSelectedTreeDeltaStimulusRegistersSelectedImportedTreeHeatChange()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);

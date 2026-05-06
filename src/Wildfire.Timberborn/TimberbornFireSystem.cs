@@ -25,6 +25,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private int _registeredChangeCountSinceLastDispatch;
     private FireSimChange[] _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
     private int _qaIgnitionPegDispatchTicksRemaining;
+    private FireSimChange[] _qaBurnDamageSpendChanges = Array.Empty<FireSimChange>();
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
 
@@ -172,6 +173,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _importedTargets = CreateImportedTargets(grid, initialCells, companionFieldValues);
         _registeredChangeCountSinceLastDispatch = 0;
         ClearQaIgnitionPeg();
+        ClearQaBurnDamageSpendProbe();
         LastTick = 0;
         LastDeltaCount = 0;
         _burnDurationProofState = TimberbornQaBurnDurationProofState.Placeholder;
@@ -183,6 +185,7 @@ public sealed class TimberbornFireSystem : IDisposable
     public GpuFireStepResult Tick()
     {
         IGpuFireSimulator fireSimulator = RequireSimulator();
+        RegisterPendingQaBurnDamageSpendChanges();
         RegisterPendingQaIgnitionPegChanges();
         int pendingChangeCount = _registeredChangeCountSinceLastDispatch;
 
@@ -262,7 +265,27 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         FireGrid grid = RequireGrid();
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
-        TimberbornImportedFieldTarget target = normalizedSelector == TimberbornQaFieldTargetSelectors.CenterTree
+        if (TimberbornQaFieldTargetSelectors.IsBurnDamageProbeSelector(normalizedSelector))
+        {
+            TimberbornImportedFieldTarget target = FindImportedTarget(
+                candidate => TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector),
+                $"No imported field target was found for QA burn-damage selector '{normalizedSelector}'.");
+            int queuedChangeCount = RegisterBurnDamageProbe(target, "qa_burn_damage_stimulus");
+
+            return new TimberbornQaDeltaStimulusResult(
+                normalizedSelector,
+                target.CellIndex,
+                target.X,
+                target.Y,
+                target.Z,
+                target.MaterialClass,
+                target.CompanionTargetId,
+                target.InitialCell,
+                QaIgnitionHeat,
+                QueuedHeatChangeCount: queuedChangeCount);
+        }
+
+        TimberbornImportedFieldTarget ignitionTarget = normalizedSelector == TimberbornQaFieldTargetSelectors.CenterTree
             ? FindImportedTarget(
                 candidate => IsBurnableImportedTarget(candidate) &&
                     candidate.MaterialClass == WildfireMaterialClass.Tree,
@@ -272,17 +295,17 @@ public sealed class TimberbornFireSystem : IDisposable
                 candidate => IsBurnableImportedTarget(candidate) &&
                     TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector),
                 $"No imported burnable field target was found for QA delta stimulus selector '{normalizedSelector}'.");
-        int queuedHeatChangeCount = RegisterIgnitionCluster(grid, target.CellIndex, "qa_delta_stimulus");
+        int queuedHeatChangeCount = RegisterIgnitionCluster(grid, ignitionTarget.CellIndex, "qa_delta_stimulus");
 
         return new TimberbornQaDeltaStimulusResult(
             normalizedSelector,
-            target.CellIndex,
-            target.X,
-            target.Y,
-            target.Z,
-            target.MaterialClass,
-            target.CompanionTargetId,
-            target.InitialCell,
+            ignitionTarget.CellIndex,
+            ignitionTarget.X,
+            ignitionTarget.Y,
+            ignitionTarget.Z,
+            ignitionTarget.MaterialClass,
+            ignitionTarget.CompanionTargetId,
+            ignitionTarget.InitialCell,
             QaIgnitionHeat,
             QueuedHeatChangeCount: queuedHeatChangeCount);
     }
@@ -502,6 +525,58 @@ public sealed class TimberbornFireSystem : IDisposable
         {
             ClearQaIgnitionPeg();
         }
+    }
+
+    private int RegisterBurnDamageProbe(TimberbornImportedFieldTarget target, string source)
+    {
+        FireSimChange primeChange = new(
+            CellIndex: target.CellIndex,
+            SetWater: QaIgnitionWater,
+            SetFuel: QaIgnitionFuel,
+            SetHeat: QaIgnitionHeat,
+            SetFlammability: QaIgnitionFlammability,
+            SetHeatLoss: QaIgnitionHeatLoss,
+            SetTerrain: QaIgnitionTerrain);
+        RegisterChange(primeChange, source, shouldLog: false);
+        _qaBurnDamageSpendChanges = new[]
+        {
+            new FireSimChange(
+                CellIndex: target.CellIndex,
+                SetWater: QaIgnitionWater,
+                SetFuel: QaSpentFuel,
+                SetHeat: QaIgnitionHeat,
+                SetFlammability: QaIgnitionFlammability,
+                SetHeatLoss: QaIgnitionHeatLoss,
+                SetTerrain: QaIgnitionTerrain),
+        };
+        LogRegisteredChanges(source, 1);
+        _logSink.Info(
+            "wildfire_timberborn_qa_burn_damage_spend_scheduled " +
+            $"source={source} " +
+            $"cell_index={target.CellIndex} " +
+            $"target_material={target.MaterialClass} " +
+            $"scheduled_changes={_qaBurnDamageSpendChanges.Length}");
+
+        return 1 + _qaBurnDamageSpendChanges.Length;
+    }
+
+    private void RegisterPendingQaBurnDamageSpendChanges()
+    {
+        if (_qaBurnDamageSpendChanges.Length == 0 || _registeredChangeCountSinceLastDispatch > 0)
+        {
+            return;
+        }
+
+        _qaBurnDamageSpendChanges
+            .ToList()
+            .ForEach(change => RegisterChange(change, "qa_burn_damage_spend", shouldLog: false));
+        LogRegisteredChanges("qa_burn_damage_spend", _qaBurnDamageSpendChanges.Length);
+        ClearQaBurnDamageSpendProbe();
+    }
+
+    private void ClearQaBurnDamageSpendProbe()
+    {
+        _qaBurnDamageSpendChanges = Array.Empty<FireSimChange>();
     }
 
     private void ClearQaIgnitionPeg()
