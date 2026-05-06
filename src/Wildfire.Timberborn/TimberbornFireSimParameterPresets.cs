@@ -88,7 +88,7 @@ public static class TimberbornFireSimParameterPresets
             {
                 FireIgnitionBaseHeat = 5u,
                 FireWaterIgnitionPenalty = 0u,
-                FireWaterEvaporationHeat = 4u,
+                FireWaterEvaporationHeat = 2u,
                 FireFlammabilityBurnPressure = 0u,
                 FireBurnHeatBase = 0u,
                 FireFuelHeatWeight = 6u,

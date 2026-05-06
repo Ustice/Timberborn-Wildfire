@@ -1337,7 +1337,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(0u, highPreset.Parameters.FireFlammabilityBurnPressure);
         Assert.Equal(6u, highPreset.Parameters.FireFuelHeatWeight);
         Assert.Equal(0u, highPreset.Parameters.FireWaterIgnitionPenalty);
-        Assert.Equal(4u, highPreset.Parameters.FireWaterEvaporationHeat);
+        Assert.Equal(2u, highPreset.Parameters.FireWaterEvaporationHeat);
         Assert.Equal(0u, highPreset.Parameters.FireWaterBurnPressurePenalty);
         Assert.Equal(0u, highPreset.Parameters.FireCoolingBase);
         Assert.Equal(16u, highPreset.Parameters.FireHeatLossCoolingDivisor);
