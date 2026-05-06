@@ -15,28 +15,31 @@ write_scope:
   - kanban/all-tickets/TWF-119-validate-generated-world-consequence-scenario-save.md
 ---
 
-# TWF-133: Implement Full Generated Scenario Layout
+# TWF-133: Validate Large Scenario Acceptance Surface
 
 ## Goal
 
-Turn the load-surviving `TWF-132` generated save into the intended world-consequence scenario with valid water, badwater, crop, storage, structure, tree, and camera checkpoints.
+Give Sprint 9 one stable large-scenario acceptance surface for real-field tuning, visuals, and consequence follow-up. The surface can be the generated world-consequence scenario or a better stable real save.
 
 ## Why
 
-`TWF-119` now proves Timberborn can load a generated artifact under active `caffeinate -disu` and preserve manifest-declared existing-coordinate checkpoints. That is not the full scenario promised by the original generator plan. The manifest still blocks the 50 by 50 generated layout, two planned badwater source slots, crop pads, storage inventory, and water/badwater flow layout because the generator does not yet carve terrain/channels or guarantee support for arbitrary planned coordinates.
+`TWF-119` and `TWF-132` proved useful generated-scenario mechanics, but the generated scenario should not become a technicality that blocks real gameplay proof. If a real save is more stable and better at exercising connected fuel, water, badwater, crops, trees, structures, storage, and camera lanes, use that save as the acceptance surface and keep generated-scenario work as reusable QA tooling.
 
 ## Requirements
 
 - Keep the generator as a Bun/TypeScript tool.
 - Preserve `TWF-131` save metadata timestamp compatibility.
 - Preserve `TWF-132` honest manifest behavior: unsupported planned placements must be blocked rather than injected into invalid load locations.
-- Implement one accepted full-layout strategy:
+- Implement or select one accepted large-layout strategy:
   - validate and mutate `TerrainMap.Voxels.Array` plus support/channel state for planned coordinates, or
-  - use a purpose-built known-valid template layout whose manifest explicitly maps the world-consequence lanes.
-- Produce manifest-declared checkpoints for water sources, badwater sources, trees, crops or harvestable equivalents, structures, storage, and camera/path lanes.
-- Prove or explicitly record north-to-south water and badwater flow.
+  - use a purpose-built known-valid template layout whose manifest explicitly maps the world-consequence lanes, or
+  - use an existing stable save when it loads reliably and exercises the needed fields.
+- Produce or document checkpoints for water sources, badwater sources, trees, crops or harvestable equivalents, structures, storage, connected fuel, and camera/path lanes.
+- Prove or explicitly record water and badwater behavior where the selected save supports it.
 - Prove or explicitly record storage inventory contents or a safe reason they remain deferred.
-- Generate a new artifact under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios`.
+- If using a generated artifact, write it under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios`.
+- If using an existing save, preserve its exact path, copied archive or checksum, map dimensions, checkpoint notes, and rationale for why it is a better acceptance surface.
+- `50x50` saves can be used for this Sprint 9 real-field gate when they are stable and useful. Sprint 10 owns the separate `256x256` map creation and max-size local-fire proof in `TWF-156`.
 - Leave `TWF-119` evidence untouched except for notes pointing to the new full-layout artifact.
 
 ## Dependencies
@@ -51,18 +54,20 @@ Turn the load-surviving `TWF-132` generated save into the intended world-consequ
 
 ## Implementation Notes
 
-- Start from `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/generated-scenarios/twf-132-template-supported-checkpoints-20260503T154213Z`.
+- Start by identifying known stable saves or generating one from a stable template.
 - Do not reintroduce cloned arbitrary BlockObjects that Timberborn will delete on load.
 - The current survivor artifact has `generatedEntities=24`, `blockedPlacements=6`, and fallback template dimensions `128x128x23`.
 - Remaining full-scope blockers from `TWF-119`: original 50 by 50 layout, crop pads, full badwater source count, water/badwater flow layout, storage inventory, and contamination test areas.
+- Do not spend sprint time forcing an oversized generated save to load if a stable real save proves the real-field system and exercises the gameplay surfaces better.
 
 ## Verification
 
 - Run `git diff --check`.
-- Run `bun test tests/generate-wildfire-scenario-save.test.ts`.
-- Run the generator and preserve the artifact path plus manifest.
-- Inspect the archive to prove manifest-declared full-layout checkpoints match the generated save before live QA.
-- Live Timberborn QA must load the artifact under active `caffeinate -disu`, prove command readiness after unpause, and verify the full-layout checkpoints or exact remaining blockers.
+- If generator code changes, run `bun test tests/generate-wildfire-scenario-save.test.ts`.
+- If using a generated artifact, run the generator and preserve the artifact path plus manifest.
+- If using an existing save, preserve the exact save path, checksum or copied artifact, dimensions, checkpoint notes, and why it is preferred.
+- Inspect the archive to prove declared checkpoints match the selected save before live QA.
+- Live Timberborn QA must load the selected save under active `caffeinate -disu`, prove command readiness after unpause, and verify the selected checkpoints or exact remaining blockers.
 
 ## Notes
 
@@ -72,3 +77,4 @@ Turn the load-surviving `TWF-132` generated save into the intended world-consequ
 - Static archive inspection matched every manifest-declared generated checkpoint back to `world.json` in the generated `.timber` archive. The remaining blocker is honest: the known-valid template has only three `BadwaterSource` entities for the planned four, and live QA still needs to confirm flow direction.
 - Live QA on 2026-05-04 did not load the artifact because `bun scripts/load-latest-save-and-unpause.ts --launch --wait=120 --lock-timeout=120` stayed on the main menu after repeated `Continue` clicks, including a manual `cliclick` injection. Evidence root: `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/latest-save-startup/2026-05-04T21-41-46-757Z`.
 - Manual load evidence on 2026-05-04 showed Timberborn did open `Wildfire world consequence scenario TWF-133.timber` and Wildfire reached the adapter load path for a `256x256x23` grid (`1,507,328` cells), then the command bridge stopped responding before processing `qa-readiness`. To avoid adding Wildfire-owned pressure while full-map tiling/active-region dispatch is still unimplemented, the runtime now skips simulator initialization for live grids above `500,000` cells. A follow-up live run logged `wildfire_timberborn_runtime_initialize_skipped`, but Timberborn still became AppleEvent-unresponsive on this oversized generated save, so the load utility now preflights the newest `.timber` save and refuses to click `Continue` when the estimated `width x height x 23` cells exceed `500,000`. Use `--skip-latest-save-preflight` only for intentional manual stress runs.
+- 2026-05-06 direction update: generated-scenario completeness should not block Sprint 9 if the newer real-field system works on a stable save. The user later clarified that the `256x256` proof should roll into Sprint 10 rather than block Sprint 9; `TWF-156` owns creating that max-size scenario map.

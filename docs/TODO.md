@@ -112,6 +112,8 @@ Follow-on gates:
 
 ### Later Sprints
 
-- Sprint 8: ash, contamination, and persistence.
-- Sprint 9: beavers and player feedback.
-- Sprint 10: release packaging and Steam Workshop.
+- Sprint 8: live QA recovery and blocked evidence triage.
+- Sprint 9: real field replacement and real-field proof. Use the best stable save rather than blocking on generated-scenario technicalities.
+- Sprint 10: visual consequences and aftermath from real fields. Expand `TWF-149` and [world-consequence-first-pass.md](world-consequence-first-pass.md) into scorch, burned textures, persistent ash, contamination, persistence, and tightened crop/tree/structure consequence tickets. Include `TWF-156` for creating a reusable `256x256` scenario map, but it does not need to be the first ticket.
+- Sprint 11: beavers and player feedback after smoke, heat, ash, and contamination fields are accepted.
+- Sprint 12: release packaging and Steam Workshop.

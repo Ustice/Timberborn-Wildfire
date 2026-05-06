@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace the remaining fire-simulation scaffolding with real field-driven implementations: shared map/material import, companion field state, runtime tunables, generated QA acceptance, GPU field rendering, and consequence gates that depend on actual simulation output instead of proof-only stimuli.
+Replace the remaining fire-simulation scaffolding with real field-driven implementations: shared map/material import, companion field state, runtime tunables, real-field QA acceptance, GPU field rendering, and consequence gates that depend on actual simulation output instead of proof-only stimuli.
 
 ## Why This Sprint Exists
 
@@ -10,7 +10,7 @@ The current system proves that the GPU loop, packed cells, deltas, visual surfac
 
 More scaffolding would make tuning misleading. A fixed center-cell stimulus can show that a shader dispatch runs, but it cannot tell us whether a pine forest has enough fuel, whether a warehouse burns because of stored logs, whether water on the map suppresses the right cells, or whether ash persists after a real tree burns. The next decisions depend on real map truth.
 
-The implementation must therefore replace fake inputs and proof-only controls with a pipeline where Timberborn world state and `.timber` snapshots classify into the same field data, the shader consumes explicit parameters, visuals render from GPU field outputs, and consequences apply from real deltas.
+The implementation must therefore replace fake inputs and proof-only controls with a pipeline where Timberborn world state and `.timber` snapshots classify into the same field data, the shader consumes explicit parameters, visuals render from GPU field outputs, and consequences apply from real deltas. A purpose-built generated scenario is useful, but it should not block the sprint if a better stable real save proves the same real-field behavior. The `256x256` map acceptance work belongs to Sprint 10 through `TWF-156`.
 
 ## Included Tickets
 
@@ -21,19 +21,21 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 - `TWF-141`: gate live/offline importer parity before downstream tuning.
 - `TWF-142`: replace shader `#define` tuning with a runtime `FireSimParameters` upload.
 - `TWF-143`: add internal QA/debug tuning presets and telemetry.
-- `TWF-144`: gate slow-reactable wildfire tuning from generated scenario evidence.
+- `TWF-144`: gate slow-reactable wildfire tuning from stable real-field evidence.
 - `TWF-145`: replace fixed-cell QA stimuli with commands that drive real imported fields.
-- `TWF-133`: finish the generated QA scenario layout so the importer has stable acceptance data.
+- `TWF-133`: validate the large-scenario acceptance surface, using either the generated QA scenario or a better stable real save.
 - `TWF-146`: add real-field checkpoints and manifests to the generated QA scenario.
 - `TWF-147`: implement the GPU field renderer for fire, smoke, ash, steam, visibility, and heat haze.
-- `TWF-148`: gate visual field renderer acceptance from recordings and status evidence.
-- `TWF-149`: gate world consequences over real field data and unblock existing consequence tickets.
+- `TWF-148`: gate visual field renderer acceptance from real-field recordings and status evidence.
+- `TWF-149`: define the world-consequence real-field gate and hand it off as the Sprint 10 consequence charter rather than treating it as one oversized Sprint 9 QA ticket.
 - `TWF-150`: remove scaffold-only code paths after their replacement gates pass.
 
 ## Existing Tickets Used As Downstream Work
 
 - `TWF-076`, `TWF-084`, `TWF-077`, `TWF-115`, `TWF-127`, `TWF-128`, and `TWF-129` remain the scoped implementation tickets for crops, trees, structures, stored goods, and infrastructure behavior.
 - `TWF-078`, `TWF-079`, and `TWF-081` remain the scoped tickets for persistent ash, contamination-aware aftermath, and persistence validation.
+- `docs/world-consequence-first-pass.md` now carries the junior-ready work packets for Sprint 10 visual consequences and aftermath.
+- `TWF-156` creates the reusable `256x256` Sprint 10 map used to prove local-fire behavior on a max-size world.
 - `TWF-089` through `TWF-092` remain the behavior tuning slices, but they should be revalidated through the new parameter buffer and generated scenario evidence.
 
 ## Out Of Scope
@@ -47,12 +49,12 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 
 1. Define the shared field contract: `TWF-137`, then `TWF-138`.
 2. Replace inputs: `TWF-139`, `TWF-140`, `TWF-133`, and `TWF-146`.
-3. Gate importer parity with generated scenario evidence: `TWF-141`.
+3. Gate importer parity with real-field evidence: `TWF-141`.
 4. Replace tuning scaffolding: `TWF-142`, then `TWF-143`.
-5. Gate slow-reactable wildfire behavior: `TWF-144`.
+5. Gate slow-reactable wildfire behavior on the best stable real-field surface: `TWF-144`.
 6. Replace fixed QA controls: `TWF-145`.
-7. Replace presentation: `TWF-147`, then `TWF-148`.
-8. Gate world consequences over real field data: `TWF-149`.
+7. Replace presentation: `TWF-147`, then `TWF-148` on the same or better real-field surface.
+8. Use `TWF-149` to define the Sprint 10 world-consequence gate and split it into implementable consequence tickets.
 9. Remove scaffold-only paths: `TWF-150`.
 
 ## Assignment Packets
@@ -64,11 +66,11 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 
 ## QA Gates
 
-- Importer parity gate: live Timberborn import and `.timber` snapshot export agree on representative generated scenario checkpoints.
+- Importer parity gate: live Timberborn import and `.timber` snapshot export agree on representative real-field checkpoints.
 - Parameter gate: shader snapshots prove identical deterministic behavior for default parameters and expected behavior changes for at least one preset.
-- Slow-reactable wildfire gate: generated scenario recording shows connected fuel spreads, trees sustain flame, water suppresses, and players have response time before large-area loss.
+- Slow-reactable wildfire gate: real-field recording shows connected fuel spreads, trees sustain flame, water suppresses, and players have response time before large-area loss.
 - Visual renderer gate: normal gameplay recordings show field-rendered fire, smoke, ash, steam, visibility, and heat haze without relying on alert text or tiny pooled prefabs.
-- Consequence gate: real imported targets produce nonzero consequence counters or precise safe-unavailable telemetry for crops, trees, structures, storage, infrastructure, ash, contamination, and persistence.
+- Consequence gate: Sprint 9 only needs to prove real-field readiness and name the Sprint 10 split. Sprint 10 owns nonzero consequence counters or precise safe-unavailable telemetry for crops, trees, structures, storage, infrastructure, ash, contamination, and persistence.
 - Scaffold removal gate: fixed-cell proof paths are gone or clearly demoted to debug helpers that call real field/tuning paths.
 
 ## Live QA Risks
@@ -79,6 +81,8 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 - Mitigation: keep full-grid dispatch for correctness, measure before optimizing, and avoid readback of companion fields unless a consumer requires it.
 - Risk: TypeScript and C# catalogs drift.
 - Mitigation: generate or compare shared catalog fixtures in tests before accepting importer parity.
+- Risk: the generated scenario becomes a technicality that blocks real gameplay proof.
+- Mitigation: use the best stable real-field scenario available. Keep generated-scenario work as reusable QA tooling, not the only acceptance surface. `Fuel` is confirmed `50x50`, so it can help smoke-test workflows but cannot satisfy Sprint 10's `256x256` gate.
 
 ## Evidence Manifest
 
@@ -89,6 +93,7 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 
 - All included new tickets are in `06-done`, `07-blocked`, `08-deferred`, or `09-awaiting-review` with concrete notes.
 - No downstream consequence ticket is accepted using fixed-cell scaffolding as proof.
+- Sprint 10 has a clear charter candidate for visual consequences and aftermath based on `docs/world-consequence-first-pass.md`.
 - `bun run kanban:audit` has been reviewed.
 - `git diff --check`, `bun run typecheck`, `bun test`, `dotnet test`, and `dotnet build Wildfire.slnx` pass for relevant changes.
 - Shader behavior changes have Unity batchmode snapshot evidence.
@@ -97,3 +102,4 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 ## Notes
 
 - This sprint intentionally pulls real field infrastructure ahead of beaver behavior and release packaging. The existing board had enough proof that scaffolding works; the next risk is making gameplay decisions from fake inputs.
+- 2026-05-06 direction update: do not get stuck on generated-scenario technicalities if the newer real-field system works. The `256x256` question belongs to Sprint 10 through `TWF-156`: create a max-size map and prove that a normal local forest fire inside that world does not make the map chug. Treat `TWF-149` as the bridge into the Sprint 10 visual-consequence/aftermath charter rather than a giant all-in-one QA gate.

@@ -5,7 +5,6 @@ role: qa
 requires_qa: true
 doc_only: false
 dependencies:
-  - TWF-133
   - TWF-147
 write_scope:
   - docs/TEST_PLAN.md
@@ -21,7 +20,7 @@ Accept or block the GPU field renderer from normal gameplay recordings.
 
 ## Requirements
 
-- Record fire, smoke, ash, steam, visibility, and heat haze over the generated QA scenario.
+- Record fire, smoke, ash, steam, visibility, and heat haze over a stable real-field scenario.
 - Verify terrain alignment and that trees or terrain in front of the effect occlude correctly where the renderer supports it.
 - Verify large-area rendering does not rely on tiny native prefabs or alert text.
 - Capture status counters for renderer binding, visible regions, dropped regions, and failures.
@@ -30,7 +29,7 @@ Accept or block the GPU field renderer from normal gameplay recordings.
 
 ## Dependencies
 
-- `TWF-133` provides the generated QA scenario required for normal and wide camera renderer gates.
+- `TWF-133` can provide or validate the selected surface, but generated-scenario completeness should not block this gate if a better stable save is available.
 - `TWF-147` implements the renderer.
 
 ## Role
@@ -41,6 +40,7 @@ Accept or block the GPU field renderer from normal gameplay recordings.
 ## Implementation Notes
 
 - Capture normal gameplay camera first, then a wide camera angle for scale and performance notes.
+- Use the same stable surface as `TWF-144` when possible. `TWF-156` owns the later Sprint 10 `256x256` proof.
 - Separate renderer correctness failures from art tuning failures in the ticket notes.
 - Alignment, occlusion, nonblank rendering, status counters, and absence of material failures are correctness.
 - Color balance, density, blob shape, and haze strength are tuning unless they make the effect unreadable.
@@ -55,3 +55,5 @@ Accept or block the GPU field renderer from normal gameplay recordings.
 
 - This gate decides whether visual tuning can proceed on the field renderer instead of the old prefab scaffold.
 - 2026-05-05 coordinator correction: added missing `TWF-133` dependency. This ticket explicitly requires the generated QA scenario, and `TWF-133` is still the owner for making that generated scenario loadable and suitable for full-layout visual checks. The `TWF-147` Diorama proof accepts the renderer pipeline, but it is not a substitute for this gate's generated-scenario recording requirement.
+- 2026-05-06 direction update: visuals are good enough to gate on stable real-field evidence rather than waiting on generated-scenario technicalities.
+- 2026-05-06 coordinator: moved to `04-verify` for real-field visual QA. This should run on the same stable save used for `TWF-144` when possible. The separate `256x256` visual/performance proof belongs to Sprint 10 in `TWF-156`.
