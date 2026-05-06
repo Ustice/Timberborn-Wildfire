@@ -217,6 +217,50 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void SoilMoistureRangeBindingExpandsAllowlistAsReadOnlyAndReportsRange()
+    {
+        TimberbornQaSoilMoistureRangeResult range = new(
+            SampleCount: 12,
+            SkippedCount: 2,
+            MoistCellCount: 5,
+            Min: 0f,
+            Max: 7.25f,
+            Average: 2.5f,
+            MinX: 1,
+            MinY: 2,
+            MinZ: 3,
+            MaxX: 4,
+            MaxY: 5,
+            MaxZ: 6);
+        RecordingSoilMoistureMapProbe probe = new(range);
+        RecordingStateProvider stateProvider = new(
+            new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: false));
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            probe,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult help = bridge.Execute("help");
+        TimberbornQaCommandResult result = bridge.Execute("qa-soil-moisture-range");
+
+        Assert.True(help.Success);
+        Assert.Equal(["help", "qa-readiness", "qa-soil-moisture-range", "status"], help.KnownCommands);
+        Assert.Contains("read-only", help.Message);
+        Assert.True(result.Success);
+        Assert.Equal("qa-soil-moisture-range", result.Command);
+        Assert.Equal(1, probe.CallCount);
+        Assert.Contains("soil_moisture_range_samples=12", result.Message);
+        Assert.Contains("skipped=2", result.Message);
+        Assert.Contains("moist_cells=5", result.Message);
+        Assert.Contains("min=0", result.Message);
+        Assert.Contains("max=7.25", result.Message);
+        Assert.Contains("avg=2.5", result.Message);
+        Assert.Contains("min_x=1_min_y=2_min_z=3", result.Message);
+        Assert.Contains("max_x=4_max_y=5_max_z=6", result.Message);
+        Assert.Equal(2, stateProvider.CallCount);
+    }
+
+    [Fact]
     public void ExecuteQaFirePresetSelectsNamedPresetWithoutRawParameters()
     {
         RecordingFireSimParameterPresetSelector selector = new();
@@ -645,6 +689,33 @@ public sealed class TimberbornQaCommandBridgeTests
             Assert.Equal((byte)0, change.SetWater);
         });
         Assert.Equal(simulator.RegisteredChanges.Count, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void QueueQaSelectedTreeDeltaStimulusPegsHeatAcrossIgnitionBuildupTicks()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+
+        fireSystem.QueueQaSelectedTreeDeltaStimulus(new RecordingSelectedTreeTargetProvider(38));
+
+        Assert.Single(simulator.RegisteredChanges);
+
+        fireSystem.Tick();
+        Assert.Single(simulator.RegisteredChanges);
+
+        Enumerable.Range(0, 11).ToList().ForEach(_ => fireSystem.Tick());
+        Assert.Equal(12, simulator.RegisteredChanges.Count);
+
+        fireSystem.Tick();
+        Assert.Equal(12, simulator.RegisteredChanges.Count);
+        Assert.All(simulator.RegisteredChanges, static change =>
+        {
+            Assert.Equal(38, change.CellIndex);
+            Assert.Equal((byte)15, change.SetHeat);
+        });
     }
 
     [Fact]
@@ -1093,8 +1164,8 @@ public sealed class TimberbornQaCommandBridgeTests
             CompatibilityProbeDegradedFeatures: "visual_effects,diagnostic_assets",
             FireSimPresetName: "slow-reactable",
             FireSimPresetIgnitionBaseHeat: 12,
-            FireSimPresetBurningNeighborHeatBonus: 3,
-            FireSimPresetWaterSuppressionHeat: 2,
+            FireSimPresetWaterFuelLock: 5,
+            FireSimPresetFuelHeatWeight: 2,
             FireSimPresetFuelBurnDownNumerator: 1,
             FireSimPresetFuelBurnDownDenominator: 2,
             WorldImportTotalSources: 50,
@@ -1193,8 +1264,9 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("compatibility_probe_degraded_features=visual_effects,diagnostic_assets", result.ResultToken);
         Assert.Contains("fire_sim_preset=slow-reactable", result.ResultToken);
         Assert.Contains("fire_ignition_base_heat=12", result.ResultToken);
-        Assert.Contains("fire_burning_neighbor_heat_bonus=3", result.ResultToken);
-        Assert.Contains("fire_water_suppression_heat=2", result.ResultToken);
+        Assert.DoesNotContain("fire_burning_neighbor_heat_bonus", result.ResultToken);
+        Assert.Contains("fire_water_fuel_lock=5", result.ResultToken);
+        Assert.Contains("fire_fuel_heat_weight=2", result.ResultToken);
         Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
         Assert.Contains("world_import_total_sources=50", result.ResultToken);
         Assert.Contains("world_import_terrain_sources=44", result.ResultToken);
@@ -1255,12 +1327,22 @@ public sealed class TimberbornQaCommandBridgeTests
             .Select(static preset => preset.Name)
             .ToArray();
 
-        Assert.Equal(["default", "slow-reactable", "harsh", "wildfire", "conservative"], names);
+        Assert.Equal(["default", "slow-reactable", "harsh", "wildfire", "conservative", "high-threshold-high-bonus"], names);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("slow-reactable", out TimberbornFireSimParameterPreset? preset));
         Assert.Equal(12u, preset.Parameters.FireIgnitionBaseHeat);
-        Assert.Equal(3u, preset.Parameters.FireBurningNeighborHeatBonus);
         Assert.Equal(1u, preset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(2u, preset.Parameters.FireFuelBurnDownPressureDenominator);
+        Assert.True(TimberbornFireSimParameterPresets.TryGet("high-threshold-high-bonus", out TimberbornFireSimParameterPreset? highPreset));
+        Assert.Equal(5u, highPreset.Parameters.FireIgnitionBaseHeat);
+        Assert.Equal(0u, highPreset.Parameters.FireFlammabilityBurnPressure);
+        Assert.Equal(6u, highPreset.Parameters.FireFuelHeatWeight);
+        Assert.Equal(0u, highPreset.Parameters.FireWaterIgnitionPenalty);
+        Assert.Equal(4u, highPreset.Parameters.FireWaterEvaporationHeat);
+        Assert.Equal(0u, highPreset.Parameters.FireWaterBurnPressurePenalty);
+        Assert.Equal(0u, highPreset.Parameters.FireCoolingBase);
+        Assert.Equal(16u, highPreset.Parameters.FireHeatLossCoolingDivisor);
+        Assert.Equal(2u, highPreset.Parameters.FireFuelBurnDownPressureNumerator);
+        Assert.Equal(1u, highPreset.Parameters.FireFuelBurnDownPressureDenominator);
         Assert.False(TimberbornFireSimParameterPresets.TryGet("FireIgnitionBaseHeat=1", out _));
     }
 
@@ -1355,6 +1437,18 @@ public sealed class TimberbornQaCommandBridgeTests
                 TimberbornFireSimParameterPresets.All
                     .Single(preset => string.Equals(preset.Name, presetName, StringComparison.OrdinalIgnoreCase))
                     .Parameters);
+        }
+    }
+
+    private sealed class RecordingSoilMoistureMapProbe(TimberbornQaSoilMoistureRangeResult range)
+        : ITimberbornQaSoilMoistureMapProbe
+    {
+        public int CallCount { get; private set; }
+
+        public TimberbornQaSoilMoistureRangeResult ScanSoilMoistureRange()
+        {
+            CallCount++;
+            return range;
         }
     }
 

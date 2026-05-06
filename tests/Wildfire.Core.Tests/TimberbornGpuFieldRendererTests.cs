@@ -131,6 +131,30 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void DefaultGpuFieldRendererKeepsUnityDebugOverlayDisabled()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        TimberbornGpuFieldRendererSink sink = new(surface, logSink);
+
+        sink.BeginVisualEffectDispatch(10);
+        sink.UpdateVisualEffect(EffectEvent(0, 10));
+        sink.CompleteVisualEffectDispatch(10);
+
+        Assert.False(sink.Counters.RendererEnabled);
+        Assert.False(sink.Counters.MaterialReady);
+        Assert.Equal(1, sink.Counters.VisibleRegionCount);
+        Assert.Equal(1, sink.Counters.UpdatedRegionCount);
+        Assert.Contains(
+            logSink.InfoMessages,
+            message => message.Contains("renderer_enabled=false", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void QaResultTokenIncludesGpuFieldRendererTelemetry()
     {
         TimberbornQaCommandState state = new(
@@ -205,6 +229,7 @@ public sealed class TimberbornGpuFieldRendererTests
             Kind: TimberbornFireVisualEffectKind.HeatChanged,
             Fuel: 10,
             Heat: 10,
+            OldWater: 0,
             Water: 0,
             IsBurning: true);
     }

@@ -74,6 +74,21 @@ public sealed class TimberbornTerrainAdapter
 {
     public const byte SolidTerrainHeatLoss = 6;
 
+    public static byte QuantizeSoilMoisture(float soilMoisture)
+    {
+        if (float.IsNaN(soilMoisture) || soilMoisture <= 0f)
+        {
+            return 0;
+        }
+
+        if (float.IsPositiveInfinity(soilMoisture))
+        {
+            return 3;
+        }
+
+        return (byte)Math.Clamp((int)Math.Floor(soilMoisture) / 4, 0, 3);
+    }
+
     public TimberbornCellSource CreateSource(int x, int y, int z, bool isSolid, byte wetness = 0)
     {
         WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Terrain);

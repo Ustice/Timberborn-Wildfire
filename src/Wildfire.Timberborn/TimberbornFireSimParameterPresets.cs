@@ -7,8 +7,8 @@ public sealed record TimberbornFireSimParameterPreset(string Name, FireSimParame
     public string StatusToken =>
         $"fire_sim_preset={TimberbornQaCommandBridge.FormatToken(Name)} " +
         $"fire_ignition_base_heat={Parameters.FireIgnitionBaseHeat} " +
-        $"fire_burning_neighbor_heat_bonus={Parameters.FireBurningNeighborHeatBonus} " +
-        $"fire_water_suppression_heat={Parameters.FireWaterSuppressionHeat} " +
+        $"fire_water_fuel_lock={Parameters.FireWaterFuelLock} " +
+        $"fire_fuel_heat_weight={Parameters.FireFuelHeatWeight} " +
         $"fire_fuel_burn_down={Parameters.FireFuelBurnDownPressureNumerator}/{Parameters.FireFuelBurnDownPressureDenominator}";
 }
 
@@ -19,6 +19,7 @@ public static class TimberbornFireSimParameterPresets
     public const string HarshName = "harsh";
     public const string WildfireName = "wildfire";
     public const string ConservativeName = "conservative";
+    public const string HighThresholdHighBonusName = "high-threshold-high-bonus";
 
     private static readonly TimberbornFireSimParameterPreset[] Presets =
     {
@@ -28,8 +29,6 @@ public static class TimberbornFireSimParameterPresets
             FireSimParameters.Default with
             {
                 FireIgnitionBaseHeat = 12u,
-                FireBurningNeighborHeatBonus = 3u,
-                FireBurningNeighborDirectHeat = 1u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 2u,
                 FireCoolingBase = 1u,
@@ -41,9 +40,6 @@ public static class TimberbornFireSimParameterPresets
             {
                 FireIgnitionBaseHeat = 9u,
                 FireWaterIgnitionPenalty = 1u,
-                FireBurningNeighborHeatBonus = 7u,
-                FireBurningNeighborDirectHeat = 2u,
-                FireWaterSuppressionHeat = 1u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 1u,
                 VisualFireBaseIntensity = 0.55f,
@@ -55,11 +51,6 @@ public static class TimberbornFireSimParameterPresets
             {
                 FireIgnitionBaseHeat = 8u,
                 FireWaterIgnitionPenalty = 1u,
-                FireRetainedHeatWeight = 2u,
-                FireSpreadHeatWeight = 5u,
-                FireBurningNeighborHeatBonus = 16u,
-                FireBurningNeighborDirectHeat = 6u,
-                FireWaterSuppressionHeat = 1u,
                 FireWaterEvaporationHeat = 7u,
                 FireFlammabilityBurnPressure = 3u,
                 FireBurnHeatBase = 4u,
@@ -85,14 +76,27 @@ public static class TimberbornFireSimParameterPresets
             {
                 FireIgnitionBaseHeat = 13u,
                 FireWaterIgnitionPenalty = 3u,
-                FireBurningNeighborHeatBonus = 2u,
-                FireBurningNeighborDirectHeat = 0u,
-                FireWaterSuppressionHeat = 3u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 4u,
                 FireCoolingBase = 2u,
                 VisualFireBaseIntensity = 0.35f,
                 VisualSmokeBaseIntensity = 0.08f,
+            }),
+        new(
+            HighThresholdHighBonusName,
+            FireSimParameters.Default with
+            {
+                FireIgnitionBaseHeat = 5u,
+                FireWaterIgnitionPenalty = 0u,
+                FireWaterEvaporationHeat = 4u,
+                FireFlammabilityBurnPressure = 0u,
+                FireBurnHeatBase = 0u,
+                FireFuelHeatWeight = 6u,
+                FireWaterBurnPressurePenalty = 0u,
+                FireCoolingBase = 0u,
+                FireHeatLossCoolingDivisor = 16u,
+                FireFuelBurnDownPressureNumerator = 2u,
+                FireFuelBurnDownPressureDenominator = 1u,
             }),
     };
 

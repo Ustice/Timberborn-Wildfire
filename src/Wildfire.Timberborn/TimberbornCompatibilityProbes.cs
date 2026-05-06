@@ -301,9 +301,6 @@ public static class TimberbornCompatibilityProbeCatalog
                 "SendWarningNotification",
                 typeof(string)),
             ProbeComputeShaderSupport(),
-            ProbeNativePrefabCatalog(TimberbornPooledFireEffectKind.Fire),
-            ProbeNativePrefabCatalog(TimberbornPooledFireEffectKind.Smoke),
-            ProbeNativePrefabCatalog(TimberbornPooledFireEffectKind.Ash),
         };
 
         results.AddRange(ProbeAssetBundles());
@@ -511,33 +508,4 @@ public static class TimberbornCompatibilityProbeCatalog
                 header.StartsWith("UnityWeb", StringComparison.Ordinal));
     }
 
-    private static TimberbornCompatibilityProbeResult ProbeNativePrefabCatalog(TimberbornPooledFireEffectKind kind)
-    {
-        try
-        {
-            TimberbornNativeFireEffectPrefabResolution resolution =
-                TimberbornNativeFireEffectPrefabCatalog.Probe(kind);
-            string name = $"native_{kind.ToString().ToLowerInvariant()}_prefab";
-
-            return resolution.IsResolved
-                ? TimberbornCompatibilityProbeResult.Passed(
-                    name,
-                    isRequired: false,
-                    "visual_effects",
-                    resolution.PrefabName ?? "resolved")
-                : TimberbornCompatibilityProbeResult.Degraded(
-                    name,
-                    isRequired: false,
-                    "visual_effects",
-                    $"preferred:{string.Join(",", resolution.PreferredNames)}");
-        }
-        catch (Exception exception)
-        {
-            return TimberbornCompatibilityProbeResult.Degraded(
-                $"native_{kind.ToString().ToLowerInvariant()}_prefab",
-                isRequired: false,
-                "visual_effects",
-                $"message:{exception.Message}");
-        }
-    }
 }

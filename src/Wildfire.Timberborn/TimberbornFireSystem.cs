@@ -11,6 +11,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private const byte QaIgnitionHeatLoss = 1;
     private const byte QaIgnitionTerrain = 1;
     private const byte QaIgnitionWater = 0;
+    private const int QaIgnitionPegDispatchTicks = 12;
     private const byte QaSpentFuel = 0;
     private const byte QaWaterSuppressionWater = 3;
 
@@ -22,6 +23,8 @@ public sealed class TimberbornFireSystem : IDisposable
     private FireGrid? _grid;
     private TimberbornImportedFieldTarget[] _importedTargets = Array.Empty<TimberbornImportedFieldTarget>();
     private int _registeredChangeCountSinceLastDispatch;
+    private FireSimChange[] _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
+    private int _qaIgnitionPegDispatchTicksRemaining;
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
 
@@ -129,6 +132,17 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public TimberbornQaBurnDurationProofState BurnDurationProofState => _burnDurationProofState;
 
+    public bool TryUpdateParameters(FireSimParameters parameters)
+    {
+        if (_fireSimulator is not ITimberbornConfigurableFireSimParameters configurable)
+        {
+            return false;
+        }
+
+        configurable.UpdateParameters(parameters);
+        return true;
+    }
+
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
         TimberbornCellSource[] sourceValues = (sources ?? throw new ArgumentNullException(nameof(sources))).ToArray();
@@ -157,6 +171,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _grid = grid;
         _importedTargets = CreateImportedTargets(grid, initialCells, companionFieldValues);
         _registeredChangeCountSinceLastDispatch = 0;
+        ClearQaIgnitionPeg();
         LastTick = 0;
         LastDeltaCount = 0;
         _burnDurationProofState = TimberbornQaBurnDurationProofState.Placeholder;
@@ -168,6 +183,7 @@ public sealed class TimberbornFireSystem : IDisposable
     public GpuFireStepResult Tick()
     {
         IGpuFireSimulator fireSimulator = RequireSimulator();
+        RegisterPendingQaIgnitionPegChanges();
         int pendingChangeCount = _registeredChangeCountSinceLastDispatch;
 
         _logSink.Info($"wildfire_timberborn_dispatch_started pending_changes={pendingChangeCount}");
@@ -446,8 +462,52 @@ public sealed class TimberbornFireSystem : IDisposable
         changes
             .ToList()
             .ForEach(change => RegisterChange(change, source, shouldLog: false));
+        StartQaIgnitionPeg(changes, source);
         LogRegisteredChanges(source, changes.Length);
         return changes.Length;
+    }
+
+    private void StartQaIgnitionPeg(FireSimChange[] changes, string source)
+    {
+        _qaIgnitionPegChanges = changes.ToArray();
+        _qaIgnitionPegDispatchTicksRemaining = Math.Max(0, QaIgnitionPegDispatchTicks - 1);
+        if (_qaIgnitionPegDispatchTicksRemaining > 0)
+        {
+            _logSink.Info(
+                "wildfire_timberborn_qa_ignition_heat_peg_started " +
+                $"source={source} " +
+                $"cell_count={_qaIgnitionPegChanges.Length} " +
+                $"remaining_dispatch_ticks={_qaIgnitionPegDispatchTicksRemaining}");
+        }
+    }
+
+    private void RegisterPendingQaIgnitionPegChanges()
+    {
+        if (_qaIgnitionPegDispatchTicksRemaining <= 0 || _qaIgnitionPegChanges.Length == 0)
+        {
+            return;
+        }
+
+        if (_registeredChangeCountSinceLastDispatch > 0)
+        {
+            return;
+        }
+
+        _qaIgnitionPegChanges
+            .ToList()
+            .ForEach(change => RegisterChange(change, "qa_ignition_heat_peg", shouldLog: false));
+        _qaIgnitionPegDispatchTicksRemaining--;
+        LogRegisteredChanges("qa_ignition_heat_peg", _qaIgnitionPegChanges.Length);
+        if (_qaIgnitionPegDispatchTicksRemaining == 0)
+        {
+            ClearQaIgnitionPeg();
+        }
+    }
+
+    private void ClearQaIgnitionPeg()
+    {
+        _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
+        _qaIgnitionPegDispatchTicksRemaining = 0;
     }
 
     private static Func<IEnumerable<TimberbornImportedFieldTarget>, IOrderedEnumerable<TimberbornImportedFieldTarget>> OrderByCenterDistance(

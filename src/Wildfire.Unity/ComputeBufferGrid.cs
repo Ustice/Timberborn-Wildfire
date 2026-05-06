@@ -9,6 +9,7 @@ public sealed class ComputeBufferGrid : IDisposable
     public const int DeltaStrideBytes = sizeof(uint) * 4;
     public const int GenerationStrideBytes = sizeof(uint);
     public const int VisualFieldStrideBytes = FireVisualField.StrideBytes;
+    public const int AtmosphericFieldStrideBytes = sizeof(uint);
     public const int CompanionTargetIdStrideBytes = sizeof(uint);
     public const int CompanionFieldStrideBytes = sizeof(uint);
 
@@ -48,6 +49,8 @@ public sealed class ComputeBufferGrid : IDisposable
             IAppendComputeBufferHandle deltas = AllocateAppendTracked(allocator, ownedBuffers, "wildfire.deltas", dimensions.CellCount, DeltaStrideBytes);
             IComputeBufferHandle generations = AllocateTracked(allocator, ownedBuffers, "wildfire.generations", dimensions.CellCount, GenerationStrideBytes);
             IComputeBufferHandle visualFields = AllocateTracked(allocator, ownedBuffers, "wildfire.visual_fields", dimensions.CellCount, VisualFieldStrideBytes);
+            IComputeBufferHandle currentAtmosphericFields = AllocateTracked(allocator, ownedBuffers, "wildfire.current_atmospheric_fields", dimensions.CellCount, AtmosphericFieldStrideBytes);
+            IComputeBufferHandle nextAtmosphericFields = AllocateTracked(allocator, ownedBuffers, "wildfire.next_atmospheric_fields", dimensions.CellCount, AtmosphericFieldStrideBytes);
             IComputeBufferHandle companionTargetIds = AllocateTracked(allocator, ownedBuffers, "wildfire.companion_target_ids", dimensions.CellCount, CompanionTargetIdStrideBytes);
             IComputeBufferHandle companionFields = AllocateTracked(allocator, ownedBuffers, "wildfire.companion_fields", dimensions.CellCount, CompanionFieldStrideBytes);
 
@@ -57,6 +60,8 @@ public sealed class ComputeBufferGrid : IDisposable
                 : initialCompanionFields.ToArray();
             currentCells.Upload(packedCells);
             nextCells.Upload(packedCells);
+            currentAtmosphericFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
+            nextAtmosphericFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
             companionTargetIds.Upload(companionValues.Select(static field => field.TargetId).ToArray());
             companionFields.Upload(companionValues.Select(static field => field.State.Pack()).ToArray());
 
@@ -66,6 +71,8 @@ public sealed class ComputeBufferGrid : IDisposable
             Deltas = deltas;
             Generations = generations;
             VisualFields = visualFields;
+            CurrentAtmosphericFields = currentAtmosphericFields;
+            NextAtmosphericFields = nextAtmosphericFields;
             CompanionTargetIds = companionTargetIds;
             CompanionFields = companionFields;
             _ownedBuffers = ownedBuffers;
@@ -99,6 +106,10 @@ public sealed class ComputeBufferGrid : IDisposable
 
     public IComputeBufferHandle VisualFields { get; }
 
+    public IComputeBufferHandle CurrentAtmosphericFields { get; private set; }
+
+    public IComputeBufferHandle NextAtmosphericFields { get; private set; }
+
     public IComputeBufferHandle CompanionTargetIds { get; }
 
     public IComputeBufferHandle CompanionFields { get; }
@@ -131,6 +142,7 @@ public sealed class ComputeBufferGrid : IDisposable
     public void SwapCellBuffers()
     {
         (CurrentCells, NextCells) = (NextCells, CurrentCells);
+        (CurrentAtmosphericFields, NextAtmosphericFields) = (NextAtmosphericFields, CurrentAtmosphericFields);
     }
 
     public void Dispose()

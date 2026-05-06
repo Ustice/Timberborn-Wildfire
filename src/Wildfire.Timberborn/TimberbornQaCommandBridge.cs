@@ -1,3 +1,8 @@
+using Timberborn.MapIndexSystem;
+using Timberborn.MapStateSystem;
+using Timberborn.SoilMoistureSystem;
+using Timberborn.TerrainSystem;
+using UnityEngine;
 using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
@@ -12,6 +17,7 @@ public sealed class TimberbornQaCommandBridge
     public const string QaWaterSuppressionStimulusCommand = "qa-water-suppression-stimulus";
     public const string QaBurnDurationStimulusCommand = "qa-burn-duration-stimulus";
     public const string QaFirePresetCommand = "qa-fire-preset";
+    public const string QaSoilMoistureRangeCommand = "qa-soil-moisture-range";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
@@ -19,6 +25,7 @@ public sealed class TimberbornQaCommandBridge
     private readonly ITimberbornQaWaterSuppressionStimulus _waterSuppressionStimulus;
     private readonly ITimberbornQaBurnDurationStimulus _burnDurationStimulus;
     private readonly ITimberbornQaFireSimParameterPresetSelector _fireSimParameterPresetSelector;
+    private readonly ITimberbornQaSoilMoistureMapProbe _soilMoistureMapProbe;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -30,6 +37,7 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
             NullTimberbornQaCommandLogSink.Instance)
     {
     }
@@ -44,6 +52,7 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink)
     {
     }
@@ -59,6 +68,7 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink)
     {
     }
@@ -75,6 +85,7 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink)
     {
     }
@@ -92,6 +103,7 @@ public sealed class TimberbornQaCommandBridge
             waterSuppressionStimulus,
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink)
     {
     }
@@ -110,6 +122,7 @@ public sealed class TimberbornQaCommandBridge
             waterSuppressionStimulus,
             burnDurationStimulus,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink)
     {
     }
@@ -121,6 +134,43 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaBurnDurationStimulus burnDurationStimulus,
         ITimberbornQaFireSimParameterPresetSelector fireSimParameterPresetSelector,
+        ITimberbornQaCommandLogSink logSink)
+        : this(
+            stateProvider,
+            deltaStimulus,
+            buildingBurnoutStimulus,
+            waterSuppressionStimulus,
+            burnDurationStimulus,
+            fireSimParameterPresetSelector,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            logSink)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
+        ITimberbornQaCommandLogSink logSink)
+        : this(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            soilMoistureMapProbe,
+            logSink)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaDeltaStimulus deltaStimulus,
+        ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
+        ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
+        ITimberbornQaBurnDurationStimulus burnDurationStimulus,
+        ITimberbornQaFireSimParameterPresetSelector fireSimParameterPresetSelector,
+        ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
         ITimberbornQaCommandLogSink logSink)
     {
         if (stateProvider is null)
@@ -153,6 +203,11 @@ public sealed class TimberbornQaCommandBridge
             throw new ArgumentNullException(nameof(fireSimParameterPresetSelector));
         }
 
+        if (soilMoistureMapProbe is null)
+        {
+            throw new ArgumentNullException(nameof(soilMoistureMapProbe));
+        }
+
         if (logSink is null)
         {
             throw new ArgumentNullException(nameof(logSink));
@@ -164,6 +219,7 @@ public sealed class TimberbornQaCommandBridge
         _waterSuppressionStimulus = waterSuppressionStimulus;
         _burnDurationStimulus = burnDurationStimulus;
         _fireSimParameterPresetSelector = fireSimParameterPresetSelector;
+        _soilMoistureMapProbe = soilMoistureMapProbe;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -195,6 +251,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(fireSimParameterPresetSelector, NullTimberbornQaFireSimParameterPresetSelector.Instance))
         {
             commands[QaFirePresetCommand] = () => ExecuteQaFirePreset(null);
+        }
+
+        if (!ReferenceEquals(soilMoistureMapProbe, NullTimberbornQaSoilMoistureMapProbe.Instance))
+        {
+            commands[QaSoilMoistureRangeCommand] = ExecuteQaSoilMoistureRange;
         }
 
         _commands = commands;
@@ -331,6 +392,25 @@ public sealed class TimberbornQaCommandBridge
                 : "wildfire_disabled");
     }
 
+    private TimberbornQaCommandResult ExecuteQaSoilMoistureRange()
+    {
+        TimberbornQaSoilMoistureRangeResult range = _soilMoistureMapProbe.ScanSoilMoistureRange();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaSoilMoistureRangeCommand,
+            _stateProvider.GetState(),
+            KnownCommands,
+            "soil_moisture_range_" +
+            $"samples={range.SampleCount}_" +
+            $"skipped={range.SkippedCount}_" +
+            $"moist_cells={range.MoistCellCount}_" +
+            $"min={FormatFloat(range.Min)}_" +
+            $"max={FormatFloat(range.Max)}_" +
+            $"avg={FormatFloat(range.Average)}_" +
+            $"min_x={range.MinX}_min_y={range.MinY}_min_z={range.MinZ}_" +
+            $"max_x={range.MaxX}_max_y={range.MaxY}_max_z={range.MaxZ}");
+    }
+
     private TimberbornQaCommandResult ExecuteQaDeltaStimulus(string? commandText)
     {
         string targetSelector = ParseFieldTargetSelector(commandText) ?? TimberbornQaFieldTargetSelectors.Default;
@@ -386,7 +466,7 @@ public sealed class TimberbornQaCommandBridge
             QaWaterSuppressionStimulusCommand,
             state,
             KnownCommands,
-            "queued_water_suppression_stimulus_" +
+            "queued_water_fuel_lock_stimulus_" +
             $"target_selector={stimulusResult.TargetSelector}_" +
             $"target_index={stimulusResult.CellIndex}_" +
             $"target_x={stimulusResult.X}_" +
@@ -457,8 +537,7 @@ public sealed class TimberbornQaCommandBridge
             "selected_fire_sim_preset_" +
             $"name={presetResult.Name}_" +
             $"ignition={presetResult.Parameters.FireIgnitionBaseHeat}_" +
-            $"neighbor_bonus={presetResult.Parameters.FireBurningNeighborHeatBonus}_" +
-            $"water_suppression={presetResult.Parameters.FireWaterSuppressionHeat}");
+            $"water_fuel_lock={presetResult.Parameters.FireWaterFuelLock}");
     }
 
     private static string NormalizeCommand(string commandText)
@@ -558,6 +637,11 @@ public sealed class TimberbornQaCommandBridge
         return string.IsNullOrWhiteSpace(value)
             ? "placeholder"
             : value.Replace(' ', '_').Replace('"', '\'');
+    }
+
+    private static string FormatFloat(float? value)
+    {
+        return value?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
     }
 }
 
@@ -1108,8 +1192,8 @@ public sealed record TimberbornQaCommandState(
     string CompatibilityProbeDegradedFeatures = "placeholder",
     string FireSimPresetName = "default",
     uint? FireSimPresetIgnitionBaseHeat = null,
-    uint? FireSimPresetBurningNeighborHeatBonus = null,
-    uint? FireSimPresetWaterSuppressionHeat = null,
+    uint? FireSimPresetWaterFuelLock = null,
+    uint? FireSimPresetFuelHeatWeight = null,
     uint? FireSimPresetFuelBurnDownNumerator = null,
     uint? FireSimPresetFuelBurnDownDenominator = null,
     int? WorldImportTotalSources = null,
@@ -1337,8 +1421,8 @@ public sealed record TimberbornQaCommandResult(
         $"compatibility_probe_degraded_features={TimberbornQaCommandBridge.FormatToken(State.CompatibilityProbeDegradedFeatures)} " +
         $"fire_sim_preset={TimberbornQaCommandBridge.FormatToken(State.FireSimPresetName)} " +
         $"fire_ignition_base_heat={FormatNumber(State.FireSimPresetIgnitionBaseHeat)} " +
-        $"fire_burning_neighbor_heat_bonus={FormatNumber(State.FireSimPresetBurningNeighborHeatBonus)} " +
-        $"fire_water_suppression_heat={FormatNumber(State.FireSimPresetWaterSuppressionHeat)} " +
+        $"fire_water_fuel_lock={FormatNumber(State.FireSimPresetWaterFuelLock)} " +
+        $"fire_fuel_heat_weight={FormatNumber(State.FireSimPresetFuelHeatWeight)} " +
         $"fire_fuel_burn_down={FormatFraction(State.FireSimPresetFuelBurnDownNumerator, State.FireSimPresetFuelBurnDownDenominator)} " +
         $"world_import_total_sources={FormatNumber(State.WorldImportTotalSources)} " +
         $"world_import_terrain_sources={FormatNumber(State.WorldImportTerrainSources)} " +
@@ -1397,6 +1481,163 @@ public sealed record TimberbornQaCommandResult(
             ? $"{FormatNumber(numerator)}/{FormatNumber(denominator)}"
             : "placeholder";
     }
+
+    private static string FormatFloat(float? value)
+    {
+        return value?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+}
+
+public interface ITimberbornQaSoilMoistureMapProbe
+{
+    TimberbornQaSoilMoistureRangeResult ScanSoilMoistureRange();
+}
+
+public sealed record TimberbornQaSoilMoistureRangeResult(
+    int SampleCount,
+    int SkippedCount,
+    int MoistCellCount,
+    float? Min,
+    float? Max,
+    float? Average,
+    int MinX,
+    int MinY,
+    int MinZ,
+    int MaxX,
+    int MaxY,
+    int MaxZ);
+
+public sealed class NullTimberbornQaSoilMoistureMapProbe : ITimberbornQaSoilMoistureMapProbe
+{
+    public static readonly NullTimberbornQaSoilMoistureMapProbe Instance = new();
+
+    private NullTimberbornQaSoilMoistureMapProbe()
+    {
+    }
+
+    public TimberbornQaSoilMoistureRangeResult ScanSoilMoistureRange()
+    {
+        throw new InvalidOperationException("QA soil moisture range command is unavailable.");
+    }
+}
+
+public sealed class TimberbornQaSoilMoistureMapProbe : ITimberbornQaSoilMoistureMapProbe
+{
+    private readonly MapSize _mapSize;
+    private readonly ITerrainService _terrainService;
+    private readonly ISoilMoistureService _soilMoistureService;
+    private readonly MapIndexService _mapIndexService;
+
+    public TimberbornQaSoilMoistureMapProbe(
+        MapSize mapSize,
+        ITerrainService terrainService,
+        ISoilMoistureService soilMoistureService,
+        MapIndexService mapIndexService)
+    {
+        _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
+        _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
+        _soilMoistureService = soilMoistureService ?? throw new ArgumentNullException(nameof(soilMoistureService));
+        _mapIndexService = mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService));
+    }
+
+    public TimberbornQaSoilMoistureRangeResult ScanSoilMoistureRange()
+    {
+        Vector2Int terrainSize2D = _mapSize.TerrainSize2D;
+        Vector3Int terrainSize = _mapSize.TerrainSize;
+        TimberbornQaSoilMoistureSample[] samples = Enumerable.Range(0, terrainSize2D.x)
+            .SelectMany(x => Enumerable.Range(0, terrainSize2D.y)
+                .SelectMany(y => _terrainService.GetAllHeightsInCell(new Vector2Int(x, y))))
+            .Where(coordinates => IsInsideTerrain(coordinates, terrainSize))
+            .Select(ReadSample)
+            .ToArray();
+        TimberbornQaSoilMoistureSample[] validSamples = samples
+            .Where(static sample => sample.IsValid)
+            .ToArray();
+
+        if (validSamples.Length == 0)
+        {
+            return new TimberbornQaSoilMoistureRangeResult(
+                SampleCount: 0,
+                SkippedCount: samples.Length,
+                MoistCellCount: 0,
+                Min: null,
+                Max: null,
+                Average: null,
+                MinX: -1,
+                MinY: -1,
+                MinZ: -1,
+                MaxX: -1,
+                MaxY: -1,
+                MaxZ: -1);
+        }
+
+        TimberbornQaSoilMoistureSample min = validSamples
+            .OrderBy(static sample => sample.Moisture)
+            .First();
+        TimberbornQaSoilMoistureSample max = validSamples
+            .OrderByDescending(static sample => sample.Moisture)
+            .First();
+
+        return new TimberbornQaSoilMoistureRangeResult(
+            SampleCount: validSamples.Length,
+            SkippedCount: samples.Length - validSamples.Length,
+            MoistCellCount: validSamples.Count(static sample => sample.IsMoist),
+            Min: min.Moisture,
+            Max: max.Moisture,
+            Average: validSamples.Average(static sample => sample.Moisture),
+            MinX: min.Coordinates.x,
+            MinY: min.Coordinates.y,
+            MinZ: min.Coordinates.z,
+            MaxX: max.Coordinates.x,
+            MaxY: max.Coordinates.y,
+            MaxZ: max.Coordinates.z);
+    }
+
+    private TimberbornQaSoilMoistureSample ReadSample(Vector3Int coordinates)
+    {
+        try
+        {
+            Vector3Int timberbornCoordinates = new(coordinates.x, coordinates.z, coordinates.y);
+            int index = _mapIndexService.CellToIndex(new Vector2Int(coordinates.x, coordinates.y));
+            return new TimberbornQaSoilMoistureSample(
+                coordinates,
+                _soilMoistureService.SoilMoisture(index),
+                TryReadIsMoist(timberbornCoordinates),
+                IsValid: true);
+        }
+        catch
+        {
+            return new TimberbornQaSoilMoistureSample(coordinates, 0f, IsMoist: false, IsValid: false);
+        }
+    }
+
+    private bool TryReadIsMoist(Vector3Int timberbornCoordinates)
+    {
+        try
+        {
+            return _soilMoistureService.SoilIsMoist(timberbornCoordinates);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsInsideTerrain(Vector3Int coordinates, Vector3Int terrainSize)
+    {
+        return coordinates.x >= 0 &&
+            coordinates.y >= 0 &&
+            coordinates.z >= 0 &&
+            coordinates.x < terrainSize.x &&
+            coordinates.y < terrainSize.y &&
+            coordinates.z < terrainSize.z;
+    }
+
+    private readonly record struct TimberbornQaSoilMoistureSample(
+        Vector3Int Coordinates,
+        float Moisture,
+        bool IsMoist,
+        bool IsValid);
 }
 
 public interface ITimberbornQaCommandLogSink

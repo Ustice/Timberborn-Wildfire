@@ -65,6 +65,8 @@ public sealed class ComputeBufferGridTests
                 "wildfire.deltas",
                 "wildfire.generations",
                 "wildfire.visual_fields",
+                "wildfire.current_atmospheric_fields",
+                "wildfire.next_atmospheric_fields",
                 "wildfire.companion_target_ids",
                 "wildfire.companion_fields",
             ],
@@ -77,10 +79,14 @@ public sealed class ComputeBufferGridTests
         Assert.True(((RecordingComputeBufferHandle)grid.Deltas).IsAppend);
         Assert.Equal(ComputeBufferGrid.GenerationStrideBytes, grid.Generations.StrideBytes);
         Assert.Equal(ComputeBufferGrid.VisualFieldStrideBytes, grid.VisualFields.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.AtmosphericFieldStrideBytes, grid.CurrentAtmosphericFields.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.AtmosphericFieldStrideBytes, grid.NextAtmosphericFields.StrideBytes);
         Assert.Equal(ComputeBufferGrid.CompanionTargetIdStrideBytes, grid.CompanionTargetIds.StrideBytes);
         Assert.Equal(ComputeBufferGrid.CompanionFieldStrideBytes, grid.CompanionFields.StrideBytes);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.CurrentCells).UploadedValues);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.NextCells).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CurrentAtmosphericFields).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.NextAtmosphericFields).UploadedValues);
         Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CompanionTargetIds).UploadedValues);
         Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues);
     }
@@ -194,6 +200,8 @@ public sealed class ComputeBufferGridTests
                 "wildfire.deltas",
                 "wildfire.generations",
                 "wildfire.visual_fields",
+                "wildfire.current_atmospheric_fields",
+                "wildfire.next_atmospheric_fields",
                 "wildfire.companion_target_ids",
                 "wildfire.companion_fields",
             ],

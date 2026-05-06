@@ -166,6 +166,23 @@ public sealed class TimberbornFireCellMapperTests
             cell);
     }
 
+    [Theory]
+    [InlineData(-1f, 0)]
+    [InlineData(0f, 0)]
+    [InlineData(3.999f, 0)]
+    [InlineData(4f, 1)]
+    [InlineData(7.999f, 1)]
+    [InlineData(8f, 2)]
+    [InlineData(11.999f, 2)]
+    [InlineData(12f, 3)]
+    [InlineData(15.999f, 3)]
+    [InlineData(16f, 3)]
+    [InlineData(99f, 3)]
+    public void TerrainAdapterQuantizesSoilMoistureToPackedWaterBand(float soilMoisture, int expectedWater)
+    {
+        Assert.Equal((byte)expectedWater, TimberbornTerrainAdapter.QuantizeSoilMoisture(soilMoisture));
+    }
+
     [Fact]
     public void CreateMappedCellsMapsMultiCellVerticalFootprints()
     {

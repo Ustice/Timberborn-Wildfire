@@ -43,6 +43,7 @@ public sealed class UnityComputeFireSimulatorTests
         Assert.Same(grid.Deltas, dispatch.Deltas);
         Assert.Same(grid.VisualFields, dispatch.VisualFields);
         Assert.Equal(FireSimParameters.Default, dispatch.Parameters);
+        Assert.Equal(FireSimWind.None, dispatch.Wind);
         Assert.Equal(0u, dispatch.ChangeCount);
         Assert.Equal(3, dispatch.ThreadGroupsX);
         Assert.Equal(2, dispatch.ThreadGroupsY);
@@ -73,6 +74,30 @@ public sealed class UnityComputeFireSimulatorTests
         simulator.Tick();
 
         Assert.Equal(parameters, Assert.Single(dispatcher.Dispatches).Parameters);
+    }
+
+    [Fact]
+    public void TickCarriesNormalizedWindToDispatch()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
+            width: 1,
+            height: 1,
+            depth: 1,
+            [PackedCell.Pack(15, 15, 3, 0, 1, 1)],
+            allocator);
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        UnityComputeFireSimulator simulator = new(grid, dispatcher)
+        {
+            Wind = new FireSimWind(3f, 4f, 2f),
+        };
+
+        simulator.Tick();
+
+        FireSimWind wind = Assert.Single(dispatcher.Dispatches).Wind;
+        Assert.Equal(0.6f, wind.DirectionX, precision: 3);
+        Assert.Equal(0.8f, wind.DirectionY, precision: 3);
+        Assert.Equal(1f, wind.Strength);
     }
 
     [Fact]

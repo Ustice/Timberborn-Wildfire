@@ -372,6 +372,7 @@ public readonly record struct TimberbornFireVisualEffectEvent(
     TimberbornFireVisualEffectKind Kind,
     int Fuel,
     int Heat,
+    int OldWater,
     int Water,
     bool IsBurning)
 {
@@ -383,6 +384,7 @@ public readonly record struct TimberbornFireVisualEffectEvent(
             SelectKind(decision),
             decision.NewFuel,
             decision.NewHeat,
+            decision.OldWater,
             decision.NewWater,
             decision.IsBurning);
     }

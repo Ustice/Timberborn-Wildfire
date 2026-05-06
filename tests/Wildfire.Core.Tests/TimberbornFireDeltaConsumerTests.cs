@@ -51,6 +51,8 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.True(decision.FuelChanged);
         Assert.False(decision.HeatChanged);
         Assert.Equal(TimberbornFireVisualEffectKind.FuelChanged, effectEvent.Kind);
+        Assert.Equal(decision.OldWater, effectEvent.OldWater);
+        Assert.Equal(decision.NewWater, effectEvent.Water);
     }
 
     [Fact]

@@ -24,6 +24,7 @@ const knownCommands = [
   "qa-delta-stimulus",
   "qa-fire-preset",
   "qa-readiness",
+  "qa-soil-moisture-range",
   "qa-water-suppression-stimulus",
   "status",
 ];
@@ -41,6 +42,7 @@ Commands:
   qa-burn-duration-stimulus <low|medium|high>
                             Queue heat on an imported burnable target in the selected fuel band.
   qa-fire-preset <preset>   Select an allowlisted fire-simulation tuning preset.
+  qa-soil-moisture-range    Read-only scan of Timberborn SoilMoisture values over terrain.
   qa-water-suppression-stimulus [burnable|tree|vegetation|crop|storage|building]
                             Queue water on an imported burnable field target.
   help                      Read-only command list.

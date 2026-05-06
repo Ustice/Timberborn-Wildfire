@@ -77,6 +77,9 @@ namespace Wildfire.UnityBatchmode
             ComputeBuffer externalChanges = null;
             ComputeBuffer deltas = null;
             ComputeBuffer visualFields = null;
+            ComputeBuffer currentAtmosphericFields = null;
+            ComputeBuffer nextAtmosphericFields = null;
+            ComputeBuffer companionFields = null;
             ComputeBuffer deltaCounter = null;
 
             try
@@ -86,10 +89,16 @@ namespace Wildfire.UnityBatchmode
                 externalChanges = new ComputeBuffer(Math.Max(1, cellCount), sizeof(uint) * 4, ComputeBufferType.Structured);
                 deltas = new ComputeBuffer(cellCount, sizeof(uint) * 4, ComputeBufferType.Append);
                 visualFields = new ComputeBuffer(cellCount, sizeof(float) * 4, ComputeBufferType.Structured);
+                currentAtmosphericFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
+                nextAtmosphericFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
+                companionFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 deltaCounter = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
                 currentCells.SetData(initialCells);
                 nextCells.SetData(initialCells);
-                LogPhase("buffer", "ok", "allocated=current,next,external,deltas,visual");
+                currentAtmosphericFields.SetData(new uint[cellCount]);
+                nextAtmosphericFields.SetData(new uint[cellCount]);
+                companionFields.SetData(new uint[cellCount]);
+                LogPhase("buffer", "ok", "allocated=current,next,external,deltas,visual,atmospheric,companion");
 
                 int kernel = shader.FindKernel("SimulateFullGrid");
                 TickSnapshot[] ticks = new TickSnapshot[tickCount];
@@ -97,7 +106,19 @@ namespace Wildfire.UnityBatchmode
                 {
                     LogPhase("dispatch", "start", "tick=" + tick);
                     deltas.SetCounterValue(0);
-                    Bind(shader, kernel, fixture, tick, currentCells, nextCells, externalChanges, deltas, visualFields);
+                    Bind(
+                        shader,
+                        kernel,
+                        fixture,
+                        tick,
+                        currentCells,
+                        nextCells,
+                        externalChanges,
+                        deltas,
+                        visualFields,
+                        currentAtmosphericFields,
+                        nextAtmosphericFields,
+                        companionFields);
                     shader.Dispatch(
                         kernel,
                         Groups(fixture.grid.width, ThreadGroupSizeX),
@@ -110,6 +131,7 @@ namespace Wildfire.UnityBatchmode
                     ticks[tick - 1] = new TickSnapshot(tick, tickDeltas);
                     LogPhase("readback", "ok", "tick=" + tick + " deltas=" + tickDeltas.Length);
                     Swap(ref currentCells, ref nextCells);
+                    Swap(ref currentAtmosphericFields, ref nextAtmosphericFields);
                 }
 
                 uint[] finalRawCells = new uint[cellCount];
@@ -125,6 +147,9 @@ namespace Wildfire.UnityBatchmode
                 Release(externalChanges);
                 Release(deltas);
                 Release(visualFields);
+                Release(currentAtmosphericFields);
+                Release(nextAtmosphericFields);
+                Release(companionFields);
                 Release(deltaCounter);
             }
         }
@@ -138,7 +163,10 @@ namespace Wildfire.UnityBatchmode
             ComputeBuffer nextCells,
             ComputeBuffer externalChanges,
             ComputeBuffer deltas,
-            ComputeBuffer visualFields)
+            ComputeBuffer visualFields,
+            ComputeBuffer currentAtmosphericFields,
+            ComputeBuffer nextAtmosphericFields,
+            ComputeBuffer companionFields)
         {
             int cellCount = checked(fixture.grid.width * fixture.grid.height * fixture.grid.depth);
             shader.SetInt("Width", fixture.grid.width);
@@ -148,12 +176,18 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("Tick", tick);
             shader.SetInt("Seed", unchecked((int)fixture.seed));
             shader.SetInt("ChangeCount", 0);
+            shader.SetFloat("WindDirectionX", 0f);
+            shader.SetFloat("WindDirectionY", 0f);
+            shader.SetFloat("WindStrength", 0f);
             BindDefaultParameters(shader);
             shader.SetBuffer(kernel, "CurrentCells", currentCells);
             shader.SetBuffer(kernel, "NextCells", nextCells);
             shader.SetBuffer(kernel, "ExternalChanges", externalChanges);
             shader.SetBuffer(kernel, "Deltas", deltas);
             shader.SetBuffer(kernel, "VisualFields", visualFields);
+            shader.SetBuffer(kernel, "CurrentAtmosphericFields", currentAtmosphericFields);
+            shader.SetBuffer(kernel, "NextAtmosphericFields", nextAtmosphericFields);
+            shader.SetBuffer(kernel, "CompanionFields", companionFields);
         }
 
         private static void BindDefaultParameters(ComputeShader shader)
@@ -171,15 +205,12 @@ namespace Wildfire.UnityBatchmode
             shader.SetFloat("VisualVisibilityAshWeight", 0.8f);
             shader.SetInt("FireIgnitionBaseHeat", 11);
             shader.SetInt("FireWaterIgnitionPenalty", 2);
-            shader.SetInt("FireRetainedHeatWeight", 2);
-            shader.SetInt("FireSpreadHeatWeight", 1);
-            shader.SetInt("FireBurningNeighborHeatBonus", 5);
-            shader.SetInt("FireBurningNeighborDirectHeat", 1);
-            shader.SetInt("FireWaterSuppressionHeat", 2);
+            shader.SetInt("FireWaterFuelLock", 5);
             shader.SetInt("FireWaterEvaporationHeat", 10);
             shader.SetInt("FireFlammabilityBurnPressure", 2);
             shader.SetInt("FireWaterBurnPressurePenalty", 3);
             shader.SetInt("FireBurnHeatBase", 1);
+            shader.SetInt("FireFuelHeatWeight", 2);
             shader.SetInt("FireCoolingBase", 1);
             shader.SetInt("FireHeatLossCoolingDivisor", 3);
             shader.SetInt("FireFuelBurnDownPressureNumerator", 3);

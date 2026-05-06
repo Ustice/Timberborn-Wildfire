@@ -9,7 +9,9 @@ public sealed class TimberbornGpuFieldRendererOptions
     public TimberbornGpuFieldRendererOptions(
         int RegionSize = 4,
         int MaxUpdatedRegionsPerDispatch = 512,
-        float MinimumVisibleIntensity = 0.01f)
+        float MinimumVisibleIntensity = 0.01f,
+        bool DebugOverlayEnabled = false,
+        float DebugOverlayHeightOffset = 0.02f)
     {
         if (RegionSize <= 0)
         {
@@ -32,9 +34,19 @@ public sealed class TimberbornGpuFieldRendererOptions
                 "Minimum visible intensity cannot be negative.");
         }
 
+        if (DebugOverlayHeightOffset < 0f)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(DebugOverlayHeightOffset),
+                DebugOverlayHeightOffset,
+                "Debug overlay height offset cannot be negative.");
+        }
+
         this.RegionSize = RegionSize;
         this.MaxUpdatedRegionsPerDispatch = MaxUpdatedRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
+        this.DebugOverlayEnabled = DebugOverlayEnabled;
+        this.DebugOverlayHeightOffset = DebugOverlayHeightOffset;
     }
 
     public int RegionSize { get; }
@@ -42,6 +54,10 @@ public sealed class TimberbornGpuFieldRendererOptions
     public int MaxUpdatedRegionsPerDispatch { get; }
 
     public float MinimumVisibleIntensity { get; }
+
+    public bool DebugOverlayEnabled { get; }
+
+    public float DebugOverlayHeightOffset { get; }
 }
 
 public readonly record struct TimberbornGpuFieldRendererRegionState(
@@ -148,7 +164,7 @@ public sealed class TimberbornGpuFieldRendererSink :
             visualFieldSurface,
             logSink,
             TimberbornGpuFieldRendererOptions.Default,
-            new TimberbornUnityGpuFieldRendererPresenter(logSink))
+            CreateDefaultPresenter(logSink, TimberbornGpuFieldRendererOptions.Default))
     {
     }
 
@@ -181,6 +197,15 @@ public sealed class TimberbornGpuFieldRendererSink :
         LastNonZeroUpdatedRegionTick: _lastNonZeroUpdatedRegionTick);
 
     public IReadOnlyDictionary<int, TimberbornGpuFieldRendererRegionState> VisibleRegions => _visibleRegions;
+
+    private static ITimberbornGpuFieldRendererPresenter CreateDefaultPresenter(
+        ITimberbornFireLogSink logSink,
+        TimberbornGpuFieldRendererOptions options)
+    {
+        return options.DebugOverlayEnabled
+            ? new TimberbornUnityGpuFieldRendererPresenter(logSink, options)
+            : NullTimberbornGpuFieldRendererPresenter.Instance;
+    }
 
     public void BeginVisualEffectDispatch(uint tick)
     {
@@ -403,7 +428,7 @@ public sealed class TimberbornGpuFieldRendererSink :
             _ash = Math.Max(_ash, Clamp01(sample.Ash));
             _visibility = Math.Max(_visibility, Clamp01(sample.Visibility));
             _heatHaze = Math.Max(_heatHaze, Clamp01(sample.Fire * sample.Visibility));
-            _steam = Math.Max(_steam, Clamp01(sample.Smoke * (1f - sample.Fire)));
+            _steam = Math.Max(_steam, Clamp01(sample.Steam));
         }
 
         public TimberbornGpuFieldRendererRegionState ToState()
@@ -439,6 +464,7 @@ public sealed class TimberbornGpuFieldRendererSink :
 public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFieldRendererPresenter
 {
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly float _heightOffset;
     private GameObject? _root;
     private Mesh? _mesh;
     private MeshRenderer? _renderer;
@@ -446,8 +472,16 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private int _materialFailureCount;
 
     public TimberbornUnityGpuFieldRendererPresenter(ITimberbornFireLogSink logSink)
+        : this(logSink, TimberbornGpuFieldRendererOptions.Default)
+    {
+    }
+
+    public TimberbornUnityGpuFieldRendererPresenter(
+        ITimberbornFireLogSink logSink,
+        TimberbornGpuFieldRendererOptions options)
     {
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
+        _heightOffset = (options ?? throw new ArgumentNullException(nameof(options))).DebugOverlayHeightOffset;
     }
 
     public TimberbornGpuFieldRendererPresenterState State => new(
@@ -465,7 +499,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 return TimberbornGpuFieldRendererPresentationResult.Disabled("mesh_unavailable");
             }
 
-            BuildMesh(_mesh, regions);
+            BuildMesh(_mesh, regions, _heightOffset);
             if (_root is not null)
             {
                 _root.SetActive(regions.Count > 0);
@@ -538,10 +572,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         _renderer.sharedMaterial = _material;
     }
 
-    private static void BuildMesh(Mesh mesh, IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
+    private static void BuildMesh(
+        Mesh mesh,
+        IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions,
+        float heightOffset)
     {
         Vector3[] vertices = regions
-            .SelectMany(ToVertices)
+            .SelectMany(region => ToVertices(region, heightOffset))
             .ToArray();
         Color[] colors = regions
             .SelectMany(region => Enumerable.Repeat(ToColor(region), 4))
@@ -561,19 +598,21 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         mesh.RecalculateBounds();
     }
 
-    private static IEnumerable<Vector3> ToVertices(TimberbornGpuFieldRendererRegionState region)
+    private static IEnumerable<Vector3> ToVertices(
+        TimberbornGpuFieldRendererRegionState region,
+        float heightOffset)
     {
         float minX = region.MinX;
         float maxX = region.MaxX + 1f;
-        float minY = region.MinY;
-        float maxY = region.MaxY + 1f;
-        float z = region.MaxZ + 1.02f;
+        float minZ = region.MinY;
+        float maxZ = region.MaxY + 1f;
+        float y = region.MaxZ + heightOffset;
         return new[]
         {
-            new Vector3(minX, minY, z),
-            new Vector3(maxX, minY, z),
-            new Vector3(maxX, maxY, z),
-            new Vector3(minX, maxY, z),
+            new Vector3(minX, y, minZ),
+            new Vector3(maxX, y, minZ),
+            new Vector3(maxX, y, maxZ),
+            new Vector3(minX, y, maxZ),
         };
     }
 

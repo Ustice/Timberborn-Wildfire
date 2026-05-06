@@ -55,7 +55,8 @@ public sealed class TimberbornFireRuntime :
         QuickNotificationService quickNotificationService,
         TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,
         WildfireReleaseSettings releaseSettings,
-        TimberbornFireSimParameterPresetState fireSimParameterPresetState)
+        TimberbornFireSimParameterPresetState fireSimParameterPresetState,
+        ITimberbornWindProvider windProvider)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
@@ -66,12 +67,11 @@ public sealed class TimberbornFireRuntime :
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
-            _logSink,
-            TimberbornGpuFieldRendererOptions.Default,
-            NullTimberbornGpuFieldRendererPresenter.Instance);
+            _logSink);
         _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
             visualFieldSurface,
-            _logSink);
+            _logSink,
+            windProvider);
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
             _logSink);
@@ -295,7 +295,7 @@ public sealed class TimberbornFireRuntime :
         TimberbornQaWaterSuppressionStimulusResult result =
             RequireFireSystem().QueueWaterSuppressionQaStimulus(targetSelector);
         _logSink.Info(
-            "wildfire_timberborn_qa_water_suppression_queued " +
+            "wildfire_timberborn_qa_water_fuel_lock_queued " +
             $"target_selector={result.TargetSelector} " +
             $"cell_index={result.CellIndex} " +
             $"x={result.X} " +
@@ -340,8 +340,15 @@ public sealed class TimberbornFireRuntime :
             "wildfire_timberborn_fire_sim_preset_selected " +
             $"preset={TimberbornQaCommandBridge.FormatToken(result.Name)} " +
             $"ignition={result.Parameters.FireIgnitionBaseHeat} " +
-            $"neighbor_bonus={result.Parameters.FireBurningNeighborHeatBonus} " +
-            $"water_suppression={result.Parameters.FireWaterSuppressionHeat}");
+            $"water_fuel_lock={result.Parameters.FireWaterFuelLock}");
+        if (_fireSystem is not null)
+        {
+            bool applied = _fireSystem.TryUpdateParameters(result.Parameters);
+            _logSink.Info(
+                "wildfire_timberborn_fire_sim_preset_live_update " +
+                $"preset={TimberbornQaCommandBridge.FormatToken(result.Name)} " +
+                $"applied={applied.ToString().ToLowerInvariant()}");
+        }
 
         return result;
     }
@@ -365,8 +372,8 @@ public sealed class TimberbornFireRuntime :
                 CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken,
                 FireSimPresetName: currentPreset.Name,
                 FireSimPresetIgnitionBaseHeat: currentPreset.Parameters.FireIgnitionBaseHeat,
-                FireSimPresetBurningNeighborHeatBonus: currentPreset.Parameters.FireBurningNeighborHeatBonus,
-                FireSimPresetWaterSuppressionHeat: currentPreset.Parameters.FireWaterSuppressionHeat,
+                FireSimPresetWaterFuelLock: currentPreset.Parameters.FireWaterFuelLock,
+                FireSimPresetFuelHeatWeight: currentPreset.Parameters.FireFuelHeatWeight,
                 FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
                 FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
                 WorldImportTotalSources: _lastWorldImportSummary?.TotalSources,
@@ -578,8 +585,8 @@ public sealed class TimberbornFireRuntime :
             CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken,
             FireSimPresetName: currentPreset.Name,
             FireSimPresetIgnitionBaseHeat: currentPreset.Parameters.FireIgnitionBaseHeat,
-            FireSimPresetBurningNeighborHeatBonus: currentPreset.Parameters.FireBurningNeighborHeatBonus,
-            FireSimPresetWaterSuppressionHeat: currentPreset.Parameters.FireWaterSuppressionHeat,
+            FireSimPresetWaterFuelLock: currentPreset.Parameters.FireWaterFuelLock,
+            FireSimPresetFuelHeatWeight: currentPreset.Parameters.FireFuelHeatWeight,
             FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
             FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
             WorldImportTotalSources: _lastWorldImportSummary?.TotalSources,

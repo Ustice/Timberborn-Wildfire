@@ -107,9 +107,15 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             .ToArray();
         int respiratoryCells = samples.Count(static sample => sample.Smoke >= RespiratorySmokeThreshold);
         int burnCells = samples.Count(static sample => sample.Fire >= BurnFireThreshold);
-        int toxicCells = samples.Count(static sample => sample.Smoke >= ToxicSmokeThreshold);
+        int contaminatedSmokeCells = samples.Count(static sample =>
+            sample.Smoke >= RespiratorySmokeThreshold &&
+            sample.SmokeContamination > 0f);
+        int toxicCells = samples.Count(static sample =>
+            sample.Smoke >= ToxicSmokeThreshold ||
+            sample.SmokeContamination >= ToxicSmokeThreshold);
         int taintedAftermathCells = samples.Count(static sample =>
             sample.Ash >= TaintedAftermathAshThreshold &&
+            sample.AshContamination > 0f &&
             sample.Fire < BurnFireThreshold);
 
         return new TimberbornBeaverFieldExposureClassification(
@@ -120,7 +126,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             candidateCellIndices.Count,
             respiratoryCells,
             burnCells,
-            0,
+            contaminatedSmokeCells,
             toxicCells,
             0,
             taintedAftermathCells);

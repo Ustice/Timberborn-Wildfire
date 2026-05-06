@@ -82,6 +82,8 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
 
     public int PendingChangeCount => _queuedChanges.Count;
 
+    public FireSimWind Wind { get; set; } = FireSimWind.None;
+
     public int LastIgnoredChangeCount { get; private set; }
 
     public int LastUploadedChangeCount { get; private set; }
@@ -136,7 +138,11 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
             BufferGrid.VisualFields,
+            BufferGrid.CurrentAtmosphericFields,
+            BufferGrid.NextAtmosphericFields,
+            BufferGrid.CompanionFields,
             _parameters,
+            Wind.Normalized(),
             0u,
             GetThreadGroups(Dimensions.Width, ThreadGroupSizeX),
             GetThreadGroups(Dimensions.Height, ThreadGroupSizeY),
@@ -179,7 +185,11 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
             BufferGrid.VisualFields,
+            BufferGrid.CurrentAtmosphericFields,
+            BufferGrid.NextAtmosphericFields,
+            BufferGrid.CompanionFields,
             _parameters,
+            Wind.Normalized(),
             checked((uint)changeCount),
             1,
             1,

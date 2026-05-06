@@ -1,6 +1,10 @@
 using System.Globalization;
 using UnityEngine;
+using Timberborn.MapIndexSystem;
+using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
+using Timberborn.SoilMoistureSystem;
+using Timberborn.TerrainSystem;
 
 namespace Wildfire.Timberborn;
 
@@ -14,7 +18,12 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
     private readonly string _inboxPath;
     private readonly string _outboxPath;
 
-    public TimberbornQaCommandFileBridge(TimberbornFireRuntime fireRuntime)
+    public TimberbornQaCommandFileBridge(
+        TimberbornFireRuntime fireRuntime,
+        MapSize mapSize,
+        ITerrainService terrainService,
+        ISoilMoistureService soilMoistureService,
+        MapIndexService mapIndexService)
     {
         if (fireRuntime is null)
         {
@@ -31,6 +40,11 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             fireRuntime,
             fireRuntime,
             fireRuntime,
+            new TimberbornQaSoilMoistureMapProbe(
+                mapSize,
+                terrainService,
+                soilMoistureService,
+                mapIndexService),
             new UnityTimberbornQaCommandLogSink());
     }
 

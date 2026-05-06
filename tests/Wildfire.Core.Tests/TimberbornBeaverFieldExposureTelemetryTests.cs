@@ -87,7 +87,9 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
             Fire: fire,
             Smoke: smoke,
             Ash: ash,
-            Visibility: 1f);
+            Visibility: 1f,
+            SmokeContamination: smoke >= TimberbornBeaverFieldExposureTelemetry.ToxicSmokeThreshold ? smoke : 0f,
+            AshContamination: ash >= TimberbornBeaverFieldExposureTelemetry.TaintedAftermathAshThreshold ? ash : 0f);
     }
 
     private sealed class StaticPositionProvider(

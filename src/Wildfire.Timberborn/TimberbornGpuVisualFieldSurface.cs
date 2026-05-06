@@ -49,6 +49,27 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         int cellCount,
         int strideBytes,
         IReadOnlyList<string> channels)
+        : this(
+            visualFieldsBuffer,
+            atmosphericFieldsBuffer: null,
+            width,
+            height,
+            depth,
+            cellCount,
+            strideBytes,
+            channels)
+    {
+    }
+
+    public TimberbornGpuVisualFieldSurfaceBinding(
+        object visualFieldsBuffer,
+        object? atmosphericFieldsBuffer,
+        int width,
+        int height,
+        int depth,
+        int cellCount,
+        int strideBytes,
+        IReadOnlyList<string> channels)
     {
         if (visualFieldsBuffer is null)
         {
@@ -75,6 +96,7 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         }
 
         VisualFieldsBuffer = visualFieldsBuffer;
+        AtmosphericFieldsBuffer = atmosphericFieldsBuffer;
         Width = width;
         Height = height;
         Depth = depth;
@@ -84,6 +106,8 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
     }
 
     public object VisualFieldsBuffer { get; }
+
+    public object? AtmosphericFieldsBuffer { get; }
 
     public int Width { get; }
 
@@ -109,6 +133,19 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         return false;
     }
 
+    public TimberbornGpuVisualFieldSurfaceBinding WithAtmosphericFieldsBuffer(object? atmosphericFieldsBuffer)
+    {
+        return new TimberbornGpuVisualFieldSurfaceBinding(
+            VisualFieldsBuffer,
+            atmosphericFieldsBuffer,
+            Width,
+            Height,
+            Depth,
+            CellCount,
+            StrideBytes,
+            Channels);
+    }
+
     private static void RequirePositive(int value, string name)
     {
         if (value <= 0)
@@ -124,7 +161,11 @@ public sealed record TimberbornGpuVisualFieldSample(
     float Fire,
     float Smoke,
     float Ash,
-    float Visibility);
+    float Visibility,
+    float Steam = 0f,
+    float SmokeContamination = 0f,
+    float AshContamination = 0f,
+    bool Source = false);
 
 public sealed record TimberbornGpuVisualFieldSurfaceState(
     bool IsBound,
@@ -313,11 +354,13 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
     public TimberbornGpuVisualFieldSurfaceBindingLifecycle(
         ITimberbornGpuVisualFieldSurface surface,
         object visualFieldsBuffer,
+        object? atmosphericFieldsBuffer,
         FireGrid grid,
         int strideBytes)
         : this(
             surface,
             visualFieldsBuffer,
+            atmosphericFieldsBuffer,
             grid.Width,
             grid.Height,
             grid.Depth,
@@ -329,6 +372,7 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
     public TimberbornGpuVisualFieldSurfaceBindingLifecycle(
         ITimberbornGpuVisualFieldSurface surface,
         object visualFieldsBuffer,
+        object? atmosphericFieldsBuffer,
         int width,
         int height,
         int depth,
@@ -338,12 +382,34 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         _surface = surface ?? throw new ArgumentNullException(nameof(surface));
         _binding = new TimberbornGpuVisualFieldSurfaceBinding(
             visualFieldsBuffer,
+            atmosphericFieldsBuffer,
             width,
             height,
             depth,
             cellCount,
             strideBytes,
             TimberbornGpuVisualFieldChannels.All);
+    }
+
+    public TimberbornGpuVisualFieldSurfaceBindingLifecycle(
+        ITimberbornGpuVisualFieldSurface surface,
+        object visualFieldsBuffer,
+        FireGrid grid,
+        int strideBytes)
+        : this(surface, visualFieldsBuffer, atmosphericFieldsBuffer: null, grid, strideBytes)
+    {
+    }
+
+    public TimberbornGpuVisualFieldSurfaceBindingLifecycle(
+        ITimberbornGpuVisualFieldSurface surface,
+        object visualFieldsBuffer,
+        int width,
+        int height,
+        int depth,
+        int cellCount,
+        int strideBytes)
+        : this(surface, visualFieldsBuffer, atmosphericFieldsBuffer: null, width, height, depth, cellCount, strideBytes)
+    {
     }
 
     public void Bind()
@@ -357,6 +423,14 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         if (_isBound)
         {
             _surface.MarkUpdated(tick);
+        }
+    }
+
+    public void UpdateAtmosphericFieldsBuffer(object? atmosphericFieldsBuffer)
+    {
+        if (_isBound)
+        {
+            _surface.Bind(_binding.WithAtmosphericFieldsBuffer(atmosphericFieldsBuffer));
         }
     }
 
@@ -393,23 +467,46 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
                 "The Timberborn GPU visual-field surface is not backed by a Unity ComputeBuffer.");
         }
 
+        ComputeBuffer? atmosphericBuffer = binding.AtmosphericFieldsBuffer as ComputeBuffer;
+
         return cellIndices
-            .Select(cellIndex => ReadSample(computeBuffer, cellIndex, tick))
+            .Select(cellIndex => ReadSample(computeBuffer, atmosphericBuffer, cellIndex, tick))
             .ToArray();
     }
 
-    private static TimberbornGpuVisualFieldSample ReadSample(ComputeBuffer computeBuffer, int cellIndex, uint? tick)
+    private static TimberbornGpuVisualFieldSample ReadSample(
+        ComputeBuffer computeBuffer,
+        ComputeBuffer? atmosphericBuffer,
+        int cellIndex,
+        uint? tick)
     {
         Vector4[] sample = new Vector4[1];
         computeBuffer.GetData(sample, 0, cellIndex, 1);
+        WildfireAtmosphericFieldState atmospheric = ReadAtmospheric(atmosphericBuffer, cellIndex);
 
         return new TimberbornGpuVisualFieldSample(
             cellIndex,
             tick,
-            sample[0].x,
-            sample[0].y,
-            sample[0].z,
-            sample[0].w);
+            Fire: sample[0].x,
+            Smoke: sample[0].y,
+            Ash: sample[0].z,
+            Visibility: sample[0].w,
+            Steam: atmospheric.Steam / 7f,
+            SmokeContamination: atmospheric.SmokeContamination / 7f,
+            AshContamination: atmospheric.AshContamination / 7f,
+            Source: atmospheric.Source);
+    }
+
+    private static WildfireAtmosphericFieldState ReadAtmospheric(ComputeBuffer? atmosphericBuffer, int cellIndex)
+    {
+        if (atmosphericBuffer is null)
+        {
+            return WildfireAtmosphericFieldState.Empty;
+        }
+
+        uint[] sample = new uint[1];
+        atmosphericBuffer.GetData(sample, 0, cellIndex, 1);
+        return WildfireAtmosphericFieldState.Unpack(sample[0]);
     }
 }
 
@@ -432,7 +529,10 @@ public sealed class NullTimberbornGpuVisualFieldDataReader : ITimberbornGpuVisua
                 tick,
                 Fire: 0f,
                 Smoke: 0f,
+                SmokeContamination: 0f,
                 Ash: 0f,
+                AshContamination: 0f,
+                Source: false,
                 Visibility: 0f))
             .ToArray();
     }
