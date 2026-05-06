@@ -5,6 +5,23 @@ namespace Wildfire.Core.Tests;
 
 public sealed class TimberbornWorldCellImporterTests
 {
+    [Theory]
+    [InlineData("Path")]
+    [InlineData("PowerShaft.IronTeeth")]
+    [InlineData("SolidPowerShaft.Folktails")]
+    [InlineData("WaterWheel.Folktails")]
+    [InlineData("GeothermalEngine.Folktails")]
+    [InlineData("WaterPump.Folktails")]
+    [InlineData("LargeWaterPump.Folktails")]
+    [InlineData("Levee.Folktails")]
+    [InlineData("Dam.Folktails")]
+    [InlineData("Floodgate.Folktails")]
+    [InlineData("Sluice.IronTeeth")]
+    public void InfrastructureClassifierIncludesPowerAndWaterRuntimeTargets(string name)
+    {
+        Assert.True(TimberbornInfrastructureNameClassifier.IsAnyInfrastructureName(name));
+    }
+
     [Fact]
     public void ImporterComposesProvidersAndBuildsCompanionFields()
     {

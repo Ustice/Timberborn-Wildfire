@@ -222,18 +222,12 @@ public static class TimberbornLiveBurnDamageTargetCollector
 
     private static bool IsPowerInfrastructureName(string name)
     {
-        return name.Contains("Shaft", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Power", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Wheel", StringComparison.OrdinalIgnoreCase);
+        return TimberbornInfrastructureNameClassifier.IsPowerInfrastructureName(name);
     }
 
     private static bool IsWaterInfrastructureName(string name)
     {
-        return name.Contains("Dam", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Levee", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Floodgate", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Sluice", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Valve", StringComparison.OrdinalIgnoreCase);
+        return TimberbornInfrastructureNameClassifier.IsWaterInfrastructureName(name);
     }
 
     private readonly record struct TargetBuildResult(

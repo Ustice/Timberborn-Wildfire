@@ -382,12 +382,7 @@ public static class TimberbornEntityComponentCells
 
     public static bool IsInfrastructureName(string name)
     {
-        return name.Contains("Path", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Slope", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Platform", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Bridge", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Stair", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Fence", StringComparison.OrdinalIgnoreCase);
+        return TimberbornInfrastructureNameClassifier.IsAnyInfrastructureName(name);
     }
 
     public static bool IsWaterSourceName(string name)

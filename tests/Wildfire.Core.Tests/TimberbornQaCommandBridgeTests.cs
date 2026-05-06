@@ -752,6 +752,56 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
+    [Theory]
+    [InlineData(TimberbornQaFieldTargetSelectors.PowerInfrastructure, "power_infrastructure:owned", "PowerWheel")]
+    [InlineData(TimberbornQaFieldTargetSelectors.WaterInfrastructure, "water_infrastructure:owned", "WaterPump")]
+    public void QueueQaDeltaStimulusInfrastructureSelectorsRequireMatchingOwnedPrefix(
+        string selector,
+        string expectedTargetKey,
+        string expectedSpecId)
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornBuildingAdapter().CreateNonBurnableSource(2, 3, 1) with
+            {
+                CompanionTargetId = 77u,
+            },
+            new TimberbornBuildingAdapter().CreateNonBurnableSource(3, 3, 1) with
+            {
+                CompanionTargetId = 88u,
+            });
+        TimberbornBurnDamageTargetState powerState = CreateBurnDamageState(
+            "power_infrastructure:owned",
+            "PowerWheel",
+            TimberbornBurnDamageTargetKind.Infrastructure,
+            fuelValue: 6,
+            flammability: 2,
+            damageCapacity: 10,
+            damageTaken: 3,
+            ownedCellIndices: [38]);
+        TimberbornBurnDamageTargetState waterState = CreateBurnDamageState(
+            "water_infrastructure:owned",
+            "WaterPump",
+            TimberbornBurnDamageTargetKind.Infrastructure,
+            fuelValue: 5,
+            flammability: 1,
+            damageCapacity: 9,
+            damageTaken: 2,
+            ownedCellIndices: [39]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            selector,
+            new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [powerState.TargetKey] = powerState,
+                [waterState.TargetKey] = waterState,
+            });
+
+        Assert.Equal(expectedTargetKey, result.BurnDamageTargetKey);
+        Assert.Equal(expectedSpecId, result.BurnDamageSpecId);
+    }
+
     [Fact]
     public void QueueQaDeltaStimulusPathInfrastructureAllowsZeroCapacitySafeNoOpProbe()
     {
