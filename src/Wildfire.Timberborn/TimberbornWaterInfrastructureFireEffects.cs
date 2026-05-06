@@ -109,16 +109,19 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
     private readonly ITimberbornWaterInfrastructureFireTargetApi _targetApi;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly ITimberbornBurnDamageTargetStateProvider? _burnDamageTargets;
     private readonly Dictionary<string, WaterDamageState> _statesByStableId = new(StringComparer.Ordinal);
 
     public TimberbornWaterInfrastructureFireSink(
         ITimberbornWaterInfrastructureFireTargetApi targetApi,
         TimberbornBurnDamageCapacityCalculator? capacityCalculator = null,
-        ITimberbornFireLogSink? logSink = null)
+        ITimberbornFireLogSink? logSink = null,
+        ITimberbornBurnDamageTargetStateProvider? burnDamageTargets = null)
     {
         _targetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
         _capacityCalculator = capacityCalculator ?? new TimberbornBurnDamageCapacityCalculator();
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
+        _burnDamageTargets = burnDamageTargets;
     }
 
     public TimberbornWaterInfrastructureFireSummary ApplyConsequences(
@@ -130,7 +133,7 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
             .Where(static consequence => consequence.ShouldApplyDamage)
             .ToArray();
         ResolvedTarget[] matchedTargets = consequences
-            .Select(consequence => new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence)))
+            .Select(ResolveTarget)
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
         ResolvedTarget[] uniqueTargets = matchedTargets
@@ -172,6 +175,7 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
     {
         TimberbornWaterInfrastructureFireTarget target = resolvedTarget.Target ??
             throw new InvalidOperationException("Resolved water infrastructure target cannot be null during application.");
+        TimberbornBurnDamageTargetState? burnDamageState = resolvedTarget.BurnDamageState;
         TimberbornBurnDamageDescriptor descriptor = new(
             target.SpecId,
             TimberbornBurnDamageTargetKind.Infrastructure,
@@ -179,8 +183,8 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
                 ? TimberbornBurnMaterialKind.NonBurnable
                 : TimberbornBurnMaterialKind.Constructed,
             constructionResources: target.ConstructionResources);
-        TimberbornBurnDamageCapacity capacity = _capacityCalculator.Calculate(descriptor);
-        bool isInertMaterialNoOp = capacity.Capacity == 0;
+        int damageCapacity = burnDamageState?.DamageCapacity ?? _capacityCalculator.Calculate(descriptor).Capacity;
+        bool isInertMaterialNoOp = damageCapacity == 0;
         if (isInertMaterialNoOp)
         {
             return new WaterApplyOutcome(
@@ -201,7 +205,7 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
             return new WaterApplyOutcome(
                 IsInertMaterialNoOp: false,
                 IsDifficultToBurnNoOp: true,
-                BurnableMaterialValue: capacity.Capacity,
+                BurnableMaterialValue: damageCapacity,
                 DamageApplied: 0,
                 new TimberbornWaterInfrastructureApplyResult(
                     AppliedDamage: false,
@@ -210,25 +214,61 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
                     RepairEligible: target.RepairEligible));
         }
 
-        WaterDamageState state = _statesByStableId.GetValueOrDefault(target.StableId, new WaterDamageState(0));
-        int damageApplied = Math.Min(effectiveDamageUnits, Math.Max(0, capacity.Capacity - state.DamageTaken));
-        WaterDamageState nextState = new(state.DamageTaken + damageApplied);
-        _statesByStableId[target.StableId] = nextState;
+        WaterDamageState localState = _statesByStableId.GetValueOrDefault(target.StableId, new WaterDamageState(0));
+        int damageTaken = burnDamageState?.DamageTaken ?? localState.DamageTaken;
+        int damageApplied = burnDamageState is null
+            ? Math.Min(effectiveDamageUnits, Math.Max(0, damageCapacity - localState.DamageTaken))
+            : Math.Min(effectiveDamageUnits, resolvedTarget.AppliedEvent?.DamageApplied ?? 0);
+        if (burnDamageState is null)
+        {
+            WaterDamageState nextState = new(localState.DamageTaken + damageApplied);
+            _statesByStableId[target.StableId] = nextState;
+            damageTaken = nextState.DamageTaken;
+        }
+
         TimberbornWaterInfrastructureApplyResult applyResult = damageApplied <= 0
             ? new TimberbornWaterInfrastructureApplyResult(false, false, false, target.RepairEligible)
-            : _targetApi.ApplyDamage(target, damageApplied, nextState.DamageTaken >= capacity.Capacity);
+            : _targetApi.ApplyDamage(target, damageApplied, damageTaken >= damageCapacity);
 
         return new WaterApplyOutcome(
             IsInertMaterialNoOp: false,
             IsDifficultToBurnNoOp: false,
-            BurnableMaterialValue: capacity.Capacity,
+            BurnableMaterialValue: damageCapacity,
             DamageApplied: damageApplied,
             applyResult);
     }
 
+    private ResolvedTarget ResolveTarget(TimberbornWaterInfrastructureFireConsequence consequence)
+    {
+        TimberbornWaterInfrastructureFireTarget? target = _targetApi.ResolveTarget(consequence);
+        if (_burnDamageTargets is null)
+        {
+            return new ResolvedTarget(consequence, target, BurnDamageState: null);
+        }
+
+        if (!_burnDamageTargets.TryGetStateForCell(consequence.CellIndex, out TimberbornBurnDamageTargetState state) ||
+            state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure ||
+            target is null ||
+            !string.Equals(target.StableId, state.TargetKey.StableId, StringComparison.Ordinal))
+        {
+            return new ResolvedTarget(consequence, Target: null, BurnDamageState: null);
+        }
+
+        bool hasAppliedEvent = _burnDamageTargets.TryGetAppliedEvent(
+            state.TargetKey,
+            out TimberbornBurnDamageAppliedEvent appliedEvent);
+        TimberbornBurnDamageAppliedEvent? currentTickEvent = hasAppliedEvent && appliedEvent.Tick == consequence.Tick
+            ? appliedEvent
+            : null;
+
+        return new ResolvedTarget(consequence, target, state, currentTickEvent);
+    }
+
     private readonly record struct ResolvedTarget(
         TimberbornWaterInfrastructureFireConsequence Consequence,
-        TimberbornWaterInfrastructureFireTarget? Target);
+        TimberbornWaterInfrastructureFireTarget? Target,
+        TimberbornBurnDamageTargetState? BurnDamageState,
+        TimberbornBurnDamageAppliedEvent? AppliedEvent = null);
 
     private readonly record struct WaterDamageState(int DamageTaken);
 
@@ -286,7 +326,7 @@ public sealed class TimberbornWaterInfrastructureFireTargetApi : ITimberbornWate
             StableId: $"water_infrastructure:{RuntimeHelpers.GetHashCode(blockObject)}",
             SpecId: blockObject.Name,
             CellIndex: consequence.CellIndex,
-            ConstructionResources: GuessConstructionResources(blockObject.Name),
+            ConstructionResources: TimberbornBurnDamageResourceGuesses.ForWaterInfrastructure(blockObject.Name),
             CanMarkDamaged: false,
             CanMutateWaterState: false,
             RepairEligible: false);
@@ -313,31 +353,5 @@ public sealed class TimberbornWaterInfrastructureFireTargetApi : ITimberbornWate
             name.Contains("Sluice", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Water", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Irrigation", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<TimberbornBurnDamageResourceStack> GuessConstructionResources(string name)
-    {
-        if (name.Contains("Metal", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Mechanical", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[] { new TimberbornBurnDamageResourceStack("MetalBlock", 1) };
-        }
-
-        if (name.Contains("Dam", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Levee", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Floodgate", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Valve", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Sluice", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Irrigation", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[]
-            {
-                new TimberbornBurnDamageResourceStack("Log", 1),
-                new TimberbornBurnDamageResourceStack("Plank", 1),
-                new TimberbornBurnDamageResourceStack("Water", 1),
-            };
-        }
-
-        return Array.Empty<TimberbornBurnDamageResourceStack>();
     }
 }

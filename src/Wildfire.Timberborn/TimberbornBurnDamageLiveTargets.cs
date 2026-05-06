@@ -1,0 +1,242 @@
+using Timberborn.BlockSystem;
+using Timberborn.Buildings;
+using Timberborn.EntitySystem;
+using Timberborn.Stockpiles;
+using Wildfire.Core;
+
+namespace Wildfire.Timberborn;
+
+public sealed record TimberbornLiveBurnDamageTargets(
+    TimberbornBurnDamageDescriptorCatalog DescriptorCatalog,
+    IReadOnlyList<TimberbornBurnDamageTargetRegistration> Registrations);
+
+public static class TimberbornBurnDamageResourceGuesses
+{
+    public static IReadOnlyList<TimberbornBurnDamageResourceStack> ForStructure(string name)
+    {
+        if (name.Contains("Metal", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[] { new TimberbornBurnDamageResourceStack("MetalBlock", 1) };
+        }
+
+        if (name.Contains("Tank", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[]
+            {
+                new TimberbornBurnDamageResourceStack("Log", 1),
+                new TimberbornBurnDamageResourceStack("Plank", 1),
+            };
+        }
+
+        if (name.Contains("Warehouse", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Storage", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Pile", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Lumber", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Forester", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Gatherer", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("District", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Pump", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Building", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[]
+            {
+                new TimberbornBurnDamageResourceStack("Log", 2),
+                new TimberbornBurnDamageResourceStack("Plank", 2),
+            };
+        }
+
+        return Array.Empty<TimberbornBurnDamageResourceStack>();
+    }
+
+    public static IReadOnlyList<TimberbornBurnDamageResourceStack> ForPathInfrastructure(string name)
+    {
+        return name.Contains("Path", StringComparison.OrdinalIgnoreCase)
+            ? Array.Empty<TimberbornBurnDamageResourceStack>()
+            : ForStructure(name);
+    }
+
+    public static IReadOnlyList<TimberbornBurnDamageResourceStack> ForPowerInfrastructure(string name)
+    {
+        if (name.Contains("Metal", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[] { new TimberbornBurnDamageResourceStack("MetalBlock", 2) };
+        }
+
+        return name.Contains("Shaft", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Power", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Wheel", StringComparison.OrdinalIgnoreCase)
+                ? new[]
+                {
+                    new TimberbornBurnDamageResourceStack("Log", 2),
+                    new TimberbornBurnDamageResourceStack("Plank", 1),
+                }
+                : ForStructure(name);
+    }
+
+    public static IReadOnlyList<TimberbornBurnDamageResourceStack> ForWaterInfrastructure(string name)
+    {
+        if (name.Contains("Dirt", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Levee", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[] { new TimberbornBurnDamageResourceStack("Dirt", 4) };
+        }
+
+        if (name.Contains("Floodgate", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Sluice", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Dam", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[]
+            {
+                new TimberbornBurnDamageResourceStack("Log", 1),
+                new TimberbornBurnDamageResourceStack("Plank", 1),
+                new TimberbornBurnDamageResourceStack("Water", 5),
+            };
+        }
+
+        return ForStructure(name);
+    }
+}
+
+public static class TimberbornLiveBurnDamageTargetCollector
+{
+    public static TimberbornLiveBurnDamageTargets Collect(EntityRegistry entityRegistry, FireGrid grid)
+    {
+        if (entityRegistry is null)
+        {
+            throw new ArgumentNullException(nameof(entityRegistry));
+        }
+
+        TargetBuildResult[] targets = CollectTargets(entityRegistry, grid).ToArray();
+        TimberbornBurnDamageDescriptor[] descriptors = targets
+            .GroupBy(static target => target.Descriptor.SpecId, StringComparer.Ordinal)
+            .Select(static group => group.First().Descriptor)
+            .ToArray();
+
+        return new TimberbornLiveBurnDamageTargets(
+            new TimberbornBurnDamageDescriptorCatalog(descriptors),
+            targets.Select(static target => target.Registration).ToArray());
+    }
+
+    private static IEnumerable<TargetBuildResult> CollectTargets(EntityRegistry entityRegistry, FireGrid grid)
+    {
+        IEnumerable<TargetBuildResult> storage = TimberbornEntityComponentCells.ComponentBlockObjects<Stockpile>(entityRegistry)
+            .Select((item, index) => BuildTarget(
+                $"stockpile:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.Component)}",
+                item.BlockObject.Name,
+                TimberbornBurnDamageTargetKind.Storage,
+                TimberbornBurnMaterialKind.StoredGood,
+                TimberbornEntityComponentCells.OccupiedCoordinates(item.BlockObject),
+                grid,
+                TimberbornBurnDamageResourceGuesses.ForStructure(item.BlockObject.Name),
+                ownershipPriority: 80));
+
+        IEnumerable<TargetBuildResult> structures = TimberbornEntityComponentCells.ComponentBlockObjects<Building>(entityRegistry)
+            .Where(static item => !TimberbornEntityComponentCells.IsInfrastructureName(item.BlockObject.Name))
+            .Where(static item => !item.Component.TryGetComponent(out Stockpile _))
+            .Select(item => BuildTarget(
+                $"structure:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject)}",
+                item.BlockObject.Name,
+                TimberbornBurnDamageTargetKind.Structure,
+                TimberbornBurnMaterialKind.Constructed,
+                TimberbornEntityComponentCells.OccupiedCoordinates(item.BlockObject),
+                grid,
+                TimberbornBurnDamageResourceGuesses.ForStructure(item.BlockObject.Name),
+                ownershipPriority: 50));
+
+        IEnumerable<TargetBuildResult> infrastructure = TimberbornEntityComponentCells.BlockObjects(entityRegistry)
+            .Where(static blockObject => TimberbornEntityComponentCells.IsInfrastructureName(blockObject.Name))
+            .Select(blockObject => BuildTarget(
+                StableInfrastructureId(blockObject),
+                blockObject.Name,
+                TimberbornBurnDamageTargetKind.Infrastructure,
+                TimberbornBurnMaterialKind.Constructed,
+                TimberbornEntityComponentCells.OccupiedCoordinates(blockObject),
+                grid,
+                InfrastructureResources(blockObject.Name),
+                ownershipPriority: 40));
+
+        return storage.Concat(structures).Concat(infrastructure)
+            .Where(static target => target.Registration.OwnedCells.Count > 0);
+    }
+
+    private static TargetBuildResult BuildTarget(
+        string stableId,
+        string specId,
+        TimberbornBurnDamageTargetKind targetKind,
+        TimberbornBurnMaterialKind materialKind,
+        IEnumerable<UnityEngine.Vector3Int> coordinates,
+        FireGrid grid,
+        IReadOnlyList<TimberbornBurnDamageResourceStack> constructionResources,
+        int ownershipPriority)
+    {
+        TimberbornCellCoordinates[] ownedCells = coordinates
+            .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+            .Select(static coordinates => new TimberbornCellCoordinates(coordinates.x, coordinates.y, coordinates.z))
+            .Distinct()
+            .ToArray();
+        TimberbornBurnDamageDescriptor descriptor = new(
+            specId,
+            targetKind,
+            constructionResources.Count == 0 ? TimberbornBurnMaterialKind.NonBurnable : materialKind,
+            constructionResources: constructionResources);
+        TimberbornBurnDamageTargetRegistration registration = new(
+            new TimberbornBurnDamageTargetKey(stableId),
+            specId,
+            ownedCells,
+            ownershipPriority);
+
+        return new TargetBuildResult(descriptor, registration);
+    }
+
+    private static string StableInfrastructureId(BlockObject blockObject)
+    {
+        int hash = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject);
+        string name = blockObject.Name;
+        if (IsPowerInfrastructureName(name))
+        {
+            return $"power_infrastructure:{hash}";
+        }
+
+        if (IsWaterInfrastructureName(name))
+        {
+            return $"water_infrastructure:{hash}";
+        }
+
+        return $"path_infrastructure:{hash}";
+    }
+
+    private static IReadOnlyList<TimberbornBurnDamageResourceStack> InfrastructureResources(string name)
+    {
+        if (IsPowerInfrastructureName(name))
+        {
+            return TimberbornBurnDamageResourceGuesses.ForPowerInfrastructure(name);
+        }
+
+        if (IsWaterInfrastructureName(name))
+        {
+            return TimberbornBurnDamageResourceGuesses.ForWaterInfrastructure(name);
+        }
+
+        return TimberbornBurnDamageResourceGuesses.ForPathInfrastructure(name);
+    }
+
+    private static bool IsPowerInfrastructureName(string name)
+    {
+        return name.Contains("Shaft", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Power", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Wheel", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWaterInfrastructureName(string name)
+    {
+        return name.Contains("Dam", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Levee", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Floodgate", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Sluice", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Valve", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private readonly record struct TargetBuildResult(
+        TimberbornBurnDamageDescriptor Descriptor,
+        TimberbornBurnDamageTargetRegistration Registration);
+}

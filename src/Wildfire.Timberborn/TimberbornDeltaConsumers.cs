@@ -72,11 +72,11 @@ public sealed class TimberbornFireDeltaConsumer
             .ToArray();
         Array.ForEach(gameplayConsequences, _sinks.GameplayConsequenceSink.ApplyConsequence);
 
+        TimberbornBurnDamageApplySummary burnDamageSummary = _sinks.BurnDamageSink.ApplyDamage(tick, decisions);
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary =
             _sinks.BuildingBurnoutConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary =
             _sinks.StructureBurnDamageRollbackSink.ApplyConsequences(tick, decisions);
-        TimberbornBurnDamageApplySummary burnDamageSummary = _sinks.BurnDamageSink.ApplyDamage(tick, decisions);
         TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary =
             _sinks.StoredGoodBurnConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornExplosiveInfrastructureConsequenceSummary explosiveInfrastructureSummary =

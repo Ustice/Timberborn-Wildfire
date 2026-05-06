@@ -23,6 +23,73 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
     }
 
     [Fact]
+    public void SinkRequiresBurnDamageInfrastructureOwnershipWhenProviderIsBound()
+    {
+        RecordingPathInfrastructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            canMarkDamaged: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure-1",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 4,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornPathInfrastructureFireSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornPathInfrastructureFireSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 5, newFuel: 1)]);
+
+        Assert.Equal(0, summary.MatchedTargetCellCount);
+        Assert.Empty(targetApi.AppliedDamage);
+    }
+
+    [Fact]
+    public void SinkUsesSharedBurnDamageStateWhenProviderOwnsPathTarget()
+    {
+        RecordingPathInfrastructureTargetApi targetApi = new(Target(
+            resources: [],
+            canMarkDamaged: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "path-1",
+                    "Path.Folktails",
+                    TimberbornBurnDamageTargetKind.Infrastructure,
+                    damageCapacity: 10,
+                    damageTaken: 4,
+                    ownedCellIndices: [4]),
+            ],
+            [
+                TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                    "path-1",
+                    "Path.Folktails",
+                    sourceCellIndex: 4,
+                    damageApplied: 4,
+                    damageTaken: 4,
+                    damageCapacity: 10,
+                    tick: 1),
+            ]);
+        TimberbornPathInfrastructureFireSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornPathInfrastructureFireSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 5, newFuel: 1)]);
+
+        Assert.Equal(1, summary.MatchedTargetCellCount);
+        Assert.Equal(4, summary.TotalDamageApplied);
+        Assert.Equal([4], targetApi.AppliedDamage.Select(static damage => damage.DamageApplied).ToArray());
+    }
+
+    [Fact]
     public void SinkAppliesBurnCapacityFromBurnableConstructionResources()
     {
         RecordingPathInfrastructureTargetApi targetApi = new(Target(

@@ -101,16 +101,19 @@ public sealed class TimberbornPathInfrastructureFireSink : ITimberbornPathInfras
     private readonly ITimberbornPathInfrastructureFireTargetApi _targetApi;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly ITimberbornBurnDamageTargetStateProvider? _burnDamageTargets;
     private readonly Dictionary<string, PathDamageState> _statesByStableId = new(StringComparer.Ordinal);
 
     public TimberbornPathInfrastructureFireSink(
         ITimberbornPathInfrastructureFireTargetApi targetApi,
         TimberbornBurnDamageCapacityCalculator? capacityCalculator = null,
-        ITimberbornFireLogSink? logSink = null)
+        ITimberbornFireLogSink? logSink = null,
+        ITimberbornBurnDamageTargetStateProvider? burnDamageTargets = null)
     {
         _targetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
         _capacityCalculator = capacityCalculator ?? new TimberbornBurnDamageCapacityCalculator();
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
+        _burnDamageTargets = burnDamageTargets;
     }
 
     public TimberbornPathInfrastructureFireSummary ApplyConsequences(
@@ -122,7 +125,7 @@ public sealed class TimberbornPathInfrastructureFireSink : ITimberbornPathInfras
             .Where(static consequence => consequence.ShouldApplyDamage)
             .ToArray();
         ResolvedTarget[] matchedTargets = consequences
-            .Select(consequence => new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence)))
+            .Select(ResolveTarget)
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
         ResolvedTarget[] uniqueTargets = matchedTargets
@@ -162,6 +165,7 @@ public sealed class TimberbornPathInfrastructureFireSink : ITimberbornPathInfras
     {
         TimberbornPathInfrastructureFireTarget target = resolvedTarget.Target ??
             throw new InvalidOperationException("Resolved path infrastructure target cannot be null during application.");
+        TimberbornBurnDamageTargetState? burnDamageState = resolvedTarget.BurnDamageState;
         TimberbornBurnDamageDescriptor descriptor = new(
             target.SpecId,
             TimberbornBurnDamageTargetKind.Infrastructure,
@@ -169,8 +173,8 @@ public sealed class TimberbornPathInfrastructureFireSink : ITimberbornPathInfras
                 ? TimberbornBurnMaterialKind.NonBurnable
                 : TimberbornBurnMaterialKind.Constructed,
             constructionResources: target.ConstructionResources);
-        TimberbornBurnDamageCapacity capacity = _capacityCalculator.Calculate(descriptor);
-        bool isZeroCostPath = capacity.Capacity == 0;
+        int damageCapacity = burnDamageState?.DamageCapacity ?? _capacityCalculator.Calculate(descriptor).Capacity;
+        bool isZeroCostPath = damageCapacity == 0;
         if (isZeroCostPath)
         {
             return new PathApplyOutcome(
@@ -183,13 +187,21 @@ public sealed class TimberbornPathInfrastructureFireSink : ITimberbornPathInfras
                     RepairEligible: target.RepairEligible));
         }
 
-        PathDamageState state = _statesByStableId.GetValueOrDefault(target.StableId, new PathDamageState(0));
-        int damageApplied = Math.Min(resolvedTarget.Consequence.DamageUnits, Math.Max(0, capacity.Capacity - state.DamageTaken));
-        PathDamageState nextState = new(state.DamageTaken + damageApplied);
-        _statesByStableId[target.StableId] = nextState;
+        PathDamageState localState = _statesByStableId.GetValueOrDefault(target.StableId, new PathDamageState(0));
+        int damageTaken = burnDamageState?.DamageTaken ?? localState.DamageTaken;
+        int damageApplied = burnDamageState is null
+            ? Math.Min(resolvedTarget.Consequence.DamageUnits, Math.Max(0, damageCapacity - localState.DamageTaken))
+            : Math.Min(resolvedTarget.Consequence.DamageUnits, resolvedTarget.AppliedEvent?.DamageApplied ?? 0);
+        if (burnDamageState is null)
+        {
+            PathDamageState nextState = new(localState.DamageTaken + damageApplied);
+            _statesByStableId[target.StableId] = nextState;
+            damageTaken = nextState.DamageTaken;
+        }
+
         TimberbornPathInfrastructureApplyResult applyResult = damageApplied <= 0
             ? new TimberbornPathInfrastructureApplyResult(false, false, false, target.RepairEligible)
-            : _targetApi.ApplyDamage(target, damageApplied, nextState.DamageTaken >= capacity.Capacity);
+            : _targetApi.ApplyDamage(target, damageApplied, damageTaken >= damageCapacity);
 
         return new PathApplyOutcome(
             IsZeroCostPath: false,
@@ -197,9 +209,37 @@ public sealed class TimberbornPathInfrastructureFireSink : ITimberbornPathInfras
             applyResult);
     }
 
+    private ResolvedTarget ResolveTarget(TimberbornPathInfrastructureFireConsequence consequence)
+    {
+        TimberbornPathInfrastructureFireTarget? target = _targetApi.ResolveTarget(consequence);
+        if (_burnDamageTargets is null)
+        {
+            return new ResolvedTarget(consequence, target, BurnDamageState: null);
+        }
+
+        if (!_burnDamageTargets.TryGetStateForCell(consequence.CellIndex, out TimberbornBurnDamageTargetState state) ||
+            state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure ||
+            target is null ||
+            !string.Equals(target.StableId, state.TargetKey.StableId, StringComparison.Ordinal))
+        {
+            return new ResolvedTarget(consequence, Target: null, BurnDamageState: null);
+        }
+
+        bool hasAppliedEvent = _burnDamageTargets.TryGetAppliedEvent(
+            state.TargetKey,
+            out TimberbornBurnDamageAppliedEvent appliedEvent);
+        TimberbornBurnDamageAppliedEvent? currentTickEvent = hasAppliedEvent && appliedEvent.Tick == consequence.Tick
+            ? appliedEvent
+            : null;
+
+        return new ResolvedTarget(consequence, target, state, currentTickEvent);
+    }
+
     private readonly record struct ResolvedTarget(
         TimberbornPathInfrastructureFireConsequence Consequence,
-        TimberbornPathInfrastructureFireTarget? Target);
+        TimberbornPathInfrastructureFireTarget? Target,
+        TimberbornBurnDamageTargetState? BurnDamageState,
+        TimberbornBurnDamageAppliedEvent? AppliedEvent = null);
 
     private readonly record struct PathDamageState(int DamageTaken);
 
@@ -255,7 +295,7 @@ public sealed class TimberbornPathInfrastructureFireTargetApi : ITimberbornPathI
             StableId: $"path_infrastructure:{RuntimeHelpers.GetHashCode(blockObject)}",
             SpecId: blockObject.Name,
             CellIndex: consequence.CellIndex,
-            ConstructionResources: GuessConstructionResources(blockObject.Name),
+            ConstructionResources: TimberbornBurnDamageResourceGuesses.ForPathInfrastructure(blockObject.Name),
             CanMarkDamaged: false,
             CanBlockPath: false,
             RepairEligible: false);
@@ -280,28 +320,5 @@ public sealed class TimberbornPathInfrastructureFireTargetApi : ITimberbornPathI
             name.Contains("Bridge", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Stair", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Overhang", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<TimberbornBurnDamageResourceStack> GuessConstructionResources(string name)
-    {
-        if (name.Contains("Path", StringComparison.OrdinalIgnoreCase))
-        {
-            return Array.Empty<TimberbornBurnDamageResourceStack>();
-        }
-
-        if (name.Contains("Metal", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[] { new TimberbornBurnDamageResourceStack("MetalBlock", 1) };
-        }
-
-        if (name.Contains("Bridge", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Platform", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Stair", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Overhang", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[] { new TimberbornBurnDamageResourceStack("Plank", 2) };
-        }
-
-        return Array.Empty<TimberbornBurnDamageResourceStack>();
     }
 }

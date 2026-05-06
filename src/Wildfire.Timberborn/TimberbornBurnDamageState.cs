@@ -395,6 +395,15 @@ public interface ITimberbornBurnDamageSink
         IReadOnlyList<TimberbornFireCellDeltaDecision> decisions);
 }
 
+public interface ITimberbornBurnDamageTargetStateProvider
+{
+    bool TryGetStateForCell(int cellIndex, out TimberbornBurnDamageTargetState state);
+
+    bool TryGetState(TimberbornBurnDamageTargetKey targetKey, out TimberbornBurnDamageTargetState state);
+
+    bool TryGetAppliedEvent(TimberbornBurnDamageTargetKey targetKey, out TimberbornBurnDamageAppliedEvent appliedEvent);
+}
+
 public sealed class NullTimberbornBurnDamageSink : ITimberbornBurnDamageSink
 {
     public static readonly NullTimberbornBurnDamageSink Instance = new();
@@ -411,12 +420,14 @@ public sealed class NullTimberbornBurnDamageSink : ITimberbornBurnDamageSink
     }
 }
 
-public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink
+public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITimberbornBurnDamageTargetStateProvider
 {
     private readonly TimberbornBurnDamageDescriptorCatalog _descriptorCatalog;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState> _states = new();
+    private IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageAppliedEvent> _lastAppliedEventsByTargetKey =
+        new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageAppliedEvent>();
     private IReadOnlyDictionary<int, TimberbornBurnDamageTargetKey> _targetKeyByCellIndex =
         new Dictionary<int, TimberbornBurnDamageTargetKey>();
 
@@ -438,7 +449,34 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink
 
     public IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState> States => _states;
 
+    public IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageAppliedEvent> LastAppliedEventsByTargetKey =>
+        _lastAppliedEventsByTargetKey;
+
     public IReadOnlyDictionary<int, TimberbornBurnDamageTargetKey> TargetKeyByCellIndex => _targetKeyByCellIndex;
+
+    public bool TryGetStateForCell(int cellIndex, out TimberbornBurnDamageTargetState state)
+    {
+        if (_targetKeyByCellIndex.TryGetValue(cellIndex, out TimberbornBurnDamageTargetKey targetKey) &&
+            _states.TryGetValue(targetKey, out state!))
+        {
+            return true;
+        }
+
+        state = default!;
+        return false;
+    }
+
+    public bool TryGetState(TimberbornBurnDamageTargetKey targetKey, out TimberbornBurnDamageTargetState state)
+    {
+        return _states.TryGetValue(targetKey, out state!);
+    }
+
+    public bool TryGetAppliedEvent(
+        TimberbornBurnDamageTargetKey targetKey,
+        out TimberbornBurnDamageAppliedEvent appliedEvent)
+    {
+        return _lastAppliedEventsByTargetKey.TryGetValue(targetKey, out appliedEvent!);
+    }
 
     public TimberbornBurnDamageRegistrationSummary RegisterTargets(
         FireGrid grid,
@@ -531,6 +569,7 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink
             .Select(hit => ApplyResolvedHit(tick, hit))
             .Where(static appliedEvent => appliedEvent.DamageApplied > 0)
             .ToArray();
+        _lastAppliedEventsByTargetKey = appliedEvents.ToDictionary(static appliedEvent => appliedEvent.TargetKey);
 
         LastApplySummary = new TimberbornBurnDamageApplySummary(
             Tick: tick,

@@ -31,6 +31,63 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     }
 
     [Fact]
+    public void SinkRequiresBurnDamageStorageOwnershipWhenProviderIsBound()
+    {
+        RecordingStoredGoodBurnInventoryApi inventoryApi = new(
+            new TimberbornStoredGoodBurnTarget(
+                "storage-1",
+                [new TimberbornStoredGoodStack("Log", 5)],
+                CanMutateInventory: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure-1",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 3,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornStoredGoodBurnConsequenceSink sink = new(
+            inventoryApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStoredGoodBurnConsequenceSummary summary = sink.ApplyConsequences(
+            8,
+            [Decision(4, oldFuel: 5, newFuel: 2)]);
+
+        Assert.Equal(0, summary.MatchedStorageCellCount);
+        Assert.Empty(inventoryApi.DestroyedStacks);
+    }
+
+    [Fact]
+    public void SinkReportsOwnedStorageWhenLiveInventoryApiCannotResolveTarget()
+    {
+        RecordingStoredGoodBurnInventoryApi inventoryApi = new(target: null);
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "storage-1",
+                    "Warehouse.Folktails",
+                    TimberbornBurnDamageTargetKind.Storage,
+                    damageCapacity: 8,
+                    damageTaken: 3,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornStoredGoodBurnConsequenceSink sink = new(
+            inventoryApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStoredGoodBurnConsequenceSummary summary = sink.ApplyConsequences(
+            8,
+            [Decision(4, oldFuel: 5, newFuel: 2)]);
+
+        Assert.Equal(1, summary.MatchedStorageCellCount);
+        Assert.Equal(3, summary.SkippedNoInventoryApiCount);
+        Assert.Empty(inventoryApi.DestroyedStacks);
+    }
+
+    [Fact]
     public void SinkSuppressesDuplicateCellsForSameStorageTarget()
     {
         RecordingStoredGoodBurnInventoryApi inventoryApi = new(

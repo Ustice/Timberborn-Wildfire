@@ -101,16 +101,19 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
     private readonly ITimberbornPowerInfrastructureFireTargetApi _targetApi;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly ITimberbornBurnDamageTargetStateProvider? _burnDamageTargets;
     private readonly Dictionary<string, PowerDamageState> _statesByStableId = new(StringComparer.Ordinal);
 
     public TimberbornPowerInfrastructureFireSink(
         ITimberbornPowerInfrastructureFireTargetApi targetApi,
         TimberbornBurnDamageCapacityCalculator? capacityCalculator = null,
-        ITimberbornFireLogSink? logSink = null)
+        ITimberbornFireLogSink? logSink = null,
+        ITimberbornBurnDamageTargetStateProvider? burnDamageTargets = null)
     {
         _targetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
         _capacityCalculator = capacityCalculator ?? new TimberbornBurnDamageCapacityCalculator();
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
+        _burnDamageTargets = burnDamageTargets;
     }
 
     public TimberbornPowerInfrastructureFireSummary ApplyConsequences(
@@ -122,7 +125,7 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
             .Where(static consequence => consequence.ShouldApplyDamage)
             .ToArray();
         ResolvedTarget[] matchedTargets = consequences
-            .Select(consequence => new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence)))
+            .Select(ResolveTarget)
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
         ResolvedTarget[] uniqueTargets = matchedTargets
@@ -162,6 +165,7 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
     {
         TimberbornPowerInfrastructureFireTarget target = resolvedTarget.Target ??
             throw new InvalidOperationException("Resolved power infrastructure target cannot be null during application.");
+        TimberbornBurnDamageTargetState? burnDamageState = resolvedTarget.BurnDamageState;
         TimberbornBurnDamageDescriptor descriptor = new(
             target.SpecId,
             TimberbornBurnDamageTargetKind.Infrastructure,
@@ -169,8 +173,8 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
                 ? TimberbornBurnMaterialKind.NonBurnable
                 : TimberbornBurnMaterialKind.Constructed,
             constructionResources: target.ConstructionResources);
-        TimberbornBurnDamageCapacity capacity = _capacityCalculator.Calculate(descriptor);
-        bool isMetalOnlyNoOp = capacity.Capacity == 0;
+        int damageCapacity = burnDamageState?.DamageCapacity ?? _capacityCalculator.Calculate(descriptor).Capacity;
+        bool isMetalOnlyNoOp = damageCapacity == 0;
         if (isMetalOnlyNoOp)
         {
             return new PowerApplyOutcome(
@@ -183,13 +187,21 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
                     RepairEligible: target.RepairEligible));
         }
 
-        PowerDamageState state = _statesByStableId.GetValueOrDefault(target.StableId, new PowerDamageState(0));
-        int damageApplied = Math.Min(resolvedTarget.Consequence.DamageUnits, Math.Max(0, capacity.Capacity - state.DamageTaken));
-        PowerDamageState nextState = new(state.DamageTaken + damageApplied);
-        _statesByStableId[target.StableId] = nextState;
+        PowerDamageState localState = _statesByStableId.GetValueOrDefault(target.StableId, new PowerDamageState(0));
+        int damageTaken = burnDamageState?.DamageTaken ?? localState.DamageTaken;
+        int damageApplied = burnDamageState is null
+            ? Math.Min(resolvedTarget.Consequence.DamageUnits, Math.Max(0, damageCapacity - localState.DamageTaken))
+            : Math.Min(resolvedTarget.Consequence.DamageUnits, resolvedTarget.AppliedEvent?.DamageApplied ?? 0);
+        if (burnDamageState is null)
+        {
+            PowerDamageState nextState = new(localState.DamageTaken + damageApplied);
+            _statesByStableId[target.StableId] = nextState;
+            damageTaken = nextState.DamageTaken;
+        }
+
         TimberbornPowerInfrastructureApplyResult applyResult = damageApplied <= 0
             ? new TimberbornPowerInfrastructureApplyResult(false, false, false, target.RepairEligible)
-            : _targetApi.ApplyDamage(target, damageApplied, nextState.DamageTaken >= capacity.Capacity);
+            : _targetApi.ApplyDamage(target, damageApplied, damageTaken >= damageCapacity);
 
         return new PowerApplyOutcome(
             IsMetalOnlyNoOp: false,
@@ -197,9 +209,37 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
             applyResult);
     }
 
+    private ResolvedTarget ResolveTarget(TimberbornPowerInfrastructureFireConsequence consequence)
+    {
+        TimberbornPowerInfrastructureFireTarget? target = _targetApi.ResolveTarget(consequence);
+        if (_burnDamageTargets is null)
+        {
+            return new ResolvedTarget(consequence, target, BurnDamageState: null);
+        }
+
+        if (!_burnDamageTargets.TryGetStateForCell(consequence.CellIndex, out TimberbornBurnDamageTargetState state) ||
+            state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure ||
+            target is null ||
+            !string.Equals(target.StableId, state.TargetKey.StableId, StringComparison.Ordinal))
+        {
+            return new ResolvedTarget(consequence, Target: null, BurnDamageState: null);
+        }
+
+        bool hasAppliedEvent = _burnDamageTargets.TryGetAppliedEvent(
+            state.TargetKey,
+            out TimberbornBurnDamageAppliedEvent appliedEvent);
+        TimberbornBurnDamageAppliedEvent? currentTickEvent = hasAppliedEvent && appliedEvent.Tick == consequence.Tick
+            ? appliedEvent
+            : null;
+
+        return new ResolvedTarget(consequence, target, state, currentTickEvent);
+    }
+
     private readonly record struct ResolvedTarget(
         TimberbornPowerInfrastructureFireConsequence Consequence,
-        TimberbornPowerInfrastructureFireTarget? Target);
+        TimberbornPowerInfrastructureFireTarget? Target,
+        TimberbornBurnDamageTargetState? BurnDamageState,
+        TimberbornBurnDamageAppliedEvent? AppliedEvent = null);
 
     private readonly record struct PowerDamageState(int DamageTaken);
 
@@ -255,7 +295,7 @@ public sealed class TimberbornPowerInfrastructureFireTargetApi : ITimberbornPowe
             StableId: $"power_infrastructure:{RuntimeHelpers.GetHashCode(blockObject)}",
             SpecId: blockObject.Name,
             CellIndex: consequence.CellIndex,
-            ConstructionResources: GuessConstructionResources(blockObject.Name),
+            ConstructionResources: TimberbornBurnDamageResourceGuesses.ForPowerInfrastructure(blockObject.Name),
             CanMarkDamaged: false,
             CanDisableOrDisconnect: false,
             RepairEligible: false);
@@ -279,27 +319,5 @@ public sealed class TimberbornPowerInfrastructureFireTargetApi : ITimberbornPowe
             name.Contains("Shaft", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Gear", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Mechanical", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<TimberbornBurnDamageResourceStack> GuessConstructionResources(string name)
-    {
-        if (name.Contains("Metal", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[] { new TimberbornBurnDamageResourceStack("MetalBlock", 1) };
-        }
-
-        if (name.Contains("Shaft", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Gear", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Power", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Mechanical", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[]
-            {
-                new TimberbornBurnDamageResourceStack("Log", 1),
-                new TimberbornBurnDamageResourceStack("Plank", 1),
-            };
-        }
-
-        return Array.Empty<TimberbornBurnDamageResourceStack>();
     }
 }

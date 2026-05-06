@@ -39,6 +39,7 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornPathInfrastructureFireTargetApi? _pathInfrastructureFireTargetApi;
     private ITimberbornPowerInfrastructureFireTargetApi? _powerInfrastructureFireTargetApi;
     private ITimberbornWaterInfrastructureFireTargetApi? _waterInfrastructureFireTargetApi;
+    private TimberbornBurnDamageService? _burnDamageService;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
@@ -108,6 +109,7 @@ public sealed class TimberbornFireRuntime :
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
+        _burnDamageService = null;
         _autoDispatchDisabledReason = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
         _compatibilityProbesRan = false;
@@ -664,6 +666,11 @@ public sealed class TimberbornFireRuntime :
         _waterInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
     }
 
+    public void AttachBurnDamageService(TimberbornBurnDamageService burnDamageService)
+    {
+        _burnDamageService = burnDamageService ?? throw new ArgumentNullException(nameof(burnDamageService));
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
@@ -757,10 +764,15 @@ public sealed class TimberbornFireRuntime :
                 ? null
                 : new TimberbornStructureBurnDamageRollbackSink(
                     _structureBurnDamageRollbackTargetApi,
-                    logSink: _logSink),
+                    logSink: _logSink,
+                    burnDamageTargets: _burnDamageService),
+            burnDamageSink: _burnDamageService,
             storedGoodBurnConsequenceSink: _storedGoodBurnInventoryApi is null
                 ? null
-                : new TimberbornStoredGoodBurnConsequenceSink(_storedGoodBurnInventoryApi, logSink: _logSink),
+                : new TimberbornStoredGoodBurnConsequenceSink(
+                    _storedGoodBurnInventoryApi,
+                    logSink: _logSink,
+                    burnDamageTargets: _burnDamageService),
             explosiveInfrastructureConsequenceSink:
                 _explosiveInfrastructureTargetApi is null || _explosiveInfrastructureHeatPulseSink is null
                     ? null
@@ -786,17 +798,20 @@ public sealed class TimberbornFireRuntime :
                 ? null
                 : new TimberbornPathInfrastructureFireSink(
                     _pathInfrastructureFireTargetApi,
-                    logSink: _logSink),
+                    logSink: _logSink,
+                    burnDamageTargets: _burnDamageService),
             powerInfrastructureFireSink: _powerInfrastructureFireTargetApi is null
                 ? null
                 : new TimberbornPowerInfrastructureFireSink(
                     _powerInfrastructureFireTargetApi,
-                    logSink: _logSink),
+                    logSink: _logSink,
+                    burnDamageTargets: _burnDamageService),
             waterInfrastructureFireSink: _waterInfrastructureFireTargetApi is null
                 ? null
                 : new TimberbornWaterInfrastructureFireSink(
                     _waterInfrastructureFireTargetApi,
-                    logSink: _logSink));
+                    logSink: _logSink,
+                    burnDamageTargets: _burnDamageService));
     }
 
     private bool TryAllowExternalChange(string source, int? count)

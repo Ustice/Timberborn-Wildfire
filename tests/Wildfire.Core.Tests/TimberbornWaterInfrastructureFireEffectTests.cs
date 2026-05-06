@@ -29,6 +29,73 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
     }
 
     [Fact]
+    public void SinkRequiresBurnDamageInfrastructureOwnershipWhenProviderIsBound()
+    {
+        RecordingWaterInfrastructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            canMarkDamaged: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure-1",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 4,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornWaterInfrastructureFireSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornWaterInfrastructureFireSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 8, newFuel: 2)]);
+
+        Assert.Equal(0, summary.MatchedTargetCellCount);
+        Assert.Empty(targetApi.AppliedDamage);
+    }
+
+    [Fact]
+    public void SinkUsesSharedBurnDamageStateWhenProviderOwnsWaterTarget()
+    {
+        RecordingWaterInfrastructureTargetApi targetApi = new(Target(
+            resources: [],
+            canMarkDamaged: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "water-1",
+                    "Floodgate.Folktails",
+                    TimberbornBurnDamageTargetKind.Infrastructure,
+                    damageCapacity: 10,
+                    damageTaken: 6,
+                    ownedCellIndices: [4]),
+            ],
+            [
+                TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                    "water-1",
+                    "Floodgate.Folktails",
+                    sourceCellIndex: 4,
+                    damageApplied: 6,
+                    damageTaken: 6,
+                    damageCapacity: 10,
+                    tick: 1),
+            ]);
+        TimberbornWaterInfrastructureFireSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornWaterInfrastructureFireSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 8, newFuel: 2)]);
+
+        Assert.Equal(1, summary.MatchedTargetCellCount);
+        Assert.Equal(3, summary.TotalDamageApplied);
+        Assert.Equal([3], targetApi.AppliedDamage.Select(static damage => damage.DamageApplied).ToArray());
+    }
+
+    [Fact]
     public void SinkAppliesOnlyBurnableMixedResourcesAfterResistance()
     {
         RecordingWaterInfrastructureTargetApi targetApi = new(Target(

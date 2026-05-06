@@ -29,6 +29,152 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void SinkRequiresBurnDamageOwnershipWhenProviderIsBound()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 2)],
+            canClose: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "storage-1",
+                    "Warehouse.Folktails",
+                    TimberbornBurnDamageTargetKind.Storage,
+                    damageCapacity: 12,
+                    damageTaken: 4,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
+
+        Assert.Equal(0, summary.MatchedStructureCellCount);
+        Assert.Empty(targetApi.Requests);
+    }
+
+    [Fact]
+    public void SinkUsesSharedBurnDamageStateWhenProviderOwnsTarget()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [],
+            canClose: true,
+            canApplyRollbackVisual: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure-1",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 6,
+                    ownedCellIndices: [4]),
+            ],
+            [
+                TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                    "structure-1",
+                    "Building.LumberMill",
+                    sourceCellIndex: 4,
+                    damageApplied: 4,
+                    damageTaken: 6,
+                    damageCapacity: 8,
+                    tick: 1),
+            ]);
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
+
+        Assert.Equal(1, summary.MatchedStructureCellCount);
+        Assert.Equal(4, summary.TotalDamageApplied);
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.Equal(6, request.DamageTaken);
+        Assert.Equal(8, request.DamageCapacity);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.PartialConstruction, request.RollbackStage);
+    }
+
+    [Fact]
+    public void SinkUsesSharedAppliedEventForPartiallyPreDamagedTarget()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [],
+            canClose: true,
+            canApplyRollbackVisual: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure-1",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 8,
+                    ownedCellIndices: [4]),
+            ],
+            [
+                TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                    "structure-1",
+                    "Building.LumberMill",
+                    sourceCellIndex: 4,
+                    damageApplied: 2,
+                    damageTaken: 8,
+                    damageCapacity: 8,
+                    tick: 1),
+            ]);
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
+
+        Assert.Equal(1, summary.MatchedStructureCellCount);
+        Assert.Equal(2, summary.TotalDamageApplied);
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.Equal(8, request.DamageTaken);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
+    }
+
+    [Fact]
+    public void SinkDoesNotRecountSharedDamageFromEarlierTicks()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [],
+            canClose: true,
+            canApplyRollbackVisual: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure-1",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 8,
+                    lastDamagedTick: 1,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            2,
+            [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
+
+        Assert.Equal(1, summary.MatchedStructureCellCount);
+        Assert.Equal(0, summary.TotalDamageApplied);
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.Equal(8, request.DamageTaken);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
+    }
+
+    [Fact]
     public void SinkAllowsRepairAfterDangerEnds()
     {
         RecordingStructureTargetApi targetApi = new(Target(

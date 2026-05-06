@@ -119,8 +119,14 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
 
             TimberbornPausableBuildingBurnoutConsequenceApi buildingBurnoutApi =
                 new(grid, _blockService);
+            TimberbornLiveBurnDamageTargets burnDamageTargets =
+                TimberbornLiveBurnDamageTargetCollector.Collect(_entityRegistry, grid);
+            TimberbornBurnDamageService burnDamageService =
+                new(burnDamageTargets.DescriptorCatalog, logSink: _logSink);
+            burnDamageService.RegisterTargets(grid, burnDamageTargets.Registrations);
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
             _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
+            _runtime.AttachBurnDamageService(burnDamageService);
             _runtime.AttachStructureBurnDamageRollbackTargetApi(
                 new TimberbornStructureBurnDamageRollbackTargetApi(grid, _blockService));
             _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService));

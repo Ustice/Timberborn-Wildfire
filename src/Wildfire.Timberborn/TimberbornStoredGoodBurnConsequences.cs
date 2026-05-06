@@ -109,15 +109,18 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
     private readonly ITimberbornStoredGoodBurnInventoryApi _inventoryApi;
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly ITimberbornBurnDamageTargetStateProvider? _burnDamageTargets;
 
     public TimberbornStoredGoodBurnConsequenceSink(
         ITimberbornStoredGoodBurnInventoryApi inventoryApi,
         TimberbornResourceFuelCatalog? resourceFuelCatalog = null,
-        ITimberbornFireLogSink? logSink = null)
+        ITimberbornFireLogSink? logSink = null,
+        ITimberbornBurnDamageTargetStateProvider? burnDamageTargets = null)
     {
         _inventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
         _resourceFuelCatalog = resourceFuelCatalog ?? TimberbornResourceFuelCatalog.Default;
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
+        _burnDamageTargets = burnDamageTargets;
     }
 
     public TimberbornStoredGoodBurnConsequenceSummary ApplyConsequences(
@@ -129,13 +132,13 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
             .Where(static consequence => consequence.ShouldBurnStoredGoods)
             .ToArray();
         ResolvedTarget[] resolvedTargets = consequences
-            .Select(consequence => new ResolvedTarget(consequence, _inventoryApi.ResolveTarget(consequence)))
+            .Select(ResolveTarget)
             .ToArray();
         ResolvedTarget[] matchedTargets = resolvedTargets
-            .Where(static resolvedTarget => resolvedTarget.Target is not null)
+            .Where(static resolvedTarget => resolvedTarget.Target is not null || resolvedTarget.HasOwnedStorageWithoutInventoryApi)
             .ToArray();
         ResolvedTarget[] uniqueTargets = matchedTargets
-            .GroupBy(static resolvedTarget => resolvedTarget.Target!.StableId, StringComparer.Ordinal)
+            .GroupBy(static resolvedTarget => resolvedTarget.StableId, StringComparer.Ordinal)
             .Select(static group => group
                 .OrderByDescending(static resolvedTarget => resolvedTarget.Consequence.BurnBudget)
                 .ThenByDescending(static resolvedTarget => resolvedTarget.Consequence.Heat)
@@ -171,8 +174,20 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
 
     private TimberbornStoredGoodBurnConsequenceResult BurnTarget(ResolvedTarget resolvedTarget)
     {
-        TimberbornStoredGoodBurnTarget target = resolvedTarget.Target ??
-            throw new InvalidOperationException("Resolved target cannot be null during burn application.");
+        if (resolvedTarget.Target is null)
+        {
+            return new TimberbornStoredGoodBurnConsequenceResult(
+                MatchedStorageCell: true,
+                AppliedConsequence: false,
+                BurnableStackCount: 0,
+                DestroyedItemCount: 0,
+                HazardousGoodCount: 0,
+                SkippedNoInventoryApiCount: resolvedTarget.Consequence.BurnBudget,
+                SkippedUnknownResourceCount: 0,
+                SkippedNonBurnableItemCount: 0);
+        }
+
+        TimberbornStoredGoodBurnTarget target = resolvedTarget.Target;
         ClassifiedStack[] classifiedStacks = target.Stacks
             .Where(static stack => stack.Amount > 0)
             .Select(stack => new ClassifiedStack(stack, _resourceFuelCatalog.Lookup(stack.ResourceId)))
@@ -242,9 +257,38 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
             .ToArray();
     }
 
+    private ResolvedTarget ResolveTarget(TimberbornStoredGoodBurnConsequence consequence)
+    {
+        TimberbornStoredGoodBurnTarget? target = _inventoryApi.ResolveTarget(consequence);
+        if (_burnDamageTargets is null)
+        {
+            return new ResolvedTarget(consequence, target, BurnDamageState: null);
+        }
+
+        if (!_burnDamageTargets.TryGetStateForCell(consequence.CellIndex, out TimberbornBurnDamageTargetState state) ||
+            state.TargetKind != TimberbornBurnDamageTargetKind.Storage)
+        {
+            return new ResolvedTarget(consequence, Target: null, BurnDamageState: null);
+        }
+
+        if (target is not null &&
+            string.Equals(target.StableId, state.TargetKey.StableId, StringComparison.Ordinal))
+        {
+            return new ResolvedTarget(consequence, target, state);
+        }
+
+        return new ResolvedTarget(consequence, Target: null, state);
+    }
+
     private readonly record struct ResolvedTarget(
         TimberbornStoredGoodBurnConsequence Consequence,
-        TimberbornStoredGoodBurnTarget? Target);
+        TimberbornStoredGoodBurnTarget? Target,
+        TimberbornBurnDamageTargetState? BurnDamageState)
+    {
+        public string StableId => Target?.StableId ?? BurnDamageState?.TargetKey.StableId ?? string.Empty;
+
+        public bool HasOwnedStorageWithoutInventoryApi => Target is null && BurnDamageState is not null;
+    }
 
     private readonly record struct ClassifiedStack(
         TimberbornStoredGoodStack Stack,

@@ -102,13 +102,14 @@ First ready wave:
 - [x] `TWF-075`: add burn damage state foundation.
 - [ ] `TWF-076`: apply crop burn consequences. Reviewed deterministic implementation is blocked on live crop-burn QA evidence.
 - [ ] `TWF-084`: apply tree burn consequences. Reviewed deterministic implementation is blocked on live tree-burn QA evidence.
-- [ ] `TWF-116`: define explosive storage fire behavior. Awaiting contract review after research-only pass.
-- [ ] `TWF-117`: classify infrastructure burn behavior. Awaiting classification review after research-only pass.
+- [x] `TWF-116`: define explosive storage fire behavior.
+- [x] `TWF-117`: classify infrastructure burn behavior.
 
 Follow-on gates:
 
-- [ ] `TWF-077`: apply structure burn damage rollback. Blocked on `TWF-064` live investigation.
-- [ ] `TWF-115`: apply stored goods burn consequences. Blocked on `TWF-116` contract acceptance and safe inventory APIs.
+- [ ] `TWF-077`: apply structure burn damage rollback. Fixed for the `TWF-075` ownership bypass and back in `04-verify`; fresh review and live QA still required.
+- [ ] `TWF-115`: apply stored goods burn consequences. Fixed for the `TWF-075` ownership bypass and owned-storage safe-unavailable telemetry; fresh review and live QA still required.
+- [ ] `TWF-127`, `TWF-128`, and `TWF-129`: path, power, and water infrastructure effects. Fixed for the `TWF-075` ownership bypass and back in `04-verify`; fresh review and live QA still required.
 
 ### Later Sprints
 
