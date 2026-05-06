@@ -529,6 +529,9 @@ public sealed class TimberbornQaCommandBridgeTests
     [InlineData("qa-delta-stimulus tree", "tree")]
     [InlineData("qa-delta-stimulus selected-tree", "selected-tree")]
     [InlineData("qa-delta-stimulus infrastructure", "infrastructure")]
+    [InlineData("qa-delta-stimulus path-infrastructure", "path-infrastructure")]
+    [InlineData("qa-delta-stimulus power-infrastructure", "power-infrastructure")]
+    [InlineData("qa-delta-stimulus water-infrastructure", "water-infrastructure")]
     [InlineData("qa-water-suppression-stimulus storage", "storage")]
     public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)
     {
@@ -747,6 +750,42 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal((byte)1, spendChange.SetHeatLoss);
         Assert.Equal((byte)1, spendChange.SetTerrain);
         Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusPathInfrastructureAllowsZeroCapacitySafeNoOpProbe()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornBuildingAdapter().CreateNonBurnableSource(2, 3, 1) with
+            {
+                CompanionTargetId = 77u,
+            });
+        TimberbornBurnDamageTargetState state = CreateBurnDamageState(
+            "path_infrastructure:zero",
+            "Path.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Infrastructure,
+            fuelValue: 0,
+            flammability: 0,
+            damageCapacity: 0,
+            damageTaken: 0,
+            ownedCellIndices: [38]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            TimberbornQaFieldTargetSelectors.PathInfrastructure,
+            new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [state.TargetKey] = state,
+            });
+
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Infrastructure, result.MaterialClass);
+        Assert.Equal("path_infrastructure:zero", result.BurnDamageTargetKey);
+        Assert.Equal(0, result.BurnDamageRemainingCapacity);
+        Assert.Equal((byte)1, result.BurnDamageProbeFuel);
+        Assert.Equal((byte)0, result.BurnDamageSpendFuel);
+        Assert.Equal(2, result.QueuedHeatChangeCount);
     }
 
     [Fact]

@@ -888,6 +888,9 @@ public static class TimberbornQaFieldTargetSelectors
     public const string Storage = "storage";
     public const string Building = "building";
     public const string Infrastructure = "infrastructure";
+    public const string PathInfrastructure = "path-infrastructure";
+    public const string PowerInfrastructure = "power-infrastructure";
+    public const string WaterInfrastructure = "water-infrastructure";
 
     private static readonly HashSet<string> KnownSelectors = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -900,6 +903,9 @@ public static class TimberbornQaFieldTargetSelectors
         Storage,
         Building,
         Infrastructure,
+        PathInfrastructure,
+        PowerInfrastructure,
+        WaterInfrastructure,
     };
 
     public static bool IsKnown(string selector)
@@ -930,13 +936,17 @@ public static class TimberbornQaFieldTargetSelectors
             Storage => materialClass == WildfireMaterialClass.Storage,
             Building => materialClass == WildfireMaterialClass.Building,
             Infrastructure => materialClass == WildfireMaterialClass.Infrastructure,
+            PathInfrastructure => materialClass == WildfireMaterialClass.Infrastructure,
+            PowerInfrastructure => materialClass == WildfireMaterialClass.Infrastructure,
+            WaterInfrastructure => materialClass == WildfireMaterialClass.Infrastructure,
             _ => false,
         };
     }
 
     public static bool IsBurnDamageProbeSelector(string selector)
     {
-        return Normalize(selector) is Building or Storage or Infrastructure;
+        return Normalize(selector) is Building or Storage or Infrastructure or PathInfrastructure or
+            PowerInfrastructure or WaterInfrastructure;
     }
 }
 

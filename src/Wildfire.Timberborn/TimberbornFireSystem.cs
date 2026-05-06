@@ -548,7 +548,7 @@ public sealed class TimberbornFireSystem : IDisposable
 
         TimberbornBurnDamageTargetState[] candidateStates = burnDamageTargets.Values
             .Where(state => MatchesBurnDamageProbeTargetKind(state.TargetKind, selector))
-            .Where(static state => state.RemainingCapacity > 0)
+            .Where(state => state.RemainingCapacity > 0 || AllowsZeroCapacityBurnDamageProbe(selector, state))
             .Where(static state => state.OwnedCellIndices.Count > 0)
             .OrderBy(static state => state.TargetKey.StableId, StringComparer.Ordinal)
             .ThenBy(static state => state.SpecId, StringComparer.Ordinal)
@@ -561,7 +561,7 @@ public sealed class TimberbornFireSystem : IDisposable
             .FirstOrDefault();
 
         return target ?? throw new InvalidOperationException(
-            $"No TWF-075 burn-damage owned target with remaining capacity was found for QA selector '{selector}'.");
+            $"No TWF-075 burn-damage owned target was found for QA selector '{selector}'.");
     }
 
     private TimberbornQaBurnDamageProbeTarget CreateBurnDamageProbeTarget(
@@ -621,6 +621,32 @@ public sealed class TimberbornFireSystem : IDisposable
             TimberbornQaFieldTargetSelectors.Building => targetKind == TimberbornBurnDamageTargetKind.Structure,
             TimberbornQaFieldTargetSelectors.Storage => targetKind == TimberbornBurnDamageTargetKind.Storage,
             TimberbornQaFieldTargetSelectors.Infrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
+            TimberbornQaFieldTargetSelectors.PathInfrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
+            TimberbornQaFieldTargetSelectors.PowerInfrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
+            TimberbornQaFieldTargetSelectors.WaterInfrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
+            _ => false,
+        };
+    }
+
+    private static bool AllowsZeroCapacityBurnDamageProbe(
+        string selector,
+        TimberbornBurnDamageTargetState state)
+    {
+        if (state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure)
+        {
+            return false;
+        }
+
+        string stableId = state.TargetKey.StableId;
+        return TimberbornQaFieldTargetSelectors.Normalize(selector) switch
+        {
+            TimberbornQaFieldTargetSelectors.Infrastructure => true,
+            TimberbornQaFieldTargetSelectors.PathInfrastructure =>
+                stableId.StartsWith("path_infrastructure:", StringComparison.Ordinal),
+            TimberbornQaFieldTargetSelectors.PowerInfrastructure =>
+                stableId.StartsWith("power_infrastructure:", StringComparison.Ordinal),
+            TimberbornQaFieldTargetSelectors.WaterInfrastructure =>
+                stableId.StartsWith("water_infrastructure:", StringComparison.Ordinal),
             _ => false,
         };
     }
