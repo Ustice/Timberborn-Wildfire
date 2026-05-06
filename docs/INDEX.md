@@ -5,6 +5,7 @@ Use this page as the startup map for humans and agents.
 ## Active Source Of Truth
 
 - [DESIGN.md](DESIGN.md) owns the simulation and gameplay design.
+- [RELEASE_DESIGN.md](RELEASE_DESIGN.md) summarizes the release-facing behavior compared with `main`.
 - [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
 - [world-consequence-first-pass.md](world-consequence-first-pass.md) owns the current first-pass plan for stored-item consequences, generated scenario saves, and faction fire-response ideas.
 - [HANDOFF.md](HANDOFF.md) owns current status, blockers, and next exact action.
