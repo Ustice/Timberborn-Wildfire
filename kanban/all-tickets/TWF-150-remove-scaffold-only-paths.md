@@ -61,3 +61,4 @@ Remove or demote code paths that exist only to fake field input, fixed-cell proo
 ## Notes
 
 - This ticket is intentionally last. Cleanup before replacement would hide risk; cleanup after gates removes confusion.
+- 2026-05-06 coordinator: blocked by failed replacement gates. `TWF-144` and `TWF-148` failed required live QA because normal gameplay visuals were not visible and `gpu_field_renderer_enabled=false` / `gpu_field_renderer_material_ready=false`; `TWF-149` is also blocked on those gates plus consequence ownership review failures. Do not remove scaffold-only paths until replacement gates pass or each remaining scaffold has an explicit accepted replacement/blocker.
