@@ -528,6 +528,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [Theory]
     [InlineData("qa-delta-stimulus tree", "tree")]
     [InlineData("qa-delta-stimulus selected-tree", "selected-tree")]
+    [InlineData("qa-delta-stimulus infrastructure", "infrastructure")]
     [InlineData("qa-water-suppression-stimulus storage", "storage")]
     public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)
     {
@@ -663,7 +664,7 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueQaDeltaStimulusInfrastructureStagesBurnDamageFuelSpend()
+    public void QueueQaDeltaStimulusInfrastructureProbeRequiresTwf075OwnedTarget()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
@@ -673,20 +674,58 @@ public sealed class TimberbornQaCommandBridgeTests
                 CompanionTargetId = 77u,
             });
 
-        TimberbornQaDeltaStimulusResult result =
-            fireSystem.QueueQaDeltaStimulus(TimberbornQaFieldTargetSelectors.Infrastructure);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => fireSystem.QueueQaDeltaStimulus(TimberbornQaFieldTargetSelectors.Infrastructure));
+
+        Assert.Contains("requires registered TWF-075 burn-damage targets", exception.Message);
+        Assert.Empty(simulator.RegisteredChanges);
+        Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusInfrastructureStagesBurnDamageFuelSpendOnTwf075OwnedCell()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornBuildingAdapter().CreateNonBurnableSource(2, 3, 1) with
+            {
+                CompanionTargetId = 77u,
+            });
+        TimberbornBurnDamageTargetState state = CreateBurnDamageState(
+            "infrastructure-target",
+            "PowerWheel",
+            TimberbornBurnDamageTargetKind.Infrastructure,
+            fuelValue: 6,
+            flammability: 2,
+            damageCapacity: 10,
+            damageTaken: 3,
+            ownedCellIndices: [38]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            TimberbornQaFieldTargetSelectors.Infrastructure,
+            new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [state.TargetKey] = state,
+            });
 
         Assert.Equal(38, result.CellIndex);
         Assert.Equal(WildfireMaterialClass.Infrastructure, result.MaterialClass);
         Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Equal("infrastructure-target", result.BurnDamageTargetKey);
+        Assert.Equal("PowerWheel", result.BurnDamageSpecId);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Infrastructure, result.BurnDamageTargetKind);
+        Assert.Equal(7, result.BurnDamageRemainingCapacity);
+        Assert.Equal((byte)6, result.BurnDamageProbeFuel);
+        Assert.Equal((byte)5, result.BurnDamageSpendFuel);
         Assert.Equal((byte)15, result.SetHeat);
         Assert.Equal(2, result.QueuedHeatChangeCount);
         FireSimChange primeChange = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(38, primeChange.CellIndex);
         Assert.Equal((byte)0, primeChange.SetWater);
-        Assert.Equal((byte)15, primeChange.SetFuel);
+        Assert.Equal((byte)6, primeChange.SetFuel);
         Assert.Equal((byte)15, primeChange.SetHeat);
-        Assert.Equal((byte)3, primeChange.SetFlammability);
+        Assert.Equal((byte)2, primeChange.SetFlammability);
         Assert.Equal((byte)1, primeChange.SetHeatLoss);
         Assert.Equal((byte)1, primeChange.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
@@ -702,9 +741,9 @@ public sealed class TimberbornQaCommandBridgeTests
         FireSimChange spendChange = simulator.RegisteredChanges[1];
         Assert.Equal(38, spendChange.CellIndex);
         Assert.Equal((byte)0, spendChange.SetWater);
-        Assert.Equal((byte)0, spendChange.SetFuel);
+        Assert.Equal((byte)5, spendChange.SetFuel);
         Assert.Equal((byte)15, spendChange.SetHeat);
-        Assert.Equal((byte)3, spendChange.SetFlammability);
+        Assert.Equal((byte)2, spendChange.SetFlammability);
         Assert.Equal((byte)1, spendChange.SetHeatLoss);
         Assert.Equal((byte)1, spendChange.SetTerrain);
         Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
@@ -1586,6 +1625,31 @@ public sealed class TimberbornQaCommandBridgeTests
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Tree,
             companionTargetId: (uint)fuel);
+    }
+
+    private static TimberbornBurnDamageTargetState CreateBurnDamageState(
+        string stableId,
+        string specId,
+        TimberbornBurnDamageTargetKind targetKind,
+        byte fuelValue,
+        byte flammability,
+        int damageCapacity,
+        int damageTaken,
+        IReadOnlyList<int> ownedCellIndices)
+    {
+        return new TimberbornBurnDamageTargetState(
+            new TimberbornBurnDamageTargetKey(stableId),
+            specId,
+            targetKind,
+            TimberbornBurnMaterialKind.Constructed,
+            damageCapacity,
+            fuelValue,
+            flammability,
+            damageTaken,
+            LastDamagedTick: 0,
+            OwnedCellIndices: ownedCellIndices.ToArray(),
+            MissingResourceIds: [],
+            AccountedResourceIds: ["Log"]);
     }
 
     private sealed class RecordingFireSimulatorFactory(RecordingFireSimulator simulator) : ITimberbornFireSimulatorFactory

@@ -261,28 +261,36 @@ public sealed class TimberbornFireSystem : IDisposable
     }
 
     public TimberbornQaDeltaStimulusResult QueueQaDeltaStimulus(
-        string targetSelector = TimberbornQaFieldTargetSelectors.Default)
+        string targetSelector = TimberbornQaFieldTargetSelectors.Default,
+        IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>? burnDamageTargets = null)
     {
         FireGrid grid = RequireGrid();
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
         if (TimberbornQaFieldTargetSelectors.IsBurnDamageProbeSelector(normalizedSelector))
         {
-            TimberbornImportedFieldTarget target = FindImportedTarget(
-                candidate => TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector),
-                $"No imported field target was found for QA burn-damage selector '{normalizedSelector}'.");
+            TimberbornQaBurnDamageProbeTarget target = FindBurnDamageProbeTarget(
+                grid,
+                normalizedSelector,
+                burnDamageTargets);
             int queuedChangeCount = RegisterBurnDamageProbe(target, "qa_burn_damage_stimulus");
 
             return new TimberbornQaDeltaStimulusResult(
                 normalizedSelector,
-                target.CellIndex,
-                target.X,
-                target.Y,
-                target.Z,
-                target.MaterialClass,
-                target.CompanionTargetId,
-                target.InitialCell,
+                target.FieldTarget.CellIndex,
+                target.FieldTarget.X,
+                target.FieldTarget.Y,
+                target.FieldTarget.Z,
+                target.FieldTarget.MaterialClass,
+                target.FieldTarget.CompanionTargetId,
+                target.FieldTarget.InitialCell,
                 QaIgnitionHeat,
-                QueuedHeatChangeCount: queuedChangeCount);
+                QueuedHeatChangeCount: queuedChangeCount,
+                BurnDamageTargetKey: target.State.TargetKey.StableId,
+                BurnDamageSpecId: target.State.SpecId,
+                BurnDamageTargetKind: target.State.TargetKind,
+                BurnDamageRemainingCapacity: target.State.RemainingCapacity,
+                BurnDamageProbeFuel: target.ProbeFuel,
+                BurnDamageSpendFuel: target.SpendFuel);
         }
 
         TimberbornImportedFieldTarget ignitionTarget = normalizedSelector == TimberbornQaFieldTargetSelectors.CenterTree
@@ -527,25 +535,128 @@ public sealed class TimberbornFireSystem : IDisposable
         }
     }
 
-    private int RegisterBurnDamageProbe(TimberbornImportedFieldTarget target, string source)
+    private TimberbornQaBurnDamageProbeTarget FindBurnDamageProbeTarget(
+        FireGrid grid,
+        string selector,
+        IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>? burnDamageTargets)
+    {
+        if (burnDamageTargets is null || burnDamageTargets.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"QA burn-damage selector '{selector}' requires registered TWF-075 burn-damage targets.");
+        }
+
+        TimberbornBurnDamageTargetState[] candidateStates = burnDamageTargets.Values
+            .Where(state => MatchesBurnDamageProbeTargetKind(state.TargetKind, selector))
+            .Where(static state => state.RemainingCapacity > 0)
+            .Where(static state => state.OwnedCellIndices.Count > 0)
+            .OrderBy(static state => state.TargetKey.StableId, StringComparer.Ordinal)
+            .ThenBy(static state => state.SpecId, StringComparer.Ordinal)
+            .ToArray();
+        TimberbornQaBurnDamageProbeTarget? target = candidateStates
+            .SelectMany(state => state.OwnedCellIndices
+                .Where(cellIndex => cellIndex >= 0 && cellIndex < grid.CellCount)
+                .OrderBy(static cellIndex => cellIndex)
+                .Select(cellIndex => (TimberbornQaBurnDamageProbeTarget?)CreateBurnDamageProbeTarget(grid, state, cellIndex)))
+            .FirstOrDefault();
+
+        return target ?? throw new InvalidOperationException(
+            $"No TWF-075 burn-damage owned target with remaining capacity was found for QA selector '{selector}'.");
+    }
+
+    private TimberbornQaBurnDamageProbeTarget CreateBurnDamageProbeTarget(
+        FireGrid grid,
+        TimberbornBurnDamageTargetState state,
+        int cellIndex)
+    {
+        TimberbornImportedFieldTarget fieldTarget = _importedTargets
+            .Where(target => target.CellIndex == cellIndex)
+            .Select(static target => (TimberbornImportedFieldTarget?)target)
+            .FirstOrDefault() ??
+            CreateSyntheticBurnDamageFieldTarget(grid, state, cellIndex);
+        byte probeFuel = (byte)Math.Clamp(Math.Max(1, (int)state.FuelValue), 1, 15);
+        byte spendFuel = (byte)Math.Max(0, probeFuel - 1);
+        byte probeFlammability = (byte)Math.Clamp(Math.Max(1, (int)state.Flammability), 1, 3);
+
+        return new TimberbornQaBurnDamageProbeTarget(
+            state,
+            fieldTarget,
+            probeFuel,
+            spendFuel,
+            probeFlammability);
+    }
+
+    private static TimberbornImportedFieldTarget CreateSyntheticBurnDamageFieldTarget(
+        FireGrid grid,
+        TimberbornBurnDamageTargetState state,
+        int cellIndex)
+    {
+        (int x, int y, int z) = grid.FromIndex(cellIndex);
+        byte probeFuel = (byte)Math.Clamp(Math.Max(1, (int)state.FuelValue), 1, 15);
+        byte probeFlammability = (byte)Math.Clamp(Math.Max(1, (int)state.Flammability), 1, 3);
+        ushort initialCell = PackedCell.Pack(
+            fuel: probeFuel,
+            heat: 0,
+            flammability: probeFlammability,
+            water: 0,
+            terrain: 1,
+            heatLoss: QaIgnitionHeatLoss);
+
+        return new TimberbornImportedFieldTarget(
+            cellIndex,
+            x,
+            y,
+            z,
+            MaterialClassForBurnDamageKind(state.TargetKind),
+            CompanionTargetId: 0,
+            initialCell);
+    }
+
+    private static bool MatchesBurnDamageProbeTargetKind(
+        TimberbornBurnDamageTargetKind targetKind,
+        string selector)
+    {
+        return TimberbornQaFieldTargetSelectors.Normalize(selector) switch
+        {
+            TimberbornQaFieldTargetSelectors.Building => targetKind == TimberbornBurnDamageTargetKind.Structure,
+            TimberbornQaFieldTargetSelectors.Storage => targetKind == TimberbornBurnDamageTargetKind.Storage,
+            TimberbornQaFieldTargetSelectors.Infrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
+            _ => false,
+        };
+    }
+
+    private static WildfireMaterialClass MaterialClassForBurnDamageKind(TimberbornBurnDamageTargetKind targetKind)
+    {
+        return targetKind switch
+        {
+            TimberbornBurnDamageTargetKind.Structure => WildfireMaterialClass.Building,
+            TimberbornBurnDamageTargetKind.Storage => WildfireMaterialClass.Storage,
+            TimberbornBurnDamageTargetKind.Infrastructure => WildfireMaterialClass.Infrastructure,
+            TimberbornBurnDamageTargetKind.Tree => WildfireMaterialClass.Tree,
+            TimberbornBurnDamageTargetKind.Crop => WildfireMaterialClass.Crop,
+            _ => WildfireMaterialClass.Empty,
+        };
+    }
+
+    private int RegisterBurnDamageProbe(TimberbornQaBurnDamageProbeTarget target, string source)
     {
         FireSimChange primeChange = new(
-            CellIndex: target.CellIndex,
+            CellIndex: target.FieldTarget.CellIndex,
             SetWater: QaIgnitionWater,
-            SetFuel: QaIgnitionFuel,
+            SetFuel: target.ProbeFuel,
             SetHeat: QaIgnitionHeat,
-            SetFlammability: QaIgnitionFlammability,
+            SetFlammability: target.ProbeFlammability,
             SetHeatLoss: QaIgnitionHeatLoss,
             SetTerrain: QaIgnitionTerrain);
         RegisterChange(primeChange, source, shouldLog: false);
         _qaBurnDamageSpendChanges = new[]
         {
             new FireSimChange(
-                CellIndex: target.CellIndex,
+                CellIndex: target.FieldTarget.CellIndex,
                 SetWater: QaIgnitionWater,
-                SetFuel: QaSpentFuel,
+                SetFuel: target.SpendFuel,
                 SetHeat: QaIgnitionHeat,
-                SetFlammability: QaIgnitionFlammability,
+                SetFlammability: target.ProbeFlammability,
                 SetHeatLoss: QaIgnitionHeatLoss,
                 SetTerrain: QaIgnitionTerrain),
         };
@@ -553,8 +664,14 @@ public sealed class TimberbornFireSystem : IDisposable
         _logSink.Info(
             "wildfire_timberborn_qa_burn_damage_spend_scheduled " +
             $"source={source} " +
-            $"cell_index={target.CellIndex} " +
-            $"target_material={target.MaterialClass} " +
+            $"cell_index={target.FieldTarget.CellIndex} " +
+            $"target_material={target.FieldTarget.MaterialClass} " +
+            $"burn_damage_target_key={TimberbornQaCommandBridge.FormatToken(target.State.TargetKey.StableId)} " +
+            $"burn_damage_spec_id={TimberbornQaCommandBridge.FormatToken(target.State.SpecId)} " +
+            $"burn_damage_target_kind={target.State.TargetKind} " +
+            $"remaining_capacity={target.State.RemainingCapacity} " +
+            $"probe_fuel={target.ProbeFuel} " +
+            $"spend_fuel={target.SpendFuel} " +
             $"scheduled_changes={_qaBurnDamageSpendChanges.Length}");
 
         return 1 + _qaBurnDamageSpendChanges.Length;
@@ -787,6 +904,13 @@ public readonly record struct TimberbornImportedFieldTarget(
     WildfireMaterialClass MaterialClass,
     uint CompanionTargetId,
     ushort InitialCell);
+
+public readonly record struct TimberbornQaBurnDamageProbeTarget(
+    TimberbornBurnDamageTargetState State,
+    TimberbornImportedFieldTarget FieldTarget,
+    byte ProbeFuel,
+    byte SpendFuel,
+    byte ProbeFlammability);
 
 public interface ITimberbornFireLogSink
 {

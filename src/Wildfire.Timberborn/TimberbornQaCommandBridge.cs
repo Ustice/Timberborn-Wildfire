@@ -431,7 +431,13 @@ public sealed class TimberbornQaCommandBridge
             $"target_z={stimulusResult.Z}_" +
             $"initial_cell={stimulusResult.InitialCell}_" +
             $"set_heat={stimulusResult.SetHeat}_" +
-            $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}");
+            $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}_" +
+            $"burn_damage_target_key={FormatToken(stimulusResult.BurnDamageTargetKey)}_" +
+            $"burn_damage_spec_id={FormatToken(stimulusResult.BurnDamageSpecId)}_" +
+            $"burn_damage_target_kind={FormatToken(stimulusResult.BurnDamageTargetKind?.ToString())}_" +
+            $"burn_damage_remaining_capacity={FormatNumber(stimulusResult.BurnDamageRemainingCapacity)}_" +
+            $"burn_damage_probe_fuel={FormatNumber(stimulusResult.BurnDamageProbeFuel)}_" +
+            $"burn_damage_spend_fuel={FormatNumber(stimulusResult.BurnDamageSpendFuel)}");
     }
 
     private TimberbornQaCommandResult ExecuteQaBuildingBurnoutStimulus()
@@ -643,6 +649,16 @@ public sealed class TimberbornQaCommandBridge
     {
         return value?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
     }
+
+    private static string FormatNumber(int? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+
+    private static string FormatNumber(byte? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
 }
 
 public interface ITimberbornQaCommandStateProvider
@@ -665,7 +681,13 @@ public sealed record TimberbornQaDeltaStimulusResult(
     uint CompanionTargetId,
     ushort InitialCell,
     byte SetHeat,
-    int QueuedHeatChangeCount);
+    int QueuedHeatChangeCount,
+    string? BurnDamageTargetKey = null,
+    string? BurnDamageSpecId = null,
+    TimberbornBurnDamageTargetKind? BurnDamageTargetKind = null,
+    int? BurnDamageRemainingCapacity = null,
+    byte? BurnDamageProbeFuel = null,
+    byte? BurnDamageSpendFuel = null);
 
 public interface ITimberbornQaBuildingBurnoutStimulus
 {

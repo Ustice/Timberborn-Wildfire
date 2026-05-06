@@ -253,7 +253,7 @@ public sealed class TimberbornFireRuntime :
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
         TimberbornQaDeltaStimulusResult result = normalizedSelector == TimberbornQaFieldTargetSelectors.SelectedTree
             ? RequireFireSystem().QueueQaSelectedTreeDeltaStimulus(_selectedTreeTargetProvider)
-            : RequireFireSystem().QueueQaDeltaStimulus(normalizedSelector);
+            : RequireFireSystem().QueueQaDeltaStimulus(normalizedSelector, _burnDamageService?.States);
         _logSink.Info(
             "wildfire_timberborn_qa_delta_stimulus_queued " +
             $"target_selector={result.TargetSelector} " +
@@ -265,7 +265,13 @@ public sealed class TimberbornFireRuntime :
             $"companion_target_id={result.CompanionTargetId} " +
             $"initial_cell={result.InitialCell} " +
             $"set_heat={result.SetHeat} " +
-            $"queued_heat_changes={result.QueuedHeatChangeCount}");
+            $"queued_heat_changes={result.QueuedHeatChangeCount} " +
+            $"burn_damage_target_key={TimberbornQaCommandBridge.FormatToken(result.BurnDamageTargetKey)} " +
+            $"burn_damage_spec_id={TimberbornQaCommandBridge.FormatToken(result.BurnDamageSpecId)} " +
+            $"burn_damage_target_kind={TimberbornQaCommandBridge.FormatToken(result.BurnDamageTargetKind?.ToString())} " +
+            $"burn_damage_remaining_capacity={FormatNumber(result.BurnDamageRemainingCapacity)} " +
+            $"burn_damage_probe_fuel={FormatNumber(result.BurnDamageProbeFuel)} " +
+            $"burn_damage_spend_fuel={FormatNumber(result.BurnDamageSpendFuel)}");
 
         return result;
     }
@@ -836,6 +842,16 @@ public sealed class TimberbornFireRuntime :
     private bool IsAutoDispatchEnabled()
     {
         return IsWildfireEnabled() && _autoDispatchDisabledReason is null;
+    }
+
+    private static string FormatNumber(int? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+
+    private static string FormatNumber(byte? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
     }
 
     private TimberbornFireSystem RequireFireSystem()
