@@ -107,9 +107,9 @@ First ready wave:
 
 Follow-on gates:
 
-- [ ] `TWF-077`: apply structure burn damage rollback. Fixed for the `TWF-075` ownership bypass, live-proved on `Fuel`, reviewed, and moved to `05-integration`.
-- [ ] `TWF-115`: apply stored goods burn consequences. Fixed for the `TWF-075` ownership bypass, live-proved on `Fuel`, reviewed, and moved to `05-integration`.
-- [ ] `TWF-127`, `TWF-128`, and `TWF-129`: path, power, and water infrastructure effects. Fixed for the `TWF-075` ownership bypass, selector specificity, and power/water live registration; live-proved on `Fuel` plus `Smolville`, reviewed, and moved to `05-integration`.
+- [x] `TWF-077`: apply structure burn damage rollback. Fixed for the `TWF-075` ownership bypass, live-proved on `Fuel`, reviewed, and integrated on `main`.
+- [x] `TWF-115`: apply stored goods burn consequences. Fixed for the `TWF-075` ownership bypass, live-proved on `Fuel`, reviewed, and integrated on `main`.
+- [x] `TWF-127`, `TWF-128`, and `TWF-129`: path, power, and water infrastructure effects. Fixed for the `TWF-075` ownership bypass, selector specificity, and power/water live registration; live-proved on `Fuel` plus `Smolville`, reviewed, and integrated on `main`.
 
 ### Later Sprints
 
