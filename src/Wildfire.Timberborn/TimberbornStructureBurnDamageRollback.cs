@@ -29,7 +29,7 @@ public readonly record struct TimberbornStructureBurnDamageConsequence(
 
     public bool HasBurnPressure => true;
 
-    public bool ShouldClose => ShouldBlockRepair;
+    public bool ShouldClose => false;
 
     public bool ShouldBlockRepair => Fuel > 0 || Heat >= RepairBlockedHeat;
 
@@ -260,7 +260,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             DamageTaken: damageTaken,
             DamageCapacity: damageCapacity,
             RollbackStage: stage,
-            ShouldClose: resolvedTarget.Consequence.ShouldClose || damageApplied > 0,
+            ShouldClose: false,
             RepairBlocked: repairBlocked,
             RepairEligible: repairEligible,
             ShouldApplyRollbackVisual: stage != TimberbornStructureBurnRollbackStage.None);
@@ -397,7 +397,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             return null;
         }
 
-        bool canBlockAccess = HasBlockableAccess(blockObject);
         bool canEnterUnfinishedState = CanEnterUnfinishedState(blockObject);
 
         return new TimberbornStructureBurnDamageTarget(
@@ -405,7 +404,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             SpecId: blockObject.Name,
             CellIndex: consequence.CellIndex,
             ConstructionResources: TimberbornBurnDamageResourceGuesses.ForStructure(blockObject.Name),
-            CanClose: canBlockAccess,
+            CanClose: false,
             CanApplyRollbackVisual: canEnterUnfinishedState,
             CanRepairAfterDanger: canEnterUnfinishedState);
     }
@@ -420,7 +419,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             .GetObjectsWithComponentAt<BlockObject>(coordinates)
             .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
             .FirstOrDefault();
-        bool accessBlocked = request.ShouldClose && blockObject is not null && TryBlockAccess(target, blockObject);
         bool accessRestored = request.RepairEligible && blockObject is not null && TryRestoreAccess(target);
         bool enteredUnfinishedState = false;
         int removedConstructionMaterialCount = 0;
@@ -447,54 +445,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         bool visualRollbackApplied = enteredUnfinishedState || removedConstructionMaterialCount > 0 || hasBurnedTextures;
         bool skippedNoSafeApi = (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
-            (request.ShouldClose && !accessBlocked) ||
             (request.RepairEligible && !accessRestored);
 
         return new TimberbornStructureBurnDamageApplyResult(
-            Closed: accessBlocked,
+            Closed: false,
             VisualRollbackApplied: visualRollbackApplied,
             SkippedNoSafeApi: skippedNoSafeApi,
             RepairEligible: request.RepairEligible);
-    }
-
-    private static bool HasBlockableAccess(BlockObject blockObject)
-    {
-        return GetBlockableAccessibles(blockObject)
-            .Any(static accessible => accessible.Accesses.Count > 0);
-    }
-
-    private bool TryBlockAccess(TimberbornStructureBurnDamageTarget target, BlockObject blockObject)
-    {
-        if (_blockedAccessesByStableId.ContainsKey(target.StableId))
-        {
-            return true;
-        }
-
-        AccessSnapshot[] snapshots = GetBlockableAccessibles(blockObject)
-            .Select(static accessible => new AccessSnapshot(accessible, accessible.Accesses.ToArray()))
-            .Where(static snapshot => snapshot.Accesses.Length > 0)
-            .ToArray();
-        if (snapshots.Length == 0)
-        {
-            return false;
-        }
-
-        try
-        {
-            Array.ForEach(snapshots, static snapshot => snapshot.Accessible.ClearAccesses());
-            _blockedAccessesByStableId[target.StableId] = snapshots;
-            _logSink.Info(
-                "wildfire_timberborn_structure_access_blocked " +
-                $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
-                $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
-                $"accessibles={snapshots.Length} " +
-                $"accesses={snapshots.Sum(static snapshot => snapshot.Accesses.Length)}");
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private static Accessible[] GetBlockableAccessibles(BlockObject blockObject)

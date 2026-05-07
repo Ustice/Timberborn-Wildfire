@@ -6,7 +6,7 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornStructureBurnDamageRollbackTests
 {
     [Fact]
-    public void SinkClosesDamagedStructureAndBlocksRepairWhileDangerous()
+    public void SinkKeepsDamagedStructureAccessibleAndBlocksRepairWhileDangerous()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 2)],
@@ -19,17 +19,17 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
 
         Assert.Equal(1, summary.MatchedStructureCellCount);
-        Assert.Equal(1, summary.ClosedStructureCount);
+        Assert.Equal(0, summary.ClosedStructureCount);
         Assert.Equal(1, summary.RepairBlockedCount);
         Assert.Equal(0, summary.RepairEligibleCount);
         Assert.Equal(4, summary.MaterialValueLost);
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
-        Assert.True(request.ShouldClose);
+        Assert.False(request.ShouldClose);
         Assert.True(request.RepairBlocked);
     }
 
     [Fact]
-    public void SinkClosesStructureOnRepairBlockingFirePressureBeforeDamageThreshold()
+    public void SinkDoesNotCloseStructureOnRepairBlockingFirePressureBeforeDamageThreshold()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 10)],
@@ -41,10 +41,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             1,
             [Decision(4, oldFuel: 10, newFuel: 10, heat: 5)]);
 
-        Assert.Equal(1, summary.ClosedStructureCount);
+        Assert.Equal(0, summary.ClosedStructureCount);
         Assert.Equal(1, summary.RepairBlockedCount);
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
-        Assert.True(request.ShouldClose);
+        Assert.False(request.ShouldClose);
         Assert.False(request.ShouldApplyRollbackVisual);
         Assert.Equal(TimberbornStructureBurnRollbackStage.None, request.RollbackStage);
     }
@@ -253,7 +253,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
 
         Assert.Equal(2, summary.MatchedStructureCellCount);
         Assert.Equal(1, summary.DuplicateStructureTargetSuppressedCount);
-        Assert.Equal(1, summary.ClosedStructureCount);
+        Assert.Equal(0, summary.ClosedStructureCount);
         Assert.Equal([6], targetApi.Requests.Select(static request => request.DamageApplied).ToArray());
     }
 
@@ -355,21 +355,20 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             [new CellDelta(4, Cell(fuel: 8, heat: 10), Cell(fuel: 5, heat: 10))]);
 
         Assert.Equal(1, summary.StructureBurnDamageRollbackConsideredDeltaCount);
-        Assert.Equal(1, summary.StructureBurnDamageRollbackClosedStructureCount);
+        Assert.Equal(0, summary.StructureBurnDamageRollbackClosedStructureCount);
         Assert.Equal(3, summary.StructureBurnDamageRollbackTotalDamageApplied);
     }
 
     [Fact]
-    public void TimberbornBuildingBurnsBlockAccessWithoutPausingBuildings()
+    public void TimberbornBuildingBurnsDoNotBlockAccessOrPauseBuildings()
     {
         string structureRollbackSource = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
         string buildingBurnoutSource = ReadTimberbornSource("TimberbornBuildingBurnoutConsequences.cs");
 
         Assert.DoesNotContain(".Pause()", structureRollbackSource, StringComparison.Ordinal);
         Assert.DoesNotContain(".Pause()", buildingBurnoutSource, StringComparison.Ordinal);
-        Assert.Contains("ClearAccesses()", structureRollbackSource, StringComparison.Ordinal);
-        Assert.Contains("ClearAccesses()", buildingBurnoutSource, StringComparison.Ordinal);
-        Assert.Contains("SetAccesses", structureRollbackSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ClearAccesses()", structureRollbackSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ClearAccesses()", buildingBurnoutSource, StringComparison.Ordinal);
     }
 
     private static TimberbornStructureBurnDamageTarget Target(

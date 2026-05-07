@@ -28,28 +28,9 @@ public sealed class TimberbornPausableBuildingBurnoutConsequenceApi :
         PausableBuilding[] pausableBuildings = _blockService
             .GetObjectsWithComponentAt<PausableBuilding>(coordinates)
             .ToArray();
-        BlockObject? blockObject = _blockService
-            .GetObjectsWithComponentAt<BlockObject>(coordinates)
-            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
-            .FirstOrDefault();
-        Accessible[] accessiblesToBlock = consequence.ShouldApplyBurnout
-            ? (blockObject is null
-                ? Array.Empty<Accessible>()
-                : GetBlockableAccessibles(blockObject)
-                    .Where(static accessible => accessible.Accesses.Count > 0)
-                    .ToArray())
-            : Array.Empty<Accessible>();
-
-        Accessible[] uniqueAccessiblesToBlock = accessiblesToBlock
-            .GroupBy(static accessible => RuntimeHelpers.GetHashCode(accessible))
-            .Select(static group => group.First())
-            .ToArray();
-
-        Array.ForEach(uniqueAccessiblesToBlock, static accessible => accessible.ClearAccesses());
-
         return new TimberbornBuildingBurnoutConsequenceResult(
             MatchedBuildingCell: pausableBuildings.Length > 0,
-            AppliedConsequence: uniqueAccessiblesToBlock.Length > 0);
+            AppliedConsequence: false);
     }
 
     public TimberbornQaBuildingBurnoutStimulusTarget FindTarget(FireGrid grid)
@@ -66,14 +47,6 @@ public sealed class TimberbornPausableBuildingBurnoutConsequenceApi :
             .Any(static building => !building.Paused);
     }
 
-    private static Accessible[] GetBlockableAccessibles(BlockObject blockObject)
-    {
-        return blockObject.GetComponentsAllocating<Accessible>()
-            .Concat(blockObject.Transform.GetComponentsInChildren<Accessible>(includeInactive: true))
-            .GroupBy(static accessible => RuntimeHelpers.GetHashCode(accessible))
-            .Select(static group => group.First())
-            .ToArray();
-    }
 }
 
 public static class TimberbornQaBuildingBurnoutStimulusTargets
