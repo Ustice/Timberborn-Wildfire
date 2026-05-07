@@ -11,7 +11,7 @@ public static class FireSimChangeUpload
     private const uint SetFuelMask = 1u << 2;
     private const uint SetHeatMask = 1u << 3;
     private const uint SetFlammabilityMask = 1u << 4;
-    private const uint SetHeatLossMask = 1u << 5;
+    private const uint SetBurningLevelMask = 1u << 5;
     private const uint SetTerrainMask = 1u << 6;
 
     public static uint[] Encode(ReadOnlySpan<FireSimChange> changes, int capacity)
@@ -48,7 +48,7 @@ public static class FireSimChangeUpload
         mask |= change.SetFuel.HasValue ? SetFuelMask : 0u;
         mask |= change.SetHeat.HasValue ? SetHeatMask : 0u;
         mask |= change.SetFlammability.HasValue ? SetFlammabilityMask : 0u;
-        mask |= change.SetHeatLoss.HasValue ? SetHeatLossMask : 0u;
+        mask |= change.SetBurningLevel.HasValue ? SetBurningLevelMask : 0u;
         mask |= change.SetTerrain.HasValue ? SetTerrainMask : 0u;
         return mask;
     }
@@ -66,7 +66,7 @@ public static class FireSimChangeUpload
             (Clamp(change.SetFuel, 15u) << 18) |
             (Clamp(change.SetHeat, 15u) << 22) |
             (Clamp(change.SetFlammability, 3u) << 26) |
-            (Clamp(change.SetHeatLoss, 7u) << 28) |
+            (Clamp(change.SetBurningLevel, 7u) << 28) |
             (Clamp(change.SetTerrain, 1u) << 31);
     }
 

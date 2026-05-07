@@ -332,8 +332,8 @@ public readonly record struct TimberbornFireCellDeltaDecision(
             PackedCell.Heat(delta.NewCell),
             PackedCell.Water(delta.OldCell),
             PackedCell.Water(delta.NewCell),
-            PackedCell.IsBurning(delta.OldCell),
-            PackedCell.IsBurning(delta.NewCell),
+            PackedCell.BurningLevel(delta.OldCell) > 0,
+            PackedCell.BurningLevel(delta.NewCell) > 0,
             FuelDepleted: oldFuel > 0 && newFuel == 0);
     }
 }
@@ -349,7 +349,7 @@ public readonly record struct TimberbornFireDebugVisualCellState(
 
     public int Water => PackedCell.Water(PackedCellValue);
 
-    public bool IsBurning => PackedCell.IsBurning(PackedCellValue);
+    public bool IsBurning => PackedCell.BurningLevel(PackedCellValue) > 0;
 
     public bool IsSpentFuel => Fuel == 0;
 

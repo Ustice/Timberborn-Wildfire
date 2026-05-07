@@ -17,7 +17,7 @@ public static class FireVisualField
         float fuel = PackedCell.Fuel(cell) / 15f;
         float heat = PackedCell.Heat(cell) / 15f;
         bool terrain = PackedCell.Terrain(cell) == 1;
-        bool burning = PackedCell.IsBurning(cell);
+        bool burning = PackedCell.BurningLevel(cell) > 0;
         bool hotFuel = terrain && PackedCell.Fuel(cell) > 0 && PackedCell.Heat(cell) > 0;
         bool ashCandidate = terrain && PackedCell.Fuel(cell) <= 2 && PackedCell.Heat(cell) > 0;
 

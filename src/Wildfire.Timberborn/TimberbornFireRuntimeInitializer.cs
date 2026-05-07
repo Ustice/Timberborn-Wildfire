@@ -16,7 +16,7 @@ namespace Wildfire.Timberborn;
 public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpdatableSingleton
 {
     private const int TerrainOnlyFallbackAttempt = 120;
-    private const int RequiredStableEntitySnapshotCount = 2;
+    private const int RequiredStableEntitySnapshotCount = 1;
 
     private readonly TimberbornFireRuntime _runtime;
     private readonly ITimberbornFireSimulatorFactory _simulatorFactory;

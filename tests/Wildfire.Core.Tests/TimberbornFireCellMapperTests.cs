@@ -18,12 +18,12 @@ public sealed class TimberbornFireCellMapperTests
             grid,
             [
                 terrainAdapter.CreateSource(0, 0, 0, isSolid: true),
-                resourceAdapter.CreateSource(1, 0, 0, fuel: 9, flammability: 3, heatLoss: 2, TimberbornResourceKind.Vegetation),
+                resourceAdapter.CreateSource(1, 0, 0, fuel: 9, flammability: 3, TimberbornResourceKind.Vegetation),
                 waterAdapter.CreateSource(1, 0, 0, water: 2),
             ]);
 
-        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 6), cells[0]);
-        Assert.Equal(PackedCell.Pack(fuel: 9, heat: 0, flammability: 3, water: 2, terrain: 1, heatLoss: 2), cells[1]);
+        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 9, heat: 0, flammability: 3, water: 2, terrain: 1, burningLevel: 0), cells[1]);
         Assert.Equal(TimberbornFireCellMapper.EmptyCell, cells[2]);
     }
 
@@ -46,11 +46,11 @@ public sealed class TimberbornFireCellMapperTests
                 buildingAdapter.CreateNonBurnableSource(4, 0, 0),
             ]);
 
-        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 6), cells[0]);
-        Assert.Equal(PackedCell.Pack(fuel: 8, heat: 0, flammability: 2, water: 0, terrain: 1, heatLoss: 3), cells[1]);
-        Assert.Equal(PackedCell.Pack(fuel: 10, heat: 0, flammability: 3, water: 0, terrain: 1, heatLoss: 1), cells[2]);
-        Assert.Equal(PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, heatLoss: 3), cells[3]);
-        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 7), cells[4]);
+        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 8, heat: 0, flammability: 2, water: 0, terrain: 1, burningLevel: 0), cells[1]);
+        Assert.Equal(PackedCell.Pack(fuel: 10, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), cells[2]);
+        Assert.Equal(PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, burningLevel: 0), cells[3]);
+        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0), cells[4]);
     }
 
     [Fact]
@@ -65,10 +65,10 @@ public sealed class TimberbornFireCellMapperTests
         TimberbornCellSource[] orderedSources =
         [
             terrainAdapter.CreateSource(0, 0, 0, isSolid: true, wetness: 1),
-            resourceAdapter.CreateSource(0, 0, 0, fuel: 4, flammability: 2, heatLoss: 5, TimberbornResourceKind.StockpileResource),
-            buildingAdapter.CreateSource(0, 0, 0, fuel: 12, flammability: 1, heatLoss: 4),
+            resourceAdapter.CreateSource(0, 0, 0, fuel: 4, flammability: 2, TimberbornResourceKind.StockpileResource),
+            buildingAdapter.CreateSource(0, 0, 0, fuel: 12, flammability: 1 ),
             waterAdapter.CreateSource(0, 0, 0, water: 3),
-            resourceAdapter.CreateSource(1, 1, 0, fuel: 8, flammability: 3, heatLoss: 2, TimberbornResourceKind.Vegetation),
+            resourceAdapter.CreateSource(1, 1, 0, fuel: 8, flammability: 3, TimberbornResourceKind.Vegetation),
         ];
         TimberbornCellSource[] reversedSources = orderedSources.Reverse().ToArray();
 
@@ -79,12 +79,12 @@ public sealed class TimberbornFireCellMapperTests
         Assert.Equal(
             new TimberbornMappedCell(
                 0,
-                PackedCell.Pack(fuel: 12, heat: 0, flammability: 1, water: 3, terrain: 1, heatLoss: 4)),
+                PackedCell.Pack(fuel: 12, heat: 0, flammability: 1, water: 3, terrain: 1, burningLevel: 0)),
             ordered[0]);
         Assert.Equal(
             new TimberbornMappedCell(
                 3,
-                PackedCell.Pack(fuel: 8, heat: 0, flammability: 3, water: 0, terrain: 1, heatLoss: 2)),
+                PackedCell.Pack(fuel: 8, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0)),
             ordered[1]);
     }
 
@@ -99,11 +99,11 @@ public sealed class TimberbornFireCellMapperTests
         TimberbornBuildingAdapter buildingAdapter = new();
         TimberbornResourceAdapter resourceAdapter = new();
         TimberbornCellSource materialSource = selectedMaterial == "building"
-            ? buildingAdapter.CreateSource(0, 0, 0, fuel: 11, flammability: 2, heatLoss: 5)
-            : resourceAdapter.CreateSource(0, 0, 0, fuel: 7, flammability: 3, heatLoss: 2, TimberbornResourceKind.Vegetation);
+            ? buildingAdapter.CreateSource(0, 0, 0, fuel: 11, flammability: 2 )
+            : resourceAdapter.CreateSource(0, 0, 0, fuel: 7, flammability: 3, TimberbornResourceKind.Vegetation);
         ushort expectedCell = selectedMaterial == "building"
-            ? PackedCell.Pack(fuel: 11, heat: 0, flammability: 2, water: 2, terrain: 1, heatLoss: 5)
-            : PackedCell.Pack(fuel: 7, heat: 0, flammability: 3, water: 2, terrain: 1, heatLoss: 2);
+            ? PackedCell.Pack(fuel: 11, heat: 0, flammability: 2, water: 2, terrain: 1, burningLevel: 0)
+            : PackedCell.Pack(fuel: 7, heat: 0, flammability: 3, water: 2, terrain: 1, burningLevel: 0);
 
         IReadOnlyList<TimberbornMappedCell> cells = mapper.CreateMappedCells(
             grid,
@@ -138,7 +138,7 @@ public sealed class TimberbornFireCellMapperTests
         Assert.Equal(
             new TimberbornMappedCell(
                 0,
-                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 2, terrain: 1, heatLoss: 7)),
+                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 2, terrain: 1, burningLevel: 0)),
             cell);
     }
 
@@ -162,7 +162,7 @@ public sealed class TimberbornFireCellMapperTests
         Assert.Equal(
             new TimberbornMappedCell(
                 0,
-                PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 3, terrain: 1, heatLoss: 3)),
+                PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 3, terrain: 1, burningLevel: 0)),
             cell);
     }
 
@@ -202,7 +202,7 @@ public sealed class TimberbornFireCellMapperTests
 
         Assert.Equal([12, 13, 21, 22], cells.Select(static cell => cell.CellIndex).ToArray());
         Assert.All(cells, static cell => Assert.Equal(
-            PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, heatLoss: 3),
+            PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, burningLevel: 0),
             cell.PackedCell));
     }
 
@@ -218,12 +218,12 @@ public sealed class TimberbornFireCellMapperTests
             grid,
             [
                 waterAdapter.CreateSource(2, 0, 0, water: 2),
-                buildingAdapter.CreateSource(1, 0, 0, fuel: 20, flammability: 9, heatLoss: 9),
+                buildingAdapter.CreateSource(1, 0, 0, fuel: 20, flammability: 9 ),
             ]);
 
         Assert.Equal([1, 2], changes.Select(static change => change.CellIndex).ToArray());
-        Assert.Equal(PackedCell.Pack(fuel: 15, heat: 0, flammability: 3, water: 0, terrain: 1, heatLoss: 7), changes[0].SetCell);
-        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 2, terrain: 0, heatLoss: 7), changes[1].SetCell);
+        Assert.Equal(PackedCell.Pack(fuel: 15, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), changes[0].SetCell);
+        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 2, terrain: 0, burningLevel: 0), changes[1].SetCell);
         Assert.All(changes, static change =>
         {
             Assert.Null(change.AddFuel);

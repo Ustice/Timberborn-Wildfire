@@ -62,12 +62,12 @@ public sealed class CliScenarioTests
     [InlineData("sparse-forest")]
     [InlineData("building-cluster")]
     [InlineData("mixed-terrain")]
-    public void ScenariosProducePackedCellsWithAnIgnition(string name)
+    public void ScenariosProducePackedCellsWithInjectedHeat(string name)
     {
         Scenario scenario = ScenarioCatalog.Build(CliOptions.Parse(["--scenario=" + name, "--seed=99"]));
 
         Assert.Equal(scenario.Grid.CellCount, scenario.Cells.Length);
-        Assert.Contains(scenario.Cells, PackedCell.IsBurning);
+        Assert.Contains(scenario.Cells, static cell => PackedCell.Heat(cell) > 0);
     }
 
     [Fact]

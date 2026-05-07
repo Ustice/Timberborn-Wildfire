@@ -1,6 +1,7 @@
 using Timberborn.SingletonSystem;
 using Timberborn.QuickNotificationSystem;
 using Timberborn.EntitySystem;
+using Timberborn.Navigation;
 using Timberborn.SelectionSystem;
 using UnityEngine;
 using Wildfire.Core;
@@ -25,6 +26,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornPlayerFireAlertSink _playerFireAlerts;
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
     private readonly TimberbornBeaverFieldExposureTelemetry _beaverFieldExposureTelemetry;
+    private readonly TimberbornBeaverHazardAvoidanceSink _beaverHazardAvoidance;
     private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
     private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
     private readonly WildfireReleaseSettings _releaseSettings;
@@ -62,7 +64,8 @@ public sealed class TimberbornFireRuntime :
         TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,
         WildfireReleaseSettings releaseSettings,
         TimberbornFireSimParameterPresetState fireSimParameterPresetState,
-        ITimberbornWindProvider windProvider)
+        ITimberbornWindProvider windProvider,
+        INavMeshObjectFactory navMeshObjectFactory)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
@@ -84,6 +87,10 @@ public sealed class TimberbornFireRuntime :
         _beaverFieldExposureTelemetry = new TimberbornBeaverFieldExposureTelemetry(
             new TimberbornEntityRegistryBeaverPositionProvider(entityRegistry),
             visualFieldSurface,
+            _logSink);
+        _beaverHazardAvoidance = new TimberbornBeaverHazardAvoidanceSink(
+            visualFieldSurface,
+            new TimberbornNavMeshBeaverHazardBlocker(navMeshObjectFactory, _logSink),
             _logSink);
         EntitySelectionService selectionService =
             entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService));
@@ -114,6 +121,7 @@ public sealed class TimberbornFireRuntime :
         _pooledFireEffects.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.Clear();
+        _beaverHazardAvoidance.Clear();
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
@@ -497,6 +505,7 @@ public sealed class TimberbornFireRuntime :
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPooledFireEffectCounters pooledEffectCounters = _pooledFireEffects.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
+        TimberbornBeaverHazardAvoidanceCounters beaverHazardAvoidanceCounters = _beaverHazardAvoidance.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
         TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.Sample(
             new FireGrid(fireSystem.Width!.Value, fireSystem.Height!.Value, fireSystem.Depth!.Value),
@@ -711,6 +720,14 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldExposureSkippedNoPositionApi: beaverExposure.SkippedNoPositionApi,
             BeaverFieldExposureSkippedBoundedSampling: beaverExposure.SkippedBoundedSampling,
             BeaverFieldExposureUnavailableReason: beaverExposure.UnavailableReason,
+            BeaverHazardAvoidanceEnabled: beaverHazardAvoidanceCounters.AvoidanceEnabled,
+            BeaverHazardAvoidanceObservedHazardCells: beaverHazardAvoidanceCounters.ObservedHazardCellCount,
+            BeaverHazardAvoidanceRestrictedCells: beaverHazardAvoidanceCounters.RestrictedCellCount,
+            BeaverHazardAvoidanceAppliedRestrictions: beaverHazardAvoidanceCounters.AppliedRestrictionCount,
+            BeaverHazardAvoidanceReleasedRestrictions: beaverHazardAvoidanceCounters.ReleasedRestrictionCount,
+            BeaverHazardAvoidanceSkippedNoSafeApi: beaverHazardAvoidanceCounters.SkippedNoSafeApiCount,
+            BeaverHazardAvoidanceFailedRestrictions: beaverHazardAvoidanceCounters.FailedRestrictionCount,
+            BeaverHazardAvoidanceLastUpdatedTick: beaverHazardAvoidanceCounters.LastUpdatedTick,
             ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,
             UpdatedVisualRegionCount: pooledEffectCounters.UpdatedVisualRegionCount,
             LastNonZeroUpdatedVisualRegionCount: pooledEffectCounters.LastNonZeroUpdatedVisualRegionCount,
@@ -884,7 +901,7 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert");
         if (_buildingBurnoutConsequenceApi is not null)
         {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause");
+            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_access_block");
         }
         if (_burnDamageService is not null)
         {
@@ -935,7 +952,10 @@ public sealed class TimberbornFireRuntime :
     {
         return new TimberbornFireDeltaConsumerSinks(
             debugVisualSink: _debugVisualSink,
-            visualEffectSink: new TimberbornCompositeFireVisualEffectSink(_gpuFieldRenderer, _pooledFireEffects),
+            visualEffectSink: new TimberbornCompositeFireVisualEffectSink(
+                _gpuFieldRenderer,
+                _pooledFireEffects,
+                _beaverHazardAvoidance),
             alertSink: _playerFireAlerts,
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
                 ? null

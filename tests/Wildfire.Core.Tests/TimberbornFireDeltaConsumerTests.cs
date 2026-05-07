@@ -9,9 +9,9 @@ public sealed class TimberbornFireDeltaConsumerTests
     public void FromDeltaClassifiesBurningTransitionsAndFuelDepletion()
     {
         TimberbornFireCellDeltaDecision started = TimberbornFireCellDeltaDecision.FromDelta(
-            new CellDelta(4, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10)));
+            new CellDelta(4, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10, burningLevel: 1)));
         TimberbornFireCellDeltaDecision spent = TimberbornFireCellDeltaDecision.FromDelta(
-            new CellDelta(5, Cell(fuel: 2, heat: 10), Cell(fuel: 0, heat: 10)));
+            new CellDelta(5, Cell(fuel: 2, heat: 10, burningLevel: 1), Cell(fuel: 0, heat: 10)));
 
         Assert.True(started.StartedBurning);
         Assert.False(started.FuelDepleted);
@@ -71,9 +71,9 @@ public sealed class TimberbornFireDeltaConsumerTests
         TimberbornFireDeltaConsumerSummary summary = consumer.Consume(
             22,
             [
-                new CellDelta(1, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10)),
+                new CellDelta(1, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10, burningLevel: 1)),
                 new CellDelta(2, Cell(fuel: 4, heat: 2, water: 0), Cell(fuel: 4, heat: 2, water: 2)),
-                new CellDelta(3, Cell(fuel: 2, heat: 10), Cell(fuel: 0, heat: 10)),
+                new CellDelta(3, Cell(fuel: 2, heat: 10, burningLevel: 1), Cell(fuel: 0, heat: 10)),
             ]);
 
         Assert.Equal(3, summary.ChangedCellCount);
@@ -134,7 +134,7 @@ public sealed class TimberbornFireDeltaConsumerTests
 
         TimberbornFireDeltaConsumerSummary summary = consumer.Consume(
             27,
-            [new CellDelta(1, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10))]);
+            [new CellDelta(1, Cell(fuel: 3, heat: 8), Cell(fuel: 3, heat: 10, burningLevel: 1))]);
 
         Assert.Equal(1, summary.VisualEffectEventCount);
         Assert.Equal(1, summary.VisualEffectFailureCount);
@@ -304,9 +304,9 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(0, consumer.LastPositiveWaterChangedCount);
     }
 
-    private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int heatLoss = 0)
+    private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int burningLevel = 0)
     {
-        return PackedCell.Pack(fuel, heat, flammability, water, terrain, heatLoss);
+        return PackedCell.Pack(fuel, heat, flammability, water, terrain, burningLevel);
     }
 
     private sealed class RecordingFireDeltaSinks :

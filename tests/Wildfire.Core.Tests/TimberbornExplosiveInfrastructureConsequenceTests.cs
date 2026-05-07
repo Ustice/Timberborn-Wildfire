@@ -302,7 +302,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
 
     private static ushort Cell(int heat)
     {
-        return PackedCell.Pack(fuel: 0, heat, flammability: 0, water: 0, terrain: 1, heatLoss: 0);
+        return PackedCell.Pack(fuel: 0, heat, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
     }
 
     private sealed class RecordingExplosiveTargetApi(

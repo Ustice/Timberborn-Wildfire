@@ -815,7 +815,6 @@ public sealed class TimberbornComputeFireSimulator :
         _shader.SetInt("FireBurnHeatBase", unchecked((int)_parameters.FireBurnHeatBase));
         _shader.SetInt("FireFuelHeatWeight", unchecked((int)_parameters.FireFuelHeatWeight));
         _shader.SetInt("FireCoolingBase", unchecked((int)_parameters.FireCoolingBase));
-        _shader.SetInt("FireHeatLossCoolingDivisor", unchecked((int)_parameters.FireHeatLossCoolingDivisor));
         _shader.SetInt("FireFuelBurnDownPressureNumerator", unchecked((int)_parameters.FireFuelBurnDownPressureNumerator));
         _shader.SetInt("FireFuelBurnDownPressureDenominator", unchecked((int)_parameters.FireFuelBurnDownPressureDenominator));
         _shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)_parameters.FireFuelBurnDownRollSeed));
@@ -895,7 +894,7 @@ public sealed class TimberbornComputeFireSimulator :
         mask |= change.SetFuel.HasValue ? 1u << 2 : 0u;
         mask |= change.SetHeat.HasValue ? 1u << 3 : 0u;
         mask |= change.SetFlammability.HasValue ? 1u << 4 : 0u;
-        mask |= change.SetHeatLoss.HasValue ? 1u << 5 : 0u;
+        mask |= change.SetBurningLevel.HasValue ? 1u << 5 : 0u;
         mask |= change.SetTerrain.HasValue ? 1u << 6 : 0u;
         return mask;
     }
@@ -913,7 +912,7 @@ public sealed class TimberbornComputeFireSimulator :
             (Clamp(change.SetFuel, 15u) << 18) |
             (Clamp(change.SetHeat, 15u) << 22) |
             (Clamp(change.SetFlammability, 3u) << 26) |
-            (Clamp(change.SetHeatLoss, 7u) << 28) |
+            (Clamp(change.SetBurningLevel, 7u) << 28) |
             (Clamp(change.SetTerrain, 1u) << 31);
     }
 

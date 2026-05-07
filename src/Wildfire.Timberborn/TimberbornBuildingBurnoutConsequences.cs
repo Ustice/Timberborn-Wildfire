@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
+using Timberborn.Navigation;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -26,15 +28,28 @@ public sealed class TimberbornPausableBuildingBurnoutConsequenceApi :
         PausableBuilding[] pausableBuildings = _blockService
             .GetObjectsWithComponentAt<PausableBuilding>(coordinates)
             .ToArray();
-        PausableBuilding[] buildingsToPause = consequence.ShouldApplyBurnout
-            ? pausableBuildings.Where(static building => !building.Paused).ToArray()
-            : Array.Empty<PausableBuilding>();
+        BlockObject? blockObject = _blockService
+            .GetObjectsWithComponentAt<BlockObject>(coordinates)
+            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+            .FirstOrDefault();
+        Accessible[] accessiblesToBlock = consequence.ShouldApplyBurnout
+            ? (blockObject is null
+                ? Array.Empty<Accessible>()
+                : GetBlockableAccessibles(blockObject)
+                    .Where(static accessible => accessible.Accesses.Count > 0)
+                    .ToArray())
+            : Array.Empty<Accessible>();
 
-        Array.ForEach(buildingsToPause, static building => building.Pause());
+        Accessible[] uniqueAccessiblesToBlock = accessiblesToBlock
+            .GroupBy(static accessible => RuntimeHelpers.GetHashCode(accessible))
+            .Select(static group => group.First())
+            .ToArray();
+
+        Array.ForEach(uniqueAccessiblesToBlock, static accessible => accessible.ClearAccesses());
 
         return new TimberbornBuildingBurnoutConsequenceResult(
             MatchedBuildingCell: pausableBuildings.Length > 0,
-            AppliedConsequence: buildingsToPause.Length > 0);
+            AppliedConsequence: uniqueAccessiblesToBlock.Length > 0);
     }
 
     public TimberbornQaBuildingBurnoutStimulusTarget FindTarget(FireGrid grid)
@@ -49,6 +64,15 @@ public sealed class TimberbornPausableBuildingBurnoutConsequenceApi :
         return _blockService
             .GetObjectsWithComponentAt<PausableBuilding>(new Vector3Int(target.X, target.Y, target.Z))
             .Any(static building => !building.Paused);
+    }
+
+    private static Accessible[] GetBlockableAccessibles(BlockObject blockObject)
+    {
+        return blockObject.GetComponentsAllocating<Accessible>()
+            .Concat(blockObject.Transform.GetComponentsInChildren<Accessible>(includeInactive: true))
+            .GroupBy(static accessible => RuntimeHelpers.GetHashCode(accessible))
+            .Select(static group => group.First())
+            .ToArray();
     }
 }
 

@@ -25,7 +25,6 @@ public sealed class TimberbornFireSystem : IDisposable
     private const byte QaIgnitionHeat = 15;
     private const byte QaIgnitionFuel = 15;
     private const byte QaIgnitionFlammability = 3;
-    private const byte QaIgnitionHeatLoss = 1;
     private const byte QaIgnitionTerrain = 1;
     private const byte QaIgnitionWater = 0;
     private const int QaIgnitionPegDispatchTicks = 12;
@@ -36,7 +35,7 @@ public sealed class TimberbornFireSystem : IDisposable
         flammability: QaIgnitionFlammability,
         water: QaIgnitionWater,
         terrain: QaIgnitionTerrain,
-        heatLoss: QaIgnitionHeatLoss);
+        burningLevel: 0);
     private const byte QaSpentFuel = 0;
     private const byte QaWaterSuppressionWater = 3;
 
@@ -891,7 +890,7 @@ public sealed class TimberbornFireSystem : IDisposable
             flammability: QaIgnitionFlammability,
             water: QaIgnitionWater,
             terrain: QaIgnitionTerrain,
-            heatLoss: QaIgnitionHeatLoss);
+            burningLevel: 0);
 
         return new TimberbornQaDirectConsequenceTarget(
             kind,
@@ -921,12 +920,7 @@ public sealed class TimberbornFireSystem : IDisposable
             .Take(25)
             .Select(static target => new FireSimChange(
                 CellIndex: target.CellIndex,
-                SetWater: QaIgnitionWater,
-                SetFuel: QaIgnitionFuel,
-                SetHeat: QaIgnitionHeat,
-                SetFlammability: QaIgnitionFlammability,
-                SetHeatLoss: QaIgnitionHeatLoss,
-                SetTerrain: QaIgnitionTerrain))
+                SetHeat: QaIgnitionHeat))
             .ToArray();
 
         if (changes.Length == 0)
@@ -994,7 +988,7 @@ public sealed class TimberbornFireSystem : IDisposable
 
         int cycleNumber = state.CompletedCycleCount + 1;
         RegisterChange(
-            new FireSimChange(CellIndex: state.CellIndex, SetCell: state.SetCell),
+            new FireSimChange(CellIndex: state.CellIndex, SetHeat: QaIgnitionHeat),
             "qa_delta_stimulus_sustained_heat",
             shouldLog: false);
         _qaDeltaStimulusSustainedHeatState = state with
@@ -1007,7 +1001,7 @@ public sealed class TimberbornFireSystem : IDisposable
             $"x={state.X} " +
             $"y={state.Y} " +
             $"z={state.Z} " +
-            $"set_cell={state.SetCell} " +
+            $"set_heat={QaIgnitionHeat} " +
             $"target_source={TimberbornQaCommandBridge.FormatToken(state.TargetSource)} " +
             $"cycle={cycleNumber} " +
             $"requested_cycles={state.RequestedCycleCount} " +
@@ -1173,7 +1167,7 @@ public sealed class TimberbornFireSystem : IDisposable
             flammability: probeFlammability,
             water: 0,
             terrain: 1,
-            heatLoss: QaIgnitionHeatLoss);
+            burningLevel: 0);
 
         return new TimberbornImportedFieldTarget(
             cellIndex,
@@ -1264,23 +1258,17 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         FireSimChange primeChange = new(
             CellIndex: target.FieldTarget.CellIndex,
-            SetWater: QaIgnitionWater,
             SetFuel: target.ProbeFuel,
             SetHeat: QaIgnitionHeat,
-            SetFlammability: target.ProbeFlammability,
-            SetHeatLoss: QaIgnitionHeatLoss,
-            SetTerrain: QaIgnitionTerrain);
+            SetFlammability: target.ProbeFlammability);
         RegisterChange(primeChange, source, shouldLog: false);
         _qaBurnDamageSpendChanges = new[]
         {
             new FireSimChange(
                 CellIndex: target.FieldTarget.CellIndex,
-                SetWater: QaIgnitionWater,
                 SetFuel: target.SpendFuel,
                 SetHeat: QaIgnitionHeat,
-                SetFlammability: target.ProbeFlammability,
-                SetHeatLoss: QaIgnitionHeatLoss,
-                SetTerrain: QaIgnitionTerrain),
+                SetFlammability: target.ProbeFlammability),
         };
         LogRegisteredChanges(source, 1);
         _logSink.Info(
@@ -1303,23 +1291,17 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         FireSimChange primeChange = new(
             CellIndex: target.CellIndex,
-            SetWater: QaIgnitionWater,
             SetFuel: QaIgnitionFuel,
             SetHeat: QaIgnitionHeat,
-            SetFlammability: QaIgnitionFlammability,
-            SetHeatLoss: QaIgnitionHeatLoss,
-            SetTerrain: QaIgnitionTerrain);
+            SetFlammability: QaIgnitionFlammability);
         RegisterChange(primeChange, source, shouldLog: false);
         _qaBurnDamageSpendChanges = new[]
         {
             new FireSimChange(
                 CellIndex: target.CellIndex,
-                SetWater: QaIgnitionWater,
                 SetFuel: (byte)Math.Max(0, QaIgnitionFuel - 1),
                 SetHeat: QaIgnitionHeat,
-                SetFlammability: QaIgnitionFlammability,
-                SetHeatLoss: QaIgnitionHeatLoss,
-                SetTerrain: QaIgnitionTerrain),
+                SetFlammability: QaIgnitionFlammability),
         };
         LogRegisteredChanges(source, 1);
         _logSink.Info(
@@ -1426,7 +1408,7 @@ public sealed class TimberbornFireSystem : IDisposable
             .Where(delta => delta.CellIndex == _burnDurationProofState.CellIndex)
             .ToArray();
         bool hasBurnEvidence = targetDeltas
-            .Any(static delta => PackedCell.IsBurning(delta.OldCell) || PackedCell.IsBurning(delta.NewCell));
+            .Any(static delta => PackedCell.BurningLevel(delta.OldCell) > 0 || PackedCell.BurningLevel(delta.NewCell) > 0);
         bool hasFuelDepletion = targetDeltas
             .Any(static delta => PackedCell.Fuel(delta.OldCell) > 0 && PackedCell.Fuel(delta.NewCell) == 0);
         uint? burnStartTick = _burnDurationProofState.BurnStartTick;

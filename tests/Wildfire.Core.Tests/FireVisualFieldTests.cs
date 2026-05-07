@@ -16,7 +16,7 @@ public sealed class FireVisualFieldTests
     [Fact]
     public void VisualSampleDerivesFireSmokeAndVisibilityFromPackedBurningCell()
     {
-        ushort cell = PackedCell.Pack(fuel: 8, heat: 12, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+        ushort cell = PackedCell.Pack(fuel: 8, heat: 12, flammability: 3, water: 0, terrain: 1, burningLevel: 1);
 
         FireVisualSample sample = FireVisualField.FromPackedCell(cell);
 
@@ -29,7 +29,7 @@ public sealed class FireVisualFieldTests
     [Fact]
     public void VisualSampleUsesHeatForSmokeOnFueledCells()
     {
-        ushort cell = PackedCell.Pack(fuel: 15, heat: 9, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+        ushort cell = PackedCell.Pack(fuel: 15, heat: 9, flammability: 3, water: 0, terrain: 1, burningLevel: 1);
 
         FireVisualSample sample = FireVisualField.FromPackedCell(cell);
 
@@ -42,7 +42,7 @@ public sealed class FireVisualFieldTests
     [Fact]
     public void VisualSampleUsesRuntimeParameters()
     {
-        ushort cell = PackedCell.Pack(fuel: 15, heat: 9, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+        ushort cell = PackedCell.Pack(fuel: 15, heat: 9, flammability: 3, water: 0, terrain: 1, burningLevel: 1);
         FireSimParameters parameters = FireSimParameters.Default with
         {
             VisualSmokeHeatWeight = 0.1f,
@@ -59,7 +59,7 @@ public sealed class FireVisualFieldTests
     [Fact]
     public void VisualSampleShowsLightSmokeForLowHeatFuelBeforeIgnition()
     {
-        ushort cell = PackedCell.Pack(fuel: 12, heat: 4, flammability: 2, water: 0, terrain: 1, heatLoss: 1);
+        ushort cell = PackedCell.Pack(fuel: 12, heat: 4, flammability: 2, water: 0, terrain: 1, burningLevel: 0);
 
         FireVisualSample sample = FireVisualField.FromPackedCell(cell);
 
@@ -71,7 +71,7 @@ public sealed class FireVisualFieldTests
     [Fact]
     public void VisualSampleDoesNotShowSmokeForHotWetTerrainWithoutFuel()
     {
-        ushort cell = PackedCell.Pack(fuel: 0, heat: 4, flammability: 2, water: 2, terrain: 1, heatLoss: 1);
+        ushort cell = PackedCell.Pack(fuel: 0, heat: 4, flammability: 2, water: 2, terrain: 1, burningLevel: 0);
 
         FireVisualSample sample = FireVisualField.FromPackedCell(cell);
 
@@ -81,9 +81,9 @@ public sealed class FireVisualFieldTests
     [Fact]
     public void VisualSampleApproximatesAshOnlyFromTerrainLowFuelAndResidualHeat()
     {
-        ushort spentTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 1, heatLoss: 2);
-        ushort coldBareTerrain = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 2);
-        ushort nonTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 0, heatLoss: 2);
+        ushort spentTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
+        ushort coldBareTerrain = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
+        ushort nonTerrain = PackedCell.Pack(fuel: 0, heat: 6, flammability: 0, water: 0, terrain: 0, burningLevel: 0);
 
         FireVisualSample spentSample = FireVisualField.FromPackedCell(spentTerrain);
 
@@ -118,7 +118,7 @@ public sealed class FireVisualFieldTests
         Assert.Contains("uint lockedFuel = min(fuel, water * FireWaterFuelLock);", shader);
         Assert.Contains("uint effectiveFuel = fuel - lockedFuel;", shader);
         Assert.Contains("bool canBurn = terrain == 1u && effectiveFuel > 0u;", shader);
-        Assert.Contains("bool wasIgnitedBeforeNeighborExchange = terrain == 1u && fuel > 0u && heat >= ignitionThreshold;", shader);
+        Assert.Contains("bool wasIgnitedBeforeNeighborExchange = burningLevel > 0u;", shader);
         Assert.Contains("if (wasIgnitedBeforeNeighborExchange && heat < ignitionThreshold)", shader);
         Assert.Contains("if (wasIgnitedBeforeNeighborExchange && fuel > 0u && heat < ignitionThreshold)", shader);
         Assert.Contains("uint fuelHeat = ((effectiveFuel * FireFuelHeatWeight) + 14u) / 15u;", shader);
@@ -138,7 +138,7 @@ public sealed class FireVisualFieldTests
         Assert.DoesNotContain("FireRetainedHeatWeight", shader);
         Assert.DoesNotContain("FireSpreadHeatWeight", shader);
         Assert.DoesNotContain("FireBurningNeighborDirectHeat", shader);
-        Assert.Contains("uint FireHeatLossCoolingDivisor;", shader);
+        Assert.Contains("uint BurningLevel(uint cell)", shader);
         Assert.Contains("WriteVisualField(index, newCell, atmospheric);", shader);
         Assert.Contains("if (canBurn && heat >= ignitionThreshold)", shader);
         Assert.DoesNotContain("IgnitionPressure", shader);

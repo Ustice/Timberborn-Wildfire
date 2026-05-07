@@ -186,17 +186,17 @@ public static class ScenarioCatalog
         return value > 0 ? value : throw new ArgumentException($"{name} must be greater than zero.");
     }
 
-    private static ushort Bare() => PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 2);
+    private static ushort Bare() => PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
 
-    private static ushort Grass() => PackedCell.Pack(fuel: 7, heat: 0, flammability: 2, water: 0, terrain: 1, heatLoss: 2);
+    private static ushort Grass() => PackedCell.Pack(fuel: 7, heat: 0, flammability: 2, water: 0, terrain: 1, burningLevel: 0);
 
-    private static ushort Brush() => PackedCell.Pack(fuel: 9, heat: 0, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+    private static ushort Brush() => PackedCell.Pack(fuel: 9, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
 
-    private static ushort Timber() => PackedCell.Pack(fuel: 12, heat: 0, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+    private static ushort Timber() => PackedCell.Pack(fuel: 12, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
 
-    private static ushort Building() => PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, heatLoss: 3);
+    private static ushort Building() => PackedCell.Pack(fuel: 15, heat: 0, flammability: 1, water: 0, terrain: 1, burningLevel: 0);
 
-    private static ushort Water() => PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 3, terrain: 1, heatLoss: 5);
+    private static ushort Water() => PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 3, terrain: 1, burningLevel: 0);
 }
 
 public sealed record Scenario(string Name, uint Seed, FireGrid Grid, ushort[] Cells);

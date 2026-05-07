@@ -772,12 +772,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(change.SetCell);
         Assert.Null(change.AddHeat);
         Assert.Null(change.AddFuel);
-        Assert.Equal((byte)0, change.SetWater);
-        Assert.Equal((byte)15, change.SetFuel);
+        Assert.Null(change.SetWater);
+        Assert.Null(change.SetFuel);
         Assert.Equal((byte)15, change.SetHeat);
-        Assert.Equal((byte)3, change.SetFlammability);
-        Assert.Equal((byte)1, change.SetHeatLoss);
-        Assert.Equal((byte)1, change.SetTerrain);
+        Assert.Null(change.SetFlammability);
+        Assert.Null(change.SetBurningLevel);
+        Assert.Null(change.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
@@ -817,7 +817,8 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(12, result.SustainedHeatRemainingCycleCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(beaverCellIndex, change.CellIndex);
-        Assert.Equal((ushort)13311, change.SetCell);
+        Assert.Null(change.SetCell);
+        Assert.Equal((byte)15, change.SetHeat);
     }
 
     [Fact]
@@ -884,12 +885,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(result.SustainedHeatRemainingCycleCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(cropCellIndex, change.CellIndex);
-        Assert.Equal((byte)0, change.SetWater);
+        Assert.Null(change.SetWater);
         Assert.Equal((byte)1, change.SetFuel);
         Assert.Equal((byte)15, change.SetHeat);
         Assert.Equal((byte)3, change.SetFlammability);
-        Assert.Equal((byte)1, change.SetHeatLoss);
-        Assert.Equal((byte)1, change.SetTerrain);
+        Assert.Null(change.SetBurningLevel);
+        Assert.Null(change.SetTerrain);
     }
 
     [Fact]
@@ -935,12 +936,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(2, result.RegisteredCropBurnTargetCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(selectedCropCellIndex, change.CellIndex);
-        Assert.Equal((byte)0, change.SetWater);
+        Assert.Null(change.SetWater);
         Assert.Equal((byte)1, change.SetFuel);
         Assert.Equal((byte)15, change.SetHeat);
         Assert.Equal((byte)3, change.SetFlammability);
-        Assert.Equal((byte)1, change.SetHeatLoss);
-        Assert.Equal((byte)1, change.SetTerrain);
+        Assert.Null(change.SetBurningLevel);
+        Assert.Null(change.SetTerrain);
     }
 
     [Fact]
@@ -1015,7 +1016,8 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.All(simulator.RegisteredChanges, change =>
         {
             Assert.Equal(queued.CellIndex, change.CellIndex);
-            Assert.Equal((ushort)13311, change.SetCell);
+            Assert.Null(change.SetCell);
+            Assert.Equal((byte)15, change.SetHeat);
         });
         Assert.Equal(12, state.RequestedCycleCount);
         Assert.Equal(12, state.CompletedCycleCount);
@@ -1138,12 +1140,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(2, result.QueuedHeatChangeCount);
         FireSimChange primeChange = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(38, primeChange.CellIndex);
-        Assert.Equal((byte)0, primeChange.SetWater);
+        Assert.Null(primeChange.SetWater);
         Assert.Equal((byte)6, primeChange.SetFuel);
         Assert.Equal((byte)15, primeChange.SetHeat);
         Assert.Equal((byte)2, primeChange.SetFlammability);
-        Assert.Equal((byte)1, primeChange.SetHeatLoss);
-        Assert.Equal((byte)1, primeChange.SetTerrain);
+        Assert.Null(primeChange.SetBurningLevel);
+        Assert.Null(primeChange.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
 
         fireSystem.Tick();
@@ -1156,12 +1158,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(2, simulator.RegisteredChanges.Count);
         FireSimChange spendChange = simulator.RegisteredChanges[1];
         Assert.Equal(38, spendChange.CellIndex);
-        Assert.Equal((byte)0, spendChange.SetWater);
+        Assert.Null(spendChange.SetWater);
         Assert.Equal((byte)5, spendChange.SetFuel);
         Assert.Equal((byte)15, spendChange.SetHeat);
         Assert.Equal((byte)2, spendChange.SetFlammability);
-        Assert.Equal((byte)1, spendChange.SetHeatLoss);
-        Assert.Equal((byte)1, spendChange.SetTerrain);
+        Assert.Null(spendChange.SetBurningLevel);
+        Assert.Null(spendChange.SetTerrain);
         Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
@@ -1313,12 +1315,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(2, result.QueuedHeatChangeCount);
         FireSimChange primeChange = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(expectedCellIndex, primeChange.CellIndex);
-        Assert.Equal((byte)0, primeChange.SetWater);
+        Assert.Null(primeChange.SetWater);
         Assert.Equal((byte)15, primeChange.SetFuel);
         Assert.Equal((byte)15, primeChange.SetHeat);
         Assert.Equal((byte)3, primeChange.SetFlammability);
-        Assert.Equal((byte)1, primeChange.SetHeatLoss);
-        Assert.Equal((byte)1, primeChange.SetTerrain);
+        Assert.Null(primeChange.SetBurningLevel);
+        Assert.Null(primeChange.SetTerrain);
         Assert.Equal(0, explosiveApi.NativeTriggerCallCount);
         Assert.Equal(0, detonatorApi.DisableCallCount);
         Assert.Equal(0, tunnelApi.ExplodeCallCount);
@@ -1447,11 +1449,11 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.All(simulator.RegisteredChanges, static change =>
         {
             Assert.Equal((byte)15, change.SetHeat);
-            Assert.Equal((byte)15, change.SetFuel);
-            Assert.Equal((byte)3, change.SetFlammability);
-            Assert.Equal((byte)1, change.SetHeatLoss);
-            Assert.Equal((byte)1, change.SetTerrain);
-            Assert.Equal((byte)0, change.SetWater);
+            Assert.Null(change.SetFuel);
+            Assert.Null(change.SetFlammability);
+            Assert.Null(change.SetBurningLevel);
+            Assert.Null(change.SetTerrain);
+            Assert.Null(change.SetWater);
         });
         Assert.Equal(simulator.RegisteredChanges.Count, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
@@ -1538,7 +1540,7 @@ public sealed class TimberbornQaCommandBridgeTests
             Assert.Null(change.AddFuel);
             Assert.Null(change.SetWater);
             Assert.Null(change.SetFlammability);
-            Assert.Null(change.SetHeatLoss);
+            Assert.Null(change.SetBurningLevel);
             Assert.Null(change.SetTerrain);
             Assert.Null(change.SetCell);
         });
@@ -1571,7 +1573,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(change.SetFuel);
         Assert.Null(change.SetHeat);
         Assert.Null(change.SetFlammability);
-        Assert.Null(change.SetHeatLoss);
+        Assert.Null(change.SetBurningLevel);
         Assert.Null(change.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
@@ -1615,7 +1617,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(change.SetFuel);
         Assert.Equal((byte)15, change.SetHeat);
         Assert.Null(change.SetFlammability);
-        Assert.Null(change.SetHeatLoss);
+        Assert.Null(change.SetBurningLevel);
         Assert.Null(change.SetTerrain);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
         Assert.Equal(target, fireSystem.BurnDurationProofState.Target);
@@ -1655,10 +1657,10 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void BurnDurationQaProofRecordsStartDepletionAndElapsedTicksFromSimulatorDeltas()
     {
-        ushort coldCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 1);
-        ushort burningFuel4 = PackedCell.Pack(fuel: 4, heat: 15, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
-        ushort burningFuel3 = PackedCell.Pack(fuel: 3, heat: 15, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
-        ushort depletedCell = PackedCell.Pack(fuel: 0, heat: 15, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+        ushort coldCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
+        ushort burningFuel4 = PackedCell.Pack(fuel: 4, heat: 15, flammability: 3, water: 0, terrain: 1, burningLevel: 1);
+        ushort burningFuel3 = PackedCell.Pack(fuel: 3, heat: 15, flammability: 3, water: 0, terrain: 1, burningLevel: 1);
+        ushort depletedCell = PackedCell.Pack(fuel: 0, heat: 15, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(37, coldCell, burningFuel4)], Tick: 5));
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(37, burningFuel4, burningFuel3)], Tick: 6));
@@ -1686,9 +1688,9 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void BurnDurationQaProofRecordsLowFuelDepletionBehindSustainedHeatDelta()
     {
-        ushort lowFuelWetCrop = PackedCell.Pack(fuel: 4, heat: 12, flammability: 2, water: 1, terrain: 1, heatLoss: 2);
-        ushort heatPeggedLowFuelCrop = PackedCell.SetHeat(lowFuelWetCrop, 15);
-        ushort depletedCrop = PackedCell.Pack(fuel: 0, heat: 11, flammability: 2, water: 0, terrain: 1, heatLoss: 2);
+        ushort lowFuelWetCrop = PackedCell.Pack(fuel: 4, heat: 12, flammability: 2, water: 1, terrain: 1, burningLevel: 0);
+        ushort heatPeggedLowFuelCrop = PackedCell.SetBurningLevel(PackedCell.SetHeat(lowFuelWetCrop, 15), 1);
+        ushort depletedCrop = PackedCell.Pack(fuel: 0, heat: 11, flammability: 2, water: 0, terrain: 1, burningLevel: 0);
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         simulator.TickResults.Enqueue(new GpuFireStepResult(
             [
@@ -1716,9 +1718,9 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void BurnDurationQaProofRecordsLowFuelDepletionBeforeSustainedHeatDelta()
     {
-        ushort lowFuelWetCrop = PackedCell.Pack(fuel: 4, heat: 12, flammability: 2, water: 1, terrain: 1, heatLoss: 2);
-        ushort heatPeggedLowFuelCrop = PackedCell.SetHeat(lowFuelWetCrop, 15);
-        ushort depletedCrop = PackedCell.Pack(fuel: 0, heat: 11, flammability: 2, water: 0, terrain: 1, heatLoss: 2);
+        ushort lowFuelWetCrop = PackedCell.Pack(fuel: 4, heat: 12, flammability: 2, water: 1, terrain: 1, burningLevel: 0);
+        ushort heatPeggedLowFuelCrop = PackedCell.SetBurningLevel(PackedCell.SetHeat(lowFuelWetCrop, 15), 1);
+        ushort depletedCrop = PackedCell.Pack(fuel: 0, heat: 11, flammability: 2, water: 0, terrain: 1, burningLevel: 0);
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         simulator.TickResults.Enqueue(new GpuFireStepResult(
             [
@@ -1746,8 +1748,8 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void BurnDurationQaProofReportsTimeoutWhenTargetDoesNotDeplete()
     {
-        ushort coldCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 1);
-        ushort burningFuel9 = PackedCell.Pack(fuel: 9, heat: 15, flammability: 3, water: 0, terrain: 1, heatLoss: 1);
+        ushort coldCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
+        ushort burningFuel9 = PackedCell.Pack(fuel: 9, heat: 15, flammability: 3, water: 0, terrain: 1, burningLevel: 1);
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(38, coldCell, burningFuel9)], Tick: 10));
         simulator.TickResults.Enqueue(new GpuFireStepResult([], Tick: 74));
@@ -1771,7 +1773,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void WaterSuppressionQaStimulusAppliesOnNextCadenceDispatchTick()
     {
-        ushort burningCell = PackedCell.Pack(fuel: 15, heat: 15, flammability: 1, water: 0, terrain: 1, heatLoss: 3);
+        ushort burningCell = PackedCell.Pack(fuel: 15, heat: 15, flammability: 1, water: 0, terrain: 1, burningLevel: 1);
         ushort wetCell = PackedCell.SetWater(burningCell, 3);
         RecordingFireSimulator simulator = new(width: 1, height: 1, depth: 1);
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(0, burningCell, wetCell)], Tick: 1));
@@ -2001,6 +2003,14 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldExposureSkippedNoPositionApi: 51,
             BeaverFieldExposureSkippedBoundedSampling: 52,
             BeaverFieldExposureUnavailableReason: "none",
+            BeaverHazardAvoidanceEnabled: true,
+            BeaverHazardAvoidanceObservedHazardCells: 53,
+            BeaverHazardAvoidanceRestrictedCells: 54,
+            BeaverHazardAvoidanceAppliedRestrictions: 55,
+            BeaverHazardAvoidanceReleasedRestrictions: 56,
+            BeaverHazardAvoidanceSkippedNoSafeApi: 57,
+            BeaverHazardAvoidanceFailedRestrictions: 58,
+            BeaverHazardAvoidanceLastUpdatedTick: 59,
             ActivePooledFireEffectCount: 26,
             UpdatedVisualRegionCount: 27,
             LastNonZeroUpdatedVisualRegionCount: 31,
@@ -2116,6 +2126,14 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_exposure_skipped_no_position_api=51", result.ResultToken);
         Assert.Contains("beaver_field_exposure_skipped_bounded_sampling=52", result.ResultToken);
         Assert.Contains("beaver_field_exposure_unavailable_reason=none", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_enabled=true", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_observed_hazard_cells=53", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_restricted_cells=54", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_applied_restrictions=55", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_released_restrictions=56", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_skipped_no_safe_api=57", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_failed_restrictions=58", result.ResultToken);
+        Assert.Contains("beaver_hazard_avoidance_updated_tick=59", result.ResultToken);
         Assert.Contains("active_pooled_fire_effects=26", result.ResultToken);
         Assert.Contains("updated_visual_regions=27", result.ResultToken);
         Assert.Contains("last_nonzero_updated_visual_regions=31", result.ResultToken);
@@ -2227,7 +2245,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(2u, highPreset.Parameters.FireWaterEvaporationHeat);
         Assert.Equal(0u, highPreset.Parameters.FireWaterBurnPressurePenalty);
         Assert.Equal(0u, highPreset.Parameters.FireCoolingBase);
-        Assert.Equal(16u, highPreset.Parameters.FireHeatLossCoolingDivisor);
         Assert.Equal(2u, highPreset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(1u, highPreset.Parameters.FireFuelBurnDownPressureDenominator);
         Assert.False(TimberbornFireSimParameterPresets.TryGet("FireIgnitionBaseHeat=1", out _));
@@ -2488,7 +2505,6 @@ public sealed class TimberbornQaCommandBridgeTests
             z,
             fuel,
             flammability: 3,
-            heatLoss: 1,
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Tree,
             companionTargetId: (uint)fuel);

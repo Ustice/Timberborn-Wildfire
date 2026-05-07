@@ -222,7 +222,7 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
 
     private static ushort Cell(int fuel)
     {
-        return PackedCell.Pack(fuel, heat: 10, flammability: 3, water: 0, terrain: 1, heatLoss: 0);
+        return PackedCell.Pack(fuel, heat: 10, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
     }
 
     private sealed class RecordingWaterInfrastructureTargetApi(TimberbornWaterInfrastructureFireTarget? target)

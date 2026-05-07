@@ -42,10 +42,9 @@ public readonly record struct TimberbornTerrainCell(bool IsSolid, byte Wetness =
 public readonly record struct TimberbornBuildingCell(
     byte Fuel,
     byte Flammability,
-    byte HeatLoss,
     TimberbornBuildingMaterialKind Kind = TimberbornBuildingMaterialKind.WoodLike);
 
-public readonly record struct TimberbornResourceCell(byte Fuel, byte Flammability, byte HeatLoss, TimberbornResourceKind Kind);
+public readonly record struct TimberbornResourceCell(byte Fuel, byte Flammability, TimberbornResourceKind Kind);
 
 public readonly record struct TimberbornWaterCell(byte Water);
 
@@ -72,8 +71,6 @@ public readonly record struct TimberbornCellSource(
 
 public sealed class TimberbornTerrainAdapter
 {
-    public const byte SolidTerrainHeatLoss = 6;
-
     public static byte QuantizeSoilMoisture(float soilMoisture)
     {
         if (float.IsNaN(soilMoisture) || soilMoisture <= 0f)
@@ -103,14 +100,12 @@ public sealed class TimberbornBuildingAdapter
 {
     public const byte WoodLikeFuel = 15;
     public const byte WoodLikeFlammability = 1;
-    public const byte WoodLikeHeatLoss = 3;
     public const byte NonBurnableFuel = 0;
     public const byte NonBurnableFlammability = 0;
-    public const byte NonBurnableHeatLoss = 7;
 
-    public TimberbornCellSource CreateSource(int x, int y, int z, byte fuel, byte flammability, byte heatLoss)
+    public TimberbornCellSource CreateSource(int x, int y, int z, byte fuel, byte flammability)
     {
-        return CreateSource(x, y, z, fuel, flammability, heatLoss, TimberbornBuildingMaterialKind.WoodLike);
+        return CreateSource(x, y, z, fuel, flammability, TimberbornBuildingMaterialKind.WoodLike);
     }
 
     public TimberbornCellSource CreateSource(
@@ -119,7 +114,6 @@ public sealed class TimberbornBuildingAdapter
         int z,
         byte fuel,
         byte flammability,
-        byte heatLoss,
         TimberbornBuildingMaterialKind kind,
         uint companionTargetId = 0)
     {
@@ -128,7 +122,7 @@ public sealed class TimberbornBuildingAdapter
             : WildfireMaterialClass.Building;
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Building: new TimberbornBuildingCell(fuel, flammability, heatLoss, kind),
+            Building: new TimberbornBuildingCell(fuel, flammability, kind),
             MaterialClass: materialClass,
             CompanionTargetId: companionTargetId);
     }
@@ -141,7 +135,6 @@ public sealed class TimberbornBuildingAdapter
             z,
             WoodLikeFuel,
             WoodLikeFlammability,
-            WoodLikeHeatLoss,
             TimberbornBuildingMaterialKind.WoodLike);
     }
 
@@ -153,7 +146,6 @@ public sealed class TimberbornBuildingAdapter
             z,
             NonBurnableFuel,
             NonBurnableFlammability,
-            NonBurnableHeatLoss,
             TimberbornBuildingMaterialKind.NonBurnable);
     }
 
@@ -174,10 +166,8 @@ public sealed class TimberbornResourceAdapter
 {
     public const byte StockpileResourceFuel = 8;
     public const byte StockpileResourceFlammability = 2;
-    public const byte StockpileResourceHeatLoss = 3;
     public const byte VegetationFuel = 10;
     public const byte VegetationFlammability = 3;
-    public const byte VegetationHeatLoss = 1;
 
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
 
@@ -197,12 +187,11 @@ public sealed class TimberbornResourceAdapter
         int z,
         byte fuel,
         byte flammability,
-        byte heatLoss,
         TimberbornResourceKind kind)
     {
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Resource: new TimberbornResourceCell(fuel, flammability, heatLoss, kind));
+            Resource: new TimberbornResourceCell(fuel, flammability, kind));
     }
 
     public TimberbornCellSource CreateStockpileResourceSource(int x, int y, int z)
@@ -213,7 +202,6 @@ public sealed class TimberbornResourceAdapter
             z,
             StockpileResourceFuel,
             StockpileResourceFlammability,
-            StockpileResourceHeatLoss,
             TimberbornResourceKind.StockpileResource,
             WildfireMaterialClass.Storage);
     }
@@ -227,7 +215,6 @@ public sealed class TimberbornResourceAdapter
             z,
             profile.FuelValue,
             profile.Flammability,
-            StockpileResourceHeatLoss,
             TimberbornResourceKind.StockpileResource,
             WildfireMaterialClass.Storage,
             companionTargetId);
@@ -246,7 +233,6 @@ public sealed class TimberbornResourceAdapter
             z,
             VegetationFuel,
             VegetationFlammability,
-            VegetationHeatLoss,
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Vegetation);
     }
@@ -260,7 +246,6 @@ public sealed class TimberbornResourceAdapter
             z,
             profile.Fuel,
             profile.Flammability,
-            profile.HeatLoss,
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Tree,
             companionTargetId);
@@ -275,7 +260,6 @@ public sealed class TimberbornResourceAdapter
             z,
             profile.Fuel,
             profile.Flammability,
-            profile.HeatLoss,
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Crop,
             companionTargetId);
@@ -287,14 +271,13 @@ public sealed class TimberbornResourceAdapter
         int z,
         byte fuel,
         byte flammability,
-        byte heatLoss,
         TimberbornResourceKind kind,
         WildfireMaterialClass materialClass,
         uint companionTargetId = 0)
     {
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Resource: new TimberbornResourceCell(fuel, flammability, heatLoss, kind),
+            Resource: new TimberbornResourceCell(fuel, flammability, kind),
             MaterialClass: materialClass,
             CompanionTargetId: companionTargetId);
     }
@@ -325,7 +308,7 @@ public sealed class TimberbornWaterAdapter
 
 public sealed class TimberbornFireCellMapper
 {
-    public const ushort EmptyCell = 0xE000;
+    public const ushort EmptyCell = 0x0000;
 
     public ushort[] CreateInitialCells(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
@@ -418,7 +401,7 @@ public sealed class TimberbornFireCellMapper
             material.Flammability,
             water,
             material.Terrain,
-            material.HeatLoss);
+            burningLevel: 0);
     }
 
     private static MaterialContribution SelectMaterial(IReadOnlyList<TimberbornCellSource> sources)
@@ -429,7 +412,6 @@ public sealed class TimberbornFireCellMapper
             .OrderByDescending(static contribution => contribution.Priority)
             .ThenByDescending(static contribution => contribution.Fuel)
             .ThenByDescending(static contribution => contribution.Flammability)
-            .ThenBy(static contribution => contribution.HeatLoss)
             .First();
     }
 
@@ -472,22 +454,16 @@ public sealed class TimberbornFireCellMapper
                 Priority: 1,
                 Fuel: 0,
                 Flammability: 0,
-                Terrain: 1,
-                HeatLoss: TimberbornTerrainAdapter.SolidTerrainHeatLoss);
+                Terrain: 1);
         }
 
         if (source.Resource is { } resource)
         {
-            int heatLoss = resource.Kind == TimberbornResourceKind.Vegetation
-                ? Math.Min(ClampHeatLoss(resource.HeatLoss), 3)
-                : ClampHeatLoss(resource.HeatLoss);
-
             yield return new MaterialContribution(
                 Priority: 2,
                 Fuel: ClampFuel(resource.Fuel),
                 Flammability: ClampFlammability(resource.Flammability),
-                Terrain: 1,
-                HeatLoss: heatLoss);
+                Terrain: 1);
         }
 
         if (source.Building is { } building)
@@ -498,8 +474,7 @@ public sealed class TimberbornFireCellMapper
                     Priority: 3,
                     Fuel: TimberbornBuildingAdapter.NonBurnableFuel,
                     Flammability: TimberbornBuildingAdapter.NonBurnableFlammability,
-                    Terrain: 1,
-                    HeatLoss: TimberbornBuildingAdapter.NonBurnableHeatLoss);
+                    Terrain: 1);
 
                 yield break;
             }
@@ -508,8 +483,7 @@ public sealed class TimberbornFireCellMapper
                 Priority: 3,
                 Fuel: ClampFuel(building.Fuel),
                 Flammability: ClampFlammability(building.Flammability),
-                Terrain: 1,
-                HeatLoss: ClampHeatLoss(building.HeatLoss));
+                Terrain: 1);
         }
     }
 
@@ -529,23 +503,19 @@ public sealed class TimberbornFireCellMapper
 
     private static int ClampWater(int water) => Math.Clamp(water, 0, 3);
 
-    private static int ClampHeatLoss(byte heatLoss) => Math.Clamp((int)heatLoss, 0, 7);
-
     private readonly record struct IndexedSource(int CellIndex, TimberbornCellSource Source);
 
     private readonly record struct MaterialContribution(
         int Priority,
         int Fuel,
         int Flammability,
-        int Terrain,
-        int HeatLoss)
+        int Terrain)
     {
         public static readonly MaterialContribution Empty = new(
             Priority: 0,
             Fuel: 0,
             Flammability: 0,
-            Terrain: 0,
-            HeatLoss: 7);
+            Terrain: 0);
     }
 }
 

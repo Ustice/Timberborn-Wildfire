@@ -72,7 +72,7 @@ static char CharFor(ushort cell)
         return '~';
     }
 
-    if (PackedCell.IsBurning(cell))
+    if (PackedCell.BurningLevel(cell) > 0)
     {
         return PackedCell.Heat(cell) > 13 ? '@' : '*';
     }
@@ -97,7 +97,7 @@ static ConsoleColor ColorFor(ushort cell)
         return ConsoleColor.Cyan;
     }
 
-    if (PackedCell.IsBurning(cell))
+    if (PackedCell.BurningLevel(cell) > 0)
     {
         return ConsoleColor.Red;
     }

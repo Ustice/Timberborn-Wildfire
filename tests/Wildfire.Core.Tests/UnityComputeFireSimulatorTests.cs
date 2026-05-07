@@ -229,7 +229,7 @@ public sealed class UnityComputeFireSimulatorTests
     [Fact]
     public void TickReturnsExternalChangeDeltaWhenSimulationDoesNotFurtherChangeCell()
     {
-        ushort newCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 1, terrain: 0, heatLoss: 0);
+        ushort newCell = PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 1, terrain: 0, burningLevel: 0);
         RecordingComputeBufferAllocator allocator = new();
 
         using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
@@ -270,7 +270,7 @@ public sealed class UnityComputeFireSimulatorTests
     [Fact]
     public void TickNotifiesListenersOfExternalChangeOnlyDelta()
     {
-        ushort newCell = PackedCell.Pack(fuel: 3, heat: 0, flammability: 0, water: 0, terrain: 0, heatLoss: 0);
+        ushort newCell = PackedCell.Pack(fuel: 3, heat: 0, flammability: 0, water: 0, terrain: 0, burningLevel: 0);
         RecordingComputeBufferAllocator allocator = new();
 
         using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(
@@ -369,7 +369,7 @@ public sealed class UnityComputeFireSimulatorTests
                 SetFuel: 7,
                 SetHeat: 8,
                 SetFlammability: 2,
-                SetHeatLoss: 6,
+                SetBurningLevel: 6,
                 SetTerrain: 1));
 
         Assert.Equal(1, simulator.PendingChangeCount);
@@ -568,7 +568,7 @@ public sealed class UnityComputeFireSimulatorTests
                     SetFuel: 16,
                     SetHeat: 17,
                     SetFlammability: 4,
-                    SetHeatLoss: 8,
+                    SetBurningLevel: 8,
                     SetTerrain: 2),
             ],
             capacity: 1);

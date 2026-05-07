@@ -14,7 +14,7 @@ public sealed class PackedCellTests
         Assert.Equal(3, PackedCell.Flammability(cell));
         Assert.Equal(2, PackedCell.Water(cell));
         Assert.Equal(1, PackedCell.Terrain(cell));
-        Assert.Equal(7, PackedCell.HeatLoss(cell));
+        Assert.Equal(7, PackedCell.BurningLevel(cell));
     }
 
     [Fact]
@@ -31,18 +31,20 @@ public sealed class PackedCellTests
         Assert.Equal(3, PackedCell.Flammability(cell));
         Assert.Equal(2, PackedCell.Water(cell));
         Assert.Equal(1, PackedCell.Terrain(cell));
-        Assert.Equal(4, PackedCell.HeatLoss(cell));
+        Assert.Equal(4, PackedCell.BurningLevel(cell));
     }
 
-    [Theory]
-    [InlineData(9, 3, 0, true)]
-    [InlineData(9, 3, 1, false)]
-    [InlineData(10, 3, 1, true)]
-    [InlineData(15, 0, 3, true)]
-    public void BurningStateUsesThreshold(int heat, int flammability, int water, bool expected)
+    [Fact]
+    public void BurningLevelSetterOnlyChangesBurningLevel()
     {
-        ushort cell = PackedCell.Pack(5, heat, flammability, water, 1, 0);
+        ushort cell = PackedCell.Pack(5, 10, 3, 1, 1, 0);
+        ushort changed = PackedCell.SetBurningLevel(cell, 6);
 
-        Assert.Equal(expected, PackedCell.IsBurning(cell));
+        Assert.Equal(5, PackedCell.Fuel(changed));
+        Assert.Equal(10, PackedCell.Heat(changed));
+        Assert.Equal(3, PackedCell.Flammability(changed));
+        Assert.Equal(1, PackedCell.Water(changed));
+        Assert.Equal(1, PackedCell.Terrain(changed));
+        Assert.Equal(6, PackedCell.BurningLevel(changed));
     }
 }

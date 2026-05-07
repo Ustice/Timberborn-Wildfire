@@ -7,9 +7,9 @@ public static class PackedCell
     private const ushort FlammabilityMask = 0b0000_0011_0000_0000;
     private const ushort WaterMask = 0b0000_1100_0000_0000;
     private const ushort TerrainMask = 0b0001_0000_0000_0000;
-    private const ushort HeatLossMask = 0b1110_0000_0000_0000;
+    private const ushort BurningLevelMask = 0b1110_0000_0000_0000;
 
-    public static ushort Pack(int fuel, int heat, int flammability, int water, int terrain, int heatLoss)
+    public static ushort Pack(int fuel, int heat, int flammability, int water, int terrain, int burningLevel)
     {
         return (ushort)(
             ((fuel & 0b1111) << 0) |
@@ -17,7 +17,7 @@ public static class PackedCell
             ((flammability & 0b11) << 8) |
             ((water & 0b11) << 10) |
             ((terrain & 0b1) << 12) |
-            ((heatLoss & 0b111) << 13));
+            ((burningLevel & 0b111) << 13));
     }
 
     public static int Fuel(ushort cell) => (cell >> 0) & 0b1111;
@@ -30,7 +30,7 @@ public static class PackedCell
 
     public static int Terrain(ushort cell) => (cell >> 12) & 0b1;
 
-    public static int HeatLoss(ushort cell) => (cell >> 13) & 0b111;
+    public static int BurningLevel(ushort cell) => (cell >> 13) & 0b111;
 
     public static ushort SetFuel(ushort cell, int fuel)
     {
@@ -57,14 +57,8 @@ public static class PackedCell
         return (ushort)((cell & ~TerrainMask) | ((terrain & 0b1) << 12));
     }
 
-    public static ushort SetHeatLoss(ushort cell, int heatLoss)
+    public static ushort SetBurningLevel(ushort cell, int burningLevel)
     {
-        return (ushort)((cell & ~HeatLossMask) | ((heatLoss & 0b111) << 13));
-    }
-
-    public static bool IsBurning(ushort cell)
-    {
-        int ignitionThreshold = 12 - Flammability(cell) + Water(cell);
-        return Terrain(cell) == 1 && Fuel(cell) > 0 && Heat(cell) >= ignitionThreshold;
+        return (ushort)((cell & ~BurningLevelMask) | ((burningLevel & 0b111) << 13));
     }
 }

@@ -183,9 +183,9 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
             new CellDelta(cellIndex, Cell(oldFuel, heat: 10), Cell(newFuel, heat: 10)));
     }
 
-    private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int heatLoss = 0)
+    private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int burningLevel = 0)
     {
-        return PackedCell.Pack(fuel, heat, flammability, water, terrain, heatLoss);
+        return PackedCell.Pack(fuel, heat, flammability, water, terrain, burningLevel);
     }
 
     private sealed class RecordingStoredGoodBurnInventoryApi(TimberbornStoredGoodBurnTarget? target)

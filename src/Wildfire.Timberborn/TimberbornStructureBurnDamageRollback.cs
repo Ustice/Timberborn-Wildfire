@@ -1,9 +1,9 @@
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using Timberborn.BlockSystem;
-using Timberborn.Buildings;
 using Timberborn.ConstructionSites;
 using Timberborn.Goods;
+using Timberborn.Navigation;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -369,6 +369,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     private readonly IBlockService _blockService;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
+    private readonly Dictionary<string, AccessSnapshot[]> _blockedAccessesByStableId = new(StringComparer.Ordinal);
 
     public TimberbornStructureBurnDamageRollbackTargetApi(
         FireGrid grid,
@@ -396,9 +397,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             return null;
         }
 
-        bool hasPausableBuilding = _blockService
-            .GetObjectsWithComponentAt<PausableBuilding>(coordinates)
-            .Any();
+        bool canBlockAccess = HasBlockableAccess(blockObject);
         bool canEnterUnfinishedState = CanEnterUnfinishedState(blockObject);
 
         return new TimberbornStructureBurnDamageTarget(
@@ -406,7 +405,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             SpecId: blockObject.Name,
             CellIndex: consequence.CellIndex,
             ConstructionResources: TimberbornBurnDamageResourceGuesses.ForStructure(blockObject.Name),
-            CanClose: hasPausableBuilding,
+            CanClose: canBlockAccess,
             CanApplyRollbackVisual: canEnterUnfinishedState,
             CanRepairAfterDanger: canEnterUnfinishedState);
     }
@@ -417,18 +416,12 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     {
         (int x, int y, int z) = _grid.FromIndex(target.CellIndex);
         Vector3Int coordinates = new(x, y, z);
-        PausableBuilding[] buildingsToPause = request.ShouldClose && target.CanClose
-            ? _blockService
-                .GetObjectsWithComponentAt<PausableBuilding>(coordinates)
-                .Where(static building => !building.Paused)
-                .ToArray()
-            : Array.Empty<PausableBuilding>();
-
-        Array.ForEach(buildingsToPause, static building => building.Pause());
         BlockObject? blockObject = _blockService
             .GetObjectsWithComponentAt<BlockObject>(coordinates)
             .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
             .FirstOrDefault();
+        bool accessBlocked = request.ShouldClose && blockObject is not null && TryBlockAccess(target, blockObject);
+        bool accessRestored = request.RepairEligible && blockObject is not null && TryRestoreAccess(target);
         bool enteredUnfinishedState = false;
         int removedConstructionMaterialCount = 0;
         bool resetConstructionProgress = false;
@@ -454,13 +447,88 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         bool visualRollbackApplied = enteredUnfinishedState || removedConstructionMaterialCount > 0 || hasBurnedTextures;
         bool skippedNoSafeApi = (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
-            (!target.CanClose && request.ShouldClose);
+            (request.ShouldClose && !accessBlocked) ||
+            (request.RepairEligible && !accessRestored);
 
         return new TimberbornStructureBurnDamageApplyResult(
-            Closed: buildingsToPause.Length > 0,
+            Closed: accessBlocked,
             VisualRollbackApplied: visualRollbackApplied,
             SkippedNoSafeApi: skippedNoSafeApi,
             RepairEligible: request.RepairEligible);
+    }
+
+    private static bool HasBlockableAccess(BlockObject blockObject)
+    {
+        return GetBlockableAccessibles(blockObject)
+            .Any(static accessible => accessible.Accesses.Count > 0);
+    }
+
+    private bool TryBlockAccess(TimberbornStructureBurnDamageTarget target, BlockObject blockObject)
+    {
+        if (_blockedAccessesByStableId.ContainsKey(target.StableId))
+        {
+            return true;
+        }
+
+        AccessSnapshot[] snapshots = GetBlockableAccessibles(blockObject)
+            .Select(static accessible => new AccessSnapshot(accessible, accessible.Accesses.ToArray()))
+            .Where(static snapshot => snapshot.Accesses.Length > 0)
+            .ToArray();
+        if (snapshots.Length == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            Array.ForEach(snapshots, static snapshot => snapshot.Accessible.ClearAccesses());
+            _blockedAccessesByStableId[target.StableId] = snapshots;
+            _logSink.Info(
+                "wildfire_timberborn_structure_access_blocked " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+                $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+                $"accessibles={snapshots.Length} " +
+                $"accesses={snapshots.Sum(static snapshot => snapshot.Accesses.Length)}");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static Accessible[] GetBlockableAccessibles(BlockObject blockObject)
+    {
+        return blockObject.GetComponentsAllocating<Accessible>()
+            .Concat(blockObject.Transform.GetComponentsInChildren<Accessible>(includeInactive: true))
+            .GroupBy(static accessible => RuntimeHelpers.GetHashCode(accessible))
+            .Select(static group => group.First())
+            .ToArray();
+    }
+
+    private bool TryRestoreAccess(TimberbornStructureBurnDamageTarget target)
+    {
+        if (!_blockedAccessesByStableId.TryGetValue(target.StableId, out AccessSnapshot[]? snapshots))
+        {
+            return true;
+        }
+
+        try
+        {
+            Array.ForEach(snapshots, static snapshot => snapshot.Accessible.SetAccesses(snapshot.Accesses));
+            _blockedAccessesByStableId.Remove(target.StableId);
+            _logSink.Info(
+                "wildfire_timberborn_structure_access_restored " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+                $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+                $"accessibles={snapshots.Length} " +
+                $"accesses={snapshots.Sum(static snapshot => snapshot.Accesses.Length)}");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool CanEnterUnfinishedState(BlockObject blockObject)
@@ -691,4 +759,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             name.Contains("Floodgate", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Dynamite", StringComparison.OrdinalIgnoreCase);
     }
+
+    private readonly record struct AccessSnapshot(Accessible Accessible, Vector3[] Accesses);
 }

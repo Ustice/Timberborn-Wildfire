@@ -21,7 +21,6 @@ public readonly record struct FireSimParameters(
     uint FireBurnHeatBase,
     uint FireFuelHeatWeight,
     uint FireCoolingBase,
-    uint FireHeatLossCoolingDivisor,
     uint FireFuelBurnDownPressureNumerator,
     uint FireFuelBurnDownPressureDenominator,
     uint FireFuelBurnDownRollSeed)
@@ -47,7 +46,6 @@ public readonly record struct FireSimParameters(
         FireBurnHeatBase: 5u,
         FireFuelHeatWeight: 5u,
         FireCoolingBase: 0u,
-        FireHeatLossCoolingDivisor: 1u,
         FireFuelBurnDownPressureNumerator: 3u,
         FireFuelBurnDownPressureDenominator: 4u,
         FireFuelBurnDownRollSeed: 0x9E3779B9u);

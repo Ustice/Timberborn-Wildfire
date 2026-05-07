@@ -120,7 +120,7 @@ public sealed class TimberbornResourceFuelCatalogTests
             grid,
             [resourceAdapter.CreateStockpileResourceSource(0, 0, 0, "Log")]);
 
-        Assert.Equal(PackedCell.Pack(fuel: 12, heat: 0, flammability: 2, water: 0, terrain: 1, heatLoss: 3), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 12, heat: 0, flammability: 2, water: 0, terrain: 1, burningLevel: 0), cells[0]);
     }
 
     [Fact]
@@ -134,6 +134,6 @@ public sealed class TimberbornResourceFuelCatalogTests
             grid,
             [resourceAdapter.CreateStockpileResourceSource(0, 0, 0, "MysteryResource")]);
 
-        Assert.Equal(PackedCell.Pack(fuel: 1, heat: 0, flammability: 0, water: 0, terrain: 1, heatLoss: 3), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 1, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0), cells[0]);
     }
 }

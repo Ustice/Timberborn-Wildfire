@@ -596,7 +596,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         string source = ReadTimberbornFireRuntimeSource();
 
         Assert.Equal(1, CountOccurrences(source, " TimberbornFireRuntime("));
-        Assert.Contains("public TimberbornFireRuntime(\n        ITimberbornGpuVisualFieldSurface visualFieldSurface,\n        EntityRegistry entityRegistry,\n        EntitySelectionService entitySelectionService,\n        QuickNotificationService quickNotificationService,\n        TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,\n        WildfireReleaseSettings releaseSettings,\n        TimberbornFireSimParameterPresetState fireSimParameterPresetState,\n        ITimberbornWindProvider windProvider)", source);
+        Assert.Contains("public TimberbornFireRuntime(\n        ITimberbornGpuVisualFieldSurface visualFieldSurface,\n        EntityRegistry entityRegistry,\n        EntitySelectionService entitySelectionService,\n        QuickNotificationService quickNotificationService,\n        TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,\n        WildfireReleaseSettings releaseSettings,\n        TimberbornFireSimParameterPresetState fireSimParameterPresetState,\n        ITimberbornWindProvider windProvider,\n        INavMeshObjectFactory navMeshObjectFactory)", source);
         Assert.DoesNotContain("public TimberbornFireRuntime()\n", source);
         Assert.DoesNotContain("internal TimberbornFireRuntime(", source);
         Assert.DoesNotContain("NullTimberbornGpuFieldRendererPresenter.Instance", source);

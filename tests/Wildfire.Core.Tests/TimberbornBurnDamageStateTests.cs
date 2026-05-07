@@ -579,8 +579,8 @@ public sealed class TimberbornBurnDamageStateTests
     {
         return new CellDelta(
             cellIndex,
-            PackedCell.Pack(oldFuel, heat: 10, flammability: 3, water: 0, terrain: 1, heatLoss: 1),
-            PackedCell.Pack(newFuel, heat: 10, flammability: 3, water: 0, terrain: 1, heatLoss: 1));
+            PackedCell.Pack(oldFuel, heat: 10, flammability: 3, water: 0, terrain: 1, burningLevel: 1),
+            PackedCell.Pack(newFuel, heat: 10, flammability: 3, water: 0, terrain: 1, burningLevel: 1));
     }
 
     private sealed class RecordingBurnDamageSink : ITimberbornBurnDamageSink

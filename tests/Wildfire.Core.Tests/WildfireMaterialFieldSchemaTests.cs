@@ -58,7 +58,6 @@ public sealed class WildfireMaterialFieldSchemaTests
         Assert.Equal(ToJsonName(profile.MaterialClass), json.MaterialClass);
         Assert.Equal(profile.Fuel, json.Fuel);
         Assert.Equal(profile.Flammability, json.Flammability);
-        Assert.Equal(profile.HeatLoss, json.HeatLoss);
         Assert.Equal(profile.Terrain, json.Terrain);
         Assert.Equal(profile.Water, json.Water);
         Assert.Equal(profile.BurnCapacity, json.BurnCapacity);
@@ -147,7 +146,6 @@ public sealed class WildfireMaterialFieldSchemaTests
         string MaterialClass,
         int Fuel,
         int Flammability,
-        int HeatLoss,
         int Terrain,
         int Water,
         int BurnCapacity,

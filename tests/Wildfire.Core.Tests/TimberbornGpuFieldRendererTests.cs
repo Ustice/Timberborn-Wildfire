@@ -19,7 +19,10 @@ public sealed class TimberbornGpuFieldRendererTests
         TimberbornGpuFieldRendererSink sink = new(
             surface,
             logSink,
-            new TimberbornGpuFieldRendererOptions(RegionSize: 2, MaxUpdatedRegionsPerDispatch: 8),
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 2,
+                MaxUpdatedRegionsPerDispatch: 8,
+                DebugOverlayEnabled: true),
             presenter);
 
         sink.BeginVisualEffectDispatch(12);
@@ -59,7 +62,10 @@ public sealed class TimberbornGpuFieldRendererTests
         TimberbornGpuFieldRendererSink sink = new(
             surface,
             logSink,
-            new TimberbornGpuFieldRendererOptions(RegionSize: 1, MaxUpdatedRegionsPerDispatch: 1),
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                MaxUpdatedRegionsPerDispatch: 1,
+                DebugOverlayEnabled: true),
             presenter);
 
         sink.BeginVisualEffectDispatch(2);
@@ -88,7 +94,10 @@ public sealed class TimberbornGpuFieldRendererTests
         TimberbornGpuFieldRendererSink sink = new(
             surface,
             logSink,
-            new TimberbornGpuFieldRendererOptions(RegionSize: 1, MaxUpdatedRegionsPerDispatch: 4),
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                MaxUpdatedRegionsPerDispatch: 4,
+                DebugOverlayEnabled: true),
             presenter);
 
         sink.BeginVisualEffectDispatch(4);
@@ -116,7 +125,10 @@ public sealed class TimberbornGpuFieldRendererTests
         TimberbornGpuFieldRendererSink sink = new(
             surface,
             logSink,
-            new TimberbornGpuFieldRendererOptions(RegionSize: 1, MaxUpdatedRegionsPerDispatch: 4),
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                MaxUpdatedRegionsPerDispatch: 4,
+                DebugOverlayEnabled: true),
             presenter);
 
         sink.BeginVisualEffectDispatch(6);
@@ -131,27 +143,128 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
-    public void DefaultGpuFieldRendererKeepsUnityDebugOverlayDisabled()
+    public void AshOverlayEnabledRendererIgnoresFireOnlyRegions()
     {
         RecordingFireLogSink logSink = new();
         RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
         {
             [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f, visibility: 1f),
+            [1] = Sample(1, fire: 0f, smoke: 0f, ash: 0.5f, visibility: 1f),
         });
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
-        TimberbornGpuFieldRendererSink sink = new(surface, logSink);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0),
+            presenter);
 
         sink.BeginVisualEffectDispatch(10);
         sink.UpdateVisualEffect(EffectEvent(0, 10));
+        sink.UpdateVisualEffect(EffectEvent(1, 10));
         sink.CompleteVisualEffectDispatch(10);
+
+        Assert.True(sink.Counters.RendererEnabled);
+        Assert.True(sink.Counters.MaterialReady);
+        Assert.Equal(1, sink.Counters.VisibleRegionCount);
+        Assert.Equal(1, sink.Counters.UpdatedRegionCount);
+        Assert.Equal(1, sink.Counters.InvisibleRegionCount);
+        Assert.Single(presenter.RenderedRegions);
+        Assert.Equal(1, presenter.RenderedRegions[0].RegionId);
+        Assert.Contains(
+            logSink.InfoMessages,
+            message => message.Contains("renderer_enabled=true", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AshOverlayBlendsAshAcrossCellsUpToTwoAway()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [10] = Sample(10, fire: 0f, smoke: 0f, ash: 0.8f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 2),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(13);
+        sink.UpdateVisualEffect(EffectEvent(10, 13));
+        sink.CompleteVisualEffectDispatch(13);
+
+        Assert.Equal(11, presenter.RenderedRegions.Count);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 10 && region.Ash == 0.8f);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 8 && region.Ash < 0.8f);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 15 && region.Ash < 0.8f);
+        Assert.Contains(
+            logSink.InfoMessages,
+            message => message.Contains("updated_regions=11", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AshOverlayRendersAccumulatedVisibleAshRegions()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 0f, smoke: 0f, ash: 0.6f, visibility: 1f),
+            [15] = Sample(15, fire: 0f, smoke: 0f, ash: 0.7f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(14);
+        sink.UpdateVisualEffect(EffectEvent(0, 14));
+        sink.CompleteVisualEffectDispatch(14);
+        sink.BeginVisualEffectDispatch(15);
+        sink.UpdateVisualEffect(EffectEvent(15, 15));
+        sink.CompleteVisualEffectDispatch(15);
+
+        Assert.Equal(2, presenter.RenderedRegions.Count);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 0);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 15);
+        Assert.Equal(2, sink.Counters.VisibleRegionCount);
+        Assert.Equal(1, sink.Counters.UpdatedRegionCount);
+    }
+
+    [Fact]
+    public void GpuFieldRendererCanDisableAshOverlayForHeadlessTelemetry()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 0f, smoke: 0f, ash: 0.6f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(AshOverlayEnabled: false),
+            NullTimberbornGpuFieldRendererPresenter.Instance);
+
+        sink.BeginVisualEffectDispatch(11);
+        sink.UpdateVisualEffect(EffectEvent(0, 11));
+        sink.CompleteVisualEffectDispatch(11);
 
         Assert.False(sink.Counters.RendererEnabled);
         Assert.False(sink.Counters.MaterialReady);
         Assert.Equal(1, sink.Counters.VisibleRegionCount);
         Assert.Equal(1, sink.Counters.UpdatedRegionCount);
-        Assert.Contains(
-            logSink.InfoMessages,
-            message => message.Contains("renderer_enabled=false", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -186,6 +299,20 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("gpu_field_renderer_dropped_regions=1", result.ResultToken);
         Assert.Contains("gpu_field_renderer_invisible_regions=4", result.ResultToken);
         Assert.Contains("gpu_field_renderer_material_failures=0", result.ResultToken);
+    }
+
+    [Fact]
+    public void UnityAshOverlayMeshUsesTopFacingTriangleWinding()
+    {
+        string source = ReadTimberbornGpuFieldRendererSource();
+
+        Assert.Contains("AshOverlayMaskTextureSize = 96", source, StringComparison.Ordinal);
+        Assert.Contains("filterMode = FilterMode.Bilinear", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "return new[] { offset, offset + 2, offset + 1, offset + 2, offset + 3, offset + 1 };",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("mesh.uv = uvs;", source, StringComparison.Ordinal);
     }
 
     private static TimberbornGpuVisualFieldSurface CreateBoundSurface(
@@ -232,6 +359,26 @@ public sealed class TimberbornGpuFieldRendererTests
             OldWater: 0,
             Water: 0,
             IsBurning: true);
+    }
+
+    private static string ReadTimberbornGpuFieldRendererSource()
+    {
+        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
+            .Select(directory => Path.Combine(
+                directory.FullName,
+                "src",
+                "Wildfire.Timberborn",
+                "TimberbornGpuFieldRenderer.cs"))
+            .First(File.Exists);
+
+        return File.ReadAllText(path);
+    }
+
+    private static IEnumerable<DirectoryInfo> SelfAndParents(DirectoryInfo directory)
+    {
+        return directory.Parent is null
+            ? [directory]
+            : new[] { directory }.Concat(SelfAndParents(directory.Parent));
     }
 
     private sealed class RecordingGpuFieldRendererPresenter : ITimberbornGpuFieldRendererPresenter
