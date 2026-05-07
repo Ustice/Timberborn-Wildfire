@@ -9,6 +9,7 @@ type InvokeOptions = {
   help: boolean;
   requireAdvancedTick: boolean;
   requireNonzeroDelta: boolean;
+  requireSustainedHeatCycles: number | null;
   requireWaterChanged: boolean;
   waitSeconds: number;
 };
@@ -51,6 +52,8 @@ Options:
   --command-dir <path>      Command bridge directory. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA.
   --require-advanced-tick   Fail unless the result reports numeric tick_count greater than 0. Unpause a loaded save before using this.
   --require-nonzero-delta   Fail unless the result reports numeric last_delta_count greater than 0. Use after qa-delta-stimulus.
+  --require-sustained-heat-cycles <count>
+                            Fail unless qa_delta_stimulus_sustained_heat_completed_cycles is at least count. Use after qa-delta-stimulus and enough unpaused dispatches.
   --require-water-changed   Fail unless the result reports durable last_positive_water_changed_count greater than 0. Use after qa-water-suppression-stimulus.
   --wait <seconds>          Wait for command-outbox.txt to update. Default: 5.
   --help                    Show this help.
@@ -78,6 +81,15 @@ const parseWait = (value: string): number => {
   return parsed;
 };
 
+const parsePositiveInteger = (value: string, flag: string): number => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    fail(`${flag} requires a positive integer.`);
+  }
+
+  return parsed;
+};
+
 const parseArgs = (args: string[]): InvokeOptions => {
   const options: InvokeOptions = {
     command: "status",
@@ -85,6 +97,7 @@ const parseArgs = (args: string[]): InvokeOptions => {
     help: false,
     requireAdvancedTick: false,
     requireNonzeroDelta: false,
+    requireSustainedHeatCycles: null,
     requireWaterChanged: false,
     waitSeconds: 5,
   };
@@ -108,6 +121,14 @@ const parseArgs = (args: string[]): InvokeOptions => {
       options.requireAdvancedTick = true;
     } else if (arg === "--require-nonzero-delta") {
       options.requireNonzeroDelta = true;
+    } else if (arg === "--require-sustained-heat-cycles") {
+      options.requireSustainedHeatCycles = parsePositiveInteger(requireValue(args, index + 1, arg), arg);
+      skipNext = true;
+    } else if (arg.startsWith("--require-sustained-heat-cycles=")) {
+      options.requireSustainedHeatCycles = parsePositiveInteger(
+        arg.slice("--require-sustained-heat-cycles=".length),
+        "--require-sustained-heat-cycles",
+      );
     } else if (arg === "--require-water-changed") {
       options.requireWaterChanged = true;
     } else if (arg === "--wait") {
@@ -171,6 +192,20 @@ const requireNonzeroDelta = (result: string): void => {
   }
 };
 
+const requireSustainedHeatCycles = (result: string, requiredCycles: number): void => {
+  const completedMatch =
+    result.match(/\bqa_delta_stimulus_sustained_heat_completed_cycles=(\d+)\b/u) ??
+    fail("Result did not include numeric qa_delta_stimulus_sustained_heat_completed_cycles. Did this build include the sustained crop stimulus proof fields?");
+  const requestedMatch =
+    result.match(/\bqa_delta_stimulus_sustained_heat_requested_cycles=(\d+)\b/u) ??
+    fail("Result did not include numeric qa_delta_stimulus_sustained_heat_requested_cycles. Did this build include the sustained crop stimulus proof fields?");
+  const completedCycles = Number(completedMatch[1]);
+  const requestedCycles = Number(requestedMatch[1]);
+  if (requestedCycles < requiredCycles || completedCycles < requiredCycles) {
+    fail(`Result reported sustained heat completed_cycles=${completedCycles} requested_cycles=${requestedCycles}. Run qa-delta-stimulus against an unpaused loaded save, wait for ${requiredCycles} simulator dispatches, then rerun status or qa-readiness.`);
+  }
+};
+
 const requireWaterChanged = (result: string): void => {
   const waterMatch =
     result.match(/\blast_positive_water_changed_count=(\d+)\b/u) ??
@@ -214,6 +249,10 @@ const main = async (): Promise<void> => {
 
   if (options.requireNonzeroDelta) {
     requireNonzeroDelta(result);
+  }
+
+  if (options.requireSustainedHeatCycles !== null) {
+    requireSustainedHeatCycles(result, options.requireSustainedHeatCycles);
   }
 
   if (options.requireWaterChanged) {

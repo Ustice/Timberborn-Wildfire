@@ -73,6 +73,10 @@ public sealed class TimberbornFireDeltaConsumer
         Array.ForEach(gameplayConsequences, _sinks.GameplayConsequenceSink.ApplyConsequence);
 
         TimberbornBurnDamageApplySummary burnDamageSummary = _sinks.BurnDamageSink.ApplyDamage(tick, decisions);
+        TimberbornCropBurnConsequenceSummary cropBurnSummary =
+            _sinks.CropBurnConsequenceSink.ApplyConsequences(tick, decisions);
+        TimberbornTreeBurnConsequenceSummary treeBurnSummary =
+            _sinks.TreeBurnConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary =
             _sinks.BuildingBurnoutConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary =
@@ -109,6 +113,8 @@ public sealed class TimberbornFireDeltaConsumer
             buildingBurnoutSummary,
             structureBurnDamageRollbackSummary,
             burnDamageSummary,
+            cropBurnSummary,
+            treeBurnSummary,
             storedGoodBurnSummary,
             explosiveInfrastructureSummary,
             detonatorFireSafetySummary,
@@ -550,6 +556,26 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int BurnDamageDuplicateCellSuppressedCount,
     int BurnDamageAppliedTargetCount,
     int BurnDamageTotalDamageApplied,
+    int CropBurnConsideredTargetCount,
+    int CropBurnBurnableTargetCount,
+    int CropBurnYieldLost,
+    int CropBurnKilledCropCount,
+    int CropBurnVisualStateUpdateCount,
+    int CropBurnDuplicateCellSuppressedCount,
+    int CropBurnUnmappedTargetCount,
+    int CropBurnUnknownHarvestResourceCount,
+    int CropBurnNonBurnableTargetCount,
+    int CropBurnSkippedUnsafeApiCount,
+    int TreeBurnConsideredTargetCount,
+    int TreeBurnBurnableTargetCount,
+    int TreeBurnYieldLost,
+    int TreeBurnKilledTreeCount,
+    int TreeBurnVisualStateUpdateCount,
+    int TreeBurnDuplicateCellSuppressedCount,
+    int TreeBurnUnmappedTargetCount,
+    int TreeBurnUnknownCuttableResourceCount,
+    int TreeBurnNonBurnableTargetCount,
+    int TreeBurnSkippedUnsafeApiCount,
     int StoredGoodBurnConsideredDeltaCount,
     int StoredGoodBurnMatchedStorageCellCount,
     int StoredGoodBurnDuplicateStorageTargetSuppressedCount,
@@ -657,6 +683,26 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         BurnDamageDuplicateCellSuppressedCount: 0,
         BurnDamageAppliedTargetCount: 0,
         BurnDamageTotalDamageApplied: 0,
+        CropBurnConsideredTargetCount: 0,
+        CropBurnBurnableTargetCount: 0,
+        CropBurnYieldLost: 0,
+        CropBurnKilledCropCount: 0,
+        CropBurnVisualStateUpdateCount: 0,
+        CropBurnDuplicateCellSuppressedCount: 0,
+        CropBurnUnmappedTargetCount: 0,
+        CropBurnUnknownHarvestResourceCount: 0,
+        CropBurnNonBurnableTargetCount: 0,
+        CropBurnSkippedUnsafeApiCount: 0,
+        TreeBurnConsideredTargetCount: 0,
+        TreeBurnBurnableTargetCount: 0,
+        TreeBurnYieldLost: 0,
+        TreeBurnKilledTreeCount: 0,
+        TreeBurnVisualStateUpdateCount: 0,
+        TreeBurnDuplicateCellSuppressedCount: 0,
+        TreeBurnUnmappedTargetCount: 0,
+        TreeBurnUnknownCuttableResourceCount: 0,
+        TreeBurnNonBurnableTargetCount: 0,
+        TreeBurnSkippedUnsafeApiCount: 0,
         StoredGoodBurnConsideredDeltaCount: 0,
         StoredGoodBurnMatchedStorageCellCount: 0,
         StoredGoodBurnDuplicateStorageTargetSuppressedCount: 0,
@@ -740,6 +786,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary,
         TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary,
         TimberbornBurnDamageApplySummary burnDamageSummary,
+        TimberbornCropBurnConsequenceSummary cropBurnSummary,
+        TimberbornTreeBurnConsequenceSummary treeBurnSummary,
         TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary,
         TimberbornExplosiveInfrastructureConsequenceSummary explosiveInfrastructureSummary,
         TimberbornDetonatorFireSafetySummary detonatorFireSafetySummary,
@@ -784,6 +832,26 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             burnDamageSummary.DuplicateCellSuppressedCount,
             burnDamageSummary.DamageAppliedTargetCount,
             burnDamageSummary.TotalDamageApplied,
+            cropBurnSummary.ConsideredCropTargetCount,
+            cropBurnSummary.BurnableCropTargetCount,
+            cropBurnSummary.YieldLost,
+            cropBurnSummary.KilledCropCount,
+            cropBurnSummary.VisualStateUpdateCount,
+            cropBurnSummary.DuplicateCellSuppressedCount,
+            cropBurnSummary.UnmappedTargetCount,
+            cropBurnSummary.UnknownHarvestResourceCount,
+            cropBurnSummary.NonBurnableCropTargetCount,
+            cropBurnSummary.SkippedUnsafeApiCount,
+            treeBurnSummary.ConsideredTreeTargetCount,
+            treeBurnSummary.BurnableTreeTargetCount,
+            treeBurnSummary.YieldLost,
+            treeBurnSummary.KilledTreeCount,
+            treeBurnSummary.VisualStateUpdateCount,
+            treeBurnSummary.DuplicateCellSuppressedCount,
+            treeBurnSummary.UnmappedTargetCount,
+            treeBurnSummary.UnknownCuttableResourceCount,
+            treeBurnSummary.NonBurnableTreeTargetCount,
+            treeBurnSummary.SkippedUnsafeApiCount,
             storedGoodBurnSummary.ConsideredDeltaCount,
             storedGoodBurnSummary.MatchedStorageCellCount,
             storedGoodBurnSummary.DuplicateStorageTargetSuppressedCount,
@@ -894,6 +962,26 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"burn_damage_duplicate_cells_suppressed={BurnDamageDuplicateCellSuppressedCount} " +
             $"burn_damage_applied_targets={BurnDamageAppliedTargetCount} " +
             $"burn_damage_total_damage_applied={BurnDamageTotalDamageApplied} " +
+            $"crop_burn_considered_targets={CropBurnConsideredTargetCount} " +
+            $"crop_burn_burnable_targets={CropBurnBurnableTargetCount} " +
+            $"crop_burn_yield_lost={CropBurnYieldLost} " +
+            $"crop_burn_killed_crops={CropBurnKilledCropCount} " +
+            $"crop_burn_visual_state_updates={CropBurnVisualStateUpdateCount} " +
+            $"crop_burn_duplicate_cells_suppressed={CropBurnDuplicateCellSuppressedCount} " +
+            $"crop_burn_unmapped_targets={CropBurnUnmappedTargetCount} " +
+            $"crop_burn_unknown_harvest_resources={CropBurnUnknownHarvestResourceCount} " +
+            $"crop_burn_non_burnable_targets={CropBurnNonBurnableTargetCount} " +
+            $"crop_burn_skipped_unsafe_apis={CropBurnSkippedUnsafeApiCount} " +
+            $"tree_burn_considered_targets={TreeBurnConsideredTargetCount} " +
+            $"tree_burn_burnable_targets={TreeBurnBurnableTargetCount} " +
+            $"tree_burn_yield_lost={TreeBurnYieldLost} " +
+            $"tree_burn_killed_trees={TreeBurnKilledTreeCount} " +
+            $"tree_burn_visual_state_updates={TreeBurnVisualStateUpdateCount} " +
+            $"tree_burn_duplicate_cells_suppressed={TreeBurnDuplicateCellSuppressedCount} " +
+            $"tree_burn_unmapped_targets={TreeBurnUnmappedTargetCount} " +
+            $"tree_burn_unknown_cuttable_resources={TreeBurnUnknownCuttableResourceCount} " +
+            $"tree_burn_non_burnable_targets={TreeBurnNonBurnableTargetCount} " +
+            $"tree_burn_skipped_unsafe_apis={TreeBurnSkippedUnsafeApiCount} " +
             $"stored_good_burn_considered_deltas={StoredGoodBurnConsideredDeltaCount} " +
             $"stored_good_burn_matched_storage_cells={StoredGoodBurnMatchedStorageCellCount} " +
             $"stored_good_burn_duplicate_storage_targets_suppressed={StoredGoodBurnDuplicateStorageTargetSuppressedCount} " +
@@ -979,6 +1067,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
         ITimberbornBuildingBurnoutConsequenceSink? buildingBurnoutConsequenceSink = null,
         ITimberbornStructureBurnDamageRollbackSink? structureBurnDamageRollbackSink = null,
         ITimberbornBurnDamageSink? burnDamageSink = null,
+        ITimberbornCropBurnConsequenceSink? cropBurnConsequenceSink = null,
+        ITimberbornTreeBurnConsequenceSink? treeBurnConsequenceSink = null,
         ITimberbornStoredGoodBurnConsequenceSink? storedGoodBurnConsequenceSink = null,
         ITimberbornExplosiveInfrastructureConsequenceSink? explosiveInfrastructureConsequenceSink = null,
         ITimberbornDetonatorFireSafetySink? detonatorFireSafetySink = null,
@@ -996,6 +1086,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
         StructureBurnDamageRollbackSink =
             structureBurnDamageRollbackSink ?? NullTimberbornStructureBurnDamageRollbackSink.Instance;
         BurnDamageSink = burnDamageSink ?? NullTimberbornBurnDamageSink.Instance;
+        CropBurnConsequenceSink = cropBurnConsequenceSink ?? NullTimberbornCropBurnConsequenceSink.Instance;
+        TreeBurnConsequenceSink = treeBurnConsequenceSink ?? NullTimberbornTreeBurnConsequenceSink.Instance;
         StoredGoodBurnConsequenceSink =
             storedGoodBurnConsequenceSink ?? NullTimberbornStoredGoodBurnConsequenceSink.Instance;
         ExplosiveInfrastructureConsequenceSink =
@@ -1023,6 +1115,10 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornStructureBurnDamageRollbackSink StructureBurnDamageRollbackSink { get; }
 
     public ITimberbornBurnDamageSink BurnDamageSink { get; }
+
+    public ITimberbornCropBurnConsequenceSink CropBurnConsequenceSink { get; }
+
+    public ITimberbornTreeBurnConsequenceSink TreeBurnConsequenceSink { get; }
 
     public ITimberbornStoredGoodBurnConsequenceSink StoredGoodBurnConsequenceSink { get; }
 

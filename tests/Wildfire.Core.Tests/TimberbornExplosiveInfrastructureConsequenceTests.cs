@@ -52,6 +52,65 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
     }
 
     [Fact]
+    public void SinkTracksSustainedThresholdAcrossVolatileNativeStableIds()
+    {
+        RecordingExplosiveTargetApi targetApi = new(
+            Target(depth: 2, canTriggerNative: true),
+            stableIdByResolve: index => $"dynamite:volatile-{index}");
+        RecordingHeatPulseSink heatPulseSink = new();
+        TimberbornExplosiveInfrastructureConsequenceSink sink = new(
+            () => Settings(thresholdTicks: 2, nativeEnabled: false),
+            targetApi,
+            heatPulseSink);
+
+        TimberbornExplosiveInfrastructureConsequenceSummary firstSummary = sink.ApplyConsequences(
+            7,
+            [Decision(12, heat: 3)]);
+        TimberbornExplosiveInfrastructureConsequenceSummary secondSummary = sink.ApplyConsequences(
+            8,
+            [Decision(12, heat: 4)]);
+
+        Assert.Equal(1, firstSummary.MatchedTargetCellCount);
+        Assert.Equal(0, firstSummary.TriggeredTargetCount);
+        Assert.Equal(1, secondSummary.ArmedTargetCount);
+        Assert.Equal(1, secondSummary.TriggeredTargetCount);
+        Assert.Equal(5, secondSummary.HeatPulseCellCount);
+        Assert.Equal(1, secondSummary.SkippedNoSafeApiCount);
+        Assert.Equal(0, targetApi.NativeTriggerCalls);
+        Assert.Single(heatPulseSink.Pulses);
+    }
+
+    [Fact]
+    public void SinkCountsVolatileDuplicateExposureOnlyOncePerDispatch()
+    {
+        RecordingExplosiveTargetApi targetApi = new(
+            Target(depth: 2, canTriggerNative: true),
+            stableIdByResolve: index => $"dynamite:volatile-{index}");
+        RecordingHeatPulseSink heatPulseSink = new();
+        TimberbornExplosiveInfrastructureConsequenceSink sink = new(
+            () => Settings(thresholdTicks: 2, nativeEnabled: false),
+            targetApi,
+            heatPulseSink);
+
+        TimberbornExplosiveInfrastructureConsequenceSummary firstSummary = sink.ApplyConsequences(
+            7,
+            [
+                Decision(12, heat: 3),
+                Decision(12, heat: 4),
+            ]);
+        TimberbornExplosiveInfrastructureConsequenceSummary secondSummary = sink.ApplyConsequences(
+            8,
+            [Decision(12, heat: 4)]);
+
+        Assert.Equal(2, firstSummary.MatchedTargetCellCount);
+        Assert.Equal(0, firstSummary.TriggeredTargetCount);
+        Assert.Equal(1, secondSummary.TriggeredTargetCount);
+        Assert.Equal(1, secondSummary.SkippedNoSafeApiCount);
+        Assert.Equal(0, targetApi.NativeTriggerCalls);
+        Assert.Single(heatPulseSink.Pulses);
+    }
+
+    [Fact]
     public void SinkSuppressesDuplicateCellsForSameDynamiteTarget()
     {
         TimberbornExplosiveInfrastructureTarget target = Target(depth: 3);
@@ -95,6 +154,28 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
     }
 
     [Fact]
+    public void SinkKeepsNativeDisabledPathPulseOnlyWithoutCallingWrapper()
+    {
+        RecordingExplosiveTargetApi targetApi = new(Target(depth: 1, canTriggerNative: true));
+        RecordingHeatPulseSink heatPulseSink = new();
+        TimberbornExplosiveInfrastructureConsequenceSink sink = new(
+            () => Settings(thresholdTicks: 1, nativeEnabled: false),
+            targetApi,
+            heatPulseSink);
+
+        TimberbornExplosiveInfrastructureConsequenceSummary summary = sink.ApplyConsequences(
+            10,
+            [Decision(12, heat: 10)]);
+
+        Assert.Equal(1, summary.TriggeredTargetCount);
+        Assert.Equal(5, summary.HeatPulseCellCount);
+        Assert.Equal(0, summary.NativeTriggeredTargetCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(0, targetApi.NativeTriggerCalls);
+        Assert.Single(heatPulseSink.Pulses);
+    }
+
+    [Fact]
     public void SinkReportsSkippedNoSafeApiWhenNativeWrapperUnavailable()
     {
         RecordingExplosiveTargetApi targetApi = new(Target(depth: 1, canTriggerNative: false));
@@ -110,6 +191,30 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
 
         Assert.Equal(1, summary.SkippedNoSafeApiCount);
         Assert.Equal(0, targetApi.NativeTriggerCalls);
+    }
+
+    [Fact]
+    public void SinkContainsNativeWrapperFailureAsSafeUnavailableTelemetry()
+    {
+        RecordingExplosiveTargetApi targetApi = new(
+            Target(depth: 1, canTriggerNative: true),
+            throwOnNativeTrigger: true);
+        RecordingHeatPulseSink heatPulseSink = new();
+        TimberbornExplosiveInfrastructureConsequenceSink sink = new(
+            () => Settings(thresholdTicks: 1, nativeEnabled: true),
+            targetApi,
+            heatPulseSink);
+
+        TimberbornExplosiveInfrastructureConsequenceSummary summary = sink.ApplyConsequences(
+            10,
+            [Decision(12, heat: 10)]);
+
+        Assert.Equal(1, summary.TriggeredTargetCount);
+        Assert.Equal(5, summary.HeatPulseCellCount);
+        Assert.Equal(0, summary.NativeTriggeredTargetCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, targetApi.NativeTriggerCalls);
+        Assert.Single(heatPulseSink.Pulses);
     }
 
     [Fact]
@@ -200,7 +305,10 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
         return PackedCell.Pack(fuel: 0, heat, flammability: 0, water: 0, terrain: 1, heatLoss: 0);
     }
 
-    private sealed class RecordingExplosiveTargetApi(TimberbornExplosiveInfrastructureTarget? target)
+    private sealed class RecordingExplosiveTargetApi(
+        TimberbornExplosiveInfrastructureTarget? target,
+        bool throwOnNativeTrigger = false,
+        Func<int, string>? stableIdByResolve = null)
         : ITimberbornExplosiveInfrastructureTargetApi
     {
         public List<TimberbornExplosiveInfrastructureConsequence> ResolvedConsequences { get; } = [];
@@ -211,7 +319,13 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
             TimberbornExplosiveInfrastructureConsequence consequence)
         {
             ResolvedConsequences.Add(consequence);
-            return target is null ? null : target with { CellIndex = consequence.CellIndex };
+            return target is null
+                ? null
+                : target with
+                {
+                    StableId = stableIdByResolve?.Invoke(ResolvedConsequences.Count) ?? target.StableId,
+                    CellIndex = consequence.CellIndex,
+                };
         }
 
         public TimberbornExplosiveInfrastructureNativeTriggerResult TriggerNative(
@@ -219,6 +333,11 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
             int delayTicks)
         {
             NativeTriggerCalls++;
+            if (throwOnNativeTrigger)
+            {
+                throw new InvalidOperationException("native trigger failed");
+            }
+
             return new TimberbornExplosiveInfrastructureNativeTriggerResult(
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.Triggered);
         }

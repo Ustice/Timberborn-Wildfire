@@ -3,6 +3,23 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
 
+public sealed record TimberbornQaDeltaStimulusSustainedHeatState(
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    ushort SetCell,
+    string TargetSource,
+    int RequestedCycleCount,
+    int CompletedCycleCount = 0,
+    int? QueuedCycleNumber = null,
+    uint? LastCompletedTick = null)
+{
+    public int RemainingCycleCount => Math.Max(0, RequestedCycleCount - CompletedCycleCount);
+
+    public bool IsActive => CompletedCycleCount < RequestedCycleCount;
+}
+
 public sealed class TimberbornFireSystem : IDisposable
 {
     private const byte QaIgnitionHeat = 15;
@@ -12,6 +29,14 @@ public sealed class TimberbornFireSystem : IDisposable
     private const byte QaIgnitionTerrain = 1;
     private const byte QaIgnitionWater = 0;
     private const int QaIgnitionPegDispatchTicks = 12;
+    private const int QaDeltaStimulusSustainedHeatCycleCount = 12;
+    private static readonly ushort QaDeltaStimulusCell = PackedCell.Pack(
+        fuel: QaIgnitionFuel,
+        heat: QaIgnitionHeat,
+        flammability: QaIgnitionFlammability,
+        water: QaIgnitionWater,
+        terrain: QaIgnitionTerrain,
+        heatLoss: QaIgnitionHeatLoss);
     private const byte QaSpentFuel = 0;
     private const byte QaWaterSuppressionWater = 3;
 
@@ -25,7 +50,10 @@ public sealed class TimberbornFireSystem : IDisposable
     private int _registeredChangeCountSinceLastDispatch;
     private FireSimChange[] _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
     private int _qaIgnitionPegDispatchTicksRemaining;
+    private string _qaIgnitionPegSource = "placeholder";
     private FireSimChange[] _qaBurnDamageSpendChanges = Array.Empty<FireSimChange>();
+    private int _burnDurationSustainedHeatTicksPendingDispatch;
+    private TimberbornQaDeltaStimulusSustainedHeatState? _qaDeltaStimulusSustainedHeatState;
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
 
@@ -133,6 +161,9 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public TimberbornQaBurnDurationProofState BurnDurationProofState => _burnDurationProofState;
 
+    public TimberbornQaDeltaStimulusSustainedHeatState? QaDeltaStimulusSustainedHeatState =>
+        _qaDeltaStimulusSustainedHeatState;
+
     public bool TryUpdateParameters(FireSimParameters parameters)
     {
         if (_fireSimulator is not ITimberbornConfigurableFireSimParameters configurable)
@@ -174,6 +205,8 @@ public sealed class TimberbornFireSystem : IDisposable
         _registeredChangeCountSinceLastDispatch = 0;
         ClearQaIgnitionPeg();
         ClearQaBurnDamageSpendProbe();
+        _qaDeltaStimulusSustainedHeatState = null;
+        _burnDurationSustainedHeatTicksPendingDispatch = 0;
         LastTick = 0;
         LastDeltaCount = 0;
         _burnDurationProofState = TimberbornQaBurnDurationProofState.Placeholder;
@@ -187,6 +220,7 @@ public sealed class TimberbornFireSystem : IDisposable
         IGpuFireSimulator fireSimulator = RequireSimulator();
         RegisterPendingQaBurnDamageSpendChanges();
         RegisterPendingQaIgnitionPegChanges();
+        QueueNextSustainedQaDeltaStimulusCycle();
         int pendingChangeCount = _registeredChangeCountSinceLastDispatch;
 
         _logSink.Info($"wildfire_timberborn_dispatch_started pending_changes={pendingChangeCount}");
@@ -199,6 +233,8 @@ public sealed class TimberbornFireSystem : IDisposable
             LastTick = result.Tick;
             LastDeltaCount = result.Deltas.Count;
             _deltaConsumer.Consume(result.Tick, result.Deltas.ToArray());
+            CompleteQueuedSustainedQaDeltaStimulusCycle(result.Tick);
+            RecordBurnDurationSustainedHeatDispatch();
             UpdateBurnDurationProof(result.Tick, result.Deltas);
             _logSink.Info(
                 $"wildfire_timberborn_dispatch_completed tick={result.Tick} delta_count={result.Deltas.Count} elapsed_ms={stopwatch.Elapsed.TotalMilliseconds:F3}");
@@ -260,12 +296,63 @@ public sealed class TimberbornFireSystem : IDisposable
         RegisterMappedCellChanges(RequireGrid(), sources);
     }
 
+    public FireGrid RequireInitializedGrid()
+    {
+        return RequireGrid();
+    }
+
     public TimberbornQaDeltaStimulusResult QueueQaDeltaStimulus(
         string targetSelector = TimberbornQaFieldTargetSelectors.Default,
-        IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>? burnDamageTargets = null)
+        IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>? burnDamageTargets = null,
+        ITimberbornExplosiveInfrastructureTargetApi? explosiveInfrastructureTargetApi = null,
+        ITimberbornDetonatorFireSafetyTargetApi? detonatorFireSafetyTargetApi = null,
+        ITimberbornTunnelFireTargetApi? tunnelFireTargetApi = null,
+        TimberbornQaSelectedCropTarget? selectedCropTarget = null,
+        TimberbornBeaverFieldExposureQaTarget? beaverExposureTarget = null)
     {
         FireGrid grid = RequireGrid();
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.BeaverExposure)
+        {
+            return RegisterSustainedBeaverExposureDeltaStimulus(grid, beaverExposureTarget);
+        }
+
+        if (normalizedSelector is TimberbornQaFieldTargetSelectors.Default or TimberbornQaFieldTargetSelectors.Crop)
+        {
+            TimberbornQaDeltaStimulusTargetSelection? cropTarget =
+                FindCropDeltaStimulusTarget(grid, burnDamageTargets, selectedCropTarget);
+            if (cropTarget is not null)
+            {
+                return RegisterSustainedCropDeltaStimulus(normalizedSelector, cropTarget);
+            }
+        }
+
+        if (TimberbornQaFieldTargetSelectors.IsDirectConsequenceTargetSelector(normalizedSelector))
+        {
+            TimberbornQaDirectConsequenceTarget target = FindDirectConsequenceTarget(
+                grid,
+                normalizedSelector,
+                explosiveInfrastructureTargetApi,
+                detonatorFireSafetyTargetApi,
+                tunnelFireTargetApi);
+            int queuedChangeCount = RegisterDirectConsequenceTargetProbe(target, "qa_direct_consequence_target_stimulus");
+
+            return new TimberbornQaDeltaStimulusResult(
+                normalizedSelector,
+                target.CellIndex,
+                target.X,
+                target.Y,
+                target.Z,
+                WildfireMaterialClass.Infrastructure,
+                CompanionTargetId: 0,
+                target.InitialCell,
+                QaIgnitionHeat,
+                QueuedHeatChangeCount: queuedChangeCount,
+                DirectTargetKind: target.Kind,
+                DirectTargetStableId: target.StableId,
+                DirectTargetScannedCellCount: target.ScannedCellCount);
+        }
+
         if (TimberbornQaFieldTargetSelectors.IsBurnDamageProbeSelector(normalizedSelector))
         {
             TimberbornQaBurnDamageProbeTarget target = FindBurnDamageProbeTarget(
@@ -404,9 +491,10 @@ public sealed class TimberbornFireSystem : IDisposable
         FireGrid grid = RequireGrid();
         TimberbornQaBurnDurationStimulusTarget selectedTarget =
             TimberbornQaBurnDurationStimulusTargets.SelectTarget(grid, _importedTargets, target);
-        RegisterChange(
-            new FireSimChange(CellIndex: selectedTarget.CellIndex, SetHeat: QaIgnitionHeat),
-            "qa_burn_duration_stimulus");
+        FireSimChange heatPegChange = new(CellIndex: selectedTarget.CellIndex, SetHeat: QaIgnitionHeat);
+        RegisterChange(heatPegChange, "qa_burn_duration_stimulus");
+        _burnDurationSustainedHeatTicksPendingDispatch = 1;
+        StartQaIgnitionPeg(new[] { heatPegChange }, "qa_burn_duration_stimulus");
 
         _burnDurationProofState = new TimberbornQaBurnDurationProofState(
             selectedTarget.Target,
@@ -416,7 +504,8 @@ public sealed class TimberbornFireSystem : IDisposable
             selectedTarget.Z,
             selectedTarget.InitialFuel,
             LastTick ?? 0,
-            TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks);
+            TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks,
+            SustainedHeatTicks: QaIgnitionPegDispatchTicks);
         _logSink.Info(ToBurnDurationProofLogToken());
 
         return new TimberbornQaBurnDurationStimulusResult(
@@ -431,12 +520,162 @@ public sealed class TimberbornFireSystem : IDisposable
             selectedTarget.InitialFuel,
             QaIgnitionHeat,
             TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks,
-            QueuedHeatChangeCount: 1);
+            QaIgnitionPegDispatchTicks,
+            QueuedHeatChangeCount: QaIgnitionPegDispatchTicks);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)
     {
         return RequireSimulator().Subscribe(listener);
+    }
+
+    private TimberbornQaDeltaStimulusResult RegisterSustainedCropDeltaStimulus(
+        string normalizedSelector,
+        TimberbornQaDeltaStimulusTargetSelection target)
+    {
+        int cellIndex = RequireGrid().ToIndex(target.Coordinates.X, target.Coordinates.Y, target.Coordinates.Z);
+        _qaDeltaStimulusSustainedHeatState = new TimberbornQaDeltaStimulusSustainedHeatState(
+            cellIndex,
+            target.Coordinates.X,
+            target.Coordinates.Y,
+            target.Coordinates.Z,
+            QaDeltaStimulusCell,
+            target.TargetSource,
+            QaDeltaStimulusSustainedHeatCycleCount);
+        QueueNextSustainedQaDeltaStimulusCycle();
+
+        return new TimberbornQaDeltaStimulusResult(
+            normalizedSelector,
+            cellIndex,
+            target.Coordinates.X,
+            target.Coordinates.Y,
+            target.Coordinates.Z,
+            WildfireMaterialClass.Crop,
+            CompanionTargetId: 0,
+            QaDeltaStimulusCell,
+            QaIgnitionHeat,
+            QueuedHeatChangeCount: _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber.HasValue ? 1 : 0,
+            TargetSource: target.TargetSource,
+            RegisteredBurnDamageTargetCount: target.RegisteredBurnDamageTargetCount,
+            RegisteredCropBurnTargetCount: target.RegisteredCropBurnTargetCount,
+            RegisteredCropBurnOwnedCellCount: target.RegisteredCropBurnOwnedCellCount,
+            SustainedHeatSetCell: QaDeltaStimulusCell,
+            SustainedHeatRequestedCycleCount: QaDeltaStimulusSustainedHeatCycleCount,
+            SustainedHeatCompletedCycleCount: _qaDeltaStimulusSustainedHeatState.CompletedCycleCount,
+            SustainedHeatRemainingCycleCount: _qaDeltaStimulusSustainedHeatState.RemainingCycleCount,
+            SustainedHeatQueuedCycleNumber: _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber);
+    }
+
+    private TimberbornQaDeltaStimulusResult RegisterSustainedBeaverExposureDeltaStimulus(
+        FireGrid grid,
+        TimberbornBeaverFieldExposureQaTarget? target)
+    {
+        if (target is not { IsAvailable: true, CellIndex: int cellIndex, X: int x, Y: int y, Z: int z })
+        {
+            string reason = target?.UnavailableReason ?? "beaver_position_unavailable";
+            throw new InvalidOperationException(
+                $"QA beaver-exposure stimulus requires available beaver position sampling: {reason}.");
+        }
+
+        TimberbornImportedFieldTarget? importedTarget = _importedTargets
+            .Where(imported => imported.CellIndex == cellIndex)
+            .Select(imported => (TimberbornImportedFieldTarget?)imported)
+            .FirstOrDefault();
+        _qaDeltaStimulusSustainedHeatState = new TimberbornQaDeltaStimulusSustainedHeatState(
+            cellIndex,
+            x,
+            y,
+            z,
+            QaDeltaStimulusCell,
+            "beaver_candidate_cell",
+            QaDeltaStimulusSustainedHeatCycleCount);
+        QueueNextSustainedQaDeltaStimulusCycle();
+
+        return new TimberbornQaDeltaStimulusResult(
+            TimberbornQaFieldTargetSelectors.BeaverExposure,
+            cellIndex,
+            x,
+            y,
+            z,
+            importedTarget?.MaterialClass ?? WildfireMaterialClass.Unknown,
+            importedTarget?.CompanionTargetId ?? 0,
+            importedTarget?.InitialCell ?? 0,
+            QaIgnitionHeat,
+            QueuedHeatChangeCount: _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber.HasValue ? 1 : 0,
+            TargetSource: "beaver_candidate_cell",
+            SustainedHeatSetCell: QaDeltaStimulusCell,
+            SustainedHeatRequestedCycleCount: QaDeltaStimulusSustainedHeatCycleCount,
+            SustainedHeatCompletedCycleCount: _qaDeltaStimulusSustainedHeatState.CompletedCycleCount,
+            SustainedHeatRemainingCycleCount: _qaDeltaStimulusSustainedHeatState.RemainingCycleCount,
+            SustainedHeatQueuedCycleNumber: _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber,
+            BeaverExposureTargetBeaverId: target.BeaverId,
+            BeaverExposureTargetBeaverX: target.BeaverX,
+            BeaverExposureTargetBeaverY: target.BeaverY,
+            BeaverExposureTargetBeaverZ: target.BeaverZ,
+            BeaverExposureTargetCandidateCells: target.CandidateCellCount,
+            BeaverExposureTargetSampledBeavers: target.SampledBeaverCount,
+            BeaverExposureTargetSkippedNoPositionApi: target.SkippedNoPositionApiCount,
+            BeaverExposureTargetSkippedBoundedSampling: target.SkippedBoundedSamplingCount);
+    }
+
+    private static TimberbornQaDeltaStimulusTargetSelection? FindCropDeltaStimulusTarget(
+        FireGrid grid,
+        IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>? burnDamageTargets,
+        TimberbornQaSelectedCropTarget? selectedCropTarget)
+    {
+        TimberbornBurnDamageTargetState[] states = burnDamageTargets?.Values.ToArray() ??
+            Array.Empty<TimberbornBurnDamageTargetState>();
+        TimberbornBurnDamageTargetState[] cropTargets = states
+            .Where(TimberbornCropBurnTargetClassifier.IsCropOrHarvestable)
+            .ToArray();
+        int cropOwnedCellCount = cropTargets
+            .SelectMany(static state => state.OwnedCellIndices)
+            .Where(cellIndex => cellIndex >= 0 && cellIndex < grid.CellCount)
+            .Distinct()
+            .Count();
+
+        if (selectedCropTarget is { } selectedTarget)
+        {
+            return new TimberbornQaDeltaStimulusTargetSelection(
+                new TimberbornCellCoordinates(selectedTarget.X, selectedTarget.Y, selectedTarget.Z),
+                selectedTarget.TargetSource,
+                states.Length,
+                cropTargets.Length,
+                cropOwnedCellCount);
+        }
+
+        TimberbornCellCoordinates center = new(grid.Width / 2, grid.Height / 2, grid.Depth / 2);
+        TimberbornCellCoordinates? cropTarget = cropTargets
+            .SelectMany(static state => state.OwnedCellIndices)
+            .Where(cellIndex => cellIndex >= 0 && cellIndex < grid.CellCount)
+            .Distinct()
+            .Select(cellIndex =>
+            {
+                (int x, int y, int z) = grid.FromIndex(cellIndex);
+                return new TimberbornCellCoordinates(x, y, z);
+            })
+            .OrderBy(coordinates => Distance(coordinates, center))
+            .ThenBy(static coordinates => coordinates.Z)
+            .ThenBy(static coordinates => coordinates.Y)
+            .ThenBy(static coordinates => coordinates.X)
+            .Select(static coordinates => (TimberbornCellCoordinates?)coordinates)
+            .FirstOrDefault();
+
+        return cropTarget.HasValue
+            ? new TimberbornQaDeltaStimulusTargetSelection(
+                cropTarget.Value,
+                "registered_crop_target",
+                states.Length,
+                cropTargets.Length,
+                cropOwnedCellCount)
+            : null;
+    }
+
+    private static int Distance(TimberbornCellCoordinates coordinates, TimberbornCellCoordinates target)
+    {
+        return Math.Abs(coordinates.X - target.X) +
+            Math.Abs(coordinates.Y - target.Y) +
+            Math.Abs(coordinates.Z - target.Z);
     }
 
     private TimberbornImportedFieldTarget FindImportedTarget(
@@ -458,6 +697,176 @@ public sealed class TimberbornFireSystem : IDisposable
         return order(candidates)
             .Select(static target => (TimberbornImportedFieldTarget?)target)
             .FirstOrDefault() ?? throw new InvalidOperationException(notFoundMessage);
+    }
+
+    private TimberbornQaDirectConsequenceTarget FindDirectConsequenceTarget(
+        FireGrid grid,
+        string selector,
+        ITimberbornExplosiveInfrastructureTargetApi? explosiveInfrastructureTargetApi,
+        ITimberbornDetonatorFireSafetyTargetApi? detonatorFireSafetyTargetApi,
+        ITimberbornTunnelFireTargetApi? tunnelFireTargetApi)
+    {
+        if (selector == TimberbornQaFieldTargetSelectors.Dynamite && explosiveInfrastructureTargetApi is null)
+        {
+            throw new InvalidOperationException(
+                "QA dynamite stimulus requires the explosive infrastructure target API.");
+        }
+
+        if (selector == TimberbornQaFieldTargetSelectors.Detonator && detonatorFireSafetyTargetApi is null)
+        {
+            throw new InvalidOperationException(
+                "QA detonator stimulus requires the detonator fire-safety target API.");
+        }
+
+        if (selector == TimberbornQaFieldTargetSelectors.Tunnel && tunnelFireTargetApi is null)
+        {
+            throw new InvalidOperationException(
+                "QA tunnel stimulus requires the tunnel fire target API.");
+        }
+
+        Func<int, TimberbornQaDirectConsequenceTarget?> resolveTarget = selector switch
+        {
+            TimberbornQaFieldTargetSelectors.Dynamite => cellIndex =>
+                ResolveDynamiteQaTarget(grid, cellIndex, explosiveInfrastructureTargetApi),
+            TimberbornQaFieldTargetSelectors.Detonator => cellIndex =>
+                ResolveDetonatorQaTarget(grid, cellIndex, detonatorFireSafetyTargetApi),
+            TimberbornQaFieldTargetSelectors.Tunnel => cellIndex =>
+                ResolveTunnelQaTarget(grid, cellIndex, tunnelFireTargetApi),
+            _ => throw new ArgumentException($"Unsupported direct consequence QA selector '{selector}'.", nameof(selector)),
+        };
+
+        int[] candidateCellIndices = _importedTargets
+            .Where(static target => target.MaterialClass == WildfireMaterialClass.Infrastructure)
+            .Select(static target => target.CellIndex)
+            .Concat(Enumerable.Range(0, grid.CellCount))
+            .Distinct()
+            .OrderBy(static cellIndex => cellIndex)
+            .ToArray();
+        TimberbornQaDirectConsequenceTarget? target = candidateCellIndices
+            .Select<int, TimberbornQaDirectConsequenceTarget?>((cellIndex, offset) =>
+            {
+                TimberbornQaDirectConsequenceTarget? resolvedTarget;
+                try
+                {
+                    resolvedTarget = resolveTarget(cellIndex);
+                }
+                catch (Exception exception)
+                {
+                    _logSink.Warning(
+                        "wildfire_timberborn_qa_direct_consequence_target_safe_unavailable " +
+                        $"selector={TimberbornQaCommandBridge.FormatToken(selector)} " +
+                        $"cell_index={cellIndex} " +
+                        $"exception_type={exception.GetType().Name}");
+                    resolvedTarget = null;
+                }
+
+                return resolvedTarget is null
+                    ? (TimberbornQaDirectConsequenceTarget?)null
+                    : resolvedTarget.Value with { ScannedCellCount = offset + 1 };
+            })
+            .Where(static resolvedTarget => resolvedTarget is not null)
+            .FirstOrDefault();
+
+        return target ?? throw new InvalidOperationException(
+            $"No placed Timberborn target was found for QA selector '{selector}'.");
+    }
+
+    private static TimberbornQaDirectConsequenceTarget? ResolveDynamiteQaTarget(
+        FireGrid grid,
+        int cellIndex,
+        ITimberbornExplosiveInfrastructureTargetApi? targetApi)
+    {
+        if (targetApi is null)
+        {
+            throw new InvalidOperationException(
+                "QA dynamite stimulus requires the explosive infrastructure target API.");
+        }
+
+        TimberbornExplosiveInfrastructureTarget? target = targetApi.ResolveTarget(
+            new TimberbornExplosiveInfrastructureConsequence(
+                cellIndex,
+                Tick: 0,
+                Heat: QaIgnitionHeat,
+                IsBurning: true));
+        return target is null
+            ? null
+            : CreateDirectTarget(grid, cellIndex, "dynamite", target.StableId);
+    }
+
+    private static TimberbornQaDirectConsequenceTarget? ResolveDetonatorQaTarget(
+        FireGrid grid,
+        int cellIndex,
+        ITimberbornDetonatorFireSafetyTargetApi? targetApi)
+    {
+        if (targetApi is null)
+        {
+            throw new InvalidOperationException(
+                "QA detonator stimulus requires the detonator fire-safety target API.");
+        }
+
+        TimberbornDetonatorFireSafetyTarget? target = targetApi.ResolveTarget(
+            new TimberbornDetonatorFireSafetyConsequence(
+                cellIndex,
+                Tick: 0,
+                Heat: QaIgnitionHeat,
+                IsBurning: true));
+        return target is null ||
+            IsUnavailablePseudoTarget(target.StableId, TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix)
+            ? null
+            : CreateDirectTarget(grid, cellIndex, "detonator", target.StableId);
+    }
+
+    private static TimberbornQaDirectConsequenceTarget? ResolveTunnelQaTarget(
+        FireGrid grid,
+        int cellIndex,
+        ITimberbornTunnelFireTargetApi? targetApi)
+    {
+        if (targetApi is null)
+        {
+            throw new InvalidOperationException(
+                "QA tunnel stimulus requires the tunnel fire target API.");
+        }
+
+        TimberbornTunnelFireTarget? target = targetApi.ResolveTarget(
+            new TimberbornTunnelFireConsequence(
+                cellIndex,
+                Tick: 0,
+                Heat: QaIgnitionHeat,
+                IsBurning: true));
+        return target is null || IsUnavailablePseudoTarget(target.StableId, "tunnel-unavailable:")
+            ? null
+            : CreateDirectTarget(grid, cellIndex, "tunnel", target.StableId);
+    }
+
+    private static bool IsUnavailablePseudoTarget(string stableId, string prefix)
+    {
+        return stableId.StartsWith(prefix, StringComparison.Ordinal);
+    }
+
+    private static TimberbornQaDirectConsequenceTarget CreateDirectTarget(
+        FireGrid grid,
+        int cellIndex,
+        string kind,
+        string stableId)
+    {
+        (int x, int y, int z) = grid.FromIndex(cellIndex);
+        ushort initialCell = PackedCell.Pack(
+            fuel: QaIgnitionFuel,
+            heat: 0,
+            flammability: QaIgnitionFlammability,
+            water: QaIgnitionWater,
+            terrain: QaIgnitionTerrain,
+            heatLoss: QaIgnitionHeatLoss);
+
+        return new TimberbornQaDirectConsequenceTarget(
+            kind,
+            stableId,
+            cellIndex,
+            x,
+            y,
+            z,
+            initialCell,
+            ScannedCellCount: 0);
     }
 
     private int RegisterIgnitionCluster(FireGrid grid, int centerCellIndex, string source)
@@ -501,6 +910,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private void StartQaIgnitionPeg(FireSimChange[] changes, string source)
     {
         _qaIgnitionPegChanges = changes.ToArray();
+        _qaIgnitionPegSource = source;
         _qaIgnitionPegDispatchTicksRemaining = Math.Max(0, QaIgnitionPegDispatchTicks - 1);
         if (_qaIgnitionPegDispatchTicksRemaining > 0)
         {
@@ -527,12 +937,73 @@ public sealed class TimberbornFireSystem : IDisposable
         _qaIgnitionPegChanges
             .ToList()
             .ForEach(change => RegisterChange(change, "qa_ignition_heat_peg", shouldLog: false));
+        if (_qaIgnitionPegSource == "qa_burn_duration_stimulus")
+        {
+            _burnDurationSustainedHeatTicksPendingDispatch++;
+        }
+
         _qaIgnitionPegDispatchTicksRemaining--;
         LogRegisteredChanges("qa_ignition_heat_peg", _qaIgnitionPegChanges.Length);
         if (_qaIgnitionPegDispatchTicksRemaining == 0)
         {
             ClearQaIgnitionPeg();
         }
+    }
+
+    private void QueueNextSustainedQaDeltaStimulusCycle()
+    {
+        if (_qaDeltaStimulusSustainedHeatState is not { IsActive: true, QueuedCycleNumber: null } state)
+        {
+            return;
+        }
+
+        int cycleNumber = state.CompletedCycleCount + 1;
+        RegisterChange(
+            new FireSimChange(CellIndex: state.CellIndex, SetCell: state.SetCell),
+            "qa_delta_stimulus_sustained_heat",
+            shouldLog: false);
+        _qaDeltaStimulusSustainedHeatState = state with
+        {
+            QueuedCycleNumber = cycleNumber,
+        };
+        _logSink.Info(
+            "wildfire_timberborn_qa_delta_stimulus_sustained_heat_queued " +
+            $"target_index={state.CellIndex} " +
+            $"x={state.X} " +
+            $"y={state.Y} " +
+            $"z={state.Z} " +
+            $"set_cell={state.SetCell} " +
+            $"target_source={TimberbornQaCommandBridge.FormatToken(state.TargetSource)} " +
+            $"cycle={cycleNumber} " +
+            $"requested_cycles={state.RequestedCycleCount} " +
+            $"completed_cycles={state.CompletedCycleCount} " +
+            $"remaining_cycles={state.RemainingCycleCount}");
+    }
+
+    private void CompleteQueuedSustainedQaDeltaStimulusCycle(uint tick)
+    {
+        if (_qaDeltaStimulusSustainedHeatState is not { QueuedCycleNumber: int cycleNumber } state)
+        {
+            return;
+        }
+
+        int completedCycleCount = Math.Min(cycleNumber, state.RequestedCycleCount);
+        _qaDeltaStimulusSustainedHeatState = state with
+        {
+            CompletedCycleCount = completedCycleCount,
+            QueuedCycleNumber = null,
+            LastCompletedTick = tick,
+        };
+        TimberbornQaDeltaStimulusSustainedHeatState completedState = _qaDeltaStimulusSustainedHeatState!;
+        _logSink.Info(
+            "wildfire_timberborn_qa_delta_stimulus_sustained_heat_completed " +
+            $"target_index={completedState.CellIndex} " +
+            $"tick={tick} " +
+            $"cycle={completedCycleCount} " +
+            $"requested_cycles={completedState.RequestedCycleCount} " +
+            $"completed_cycles={completedState.CompletedCycleCount} " +
+            $"remaining_cycles={completedState.RemainingCycleCount} " +
+            $"active={completedState.IsActive.ToString().ToLowerInvariant()}");
     }
 
     private TimberbornQaBurnDamageProbeTarget FindBurnDamageProbeTarget(
@@ -727,6 +1198,41 @@ public sealed class TimberbornFireSystem : IDisposable
         return 1 + _qaBurnDamageSpendChanges.Length;
     }
 
+    private int RegisterDirectConsequenceTargetProbe(TimberbornQaDirectConsequenceTarget target, string source)
+    {
+        FireSimChange primeChange = new(
+            CellIndex: target.CellIndex,
+            SetWater: QaIgnitionWater,
+            SetFuel: QaIgnitionFuel,
+            SetHeat: QaIgnitionHeat,
+            SetFlammability: QaIgnitionFlammability,
+            SetHeatLoss: QaIgnitionHeatLoss,
+            SetTerrain: QaIgnitionTerrain);
+        RegisterChange(primeChange, source, shouldLog: false);
+        _qaBurnDamageSpendChanges = new[]
+        {
+            new FireSimChange(
+                CellIndex: target.CellIndex,
+                SetWater: QaIgnitionWater,
+                SetFuel: (byte)Math.Max(0, QaIgnitionFuel - 1),
+                SetHeat: QaIgnitionHeat,
+                SetFlammability: QaIgnitionFlammability,
+                SetHeatLoss: QaIgnitionHeatLoss,
+                SetTerrain: QaIgnitionTerrain),
+        };
+        LogRegisteredChanges(source, 1);
+        _logSink.Info(
+            "wildfire_timberborn_qa_direct_consequence_target_stimulus_scheduled " +
+            $"source={source} " +
+            $"cell_index={target.CellIndex} " +
+            $"target_kind={TimberbornQaCommandBridge.FormatToken(target.Kind)} " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"scanned_cells={target.ScannedCellCount} " +
+            $"scheduled_changes={_qaBurnDamageSpendChanges.Length}");
+
+        return 1 + _qaBurnDamageSpendChanges.Length;
+    }
+
     private void RegisterPendingQaBurnDamageSpendChanges()
     {
         if (_qaBurnDamageSpendChanges.Length == 0 || _registeredChangeCountSinceLastDispatch > 0)
@@ -750,6 +1256,7 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
         _qaIgnitionPegDispatchTicksRemaining = 0;
+        _qaIgnitionPegSource = "placeholder";
     }
 
     private static Func<IEnumerable<TimberbornImportedFieldTarget>, IOrderedEnumerable<TimberbornImportedFieldTarget>> OrderByCenterDistance(
@@ -814,40 +1321,36 @@ public sealed class TimberbornFireSystem : IDisposable
             return;
         }
 
-        CellDelta? targetDelta = deltas
-            .Select(delta => (CellDelta?)delta)
-            .FirstOrDefault(delta => delta?.CellIndex == _burnDurationProofState.CellIndex);
-        TimberbornQaBurnDurationProofState nextState = _burnDurationProofState;
-
-        if (targetDelta is { } delta)
+        CellDelta[] targetDeltas = deltas
+            .Where(delta => delta.CellIndex == _burnDurationProofState.CellIndex)
+            .ToArray();
+        bool hasBurnEvidence = targetDeltas
+            .Any(static delta => PackedCell.IsBurning(delta.OldCell) || PackedCell.IsBurning(delta.NewCell));
+        bool hasFuelDepletion = targetDeltas
+            .Any(static delta => PackedCell.Fuel(delta.OldCell) > 0 && PackedCell.Fuel(delta.NewCell) == 0);
+        uint? burnStartTick = _burnDurationProofState.BurnStartTick;
+        if (!burnStartTick.HasValue && hasBurnEvidence)
         {
-            bool isBurning = PackedCell.IsBurning(delta.NewCell);
-            int oldFuel = PackedCell.Fuel(delta.OldCell);
-            int newFuel = PackedCell.Fuel(delta.NewCell);
-            uint? burnStartTick = nextState.BurnStartTick;
-            if (!burnStartTick.HasValue && isBurning)
-            {
-                burnStartTick = tick;
-            }
-
-            uint? depletionTick = nextState.DepletionTick;
-            uint? elapsedBurnTicks = nextState.ElapsedBurnTicks;
-            if (burnStartTick.HasValue && oldFuel > 0 && newFuel == 0)
-            {
-                depletionTick = tick;
-                elapsedBurnTicks = checked((tick - burnStartTick.Value) + 1);
-            }
-
-            nextState = nextState with
-            {
-                BurnStartTick = burnStartTick,
-                DepletionTick = depletionTick,
-                ElapsedBurnTicks = elapsedBurnTicks,
-                Status = depletionTick.HasValue
-                    ? "depleted"
-                    : burnStartTick.HasValue ? "burning" : "queued",
-            };
+            burnStartTick = tick;
         }
+
+        uint? depletionTick = _burnDurationProofState.DepletionTick;
+        uint? elapsedBurnTicks = _burnDurationProofState.ElapsedBurnTicks;
+        if (burnStartTick.HasValue && !depletionTick.HasValue && hasFuelDepletion)
+        {
+            depletionTick = tick;
+            elapsedBurnTicks = checked((tick - burnStartTick.Value) + 1);
+        }
+
+        TimberbornQaBurnDurationProofState nextState = _burnDurationProofState with
+        {
+            BurnStartTick = burnStartTick,
+            DepletionTick = depletionTick,
+            ElapsedBurnTicks = elapsedBurnTicks,
+            Status = depletionTick.HasValue
+                ? "depleted"
+                : burnStartTick.HasValue ? "burning" : "queued",
+        };
 
         if (nextState is { BurnStartTick: not null, DepletionTick: null } &&
             tick - nextState.BurnStartTick.Value >= nextState.TimeoutTicks)
@@ -859,6 +1362,36 @@ public sealed class TimberbornFireSystem : IDisposable
                 Status = "no_depletion_timeout",
             };
         }
+
+        if (!Equals(nextState, _burnDurationProofState))
+        {
+            _burnDurationProofState = nextState;
+            _logSink.Info(ToBurnDurationProofLogToken());
+        }
+    }
+
+    private void RecordBurnDurationSustainedHeatDispatch()
+    {
+        if (_burnDurationSustainedHeatTicksPendingDispatch <= 0)
+        {
+            return;
+        }
+
+        int pendingTicks = _burnDurationSustainedHeatTicksPendingDispatch;
+        _burnDurationSustainedHeatTicksPendingDispatch = 0;
+        if (_burnDurationProofState.Status == "placeholder")
+        {
+            return;
+        }
+
+        int appliedTicks = Math.Min(
+            _burnDurationProofState.SustainedHeatTicks,
+            _burnDurationProofState.SustainedHeatAppliedTicks + pendingTicks);
+        TimberbornQaBurnDurationProofState nextState = _burnDurationProofState with
+        {
+            SustainedHeatAppliedTicks = appliedTicks,
+            SustainedHeatComplete = appliedTicks >= _burnDurationProofState.SustainedHeatTicks,
+        };
 
         if (!Equals(nextState, _burnDurationProofState))
         {
@@ -881,6 +1414,9 @@ public sealed class TimberbornFireSystem : IDisposable
             $"depletion_tick={FormatNumber(_burnDurationProofState.DepletionTick)} " +
             $"elapsed_burn_ticks={FormatNumber(_burnDurationProofState.ElapsedBurnTicks)} " +
             $"timeout_ticks={_burnDurationProofState.TimeoutTicks} " +
+            $"sustained_heat_ticks={_burnDurationProofState.SustainedHeatTicks} " +
+            $"sustained_heat_applied_ticks={_burnDurationProofState.SustainedHeatAppliedTicks} " +
+            $"sustained_heat_complete={_burnDurationProofState.SustainedHeatComplete.ToString().ToLowerInvariant()} " +
             $"timed_out={_burnDurationProofState.TimedOut.ToString().ToLowerInvariant()} " +
             $"status={_burnDurationProofState.Status}";
     }
@@ -929,6 +1465,13 @@ public sealed class TimberbornFireSystem : IDisposable
                 nameof(grid));
         }
     }
+
+    private sealed record TimberbornQaDeltaStimulusTargetSelection(
+        TimberbornCellCoordinates Coordinates,
+        string TargetSource,
+        int RegisteredBurnDamageTargetCount,
+        int RegisteredCropBurnTargetCount,
+        int RegisteredCropBurnOwnedCellCount);
 }
 
 public interface ITimberbornFireSimulatorFactory
@@ -961,6 +1504,16 @@ public readonly record struct TimberbornQaBurnDamageProbeTarget(
     byte ProbeFuel,
     byte SpendFuel,
     byte ProbeFlammability);
+
+public readonly record struct TimberbornQaDirectConsequenceTarget(
+    string Kind,
+    string StableId,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    ushort InitialCell,
+    int ScannedCellCount);
 
 public interface ITimberbornFireLogSink
 {

@@ -437,7 +437,27 @@ public sealed class TimberbornQaCommandBridge
             $"burn_damage_target_kind={FormatToken(stimulusResult.BurnDamageTargetKind?.ToString())}_" +
             $"burn_damage_remaining_capacity={FormatNumber(stimulusResult.BurnDamageRemainingCapacity)}_" +
             $"burn_damage_probe_fuel={FormatNumber(stimulusResult.BurnDamageProbeFuel)}_" +
-            $"burn_damage_spend_fuel={FormatNumber(stimulusResult.BurnDamageSpendFuel)}");
+            $"burn_damage_spend_fuel={FormatNumber(stimulusResult.BurnDamageSpendFuel)}_" +
+            $"direct_target_kind={FormatToken(stimulusResult.DirectTargetKind)}_" +
+            $"direct_target_stable_id={FormatToken(stimulusResult.DirectTargetStableId)}_" +
+            $"direct_target_scanned_cells={FormatNumber(stimulusResult.DirectTargetScannedCellCount)}_" +
+            $"target_source={FormatToken(stimulusResult.TargetSource)}_" +
+            $"registered_burn_damage_targets={FormatNumber(stimulusResult.RegisteredBurnDamageTargetCount)}_" +
+            $"registered_crop_burn_targets={FormatNumber(stimulusResult.RegisteredCropBurnTargetCount)}_" +
+            $"registered_crop_burn_owned_cells={FormatNumber(stimulusResult.RegisteredCropBurnOwnedCellCount)}_" +
+            $"sustained_heat_set_cell={FormatNumber(stimulusResult.SustainedHeatSetCell)}_" +
+            $"sustained_heat_requested_cycles={FormatNumber(stimulusResult.SustainedHeatRequestedCycleCount)}_" +
+            $"sustained_heat_completed_cycles={FormatNumber(stimulusResult.SustainedHeatCompletedCycleCount)}_" +
+            $"sustained_heat_remaining_cycles={FormatNumber(stimulusResult.SustainedHeatRemainingCycleCount)}_" +
+            $"sustained_heat_queued_cycle={FormatNumber(stimulusResult.SustainedHeatQueuedCycleNumber)}_" +
+            $"beaver_exposure_target_beaver_id={FormatToken(stimulusResult.BeaverExposureTargetBeaverId)}_" +
+            $"beaver_exposure_target_beaver_x={FormatNumber(stimulusResult.BeaverExposureTargetBeaverX)}_" +
+            $"beaver_exposure_target_beaver_y={FormatNumber(stimulusResult.BeaverExposureTargetBeaverY)}_" +
+            $"beaver_exposure_target_beaver_z={FormatNumber(stimulusResult.BeaverExposureTargetBeaverZ)}_" +
+            $"beaver_exposure_target_candidate_cells={FormatNumber(stimulusResult.BeaverExposureTargetCandidateCells)}_" +
+            $"beaver_exposure_target_sampled_beavers={FormatNumber(stimulusResult.BeaverExposureTargetSampledBeavers)}_" +
+            $"beaver_exposure_target_skipped_no_position_api={FormatNumber(stimulusResult.BeaverExposureTargetSkippedNoPositionApi)}_" +
+            $"beaver_exposure_target_skipped_bounded_sampling={FormatNumber(stimulusResult.BeaverExposureTargetSkippedBoundedSampling)}");
     }
 
     private TimberbornQaCommandResult ExecuteQaBuildingBurnoutStimulus()
@@ -517,6 +537,7 @@ public sealed class TimberbornQaCommandBridge
             $"initial_fuel={stimulusResult.InitialFuel}_" +
             $"set_heat={stimulusResult.SetHeat}_" +
             $"timeout_ticks={stimulusResult.TimeoutTicks}_" +
+            $"sustained_heat_ticks={stimulusResult.SustainedHeatTicks}_" +
             $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}");
     }
 
@@ -568,9 +589,13 @@ public sealed class TimberbornQaCommandBridge
 
     private static bool CanAcceptArguments(string command, string commandText)
     {
-        return (StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) ||
-            StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand)) &&
-            ParseFieldTargetSelector(commandText) is not null ||
+        string? fieldTargetSelector = ParseFieldTargetSelector(commandText);
+        return StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) &&
+            fieldTargetSelector is not null ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand) &&
+            fieldTargetSelector is not null &&
+            fieldTargetSelector != TimberbornQaFieldTargetSelectors.BeaverExposure &&
+            !TimberbornQaFieldTargetSelectors.IsDirectConsequenceTargetSelector(fieldTargetSelector) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) &&
             ParseBurnDurationTarget(commandText) is not null ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) &&
@@ -687,7 +712,27 @@ public sealed record TimberbornQaDeltaStimulusResult(
     TimberbornBurnDamageTargetKind? BurnDamageTargetKind = null,
     int? BurnDamageRemainingCapacity = null,
     byte? BurnDamageProbeFuel = null,
-    byte? BurnDamageSpendFuel = null);
+    byte? BurnDamageSpendFuel = null,
+    string? DirectTargetKind = null,
+    string? DirectTargetStableId = null,
+    int? DirectTargetScannedCellCount = null,
+    string? TargetSource = null,
+    int? RegisteredBurnDamageTargetCount = null,
+    int? RegisteredCropBurnTargetCount = null,
+    int? RegisteredCropBurnOwnedCellCount = null,
+    int? SustainedHeatSetCell = null,
+    int? SustainedHeatRequestedCycleCount = null,
+    int? SustainedHeatCompletedCycleCount = null,
+    int? SustainedHeatRemainingCycleCount = null,
+    int? SustainedHeatQueuedCycleNumber = null,
+    string? BeaverExposureTargetBeaverId = null,
+    int? BeaverExposureTargetBeaverX = null,
+    int? BeaverExposureTargetBeaverY = null,
+    int? BeaverExposureTargetBeaverZ = null,
+    int? BeaverExposureTargetCandidateCells = null,
+    int? BeaverExposureTargetSampledBeavers = null,
+    int? BeaverExposureTargetSkippedNoPositionApi = null,
+    int? BeaverExposureTargetSkippedBoundedSampling = null);
 
 public interface ITimberbornQaBuildingBurnoutStimulus
 {
@@ -752,6 +797,7 @@ public sealed record TimberbornQaBurnDurationStimulusResult(
     byte InitialFuel,
     byte SetHeat,
     uint TimeoutTicks,
+    int SustainedHeatTicks,
     int QueuedHeatChangeCount);
 
 public sealed record TimberbornQaBurnDurationProofState(
@@ -763,6 +809,9 @@ public sealed record TimberbornQaBurnDurationProofState(
     byte InitialFuel,
     uint QueuedTick,
     uint TimeoutTicks,
+    int SustainedHeatTicks = 0,
+    int SustainedHeatAppliedTicks = 0,
+    bool SustainedHeatComplete = false,
     uint? BurnStartTick = null,
     uint? DepletionTick = null,
     uint? ElapsedBurnTicks = null,
@@ -883,11 +932,15 @@ public static class TimberbornQaFieldTargetSelectors
     public const string Tree = "tree";
     public const string SelectedTree = "selected-tree";
     public const string CenterTree = "center-tree";
+    public const string BeaverExposure = "beaver-exposure";
     public const string Vegetation = "vegetation";
     public const string Crop = "crop";
     public const string Storage = "storage";
     public const string Building = "building";
     public const string Infrastructure = "infrastructure";
+    public const string Dynamite = "dynamite";
+    public const string Detonator = "detonator";
+    public const string Tunnel = "tunnel";
     public const string PathInfrastructure = "path-infrastructure";
     public const string PowerInfrastructure = "power-infrastructure";
     public const string WaterInfrastructure = "water-infrastructure";
@@ -898,11 +951,15 @@ public static class TimberbornQaFieldTargetSelectors
         Tree,
         SelectedTree,
         CenterTree,
+        BeaverExposure,
         Vegetation,
         Crop,
         Storage,
         Building,
         Infrastructure,
+        Dynamite,
+        Detonator,
+        Tunnel,
         PathInfrastructure,
         PowerInfrastructure,
         WaterInfrastructure,
@@ -931,11 +988,15 @@ public static class TimberbornQaFieldTargetSelectors
             Tree => materialClass == WildfireMaterialClass.Tree,
             SelectedTree => materialClass == WildfireMaterialClass.Tree,
             CenterTree => materialClass == WildfireMaterialClass.Tree,
+            BeaverExposure => false,
             Vegetation => materialClass == WildfireMaterialClass.Vegetation,
             Crop => materialClass == WildfireMaterialClass.Crop,
             Storage => materialClass == WildfireMaterialClass.Storage,
             Building => materialClass == WildfireMaterialClass.Building,
             Infrastructure => materialClass == WildfireMaterialClass.Infrastructure,
+            Dynamite => false,
+            Detonator => false,
+            Tunnel => false,
             PathInfrastructure => materialClass == WildfireMaterialClass.Infrastructure,
             PowerInfrastructure => materialClass == WildfireMaterialClass.Infrastructure,
             WaterInfrastructure => materialClass == WildfireMaterialClass.Infrastructure,
@@ -947,6 +1008,11 @@ public static class TimberbornQaFieldTargetSelectors
     {
         return Normalize(selector) is Building or Storage or Infrastructure or PathInfrastructure or
             PowerInfrastructure or WaterInfrastructure;
+    }
+
+    public static bool IsDirectConsequenceTargetSelector(string selector)
+    {
+        return Normalize(selector) is Dynamite or Detonator or Tunnel;
     }
 }
 
@@ -1080,6 +1146,58 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerBuildingBurnoutConsideredDeltaCount = null,
     int? LastDeltaConsumerBuildingBurnoutMatchedCellCount = null,
     int? LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount = null,
+    int? BurnDamageRegisteredTargetCount = null,
+    int? BurnDamageRegisteredOwnedCellCount = null,
+    int? BurnDamageRegisteredUnknownSpecCount = null,
+    int? BurnDamageRegisteredMissingResourceCount = null,
+    int? BurnDamageRegisteredTotalCapacity = null,
+    int? BurnDamageRegisteredZeroCapacityTargetCount = null,
+    int? BurnDamageRegisteredCropBurnTargetCount = null,
+    int? BurnDamageRegisteredCropBurnOwnedCellCount = null,
+    int? BurnDamageRegisteredTreeBurnTargetCount = null,
+    int? BurnDamageRegisteredTreeBurnOwnedCellCount = null,
+    int? QaDeltaStimulusTargetCellIndex = null,
+    int? QaDeltaStimulusTargetX = null,
+    int? QaDeltaStimulusTargetY = null,
+    int? QaDeltaStimulusTargetZ = null,
+    string? QaDeltaStimulusTargetSource = null,
+    int? QaDeltaStimulusSustainedHeatSetCell = null,
+    int? QaDeltaStimulusSustainedHeatRequestedCycleCount = null,
+    int? QaDeltaStimulusSustainedHeatCompletedCycleCount = null,
+    int? QaDeltaStimulusSustainedHeatRemainingCycleCount = null,
+    int? QaDeltaStimulusSustainedHeatQueuedCycleNumber = null,
+    uint? QaDeltaStimulusSustainedHeatLastCompletedTick = null,
+    bool QaDeltaStimulusSustainedHeatActive = false,
+    string? SelectedCropTargetSelectionState = null,
+    string? SelectedCropTargetObjectType = null,
+    string? SelectedCropTargetObjectName = null,
+    string? SelectedCropTargetBlockObjectName = null,
+    int? SelectedCropTargetComponentCount = null,
+    string? SelectedCropTargetComponentTypes = null,
+    int? SelectedCropTargetOccupiedCellCount = null,
+    int? SelectedCropTargetOccupiedInGridCellCount = null,
+    string? SelectedCropTargetYieldDebug = null,
+    string? SelectedCropTargetFailureReason = null,
+    int? LastDeltaConsumerCropBurnConsideredTargetCount = null,
+    int? LastDeltaConsumerCropBurnBurnableTargetCount = null,
+    int? LastDeltaConsumerCropBurnYieldLost = null,
+    int? LastDeltaConsumerCropBurnKilledCropCount = null,
+    int? LastDeltaConsumerCropBurnVisualStateUpdateCount = null,
+    int? LastDeltaConsumerCropBurnDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerCropBurnUnmappedTargetCount = null,
+    int? LastDeltaConsumerCropBurnUnknownHarvestResourceCount = null,
+    int? LastDeltaConsumerCropBurnNonBurnableTargetCount = null,
+    int? LastDeltaConsumerCropBurnSkippedUnsafeApiCount = null,
+    int? LastDeltaConsumerTreeBurnConsideredTargetCount = null,
+    int? LastDeltaConsumerTreeBurnBurnableTargetCount = null,
+    int? LastDeltaConsumerTreeBurnYieldLost = null,
+    int? LastDeltaConsumerTreeBurnKilledTreeCount = null,
+    int? LastDeltaConsumerTreeBurnVisualStateUpdateCount = null,
+    int? LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerTreeBurnUnmappedTargetCount = null,
+    int? LastDeltaConsumerTreeBurnUnknownCuttableResourceCount = null,
+    int? LastDeltaConsumerTreeBurnNonBurnableTargetCount = null,
+    int? LastDeltaConsumerTreeBurnSkippedUnsafeApiCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount = null,
@@ -1199,6 +1317,7 @@ public sealed record TimberbornQaCommandState(
     int? BeaverFieldExposureToxicSteamCells = null,
     int? BeaverFieldExposureTaintedAftermathCells = null,
     int? BeaverFieldExposureSkippedNoPositionApi = null,
+    int? BeaverFieldExposureSkippedBoundedSampling = null,
     string? BeaverFieldExposureUnavailableReason = null,
     int? ActivePooledFireEffectCount = null,
     int? UpdatedVisualRegionCount = null,
@@ -1221,6 +1340,9 @@ public sealed record TimberbornQaCommandState(
     uint? BurnDurationProofDepletionTick = null,
     uint? BurnDurationProofElapsedBurnTicks = null,
     uint? BurnDurationProofTimeoutTicks = null,
+    int? BurnDurationProofSustainedHeatTicks = null,
+    int? BurnDurationProofSustainedHeatAppliedTicks = null,
+    bool BurnDurationProofSustainedHeatComplete = false,
     bool BurnDurationProofTimedOut = false,
     string? BurnDurationProofStatus = null,
     string CompatibilityProbeStatus = "placeholder",
@@ -1309,6 +1431,58 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_building_burnout_considered_deltas={FormatNumber(State.LastDeltaConsumerBuildingBurnoutConsideredDeltaCount)} " +
         $"last_delta_consumer_building_burnout_matched_cells={FormatNumber(State.LastDeltaConsumerBuildingBurnoutMatchedCellCount)} " +
         $"last_delta_consumer_building_burnout_applied_consequences={FormatNumber(State.LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount)} " +
+        $"burn_damage_registered_targets={FormatNumber(State.BurnDamageRegisteredTargetCount)} " +
+        $"burn_damage_registered_owned_cells={FormatNumber(State.BurnDamageRegisteredOwnedCellCount)} " +
+        $"burn_damage_registered_unknown_specs={FormatNumber(State.BurnDamageRegisteredUnknownSpecCount)} " +
+        $"burn_damage_registered_missing_resources={FormatNumber(State.BurnDamageRegisteredMissingResourceCount)} " +
+        $"burn_damage_registered_total_capacity={FormatNumber(State.BurnDamageRegisteredTotalCapacity)} " +
+        $"burn_damage_registered_zero_capacity_targets={FormatNumber(State.BurnDamageRegisteredZeroCapacityTargetCount)} " +
+        $"burn_damage_registered_crop_burn_targets={FormatNumber(State.BurnDamageRegisteredCropBurnTargetCount)} " +
+        $"burn_damage_registered_crop_burn_owned_cells={FormatNumber(State.BurnDamageRegisteredCropBurnOwnedCellCount)} " +
+        $"burn_damage_registered_tree_burn_targets={FormatNumber(State.BurnDamageRegisteredTreeBurnTargetCount)} " +
+        $"burn_damage_registered_tree_burn_owned_cells={FormatNumber(State.BurnDamageRegisteredTreeBurnOwnedCellCount)} " +
+        $"qa_delta_stimulus_target_index={FormatNumber(State.QaDeltaStimulusTargetCellIndex)} " +
+        $"qa_delta_stimulus_target_x={FormatNumber(State.QaDeltaStimulusTargetX)} " +
+        $"qa_delta_stimulus_target_y={FormatNumber(State.QaDeltaStimulusTargetY)} " +
+        $"qa_delta_stimulus_target_z={FormatNumber(State.QaDeltaStimulusTargetZ)} " +
+        $"qa_delta_stimulus_target_source={TimberbornQaCommandBridge.FormatToken(State.QaDeltaStimulusTargetSource)} " +
+        $"qa_delta_stimulus_sustained_heat_set_cell={FormatNumber(State.QaDeltaStimulusSustainedHeatSetCell)} " +
+        $"qa_delta_stimulus_sustained_heat_requested_cycles={FormatNumber(State.QaDeltaStimulusSustainedHeatRequestedCycleCount)} " +
+        $"qa_delta_stimulus_sustained_heat_completed_cycles={FormatNumber(State.QaDeltaStimulusSustainedHeatCompletedCycleCount)} " +
+        $"qa_delta_stimulus_sustained_heat_remaining_cycles={FormatNumber(State.QaDeltaStimulusSustainedHeatRemainingCycleCount)} " +
+        $"qa_delta_stimulus_sustained_heat_queued_cycle={FormatNumber(State.QaDeltaStimulusSustainedHeatQueuedCycleNumber)} " +
+        $"qa_delta_stimulus_sustained_heat_last_completed_tick={FormatNumber(State.QaDeltaStimulusSustainedHeatLastCompletedTick)} " +
+        $"qa_delta_stimulus_sustained_heat_active={State.QaDeltaStimulusSustainedHeatActive.ToString().ToLowerInvariant()} " +
+        $"selected_crop_target_state={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetSelectionState)} " +
+        $"selected_crop_target_object_type={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetObjectType)} " +
+        $"selected_crop_target_object_name={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetObjectName)} " +
+        $"selected_crop_target_block_object={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetBlockObjectName)} " +
+        $"selected_crop_target_component_count={FormatNumber(State.SelectedCropTargetComponentCount)} " +
+        $"selected_crop_target_components={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetComponentTypes)} " +
+        $"selected_crop_target_occupied_cells={FormatNumber(State.SelectedCropTargetOccupiedCellCount)} " +
+        $"selected_crop_target_occupied_in_grid_cells={FormatNumber(State.SelectedCropTargetOccupiedInGridCellCount)} " +
+        $"selected_crop_target_yield_debug={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetYieldDebug)} " +
+        $"selected_crop_target_failure={TimberbornQaCommandBridge.FormatToken(State.SelectedCropTargetFailureReason)} " +
+        $"last_delta_consumer_crop_burn_considered_targets={FormatNumber(State.LastDeltaConsumerCropBurnConsideredTargetCount)} " +
+        $"last_delta_consumer_crop_burn_burnable_targets={FormatNumber(State.LastDeltaConsumerCropBurnBurnableTargetCount)} " +
+        $"last_delta_consumer_crop_burn_yield_lost={FormatNumber(State.LastDeltaConsumerCropBurnYieldLost)} " +
+        $"last_delta_consumer_crop_burn_killed_crops={FormatNumber(State.LastDeltaConsumerCropBurnKilledCropCount)} " +
+        $"last_delta_consumer_crop_burn_visual_state_updates={FormatNumber(State.LastDeltaConsumerCropBurnVisualStateUpdateCount)} " +
+        $"last_delta_consumer_crop_burn_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerCropBurnDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_crop_burn_unmapped_targets={FormatNumber(State.LastDeltaConsumerCropBurnUnmappedTargetCount)} " +
+        $"last_delta_consumer_crop_burn_unknown_harvest_resources={FormatNumber(State.LastDeltaConsumerCropBurnUnknownHarvestResourceCount)} " +
+        $"last_delta_consumer_crop_burn_non_burnable_targets={FormatNumber(State.LastDeltaConsumerCropBurnNonBurnableTargetCount)} " +
+        $"last_delta_consumer_crop_burn_skipped_unsafe_apis={FormatNumber(State.LastDeltaConsumerCropBurnSkippedUnsafeApiCount)} " +
+        $"last_delta_consumer_tree_burn_considered_targets={FormatNumber(State.LastDeltaConsumerTreeBurnConsideredTargetCount)} " +
+        $"last_delta_consumer_tree_burn_burnable_targets={FormatNumber(State.LastDeltaConsumerTreeBurnBurnableTargetCount)} " +
+        $"last_delta_consumer_tree_burn_yield_lost={FormatNumber(State.LastDeltaConsumerTreeBurnYieldLost)} " +
+        $"last_delta_consumer_tree_burn_killed_trees={FormatNumber(State.LastDeltaConsumerTreeBurnKilledTreeCount)} " +
+        $"last_delta_consumer_tree_burn_visual_state_updates={FormatNumber(State.LastDeltaConsumerTreeBurnVisualStateUpdateCount)} " +
+        $"last_delta_consumer_tree_burn_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_tree_burn_unmapped_targets={FormatNumber(State.LastDeltaConsumerTreeBurnUnmappedTargetCount)} " +
+        $"last_delta_consumer_tree_burn_unknown_cuttable_resources={FormatNumber(State.LastDeltaConsumerTreeBurnUnknownCuttableResourceCount)} " +
+        $"last_delta_consumer_tree_burn_non_burnable_targets={FormatNumber(State.LastDeltaConsumerTreeBurnNonBurnableTargetCount)} " +
+        $"last_delta_consumer_tree_burn_skipped_unsafe_apis={FormatNumber(State.LastDeltaConsumerTreeBurnSkippedUnsafeApiCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_considered_deltas={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_matched_structure_cells={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_duplicate_structure_targets_suppressed={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount)} " +
@@ -1428,6 +1602,7 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_exposure_toxic_steam_cells={FormatNumber(State.BeaverFieldExposureToxicSteamCells)} " +
         $"beaver_field_exposure_tainted_aftermath_cells={FormatNumber(State.BeaverFieldExposureTaintedAftermathCells)} " +
         $"beaver_field_exposure_skipped_no_position_api={FormatNumber(State.BeaverFieldExposureSkippedNoPositionApi)} " +
+        $"beaver_field_exposure_skipped_bounded_sampling={FormatNumber(State.BeaverFieldExposureSkippedBoundedSampling)} " +
         $"beaver_field_exposure_unavailable_reason={TimberbornQaCommandBridge.FormatToken(State.BeaverFieldExposureUnavailableReason)} " +
         $"active_pooled_fire_effects={FormatNumber(State.ActivePooledFireEffectCount)} " +
         $"updated_visual_regions={FormatNumber(State.UpdatedVisualRegionCount)} " +
@@ -1450,6 +1625,9 @@ public sealed record TimberbornQaCommandResult(
         $"burn_duration_proof_depletion_tick={FormatNumber(State.BurnDurationProofDepletionTick)} " +
         $"burn_duration_proof_elapsed_burn_ticks={FormatNumber(State.BurnDurationProofElapsedBurnTicks)} " +
         $"burn_duration_proof_timeout_ticks={FormatNumber(State.BurnDurationProofTimeoutTicks)} " +
+        $"burn_duration_proof_sustained_heat_ticks={FormatNumber(State.BurnDurationProofSustainedHeatTicks)} " +
+        $"burn_duration_proof_sustained_heat_applied_ticks={FormatNumber(State.BurnDurationProofSustainedHeatAppliedTicks)} " +
+        $"burn_duration_proof_sustained_heat_complete={State.BurnDurationProofSustainedHeatComplete.ToString().ToLowerInvariant()} " +
         $"burn_duration_proof_timed_out={State.BurnDurationProofTimedOut.ToString().ToLowerInvariant()} " +
         $"burn_duration_proof_status={TimberbornQaCommandBridge.FormatToken(State.BurnDurationProofStatus)} " +
         $"compatibility_probe_status={TimberbornQaCommandBridge.FormatToken(State.CompatibilityProbeStatus)} " +

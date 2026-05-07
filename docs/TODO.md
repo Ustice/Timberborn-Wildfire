@@ -84,7 +84,7 @@ Goal: make fire, smoke, ash, and steam readable, then tune core fire behavior fr
 
 First ready wave:
 
-- [ ] `TWF-066`: tune visible fire effect. Reviewed deterministic implementation is blocked on live Timberborn recording evidence.
+- [x] `TWF-066`: tune visible fire effect. Live QA accepted the procedural Fire particle baseline on `QA Tunnels and Booms`.
 - [ ] `TWF-088`: tune fire spread pace. Reviewed deterministic implementation is blocked on command-responsive loaded-save and low-resolution recording evidence.
 - [ ] `TWF-089`: tune fuel burn-down duration. Reviewed deterministic implementation is blocked on `TWF-088` live acceptance and burn-duration recording evidence.
 - [ ] `TWF-090`: tune water suppression behavior. Reviewed deterministic evidence is blocked on upstream live acceptance and suppression recording evidence.
@@ -100,8 +100,8 @@ Goal: make fire damage the world in durable, resource-accounted ways.
 First ready wave:
 
 - [x] `TWF-075`: add burn damage state foundation.
-- [ ] `TWF-076`: apply crop burn consequences. Reviewed deterministic implementation is blocked on live crop-burn QA evidence.
-- [ ] `TWF-084`: apply tree burn consequences. Reviewed deterministic implementation is blocked on live tree-burn QA evidence.
+- [x] `TWF-076`: apply crop burn consequences. Live QA accepted manual selected-Blueberry proof with precise safe-unavailable mutation telemetry.
+- [x] `TWF-084`: apply tree burn consequences. Live QA accepted real tree/cuttable registration and nonzero tree-burn telemetry with precise safe-unavailable mutation telemetry.
 - [x] `TWF-116`: define explosive storage fire behavior.
 - [x] `TWF-117`: classify infrastructure burn behavior.
 
@@ -111,10 +111,22 @@ Follow-on gates:
 - [x] `TWF-115`: apply stored goods burn consequences. Fixed for the `TWF-075` ownership bypass, live-proved on `Fuel`, reviewed, and integrated on `main`.
 - [x] `TWF-127`, `TWF-128`, and `TWF-129`: path, power, and water infrastructure effects. Fixed for the `TWF-075` ownership bypass, selector specificity, and power/water live registration; live-proved on `Fuel` plus `Smolville`, reviewed, and integrated on `main`.
 
+### Sprint 10: Recovery And Consequence Gates
+
+- [x] `TWF-066`: accepted procedural Fire readability baseline.
+- [x] `TWF-072`: accepted beaver exposure telemetry, including beaver-proximate live proof without behavior mutation.
+- [x] `TWF-076`: accepted crop/harvestable consequence telemetry from manual crop selection.
+- [x] `TWF-084`: accepted tree/cuttable consequence telemetry.
+- [x] `TWF-089`: accepted fuel burn-down recovery.
+- [x] `TWF-152`: accepted native dynamite fire-triggering boundary.
+- [x] `TWF-153`: accepted conservative detonator fire-safety behavior.
+- [x] `TWF-154`: accepted tunnel fire destruction gate.
+- [ ] Blocked carry-forward: `TWF-090`, `TWF-091`, `TWF-092`, `TWF-144`, `TWF-148`, `TWF-149`, and `TWF-150` remain explicit blockers.
+
 ### Later Sprints
 
 - Sprint 8: live QA recovery and blocked evidence triage.
 - Sprint 9: real field replacement and real-field proof closed as mixed done/blocked. `Fuel` is accepted as the stable `50x50` Sprint 9 surface, but `TWF-144` and `TWF-148` are blocked on making normal gameplay visuals plainly visible.
-- Sprint 10: visual consequences and aftermath from real fields. First unblock the normal gameplay visual path, then expand `TWF-149` and [world-consequence-first-pass.md](world-consequence-first-pass.md) into scorch, burned textures, persistent ash, contamination, persistence, and tightened crop/tree/structure consequence tickets. Include `TWF-156` for creating a reusable `256x256` scenario map, but it does not need to be the first ticket.
-- Sprint 11: beavers and player feedback after smoke, heat, ash, and contamination fields are accepted.
+- Sprint 11: next dependency-ready choices are `TWF-067` smoke tuning, `TWF-073` beaver field behavior harness, and `TWF-078` persistent ash field service. Pick one lane first because their write scopes overlap.
+- Later: visual consequences and aftermath from real fields should continue from [world-consequence-first-pass.md](world-consequence-first-pass.md) once `TWF-144`/`TWF-148` are unblocked.
 - Sprint 12: release packaging and Steam Workshop.

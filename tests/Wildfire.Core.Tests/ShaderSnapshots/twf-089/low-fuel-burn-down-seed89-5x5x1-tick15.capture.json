@@ -1,0 +1,205 @@
+{
+  "formatVersion": 1,
+  "scenario": "low-fuel-burn-down",
+  "seed": 89,
+  "grid": {
+    "width": 5,
+    "height": 5,
+    "depth": 1
+  },
+  "tickCount": 15,
+  "finalPackedCells": [
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    21168,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248,
+    53248
+  ],
+  "perTickDeltaCounts": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "perTickDeltas": [
+    {
+      "tick": 1,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 24308,
+          "newCell": 23268
+        }
+      ]
+    },
+    {
+      "tick": 2,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 23268,
+          "newCell": 22212
+        }
+      ]
+    },
+    {
+      "tick": 3,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 22212,
+          "newCell": 21219
+        }
+      ]
+    },
+    {
+      "tick": 4,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21219,
+          "newCell": 21139
+        }
+      ]
+    },
+    {
+      "tick": 5,
+      "deltaCount": 0,
+      "deltas": [
+      ]
+    },
+    {
+      "tick": 6,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21139,
+          "newCell": 21187
+        }
+      ]
+    },
+    {
+      "tick": 7,
+      "deltaCount": 0,
+      "deltas": [
+      ]
+    },
+    {
+      "tick": 8,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21187,
+          "newCell": 21139
+        }
+      ]
+    },
+    {
+      "tick": 9,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21139,
+          "newCell": 21187
+        }
+      ]
+    },
+    {
+      "tick": 10,
+      "deltaCount": 0,
+      "deltas": [
+      ]
+    },
+    {
+      "tick": 11,
+      "deltaCount": 0,
+      "deltas": [
+      ]
+    },
+    {
+      "tick": 12,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21187,
+          "newCell": 21186
+        }
+      ]
+    },
+    {
+      "tick": 13,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21186,
+          "newCell": 21185
+        }
+      ]
+    },
+    {
+      "tick": 14,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21185,
+          "newCell": 21137
+        }
+      ]
+    },
+    {
+      "tick": 15,
+      "deltaCount": 1,
+      "deltas": [
+        {
+          "cellIndex": 12,
+          "oldCell": 21137,
+          "newCell": 21168
+        }
+      ]
+    }
+  ],
+  "visual": {
+    "checksum": "visual-fnv1a32:32CD75E9"
+  }
+}

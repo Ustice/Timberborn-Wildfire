@@ -103,6 +103,71 @@ public sealed class TimberbornTunnelFireConsequenceTests
     }
 
     [Fact]
+    public void SinkContainsResolverTypeFailureAsSafeUnavailableTelemetry()
+    {
+        RecordingTunnelTargetApi targetApi = new(Target(), throwOnResolve: true);
+        TimberbornTunnelFireSink sink = new(
+            () => Settings(destructionEnabled: true),
+            targetApi);
+
+        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+            5,
+            [Decision(12, heat: 5)]);
+
+        Assert.Equal(1, summary.ConsideredDeltaCount);
+        Assert.Equal(0, summary.MatchedTargetCellCount);
+        Assert.Equal(0, summary.NativeExplodeAttemptedCount);
+        Assert.Equal(0, summary.NativeExplodeAppliedCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Empty(targetApi.ExplodedTargets);
+    }
+
+    [Fact]
+    public void SinkReportsExplodeMethodFailureAsSafeUnavailableTelemetry()
+    {
+        RecordingTunnelTargetApi targetApi = new(
+            Target(canExplodeNative: true),
+            explodeResult: new TimberbornTunnelNativeExplodeResult(
+                TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
+                RecoverabilityPreserved: false));
+        TimberbornTunnelFireSink sink = new(
+            () => Settings(destructionEnabled: true),
+            targetApi);
+
+        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+            5,
+            [Decision(12, heat: 5)]);
+
+        Assert.Equal(1, summary.NativeExplodeAttemptedCount);
+        Assert.Equal(0, summary.NativeExplodeAppliedCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Single(targetApi.ExplodedTargets);
+    }
+
+    [Fact]
+    public void SinkContainsExplodeInvocationFailureAsSafeUnavailableTelemetry()
+    {
+        RecordingTunnelTargetApi targetApi = new(
+            Target(canExplodeNative: true),
+            throwOnExplode: true);
+        TimberbornTunnelFireSink sink = new(
+            () => Settings(destructionEnabled: true),
+            targetApi);
+
+        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+            5,
+            [Decision(12, heat: 5)]);
+
+        Assert.Equal(1, summary.NativeExplodeAttemptedCount);
+        Assert.Equal(0, summary.NativeExplodeAppliedCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Single(targetApi.ExplodedTargets);
+    }
+
+    [Fact]
     public void DeltaConsumerRoutesTunnelTelemetry()
     {
         RecordingTunnelTargetApi targetApi = new(Target());
@@ -155,7 +220,11 @@ public sealed class TimberbornTunnelFireConsequenceTests
         return PackedCell.Pack(fuel: 0, heat, flammability: 0, water: 0, terrain: 1, heatLoss: 0);
     }
 
-    private sealed class RecordingTunnelTargetApi(TimberbornTunnelFireTarget? target)
+    private sealed class RecordingTunnelTargetApi(
+        TimberbornTunnelFireTarget? target,
+        bool throwOnResolve = false,
+        TimberbornTunnelNativeExplodeResult? explodeResult = null,
+        bool throwOnExplode = false)
         : ITimberbornTunnelFireTargetApi
     {
         public List<TimberbornTunnelFireConsequence> ResolvedConsequences { get; } = [];
@@ -164,6 +233,11 @@ public sealed class TimberbornTunnelFireConsequenceTests
 
         public TimberbornTunnelFireTarget? ResolveTarget(TimberbornTunnelFireConsequence consequence)
         {
+            if (throwOnResolve)
+            {
+                throw new TypeLoadException("tunnel type lookup failed");
+            }
+
             ResolvedConsequences.Add(consequence);
             return target is null ? null : target with { CellIndex = consequence.CellIndex };
         }
@@ -171,7 +245,12 @@ public sealed class TimberbornTunnelFireConsequenceTests
         public TimberbornTunnelNativeExplodeResult ExplodeNative(TimberbornTunnelFireTarget explodeTarget)
         {
             ExplodedTargets.Add(explodeTarget);
-            return new TimberbornTunnelNativeExplodeResult(
+            if (throwOnExplode)
+            {
+                throw new InvalidOperationException("tunnel explode failed");
+            }
+
+            return explodeResult ?? new TimberbornTunnelNativeExplodeResult(
                 TimberbornTunnelNativeExplodeStatus.Applied,
                 RecoverabilityPreserved: explodeTarget.CanRecover);
         }

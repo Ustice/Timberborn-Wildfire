@@ -30,6 +30,7 @@ Use these instructions for every Wildfire QA sub-agent unless the ticket says ot
 - If a stale deploy/QA lock is encountered, stop and report the lock path, owner metadata, running-process check, and smallest safe cleanup request to the coordinator.
 - Do not infer success from logs alone when the ticket requires visible runtime behavior.
 - Treat visible symptoms as primary evidence when they conflict with internal tests.
+- You may edit and create new QA-specific tools to make verifying work easier.
 
 ## Evidence Contract
 

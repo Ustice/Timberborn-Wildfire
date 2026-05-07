@@ -121,9 +121,14 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                 new(grid, _blockService);
             TimberbornLiveBurnDamageTargets burnDamageTargets =
                 TimberbornLiveBurnDamageTargetCollector.Collect(_entityRegistry, grid);
+            TimberbornLiveCropBurnDamageTargets cropBurnDamageTargets =
+                TimberbornLiveCropBurnDamageTargetCollector.Collect(_entityRegistry, grid);
             TimberbornBurnDamageService burnDamageService =
                 new(burnDamageTargets.DescriptorCatalog, logSink: _logSink);
-            burnDamageService.RegisterTargets(grid, burnDamageTargets.Registrations);
+            burnDamageService.RegisterTargets(
+                grid,
+                burnDamageTargets.Registrations.Concat(cropBurnDamageTargets.Registrations),
+                cropBurnDamageTargets.Descriptors);
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
             _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
             _runtime.AttachBurnDamageService(burnDamageService);

@@ -147,6 +147,196 @@ public sealed class TimberbornBurnDamageStateTests
     }
 
     [Fact]
+    public void LiveCropCollectorRegistersKnownBurnableYieldTargets()
+    {
+        FireGrid grid = new(50, 50, 23);
+        int cropCellIndex = grid.ToIndex(25, 25, 3);
+        TimberbornLiveCropBurnDamageTargets targets =
+            TimberbornLiveCropBurnDamageTargetCollector.CollectCandidates(
+                grid,
+                [
+                    new TimberbornLiveCropBurnDamageCandidate(
+                        "crop-kohlrabi-live-1",
+                        "Kohlrabi.Folktails",
+                        "Kohlrabi",
+                        1,
+                        [
+                            new TimberbornCellCoordinates(25, 25, 3),
+                            new TimberbornCellCoordinates(25, 26, 3),
+                        ]),
+                    new TimberbornLiveCropBurnDamageCandidate(
+                        "crop-unknown-live-1",
+                        "MysteryCrop",
+                        "MysteryCrop",
+                        1,
+                        [new TimberbornCellCoordinates(1, 1, 1)]),
+                ]);
+        RecordingFireLogSink logSink = new();
+        TimberbornBurnDamageService service = new(
+            targets.DescriptorCatalog,
+            logSink: logSink);
+
+        TimberbornBurnDamageRegistrationSummary summary = service.RegisterTargets(grid, targets.Registrations);
+        TimberbornBurnDamageTargetState state = Assert.Single(service.States.Values);
+
+        Assert.Equal(1, summary.TargetCount);
+        Assert.Equal(2, summary.OwnedCellCount);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Crop, state.TargetKind);
+        Assert.Equal(TimberbornBurnMaterialKind.Organic, state.MaterialKind);
+        Assert.Equal(["Kohlrabi"], state.AccountedResourceIds);
+        Assert.True(state.DamageCapacity > 0);
+        Assert.Contains(cropCellIndex, state.OwnedCellIndices);
+        Assert.Equal(state.TargetKey, service.TargetKeyByCellIndex[cropCellIndex]);
+    }
+
+    [Fact]
+    public void LiveCropCollectorRegistersBlueberryHarvestableAsOrganicResourceTarget()
+    {
+        FireGrid grid = new(50, 50, 23);
+        int blueberryCellIndex = grid.ToIndex(12, 13, 2);
+        TimberbornLiveCropBurnDamageTargets targets =
+            TimberbornLiveCropBurnDamageTargetCollector.CollectCandidates(
+                grid,
+                [
+                    new TimberbornLiveCropBurnDamageCandidate(
+                        "harvestable-blueberry-live-1",
+                        "BlueberryBush",
+                        "Berries",
+                        3,
+                        [new TimberbornCellCoordinates(12, 13, 2)]),
+                ]);
+        TimberbornBurnDamageService service = new(targets.DescriptorCatalog);
+
+        TimberbornBurnDamageRegistrationSummary summary = service.RegisterTargets(grid, targets.Registrations);
+        TimberbornBurnDamageTargetState state = Assert.Single(service.States.Values);
+
+        Assert.Equal(1, summary.TargetCount);
+        Assert.Equal(1, summary.OwnedCellCount);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Resource, state.TargetKind);
+        Assert.Equal(TimberbornBurnMaterialKind.Organic, state.MaterialKind);
+        Assert.Equal(["Berries"], state.AccountedResourceIds);
+        Assert.Equal(9, state.DamageCapacity);
+        Assert.Contains(blueberryCellIndex, state.OwnedCellIndices);
+        Assert.Equal(state.TargetKey, service.TargetKeyByCellIndex[blueberryCellIndex]);
+    }
+
+    [Fact]
+    public void SelectedBlueberryLiveShapeRegistersFromSelectedObjectWhenGlobalRegistrationIsEmpty()
+    {
+        FireGrid grid = new(50, 50, 23);
+        int blueberryCellIndex = grid.ToIndex(12, 13, 2);
+        TimberbornLiveCropBurnDamageTargets selectedTargets =
+            TimberbornLiveCropBurnDamageTargetCollector.CollectSelectedObject(
+                grid,
+                "selected-blueberry-live-1",
+                "BlueberryBush(Clone)",
+                [
+                    new LiveShapeGatherable(
+                        new LiveShapeYielder(
+                            new LiveShapeGoodAmount("Berries", 3),
+                            new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Berries", 3)))),
+                    new LiveShapeDirectYielder(
+                        new LiveShapeGoodAmount("Berries", 3),
+                        new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Berries", 3))),
+                ],
+                [new TimberbornCellCoordinates(12, 13, 2)]);
+        TimberbornBurnDamageService service = new(
+            new TimberbornBurnDamageDescriptorCatalog([]));
+
+        TimberbornBurnDamageRegistrationSummary summary = service.RegisterTargets(
+            grid,
+            selectedTargets.Registrations,
+            selectedTargets.Descriptors);
+        TimberbornQaSelectedCropTarget target = TimberbornSelectedCropTargetProvider.ResolveSelectedTarget(
+            grid,
+            service.States,
+            [blueberryCellIndex]);
+        TimberbornBurnDamageTargetState state = Assert.Single(service.States.Values);
+
+        Assert.Equal(1, summary.TargetCount);
+        Assert.Equal(1, summary.OwnedCellCount);
+        Assert.Equal(new TimberbornBurnDamageTargetKey("selected-blueberry-live-1"), state.TargetKey);
+        Assert.Equal("BlueberryBush(Clone)", state.SpecId);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Resource, state.TargetKind);
+        Assert.Equal(TimberbornBurnMaterialKind.Organic, state.MaterialKind);
+        Assert.Equal(["Berries"], state.AccountedResourceIds);
+        Assert.Equal(9, state.DamageCapacity);
+        Assert.Equal(new TimberbornQaSelectedCropTarget(
+            blueberryCellIndex,
+            12,
+            13,
+            2,
+            "selected_crop_target"), target);
+    }
+
+    [Fact]
+    public void LiveCropCollectorIgnoresCuttableTreeLogTargets()
+    {
+        FireGrid grid = new(50, 50, 23);
+        int blueberryCellIndex = grid.ToIndex(12, 13, 2);
+        TimberbornLiveCropBurnDamageTargets targets =
+            TimberbornLiveCropBurnDamageTargetCollector.CollectCandidates(
+                grid,
+                [
+                    new TimberbornLiveCropBurnDamageCandidate(
+                        "harvestable-blueberry-live-1",
+                        "BlueberryBush",
+                        "Berries",
+                        3,
+                        [new TimberbornCellCoordinates(12, 13, 2)],
+                        TimberbornLiveYieldSource.Gatherable),
+                    new TimberbornLiveCropBurnDamageCandidate(
+                        "cuttable-oak-live-1",
+                        "Oak",
+                        "Log",
+                        8,
+                        [new TimberbornCellCoordinates(13, 13, 2)],
+                        TimberbornLiveYieldSource.Cuttable),
+                ]);
+        TimberbornBurnDamageService service = new(targets.DescriptorCatalog);
+
+        TimberbornBurnDamageRegistrationSummary summary = service.RegisterTargets(grid, targets.Registrations);
+        TimberbornBurnDamageTargetState state = Assert.Single(service.States.Values);
+
+        Assert.Equal(1, summary.TargetCount);
+        Assert.Equal(new TimberbornBurnDamageTargetKey("harvestable-blueberry-live-1"), state.TargetKey);
+        Assert.Equal(["Berries"], state.AccountedResourceIds);
+        Assert.DoesNotContain("Log", state.AccountedResourceIds);
+        Assert.Contains(blueberryCellIndex, state.OwnedCellIndices);
+    }
+
+    [Fact]
+    public void SelectedTreeOrLogLiveShapeDoesNotRegisterAsCropBurnTarget()
+    {
+        FireGrid grid = new(50, 50, 23);
+
+        TimberbornLiveCropBurnDamageTargets selectedTargets =
+            TimberbornLiveCropBurnDamageTargetCollector.CollectSelectedObject(
+                grid,
+                "selected-oak-live-1",
+                "Oak(Clone)",
+                [
+                    new LiveShapeTreeComponent(),
+                    new LiveShapeGatherable(
+                        new LiveShapeYielder(
+                            new LiveShapeGoodAmount("Log", 8),
+                            new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Log", 8)))),
+                ],
+                [new TimberbornCellCoordinates(12, 13, 2)]);
+        TimberbornBurnDamageService service = new(
+            new TimberbornBurnDamageDescriptorCatalog([]));
+
+        TimberbornBurnDamageRegistrationSummary summary = service.RegisterTargets(
+            grid,
+            selectedTargets.Registrations,
+            selectedTargets.Descriptors);
+
+        Assert.Empty(selectedTargets.Registrations);
+        Assert.Equal(0, summary.TargetCount);
+        Assert.Empty(service.States);
+    }
+
+    [Fact]
     public void RegisterTargetsMapsChangedCellsToSingleOwningTarget()
     {
         FireGrid grid = new(3, 3, 1);
@@ -310,6 +500,59 @@ public sealed class TimberbornBurnDamageStateTests
         Assert.Equal(2, summary.BurnDamageTotalDamageApplied);
     }
 
+    [Fact]
+    public void CropBurnRegistrationSummaryDoesNotCountOrganicLogResourceTargets()
+    {
+        FireGrid grid = new(4, 1, 1);
+        TimberbornBurnDamageTargetKey cropKey = new("crop-carrot-1");
+        TimberbornBurnDamageTargetKey blueberryKey = new("harvestable-blueberry-1");
+        TimberbornBurnDamageTargetKey logKey = new("cuttable-oak-log-1");
+        TimberbornBurnDamageService service = CreateService(
+            new TimberbornBurnDamageDescriptor(
+                "Crop.Carrot",
+                TimberbornBurnDamageTargetKind.Crop,
+                TimberbornBurnMaterialKind.Organic,
+                resourceYields: [new TimberbornBurnDamageResourceStack("Carrot", 1)]),
+            new TimberbornBurnDamageDescriptor(
+                "Harvestable.Blueberry",
+                TimberbornBurnDamageTargetKind.Resource,
+                TimberbornBurnMaterialKind.Organic,
+                resourceYields: [new TimberbornBurnDamageResourceStack("Berries", 1)]),
+            new TimberbornBurnDamageDescriptor(
+                "Tree.Oak",
+                TimberbornBurnDamageTargetKind.Resource,
+                TimberbornBurnMaterialKind.Organic,
+                resourceYields: [new TimberbornBurnDamageResourceStack("Log", 1)]));
+        service.RegisterTargets(
+            grid,
+            [
+                new TimberbornBurnDamageTargetRegistration(
+                    cropKey,
+                    "Crop.Carrot",
+                    [
+                        new TimberbornCellCoordinates(0, 0, 0),
+                        new TimberbornCellCoordinates(1, 0, 0),
+                    ]),
+                new TimberbornBurnDamageTargetRegistration(
+                    blueberryKey,
+                    "Harvestable.Blueberry",
+                    [new TimberbornCellCoordinates(2, 0, 0)]),
+                new TimberbornBurnDamageTargetRegistration(
+                    logKey,
+                    "Tree.Oak",
+                    [new TimberbornCellCoordinates(3, 0, 0)]),
+            ]);
+
+        TimberbornCropBurnTargetRegistrationSummary summary =
+            TimberbornCropBurnTargetClassifier.SummarizeRegisteredTargets(service.States.Values);
+
+        Assert.Equal(2, summary.TargetCount);
+        Assert.Equal(3, summary.OwnedCellCount);
+        Assert.True(TimberbornCropBurnTargetClassifier.IsCropOrHarvestable(service.States[cropKey]));
+        Assert.True(TimberbornCropBurnTargetClassifier.IsCropOrHarvestable(service.States[blueberryKey]));
+        Assert.False(TimberbornCropBurnTargetClassifier.IsCropOrHarvestable(service.States[logKey]));
+    }
+
     private static TimberbornBurnDamageService CreateService(params TimberbornBurnDamageDescriptor[] descriptors)
     {
         return new TimberbornBurnDamageService(
@@ -380,5 +623,51 @@ public sealed class TimberbornBurnDamageStateTests
         {
             WarningMessages.Add(message);
         }
+    }
+
+    private sealed class LiveShapeGatherable(LiveShapeYielder yielder)
+    {
+        public LiveShapeYielder Yielder { get; } = yielder;
+    }
+
+    private sealed class LiveShapeDirectYielder(
+        LiveShapeGoodAmount yield,
+        LiveShapeYielderSpec yielderSpec)
+    {
+        public LiveShapeGoodAmount Yield { get; } = yield;
+
+        public LiveShapeYielderSpec YielderSpec { get; } = yielderSpec;
+    }
+
+    private sealed class LiveShapeYielder(
+        LiveShapeGoodAmount yield,
+        LiveShapeYielderSpec yielderSpec)
+    {
+        public LiveShapeGoodAmount Yield { get; } = yield;
+
+        public LiveShapeYielderSpec YielderSpec { get; } = yielderSpec;
+    }
+
+    private sealed class LiveShapeYielderSpec(LiveShapeGoodAmountSpec yield)
+    {
+        public LiveShapeGoodAmountSpec Yield { get; } = yield;
+    }
+
+    private sealed class LiveShapeGoodAmount(string goodId, int amount)
+    {
+        public string GoodId { get; } = goodId;
+
+        public int Amount { get; } = amount;
+    }
+
+    private sealed class LiveShapeGoodAmountSpec(string id, int amount)
+    {
+        public string Id { get; } = id;
+
+        public int Amount { get; } = amount;
+    }
+
+    private sealed class LiveShapeTreeComponent
+    {
     }
 }

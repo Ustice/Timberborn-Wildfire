@@ -24,19 +24,7 @@
     20999,
     20999,
     20999,
-    20999,
-    20999,
-    20999,
-    48128,
-    20999,
-    20999,
-    20999,
-    20999,
-    20999,
-    20999,
-    20999,
-    20999,
-    21047,
+    21015,
     20999,
     20999,
     48128,
@@ -47,8 +35,20 @@
     20999,
     20999,
     20999,
+    21015,
+    21188,
+    21015,
+    20999,
+    48128,
     20999,
     20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    20999,
+    21015,
     20999,
     20999,
     48128,
@@ -72,9 +72,9 @@
   ],
   "perTickDeltaCounts": [
     5,
-    5,
-    5,
-    5
+    1,
+    1,
+    1
   ],
   "perTickDeltas": [
     {
@@ -84,12 +84,12 @@
         {
           "cellIndex": 15,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         },
         {
           "cellIndex": 26,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         },
         {
           "cellIndex": 27,
@@ -99,110 +99,50 @@
         {
           "cellIndex": 28,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         },
         {
           "cellIndex": 39,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         }
       ]
     },
     {
       "tick": 2,
-      "deltaCount": 5,
+      "deltaCount": 1,
       "deltas": [
-        {
-          "cellIndex": 15,
-          "oldCell": 21031,
-          "newCell": 21063
-        },
-        {
-          "cellIndex": 26,
-          "oldCell": 21031,
-          "newCell": 21063
-        },
         {
           "cellIndex": 27,
           "oldCell": 21191,
-          "newCell": 21111
-        },
-        {
-          "cellIndex": 28,
-          "oldCell": 21031,
-          "newCell": 21063
-        },
-        {
-          "cellIndex": 39,
-          "oldCell": 21031,
-          "newCell": 21063
+          "newCell": 21190
         }
       ]
     },
     {
       "tick": 3,
-      "deltaCount": 5,
+      "deltaCount": 1,
       "deltas": [
         {
-          "cellIndex": 15,
-          "oldCell": 21063,
-          "newCell": 21031
-        },
-        {
-          "cellIndex": 26,
-          "oldCell": 21063,
-          "newCell": 21031
-        },
-        {
           "cellIndex": 27,
-          "oldCell": 21111,
-          "newCell": 21079
-        },
-        {
-          "cellIndex": 28,
-          "oldCell": 21063,
-          "newCell": 21031
-        },
-        {
-          "cellIndex": 39,
-          "oldCell": 21063,
-          "newCell": 21031
+          "oldCell": 21190,
+          "newCell": 21189
         }
       ]
     },
     {
       "tick": 4,
-      "deltaCount": 5,
+      "deltaCount": 1,
       "deltas": [
         {
-          "cellIndex": 15,
-          "oldCell": 21031,
-          "newCell": 20999
-        },
-        {
-          "cellIndex": 26,
-          "oldCell": 21031,
-          "newCell": 20999
-        },
-        {
           "cellIndex": 27,
-          "oldCell": 21079,
-          "newCell": 21047
-        },
-        {
-          "cellIndex": 28,
-          "oldCell": 21031,
-          "newCell": 20999
-        },
-        {
-          "cellIndex": 39,
-          "oldCell": 21031,
-          "newCell": 20999
+          "oldCell": 21189,
+          "newCell": 21188
         }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:5947E999"
+    "checksum": "visual-fnv1a32:DF04F8A3"
   }
 }

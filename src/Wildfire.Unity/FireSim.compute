@@ -249,6 +249,11 @@ uint CompanionAshQuality(uint companion)
     return (companion >> 20) & 0x3u;
 }
 
+uint CompanionMaterialClass(uint companion)
+{
+    return companion & 0xFFu;
+}
+
 uint CompanionContaminationBehavior(uint companion)
 {
     return (companion >> 22) & 0x7u;
@@ -413,7 +418,14 @@ void AddNeighbor(
     inout float windWeightedHeatSum,
     inout float neighborWeightSum)
 {
-    uint cell = CurrentCells[ToIndex(coordinate)] & 0xFFFFu;
+    uint index = ToIndex(coordinate);
+    uint companion = CompanionFields[index];
+    if (CompanionMaterialClass(companion) == 1u)
+    {
+        return;
+    }
+
+    uint cell = CurrentCells[index] & 0xFFFFu;
     float distance = length(float3(offset));
     float weight = 1.0f / max(1.0f, distance);
     float horizontalDistance = length(float2(offset.x, offset.y));
@@ -431,6 +443,11 @@ uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric)
     uint water = Water(cell);
     uint terrain = Terrain(cell);
     uint heatLoss = HeatLoss(cell);
+    uint lockedFuel = min(fuel, water * FireWaterFuelLock);
+    uint effectiveFuel = fuel - lockedFuel;
+    uint ignitionThreshold = FireIgnitionBaseHeat - flammability + (water * FireWaterIgnitionPenalty);
+    bool wasIgnitedBeforeNeighborExchange = terrain == 1u && fuel > 0u && heat >= ignitionThreshold;
+    bool canBurn = terrain == 1u && effectiveFuel > 0u;
     float windWeightedNeighborHeatSum = 0.0f;
     float neighborWeightSum = 0.0f;
     int3 current = int3((int)coordinate.x, (int)coordinate.y, (int)coordinate.z);
@@ -460,16 +477,20 @@ uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric)
     }
 
     heat = min(15u, (uint)round(((float)heat + windWeightedNeighborHeatSum) / (1.0f + neighborWeightSum)));
+    if (wasIgnitedBeforeNeighborExchange && heat < ignitionThreshold)
+    {
+        heat = ignitionThreshold;
+    }
 
-    if (water > 0u && heat > FireWaterEvaporationHeat)
+    if (water > 0u && heat >= FireWaterEvaporationHeat)
     {
         water -= 1u;
     }
 
-    uint lockedFuel = min(fuel, water * FireWaterFuelLock);
-    uint effectiveFuel = fuel - lockedFuel;
-    bool canBurn = terrain == 1u && effectiveFuel > 0u;
-    uint ignitionThreshold = FireIgnitionBaseHeat - flammability + (water * FireWaterIgnitionPenalty);
+    lockedFuel = min(fuel, water * FireWaterFuelLock);
+    effectiveFuel = fuel - lockedFuel;
+    canBurn = terrain == 1u && effectiveFuel > 0u;
+    ignitionThreshold = FireIgnitionBaseHeat - flammability + (water * FireWaterIgnitionPenalty);
 
     if (canBurn && heat >= ignitionThreshold)
     {
@@ -502,6 +523,10 @@ uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric)
 
     uint cooling = FireCoolingBase + (heatLoss / max(1u, FireHeatLossCoolingDivisor));
     heat = heat > cooling ? heat - cooling : 0u;
+    if (wasIgnitedBeforeNeighborExchange && fuel > 0u && heat < ignitionThreshold)
+    {
+        heat = ignitionThreshold;
+    }
 
     return Pack(fuel, heat, flammability, water, terrain, heatLoss);
 }

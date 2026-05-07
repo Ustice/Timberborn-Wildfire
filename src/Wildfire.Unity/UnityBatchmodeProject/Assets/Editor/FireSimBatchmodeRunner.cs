@@ -206,12 +206,12 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("FireIgnitionBaseHeat", 11);
             shader.SetInt("FireWaterIgnitionPenalty", 2);
             shader.SetInt("FireWaterFuelLock", 5);
-            shader.SetInt("FireWaterEvaporationHeat", 10);
+            shader.SetInt("FireWaterEvaporationHeat", 4);
             shader.SetInt("FireFlammabilityBurnPressure", 2);
             shader.SetInt("FireWaterBurnPressurePenalty", 3);
             shader.SetInt("FireBurnHeatBase", 1);
-            shader.SetInt("FireFuelHeatWeight", 2);
-            shader.SetInt("FireCoolingBase", 1);
+            shader.SetInt("FireFuelHeatWeight", 5);
+            shader.SetInt("FireCoolingBase", 0);
             shader.SetInt("FireHeatLossCoolingDivisor", 3);
             shader.SetInt("FireFuelBurnDownPressureNumerator", 3);
             shader.SetInt("FireFuelBurnDownPressureDenominator", 4);

@@ -44,6 +44,30 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
     }
 
     [Fact]
+    public void SinkDisarmsDynamiteControlFallbackAsDistinctConservativeTarget()
+    {
+        RecordingDetonatorTargetApi targetApi = new(Target(
+            stableId: $"{TimberbornDetonatorFireSafetyStableIds.DynamiteControlPrefix}owned",
+            cellIndex: 12));
+        TimberbornDetonatorFireSafetySink sink = new(
+            () => true,
+            targetApi);
+
+        TimberbornDetonatorFireSafetySummary summary = sink.ApplyConsequences(
+            2,
+            [Decision(12, heat: 6)]);
+
+        Assert.Equal(1, summary.MatchedTargetCellCount);
+        Assert.Equal(1, summary.DisabledTargetCount);
+        Assert.Equal(0, summary.ArmedTargetCount);
+        TimberbornDetonatorFireSafetyTarget disabledTarget = Assert.Single(targetApi.DisabledTargets);
+        Assert.StartsWith(TimberbornDetonatorFireSafetyStableIds.DynamiteControlPrefix, disabledTarget.StableId);
+        Assert.False(disabledTarget.StableId.StartsWith(
+            TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix,
+            StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void SinkSuppressesDuplicateCellsForSameDetonatorTarget()
     {
         RecordingDetonatorTargetApi targetApi = new(Target());
@@ -84,6 +108,45 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
     }
 
     [Fact]
+    public void SinkContainsResolverFailureAsSafeUnavailableTelemetry()
+    {
+        RecordingDetonatorTargetApi targetApi = new(Target(), throwOnResolve: true);
+        TimberbornDetonatorFireSafetySink sink = new(
+            () => true,
+            targetApi);
+
+        TimberbornDetonatorFireSafetySummary summary = sink.ApplyConsequences(
+            4,
+            [Decision(12, heat: 5)]);
+
+        Assert.Equal(1, summary.ConsideredDeltaCount);
+        Assert.Equal(0, summary.MatchedTargetCellCount);
+        Assert.Equal(0, summary.DisabledTargetCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Empty(targetApi.DisabledTargets);
+    }
+
+    [Fact]
+    public void SinkContainsDisableFailureAsSafeUnavailableTelemetry()
+    {
+        RecordingDetonatorTargetApi targetApi = new(Target(), throwOnDisable: true);
+        TimberbornDetonatorFireSafetySink sink = new(
+            () => true,
+            targetApi);
+
+        TimberbornDetonatorFireSafetySummary summary = sink.ApplyConsequences(
+            4,
+            [Decision(12, heat: 5)]);
+
+        Assert.Equal(1, summary.MatchedTargetCellCount);
+        Assert.Equal(0, summary.DisabledTargetCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Single(targetApi.DisabledTargets);
+    }
+
+    [Fact]
     public void DeltaConsumerRoutesDetonatorTelemetry()
     {
         RecordingDetonatorTargetApi targetApi = new(Target());
@@ -101,6 +164,86 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
         Assert.Equal(1, summary.DetonatorFireSafetyConsideredDeltaCount);
         Assert.Equal(1, summary.DetonatorFireSafetyDisabledTargetCount);
         Assert.Equal(0, summary.DetonatorFireSafetyArmedTargetCount);
+    }
+
+    [Fact]
+    public void NativeWrapperInvokesNonPublicDisarmWithoutArmingOrEvaluating()
+    {
+        NonPublicDisarmDetonator detonator = new();
+
+        TimberbornDetonatorFireSafetyDisableResult result =
+            TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
+                detonator,
+                canPreserveAutomationState: true);
+
+        Assert.Equal(TimberbornDetonatorFireSafetyDisableStatus.Disabled, result.Status);
+        Assert.True(result.RecoverabilityPreserved);
+        Assert.Equal(1, detonator.DisarmCallCount);
+        Assert.Equal(0, detonator.ArmCallCount);
+        Assert.Equal(0, detonator.EvaluateCallCount);
+    }
+
+    [Fact]
+    public void NativeWrapperReportsSafeUnavailableWhenDisarmIsMissing()
+    {
+        NoDisarmDetonator detonator = new();
+
+        TimberbornDetonatorFireSafetyDisableResult result =
+            TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
+                detonator,
+                canPreserveAutomationState: true);
+
+        Assert.Equal(TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi, result.Status);
+        Assert.False(result.RecoverabilityPreserved);
+        Assert.Equal(0, detonator.ArmCallCount);
+        Assert.Equal(0, detonator.EvaluateCallCount);
+    }
+
+    [Fact]
+    public void NativeWrapperContainsDisarmFailuresAsSafeUnavailable()
+    {
+        ThrowingDisarmDetonator detonator = new();
+
+        TimberbornDetonatorFireSafetyDisableResult result =
+            TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
+                detonator,
+                canPreserveAutomationState: true);
+
+        Assert.Equal(TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi, result.Status);
+        Assert.False(result.RecoverabilityPreserved);
+        Assert.Equal(1, detonator.DisarmCallCount);
+    }
+
+    [Fact]
+    public void NativeWrapperInvokesDynamiteControlDisarmWithoutTriggeringOrEvaluating()
+    {
+        DynamiteControlFallback dynamiteControl = new();
+
+        TimberbornDetonatorFireSafetyDisableResult result =
+            TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
+                dynamiteControl,
+                canPreserveAutomationState: true);
+
+        Assert.Equal(TimberbornDetonatorFireSafetyDisableStatus.Disabled, result.Status);
+        Assert.True(result.RecoverabilityPreserved);
+        Assert.Equal(1, dynamiteControl.DisarmCallCount);
+        Assert.Equal(0, dynamiteControl.TriggerCallCount);
+        Assert.Equal(0, dynamiteControl.TriggerDelayedCallCount);
+        Assert.Equal(0, dynamiteControl.ArmCallCount);
+        Assert.Equal(0, dynamiteControl.EvaluateCallCount);
+    }
+
+    [Fact]
+    public void DynamiteControlStableIdUsesDistinctNonUnavailablePrefix()
+    {
+        object dynamiteControl = new();
+
+        string stableId = TimberbornDetonatorFireSafetyStableIds.CreateDynamiteControlStableId(dynamiteControl);
+
+        Assert.StartsWith(TimberbornDetonatorFireSafetyStableIds.DynamiteControlPrefix, stableId);
+        Assert.False(stableId.StartsWith(
+            TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix,
+            StringComparison.Ordinal));
     }
 
     private static TimberbornDetonatorFireSafetyTarget Target(
@@ -127,7 +270,10 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
         return PackedCell.Pack(fuel: 0, heat, flammability: 0, water: 0, terrain: 1, heatLoss: 0);
     }
 
-    private sealed class RecordingDetonatorTargetApi(TimberbornDetonatorFireSafetyTarget? target)
+    private sealed class RecordingDetonatorTargetApi(
+        TimberbornDetonatorFireSafetyTarget? target,
+        bool throwOnResolve = false,
+        bool throwOnDisable = false)
         : ITimberbornDetonatorFireSafetyTargetApi
     {
         public List<TimberbornDetonatorFireSafetyConsequence> ResolvedConsequences { get; } = [];
@@ -137,6 +283,11 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
         public TimberbornDetonatorFireSafetyTarget? ResolveTarget(
             TimberbornDetonatorFireSafetyConsequence consequence)
         {
+            if (throwOnResolve)
+            {
+                throw new TypeLoadException("detonator type lookup failed");
+            }
+
             ResolvedConsequences.Add(consequence);
             return target is null ? null : target with { CellIndex = consequence.CellIndex };
         }
@@ -145,6 +296,11 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
             TimberbornDetonatorFireSafetyTarget disableTarget)
         {
             DisabledTargets.Add(disableTarget);
+            if (throwOnDisable)
+            {
+                throw new InvalidOperationException("detonator disarm failed");
+            }
+
             return new TimberbornDetonatorFireSafetyDisableResult(
                 TimberbornDetonatorFireSafetyDisableStatus.Disabled,
                 RecoverabilityPreserved: disableTarget.CanPreserveAutomationState);
@@ -159,6 +315,97 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
 
         public void Warning(string message)
         {
+        }
+    }
+
+    private sealed class NonPublicDisarmDetonator
+    {
+        public int ArmCallCount { get; private set; }
+
+        public int DisarmCallCount { get; private set; }
+
+        public int EvaluateCallCount { get; private set; }
+
+        private void Disarm()
+        {
+            DisarmCallCount++;
+        }
+
+        private void Arm()
+        {
+            ArmCallCount++;
+        }
+
+        public void Evaluate()
+        {
+            EvaluateCallCount++;
+        }
+    }
+
+    private sealed class NoDisarmDetonator
+    {
+        public int ArmCallCount { get; private set; }
+
+        public int EvaluateCallCount { get; private set; }
+
+        private void Arm()
+        {
+            ArmCallCount++;
+        }
+
+        public void Evaluate()
+        {
+            EvaluateCallCount++;
+        }
+    }
+
+    private sealed class ThrowingDisarmDetonator
+    {
+        public int DisarmCallCount { get; private set; }
+
+        private void Disarm()
+        {
+            DisarmCallCount++;
+            throw new InvalidOperationException("detonator disarm failed");
+        }
+    }
+
+    private sealed class DynamiteControlFallback
+    {
+        public int ArmCallCount { get; private set; }
+
+        public int DisarmCallCount { get; private set; }
+
+        public int EvaluateCallCount { get; private set; }
+
+        public int TriggerCallCount { get; private set; }
+
+        public int TriggerDelayedCallCount { get; private set; }
+
+        public void Disarm()
+        {
+            DisarmCallCount++;
+        }
+
+        public void Trigger()
+        {
+            TriggerCallCount++;
+        }
+
+        public void TriggerDelayed(int delay)
+        {
+            _ = delay;
+            TriggerDelayedCallCount++;
+        }
+
+        private void Arm()
+        {
+            ArmCallCount++;
+        }
+
+        public void Evaluate()
+        {
+            EvaluateCallCount++;
         }
     }
 }

@@ -86,7 +86,7 @@
     20999,
     28943,
     28943,
-    28974,
+    29132,
     28943,
     28943,
     20999,
@@ -151,106 +151,46 @@
     20999
   ],
   "perTickDeltaCounts": [
-    5,
-    5,
-    5
+    1,
+    1,
+    1
   ],
   "perTickDeltas": [
     {
       "tick": 1,
-      "deltaCount": 5,
+      "deltaCount": 1,
       "deltas": [
-        {
-          "cellIndex": 78,
-          "oldCell": 28943,
-          "newCell": 28959
-        },
-        {
-          "cellIndex": 63,
-          "oldCell": 28943,
-          "newCell": 28959
-        },
-        {
-          "cellIndex": 76,
-          "oldCell": 28943,
-          "newCell": 28959
-        },
         {
           "cellIndex": 77,
           "oldCell": 29183,
-          "newCell": 29102
-        },
-        {
-          "cellIndex": 91,
-          "oldCell": 28943,
-          "newCell": 28959
+          "newCell": 29134
         }
       ]
     },
     {
       "tick": 2,
-      "deltaCount": 5,
+      "deltaCount": 1,
       "deltas": [
         {
-          "cellIndex": 78,
-          "oldCell": 28959,
-          "newCell": 28975
-        },
-        {
-          "cellIndex": 63,
-          "oldCell": 28959,
-          "newCell": 28975
-        },
-        {
-          "cellIndex": 76,
-          "oldCell": 28959,
-          "newCell": 28975
-        },
-        {
           "cellIndex": 77,
-          "oldCell": 29102,
-          "newCell": 29022
-        },
-        {
-          "cellIndex": 91,
-          "oldCell": 28959,
-          "newCell": 28975
+          "oldCell": 29134,
+          "newCell": 29133
         }
       ]
     },
     {
       "tick": 3,
-      "deltaCount": 5,
+      "deltaCount": 1,
       "deltas": [
         {
-          "cellIndex": 78,
-          "oldCell": 28975,
-          "newCell": 28943
-        },
-        {
-          "cellIndex": 63,
-          "oldCell": 28975,
-          "newCell": 28943
-        },
-        {
-          "cellIndex": 76,
-          "oldCell": 28975,
-          "newCell": 28943
-        },
-        {
           "cellIndex": 77,
-          "oldCell": 29022,
-          "newCell": 28974
-        },
-        {
-          "cellIndex": 91,
-          "oldCell": 28975,
-          "newCell": 28943
+          "oldCell": 29133,
+          "newCell": 29132
         }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:5D5FCA57"
+    "checksum": "visual-fnv1a32:2555A1E7"
   }
 }

@@ -26,8 +26,13 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
     private readonly TimberbornBeaverFieldExposureTelemetry _beaverFieldExposureTelemetry;
     private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
+    private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
+    private ITimberbornCropBurnConsequenceApi _cropBurnConsequenceApi =
+        UnavailableTimberbornCropBurnConsequenceApi.Instance;
+    private ITimberbornTreeBurnConsequenceApi _treeBurnConsequenceApi =
+        UnavailableTimberbornTreeBurnConsequenceApi.Instance;
     private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private ITimberbornStructureBurnDamageRollbackTargetApi? _structureBurnDamageRollbackTargetApi;
@@ -80,8 +85,11 @@ public sealed class TimberbornFireRuntime :
             new TimberbornEntityRegistryBeaverPositionProvider(entityRegistry),
             visualFieldSurface,
             _logSink);
+        EntitySelectionService selectionService =
+            entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService));
         _selectedTreeTargetProvider = new TimberbornSelectedTreeTargetProvider(
-            entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService)));
+            selectionService);
+        _selectedCropTargetProvider = new TimberbornSelectedCropTargetProvider(selectionService);
     }
 
     public void Load()
@@ -251,9 +259,22 @@ public sealed class TimberbornFireRuntime :
     public TimberbornQaDeltaStimulusResult QueueDeltaStimulus(string targetSelector)
     {
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
+        TimberbornBeaverFieldExposureQaTarget? beaverExposureTarget =
+            normalizedSelector == TimberbornQaFieldTargetSelectors.BeaverExposure
+                ? _beaverFieldExposureTelemetry.SelectQaStimulusTarget(RequireFireSystem().RequireInitializedGrid())
+                : null;
         TimberbornQaDeltaStimulusResult result = normalizedSelector == TimberbornQaFieldTargetSelectors.SelectedTree
             ? RequireFireSystem().QueueQaSelectedTreeDeltaStimulus(_selectedTreeTargetProvider)
-            : RequireFireSystem().QueueQaDeltaStimulus(normalizedSelector, _burnDamageService?.States);
+            : RequireFireSystem().QueueQaDeltaStimulus(
+                normalizedSelector,
+                _burnDamageService?.States,
+                _explosiveInfrastructureTargetApi,
+                _detonatorFireSafetyTargetApi,
+                _tunnelFireTargetApi,
+                normalizedSelector is TimberbornQaFieldTargetSelectors.Default or TimberbornQaFieldTargetSelectors.Crop
+                    ? FindOrRegisterSelectedCropTarget(RequireFireSystem().RequireInitializedGrid())
+                    : null,
+                beaverExposureTarget);
         _logSink.Info(
             "wildfire_timberborn_qa_delta_stimulus_queued " +
             $"target_selector={result.TargetSelector} " +
@@ -271,9 +292,61 @@ public sealed class TimberbornFireRuntime :
             $"burn_damage_target_kind={TimberbornQaCommandBridge.FormatToken(result.BurnDamageTargetKind?.ToString())} " +
             $"burn_damage_remaining_capacity={FormatNumber(result.BurnDamageRemainingCapacity)} " +
             $"burn_damage_probe_fuel={FormatNumber(result.BurnDamageProbeFuel)} " +
-            $"burn_damage_spend_fuel={FormatNumber(result.BurnDamageSpendFuel)}");
+            $"burn_damage_spend_fuel={FormatNumber(result.BurnDamageSpendFuel)} " +
+            $"direct_target_kind={TimberbornQaCommandBridge.FormatToken(result.DirectTargetKind)} " +
+            $"direct_target_stable_id={TimberbornQaCommandBridge.FormatToken(result.DirectTargetStableId)} " +
+            $"direct_target_scanned_cells={FormatNumber(result.DirectTargetScannedCellCount)} " +
+            $"target_source={TimberbornQaCommandBridge.FormatToken(result.TargetSource)} " +
+            $"registered_burn_damage_targets={FormatNumber(result.RegisteredBurnDamageTargetCount)} " +
+            $"registered_crop_burn_targets={FormatNumber(result.RegisteredCropBurnTargetCount)} " +
+            $"registered_crop_burn_owned_cells={FormatNumber(result.RegisteredCropBurnOwnedCellCount)} " +
+            $"sustained_heat_requested_cycles={FormatNumber(result.SustainedHeatRequestedCycleCount)} " +
+            $"sustained_heat_completed_cycles={FormatNumber(result.SustainedHeatCompletedCycleCount)} " +
+            $"sustained_heat_remaining_cycles={FormatNumber(result.SustainedHeatRemainingCycleCount)} " +
+            $"sustained_heat_queued_cycle={FormatNumber(result.SustainedHeatQueuedCycleNumber)} " +
+            $"beaver_exposure_target_beaver_id={TimberbornQaCommandBridge.FormatToken(result.BeaverExposureTargetBeaverId)} " +
+            $"beaver_exposure_target_beaver_x={FormatNumber(result.BeaverExposureTargetBeaverX)} " +
+            $"beaver_exposure_target_beaver_y={FormatNumber(result.BeaverExposureTargetBeaverY)} " +
+            $"beaver_exposure_target_beaver_z={FormatNumber(result.BeaverExposureTargetBeaverZ)} " +
+            $"beaver_exposure_target_candidate_cells={FormatNumber(result.BeaverExposureTargetCandidateCells)} " +
+            $"beaver_exposure_target_sampled_beavers={FormatNumber(result.BeaverExposureTargetSampledBeavers)} " +
+            $"beaver_exposure_target_skipped_no_position_api={FormatNumber(result.BeaverExposureTargetSkippedNoPositionApi)} " +
+            $"beaver_exposure_target_skipped_bounded_sampling={FormatNumber(result.BeaverExposureTargetSkippedBoundedSampling)}");
 
         return result;
+    }
+
+    private TimberbornQaSelectedCropTarget? FindOrRegisterSelectedCropTarget(FireGrid grid)
+    {
+        if (_burnDamageService is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return _selectedCropTargetProvider.FindSelectedTarget(grid, _burnDamageService.States);
+        }
+        catch (InvalidOperationException) when (_burnDamageService.States.Count == 0)
+        {
+            TimberbornLiveCropBurnDamageTargets selectedTargets =
+                _selectedCropTargetProvider.CollectSelectedTargets(grid);
+            if (selectedTargets.Registrations.Count == 0)
+            {
+                throw;
+            }
+
+            TimberbornBurnDamageRegistrationSummary registrationSummary = _burnDamageService.RegisterTargets(
+                grid,
+                selectedTargets.Registrations,
+                selectedTargets.Descriptors);
+            _logSink.Info(
+                "wildfire_timberborn_selected_crop_target_registered " +
+                $"targets={registrationSummary.TargetCount} " +
+                $"owned_cells={registrationSummary.OwnedCellCount}");
+
+            return _selectedCropTargetProvider.FindSelectedTarget(grid, _burnDamageService.States);
+        }
     }
 
     public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutStimulus()
@@ -335,6 +408,7 @@ public sealed class TimberbornFireRuntime :
             $"initial_fuel={result.InitialFuel} " +
             $"set_heat={result.SetHeat} " +
             $"timeout_ticks={result.TimeoutTicks} " +
+            $"sustained_heat_ticks={result.SustainedHeatTicks} " +
             $"queued_heat_changes={result.QueuedHeatChangeCount}");
 
         return result;
@@ -416,6 +490,18 @@ public sealed class TimberbornFireRuntime :
         TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.Sample(
             new FireGrid(fireSystem.Width!.Value, fireSystem.Height!.Value, fireSystem.Depth!.Value),
             fireSystem.LastTick);
+        TimberbornBurnDamageRegistrationSummary burnDamageRegistrationSummary =
+            _burnDamageService?.LastRegistrationSummary ?? TimberbornBurnDamageRegistrationSummary.Empty;
+        TimberbornCropBurnTargetRegistrationSummary cropBurnSummary =
+            TimberbornCropBurnTargetClassifier.SummarizeRegisteredTargets(
+                _burnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
+        TimberbornTreeBurnTargetRegistrationSummary treeBurnSummary =
+            TimberbornTreeBurnTargetClassifier.SummarizeRegisteredTargets(
+                _burnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
+        TimberbornQaDeltaStimulusSustainedHeatState? sustainedHeatState =
+            fireSystem.QaDeltaStimulusSustainedHeatState;
+        TimberbornSelectedCropTargetDiagnostics selectedCropDiagnostics =
+            _selectedCropTargetProvider.LastDiagnostics;
 
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
@@ -441,6 +527,58 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: deltaConsumerSummary.BuildingBurnoutConsideredDeltaCount,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: deltaConsumerSummary.BuildingBurnoutMatchedCellCount,
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: deltaConsumerSummary.BuildingBurnoutAppliedConsequenceCount,
+            BurnDamageRegisteredTargetCount: burnDamageRegistrationSummary.TargetCount,
+            BurnDamageRegisteredOwnedCellCount: burnDamageRegistrationSummary.OwnedCellCount,
+            BurnDamageRegisteredUnknownSpecCount: burnDamageRegistrationSummary.UnknownSpecCount,
+            BurnDamageRegisteredMissingResourceCount: burnDamageRegistrationSummary.MissingResourceCount,
+            BurnDamageRegisteredTotalCapacity: burnDamageRegistrationSummary.TotalDamageCapacity,
+            BurnDamageRegisteredZeroCapacityTargetCount: burnDamageRegistrationSummary.ZeroCapacityTargetCount,
+            BurnDamageRegisteredCropBurnTargetCount: cropBurnSummary.TargetCount,
+            BurnDamageRegisteredCropBurnOwnedCellCount: cropBurnSummary.OwnedCellCount,
+            BurnDamageRegisteredTreeBurnTargetCount: treeBurnSummary.TargetCount,
+            BurnDamageRegisteredTreeBurnOwnedCellCount: treeBurnSummary.OwnedCellCount,
+            QaDeltaStimulusTargetCellIndex: sustainedHeatState?.CellIndex,
+            QaDeltaStimulusTargetX: sustainedHeatState?.X,
+            QaDeltaStimulusTargetY: sustainedHeatState?.Y,
+            QaDeltaStimulusTargetZ: sustainedHeatState?.Z,
+            QaDeltaStimulusTargetSource: sustainedHeatState?.TargetSource,
+            QaDeltaStimulusSustainedHeatSetCell: sustainedHeatState?.SetCell,
+            QaDeltaStimulusSustainedHeatRequestedCycleCount: sustainedHeatState?.RequestedCycleCount,
+            QaDeltaStimulusSustainedHeatCompletedCycleCount: sustainedHeatState?.CompletedCycleCount,
+            QaDeltaStimulusSustainedHeatRemainingCycleCount: sustainedHeatState?.RemainingCycleCount,
+            QaDeltaStimulusSustainedHeatQueuedCycleNumber: sustainedHeatState?.QueuedCycleNumber,
+            QaDeltaStimulusSustainedHeatLastCompletedTick: sustainedHeatState?.LastCompletedTick,
+            QaDeltaStimulusSustainedHeatActive: sustainedHeatState?.IsActive ?? false,
+            SelectedCropTargetSelectionState: selectedCropDiagnostics.SelectionState,
+            SelectedCropTargetObjectType: selectedCropDiagnostics.SelectedObjectType,
+            SelectedCropTargetObjectName: selectedCropDiagnostics.SelectedObjectName,
+            SelectedCropTargetBlockObjectName: selectedCropDiagnostics.BlockObjectName,
+            SelectedCropTargetComponentCount: selectedCropDiagnostics.ComponentCount,
+            SelectedCropTargetComponentTypes: selectedCropDiagnostics.ComponentTypes,
+            SelectedCropTargetOccupiedCellCount: selectedCropDiagnostics.OccupiedCellCount,
+            SelectedCropTargetOccupiedInGridCellCount: selectedCropDiagnostics.OccupiedInGridCellCount,
+            SelectedCropTargetYieldDebug: selectedCropDiagnostics.YieldDebug,
+            SelectedCropTargetFailureReason: selectedCropDiagnostics.FailureReason,
+            LastDeltaConsumerCropBurnConsideredTargetCount: deltaConsumerSummary.CropBurnConsideredTargetCount,
+            LastDeltaConsumerCropBurnBurnableTargetCount: deltaConsumerSummary.CropBurnBurnableTargetCount,
+            LastDeltaConsumerCropBurnYieldLost: deltaConsumerSummary.CropBurnYieldLost,
+            LastDeltaConsumerCropBurnKilledCropCount: deltaConsumerSummary.CropBurnKilledCropCount,
+            LastDeltaConsumerCropBurnVisualStateUpdateCount: deltaConsumerSummary.CropBurnVisualStateUpdateCount,
+            LastDeltaConsumerCropBurnDuplicateCellSuppressedCount: deltaConsumerSummary.CropBurnDuplicateCellSuppressedCount,
+            LastDeltaConsumerCropBurnUnmappedTargetCount: deltaConsumerSummary.CropBurnUnmappedTargetCount,
+            LastDeltaConsumerCropBurnUnknownHarvestResourceCount: deltaConsumerSummary.CropBurnUnknownHarvestResourceCount,
+            LastDeltaConsumerCropBurnNonBurnableTargetCount: deltaConsumerSummary.CropBurnNonBurnableTargetCount,
+            LastDeltaConsumerCropBurnSkippedUnsafeApiCount: deltaConsumerSummary.CropBurnSkippedUnsafeApiCount,
+            LastDeltaConsumerTreeBurnConsideredTargetCount: deltaConsumerSummary.TreeBurnConsideredTargetCount,
+            LastDeltaConsumerTreeBurnBurnableTargetCount: deltaConsumerSummary.TreeBurnBurnableTargetCount,
+            LastDeltaConsumerTreeBurnYieldLost: deltaConsumerSummary.TreeBurnYieldLost,
+            LastDeltaConsumerTreeBurnKilledTreeCount: deltaConsumerSummary.TreeBurnKilledTreeCount,
+            LastDeltaConsumerTreeBurnVisualStateUpdateCount: deltaConsumerSummary.TreeBurnVisualStateUpdateCount,
+            LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount: deltaConsumerSummary.TreeBurnDuplicateCellSuppressedCount,
+            LastDeltaConsumerTreeBurnUnmappedTargetCount: deltaConsumerSummary.TreeBurnUnmappedTargetCount,
+            LastDeltaConsumerTreeBurnUnknownCuttableResourceCount: deltaConsumerSummary.TreeBurnUnknownCuttableResourceCount,
+            LastDeltaConsumerTreeBurnNonBurnableTargetCount: deltaConsumerSummary.TreeBurnNonBurnableTargetCount,
+            LastDeltaConsumerTreeBurnSkippedUnsafeApiCount: deltaConsumerSummary.TreeBurnSkippedUnsafeApiCount,
             LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount: deltaConsumerSummary.StructureBurnDamageRollbackConsideredDeltaCount,
             LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount: deltaConsumerSummary.StructureBurnDamageRollbackMatchedStructureCellCount,
             LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount: deltaConsumerSummary.StructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount,
@@ -560,6 +698,7 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldExposureToxicSteamCells: beaverExposure.ToxicSteamCells,
             BeaverFieldExposureTaintedAftermathCells: beaverExposure.TaintedAftermathCells,
             BeaverFieldExposureSkippedNoPositionApi: beaverExposure.SkippedNoPositionApi,
+            BeaverFieldExposureSkippedBoundedSampling: beaverExposure.SkippedBoundedSampling,
             BeaverFieldExposureUnavailableReason: beaverExposure.UnavailableReason,
             ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,
             UpdatedVisualRegionCount: pooledEffectCounters.UpdatedVisualRegionCount,
@@ -582,6 +721,9 @@ public sealed class TimberbornFireRuntime :
             BurnDurationProofDepletionTick: burnDurationProof.DepletionTick,
             BurnDurationProofElapsedBurnTicks: burnDurationProof.ElapsedBurnTicks,
             BurnDurationProofTimeoutTicks: burnDurationProof.TimeoutTicks,
+            BurnDurationProofSustainedHeatTicks: burnDurationProof.SustainedHeatTicks,
+            BurnDurationProofSustainedHeatAppliedTicks: burnDurationProof.SustainedHeatAppliedTicks,
+            BurnDurationProofSustainedHeatComplete: burnDurationProof.SustainedHeatComplete,
             BurnDurationProofTimedOut: burnDurationProof.TimedOut,
             BurnDurationProofStatus: burnDurationProof.Status,
             CompatibilityProbeStatus: _compatibilityReport.StatusToken,
@@ -623,6 +765,16 @@ public sealed class TimberbornFireRuntime :
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
     {
         _buildingBurnoutConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
+    }
+
+    public void AttachCropBurnConsequenceApi(ITimberbornCropBurnConsequenceApi consequenceApi)
+    {
+        _cropBurnConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
+    }
+
+    public void AttachTreeBurnConsequenceApi(ITimberbornTreeBurnConsequenceApi consequenceApi)
+    {
+        _treeBurnConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
     }
 
     public void AttachBuildingBurnoutStimulusTargetProvider(
@@ -723,6 +875,17 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_pause");
         }
+        if (_burnDamageService is not null)
+        {
+            _logSink.Info(
+                "wildfire_timberborn_delta_consequence_sink_bound " +
+                "lane=crop_burn_consequences " +
+                $"unavailable_api={(_cropBurnConsequenceApi is UnavailableTimberbornCropBurnConsequenceApi).ToString().ToLowerInvariant()}");
+            _logSink.Info(
+                "wildfire_timberborn_delta_consequence_sink_bound " +
+                "lane=tree_burn_consequences " +
+                $"unavailable_api={(_treeBurnConsequenceApi is UnavailableTimberbornTreeBurnConsequenceApi).ToString().ToLowerInvariant()}");
+        }
         if (_structureBurnDamageRollbackTargetApi is not null)
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=structure_burn_damage_rollback");
@@ -773,6 +936,12 @@ public sealed class TimberbornFireRuntime :
                     logSink: _logSink,
                     burnDamageTargets: _burnDamageService),
             burnDamageSink: _burnDamageService,
+            cropBurnConsequenceSink: _burnDamageService is null
+                ? null
+                : new TimberbornCropBurnConsequenceSink(_burnDamageService, _cropBurnConsequenceApi),
+            treeBurnConsequenceSink: _burnDamageService is null
+                ? null
+                : new TimberbornTreeBurnConsequenceSink(_burnDamageService, _treeBurnConsequenceApi, _logSink),
             storedGoodBurnConsequenceSink: _storedGoodBurnInventoryApi is null
                 ? null
                 : new TimberbornStoredGoodBurnConsequenceSink(

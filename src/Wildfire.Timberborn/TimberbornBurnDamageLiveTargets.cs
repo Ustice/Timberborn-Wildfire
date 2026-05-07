@@ -1,7 +1,9 @@
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
+using Timberborn.Cutting;
 using Timberborn.EntitySystem;
 using Timberborn.Stockpiles;
+using Timberborn.Yielding;
 using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
@@ -155,8 +157,46 @@ public static class TimberbornLiveBurnDamageTargetCollector
                 InfrastructureResources(blockObject.Name),
                 ownershipPriority: 40));
 
-        return storage.Concat(structures).Concat(infrastructure)
+        IEnumerable<TargetBuildResult> trees = CollectTreeTargets(entityRegistry, grid);
+
+        return trees.Concat(storage).Concat(structures).Concat(infrastructure)
             .Where(static target => target.Registration.OwnedCells.Count > 0);
+    }
+
+    private static IEnumerable<TargetBuildResult> CollectTreeTargets(EntityRegistry entityRegistry, FireGrid grid)
+    {
+        TimberbornEntityComponentCells.TimberbornEntityComponentBlockObject<Cuttable>[] cuttableTrees =
+            TimberbornEntityComponentCells.ComponentBlockObjects<Cuttable>(entityRegistry)
+                .Where(static item => TimberbornEntityComponentCells.IsTreeName(item.BlockObject.Name))
+                .ToArray();
+        HashSet<int> cuttableBlockHashes = cuttableTrees
+            .Select(static item => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject))
+            .ToHashSet();
+        IEnumerable<TargetBuildResult> cuttableTargets = cuttableTrees
+            .Select(item => BuildResourceYieldTarget(
+                $"tree_cuttable:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject)}",
+                item.BlockObject.Name,
+                TimberbornBurnDamageTargetKind.Tree,
+                TimberbornBurnMaterialKind.Wood,
+                TimberbornEntityComponentCells.OccupiedCoordinates(item.BlockObject),
+                grid,
+                YieldResources(item.Component.Yielder),
+                ownershipPriority: 90));
+        IEnumerable<TargetBuildResult> fallbackTargets = TimberbornEntityComponentCells.BlockObjects(entityRegistry)
+            .Where(static blockObject => TimberbornEntityComponentCells.IsTreeName(blockObject.Name))
+            .Where(blockObject => !cuttableBlockHashes.Contains(
+                System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)))
+            .Select(blockObject => BuildResourceYieldTarget(
+                $"tree_cuttable:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)}",
+                blockObject.Name,
+                TimberbornBurnDamageTargetKind.Tree,
+                TimberbornBurnMaterialKind.Wood,
+                TimberbornEntityComponentCells.OccupiedCoordinates(blockObject),
+                grid,
+                new[] { new TimberbornBurnDamageResourceStack("Log", 1) },
+                ownershipPriority: 90));
+
+        return cuttableTargets.Concat(fallbackTargets);
     }
 
     private static TargetBuildResult BuildTarget(
@@ -186,6 +226,68 @@ public static class TimberbornLiveBurnDamageTargetCollector
             ownershipPriority);
 
         return new TargetBuildResult(descriptor, registration);
+    }
+
+    private static TargetBuildResult BuildResourceYieldTarget(
+        string stableId,
+        string specId,
+        TimberbornBurnDamageTargetKind targetKind,
+        TimberbornBurnMaterialKind materialKind,
+        IEnumerable<UnityEngine.Vector3Int> coordinates,
+        FireGrid grid,
+        IReadOnlyList<TimberbornBurnDamageResourceStack> resourceYields,
+        int ownershipPriority)
+    {
+        TimberbornCellCoordinates[] ownedCells = coordinates
+            .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+            .Select(static coordinates => new TimberbornCellCoordinates(coordinates.x, coordinates.y, coordinates.z))
+            .Distinct()
+            .ToArray();
+        TimberbornBurnDamageDescriptor descriptor = new(
+            specId,
+            targetKind,
+            resourceYields.Count == 0 ? TimberbornBurnMaterialKind.NonBurnable : materialKind,
+            resourceYields: resourceYields);
+        TimberbornBurnDamageTargetRegistration registration = new(
+            new TimberbornBurnDamageTargetKey(stableId),
+            specId,
+            ownedCells,
+            ownershipPriority,
+            descriptor);
+
+        return new TargetBuildResult(descriptor, registration);
+    }
+
+    private static IReadOnlyList<TimberbornBurnDamageResourceStack> YieldResources(Yielder yielder)
+    {
+        string resourceId = SelectResourceId(yielder);
+        int amount = SelectYieldAmount(yielder);
+
+        return string.IsNullOrWhiteSpace(resourceId) || amount <= 0
+            ? new[] { new TimberbornBurnDamageResourceStack("UnknownCuttableResource", 1) }
+            : new[] { new TimberbornBurnDamageResourceStack(resourceId, amount) };
+    }
+
+    private static string SelectResourceId(Yielder yielder)
+    {
+        string liveResourceId = yielder.Yield.GoodId;
+        if (!string.IsNullOrWhiteSpace(liveResourceId))
+        {
+            return liveResourceId;
+        }
+
+        return yielder.YielderSpec?.Yield?.Id ?? "";
+    }
+
+    private static int SelectYieldAmount(Yielder yielder)
+    {
+        int liveAmount = yielder.Yield.Amount;
+        if (liveAmount > 0)
+        {
+            return liveAmount;
+        }
+
+        return Math.Max(0, yielder.YielderSpec?.Yield?.Amount ?? 0);
     }
 
     private static string StableInfrastructureId(BlockObject blockObject)

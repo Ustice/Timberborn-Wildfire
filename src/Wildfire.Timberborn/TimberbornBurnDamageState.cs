@@ -219,7 +219,8 @@ public sealed record TimberbornBurnDamageTargetRegistration
         TimberbornBurnDamageTargetKey targetKey,
         string specId,
         IReadOnlyList<TimberbornCellCoordinates> ownedCells,
-        int ownershipPriority = 0)
+        int ownershipPriority = 0,
+        TimberbornBurnDamageDescriptor? descriptorOverride = null)
     {
         if (string.IsNullOrWhiteSpace(specId))
         {
@@ -235,6 +236,7 @@ public sealed record TimberbornBurnDamageTargetRegistration
         SpecId = specId.Trim();
         OwnedCells = ownedCells.ToArray();
         OwnershipPriority = ownershipPriority;
+        DescriptorOverride = descriptorOverride;
     }
 
     public TimberbornBurnDamageTargetKey TargetKey { get; }
@@ -244,6 +246,8 @@ public sealed record TimberbornBurnDamageTargetRegistration
     public IReadOnlyList<TimberbornCellCoordinates> OwnedCells { get; }
 
     public int OwnershipPriority { get; }
+
+    public TimberbornBurnDamageDescriptor? DescriptorOverride { get; }
 
     public static TimberbornBurnDamageTargetRegistration FromFootprint(
         TimberbornBurnDamageTargetKey targetKey,
@@ -425,6 +429,8 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
     private readonly TimberbornBurnDamageDescriptorCatalog _descriptorCatalog;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly Dictionary<string, TimberbornBurnDamageDescriptor> _dynamicDescriptorsBySpecId =
+        new(StringComparer.Ordinal);
     private readonly Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState> _states = new();
     private IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageAppliedEvent> _lastAppliedEventsByTargetKey =
         new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageAppliedEvent>();
@@ -482,11 +488,27 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
         FireGrid grid,
         IEnumerable<TimberbornBurnDamageTargetRegistration> registrations)
     {
+        return RegisterTargets(grid, registrations, Array.Empty<TimberbornBurnDamageDescriptor>());
+    }
+
+    public TimberbornBurnDamageRegistrationSummary RegisterTargets(
+        FireGrid grid,
+        IEnumerable<TimberbornBurnDamageTargetRegistration> registrations,
+        IEnumerable<TimberbornBurnDamageDescriptor> dynamicDescriptors)
+    {
         if (registrations is null)
         {
             throw new ArgumentNullException(nameof(registrations));
         }
 
+        if (dynamicDescriptors is null)
+        {
+            throw new ArgumentNullException(nameof(dynamicDescriptors));
+        }
+
+        dynamicDescriptors
+            .ToList()
+            .ForEach(descriptor => _dynamicDescriptorsBySpecId[descriptor.SpecId] = descriptor);
         TimberbornBurnDamageTargetRegistration[] targets = registrations.ToArray();
         RegisteredCell[] registeredCells = targets
             .SelectMany(target => target.OwnedCells
@@ -621,7 +643,19 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
 
     private TargetStateBuildResult BuildState(FireGrid grid, TimberbornBurnDamageTargetRegistration target)
     {
-        bool isKnownSpec = _descriptorCatalog.TryLookup(target.SpecId, out TimberbornBurnDamageDescriptor descriptor);
+        bool isKnownSpec;
+        TimberbornBurnDamageDescriptor descriptor;
+        if (target.DescriptorOverride is not null)
+        {
+            descriptor = target.DescriptorOverride;
+            isKnownSpec = true;
+        }
+        else
+        {
+            isKnownSpec = _dynamicDescriptorsBySpecId.TryGetValue(target.SpecId, out descriptor) ||
+                _descriptorCatalog.TryLookup(target.SpecId, out descriptor);
+        }
+
         TimberbornBurnDamageCapacity capacity = _capacityCalculator.Calculate(descriptor);
         int[] ownedCellIndices = target.OwnedCells
             .Select(cell => grid.ToIndex(cell.X, cell.Y, cell.Z))

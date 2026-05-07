@@ -159,8 +159,12 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             return disabledSummary;
         }
 
-        ResolvedTarget[] matchedTargets = consequences
-            .Select(consequence => new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence)))
+        ResolvedTarget[] resolvedTargets = consequences
+            .Select(ResolveTargetSafely)
+            .ToArray();
+        int resolutionFailureCount = resolvedTargets.Count(static resolvedTarget =>
+            resolvedTarget.ResolutionFailed);
+        ResolvedTarget[] matchedTargets = resolvedTargets
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
         ResolvedTarget[] uniqueTargets = matchedTargets
@@ -185,12 +189,35 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             DestructionDeferredCount: results.Count(static result =>
                 result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedSettingDisabled),
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: results.Count(static result =>
+            SkippedNoSafeApiCount: resolutionFailureCount + results.Count(static result =>
                 result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
-            RecoverabilityUnknownCount: results.Count(static result => !result.RecoverabilityPreserved));
+            RecoverabilityUnknownCount: resolutionFailureCount + results.Count(static result =>
+                !result.RecoverabilityPreserved));
         _logSink.Info(summary.ToLogToken(tick));
         return summary;
+    }
+
+    private ResolvedTarget ResolveTargetSafely(TimberbornTunnelFireConsequence consequence)
+    {
+        try
+        {
+            return new ResolvedTarget(
+                consequence,
+                _targetApi.ResolveTarget(consequence),
+                ResolutionFailed: false);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_tunnel_fire_safe_unavailable " +
+                $"reason=resolve_target_failed cell_index={consequence.CellIndex} " +
+                $"exception_type={exception.GetType().Name}");
+            return new ResolvedTarget(
+                consequence,
+                Target: null,
+                ResolutionFailed: true);
+        }
     }
 
     private TunnelTargetResult ApplyTarget(
@@ -219,8 +246,12 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
                 RecoverabilityPreserved: target.CanRecover);
         }
 
-        _explodedTargets.Add(target.StableId);
-        TimberbornTunnelNativeExplodeResult result = _targetApi.ExplodeNative(target);
+        TimberbornTunnelNativeExplodeResult result = ExplodeNativeSafely(target);
+        if (result.Status == TimberbornTunnelNativeExplodeStatus.Applied)
+        {
+            _explodedTargets.Add(target.StableId);
+        }
+
         return new TunnelTargetResult(
             MarkedUnstable: markedUnstable,
             NativeAttempted: true,
@@ -228,9 +259,28 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             RecoverabilityPreserved: result.RecoverabilityPreserved);
     }
 
+    private TimberbornTunnelNativeExplodeResult ExplodeNativeSafely(TimberbornTunnelFireTarget target)
+    {
+        try
+        {
+            return _targetApi.ExplodeNative(target);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_tunnel_fire_safe_unavailable " +
+                $"reason=native_explode_failed stable_id={target.StableId} " +
+                $"exception_type={exception.GetType().Name}");
+            return new TimberbornTunnelNativeExplodeResult(
+                TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
+                RecoverabilityPreserved: false);
+        }
+    }
+
     private readonly record struct ResolvedTarget(
         TimberbornTunnelFireConsequence Consequence,
-        TimberbornTunnelFireTarget? Target);
+        TimberbornTunnelFireTarget? Target,
+        bool ResolutionFailed);
 
     private readonly record struct TunnelTargetResult(
         bool MarkedUnstable,
@@ -272,20 +322,31 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
     {
         (int x, int y, int z) = _grid.FromIndex(consequence.CellIndex);
         Vector3Int coordinates = new(x, y, z);
-        object? tunnel = FindTunnelAt(coordinates);
+        FindTunnelResult findResult = FindTunnelAt(coordinates);
 
-        if (tunnel is null)
+        if (findResult.SafeApiUnavailable)
+        {
+            return new TimberbornTunnelFireTarget(
+                $"tunnel-unavailable:{consequence.CellIndex}",
+                consequence.CellIndex,
+                BottomLevel: 0,
+                CanMarkUnstable: false,
+                CanExplodeNative: false,
+                CanRecover: false);
+        }
+
+        if (findResult.Tunnel is null)
         {
             return null;
         }
 
-        string stableId = $"tunnel:{RuntimeHelpers.GetHashCode(tunnel)}";
-        _tunnelsByStableId[stableId] = tunnel;
+        string stableId = $"tunnel:{RuntimeHelpers.GetHashCode(findResult.Tunnel)}";
+        _tunnelsByStableId[stableId] = findResult.Tunnel;
 
         return new TimberbornTunnelFireTarget(
             stableId,
             consequence.CellIndex,
-            ReadBottomLevel(tunnel),
+            ReadBottomLevel(findResult.Tunnel),
             CanMarkUnstable: true,
             CanExplodeNative: true,
             CanRecover: false);
@@ -300,27 +361,36 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
                 RecoverabilityPreserved: false);
         }
 
-        MethodInfo? explodeMethod = tunnel.GetType().GetMethod(
-            "Explode",
-            BindingFlags.Instance | BindingFlags.Public);
-        if (explodeMethod is null)
+        try
+        {
+            MethodInfo? explodeMethod = tunnel.GetType().GetMethod(
+                "Explode",
+                BindingFlags.Instance | BindingFlags.Public);
+            if (explodeMethod is null)
+            {
+                return new TimberbornTunnelNativeExplodeResult(
+                    TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
+                    RecoverabilityPreserved: false);
+            }
+
+            explodeMethod.Invoke(tunnel, Array.Empty<object>());
+            return new TimberbornTunnelNativeExplodeResult(
+                TimberbornTunnelNativeExplodeStatus.Applied,
+                RecoverabilityPreserved: target.CanRecover);
+        }
+        catch
         {
             return new TimberbornTunnelNativeExplodeResult(
                 TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
                 RecoverabilityPreserved: false);
         }
-
-        explodeMethod.Invoke(tunnel, Array.Empty<object>());
-        return new TimberbornTunnelNativeExplodeResult(
-            TimberbornTunnelNativeExplodeStatus.Applied,
-            RecoverabilityPreserved: target.CanRecover);
     }
 
-    private object? FindTunnelAt(Vector3Int coordinates)
+    private FindTunnelResult FindTunnelAt(Vector3Int coordinates)
     {
         if (_tunnelType is null)
         {
-            return null;
+            return FindTunnelResult.SafeUnavailable;
         }
 
         MethodInfo? method = typeof(IBlockService)
@@ -329,19 +399,54 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
             .Where(static candidate => candidate.IsGenericMethodDefinition)
             .Where(static candidate => candidate.GetParameters().Length == 1)
             .FirstOrDefault();
-        object? result = method
-            ?.MakeGenericMethod(_tunnelType)
-            .Invoke(_blockService, new object[] { coordinates });
-        return (result as System.Collections.IEnumerable)
-            ?.Cast<object>()
-            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
-            .FirstOrDefault();
+        if (method is null)
+        {
+            return FindTunnelResult.SafeUnavailable;
+        }
+
+        try
+        {
+            object? result = method
+                .MakeGenericMethod(_tunnelType)
+                .Invoke(_blockService, new object[] { coordinates });
+            if (result is not System.Collections.IEnumerable enumerable)
+            {
+                return FindTunnelResult.SafeUnavailable;
+            }
+
+            return new FindTunnelResult(
+                enumerable
+                    .Cast<object>()
+                    .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+                    .FirstOrDefault(),
+                SafeApiUnavailable: false);
+        }
+        catch
+        {
+            return FindTunnelResult.SafeUnavailable;
+        }
     }
 
     private static int ReadBottomLevel(object tunnel)
     {
-        return tunnel.GetType()
-            .GetProperty("BottomLevel", BindingFlags.Instance | BindingFlags.Public)
-            ?.GetValue(tunnel) as int? ?? 0;
+        try
+        {
+            return tunnel.GetType()
+                .GetProperty("BottomLevel", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(tunnel) as int? ?? 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private readonly record struct FindTunnelResult(
+        object? Tunnel,
+        bool SafeApiUnavailable)
+    {
+        public static readonly FindTunnelResult SafeUnavailable = new(
+            Tunnel: null,
+            SafeApiUnavailable: true);
     }
 }

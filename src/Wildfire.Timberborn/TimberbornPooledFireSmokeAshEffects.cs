@@ -721,7 +721,9 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         float smokeContamination = Clamp01(sample.SmokeContamination);
         float ashContamination = Clamp01(sample.AshContamination);
         float moistureDrop = Clamp01(Math.Max(0, effectEvent.OldWater - effectEvent.Water) / 3f);
-        float steam = Clamp01(sample.Steam);
+        float steam = kind == TimberbornPooledFireEffectKind.Steam
+            ? moistureDrop
+            : Clamp01(sample.Steam);
         float visibility = Clamp01(sample.Visibility);
         float fieldValue = FieldValue(kind, fire, smoke, steam, ash, smokeContamination, ashContamination);
         float intensity = fieldValue * visibility;
@@ -1235,17 +1237,14 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         int salt,
         int axis)
     {
-        if (state.Kind == TimberbornPooledFireEffectKind.Fire)
+        if (state.Kind is TimberbornPooledFireEffectKind.Fire or TimberbornPooledFireEffectKind.Steam)
         {
-            float wind = (axis == 0 ? state.WindDirectionX : state.WindDirectionY) * state.WindStrength * 0.5f;
-            float drift = wind + ((Hash01(state.CellIndex, salt) - 0.5f) * 0.5f);
-            return new ParticleSystem.MinMaxCurve(drift - 0.5f, drift + 0.5f);
+            return new ParticleSystem.MinMaxCurve(0f, 0f);
         }
 
         if (state.Kind is
             TimberbornPooledFireEffectKind.Smoke or
-            TimberbornPooledFireEffectKind.ToxicSmoke or
-            TimberbornPooledFireEffectKind.Steam)
+            TimberbornPooledFireEffectKind.ToxicSmoke)
         {
             float wind = (axis == 0 ? state.WindDirectionX : state.WindDirectionY) *
                 Lerp(0.35f, 1.35f, state.WindStrength);
@@ -1414,8 +1413,8 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         velocityOverLifetime.space = ParticleSystemSimulationSpace.World;
         velocityOverLifetime.x = kind switch
         {
-            TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(-0.55f, 0.55f),
-            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(0.24f, 0.66f),
+            TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(0f, 0f),
+            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(0f, 0f),
             TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(0.24f, 0.66f),
             TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(0.2f, 0.58f),
             _ => new ParticleSystem.MinMaxCurve(0f, 0f),
@@ -1431,8 +1430,8 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         };
         velocityOverLifetime.z = kind switch
         {
-            TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(-0.55f, 0.55f),
-            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(0.06f, 0.36f),
+            TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(0f, 0f),
+            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(0f, 0f),
             TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(0.06f, 0.36f),
             TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(0.04f, 0.32f),
             _ => new ParticleSystem.MinMaxCurve(0f, 0f),

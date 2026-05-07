@@ -23,20 +23,20 @@ public sealed class UnityShaderExecutionHarnessTests
             "low-fuel-burn-down",
             89,
             "low-fuel-burn-down-seed89-5x5x1.fixture.json",
-            "low-fuel-burn-down-seed89-5x5x1-tick7.capture.json",
-            [57, 38, 19, 8, 3, 2, 0]),
+            "low-fuel-burn-down-seed89-5x5x1-tick15.capture.json",
+            [4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 1, 1, 0]),
         new(
             "medium-fuel-burn-down",
             89,
             "medium-fuel-burn-down-seed89-5x5x1.fixture.json",
-            "medium-fuel-burn-down-seed89-5x5x1-tick15.capture.json",
-            [182, 163, 144, 127, 109, 92, 75, 56, 42, 31, 19, 9, 3, 1, 0]),
+            "medium-fuel-burn-down-seed89-5x5x1-tick17.capture.json",
+            [9, 8, 7, 7, 7, 7, 6, 6, 6, 6, 6, 5, 4, 3, 2, 1, 0]),
         new(
             "high-fuel-burn-down",
             89,
             "high-fuel-burn-down-seed89-5x5x1.fixture.json",
             "high-fuel-burn-down-seed89-5x5x1-tick27.capture.json",
-            [357, 338, 319, 302, 284, 267, 250, 231, 216, 201, 182, 167, 147, 127, 108, 89, 69, 50, 38, 27, 16, 9, 6, 4, 2, 1, 0]),
+            [12, 11, 10, 10, 10, 10, 10, 10, 10, 10, 10, 9, 8, 8, 7, 6, 5, 4, 4, 3, 2, 2, 2, 2, 2, 1, 0]),
     ];
 
     [Fact]
@@ -132,28 +132,28 @@ public sealed class UnityShaderExecutionHarnessTests
     {
         AssertScenarioSummary(
             "single-ignition",
-            perTickDeltas: [5, 5],
-            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 0, MaxHeat: 7, WaterCells: 0, FuelTotal: 176));
+            perTickDeltas: [5, 0],
+            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 1, MaxHeat: 13, WaterCells: 0, FuelTotal: 176));
         AssertScenarioSummary(
             "line-of-fuel",
-            perTickDeltas: [5, 5, 4, 5],
-            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 2, MaxHeat: 12, WaterCells: 0, FuelTotal: 104));
+            perTickDeltas: [7, 2, 1, 5],
+            summary: new ShaderSemanticSummary(HotCells: 4, BurningCells: 1, MaxHeat: 12, WaterCells: 0, FuelTotal: 105));
         AssertScenarioSummary(
             "sparse-forest",
-            perTickDeltas: [5, 5, 5],
-            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 1, MaxHeat: 12, WaterCells: 0, FuelTotal: 979));
+            perTickDeltas: [5, 0, 1],
+            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 1, MaxHeat: 13, WaterCells: 0, FuelTotal: 980));
         AssertScenarioSummary(
             "building-cluster",
-            perTickDeltas: [5, 5, 5],
-            summary: new ShaderSemanticSummary(HotCells: 1, BurningCells: 0, MaxHeat: 2, WaterCells: 0, FuelTotal: 1179));
+            perTickDeltas: [1, 1, 1],
+            summary: new ShaderSemanticSummary(HotCells: 1, BurningCells: 1, MaxHeat: 12, WaterCells: 0, FuelTotal: 1177));
         AssertScenarioSummary(
             "water-barrier",
-            perTickDeltas: [5, 5, 5, 5],
-            summary: new ShaderSemanticSummary(HotCells: 1, BurningCells: 0, MaxHeat: 3, WaterCells: 5, FuelTotal: 385));
+            perTickDeltas: [5, 1, 1, 1],
+            summary: new ShaderSemanticSummary(HotCells: 5, BurningCells: 1, MaxHeat: 12, WaterCells: 5, FuelTotal: 382));
         AssertScenarioSummary(
             "vertical-fuel-column",
-            perTickDeltas: [6, 6, 6, 6],
-            summary: new ShaderSemanticSummary(HotCells: 6, BurningCells: 1, MaxHeat: 12, WaterCells: 0, FuelTotal: 45));
+            perTickDeltas: [1, 1, 1, 1],
+            summary: new ShaderSemanticSummary(HotCells: 1, BurningCells: 1, MaxHeat: 13, WaterCells: 0, FuelTotal: 45));
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public sealed class UnityShaderExecutionHarnessTests
             .Select(AssertFuelBurnDownSummary)
             .ToArray();
 
-        Assert.Equal([7, 15, 27], depletedTicks);
+        Assert.Equal([15, 17, 27], depletedTicks);
     }
 
     [Fact]

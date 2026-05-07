@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using Timberborn.BlockSystem;
+using Timberborn.Explosions;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -31,6 +32,22 @@ public sealed record TimberbornDetonatorFireSafetyTarget(
     int CellIndex,
     bool CanDisable,
     bool CanPreserveAutomationState);
+
+public static class TimberbornDetonatorFireSafetyStableIds
+{
+    public const string UnavailablePrefix = "detonator-unavailable:";
+    public const string DynamiteControlPrefix = "detonator-dynamite-control:";
+
+    public static string CreateDynamiteControlStableId(object dynamite)
+    {
+        if (dynamite is null)
+        {
+            throw new ArgumentNullException(nameof(dynamite));
+        }
+
+        return $"{DynamiteControlPrefix}{RuntimeHelpers.GetHashCode(dynamite)}";
+    }
+}
 
 public enum TimberbornDetonatorFireSafetyDisableStatus
 {
@@ -137,8 +154,12 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
             return disabledSummary;
         }
 
-        ResolvedTarget[] matchedTargets = consequences
-            .Select(consequence => new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence)))
+        ResolvedTarget[] resolvedTargets = consequences
+            .Select(ResolveTargetSafely)
+            .ToArray();
+        int resolutionFailureCount = resolvedTargets.Count(static resolvedTarget =>
+            resolvedTarget.ResolutionFailed);
+        ResolvedTarget[] matchedTargets = resolvedTargets
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
         ResolvedTarget[] uniqueTargets = matchedTargets
@@ -160,12 +181,35 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 result.Status == TimberbornDetonatorFireSafetyDisableStatus.Disabled),
             ArmedTargetCount: 0,
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: results.Count(static result =>
+            SkippedNoSafeApiCount: resolutionFailureCount + results.Count(static result =>
                 result.Status == TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
-            RecoverabilityUnknownCount: results.Count(static result => !result.RecoverabilityPreserved));
+            RecoverabilityUnknownCount: resolutionFailureCount + results.Count(static result =>
+                !result.RecoverabilityPreserved));
         _logSink.Info(summary.ToLogToken(tick));
         return summary;
+    }
+
+    private ResolvedTarget ResolveTargetSafely(TimberbornDetonatorFireSafetyConsequence consequence)
+    {
+        try
+        {
+            return new ResolvedTarget(
+                consequence,
+                _targetApi.ResolveTarget(consequence),
+                ResolutionFailed: false);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_detonator_fire_safety_safe_unavailable " +
+                $"reason=resolve_target_failed cell_index={consequence.CellIndex} " +
+                $"exception_type={exception.GetType().Name}");
+            return new ResolvedTarget(
+                consequence,
+                Target: null,
+                ResolutionFailed: true);
+        }
     }
 
     private TimberbornDetonatorFireSafetyDisableResult DisableTarget(ResolvedTarget resolvedTarget)
@@ -179,12 +223,26 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 RecoverabilityPreserved: target.CanPreserveAutomationState);
         }
 
-        return _targetApi.DisableTarget(target);
+        try
+        {
+            return _targetApi.DisableTarget(target);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_detonator_fire_safety_safe_unavailable " +
+                $"reason=disable_failed stable_id={target.StableId} " +
+                $"exception_type={exception.GetType().Name}");
+            return new TimberbornDetonatorFireSafetyDisableResult(
+                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
+                RecoverabilityPreserved: false);
+        }
     }
 
     private readonly record struct ResolvedTarget(
         TimberbornDetonatorFireSafetyConsequence Consequence,
-        TimberbornDetonatorFireSafetyTarget? Target);
+        TimberbornDetonatorFireSafetyTarget? Target,
+        bool ResolutionFailed);
 }
 
 public sealed class NullTimberbornDetonatorFireSafetySink : ITimberbornDetonatorFireSafetySink
@@ -209,7 +267,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
     private readonly IBlockService _blockService;
     private readonly Type? _detonatorType =
         Type.GetType("Timberborn.AutomationBuildings.Detonator, Timberborn.AutomationBuildings");
-    private readonly Dictionary<string, object> _detonatorsByStableId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, object> _disarmTargetsByStableId = new(StringComparer.Ordinal);
 
     public TimberbornDetonatorFireSafetyTargetApi(FireGrid grid, IBlockService blockService)
     {
@@ -222,15 +280,47 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
     {
         (int x, int y, int z) = _grid.FromIndex(consequence.CellIndex);
         Vector3Int coordinates = new(x, y, z);
-        object? detonator = FindDetonatorAt(coordinates);
+        FindDetonatorResult findResult = FindDetonatorAt(coordinates);
 
-        if (detonator is null)
+        if (findResult.SafeApiUnavailable)
         {
-            return null;
+            return new TimberbornDetonatorFireSafetyTarget(
+                $"{TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix}{consequence.CellIndex}",
+                consequence.CellIndex,
+                CanDisable: false,
+                CanPreserveAutomationState: false);
         }
 
-        string stableId = $"detonator:{RuntimeHelpers.GetHashCode(detonator)}";
-        _detonatorsByStableId[stableId] = detonator;
+        if (findResult.Detonator is null)
+        {
+            FindDynamiteControlResult dynamiteControlResult = FindDynamiteControlAt(coordinates);
+            if (dynamiteControlResult.SafeApiUnavailable)
+            {
+                return new TimberbornDetonatorFireSafetyTarget(
+                    $"{TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix}{consequence.CellIndex}",
+                    consequence.CellIndex,
+                    CanDisable: false,
+                    CanPreserveAutomationState: false);
+            }
+
+            if (dynamiteControlResult.Dynamite is null)
+            {
+                return null;
+            }
+
+            string dynamiteControlStableId =
+                TimberbornDetonatorFireSafetyStableIds.CreateDynamiteControlStableId(dynamiteControlResult.Dynamite);
+            _disarmTargetsByStableId[dynamiteControlStableId] = dynamiteControlResult.Dynamite;
+
+            return new TimberbornDetonatorFireSafetyTarget(
+                dynamiteControlStableId,
+                consequence.CellIndex,
+                CanDisable: true,
+                CanPreserveAutomationState: true);
+        }
+
+        string stableId = $"detonator:{RuntimeHelpers.GetHashCode(findResult.Detonator)}";
+        _disarmTargetsByStableId[stableId] = findResult.Detonator;
 
         return new TimberbornDetonatorFireSafetyTarget(
             stableId,
@@ -242,34 +332,23 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
     public TimberbornDetonatorFireSafetyDisableResult DisableTarget(
         TimberbornDetonatorFireSafetyTarget target)
     {
-        if (!_detonatorsByStableId.TryGetValue(target.StableId, out object? detonator))
+        if (!_disarmTargetsByStableId.TryGetValue(target.StableId, out object? disarmTarget))
         {
             return new TimberbornDetonatorFireSafetyDisableResult(
                 TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
                 RecoverabilityPreserved: false);
         }
 
-        MethodInfo? disarmMethod = detonator.GetType().GetMethod(
-            "Disarm",
-            BindingFlags.Instance | BindingFlags.Public);
-        if (disarmMethod is null)
-        {
-            return new TimberbornDetonatorFireSafetyDisableResult(
-                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
-        }
-
-        disarmMethod.Invoke(detonator, Array.Empty<object>());
-        return new TimberbornDetonatorFireSafetyDisableResult(
-            TimberbornDetonatorFireSafetyDisableStatus.Disabled,
-            RecoverabilityPreserved: target.CanPreserveAutomationState);
+        return TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
+            disarmTarget,
+            target.CanPreserveAutomationState);
     }
 
-    private object? FindDetonatorAt(Vector3Int coordinates)
+    private FindDetonatorResult FindDetonatorAt(Vector3Int coordinates)
     {
         if (_detonatorType is null)
         {
-            return null;
+            return FindDetonatorResult.SafeUnavailable;
         }
 
         MethodInfo? method = typeof(IBlockService)
@@ -278,12 +357,106 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
             .Where(static candidate => candidate.IsGenericMethodDefinition)
             .Where(static candidate => candidate.GetParameters().Length == 1)
             .FirstOrDefault();
-        object? result = method
-            ?.MakeGenericMethod(_detonatorType)
-            .Invoke(_blockService, new object[] { coordinates });
-        return (result as System.Collections.IEnumerable)
-            ?.Cast<object>()
-            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+        if (method is null)
+        {
+            return FindDetonatorResult.SafeUnavailable;
+        }
+
+        try
+        {
+            object? result = method
+                .MakeGenericMethod(_detonatorType)
+                .Invoke(_blockService, new object[] { coordinates });
+            if (result is not System.Collections.IEnumerable enumerable)
+            {
+                return FindDetonatorResult.SafeUnavailable;
+            }
+
+            return new FindDetonatorResult(
+                enumerable
+                    .Cast<object>()
+                    .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+                    .FirstOrDefault(),
+                SafeApiUnavailable: false);
+        }
+        catch
+        {
+            return FindDetonatorResult.SafeUnavailable;
+        }
+    }
+
+    private FindDynamiteControlResult FindDynamiteControlAt(Vector3Int coordinates)
+    {
+        try
+        {
+            return new FindDynamiteControlResult(
+                _blockService
+                    .GetObjectsWithComponentAt<Dynamite>(coordinates)
+                    .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+                    .FirstOrDefault(),
+                SafeApiUnavailable: false);
+        }
+        catch
+        {
+            return FindDynamiteControlResult.SafeUnavailable;
+        }
+    }
+
+    private readonly record struct FindDetonatorResult(
+        object? Detonator,
+        bool SafeApiUnavailable)
+    {
+        public static readonly FindDetonatorResult SafeUnavailable = new(
+            Detonator: null,
+            SafeApiUnavailable: true);
+    }
+
+    private readonly record struct FindDynamiteControlResult(
+        Dynamite? Dynamite,
+        bool SafeApiUnavailable)
+    {
+        public static readonly FindDynamiteControlResult SafeUnavailable = new(
+            Dynamite: null,
+            SafeApiUnavailable: true);
+    }
+}
+
+public static class TimberbornDetonatorFireSafetyNativeWrapper
+{
+    public static TimberbornDetonatorFireSafetyDisableResult DisableTarget(
+        object detonator,
+        bool canPreserveAutomationState)
+    {
+        if (detonator is null)
+        {
+            throw new ArgumentNullException(nameof(detonator));
+        }
+
+        MethodInfo? disarmMethod = detonator
+            .GetType()
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(static method => method.Name == "Disarm")
+            .Where(static method => method.GetParameters().Length == 0)
             .FirstOrDefault();
+        if (disarmMethod is null)
+        {
+            return new TimberbornDetonatorFireSafetyDisableResult(
+                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
+                RecoverabilityPreserved: false);
+        }
+
+        try
+        {
+            disarmMethod.Invoke(detonator, Array.Empty<object>());
+            return new TimberbornDetonatorFireSafetyDisableResult(
+                TimberbornDetonatorFireSafetyDisableStatus.Disabled,
+                RecoverabilityPreserved: canPreserveAutomationState);
+        }
+        catch
+        {
+            return new TimberbornDetonatorFireSafetyDisableResult(
+                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
+                RecoverabilityPreserved: false);
+        }
     }
 }

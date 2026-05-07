@@ -16,17 +16,17 @@
     20999,
     20999,
     20999,
-    21063,
+    21015,
     20999,
     20999,
     20999,
-    21063,
-    21112,
-    21063,
+    21015,
+    21208,
+    21015,
     20999,
     20999,
     20999,
-    21063,
+    21015,
     20999,
     20999,
     20999,
@@ -37,7 +37,7 @@
   ],
   "perTickDeltaCounts": [
     5,
-    5
+    0
   ],
   "perTickDeltas": [
     {
@@ -47,63 +47,38 @@
         {
           "cellIndex": 7,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         },
         {
           "cellIndex": 11,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         },
         {
           "cellIndex": 12,
           "oldCell": 21240,
-          "newCell": 21192
+          "newCell": 21208
         },
         {
           "cellIndex": 13,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         },
         {
           "cellIndex": 17,
           "oldCell": 20999,
-          "newCell": 21031
+          "newCell": 21015
         }
       ]
     },
     {
       "tick": 2,
-      "deltaCount": 5,
+      "deltaCount": 0,
       "deltas": [
-        {
-          "cellIndex": 7,
-          "oldCell": 21031,
-          "newCell": 21063
-        },
-        {
-          "cellIndex": 11,
-          "oldCell": 21031,
-          "newCell": 21063
-        },
-        {
-          "cellIndex": 12,
-          "oldCell": 21192,
-          "newCell": 21112
-        },
-        {
-          "cellIndex": 13,
-          "oldCell": 21031,
-          "newCell": 21063
-        },
-        {
-          "cellIndex": 17,
-          "oldCell": 21031,
-          "newCell": 21063
-        }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:F37C248E"
+    "checksum": "visual-fnv1a32:C93F7A6F"
   }
 }

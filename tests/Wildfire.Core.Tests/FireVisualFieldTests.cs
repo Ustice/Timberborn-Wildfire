@@ -118,11 +118,16 @@ public sealed class FireVisualFieldTests
         Assert.Contains("uint lockedFuel = min(fuel, water * FireWaterFuelLock);", shader);
         Assert.Contains("uint effectiveFuel = fuel - lockedFuel;", shader);
         Assert.Contains("bool canBurn = terrain == 1u && effectiveFuel > 0u;", shader);
+        Assert.Contains("bool wasIgnitedBeforeNeighborExchange = terrain == 1u && fuel > 0u && heat >= ignitionThreshold;", shader);
+        Assert.Contains("if (wasIgnitedBeforeNeighborExchange && heat < ignitionThreshold)", shader);
+        Assert.Contains("if (wasIgnitedBeforeNeighborExchange && fuel > 0u && heat < ignitionThreshold)", shader);
         Assert.Contains("uint fuelHeat = ((effectiveFuel * FireFuelHeatWeight) + 14u) / 15u;", shader);
         Assert.Contains("heat = min(15u, heat + FireBurnHeatBase + flammability + fuelHeat);", shader);
         Assert.Contains("float EffectiveWindStrength()", shader);
         Assert.Contains("return saturate(WindStrength * 0.5f);", shader);
         Assert.Contains("uint WindWeightedNeighborHeat(uint neighborHeat, float directionX, float directionY)", shader);
+        Assert.Contains("uint CompanionMaterialClass(uint companion)", shader);
+        Assert.Contains("if (CompanionMaterialClass(companion) == 1u)", shader);
         Assert.Contains("int distanceSquared = (dx * dx) + (dy * dy) + (dz * dz);", shader);
         Assert.Contains("distanceSquared == 0 || distanceSquared > 4", shader);
         Assert.Contains("float weight = 1.0f / max(1.0f, distance);", shader);

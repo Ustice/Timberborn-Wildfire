@@ -16,17 +16,12 @@
     20480,
     20480,
     20480,
-    20560,
     20480,
     20480,
     20480,
-    20560,
-    13257,
-    20560,
     20480,
     20480,
-    20480,
-    20560,
+    13273,
     20480,
     20480,
     20480,
@@ -46,7 +41,12 @@
     20480,
     20480,
     20480,
-    13148,
+    20480,
+    20480,
+    20480,
+    20480,
+    20480,
+    13068,
     20480,
     20480,
     20480,
@@ -111,158 +111,58 @@
     20480
   ],
   "perTickDeltaCounts": [
-    6,
-    6,
-    6,
-    6
+    1,
+    1,
+    1,
+    1
   ],
   "perTickDeltas": [
     {
       "tick": 1,
-      "deltaCount": 6,
+      "deltaCount": 1,
       "deltas": [
-        {
-          "cellIndex": 37,
-          "oldCell": 13068,
-          "newCell": 13100
-        },
-        {
-          "cellIndex": 7,
-          "oldCell": 20480,
-          "newCell": 20512
-        },
-        {
-          "cellIndex": 11,
-          "oldCell": 20480,
-          "newCell": 20512
-        },
         {
           "cellIndex": 12,
           "oldCell": 13308,
           "newCell": 13276
-        },
-        {
-          "cellIndex": 13,
-          "oldCell": 20480,
-          "newCell": 20512
-        },
-        {
-          "cellIndex": 17,
-          "oldCell": 20480,
-          "newCell": 20512
         }
       ]
     },
     {
       "tick": 2,
-      "deltaCount": 6,
+      "deltaCount": 1,
       "deltas": [
-        {
-          "cellIndex": 37,
-          "oldCell": 13100,
-          "newCell": 13116
-        },
-        {
-          "cellIndex": 7,
-          "oldCell": 20512,
-          "newCell": 20528
-        },
-        {
-          "cellIndex": 11,
-          "oldCell": 20512,
-          "newCell": 20528
-        },
         {
           "cellIndex": 12,
           "oldCell": 13276,
-          "newCell": 13259
-        },
-        {
-          "cellIndex": 13,
-          "oldCell": 20512,
-          "newCell": 20528
-        },
-        {
-          "cellIndex": 17,
-          "oldCell": 20512,
-          "newCell": 20528
+          "newCell": 13275
         }
       ]
     },
     {
       "tick": 3,
-      "deltaCount": 6,
+      "deltaCount": 1,
       "deltas": [
         {
-          "cellIndex": 37,
-          "oldCell": 13116,
-          "newCell": 13132
-        },
-        {
-          "cellIndex": 7,
-          "oldCell": 20528,
-          "newCell": 20544
-        },
-        {
-          "cellIndex": 11,
-          "oldCell": 20528,
-          "newCell": 20544
-        },
-        {
           "cellIndex": 12,
-          "oldCell": 13259,
-          "newCell": 13258
-        },
-        {
-          "cellIndex": 13,
-          "oldCell": 20528,
-          "newCell": 20544
-        },
-        {
-          "cellIndex": 17,
-          "oldCell": 20528,
-          "newCell": 20544
+          "oldCell": 13275,
+          "newCell": 13274
         }
       ]
     },
     {
       "tick": 4,
-      "deltaCount": 6,
+      "deltaCount": 1,
       "deltas": [
         {
-          "cellIndex": 37,
-          "oldCell": 13132,
-          "newCell": 13148
-        },
-        {
-          "cellIndex": 7,
-          "oldCell": 20544,
-          "newCell": 20560
-        },
-        {
-          "cellIndex": 11,
-          "oldCell": 20544,
-          "newCell": 20560
-        },
-        {
           "cellIndex": 12,
-          "oldCell": 13258,
-          "newCell": 13257
-        },
-        {
-          "cellIndex": 13,
-          "oldCell": 20544,
-          "newCell": 20560
-        },
-        {
-          "cellIndex": 17,
-          "oldCell": 20544,
-          "newCell": 20560
+          "oldCell": 13274,
+          "newCell": 13273
         }
       ]
     }
   ],
   "visual": {
-    "checksum": "visual-fnv1a32:EF67F7F2"
+    "checksum": "visual-fnv1a32:200621F8"
   }
 }

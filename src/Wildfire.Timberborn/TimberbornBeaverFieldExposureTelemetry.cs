@@ -10,6 +10,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
     public const float RespiratorySmokeThreshold = 0.18f;
     public const float BurnFireThreshold = 0.12f;
     public const float ToxicSmokeThreshold = 0.55f;
+    public const float ToxicSteamThreshold = 0.55f;
     public const float TaintedAftermathAshThreshold = 0.35f;
     public const int MaxSampleCellsPerBeaver = 9;
 
@@ -50,33 +51,81 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             return _lastSnapshot;
         }
 
-        TimberbornBeaverFieldExposureCandidate[] candidates = positions.Beavers
-            .Select(beaver => new TimberbornBeaverFieldExposureCandidate(
-                beaver,
-                CandidateCellIndices(grid, beaver.X, beaver.Y, beaver.Z)))
-            .Where(static candidate => candidate.CellIndices.Count > 0)
-            .ToArray();
+        TimberbornBeaverFieldExposureCandidate[] candidates = CreateCandidates(grid, positions.Beavers);
+        TimberbornBeaverFieldExposureCandidate[] sampledCandidates = SelectSampledCandidates(
+            candidates,
+            out int[] inspectedCellIndices,
+            out int skippedBoundedSampling);
 
-        IReadOnlyList<TimberbornGpuVisualFieldSample> samples = candidates.Length == 0
+        IReadOnlyList<TimberbornGpuVisualFieldSample> samples = inspectedCellIndices.Length == 0
             ? Array.Empty<TimberbornGpuVisualFieldSample>()
-            : _visualFieldSurface.InspectCells(candidates
-                .SelectMany(static candidate => candidate.CellIndices)
-                .Distinct()
-                .Take(TimberbornGpuVisualFieldSurface.MaxInspectionCellCount)
-                .ToArray());
+            : _visualFieldSurface.InspectCells(inspectedCellIndices);
         Dictionary<int, TimberbornGpuVisualFieldSample> sampleByCell = samples
             .GroupBy(static sample => sample.CellIndex)
             .ToDictionary(static group => group.Key, static group => group.First());
 
-        TimberbornBeaverFieldExposureClassification[] classifications = candidates
+        TimberbornBeaverFieldExposureClassification[] classifications = sampledCandidates
             .Select(candidate => Classify(candidate.Beaver, candidate.CellIndices, sampleByCell))
             .ToArray();
         _lastSnapshot = TimberbornBeaverFieldExposureSnapshot.FromClassifications(
-            sampledBeavers: positions.Beavers.Count,
+            sampledBeavers: classifications.Length,
             skippedNoPositionApi: positions.SkippedNoPositionApiCount,
+            skippedBoundedSampling: skippedBoundedSampling,
             classifications);
         LogSnapshot(tick, _lastSnapshot);
         return _lastSnapshot;
+    }
+
+    public TimberbornBeaverFieldExposureQaTarget SelectQaStimulusTarget(FireGrid grid)
+    {
+        TimberbornBeaverPositionSnapshot positions = _positionProvider.GetPositions(grid);
+        if (!positions.IsAvailable)
+        {
+            return TimberbornBeaverFieldExposureQaTarget.Unavailable(
+                positions.UnavailableReason,
+                positions.SkippedNoPositionApiCount);
+        }
+
+        TimberbornBeaverFieldExposureCandidate[] candidates = CreateCandidates(grid, positions.Beavers);
+        TimberbornBeaverFieldExposureCandidate[] sampledCandidates = SelectSampledCandidates(
+            candidates,
+            out _,
+            out int skippedBoundedSampling);
+        TimberbornBeaverFieldExposureCandidate? selectedCandidate = sampledCandidates
+            .OrderBy(static candidate => candidate.Beaver.BeaverId, StringComparer.Ordinal)
+            .ThenBy(static candidate => candidate.CellIndices.Min())
+            .Select(static candidate => (TimberbornBeaverFieldExposureCandidate?)candidate)
+            .FirstOrDefault();
+        if (selectedCandidate is not { } targetCandidate)
+        {
+            return TimberbornBeaverFieldExposureQaTarget.Unavailable(
+                "no_sampled_beaver_candidate_cells",
+                positions.SkippedNoPositionApiCount,
+                sampledCandidates.Length,
+                skippedBoundedSampling);
+        }
+
+        int beaverCellIndex = grid.ToIndex(
+            targetCandidate.Beaver.X,
+            targetCandidate.Beaver.Y,
+            targetCandidate.Beaver.Z);
+        int targetCellIndex = targetCandidate.CellIndices.Contains(beaverCellIndex)
+            ? beaverCellIndex
+            : targetCandidate.CellIndices.OrderBy(static cellIndex => cellIndex).First();
+        (int targetX, int targetY, int targetZ) = grid.FromIndex(targetCellIndex);
+
+        return TimberbornBeaverFieldExposureQaTarget.Available(
+            targetCandidate.Beaver.BeaverId,
+            targetCandidate.Beaver.X,
+            targetCandidate.Beaver.Y,
+            targetCandidate.Beaver.Z,
+            targetCellIndex,
+            targetX,
+            targetY,
+            targetZ,
+            targetCandidate.CellIndices.Count,
+            sampledCandidates.Length,
+            skippedBoundedSampling);
     }
 
     public static IReadOnlyList<int> CandidateCellIndices(FireGrid grid, int x, int y, int z)
@@ -113,6 +162,10 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
         int toxicCells = samples.Count(static sample =>
             sample.Smoke >= ToxicSmokeThreshold ||
             sample.SmokeContamination >= ToxicSmokeThreshold);
+        int toxicSteamCells = samples.Count(static sample =>
+            sample.Steam >= RespiratorySmokeThreshold &&
+            (sample.SmokeContamination >= ToxicSteamThreshold ||
+                sample.AshContamination >= ToxicSteamThreshold));
         int taintedAftermathCells = samples.Count(static sample =>
             sample.Ash >= TaintedAftermathAshThreshold &&
             sample.AshContamination > 0f &&
@@ -128,8 +181,38 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             burnCells,
             contaminatedSmokeCells,
             toxicCells,
-            0,
+            toxicSteamCells,
             taintedAftermathCells);
+    }
+
+    private static TimberbornBeaverFieldExposureCandidate[] CreateCandidates(
+        FireGrid grid,
+        IReadOnlyList<TimberbornBeaverPositionSample> beavers)
+    {
+        return beavers
+            .Select(beaver => new TimberbornBeaverFieldExposureCandidate(
+                beaver,
+                CandidateCellIndices(grid, beaver.X, beaver.Y, beaver.Z)))
+            .Where(static candidate => candidate.CellIndices.Count > 0)
+            .ToArray();
+    }
+
+    private static TimberbornBeaverFieldExposureCandidate[] SelectSampledCandidates(
+        TimberbornBeaverFieldExposureCandidate[] candidates,
+        out int[] inspectedCellIndices,
+        out int skippedBoundedSampling)
+    {
+        inspectedCellIndices = candidates
+            .SelectMany(static candidate => candidate.CellIndices)
+            .Distinct()
+            .Take(TimberbornGpuVisualFieldSurface.MaxInspectionCellCount)
+            .ToArray();
+        HashSet<int> inspectedCellIndexSet = inspectedCellIndices.ToHashSet();
+        TimberbornBeaverFieldExposureCandidate[] sampledCandidates = candidates
+            .Where(candidate => candidate.CellIndices.All(inspectedCellIndexSet.Contains))
+            .ToArray();
+        skippedBoundedSampling = candidates.Length - sampledCandidates.Length;
+        return sampledCandidates;
     }
 
     private void LogSnapshot(uint? tick, TimberbornBeaverFieldExposureSnapshot snapshot)
@@ -144,8 +227,10 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             $"respiratory_cells={snapshot.RespiratoryExposureCells} " +
             $"burn_cells={snapshot.BurnExposureCells} " +
             $"toxic_cells={snapshot.ToxicExposureCells} " +
+            $"toxic_steam_cells={snapshot.ToxicSteamCells} " +
             $"tainted_aftermath_cells={snapshot.TaintedAftermathCells} " +
-            $"skipped_no_position_api={snapshot.SkippedNoPositionApi}");
+            $"skipped_no_position_api={snapshot.SkippedNoPositionApi} " +
+            $"skipped_bounded_sampling={snapshot.SkippedBoundedSampling}");
     }
 
     private static string FormatNumber(uint? value)
@@ -238,6 +323,76 @@ public sealed record TimberbornBeaverPositionSnapshot(
 
 public readonly record struct TimberbornBeaverPositionSample(string BeaverId, int X, int Y, int Z);
 
+public sealed record TimberbornBeaverFieldExposureQaTarget(
+    bool IsAvailable,
+    string UnavailableReason,
+    string? BeaverId,
+    int? BeaverX,
+    int? BeaverY,
+    int? BeaverZ,
+    int? CellIndex,
+    int? X,
+    int? Y,
+    int? Z,
+    int CandidateCellCount,
+    int SampledBeaverCount,
+    int SkippedNoPositionApiCount,
+    int SkippedBoundedSamplingCount)
+{
+    public static TimberbornBeaverFieldExposureQaTarget Available(
+        string beaverId,
+        int beaverX,
+        int beaverY,
+        int beaverZ,
+        int cellIndex,
+        int x,
+        int y,
+        int z,
+        int candidateCellCount,
+        int sampledBeaverCount,
+        int skippedBoundedSamplingCount)
+    {
+        return new TimberbornBeaverFieldExposureQaTarget(
+            true,
+            "none",
+            beaverId,
+            beaverX,
+            beaverY,
+            beaverZ,
+            cellIndex,
+            x,
+            y,
+            z,
+            candidateCellCount,
+            sampledBeaverCount,
+            SkippedNoPositionApiCount: 0,
+            SkippedBoundedSamplingCount: skippedBoundedSamplingCount);
+    }
+
+    public static TimberbornBeaverFieldExposureQaTarget Unavailable(
+        string reason,
+        int skippedNoPositionApiCount,
+        int sampledBeaverCount = 0,
+        int skippedBoundedSamplingCount = 0)
+    {
+        return new TimberbornBeaverFieldExposureQaTarget(
+            false,
+            string.IsNullOrWhiteSpace(reason) ? "beaver_position_unavailable" : reason,
+            BeaverId: null,
+            BeaverX: null,
+            BeaverY: null,
+            BeaverZ: null,
+            CellIndex: null,
+            X: null,
+            Y: null,
+            Z: null,
+            CandidateCellCount: 0,
+            sampledBeaverCount,
+            skippedNoPositionApiCount,
+            skippedBoundedSamplingCount);
+    }
+}
+
 public sealed record TimberbornBeaverFieldExposureSnapshot(
     bool IsAvailable,
     int SampledBeavers,
@@ -249,6 +404,7 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
     int ToxicSteamCells,
     int TaintedAftermathCells,
     int SkippedNoPositionApi,
+    int SkippedBoundedSampling,
     string UnavailableReason)
 {
     public static TimberbornBeaverFieldExposureSnapshot Unavailable(
@@ -266,12 +422,14 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
             ToxicSteamCells: 0,
             TaintedAftermathCells: 0,
             SkippedNoPositionApi: 1,
+            SkippedBoundedSampling: 0,
             UnavailableReason: string.IsNullOrWhiteSpace(reason) ? "unavailable" : reason);
     }
 
     public static TimberbornBeaverFieldExposureSnapshot FromClassifications(
         int sampledBeavers,
         int skippedNoPositionApi,
+        int skippedBoundedSampling,
         IReadOnlyList<TimberbornBeaverFieldExposureClassification> classifications)
     {
         return new TimberbornBeaverFieldExposureSnapshot(
@@ -285,6 +443,7 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
             ToxicSteamCells: classifications.Sum(static classification => classification.ToxicSteamCells),
             TaintedAftermathCells: classifications.Sum(static classification => classification.TaintedAftermathCells),
             SkippedNoPositionApi: skippedNoPositionApi,
+            SkippedBoundedSampling: skippedBoundedSampling,
             UnavailableReason: "none");
     }
 }
