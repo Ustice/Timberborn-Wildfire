@@ -359,7 +359,7 @@ const readNestedNumber = (value: unknown, path: string[]): number | null => {
   return typeof found === "number" ? found : null;
 };
 
-const findTimberbornSaves = (root: string): string[] => {
+const findTimberbornSaves = (root: string, depth = 0): string[] => {
   if (!existsSync(root)) {
     return [];
   }
@@ -367,7 +367,7 @@ const findTimberbornSaves = (root: string): string[] => {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const path = join(root, entry.name);
     if (entry.isDirectory()) {
-      return findTimberbornSaves(path);
+      return depth < 1 ? findTimberbornSaves(path, depth + 1) : [];
     }
 
     return entry.isFile() && entry.name.endsWith(".timber") ? [path] : [];

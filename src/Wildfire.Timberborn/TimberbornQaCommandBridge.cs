@@ -935,6 +935,7 @@ public static class TimberbornQaFieldTargetSelectors
     public const string BeaverExposure = "beaver-exposure";
     public const string Vegetation = "vegetation";
     public const string Crop = "crop";
+    public const string Bush = "bush";
     public const string Storage = "storage";
     public const string Building = "building";
     public const string Infrastructure = "infrastructure";
@@ -954,6 +955,7 @@ public static class TimberbornQaFieldTargetSelectors
         BeaverExposure,
         Vegetation,
         Crop,
+        Bush,
         Storage,
         Building,
         Infrastructure,
@@ -991,6 +993,7 @@ public static class TimberbornQaFieldTargetSelectors
             BeaverExposure => false,
             Vegetation => materialClass == WildfireMaterialClass.Vegetation,
             Crop => materialClass == WildfireMaterialClass.Crop,
+            Bush => materialClass is WildfireMaterialClass.Vegetation or WildfireMaterialClass.Crop,
             Storage => materialClass == WildfireMaterialClass.Storage,
             Building => materialClass == WildfireMaterialClass.Building,
             Infrastructure => materialClass == WildfireMaterialClass.Infrastructure,

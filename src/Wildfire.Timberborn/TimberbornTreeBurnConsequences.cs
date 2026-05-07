@@ -2,9 +2,11 @@ namespace Wildfire.Timberborn;
 
 public enum TimberbornTreeBurnConsequenceKind
 {
+    DryTree,
     ReduceYield,
     KillTree,
     MarkBurnedVisual,
+    MarkBurnedLeftover,
 }
 
 public readonly record struct TimberbornTreeBurnConsequence(
@@ -85,7 +87,11 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
     private readonly ITimberbornTreeBurnConsequenceApi _consequenceApi;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly Dictionary<TimberbornBurnDamageTargetKey, int> _appliedYieldLossByTarget = new();
+    private readonly HashSet<TimberbornBurnDamageTargetKey> _driedTargets = new();
     private readonly HashSet<TimberbornBurnDamageTargetKey> _killedTargets = new();
+    private readonly HashSet<TimberbornBurnDamageTargetKey> _leftoverTargets = new();
+    private const int TreeDeathDamageNumerator = 1;
+    private const int TreeDeathDamageDenominator = 5;
 
     public TimberbornTreeBurnConsequenceSink(
         TimberbornBurnDamageService burnDamageService,
@@ -191,15 +197,58 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             ? appliedYieldLoss
             : 0;
         int incrementalYieldLoss = Math.Max(0, targetYieldLost - alreadyAppliedYieldLoss);
+        TimberbornTreeBurnTargetOutcome dryingOutcome = ApplyDryingConsequences(tick, state, initialYield, targetYieldLost);
         TimberbornTreeBurnTargetOutcome yieldOutcome = incrementalYieldLoss > 0
             ? ApplyYieldLoss(tick, state, incrementalYieldLoss, initialYield, targetYieldLost)
             : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
-        TimberbornTreeBurnTargetOutcome fullBurnOutcome =
-            state.IsFullyDamaged || targetYieldLost >= initialYield
-                ? ApplyFullBurnConsequences(tick, state, initialYield, targetYieldLost)
+        TimberbornTreeBurnTargetOutcome deathOutcome =
+            ShouldKillTree(state)
+                ? ApplyDeathConsequences(
+                    tick,
+                    state,
+                    initialYield,
+                    targetYieldLost,
+                    markBurnedDeadVisual: !ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost))
+                : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+        TimberbornTreeBurnTargetOutcome leftoverOutcome =
+            ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost)
+                ? ApplyBurnedLeftoverConsequences(tick, state, initialYield, targetYieldLost)
                 : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
 
-        return TimberbornTreeBurnTargetOutcome.Combine(yieldOutcome, fullBurnOutcome);
+        return TimberbornTreeBurnTargetOutcome.Combine(
+            TimberbornTreeBurnTargetOutcome.Combine(
+                TimberbornTreeBurnTargetOutcome.Combine(dryingOutcome, yieldOutcome),
+                deathOutcome),
+            leftoverOutcome);
+    }
+
+    private TimberbornTreeBurnTargetOutcome ApplyDryingConsequences(
+        uint tick,
+        TimberbornBurnDamageTargetState state,
+        int initialYield,
+        int targetYieldLost)
+    {
+        if (_driedTargets.Contains(state.TargetKey))
+        {
+            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+        }
+
+        TimberbornTreeBurnConsequenceResult result = _consequenceApi.ApplyConsequence(CreateConsequence(
+            tick,
+            state,
+            TimberbornTreeBurnConsequenceKind.DryTree,
+            targetYieldLost,
+            Math.Max(0, initialYield - targetYieldLost)));
+
+        if (!result.Applied)
+        {
+            return result.SafeApiUnavailable
+                ? TimberbornTreeBurnTargetOutcome.SkippedUnsafeApi
+                : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+        }
+
+        _driedTargets.Add(state.TargetKey);
+        return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
     }
 
     private TimberbornTreeBurnTargetOutcome ApplyYieldLoss(
@@ -233,11 +282,12 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             SkippedUnsafeApiCount: 0);
     }
 
-    private TimberbornTreeBurnTargetOutcome ApplyFullBurnConsequences(
+    private TimberbornTreeBurnTargetOutcome ApplyDeathConsequences(
         uint tick,
         TimberbornBurnDamageTargetState state,
         int initialYield,
-        int targetYieldLost)
+        int targetYieldLost,
+        bool markBurnedDeadVisual)
     {
         if (_killedTargets.Contains(state.TargetKey))
         {
@@ -251,15 +301,16 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             targetYieldLost,
             remainingYield: 0);
         TimberbornTreeBurnConsequenceResult killResult = _consequenceApi.ApplyConsequence(killConsequence);
-        TimberbornTreeBurnConsequenceResult visualResult = _consequenceApi.ApplyConsequence(killConsequence with
-        {
-            Kind = TimberbornTreeBurnConsequenceKind.MarkBurnedVisual,
-        });
+        TimberbornTreeBurnConsequenceResult visualResult = markBurnedDeadVisual
+            ? _consequenceApi.ApplyConsequence(killConsequence with
+            {
+                Kind = TimberbornTreeBurnConsequenceKind.MarkBurnedVisual,
+            })
+            : new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: false);
 
         if (killResult.Applied)
         {
             _killedTargets.Add(state.TargetKey);
-            _appliedYieldLossByTarget[state.TargetKey] = initialYield;
         }
 
         return new TimberbornTreeBurnTargetOutcome(
@@ -269,6 +320,42 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             VisualUpdated: visualResult.Applied,
             SkippedUnknownResource: false,
             SkippedUnsafeApiCount: CountUnavailable(killResult) + CountUnavailable(visualResult));
+    }
+
+    private TimberbornTreeBurnTargetOutcome ApplyBurnedLeftoverConsequences(
+        uint tick,
+        TimberbornBurnDamageTargetState state,
+        int initialYield,
+        int targetYieldLost)
+    {
+        if (_leftoverTargets.Contains(state.TargetKey))
+        {
+            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+        }
+
+        TimberbornTreeBurnConsequenceResult result = _consequenceApi.ApplyConsequence(CreateConsequence(
+            tick,
+            state,
+            TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover,
+            targetYieldLost,
+            remainingYield: 0));
+
+        if (!result.Applied)
+        {
+            return result.SafeApiUnavailable
+                ? TimberbornTreeBurnTargetOutcome.SkippedUnsafeApi
+                : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+        }
+
+        _leftoverTargets.Add(state.TargetKey);
+        _appliedYieldLossByTarget[state.TargetKey] = initialYield;
+        return new TimberbornTreeBurnTargetOutcome(
+            Burnable: true,
+            YieldLost: 0,
+            Killed: false,
+            VisualUpdated: true,
+            SkippedUnknownResource: false,
+            SkippedUnsafeApiCount: 0);
     }
 
     private TimberbornTreeBurnConsequence CreateConsequence(
@@ -319,6 +406,21 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
         int fuelValuePerYield = Math.Max(1, (int)state.FuelValue);
         return Math.Clamp(state.DamageTaken / fuelValuePerYield, 0, initialYield);
+    }
+
+    private static bool ShouldKillTree(TimberbornBurnDamageTargetState state)
+    {
+        return state.DamageCapacity > 0 &&
+            state.DamageTaken * TreeDeathDamageDenominator > state.DamageCapacity * TreeDeathDamageNumerator;
+    }
+
+    private static bool ShouldMarkBurnedLeftover(
+        TimberbornBurnDamageTargetState state,
+        int initialYield,
+        int targetYieldLost)
+    {
+        return initialYield > 0 &&
+            (state.IsFullyDamaged || targetYieldLost >= initialYield);
     }
 
     private static int CountUnavailable(TimberbornTreeBurnConsequenceResult result)

@@ -1,6 +1,9 @@
 using System.Runtime.CompilerServices;
+using System.Reflection;
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
+using Timberborn.ConstructionSites;
+using Timberborn.Goods;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -22,12 +25,11 @@ public readonly record struct TimberbornStructureBurnDamageConsequence(
     int Heat,
     int Water)
 {
-    private const int DangerousHeat = 8;
     private const int RepairBlockedHeat = 5;
 
     public bool HasBurnPressure => true;
 
-    public bool ShouldClose => Fuel > 0 || Heat >= DangerousHeat;
+    public bool ShouldClose => ShouldBlockRepair;
 
     public bool ShouldBlockRepair => Fuel > 0 || Heat >= RepairBlockedHeat;
 
@@ -142,6 +144,8 @@ public interface ITimberbornStructureBurnDamageRollbackTargetApi
 
 public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStructureBurnDamageRollbackSink
 {
+    private const int UnfinishedDamageThresholdPercent = 10;
+
     private readonly ITimberbornStructureBurnDamageRollbackTargetApi _targetApi;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
     private readonly ITimberbornFireLogSink _logSink;
@@ -281,14 +285,12 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             return TimberbornStructureBurnRollbackStage.None;
         }
 
-        if (damageTaken >= damageCapacity)
+        if (damageTaken * 100 >= damageCapacity * UnfinishedDamageThresholdPercent)
         {
             return TimberbornStructureBurnRollbackStage.Unfinished;
         }
 
-        return damageTaken * 2 >= damageCapacity
-            ? TimberbornStructureBurnRollbackStage.PartialConstruction
-            : TimberbornStructureBurnRollbackStage.Scorched;
+        return TimberbornStructureBurnRollbackStage.Scorched;
     }
 
     private ResolvedTarget ResolveTarget(TimberbornStructureBurnDamageConsequence consequence)
@@ -365,11 +367,19 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 {
     private readonly FireGrid _grid;
     private readonly IBlockService _blockService;
+    private readonly ITimberbornFireLogSink _logSink;
+    private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
 
-    public TimberbornStructureBurnDamageRollbackTargetApi(FireGrid grid, IBlockService blockService)
+    public TimberbornStructureBurnDamageRollbackTargetApi(
+        FireGrid grid,
+        IBlockService blockService,
+        ITimberbornFireLogSink? logSink = null,
+        TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null)
     {
         _grid = grid;
         _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
+        _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
+        _textureDeriver = textureDeriver ?? new TimberbornRuntimeBurnedTextureDeriver(_logSink);
     }
 
     public TimberbornStructureBurnDamageTarget? ResolveTarget(
@@ -389,6 +399,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         bool hasPausableBuilding = _blockService
             .GetObjectsWithComponentAt<PausableBuilding>(coordinates)
             .Any();
+        bool canEnterUnfinishedState = CanEnterUnfinishedState(blockObject);
 
         return new TimberbornStructureBurnDamageTarget(
             StableId: $"structure:{RuntimeHelpers.GetHashCode(blockObject)}",
@@ -396,8 +407,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             CellIndex: consequence.CellIndex,
             ConstructionResources: TimberbornBurnDamageResourceGuesses.ForStructure(blockObject.Name),
             CanClose: hasPausableBuilding,
-            CanApplyRollbackVisual: false,
-            CanRepairAfterDanger: false);
+            CanApplyRollbackVisual: canEnterUnfinishedState,
+            CanRepairAfterDanger: canEnterUnfinishedState);
     }
 
     public TimberbornStructureBurnDamageApplyResult ApplyState(
@@ -414,12 +425,257 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             : Array.Empty<PausableBuilding>();
 
         Array.ForEach(buildingsToPause, static building => building.Pause());
+        BlockObject? blockObject = _blockService
+            .GetObjectsWithComponentAt<BlockObject>(coordinates)
+            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+            .FirstOrDefault();
+        bool enteredUnfinishedState = false;
+        int removedConstructionMaterialCount = 0;
+        bool resetConstructionProgress = false;
+        int burnedMaterialCount = 0;
+        bool hasBurnedTextures = false;
+
+        if (blockObject is not null && request.ShouldApplyRollbackVisual)
+        {
+            if (request.RollbackStage is TimberbornStructureBurnRollbackStage.PartialConstruction or
+                TimberbornStructureBurnRollbackStage.Unfinished)
+            {
+                enteredUnfinishedState = TryEnterUnfinishedState(blockObject);
+            }
+
+            ConstructionSite? constructionSite = TryGetConstructionSite(blockObject, coordinates);
+            removedConstructionMaterialCount = RemoveConstructionMaterials(constructionSite, target);
+            resetConstructionProgress = request.RepairBlocked &&
+                TrySetConstructionProgress(constructionSite, buildTimeProgressInHours: 0f);
+            burnedMaterialCount = ApplyBurnedTextures(blockObject, target.SpecId);
+            hasBurnedTextures = burnedMaterialCount > 0 || HasBurnedTextures(blockObject);
+            LogRollbackVisual(target, request, enteredUnfinishedState, removedConstructionMaterialCount, resetConstructionProgress, burnedMaterialCount);
+        }
+
+        bool visualRollbackApplied = enteredUnfinishedState || removedConstructionMaterialCount > 0 || hasBurnedTextures;
+        bool skippedNoSafeApi = (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
+            (!target.CanClose && request.ShouldClose);
 
         return new TimberbornStructureBurnDamageApplyResult(
             Closed: buildingsToPause.Length > 0,
-            VisualRollbackApplied: false,
-            SkippedNoSafeApi: request.ShouldApplyRollbackVisual || (!target.CanClose && request.ShouldClose),
+            VisualRollbackApplied: visualRollbackApplied,
+            SkippedNoSafeApi: skippedNoSafeApi,
             RepairEligible: request.RepairEligible);
+    }
+
+    private static bool CanEnterUnfinishedState(BlockObject blockObject)
+    {
+        try
+        {
+            return blockObject.IsFinished;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryEnterUnfinishedState(BlockObject blockObject)
+    {
+        try
+        {
+            if (blockObject.IsUnfinished)
+            {
+                return true;
+            }
+
+            if (!blockObject.IsFinished)
+            {
+                return false;
+            }
+
+            object? blockObjectState = typeof(BlockObject).GetField(
+                "_blockObjectState",
+                BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(blockObject);
+            if (blockObjectState is null)
+            {
+                return false;
+            }
+
+            MethodInfo? enterStateMethod = blockObjectState.GetType().GetMethod(
+                "EnterState",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Type? stateType = enterStateMethod?.GetParameters().FirstOrDefault()?.ParameterType;
+            if (enterStateMethod is null || stateType is null)
+            {
+                return false;
+            }
+
+            object unfinishedState = Enum.Parse(stateType, "Unfinished");
+            enterStateMethod.Invoke(blockObjectState, new[] { unfinishedState });
+            return blockObject.IsUnfinished;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private ConstructionSite? TryGetConstructionSite(BlockObject blockObject, Vector3Int coordinates)
+    {
+        if (blockObject.TryGetComponent(out ConstructionSite directConstructionSite))
+        {
+            return directConstructionSite;
+        }
+
+        return _blockService
+            .GetObjectsWithComponentAt<ConstructionSite>(coordinates)
+            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+            .FirstOrDefault();
+    }
+
+    private int RemoveConstructionMaterials(
+        ConstructionSite? constructionSite,
+        TimberbornStructureBurnDamageTarget target)
+    {
+        if (constructionSite?.Inventory is null || target.ConstructionResources.Count == 0)
+        {
+            return 0;
+        }
+
+        return target.ConstructionResources
+            .Select(static resource => resource.ResourceId)
+            .Distinct(StringComparer.Ordinal)
+            .Select(resourceId => RemoveConstructionMaterial(constructionSite, target, resourceId))
+            .Sum();
+    }
+
+    private int RemoveConstructionMaterial(
+        ConstructionSite constructionSite,
+        TimberbornStructureBurnDamageTarget target,
+        string resourceId)
+    {
+        int amount = Math.Max(0, constructionSite.Inventory.AmountInStock(resourceId));
+        if (amount <= 0)
+        {
+            return 0;
+        }
+
+        constructionSite.Inventory.Take(new GoodAmount(resourceId, amount));
+        _logSink.Info(
+            "wildfire_timberborn_structure_construction_material_burned " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+            $"resource={TimberbornQaCommandBridge.FormatToken(resourceId)} " +
+            $"amount={amount}");
+        return amount;
+    }
+
+    private static bool TrySetConstructionProgress(ConstructionSite? constructionSite, float buildTimeProgressInHours)
+    {
+        if (constructionSite is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            MethodInfo? method = constructionSite.GetType().GetMethod(
+                "SetBuildTimeProgress",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                new[] { typeof(float) },
+                modifiers: null);
+            if (method is null)
+            {
+                return false;
+            }
+
+            method.Invoke(constructionSite, new object[] { buildTimeProgressInHours });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private int ApplyBurnedTextures(BlockObject blockObject, string textureLabel)
+    {
+        return blockObject.Transform
+            .GetComponentsInChildren<Renderer>(includeInactive: true)
+            .Sum(renderer => ApplyBurnedTextures(renderer, textureLabel));
+    }
+
+    private static bool HasBurnedTextures(BlockObject blockObject)
+    {
+        return blockObject.Transform
+            .GetComponentsInChildren<Renderer>(includeInactive: true)
+            .SelectMany(static renderer => renderer.sharedMaterials)
+            .OfType<Material>()
+            .Any(IsBurnedMaterial);
+    }
+
+    private int ApplyBurnedTextures(Renderer renderer, string textureLabel)
+    {
+        Material?[] materials = renderer.sharedMaterials;
+        Material?[] updatedMaterials = materials
+            .Select(material => CreateBurnedMaterialOrOriginal(material, textureLabel))
+            .ToArray();
+        int updatedMaterialCount = Enumerable.Range(0, materials.Length)
+            .Count(index => !ReferenceEquals(materials[index], updatedMaterials[index]));
+
+        if (updatedMaterialCount > 0)
+        {
+            renderer.sharedMaterials = updatedMaterials;
+        }
+
+        return updatedMaterialCount;
+    }
+
+    private Material? CreateBurnedMaterialOrOriginal(Material? source, string textureLabel)
+    {
+        if (source is null ||
+            IsBurnedMaterial(source) ||
+            !source.HasProperty("_MainTex") ||
+            source.mainTexture is null)
+        {
+            return source;
+        }
+
+        Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(source.mainTexture, textureLabel);
+        return burnedTexture is null ? source : CreateBurnedMaterial(source, burnedTexture);
+    }
+
+    private static Material CreateBurnedMaterial(Material source, Texture burnedTexture)
+    {
+        Material material = new(source)
+        {
+            name = $"{source.name} Wildfire Burned",
+            mainTexture = burnedTexture,
+            hideFlags = HideFlags.HideAndDontSave,
+        };
+        return material;
+    }
+
+    private static bool IsBurnedMaterial(Material material)
+    {
+        return material.name.EndsWith(" Wildfire Burned", StringComparison.Ordinal);
+    }
+
+    private void LogRollbackVisual(
+        TimberbornStructureBurnDamageTarget target,
+        TimberbornStructureBurnDamageApplyRequest request,
+        bool enteredUnfinishedState,
+        int removedConstructionMaterialCount,
+        bool resetConstructionProgress,
+        int burnedMaterialCount)
+    {
+        _logSink.Info(
+            "wildfire_timberborn_structure_burned_visual_applied " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+            $"stage={TimberbornQaCommandBridge.FormatToken(request.RollbackStage.ToString())} " +
+            $"entered_unfinished={enteredUnfinishedState} " +
+            $"construction_materials_removed={removedConstructionMaterialCount} " +
+            $"repair_blocked={request.RepairBlocked} " +
+            $"construction_progress_reset={resetConstructionProgress} " +
+            $"materials={burnedMaterialCount}");
     }
 
     private static bool IsInfrastructureLikeName(string name)

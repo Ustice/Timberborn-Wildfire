@@ -49,6 +49,14 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Forestry.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.NaturalResourcesLifecycle">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.NaturalResourcesLifecycle.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.NaturalResourcesMoisture">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.NaturalResourcesMoisture.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.EntitySystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.EntitySystem.dll</HintPath>
       <Private>false</Private>
@@ -67,6 +75,10 @@
     </Reference>
     <Reference Include="Timberborn.Goods">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Goods.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.ConstructionSites">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.ConstructionSites.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Explosions">

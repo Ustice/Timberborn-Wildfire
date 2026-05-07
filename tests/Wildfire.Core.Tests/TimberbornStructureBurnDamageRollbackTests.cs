@@ -29,6 +29,27 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void SinkClosesStructureOnRepairBlockingFirePressureBeforeDamageThreshold()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 10)],
+            canClose: true,
+            canApplyRollbackVisual: true));
+        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            1,
+            [Decision(4, oldFuel: 10, newFuel: 10, heat: 5)]);
+
+        Assert.Equal(1, summary.ClosedStructureCount);
+        Assert.Equal(1, summary.RepairBlockedCount);
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.True(request.ShouldClose);
+        Assert.False(request.ShouldApplyRollbackVisual);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.None, request.RollbackStage);
+    }
+
+    [Fact]
     public void SinkRequiresBurnDamageOwnershipWhenProviderIsBound()
     {
         RecordingStructureTargetApi targetApi = new(Target(
@@ -96,7 +117,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
         Assert.Equal(6, request.DamageTaken);
         Assert.Equal(8, request.DamageCapacity);
-        Assert.Equal(TimberbornStructureBurnRollbackStage.PartialConstruction, request.RollbackStage);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
     }
 
     [Fact]
@@ -237,20 +258,63 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
-    public void SinkReportsRollbackThresholdTransitions()
+    public void SinkRevertsStructureToUnfinishedAtTenPercentMaterialLoss()
     {
         RecordingStructureTargetApi targetApi = new(Target(
-            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            resources: [],
             canClose: true,
             canApplyRollbackVisual: true));
-        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+        TimberbornStructureBurnDamageRollbackSink scorchedSink = new(
+            targetApi,
+            burnDamageTargets: new TimberbornBurnDamageTestStateProvider(
+                [
+                    TimberbornBurnDamageTestStateProvider.State(
+                        "structure-1",
+                        "Building.LumberMill",
+                        TimberbornBurnDamageTargetKind.Structure,
+                        damageCapacity: 100,
+                        damageTaken: 9,
+                        ownedCellIndices: [4]),
+                ],
+                [
+                    TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                        "structure-1",
+                        "Building.LumberMill",
+                        sourceCellIndex: 4,
+                        damageApplied: 9,
+                        damageTaken: 9,
+                        damageCapacity: 100,
+                        tick: 6),
+                ]));
+        TimberbornStructureBurnDamageRollbackSink unfinishedSink = new(
+            targetApi,
+            burnDamageTargets: new TimberbornBurnDamageTestStateProvider(
+                [
+                    TimberbornBurnDamageTestStateProvider.State(
+                        "structure-1",
+                        "Building.LumberMill",
+                        TimberbornBurnDamageTargetKind.Structure,
+                        damageCapacity: 100,
+                        damageTaken: 10,
+                        ownedCellIndices: [4]),
+                ],
+                [
+                    TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                        "structure-1",
+                        "Building.LumberMill",
+                        sourceCellIndex: 4,
+                        damageApplied: 1,
+                        damageTaken: 10,
+                        damageCapacity: 100,
+                        tick: 7),
+                ]));
 
-        TimberbornStructureBurnDamageRollbackSummary scorched = sink.ApplyConsequences(
+        TimberbornStructureBurnDamageRollbackSummary scorched = scorchedSink.ApplyConsequences(
             6,
-            [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
-        TimberbornStructureBurnDamageRollbackSummary unfinished = sink.ApplyConsequences(
+            [Decision(4, oldFuel: 10, newFuel: 9, heat: 10)]);
+        TimberbornStructureBurnDamageRollbackSummary unfinished = unfinishedSink.ApplyConsequences(
             7,
-            [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]);
+            [Decision(4, oldFuel: 10, newFuel: 5, heat: 10)]);
 
         Assert.Equal(1, scorched.ScorchedStageCount);
         Assert.Equal(1, unfinished.UnfinishedStageCount);

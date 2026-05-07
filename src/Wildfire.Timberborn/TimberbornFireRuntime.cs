@@ -271,8 +271,13 @@ public sealed class TimberbornFireRuntime :
                 _explosiveInfrastructureTargetApi,
                 _detonatorFireSafetyTargetApi,
                 _tunnelFireTargetApi,
-                normalizedSelector is TimberbornQaFieldTargetSelectors.Default or TimberbornQaFieldTargetSelectors.Crop
-                    ? FindOrRegisterSelectedCropTarget(RequireFireSystem().RequireInitializedGrid())
+                normalizedSelector is TimberbornQaFieldTargetSelectors.Default or
+                    TimberbornQaFieldTargetSelectors.Crop or
+                    TimberbornQaFieldTargetSelectors.Bush
+                    ? FindOrRegisterSelectedCropTarget(
+                        RequireFireSystem().RequireInitializedGrid(),
+                        allowRegisteredTargetFallback: normalizedSelector is TimberbornQaFieldTargetSelectors.Crop or
+                            TimberbornQaFieldTargetSelectors.Bush)
                     : null,
                 beaverExposureTarget);
         _logSink.Info(
@@ -316,7 +321,9 @@ public sealed class TimberbornFireRuntime :
         return result;
     }
 
-    private TimberbornQaSelectedCropTarget? FindOrRegisterSelectedCropTarget(FireGrid grid)
+    private TimberbornQaSelectedCropTarget? FindOrRegisterSelectedCropTarget(
+        FireGrid grid,
+        bool allowRegisteredTargetFallback)
     {
         if (_burnDamageService is null)
         {
@@ -326,6 +333,10 @@ public sealed class TimberbornFireRuntime :
         try
         {
             return _selectedCropTargetProvider.FindSelectedTarget(grid, _burnDamageService.States);
+        }
+        catch (InvalidOperationException) when (allowRegisteredTargetFallback && _burnDamageService.States.Count > 0)
+        {
+            return null;
         }
         catch (InvalidOperationException) when (_burnDamageService.States.Count == 0)
         {

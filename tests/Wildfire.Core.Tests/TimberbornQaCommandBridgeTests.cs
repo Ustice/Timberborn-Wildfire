@@ -858,6 +858,7 @@ public sealed class TimberbornQaCommandBridgeTests
             ["Log"]);
 
         TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            targetSelector: TimberbornQaFieldTargetSelectors.Crop,
             burnDamageTargets: new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
             {
                 [treeTarget.TargetKey] = treeTarget,
@@ -872,11 +873,23 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(2, result.RegisteredBurnDamageTargetCount);
         Assert.Equal(1, result.RegisteredCropBurnTargetCount);
         Assert.Equal(2, result.RegisteredCropBurnOwnedCellCount);
-        Assert.Equal(12, result.SustainedHeatRequestedCycleCount);
-        Assert.Equal(12, result.SustainedHeatRemainingCycleCount);
+        Assert.Equal("crop-kohlrabi-25-25-3", result.BurnDamageTargetKey);
+        Assert.Equal("Crop.Kohlrabi", result.BurnDamageSpecId);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Crop, result.BurnDamageTargetKind);
+        Assert.Equal(2, result.BurnDamageRemainingCapacity);
+        Assert.Equal((byte?)1, result.BurnDamageProbeFuel);
+        Assert.Equal((byte?)0, result.BurnDamageSpendFuel);
+        Assert.Equal(2, result.QueuedHeatChangeCount);
+        Assert.Null(result.SustainedHeatRequestedCycleCount);
+        Assert.Null(result.SustainedHeatRemainingCycleCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(cropCellIndex, change.CellIndex);
-        Assert.Equal((ushort)13311, change.SetCell);
+        Assert.Equal((byte)0, change.SetWater);
+        Assert.Equal((byte)1, change.SetFuel);
+        Assert.Equal((byte)15, change.SetHeat);
+        Assert.Equal((byte)3, change.SetFlammability);
+        Assert.Equal((byte)1, change.SetHeatLoss);
+        Assert.Equal((byte)1, change.SetTerrain);
     }
 
     [Fact]
@@ -901,6 +914,7 @@ public sealed class TimberbornQaCommandBridgeTests
             ["Kohlrabi"]);
 
         TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            targetSelector: TimberbornQaFieldTargetSelectors.Crop,
             burnDamageTargets: new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
             {
                 [automaticCropTarget.TargetKey] = automaticCropTarget,
@@ -915,10 +929,59 @@ public sealed class TimberbornQaCommandBridgeTests
 
         Assert.Equal(selectedCropCellIndex, result.CellIndex);
         Assert.Equal("selected_crop_target", result.TargetSource);
+        Assert.Equal("crop-kohlrabi-selected", result.BurnDamageTargetKey);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Crop, result.BurnDamageTargetKind);
+        Assert.Equal(2, result.QueuedHeatChangeCount);
         Assert.Equal(2, result.RegisteredCropBurnTargetCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(selectedCropCellIndex, change.CellIndex);
-        Assert.Equal((ushort)13311, change.SetCell);
+        Assert.Equal((byte)0, change.SetWater);
+        Assert.Equal((byte)1, change.SetFuel);
+        Assert.Equal((byte)15, change.SetHeat);
+        Assert.Equal((byte)3, change.SetFlammability);
+        Assert.Equal((byte)1, change.SetHeatLoss);
+        Assert.Equal((byte)1, change.SetTerrain);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusBushTargetsRegisteredHarvestableResource()
+    {
+        RecordingFireSimulator simulator = new(width: 50, height: 50, depth: 23);
+        TimberbornFireSystem fireSystem = new(simulator);
+        FireGrid grid = new(50, 50, 23);
+        int cropCellIndex = grid.ToIndex(25, 25, 3);
+        int bushCellIndex = grid.ToIndex(8, 9, 2);
+        TimberbornBurnDamageTargetState cropTarget = CreateOrganicBurnDamageState(
+            "crop-kohlrabi",
+            "Crop.Kohlrabi",
+            TimberbornBurnDamageTargetKind.Crop,
+            [cropCellIndex],
+            ["Kohlrabi"]);
+        TimberbornBurnDamageTargetState bushTarget = CreateOrganicBurnDamageState(
+            "resource-blueberry-bush",
+            "BlueberryBush",
+            TimberbornBurnDamageTargetKind.Resource,
+            [bushCellIndex],
+            ["Blueberry"]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            targetSelector: TimberbornQaFieldTargetSelectors.Bush,
+            burnDamageTargets: new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [cropTarget.TargetKey] = cropTarget,
+                [bushTarget.TargetKey] = bushTarget,
+            });
+
+        Assert.Equal(TimberbornQaFieldTargetSelectors.Bush, result.TargetSelector);
+        Assert.Equal(bushCellIndex, result.CellIndex);
+        Assert.Equal("resource-blueberry-bush", result.BurnDamageTargetKey);
+        Assert.Equal("BlueberryBush", result.BurnDamageSpecId);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Resource, result.BurnDamageTargetKind);
+        Assert.Equal(2, result.RegisteredCropBurnTargetCount);
+        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(bushCellIndex, change.CellIndex);
+        Assert.Equal((byte)1, change.SetFuel);
+        Assert.Equal((byte)15, change.SetHeat);
     }
 
     [Fact]

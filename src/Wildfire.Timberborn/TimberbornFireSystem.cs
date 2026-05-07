@@ -317,6 +317,41 @@ public sealed class TimberbornFireSystem : IDisposable
             return RegisterSustainedBeaverExposureDeltaStimulus(grid, beaverExposureTarget);
         }
 
+        if (normalizedSelector is TimberbornQaFieldTargetSelectors.Crop or TimberbornQaFieldTargetSelectors.Bush &&
+            burnDamageTargets is not null)
+        {
+            TimberbornQaBurnDamageProbeTarget target = FindCropBurnDamageProbeTarget(
+                grid,
+                normalizedSelector,
+                burnDamageTargets,
+                selectedCropTarget);
+            int queuedChangeCount = RegisterBurnDamageProbe(target, "qa_crop_burn_damage_stimulus");
+            TimberbornCropBurnTargetRegistrationSummary cropSummary =
+                TimberbornCropBurnTargetClassifier.SummarizeRegisteredTargets(burnDamageTargets.Values);
+
+            return new TimberbornQaDeltaStimulusResult(
+                normalizedSelector,
+                target.FieldTarget.CellIndex,
+                target.FieldTarget.X,
+                target.FieldTarget.Y,
+                target.FieldTarget.Z,
+                target.FieldTarget.MaterialClass,
+                target.FieldTarget.CompanionTargetId,
+                target.FieldTarget.InitialCell,
+                QaIgnitionHeat,
+                QueuedHeatChangeCount: queuedChangeCount,
+                BurnDamageTargetKey: target.State.TargetKey.StableId,
+                BurnDamageSpecId: target.State.SpecId,
+                BurnDamageTargetKind: target.State.TargetKind,
+                BurnDamageRemainingCapacity: target.State.RemainingCapacity,
+                BurnDamageProbeFuel: target.ProbeFuel,
+                BurnDamageSpendFuel: target.SpendFuel,
+                TargetSource: selectedCropTarget?.TargetSource ?? "registered_crop_target",
+                RegisteredBurnDamageTargetCount: burnDamageTargets.Count,
+                RegisteredCropBurnTargetCount: cropSummary.TargetCount,
+                RegisteredCropBurnOwnedCellCount: cropSummary.OwnedCellCount);
+        }
+
         if (normalizedSelector is TimberbornQaFieldTargetSelectors.Default or TimberbornQaFieldTargetSelectors.Crop)
         {
             TimberbornQaDeltaStimulusTargetSelection? cropTarget =
@@ -1034,6 +1069,72 @@ public sealed class TimberbornFireSystem : IDisposable
 
         return target ?? throw new InvalidOperationException(
             $"No TWF-075 burn-damage owned target was found for QA selector '{selector}'.");
+    }
+
+    private TimberbornQaBurnDamageProbeTarget FindCropBurnDamageProbeTarget(
+        FireGrid grid,
+        string selector,
+        IReadOnlyDictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState> burnDamageTargets,
+        TimberbornQaSelectedCropTarget? selectedCropTarget)
+    {
+        TimberbornBurnDamageTargetState[] candidateStates = burnDamageTargets.Values
+            .Where(TimberbornCropBurnTargetClassifier.IsCropOrHarvestable)
+            .Where(state => MatchesCropBurnDamageProbeSelector(selector, state))
+            .Where(static state => state.RemainingCapacity > 0)
+            .Where(static state => state.OwnedCellIndices.Count > 0)
+            .OrderBy(static state => state.TargetKey.StableId, StringComparer.Ordinal)
+            .ThenBy(static state => state.SpecId, StringComparer.Ordinal)
+            .ToArray();
+
+        if (selectedCropTarget is { } selectedTarget)
+        {
+            int selectedCellIndex = grid.ToIndex(selectedTarget.X, selectedTarget.Y, selectedTarget.Z);
+            TimberbornBurnDamageTargetState? selectedState = candidateStates
+                .Where(state => state.OwnedCellIndices.Contains(selectedCellIndex))
+                .Select(static state => (TimberbornBurnDamageTargetState?)state)
+                .FirstOrDefault();
+            if (selectedState is { } foundSelectedState)
+            {
+                return CreateBurnDamageProbeTarget(grid, foundSelectedState, selectedCellIndex);
+            }
+        }
+
+        TimberbornCellCoordinates center = new(grid.Width / 2, grid.Height / 2, grid.Depth / 2);
+        TimberbornQaBurnDamageProbeTarget? target = candidateStates
+            .SelectMany(state => state.OwnedCellIndices
+                .Where(cellIndex => cellIndex >= 0 && cellIndex < grid.CellCount)
+                .Distinct()
+                .Select(cellIndex =>
+                {
+                    (int x, int y, int z) = grid.FromIndex(cellIndex);
+                    return new
+                    {
+                        State = state,
+                        CellIndex = cellIndex,
+                        Coordinates = new TimberbornCellCoordinates(x, y, z),
+                    };
+                }))
+            .OrderBy(item => Distance(item.Coordinates, center))
+            .ThenBy(static item => item.Coordinates.Z)
+            .ThenBy(static item => item.Coordinates.Y)
+            .ThenBy(static item => item.Coordinates.X)
+            .Select(item => (TimberbornQaBurnDamageProbeTarget?)CreateBurnDamageProbeTarget(
+                grid,
+                item.State,
+                item.CellIndex))
+            .FirstOrDefault();
+
+        return target ?? throw new InvalidOperationException(
+            "No crop or harvestable burn-damage target was found for QA crop stimulus.");
+    }
+
+    private static bool MatchesCropBurnDamageProbeSelector(string selector, TimberbornBurnDamageTargetState state)
+    {
+        return TimberbornQaFieldTargetSelectors.Normalize(selector) switch
+        {
+            TimberbornQaFieldTargetSelectors.Bush => state.TargetKind == TimberbornBurnDamageTargetKind.Resource,
+            _ => true,
+        };
     }
 
     private TimberbornQaBurnDamageProbeTarget CreateBurnDamageProbeTarget(

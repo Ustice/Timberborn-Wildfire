@@ -16,6 +16,7 @@ namespace Wildfire.Timberborn;
 public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpdatableSingleton
 {
     private const int TerrainOnlyFallbackAttempt = 120;
+    private const int RequiredStableEntitySnapshotCount = 2;
 
     private readonly TimberbornFireRuntime _runtime;
     private readonly ITimberbornFireSimulatorFactory _simulatorFactory;
@@ -28,6 +29,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     private readonly ITimberbornFireLogSink _logSink;
     private bool _initialized;
     private int _initializationAttempt;
+    private int _lastEntityCount;
+    private int _stableEntitySnapshotCount;
 
     public TimberbornFireRuntimeInitializer(
         TimberbornFireRuntime runtime,
@@ -53,7 +56,9 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     public void Load()
     {
         _initializationAttempt = 0;
-        TryInitializeRuntime();
+        _lastEntityCount = 0;
+        _stableEntitySnapshotCount = 0;
+        _logSink.Info("wildfire_timberborn_runtime_initialize_deferred_until_update");
     }
 
     public void UpdateSingleton()
@@ -84,6 +89,23 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                 }
 
                 return;
+            }
+            if (entityCount > 0)
+            {
+                _stableEntitySnapshotCount = entityCount == _lastEntityCount
+                    ? _stableEntitySnapshotCount + 1
+                    : 1;
+                _lastEntityCount = entityCount;
+                if (_stableEntitySnapshotCount < RequiredStableEntitySnapshotCount)
+                {
+                    _logSink.Info(
+                        "wildfire_timberborn_runtime_initialize_waiting_for_stable_entities " +
+                        $"attempt={_initializationAttempt} " +
+                        $"entity_count={entityCount} " +
+                        $"stable_snapshots={_stableEntitySnapshotCount} " +
+                        $"required_stable_snapshots={RequiredStableEntitySnapshotCount}");
+                    return;
+                }
             }
 
             Vector3Int terrainSize = _mapSize.TerrainSize;
@@ -132,8 +154,12 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
             _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
             _runtime.AttachBurnDamageService(burnDamageService);
+            _runtime.AttachTreeBurnConsequenceApi(
+                new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink));
+            _runtime.AttachCropBurnConsequenceApi(
+                new TimberbornTextureCropBurnConsequenceApi(_entityRegistry, _logSink));
             _runtime.AttachStructureBurnDamageRollbackTargetApi(
-                new TimberbornStructureBurnDamageRollbackTargetApi(grid, _blockService));
+                new TimberbornStructureBurnDamageRollbackTargetApi(grid, _blockService, _logSink));
             _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService));
             _runtime.AttachExplosiveInfrastructureTargetApi(
                 new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));

@@ -10,7 +10,7 @@ public sealed class TimberbornCropBurnConsequenceTests
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornBurnDamageService burnDamageService = CreateService(
-            CropDescriptor("Crop.Carrot", "Carrot", amount: 2));
+            CropDescriptor("Crop.Carrot", "Carrot", amount: 10));
         burnDamageService.RegisterTargets(
             grid,
             [Registration("crop-carrot-1", "Crop.Carrot", [new TimberbornCellCoordinates(0, 0, 0)])]);
@@ -18,14 +18,20 @@ public sealed class TimberbornCropBurnConsequenceTests
         TimberbornCropBurnConsequenceSink cropSink = new(burnDamageService, cropApi);
 
         TimberbornBurnDamageApplySummary damageSummary =
-            burnDamageService.ApplyDamage(21, [Decision(0, oldFuel: 10, newFuel: 8)]);
+            burnDamageService.ApplyDamage(21, [Decision(0, oldFuel: 10, newFuel: 7)]);
         TimberbornCropBurnConsequenceSummary cropSummary =
-            cropSink.ApplyConsequences(21, [Decision(0, oldFuel: 10, newFuel: 8)]);
+            cropSink.ApplyConsequences(21, [Decision(0, oldFuel: 10, newFuel: 7)]);
 
-        TimberbornCropBurnConsequence consequence = Assert.Single(cropApi.Consequences);
-        Assert.Equal(2, damageSummary.TotalDamageApplied);
-        Assert.Equal(2, consequence.DamageApplied);
-        Assert.Equal(2, cropSummary.YieldLost);
+        Assert.Equal(
+            [
+                TimberbornCropBurnConsequenceKind.DryCrop,
+                TimberbornCropBurnConsequenceKind.ReduceYield,
+            ],
+            cropApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
+        TimberbornCropBurnConsequence consequence = cropApi.Consequences.Last();
+        Assert.Equal(3, damageSummary.TotalDamageApplied);
+        Assert.Equal(3, consequence.DamageApplied);
+        Assert.Equal(1, cropSummary.YieldLost);
         Assert.Equal(1, cropSummary.ConsideredCropTargetCount);
         Assert.Equal(1, cropSummary.BurnableCropTargetCount);
     }
@@ -42,9 +48,12 @@ public sealed class TimberbornCropBurnConsequenceTests
         RecordingCropBurnConsequenceApi cropApi = new(static consequence =>
             new TimberbornCropBurnConsequenceResult(
                 MatchedCropTarget: true,
-                YieldLost: consequence.DamageApplied,
-                KilledCrop: consequence.IsFullyBurned,
-                VisualStateUpdated: consequence.IsFullyBurned,
+                YieldLost: consequence.Kind == TimberbornCropBurnConsequenceKind.ReduceYield
+                    ? consequence.YieldLost
+                    : 0,
+                KilledCrop: consequence.Kind == TimberbornCropBurnConsequenceKind.KillCrop,
+                VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
+                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
                 SkippedUnsafeApi: false));
         TimberbornCropBurnConsequenceSink cropSink = new(burnDamageService, cropApi);
 
@@ -52,8 +61,15 @@ public sealed class TimberbornCropBurnConsequenceTests
         TimberbornCropBurnConsequenceSummary summary =
             cropSink.ApplyConsequences(22, [Decision(0, oldFuel: 3, newFuel: 0)]);
 
-        TimberbornCropBurnConsequence consequence = Assert.Single(cropApi.Consequences);
-        Assert.True(consequence.IsFullyBurned);
+        Assert.Equal(
+            [
+                TimberbornCropBurnConsequenceKind.DryCrop,
+                TimberbornCropBurnConsequenceKind.ReduceYield,
+                TimberbornCropBurnConsequenceKind.KillCrop,
+                TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
+            ],
+            cropApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
+        Assert.All(cropApi.Consequences, static consequence => Assert.True(consequence.IsFullyBurned));
         Assert.Equal(1, summary.KilledCropCount);
         Assert.Equal(1, summary.VisualStateUpdateCount);
     }
@@ -81,10 +97,17 @@ public sealed class TimberbornCropBurnConsequenceTests
         burnDamageService.ApplyDamage(23, decisions);
         TimberbornCropBurnConsequenceSummary summary = cropSink.ApplyConsequences(23, decisions);
 
-        Assert.Single(cropApi.Consequences);
+        Assert.Equal(
+            [
+                TimberbornCropBurnConsequenceKind.DryCrop,
+                TimberbornCropBurnConsequenceKind.ReduceYield,
+                TimberbornCropBurnConsequenceKind.KillCrop,
+                TimberbornCropBurnConsequenceKind.MarkBurnedVisual,
+            ],
+            cropApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
         Assert.Equal(1, summary.ConsideredCropTargetCount);
         Assert.Equal(1, summary.DuplicateCellSuppressedCount);
-        Assert.Equal(3, summary.YieldLost);
+        Assert.Equal(1, summary.YieldLost);
     }
 
     [Fact]
@@ -179,7 +202,7 @@ public sealed class TimberbornCropBurnConsequenceTests
         TimberbornCropBurnConsequenceSummary summary =
             cropSink.ApplyConsequences(26, [Decision(0, oldFuel: 3, newFuel: 0)]);
 
-        Assert.Equal(1, summary.SkippedUnsafeApiCount);
+        Assert.Equal(4, summary.SkippedUnsafeApiCount);
         Assert.Equal(0, summary.YieldLost);
         Assert.Equal(0, summary.KilledCropCount);
         Assert.Equal(0, summary.VisualStateUpdateCount);
@@ -214,11 +237,11 @@ public sealed class TimberbornCropBurnConsequenceTests
             ["help", "qa-readiness", "status"]);
 
         Assert.Equal(1, summary.CropBurnConsideredTargetCount);
-        Assert.Equal(3, summary.CropBurnYieldLost);
+        Assert.Equal(1, summary.CropBurnYieldLost);
         Assert.Equal(1, summary.CropBurnKilledCropCount);
-        Assert.Contains("crop_burn_yield_lost=3", summary.ToLogToken());
+        Assert.Contains("crop_burn_yield_lost=1", summary.ToLogToken());
         Assert.Contains("last_delta_consumer_crop_burn_considered_targets=1", result.ResultToken);
-        Assert.Contains("last_delta_consumer_crop_burn_yield_lost=3", result.ResultToken);
+        Assert.Contains("last_delta_consumer_crop_burn_yield_lost=1", result.ResultToken);
         Assert.Contains("last_delta_consumer_crop_burn_skipped_unsafe_apis=0", result.ResultToken);
     }
 
@@ -282,9 +305,12 @@ public sealed class TimberbornCropBurnConsequenceTests
             Consequences.Add(consequence);
             return apply?.Invoke(consequence) ?? new TimberbornCropBurnConsequenceResult(
                 MatchedCropTarget: true,
-                YieldLost: consequence.DamageApplied,
-                KilledCrop: consequence.IsFullyBurned,
-                VisualStateUpdated: consequence.IsFullyBurned,
+                YieldLost: consequence.Kind == TimberbornCropBurnConsequenceKind.ReduceYield
+                    ? consequence.YieldLost
+                    : 0,
+                KilledCrop: consequence.Kind == TimberbornCropBurnConsequenceKind.KillCrop,
+                VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
+                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
                 SkippedUnsafeApi: false);
         }
     }

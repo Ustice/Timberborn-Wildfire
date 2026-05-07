@@ -10,7 +10,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornBurnDamageService burnDamageService = CreateService(
-            TreeDescriptor("Tree.Pine", "Log", amount: 3));
+            TreeDescriptor("Tree.Pine", "Log", amount: 10));
         burnDamageService.RegisterTargets(
             grid,
             [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
@@ -22,10 +22,16 @@ public sealed class TimberbornTreeBurnConsequenceTests
         TimberbornTreeBurnConsequenceSummary treeSummary =
             treeSink.ApplyConsequences(21, [Decision(0, oldFuel: 15, newFuel: 3)]);
 
-        TimberbornTreeBurnConsequence consequence = Assert.Single(treeApi.Consequences);
+        Assert.Equal(
+            [
+                TimberbornTreeBurnConsequenceKind.DryTree,
+                TimberbornTreeBurnConsequenceKind.ReduceYield,
+            ],
+            treeApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
+        TimberbornTreeBurnConsequence consequence = treeApi.Consequences.Last();
         Assert.Equal(TimberbornTreeBurnConsequenceKind.ReduceYield, consequence.Kind);
         Assert.Equal(1, consequence.YieldLost);
-        Assert.Equal(2, consequence.RemainingYield);
+        Assert.Equal(9, consequence.RemainingYield);
         Assert.Equal(12, damageSummary.TotalDamageApplied);
         Assert.Equal(1, treeSummary.ConsideredTreeTargetCount);
         Assert.Equal(1, treeSummary.BurnableTreeTargetCount);
@@ -73,7 +79,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
         Assert.True(depletedTree.IsFullyDamaged);
         Assert.False(fullTree.IsFullyDamaged);
         Assert.Equal(2, treeSummary.YieldLost);
-        Assert.Equal(1, treeSummary.KilledTreeCount);
+        Assert.Equal(2, treeSummary.KilledTreeCount);
         Assert.Contains(
             treeApi.Consequences,
             static consequence => consequence.TargetKey.StableId == "tree-pine-full" &&
@@ -99,15 +105,49 @@ public sealed class TimberbornTreeBurnConsequenceTests
 
         Assert.Equal(
             [
+                TimberbornTreeBurnConsequenceKind.DryTree,
                 TimberbornTreeBurnConsequenceKind.ReduceYield,
                 TimberbornTreeBurnConsequenceKind.KillTree,
-                TimberbornTreeBurnConsequenceKind.MarkBurnedVisual,
+                TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover,
             ],
             treeApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
         Assert.Equal(1, summary.YieldLost);
         Assert.Equal(1, summary.KilledTreeCount);
         Assert.Equal(1, summary.VisualStateUpdateCount);
         Assert.Equal(0, summary.SkippedUnsafeApiCount);
+    }
+
+    [Fact]
+    public void TreeDiesOnlyAfterBurnDamageExceedsTwentyPercentFuelConsumed()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornBurnDamageService burnDamageService = CreateService(
+            TreeDescriptor("Tree.Pine", "Log", amount: 10));
+        burnDamageService.RegisterTargets(
+            grid,
+            [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
+        RecordingTreeBurnConsequenceApi treeApi = new();
+        TimberbornTreeBurnConsequenceSink treeSink = new(burnDamageService, treeApi);
+        TimberbornFireCellDeltaDecision first = Decision(0, oldFuel: 15, newFuel: 3);
+        TimberbornFireCellDeltaDecision second = Decision(0, oldFuel: 15, newFuel: 3);
+        TimberbornFireCellDeltaDecision third = Decision(0, oldFuel: 15, newFuel: 14);
+
+        burnDamageService.ApplyDamage(30, [first]);
+        TimberbornTreeBurnConsequenceSummary firstSummary = treeSink.ApplyConsequences(30, [first]);
+        burnDamageService.ApplyDamage(31, [second]);
+        TimberbornTreeBurnConsequenceSummary exactThresholdSummary = treeSink.ApplyConsequences(31, [second]);
+        burnDamageService.ApplyDamage(32, [third]);
+        TimberbornTreeBurnConsequenceSummary overThresholdSummary = treeSink.ApplyConsequences(32, [third]);
+
+        Assert.Equal(0, firstSummary.KilledTreeCount);
+        Assert.Equal(0, exactThresholdSummary.KilledTreeCount);
+        Assert.Equal(1, overThresholdSummary.KilledTreeCount);
+        Assert.Contains(
+            treeApi.Consequences,
+            static consequence => consequence.Tick == 32 &&
+                consequence.Kind == TimberbornTreeBurnConsequenceKind.KillTree &&
+                consequence.DamageTaken == 25 &&
+                consequence.DamageCapacity == 120);
     }
 
     [Fact]
@@ -140,7 +180,14 @@ public sealed class TimberbornTreeBurnConsequenceTests
         burnDamageService.ApplyDamage(23, decisions);
         TimberbornTreeBurnConsequenceSummary summary = treeSink.ApplyConsequences(23, decisions);
 
-        Assert.Single(treeApi.Consequences);
+        Assert.Equal(
+            [
+                TimberbornTreeBurnConsequenceKind.DryTree,
+                TimberbornTreeBurnConsequenceKind.ReduceYield,
+                TimberbornTreeBurnConsequenceKind.KillTree,
+                TimberbornTreeBurnConsequenceKind.MarkBurnedVisual,
+            ],
+            treeApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
         Assert.Equal(1, summary.ConsideredTreeTargetCount);
         Assert.Equal(3, summary.DuplicateCellSuppressedCount);
         Assert.Equal(1, summary.YieldLost);
@@ -219,12 +266,50 @@ public sealed class TimberbornTreeBurnConsequenceTests
         TimberbornTreeBurnConsequenceSummary summary =
             treeSink.ApplyConsequences(26, [Decision(0, oldFuel: 15, newFuel: 0)]);
 
-        Assert.Equal(3, summary.SkippedUnsafeApiCount);
+        Assert.Equal(4, summary.SkippedUnsafeApiCount);
         Assert.Equal(0, summary.YieldLost);
         Assert.Equal(0, summary.KilledTreeCount);
         Assert.Equal(0, summary.VisualStateUpdateCount);
         Assert.Equal(1, summary.ConsideredTreeTargetCount);
         Assert.Equal(1, summary.BurnableTreeTargetCount);
+    }
+
+    [Fact]
+    public void BurnedLeftoverOnlyAppliesWhenFuelConsumptionRemovesAllYield()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornBurnDamageService burnDamageService = CreateService(
+            TreeDescriptor("Tree.Pine", "Log", amount: 10));
+        burnDamageService.RegisterTargets(
+            grid,
+            [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
+        RecordingTreeBurnConsequenceApi treeApi = new();
+        TimberbornTreeBurnConsequenceSink treeSink = new(burnDamageService, treeApi);
+
+        TimberbornFireCellDeltaDecision burnStep = Decision(0, oldFuel: 15, newFuel: 0);
+        burnDamageService.ApplyDamage(33, [burnStep]);
+        TimberbornTreeBurnConsequenceSummary partialSummary = treeSink.ApplyConsequences(33, [burnStep]);
+        Enumerable.Range(34, 6)
+            .Select(tick =>
+            {
+                burnDamageService.ApplyDamage((uint)tick, [burnStep]);
+                return treeSink.ApplyConsequences((uint)tick, [burnStep]);
+            })
+            .ToArray();
+        burnDamageService.ApplyDamage(40, [burnStep]);
+        TimberbornTreeBurnConsequenceSummary fullSummary = treeSink.ApplyConsequences(40, [burnStep]);
+
+        Assert.DoesNotContain(
+            treeApi.Consequences,
+            static consequence => consequence.Tick < 40 &&
+                consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover);
+        Assert.Contains(
+            treeApi.Consequences,
+            static consequence => consequence.Tick == 40 &&
+                consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover &&
+                consequence.RemainingYield == 0);
+        Assert.Equal(0, partialSummary.VisualStateUpdateCount);
+        Assert.Equal(1, fullSummary.VisualStateUpdateCount);
     }
 
     [Fact]
