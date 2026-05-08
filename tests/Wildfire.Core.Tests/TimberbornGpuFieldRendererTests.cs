@@ -170,7 +170,7 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.True(sink.Counters.MaterialReady);
         Assert.Equal(1, sink.Counters.VisibleRegionCount);
         Assert.Equal(1, sink.Counters.UpdatedRegionCount);
-        Assert.Equal(1, sink.Counters.InvisibleRegionCount);
+        Assert.Equal(0, sink.Counters.InvisibleRegionCount);
         Assert.Single(presenter.RenderedRegions);
         Assert.Equal(1, presenter.RenderedRegions[0].RegionId);
         Assert.Contains(
@@ -179,7 +179,7 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
-    public void AshOverlayBlendsAshAcrossCellsUpToTwoAway()
+    public void AshOverlayBleedsTwoTilesOutForSofterEdges()
     {
         RecordingFireLogSink logSink = new();
         RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
@@ -200,13 +200,13 @@ public sealed class TimberbornGpuFieldRendererTests
         sink.UpdateVisualEffect(EffectEvent(10, 13));
         sink.CompleteVisualEffectDispatch(13);
 
-        Assert.Equal(11, presenter.RenderedRegions.Count);
+        Assert.Equal(16, presenter.RenderedRegions.Count);
         Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 10 && region.Ash == 0.8f);
-        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 8 && region.Ash < 0.8f);
-        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 15 && region.Ash < 0.8f);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 5 && region.Ash < 0.8f);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 2 && region.Ash < 0.8f);
         Assert.Contains(
             logSink.InfoMessages,
-            message => message.Contains("updated_regions=11", StringComparison.Ordinal));
+            message => message.Contains("updated_regions=16", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -236,10 +236,111 @@ public sealed class TimberbornGpuFieldRendererTests
         sink.CompleteVisualEffectDispatch(15);
 
         Assert.Equal(2, presenter.RenderedRegions.Count);
-        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 0);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 0 && region.Ash == 0.6f);
         Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 15);
         Assert.Equal(2, sink.Counters.VisibleRegionCount);
         Assert.Equal(1, sink.Counters.UpdatedRegionCount);
+    }
+
+    [Fact]
+    public void AshOverlayAccumulatesRepeatedAshOnSameGroundCell()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 0f, smoke: 0f, ash: 0.35f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(14);
+        sink.UpdateVisualEffect(EffectEvent(0, 14));
+        sink.CompleteVisualEffectDispatch(14);
+        sink.BeginVisualEffectDispatch(15);
+        sink.UpdateVisualEffect(EffectEvent(0, 15));
+        sink.CompleteVisualEffectDispatch(15);
+
+        Assert.Single(presenter.RenderedRegions);
+        Assert.Equal(0.7f, presenter.RenderedRegions[0].Ash, precision: 4);
+    }
+
+    [Fact]
+    public void AshOverlayProjectsVerticalAshSamplesOntoOneHorizontalSurface()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [5] = Sample(5, fire: 0f, smoke: 0f, ash: 0.4f, visibility: 1f),
+            [21] = Sample(21, fire: 0f, smoke: 0f, ash: 0.6f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader, depth: 2);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0),
+            presenter,
+            new FixedAshOverlaySurfaceProvider(surfaceZ: 3));
+
+        sink.BeginVisualEffectDispatch(16);
+        sink.UpdateVisualEffect(EffectEvent(5, 16));
+        sink.UpdateVisualEffect(EffectEvent(21, 16));
+        sink.CompleteVisualEffectDispatch(16);
+
+        Assert.All(presenter.RenderedRegions, static region =>
+        {
+            Assert.Equal(3, region.MinZ);
+            Assert.Equal(3, region.MaxZ);
+        });
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 5 && region.Ash > 0.4f);
+    }
+
+    [Fact]
+    public void AshOverlaySkipsFringeCellsWithoutTerrainSurface()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [10] = Sample(10, fire: 0f, smoke: 0f, ash: 0.9f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 2),
+            presenter,
+            new MissingAshOverlaySurfaceProvider(missingX: 0));
+
+        sink.BeginVisualEffectDispatch(17);
+        sink.UpdateVisualEffect(EffectEvent(10, 17));
+        sink.CompleteVisualEffectDispatch(17);
+
+        Assert.DoesNotContain(presenter.RenderedRegions, static region => region.MinX == 0);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 10 && region.Ash == 0.9f);
+        Assert.Equal(12, presenter.RenderedRegions.Count);
+    }
+
+    [Fact]
+    public void UnityAshOverlayRendersBeforeSmokeParticles()
+    {
+        string source = ReadTimberbornGpuFieldRendererSource();
+        string shader = ReadAshOverlayShaderSource();
+
+        Assert.Contains("AshOverlayRenderQueueOffset = -100", source, StringComparison.Ordinal);
+        Assert.Contains("RenderQueue.Transparent + AshOverlayRenderQueueOffset", source, StringComparison.Ordinal);
+        Assert.Contains("\"Queue\" = \"Transparent-100\"", shader, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -306,8 +407,9 @@ public sealed class TimberbornGpuFieldRendererTests
     {
         string source = ReadTimberbornGpuFieldRendererSource();
 
-        Assert.Contains("AshOverlayMaskTextureSize = 96", source, StringComparison.Ordinal);
-        Assert.Contains("filterMode = FilterMode.Bilinear", source, StringComparison.Ordinal);
+        Assert.Contains("Shader.Find(\"Wildfire/AshOverlay\")", source, StringComparison.Ordinal);
+        Assert.Contains("AshOverlayMaskTextureResourceName", source, StringComparison.Ordinal);
+        Assert.Contains("ToAshVertexColor", source, StringComparison.Ordinal);
         Assert.Contains(
             "return new[] { offset, offset + 2, offset + 1, offset + 2, offset + 3, offset + 1 };",
             source,
@@ -317,19 +419,38 @@ public sealed class TimberbornGpuFieldRendererTests
 
     private static TimberbornGpuVisualFieldSurface CreateBoundSurface(
         ITimberbornFireLogSink logSink,
-        ITimberbornGpuVisualFieldDataReader dataReader)
+        ITimberbornGpuVisualFieldDataReader dataReader,
+        int depth = 1)
     {
         TimberbornGpuVisualFieldSurface surface = new(logSink, dataReader);
         surface.Bind(new TimberbornGpuVisualFieldSurfaceBinding(
             visualFieldsBuffer: new object(),
             width: 4,
             height: 4,
-            depth: 1,
-            cellCount: 16,
+            depth: depth,
+            cellCount: 16 * depth,
             strideBytes: 16,
             channels: TimberbornGpuVisualFieldChannels.All));
         surface.MarkUpdated(12);
         return surface;
+    }
+
+    private sealed class FixedAshOverlaySurfaceProvider(int surfaceZ) : ITimberbornAshOverlaySurfaceProvider
+    {
+        public bool TryProjectToSurfaceZ(int x, int y, int sourceZ, out int projectedSurfaceZ)
+        {
+            projectedSurfaceZ = surfaceZ;
+            return true;
+        }
+    }
+
+    private sealed class MissingAshOverlaySurfaceProvider(int missingX) : ITimberbornAshOverlaySurfaceProvider
+    {
+        public bool TryProjectToSurfaceZ(int x, int y, int sourceZ, out int surfaceZ)
+        {
+            surfaceZ = sourceZ;
+            return x != missingX;
+        }
     }
 
     private static TimberbornGpuVisualFieldSample Sample(
@@ -369,6 +490,19 @@ public sealed class TimberbornGpuFieldRendererTests
                 "src",
                 "Wildfire.Timberborn",
                 "TimberbornGpuFieldRenderer.cs"))
+            .First(File.Exists);
+
+        return File.ReadAllText(path);
+    }
+
+    private static string ReadAshOverlayShaderSource()
+    {
+        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
+            .Select(directory => Path.Combine(
+                directory.FullName,
+                "src",
+                "Wildfire.Unity",
+                "AshOverlay.shader"))
             .First(File.Exists);
 
         return File.ReadAllText(path);
@@ -417,7 +551,15 @@ public sealed class TimberbornGpuFieldRendererTests
                 .Concat(cellIndices)
                 .ToArray();
             return cellIndices
-                .Select(cellIndex => sampleByCellIndex[cellIndex])
+                .Select(cellIndex => sampleByCellIndex.TryGetValue(cellIndex, out TimberbornGpuVisualFieldSample? sample)
+                    ? sample
+                    : new TimberbornGpuVisualFieldSample(
+                        cellIndex,
+                        Tick: null,
+                        Fire: 0f,
+                        Smoke: 0f,
+                        Ash: 0f,
+                        Visibility: 0f))
                 .ToArray();
         }
     }

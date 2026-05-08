@@ -39,6 +39,7 @@ type AssetBundleArtifact = {
   manifestName: string;
   name: string;
   requiredAsset: string;
+  sourcePath: string;
 };
 
 const repoRoot = resolve(import.meta.dir, "..");
@@ -49,6 +50,7 @@ const lockInfoPath = join(lockDir, "lock.json");
 const modFolderName = "Wildfire";
 const unityProjectPath = join(repoRoot, "src", "Wildfire.Unity", "UnityBatchmodeProject");
 const computeShaderPath = join(repoRoot, "src", "Wildfire.Unity", "FireSim.compute");
+const ashOverlayShaderPath = join(repoRoot, "src", "Wildfire.Unity", "AshOverlay.shader");
 const defaultUnityExecutable =
   process.env.WILDFIRE_UNITY_EXECUTABLE ??
   "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
@@ -61,6 +63,7 @@ const assetBundleArtifacts: AssetBundleArtifact[] = [
     manifestName: "wildfire_compute_mac.manifest",
     name: "wildfire_compute_mac",
     requiredAsset: "Assets/WildfireGenerated/FireSim.compute",
+    sourcePath: computeShaderPath,
   },
   {
     builderMethod: "Wildfire.UnityBatchmode.DiagnosticTextAssetBundleBuilder.Build",
@@ -68,6 +71,15 @@ const assetBundleArtifacts: AssetBundleArtifact[] = [
     manifestName: "wildfire_diagnostic_mac.manifest",
     name: "wildfire_diagnostic_mac",
     requiredAsset: "Assets/WildfireGenerated/Diagnostic.txt",
+    sourcePath: computeShaderPath,
+  },
+  {
+    builderMethod: "Wildfire.UnityBatchmode.AshOverlayAssetBundleBuilder.Build",
+    logName: "ash-overlay-assetbundle-build.log",
+    manifestName: "wildfire_visual_mac.manifest",
+    name: "wildfire_visual_mac",
+    requiredAsset: "Assets/WildfireGenerated/AshOverlay.shader",
+    sourcePath: ashOverlayShaderPath,
   },
 ];
 const manifest = {
@@ -370,7 +382,7 @@ const runUnityAssetBundleBuilder = (
       logPath,
       "--",
       "--shader",
-      computeShaderPath,
+      artifact.sourcePath,
       "--output",
       outputDir,
       "--bundle",

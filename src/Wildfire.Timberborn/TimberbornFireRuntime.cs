@@ -3,6 +3,8 @@ using Timberborn.QuickNotificationSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Navigation;
 using Timberborn.SelectionSystem;
+using Timberborn.MapStateSystem;
+using Timberborn.TerrainSystem;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -65,7 +67,9 @@ public sealed class TimberbornFireRuntime :
         WildfireReleaseSettings releaseSettings,
         TimberbornFireSimParameterPresetState fireSimParameterPresetState,
         ITimberbornWindProvider windProvider,
-        INavMeshObjectFactory navMeshObjectFactory)
+        INavMeshObjectFactory navMeshObjectFactory,
+        MapSize mapSize,
+        ITerrainService terrainService)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
@@ -76,7 +80,10 @@ public sealed class TimberbornFireRuntime :
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
-            _logSink);
+            _logSink,
+            TimberbornGpuFieldRendererOptions.Default,
+            new TimberbornUnityGpuFieldRendererPresenter(_logSink, TimberbornGpuFieldRendererOptions.Default),
+            new TimberbornTerrainAshOverlaySurfaceProvider(mapSize, terrainService));
         _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
             visualFieldSurface,
             _logSink,

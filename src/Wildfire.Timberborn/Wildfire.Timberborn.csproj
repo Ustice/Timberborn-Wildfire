@@ -167,7 +167,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets\WildfireAshOverlay4096.png" />
+    <EmbeddedResource Include="Assets\WildfireAshGround2048.png" />
+    <EmbeddedResource Include="Assets\WildfireAshMask4096Levels.png" />
   </ItemGroup>
 
 </Project>

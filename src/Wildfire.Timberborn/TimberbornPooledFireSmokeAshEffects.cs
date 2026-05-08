@@ -1288,7 +1288,8 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             _logSink.Info(
                 "wildfire_timberborn_pooled_fire_effect_native_prefab_resolved " +
                 $"kind={kind.ToString().ToLowerInvariant()} " +
-                $"prefab={FormatLogToken(resolution.PrefabName)}");
+                $"prefab={FormatLogToken(resolution.PrefabName)} " +
+                RenderOrderToken(resolution.Prefab));
         }
         else
         {
@@ -1299,6 +1300,19 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         }
 
         return resolution;
+    }
+
+    private static string RenderOrderToken(GameObject? prefab)
+    {
+        ParticleSystemRenderer? renderer = prefab is null
+            ? null
+            : prefab.GetComponent<ParticleSystemRenderer>();
+        Material? material = renderer?.sharedMaterial;
+        return renderer is null
+            ? "render_queue=placeholder sorting_order=placeholder sorting_fudge=placeholder"
+            : $"render_queue={material?.renderQueue.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder"} " +
+                $"sorting_order={renderer.sortingOrder.ToString(System.Globalization.CultureInfo.InvariantCulture)} " +
+                $"sorting_fudge={renderer.sortingFudge.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
     }
 
     private static string FormatLogToken(string? value)
@@ -1331,6 +1345,10 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
 
 public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
 {
+    private const int AtmosphericParticleRenderQueueOffset = 700;
+    private const int AtmosphericParticleSortingOrder = 20;
+    private const float AtmosphericParticleSortingFudge = 1f;
+
     public static TimberbornNativeFireEffectPrefabResolution Resolve(TimberbornPooledFireEffectKind kind)
     {
         GameObject prefab = CreatePrefab(kind);
@@ -1486,6 +1504,7 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
 
         ParticleSystemRenderer renderer = prefab.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        ConfigureParticleRendererOrdering(renderer);
         Shader? shader = Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default");
         if (shader is not null)
         {
@@ -1495,6 +1514,12 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         return prefab;
     }
 
+    private static void ConfigureParticleRendererOrdering(ParticleSystemRenderer renderer)
+    {
+        renderer.sortingOrder = AtmosphericParticleSortingOrder;
+        renderer.sortingFudge = AtmosphericParticleSortingFudge;
+    }
+
     private static Material CreateParticleMaterial(Shader shader, TimberbornPooledFireEffectKind kind)
     {
         Material material = new(shader)
@@ -1502,7 +1527,7 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
             hideFlags = HideFlags.DontSave,
         };
         material.mainTexture = CreateCircularParticleTexture(kind);
-        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 500;
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + AtmosphericParticleRenderQueueOffset;
         if (material.HasProperty("_ZWrite"))
         {
             material.SetInt("_ZWrite", 0);

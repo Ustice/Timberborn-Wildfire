@@ -50,6 +50,12 @@ type CoordinateTarget = {
   y: number;
 };
 
+type InputReadinessContext = {
+  artifactDir: string;
+  expectedResolution: string;
+  expectedScreens: ScreenKind[];
+};
+
 type PngImage = {
   bytesPerPixel: number;
   data: Uint8Array;
@@ -61,6 +67,11 @@ type Pixel = {
   b: number;
   g: number;
   r: number;
+};
+
+type MousePosition = {
+  x: number;
+  y: number;
 };
 
 type Screenshot = {
@@ -96,6 +107,13 @@ const outboxFileName = "command-outbox.txt";
 const fastFrameIntervalMs = 1500;
 const activationRetryIntervalMs = 500;
 const activationRetryTimeoutMs = 20000;
+const continueLoadTimeoutMs = 20000;
+const inputReadyCpuThreshold = 75;
+const inputReadyRequiredStablePolls = 2;
+const inputReadyPollIntervalMs = 500;
+const inputReadyTimeoutMs = 20000;
+const userMouseQuietWindowMs = 750;
+const userMouseActivityPauseMs = 2000;
 
 const targets = {
   experimentalStart: { id: "experimental_mode.start", x: 960, y: 716 },
@@ -135,7 +153,7 @@ Examples:
   bun scripts/load-latest-save-and-unpause.ts --attach --skip-post-status
 
 Default startup behavior:
-  --launch uses the signal-driven cold-start path: sample frames, press Enter when startup confirmation gates are positively identified, click only the documented main.continue coordinate, then verify loaded-save HUD/status/log proof.
+  --launch uses the signal-driven cold-start path: sample frames, waits for Timberborn CPU to settle before each input, presses each startup gate once, clicks only the documented main.continue coordinate, then gives the game 20 seconds to reach the loaded-save HUD before failing.
   --attach uses the conservative classifier path for already-running Timberborn sessions.
 `;
 
@@ -275,11 +293,139 @@ const run = (command: string, args: string[]): ShellResult => {
 
 const isTimberbornRunning = (): boolean => run("pgrep", ["-x", processName]).exitCode === 0;
 
+const getTimberbornPid = (): number | null => {
+  const result = run("pgrep", ["-x", processName]);
+  if (result.exitCode !== 0) {
+    return null;
+  }
+
+  const pid = result.stdout
+    .split(/\s+/u)
+    .map((value) => Number(value.trim()))
+    .find((value) => Number.isInteger(value) && value > 0);
+  return pid ?? null;
+};
+
+const readTimberbornCpu = (): number | null => {
+  const pid = getTimberbornPid();
+  if (pid === null) {
+    return null;
+  }
+
+  const result = run("ps", ["-o", "%cpu=", "-p", String(pid)]);
+  if (result.exitCode !== 0) {
+    return null;
+  }
+
+  const parsed = Number(result.stdout.trim());
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const waitForTimberbornInputReady = (label: string): void => {
+  const startedAt = Date.now();
+  let stablePolls = 0;
+  let lastCpu: number | null = null;
+
+  while (Date.now() - startedAt <= inputReadyTimeoutMs) {
+    lastCpu = readTimberbornCpu();
+    if (lastCpu !== null && lastCpu <= inputReadyCpuThreshold) {
+      stablePolls += 1;
+      if (stablePolls >= inputReadyRequiredStablePolls) {
+        if (Date.now() > startedAt) {
+          log(`input_ready label=${label} cpu=${lastCpu.toFixed(1)} stable_polls=${stablePolls}`);
+        }
+        return;
+      }
+    } else {
+      stablePolls = 0;
+    }
+
+    Bun.sleepSync(inputReadyPollIntervalMs);
+  }
+
+  fail(
+    `Timed out waiting for Timberborn to settle before ${label}: last_cpu=${lastCpu?.toFixed(1) ?? "unknown"} threshold=${inputReadyCpuThreshold}`,
+  );
+};
+
+const readMousePosition = (): MousePosition | null => {
+  const result = run("cliclick", ["p"]);
+  if (result.exitCode !== 0) {
+    return null;
+  }
+
+  const match = result.stdout.trim().match(/^(-?\d+),(-?\d+)$/u);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    x: Number(match[1]),
+    y: Number(match[2]),
+  };
+};
+
+const requireMousePosition = (label: string): MousePosition =>
+  readMousePosition() ?? fail(`Could not read mouse position for ${label}.`);
+
+const waitForUserMouseQuiet = (label: string): boolean => {
+  const startedAt = Date.now();
+  let lastMovement = "none";
+  let detectedActivity = false;
+
+  while (Date.now() - startedAt <= inputReadyTimeoutMs) {
+    const before = requireMousePosition(`before ${label}`);
+    Bun.sleepSync(userMouseQuietWindowMs);
+    const after = requireMousePosition(`after ${label}`);
+    if (before.x === after.x && before.y === after.y) {
+      log(`mouse_quiet label=${label} position=${after.x},${after.y} window_ms=${userMouseQuietWindowMs}`);
+      return detectedActivity;
+    }
+
+    detectedActivity = true;
+    lastMovement = `${before.x},${before.y}->${after.x},${after.y}`;
+    log(`user_mouse_activity_detected label=${label} movement=${lastMovement} pause_ms=${userMouseActivityPauseMs}`);
+    Bun.sleepSync(userMouseActivityPauseMs);
+  }
+
+  return fail(`Timed out waiting for mouse quiet before ${label}: last_movement=${lastMovement}`);
+};
+
+const verifyScreenAfterUserActivity = (label: string, context: InputReadinessContext): ScreenKind | null => {
+  activateTimberborn(`verify_after_user_activity:${label}`);
+  const screenshot = captureScreenshot(
+    context.artifactDir,
+    `input-verify-${fileSafeToken(label)}-${Date.now()}`,
+    context.expectedResolution,
+  );
+  failOnBlockingOverlay(screenshot);
+  if (!context.expectedScreens.includes(screenshot.screen)) {
+    log(
+      `input_context_changed label=${label} expected=${context.expectedScreens.join(",")} actual=${screenshot.screen} path=${screenshot.path}`,
+    );
+    return screenshot.screen;
+  }
+
+  log(`input_context_verified label=${label} screen=${screenshot.screen} path=${screenshot.path}`);
+  return null;
+};
+
+const waitForAutomationInputReady = (label: string, context: InputReadinessContext): ScreenKind | null => {
+  waitForTimberbornInputReady(label);
+  if (waitForUserMouseQuiet(label)) {
+    return verifyScreenAfterUserActivity(label, context);
+  }
+
+  return null;
+};
+
 const commandFailureText = (result: ShellResult): string => result.stderr.trim() || result.stdout.trim() || "(no stderr/stdout)";
 
 const formatError = (error: unknown): string => error instanceof Error ? error.message : String(error);
 
 const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
+
+const fileSafeToken = (value: string): string => value.replaceAll(/[^a-zA-Z0-9_-]+/gu, "-").replaceAll(/^-|-$/gu, "");
 
 const defaultTimberbornGridDepth = 23;
 const maxContinueCellCount = 500_000;
@@ -844,7 +990,6 @@ const assertScreenshotSize = (path: string, image: PngImage, expectedResolution:
 };
 
 const captureScreenshot = (artifactDir: string, name: string, expectedResolution: string): Screenshot => {
-  activateTimberborn(`screenshot:${name}`);
   assertTimberbornForeground(`screenshot:${name}`);
   const path = join(artifactDir, `${name}.png`);
   const result = run("screencapture", ["-x", path]);
@@ -964,31 +1109,55 @@ const uniqueScreenKinds = (screens: ScreenKind[]): ScreenKind[] =>
     return uniqueScreens;
   }, []);
 
-const clickTarget = (target: CoordinateTarget): void => {
+const clickTarget = (target: CoordinateTarget, context: InputReadinessContext): ScreenKind | null => {
+  const changedScreen = waitForAutomationInputReady(`click:${target.id}`, context);
+  if (changedScreen !== null) {
+    log(`input_skipped target=${target.id} reason=screen_changed screen=${changedScreen}`);
+    return changedScreen;
+  }
+
   activateTimberborn(`click:${target.id}`);
   log(`click target=${target.id} x=${target.x} y=${target.y}`);
   const result = run("cliclick", [`c:${target.x},${target.y}`]);
   if (result.exitCode !== 0) {
     fail(`cliclick failed for ${target.id}: ${commandFailureText(result)}`);
   }
+
+  return null;
 };
 
-const pressEnter = (actionName: string): void => {
+const pressEnter = (actionName: string, context: InputReadinessContext): ScreenKind | null => {
+  const changedScreen = waitForAutomationInputReady(`press:${actionName}`, context);
+  if (changedScreen !== null) {
+    log(`input_skipped action=${actionName} reason=screen_changed screen=${changedScreen}`);
+    return changedScreen;
+  }
+
   activateTimberborn(`press:${actionName}`);
   log(`keypress action=${actionName} key=return`);
   const result = run("cliclick", ["kp:return"]);
   if (result.exitCode !== 0) {
     fail(`cliclick failed for ${actionName}: ${commandFailureText(result)}`);
   }
+
+  return null;
 };
 
-const pressSpeedOne = (actionName: string): void => {
+const pressSpeedOne = (actionName: string, context: InputReadinessContext): ScreenKind | null => {
+  const changedScreen = waitForAutomationInputReady(`press:${actionName}`, context);
+  if (changedScreen !== null) {
+    log(`input_skipped action=${actionName} reason=screen_changed screen=${changedScreen}`);
+    return changedScreen;
+  }
+
   activateTimberborn(`press:${actionName}`);
   log(`keypress action=${actionName} key=1`);
   const result = run("cliclick", ["kp:num-1"]);
   if (result.exitCode !== 0) {
     fail(`cliclick failed for ${actionName}: ${commandFailureText(result)}`);
   }
+
+  return null;
 };
 
 const waitForKnownScreen = async (artifactDir: string, options: Options, prefix: string): Promise<Screenshot> => {
@@ -1062,7 +1231,7 @@ const waitForLoadedSaveAfterContinue = async (
   const startedAt = Date.now();
   let attempts = 0;
 
-  while (Date.now() - startedAt <= options.waitSeconds * 1000) {
+  while (Date.now() - startedAt <= continueLoadTimeoutMs) {
     attempts += 1;
     const screenshot = captureScreenshotForWait(
       artifactDir,
@@ -1076,19 +1245,18 @@ const waitForLoadedSaveAfterContinue = async (
 
     failOnBlockingOverlay(screenshot);
     if (screenshot.screen === "loaded-save") {
+      log(`loaded_save_detected_before_unpause elapsed_ms=${Date.now() - startedAt} screenshot=${screenshot.path}`);
       return screenshot;
     }
 
-    if (screenshot.screen === "main-menu" && attempts % 5 === 0) {
-      clickTarget(targets.mainContinue);
-    } else if (screenshot.screen !== "main-menu" && (attempts === 1 || attempts % 5 === 0)) {
-      pressSpeedOne("loaded_save_speed_probe");
+    if (attempts === 1 || attempts % 5 === 0) {
+      log(`continue_load_waiting screen=${screenshot.screen} elapsed_ms=${Date.now() - startedAt} timeout_ms=${continueLoadTimeoutMs}`);
     }
 
     await Bun.sleep(1000);
   }
 
-  return fail(`Timed out waiting for loaded-save after Continue. Last screenshots are in ${artifactDir}.`);
+  return fail(`Timed out waiting ${continueLoadTimeoutMs}ms for loaded-save after one Continue click. Last screenshots are in ${artifactDir}.`);
 };
 
 const waitForScreen = async (
@@ -1154,7 +1322,15 @@ const ensureUnpaused = async (artifactDir: string, options: Options): Promise<Co
     fail(`Expected loaded-save HUD before unpause, got ${beforeUnpause.screen}.`);
   }
 
+  log(`loaded_save_before_unpause screenshot=${beforeUnpause.path}`);
   const firstStatus = await readStatus(options.commandDir, 6);
+  if (firstStatus !== null) {
+    writeFileSync(join(artifactDir, "command-status-before-unpause.txt"), firstStatus.text);
+    log(`pre_unpause_status_available tick_count=${firstStatus.tickCount ?? "unknown"}`);
+  } else {
+    log("pre_unpause_status_unavailable");
+  }
+
   if (firstStatus !== null && firstStatus.tickCount !== null && firstStatus.tickCount > 0) {
     await Bun.sleep(1500);
     const secondStatus = await readStatus(options.commandDir, 6);
@@ -1166,7 +1342,15 @@ const ensureUnpaused = async (artifactDir: string, options: Options): Promise<Co
     }
   }
 
-  clickTarget(targets.hudSpeed1);
+  const skippedUnpauseScreen = clickTarget(targets.hudSpeed1, {
+    artifactDir,
+    expectedResolution: options.expectedResolution,
+    expectedScreens: ["loaded-save"],
+  });
+  if (skippedUnpauseScreen !== null) {
+    fail(`Skipped unpause because screen changed to ${skippedUnpauseScreen}.`);
+  }
+
   await Bun.sleep(3000);
   captureScreenshot(artifactDir, "05-loaded-save-after-unpause", options.expectedResolution);
 
@@ -1259,7 +1443,7 @@ const printPlan = (options: Options): void => {
   log(`post_status=${options.postStatus}`);
   log(`latest_save_preflight=${options.skipLatestSavePreflight ? "skipped" : "enabled"}`);
   if (options.mode === "launch") {
-    log(`fast_startup_timing_ms=frame_interval:${fastFrameIntervalMs}`);
+    log(`fast_startup_timing_ms=frame_interval:${fastFrameIntervalMs} continue_load_timeout:${continueLoadTimeoutMs} input_ready_timeout:${inputReadyTimeoutMs} mouse_quiet_window:${userMouseQuietWindowMs} mouse_activity_pause:${userMouseActivityPauseMs}`);
   }
   log(`targets=${Object.values(targets).map((target) => `${target.id}@${target.x},${target.y}`).join(",")}`);
   log(`lock=${lockDir}`);
@@ -1287,24 +1471,47 @@ const runClassifierStartupPath = async (
   failOnBlockingOverlay(current);
 
   if (current.screen === "startup-mods") {
-    clickTarget(targets.startupModsOk);
-    await Bun.sleep(1000);
-    current = await waitForKnownScreen(artifactDir, options, "01-after-startup-mods");
+    const skippedScreen = clickTarget(targets.startupModsOk, {
+      artifactDir,
+      expectedResolution: options.expectedResolution,
+      expectedScreens: ["startup-mods"],
+    });
+    current = skippedScreen === null
+      ? await (async (): Promise<Screenshot> => {
+        await Bun.sleep(1000);
+        return waitForKnownScreen(artifactDir, options, "01-after-startup-mods");
+      })()
+      : await waitForKnownScreen(artifactDir, options, "01-after-startup-mods-skipped");
     observedScreens.push(current.screen);
     failOnBlockingOverlay(current);
   }
 
   if (current.screen === "experimental-mode") {
-    clickTarget(targets.experimentalStart);
-    await Bun.sleep(1000);
-    current = await waitForKnownScreen(artifactDir, options, "02-after-experimental-mode");
+    const skippedScreen = clickTarget(targets.experimentalStart, {
+      artifactDir,
+      expectedResolution: options.expectedResolution,
+      expectedScreens: ["experimental-mode"],
+    });
+    current = skippedScreen === null
+      ? await (async (): Promise<Screenshot> => {
+        await Bun.sleep(1000);
+        return waitForKnownScreen(artifactDir, options, "02-after-experimental-mode");
+      })()
+      : await waitForKnownScreen(artifactDir, options, "02-after-experimental-mode-skipped");
     observedScreens.push(current.screen);
   }
 
   if (current.screen === "main-menu") {
     assertLatestSaveCanBeLoadedByContinue(options);
-    clickTarget(targets.mainContinue);
-    await waitForLoadedSaveAfterContinue(artifactDir, options, "03-after-main-continue");
+    const skippedScreen = clickTarget(targets.mainContinue, {
+      artifactDir,
+      expectedResolution: options.expectedResolution,
+      expectedScreens: ["main-menu"],
+    });
+    if (skippedScreen !== "loaded-save") {
+      await waitForLoadedSaveAfterContinue(artifactDir, options, "03-after-main-continue");
+    }
+
     observedScreens.push("loaded-save");
   } else if (current.screen !== "loaded-save") {
     fail(`Expected main-menu or loaded-save after startup gates, got ${current.screen}.`);
@@ -1329,32 +1536,41 @@ const runFastRecordedStartupPath = async (
     failOnBlockingOverlay(current);
 
     if (current.screen === "startup-mods") {
-      pressEnter("startup_mods.confirm");
-      current = await waitForKnownScreenChange(artifactDir, options, "01-after-startup-mods", "startup-mods", (attempts) => {
-        if (attempts % 15 === 0) {
-          clickTarget(targets.startupModsOk);
-        } else if (attempts % 5 === 0) {
-          pressEnter("startup_mods.confirm_retry");
-        }
+      const skippedScreen = pressEnter("startup_mods.confirm", {
+        artifactDir,
+        expectedResolution: options.expectedResolution,
+        expectedScreens: ["startup-mods"],
       });
+      current = skippedScreen === null
+        ? await waitForKnownScreenChange(artifactDir, options, "01-after-startup-mods", "startup-mods")
+        : await waitForKnownScreen(artifactDir, options, "01-after-startup-mods-skipped");
       observedScreens.push(current.screen);
       failOnBlockingOverlay(current);
     }
 
     if (current.screen === "experimental-mode") {
-      pressEnter("experimental_mode.start");
-      current = await waitForKnownScreenChange(artifactDir, options, "02-after-experimental-mode", "experimental-mode", (attempts) => {
-        if (attempts % 5 === 0) {
-          pressEnter("experimental_mode.start_retry");
-        }
+      const skippedScreen = pressEnter("experimental_mode.start", {
+        artifactDir,
+        expectedResolution: options.expectedResolution,
+        expectedScreens: ["experimental-mode"],
       });
+      current = skippedScreen === null
+        ? await waitForKnownScreenChange(artifactDir, options, "02-after-experimental-mode", "experimental-mode")
+        : await waitForKnownScreen(artifactDir, options, "02-after-experimental-mode-skipped");
       observedScreens.push(current.screen);
     }
 
     if (current.screen === "main-menu") {
       assertLatestSaveCanBeLoadedByContinue(options);
-      clickTarget(targets.mainContinue);
-      await waitForLoadedSaveAfterContinue(artifactDir, options, "03-after-main-continue");
+      const skippedScreen = clickTarget(targets.mainContinue, {
+        artifactDir,
+        expectedResolution: options.expectedResolution,
+        expectedScreens: ["main-menu"],
+      });
+      if (skippedScreen !== "loaded-save") {
+        await waitForLoadedSaveAfterContinue(artifactDir, options, "03-after-main-continue");
+      }
+
       observedScreens.push("loaded-save");
     } else if (current.screen !== "loaded-save") {
       fail(`Expected main-menu or loaded-save after startup gates, got ${current.screen}.`);

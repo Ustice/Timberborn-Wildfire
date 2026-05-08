@@ -214,7 +214,17 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         Assert.Contains("TimberbornPooledFireEffectKind.Smoke => 6.5f", source);
         Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => 4f", source);
         Assert.Contains("material.mainTexture = CreateCircularParticleTexture(kind);", source);
-        Assert.Contains("material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 500;", source);
+        Assert.Contains("private const int AtmosphericParticleRenderQueueOffset = 700;", source);
+        Assert.Contains("private const int AtmosphericParticleSortingOrder = 20;", source);
+        Assert.Contains("private const float AtmosphericParticleSortingFudge = 1f;", source);
+        Assert.Contains("ConfigureParticleRendererOrdering(renderer);", source);
+        Assert.Contains("renderer.sortingOrder = AtmosphericParticleSortingOrder;", source);
+        Assert.Contains("renderer.sortingFudge = AtmosphericParticleSortingFudge;", source);
+        Assert.Contains("material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + AtmosphericParticleRenderQueueOffset;", source);
+        Assert.Contains("RenderOrderToken(resolution.Prefab)", source);
+        Assert.Contains("render_queue=", source);
+        Assert.Contains("sorting_order=", source);
+        Assert.Contains("sorting_fudge=", source);
         Assert.Contains("material.SetInt(\"_ZWrite\", 0);", source);
         Assert.Contains("float edgeSoftness = kind == TimberbornPooledFireEffectKind.Fire ? 0.18f : 0.32f;", source);
         Assert.Contains("new Color(1f, 1f, 1f, alpha)", source);
@@ -596,7 +606,9 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         string source = ReadTimberbornFireRuntimeSource();
 
         Assert.Equal(1, CountOccurrences(source, " TimberbornFireRuntime("));
-        Assert.Contains("public TimberbornFireRuntime(\n        ITimberbornGpuVisualFieldSurface visualFieldSurface,\n        EntityRegistry entityRegistry,\n        EntitySelectionService entitySelectionService,\n        QuickNotificationService quickNotificationService,\n        TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,\n        WildfireReleaseSettings releaseSettings,\n        TimberbornFireSimParameterPresetState fireSimParameterPresetState,\n        ITimberbornWindProvider windProvider,\n        INavMeshObjectFactory navMeshObjectFactory)", source);
+        Assert.Contains("MapSize mapSize", source, StringComparison.Ordinal);
+        Assert.Contains("ITerrainService terrainService", source, StringComparison.Ordinal);
+        Assert.Contains("new TimberbornTerrainAshOverlaySurfaceProvider(mapSize, terrainService)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("public TimberbornFireRuntime()\n", source);
         Assert.DoesNotContain("internal TimberbornFireRuntime(", source);
         Assert.DoesNotContain("NullTimberbornGpuFieldRendererPresenter.Instance", source);
