@@ -1151,10 +1151,10 @@ const pressSpeedOne = (actionName: string, context: InputReadinessContext): Scre
   }
 
   activateTimberborn(`press:${actionName}`);
-  log(`keypress action=${actionName} key=1`);
-  const result = run("cliclick", ["kp:num-1"]);
+  log(`keypress action=${actionName} key_code=18 key=1`);
+  const result = run("osascript", ["-e", "tell application \"System Events\" to key code 18"]);
   if (result.exitCode !== 0) {
-    fail(`cliclick failed for ${actionName}: ${commandFailureText(result)}`);
+    fail(`osascript keypress failed for ${actionName}: ${commandFailureText(result)}`);
   }
 
   return null;
@@ -1342,7 +1342,7 @@ const ensureUnpaused = async (artifactDir: string, options: Options): Promise<Co
     }
   }
 
-  const skippedUnpauseScreen = clickTarget(targets.hudSpeed1, {
+  const skippedUnpauseScreen = pressSpeedOne("loaded_save_speed_1", {
     artifactDir,
     expectedResolution: options.expectedResolution,
     expectedScreens: ["loaded-save"],

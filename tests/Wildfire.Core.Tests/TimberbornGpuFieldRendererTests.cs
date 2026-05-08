@@ -344,6 +344,19 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void UnityAshOverlayUsesSceneLighting()
+    {
+        string shader = ReadAshOverlayShaderSource();
+
+        Assert.Contains("#include \"Lighting.cginc\"", shader, StringComparison.Ordinal);
+        Assert.Contains("ShadeSH9", shader, StringComparison.Ordinal);
+        Assert.Contains("_LightColor0", shader, StringComparison.Ordinal);
+        Assert.Contains("_WorldSpaceLightPos0", shader, StringComparison.Ordinal);
+        Assert.DoesNotContain("Lighting Off", shader, StringComparison.Ordinal);
+        Assert.DoesNotContain("Fallback \"Unlit/Transparent\"", shader, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GpuFieldRendererCanDisableAshOverlayForHeadlessTelemetry()
     {
         RecordingFireLogSink logSink = new();
@@ -415,6 +428,18 @@ public sealed class TimberbornGpuFieldRendererTests
             source,
             StringComparison.Ordinal);
         Assert.Contains("mesh.uv = uvs;", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnityAshOverlayMeshUsesSoftNeighborAlphaField()
+    {
+        string source = ReadTimberbornGpuFieldRendererSource();
+
+        Assert.Contains("BuildAshOverlayMesh(mesh, regions, heightOffset);", source, StringComparison.Ordinal);
+        Assert.Contains("ToSoftAshVertices(region, heightOffset)", source, StringComparison.Ordinal);
+        Assert.Contains("ToSoftAshColors(region, ashByCell)", source, StringComparison.Ordinal);
+        Assert.Contains("SoftAshVertexAlpha(region, vertexX - 1, vertexY - 1, ashByCell)", source, StringComparison.Ordinal);
+        Assert.Contains("ToSoftAshTriangles(index * 9)", source, StringComparison.Ordinal);
     }
 
     private static TimberbornGpuVisualFieldSurface CreateBoundSurface(

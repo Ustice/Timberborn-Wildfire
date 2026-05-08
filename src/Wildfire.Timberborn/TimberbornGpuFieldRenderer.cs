@@ -872,6 +872,12 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         float heightOffset,
         bool debugOverlayEnabled)
     {
+        if (!debugOverlayEnabled)
+        {
+            BuildAshOverlayMesh(mesh, regions, heightOffset);
+            return;
+        }
+
         Vector3[] vertices = regions
             .SelectMany(region => ToVertices(region, heightOffset))
             .ToArray();
@@ -887,6 +893,37 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 int offset = index * 4;
                 return new[] { offset, offset + 2, offset + 1, offset + 2, offset + 3, offset + 1 };
             })
+            .ToArray();
+
+        mesh.Clear();
+        mesh.vertices = vertices;
+        mesh.colors = colors;
+        mesh.uv = uvs;
+        mesh.triangles = triangles;
+        mesh.RecalculateBounds();
+    }
+
+    private static void BuildAshOverlayMesh(
+        Mesh mesh,
+        IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions,
+        float heightOffset)
+    {
+        Dictionary<(int X, int Y, int Z), float> ashByCell = regions
+            .GroupBy(static region => (region.MinX, region.MinY, region.MaxZ))
+            .ToDictionary(
+                static group => group.Key,
+                static group => Math.Clamp(group.Max(static region => region.Ash), 0f, 1f));
+        Vector3[] vertices = regions
+            .SelectMany(region => ToSoftAshVertices(region, heightOffset))
+            .ToArray();
+        Color[] colors = regions
+            .SelectMany(region => ToSoftAshColors(region, ashByCell))
+            .ToArray();
+        Vector2[] uvs = regions
+            .SelectMany(static region => ToSoftAshUvs(region))
+            .ToArray();
+        int[] triangles = regions
+            .SelectMany(static (_, index) => ToSoftAshTriangles(index * 9))
             .ToArray();
 
         mesh.Clear();
@@ -919,6 +956,94 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             ? ToDebugColor(region)
             : ToAshVertexColor(region);
         return Enumerable.Repeat(center, 4);
+    }
+
+    private static IEnumerable<Vector3> ToSoftAshVertices(
+        TimberbornGpuFieldRendererRegionState region,
+        float heightOffset)
+    {
+        AshOverlayQuadBounds bounds = ToAshOverlayQuadBounds(region);
+        float midX = (bounds.MinX + bounds.MaxX) * 0.5f;
+        float midZ = (bounds.MinZ + bounds.MaxZ) * 0.5f;
+        float y = region.MaxZ + heightOffset;
+        float[] xs = { bounds.MinX, midX, bounds.MaxX };
+        float[] zs = { bounds.MinZ, midZ, bounds.MaxZ };
+
+        return zs.SelectMany(z => xs.Select(x => new Vector3(x, y, z)));
+    }
+
+    private static IEnumerable<Color> ToSoftAshColors(
+        TimberbornGpuFieldRendererRegionState region,
+        IReadOnlyDictionary<(int X, int Y, int Z), float> ashByCell)
+    {
+        return Enumerable.Range(0, 3)
+            .SelectMany(vertexY => Enumerable.Range(0, 3)
+                .Select(vertexX => new Color(
+                    1f,
+                    1f,
+                    1f,
+                    SoftAshVertexAlpha(region, vertexX - 1, vertexY - 1, ashByCell))));
+    }
+
+    private static IEnumerable<Vector2> ToSoftAshUvs(TimberbornGpuFieldRendererRegionState region)
+    {
+        AshOverlayQuadBounds bounds = ToAshOverlayQuadBounds(region);
+        float midX = (bounds.MinX + bounds.MaxX) * 0.5f;
+        float midZ = (bounds.MinZ + bounds.MaxZ) * 0.5f;
+        float[] xs = { bounds.MinX, midX, bounds.MaxX };
+        float[] zs = { bounds.MinZ, midZ, bounds.MaxZ };
+
+        return zs.SelectMany(z => xs.Select(x => new Vector2(
+            x / AshOverlayTextureWorldSizeCells,
+            z / AshOverlayTextureWorldSizeCells)));
+    }
+
+    private static IEnumerable<int> ToSoftAshTriangles(int offset)
+    {
+        return Enumerable.Range(0, 2)
+            .SelectMany(row => Enumerable.Range(0, 2)
+                .SelectMany(column =>
+                {
+                    int lowerLeft = offset + (row * 3) + column;
+                    int lowerRight = lowerLeft + 1;
+                    int upperLeft = lowerLeft + 3;
+                    int upperRight = upperLeft + 1;
+                    return new[] { lowerLeft, upperLeft, lowerRight, upperLeft, upperRight, lowerRight };
+                }));
+    }
+
+    private static float SoftAshVertexAlpha(
+        TimberbornGpuFieldRendererRegionState region,
+        int directionX,
+        int directionY,
+        IReadOnlyDictionary<(int X, int Y, int Z), float> ashByCell)
+    {
+        float ownAsh = CellAsh(region.MinX, region.MinY, region.MaxZ, ashByCell);
+        if (directionX == 0 && directionY == 0)
+        {
+            return ownAsh;
+        }
+
+        int neighborCount = directionX == 0 || directionY == 0 ? 2 : 4;
+        float neighborAsh = directionX == 0
+            ? CellAsh(region.MinX, region.MinY + directionY, region.MaxZ, ashByCell)
+            : directionY == 0
+                ? CellAsh(region.MinX + directionX, region.MinY, region.MaxZ, ashByCell)
+                : CellAsh(region.MinX + directionX, region.MinY, region.MaxZ, ashByCell) +
+                    CellAsh(region.MinX, region.MinY + directionY, region.MaxZ, ashByCell) +
+                    CellAsh(region.MinX + directionX, region.MinY + directionY, region.MaxZ, ashByCell);
+        return Math.Clamp((ownAsh + neighborAsh) / neighborCount, 0f, 1f);
+    }
+
+    private static float CellAsh(
+        int x,
+        int y,
+        int z,
+        IReadOnlyDictionary<(int X, int Y, int Z), float> ashByCell)
+    {
+        return ashByCell.TryGetValue((x, y, z), out float ash)
+            ? ash
+            : 0f;
     }
 
     private static IEnumerable<Vector2> ToUvs(
