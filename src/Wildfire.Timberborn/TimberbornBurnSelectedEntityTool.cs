@@ -6,6 +6,7 @@ using Timberborn.QuickNotificationSystem;
 using Timberborn.SingletonSystem;
 using Timberborn.ToolSystem;
 using Timberborn.ToolSystemUI;
+using System.Reflection;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -15,6 +16,8 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
 {
     private const byte IgnitionHeat = TimberbornFireSystem.QaIgnitionHeat;
     private const string CursorKey = "DemolishResourcesCursor";
+    private const string LargeCursorResourceName = "Wildfire.Timberborn.Assets.WildfireIgniteToolCursorLarge.png";
+    private const string SmallCursorResourceName = "Wildfire.Timberborn.Assets.WildfireIgniteToolCursorSmall.png";
 
     private readonly TimberbornFireRuntime _fireRuntime;
     private readonly InputService _inputService;
@@ -22,6 +25,8 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
     private readonly AreaBlockObjectPickerFactory _areaBlockObjectPickerFactory;
     private readonly BlockObjectSelectionDrawerFactory _blockObjectSelectionDrawerFactory;
     private readonly QuickNotificationService _quickNotificationService;
+    private static Texture2D? _largeCursorTexture;
+    private static Texture2D? _smallCursorTexture;
     private AreaBlockObjectPicker? _areaBlockObjectPicker;
     private BlockObjectSelectionDrawer? _blockObjectSelectionDrawer;
 
@@ -57,6 +62,7 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
     {
         _inputService.AddInputProcessor(this);
         _cursorService.SetCursor(CursorKey);
+        UnityEngine.Cursor.SetCursor(GetCursorTexture(), Vector2.zero, CursorMode.Auto);
     }
 
     public void Exit()
@@ -241,6 +247,39 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
             .Distinct()
             .OrderBy(static cellIndex => cellIndex)
             .ToArray();
+    }
+
+    private static Texture2D GetCursorTexture()
+    {
+        bool useSmallCursor = Application.platform is RuntimePlatform.OSXPlayer or RuntimePlatform.OSXEditor;
+        if (useSmallCursor)
+        {
+            return _smallCursorTexture ??= LoadCursorTexture(SmallCursorResourceName, 48, 48, "WildfireIgniteToolCursorSmall");
+        }
+
+        return _largeCursorTexture ??= LoadCursorTexture(LargeCursorResourceName, 64, 64, "WildfireIgniteToolCursorLarge");
+    }
+
+    private static Texture2D LoadCursorTexture(string resourceName, int width, int height, string textureName)
+    {
+        using Stream stream = Assembly.GetExecutingAssembly()
+            .GetManifestResourceStream(resourceName) ??
+            throw new InvalidOperationException($"Could not load embedded Wildfire ignite tool cursor {resourceName}.");
+        using MemoryStream memoryStream = new();
+        stream.CopyTo(memoryStream);
+
+        Texture2D texture = new(width, height, TextureFormat.RGBA32, mipChain: false)
+        {
+            name = textureName,
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+        if (!texture.LoadImage(memoryStream.ToArray(), markNonReadable: false))
+        {
+            throw new InvalidOperationException($"Could not decode embedded Wildfire ignite tool cursor {resourceName}.");
+        }
+
+        return texture;
     }
 }
 

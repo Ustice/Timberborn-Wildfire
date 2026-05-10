@@ -50,7 +50,9 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
         SetUniqueButtonIdentity(button);
         ApplyBurnToolIcon(button);
 
+        VisualElement? rightmostToolRoot = GetRightmostToolRoot(toolGroupButton);
         toolGroupButton.AddTool(button);
+        PlaceButtonBeforeRightmostTool(button, rightmostToolRoot);
         _toolGroupService.AssignToGroup(toolGroup, _burnSelectedEntityTool);
         _buttonAdded = true;
         return Array.Empty<BottomBarElement>();
@@ -112,6 +114,34 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
         }
 
         toolImage.style.backgroundImage = new StyleBackground(GetBurnToolIcon());
+    }
+
+    private static VisualElement? GetRightmostToolRoot(ToolGroupButton toolGroupButton)
+    {
+        HashSet<VisualElement> toolRoots = toolGroupButton.ToolButtons
+            .Select(static button => button.Root)
+            .ToHashSet();
+        return toolGroupButton.ToolButtonsElement.Children()
+            .Where(toolRoots.Contains)
+            .LastOrDefault();
+    }
+
+    private static void PlaceButtonBeforeRightmostTool(ToolButton button, VisualElement? rightmostToolRoot)
+    {
+        if (rightmostToolRoot is null)
+        {
+            return;
+        }
+
+        VisualElement parent = rightmostToolRoot.parent;
+        int rightmostIndex = parent.IndexOf(rightmostToolRoot);
+        if (rightmostIndex < 0)
+        {
+            return;
+        }
+
+        parent.Remove(button.Root);
+        parent.Insert(rightmostIndex, button.Root);
     }
 
     private static Texture2D GetBurnToolIcon()
