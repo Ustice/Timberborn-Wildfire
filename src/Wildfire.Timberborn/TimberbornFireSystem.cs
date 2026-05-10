@@ -269,6 +269,22 @@ public sealed class TimberbornFireSystem : IDisposable
         }
     }
 
+    public int RegisterSustainedIgnitionChanges(IEnumerable<FireSimChange> changes, string source)
+    {
+        FireSimChange[] ignitionChanges = (changes ?? throw new ArgumentNullException(nameof(changes))).ToArray();
+        if (ignitionChanges.Length == 0)
+        {
+            return 0;
+        }
+
+        ignitionChanges
+            .ToList()
+            .ForEach(change => RegisterChange(change, source, shouldLog: false));
+        StartQaIgnitionPeg(ignitionChanges, source);
+        LogRegisteredChanges(source, ignitionChanges.Length);
+        return GetQaIgnitionPegDispatchTicks();
+    }
+
     public void LogRegisteredChanges(string source, int count)
     {
         _logSink.Info(

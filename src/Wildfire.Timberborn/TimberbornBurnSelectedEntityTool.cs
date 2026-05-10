@@ -102,7 +102,8 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
     {
         try
         {
-            TimberbornBurnSelectedEntityResult[] results = BurnBlockObjects(blockObjects).ToArray();
+            TimberbornBurnSelectedEntityResult[] results = BurnBlockObjects(blockObjects, out int sustainedHeatDispatchTicks)
+                .ToArray();
             if (results.Length == 0)
             {
                 throw new InvalidOperationException("No block-backed entity with fire-grid cells was selected.");
@@ -122,7 +123,8 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
                 $"x={results[0].X} " +
                 $"y={results[0].Y} " +
                 $"z={results[0].Z} " +
-                $"set_heat={IgnitionHeat}");
+                $"set_heat={IgnitionHeat} " +
+                $"sustained_heat_dispatch_ticks={sustainedHeatDispatchTicks}");
         }
         catch (InvalidOperationException exception)
         {
@@ -146,7 +148,9 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
         GetBlockObjectSelectionDrawer().StopDrawing();
     }
 
-    private IEnumerable<TimberbornBurnSelectedEntityResult> BurnBlockObjects(IEnumerable<BlockObject> blockObjects)
+    private IEnumerable<TimberbornBurnSelectedEntityResult> BurnBlockObjects(
+        IEnumerable<BlockObject> blockObjects,
+        out int sustainedHeatDispatchTicks)
     {
         FireGrid grid = GetFireGrid();
         BlockObject[] distinctBlockObjects = blockObjects
@@ -159,32 +163,41 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
             throw new InvalidOperationException("No Timberborn entity was selected.");
         }
 
-        return distinctBlockObjects
-            .Select(blockObject => BurnBlockObject(grid, blockObject))
-            .Where(static result => result is not null)
-            .Cast<TimberbornBurnSelectedEntityResult>();
+        TimberbornBurnSelectedEntityTarget[] burnTargets = distinctBlockObjects
+            .Select(blockObject => CreateBurnTarget(grid, blockObject))
+            .Where(static target => target is not null)
+            .Cast<TimberbornBurnSelectedEntityTarget>()
+            .ToArray();
+        FireSimChange[] ignitionChanges = burnTargets
+            .SelectMany(static target => target.CellIndices)
+            .Distinct()
+            .OrderBy(static cellIndex => cellIndex)
+            .Select(static cellIndex => new FireSimChange(CellIndex: cellIndex, SetHeat: IgnitionHeat))
+            .ToArray();
+        sustainedHeatDispatchTicks = _fireRuntime.RegisterSustainedIgnitionChanges(
+            ignitionChanges,
+            "ignite_tool");
+        return burnTargets.Select(static target => target.Result);
     }
 
-    private TimberbornBurnSelectedEntityResult? BurnBlockObject(FireGrid grid, BlockObject blockObject)
+    private TimberbornBurnSelectedEntityTarget? CreateBurnTarget(FireGrid grid, BlockObject blockObject)
     {
         int[] cellIndices = SelectOccupiedCellIndices(grid, blockObject.PositionedBlocks.GetOccupiedCoordinates());
-        cellIndices
-            .Select(cellIndex => new FireSimChange(CellIndex: cellIndex, SetHeat: IgnitionHeat))
-            .ToList()
-            .ForEach(change => _fireRuntime.RegisterChange(change));
         if (cellIndices.Length == 0)
         {
             return null;
         }
 
         (int x, int y, int z) = grid.FromIndex(cellIndices[0]);
-        return new TimberbornBurnSelectedEntityResult(
-            blockObject.Name,
-            cellIndices.Length,
-            cellIndices[0],
-            x,
-            y,
-            z);
+        return new TimberbornBurnSelectedEntityTarget(
+            cellIndices,
+            new TimberbornBurnSelectedEntityResult(
+                blockObject.Name,
+                cellIndices.Length,
+                cellIndices[0],
+                x,
+                y,
+                z));
     }
 
     private FireGrid GetFireGrid()
@@ -238,3 +251,7 @@ public sealed record TimberbornBurnSelectedEntityResult(
     int X,
     int Y,
     int Z);
+
+internal sealed record TimberbornBurnSelectedEntityTarget(
+    int[] CellIndices,
+    TimberbornBurnSelectedEntityResult Result);
