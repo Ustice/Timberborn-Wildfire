@@ -1,6 +1,7 @@
 using Timberborn.BottomBarSystem;
 using Timberborn.ToolButtonSystem;
 using Timberborn.ToolSystem;
+using UnityEngine.UIElements;
 
 namespace Wildfire.Timberborn;
 
@@ -42,6 +43,7 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
             _burnSelectedEntityTool,
             BurnToolImageName,
             toolGroupButton.ToolButtonsElement);
+        SetUniqueButtonIdentity(button);
 
         toolGroupButton.AddTool(button);
         _toolGroupService.AssignToGroup(toolGroup, _burnSelectedEntityTool);
@@ -70,5 +72,28 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
         }
 
         return _toolButtonService.GetToolGroupButton(anchorButton);
+    }
+
+    private static void SetUniqueButtonIdentity(ToolButton button)
+    {
+        const string keyPrefix = "ToolButton-WildfireBurnSelectedEntityTool";
+        button.Root.name = "WildfireBurnSelectedEntityToolButtonRoot";
+        button.Root.viewDataKey = $"{keyPrefix}.Root";
+        button.Root.tooltip = "Burn selected entity";
+
+        Button? rootButton = button.Root as Button ?? button.Root.Q<Button>();
+        if (rootButton is not null)
+        {
+            rootButton.name = "WildfireBurnSelectedEntityToolButton";
+            rootButton.viewDataKey = $"{keyPrefix}.Title";
+            rootButton.tooltip = "Burn selected entity";
+        }
+
+        VisualElement? toolImage = button.Root.Q<VisualElement>("ToolImage");
+        if (toolImage is not null)
+        {
+            toolImage.name = "WildfireBurnSelectedEntityToolImage";
+            toolImage.viewDataKey = $"{keyPrefix}.Image";
+        }
     }
 }
