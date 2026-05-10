@@ -1,6 +1,9 @@
+using System.Reflection;
 using Timberborn.BottomBarSystem;
 using Timberborn.ToolButtonSystem;
 using Timberborn.ToolSystem;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Wildfire.Timberborn;
 
@@ -8,11 +11,13 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
 {
     private const string DemolishingToolGroupId = "Demolishing";
     private const string BurnToolImageName = "DemolishResourcesTool";
+    private const string BurnToolIconResourceName = "Wildfire.Timberborn.Assets.WildfireIgniteToolIcon.png";
 
     private readonly TimberbornBurnSelectedEntityTool _burnSelectedEntityTool;
     private readonly ToolButtonFactory _toolButtonFactory;
     private readonly ToolButtonService _toolButtonService;
     private readonly ToolGroupService _toolGroupService;
+    private static Texture2D? _burnToolIcon;
     private bool _buttonAdded;
 
     public TimberbornDemolitionBurnToolButton(
@@ -42,6 +47,8 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
             _burnSelectedEntityTool,
             BurnToolImageName,
             toolGroupButton.ToolButtonsElement);
+        SetUniqueButtonIdentity(button);
+        ApplyBurnToolIcon(button);
 
         toolGroupButton.AddTool(button);
         _toolGroupService.AssignToGroup(toolGroup, _burnSelectedEntityTool);
@@ -70,5 +77,68 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
         }
 
         return _toolButtonService.GetToolGroupButton(anchorButton);
+    }
+
+    private static void SetUniqueButtonIdentity(ToolButton button)
+    {
+        const string keyPrefix = "ToolButton-WildfireBurnSelectedEntityTool";
+        button.Root.name = "WildfireBurnSelectedEntityToolButtonRoot";
+        button.Root.viewDataKey = $"{keyPrefix}.Root";
+        button.Root.tooltip = "Burn selected entity";
+
+        Button? rootButton = button.Root as Button ?? button.Root.Q<Button>();
+        if (rootButton is not null)
+        {
+            rootButton.name = "WildfireBurnSelectedEntityToolButton";
+            rootButton.viewDataKey = $"{keyPrefix}.Title";
+            rootButton.tooltip = "Burn selected entity";
+        }
+
+        VisualElement? toolImage = button.Root.Q<VisualElement>("ToolImage");
+        if (toolImage is not null)
+        {
+            toolImage.name = "WildfireBurnSelectedEntityToolImage";
+            toolImage.viewDataKey = $"{keyPrefix}.Image";
+        }
+    }
+
+    private static void ApplyBurnToolIcon(ToolButton button)
+    {
+        VisualElement? toolImage = button.Root.Q<VisualElement>("WildfireBurnSelectedEntityToolImage") ??
+            button.Root.Q<VisualElement>("ToolImage");
+        if (toolImage is null)
+        {
+            return;
+        }
+
+        toolImage.style.backgroundImage = new StyleBackground(GetBurnToolIcon());
+    }
+
+    private static Texture2D GetBurnToolIcon()
+    {
+        if (_burnToolIcon is not null)
+        {
+            return _burnToolIcon;
+        }
+
+        using Stream stream = Assembly.GetExecutingAssembly()
+            .GetManifestResourceStream(BurnToolIconResourceName) ??
+            throw new InvalidOperationException($"Could not load embedded Wildfire ignite tool icon {BurnToolIconResourceName}.");
+        using MemoryStream memoryStream = new();
+        stream.CopyTo(memoryStream);
+
+        Texture2D texture = new(112, 112, TextureFormat.RGBA32, mipChain: false)
+        {
+            name = "WildfireIgniteToolIcon",
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+        if (!texture.LoadImage(memoryStream.ToArray(), markNonReadable: false))
+        {
+            throw new InvalidOperationException("Could not decode embedded Wildfire ignite tool icon.");
+        }
+
+        _burnToolIcon = texture;
+        return texture;
     }
 }
