@@ -283,7 +283,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(["help", "qa-fire-preset", "qa-readiness", "status"], result.KnownCommands);
         Assert.Equal(["slow-reactable"], selector.PresetNames);
         Assert.Contains("selected_fire_sim_preset_name=slow-reactable", result.Message);
-        Assert.Contains("ignition=12", result.Message);
+        Assert.Contains("ignition=5", result.Message);
         Assert.Equal(2, stateProvider.CallCount);
     }
 
@@ -1486,6 +1486,32 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void QueueQaSelectedTreeDeltaStimulusScalesHeatPegWithFireStepInterval()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+        Assert.True(fireSystem.TryUpdateParameters(FireSimParameters.Default with
+        {
+            FireCellStepIntervalTicks = 6u,
+        }));
+
+        fireSystem.QueueQaSelectedTreeDeltaStimulus(new RecordingSelectedTreeTargetProvider(38));
+
+        Enumerable.Range(0, 72).ToList().ForEach(_ => fireSystem.Tick());
+        Assert.Equal(72, simulator.RegisteredChanges.Count);
+
+        fireSystem.Tick();
+        Assert.Equal(72, simulator.RegisteredChanges.Count);
+        Assert.All(simulator.RegisteredChanges, static change =>
+        {
+            Assert.Equal(38, change.CellIndex);
+            Assert.Equal((byte)15, change.SetHeat);
+        });
+    }
+
+    [Fact]
     public void DisabledQaDeltaStimulusFailsWithoutQueuingExternalChange()
     {
         TimberbornQaCommandState state = new(
@@ -2045,11 +2071,12 @@ public sealed class TimberbornQaCommandBridgeTests
             CompatibilityProbeOptionalTotal: 4,
             CompatibilityProbeDegradedFeatures: "visual_effects,diagnostic_assets",
             FireSimPresetName: "slow-reactable",
-            FireSimPresetIgnitionPoint: 12,
+            FireSimPresetIgnitionPoint: 5,
             FireSimPresetWaterIgnitionPenalty: 2,
             FireSimPresetFuelHeatWeight: 2,
             FireSimPresetFuelBurnDownNumerator: 1,
             FireSimPresetFuelBurnDownDenominator: 2,
+            FireSimPresetCellStepIntervalTicks: 6,
             WorldImportTotalSources: 50,
             WorldImportTerrainSources: 44,
             WorldImportVegetationSources: 3,
@@ -2168,11 +2195,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("compatibility_probe_optional_total=4", result.ResultToken);
         Assert.Contains("compatibility_probe_degraded_features=visual_effects,diagnostic_assets", result.ResultToken);
         Assert.Contains("fire_sim_preset=slow-reactable", result.ResultToken);
-        Assert.Contains("fire_ignition_point=12", result.ResultToken);
+        Assert.Contains("fire_ignition_point=5", result.ResultToken);
         Assert.DoesNotContain("fire_burning_neighbor_heat_bonus", result.ResultToken);
         Assert.Contains("fire_water_ignition_penalty=2", result.ResultToken);
         Assert.Contains("fire_fuel_heat_weight=2", result.ResultToken);
         Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
+        Assert.Contains("fire_step_interval_ticks=6", result.ResultToken);
         Assert.Contains("world_import_total_sources=50", result.ResultToken);
         Assert.Contains("world_import_terrain_sources=44", result.ResultToken);
         Assert.Contains("world_import_vegetation_sources=3", result.ResultToken);
@@ -2234,9 +2262,10 @@ public sealed class TimberbornQaCommandBridgeTests
 
         Assert.Equal(["default", "slow-reactable", "harsh", "wildfire", "conservative", "high-threshold-high-bonus"], names);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("slow-reactable", out TimberbornFireSimParameterPreset? preset));
-        Assert.Equal(12u, preset.Parameters.IgnitionPoint);
+        Assert.Equal(5u, preset.Parameters.IgnitionPoint);
         Assert.Equal(1u, preset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(2u, preset.Parameters.FireFuelBurnDownPressureDenominator);
+        Assert.Equal(6u, preset.Parameters.FireCellStepIntervalTicks);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("high-threshold-high-bonus", out TimberbornFireSimParameterPreset? highPreset));
         Assert.Equal(5u, highPreset.Parameters.IgnitionPoint);
         Assert.Equal(6u, highPreset.Parameters.FireFuelHeatWeight);
@@ -2567,7 +2596,9 @@ public sealed class TimberbornQaCommandBridgeTests
         }
     }
 
-    private sealed class RecordingFireSimulator(int width, int height, int depth) : IGpuFireSimulator
+    private sealed class RecordingFireSimulator(int width, int height, int depth) :
+        IGpuFireSimulator,
+        ITimberbornConfigurableFireSimParameters
     {
         public int Width { get; } = width;
 
@@ -2581,6 +2612,8 @@ public sealed class TimberbornQaCommandBridgeTests
 
         public int TickCallCount { get; private set; }
 
+        public FireSimParameters Parameters { get; private set; } = FireSimParameters.Default;
+
         public void RegisterChange(FireSimChange change)
         {
             RegisteredChanges.Add(change);
@@ -2592,6 +2625,11 @@ public sealed class TimberbornQaCommandBridgeTests
             return TickResults.Count > 0
                 ? TickResults.Dequeue()
                 : new GpuFireStepResult([], Tick: (uint)TickCallCount);
+        }
+
+        public void UpdateParameters(FireSimParameters parameters)
+        {
+            Parameters = parameters;
         }
 
         public IDisposable Subscribe(IFireSimListener listener)

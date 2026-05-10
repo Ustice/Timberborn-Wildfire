@@ -20,6 +20,8 @@
 #define TERRAIN_MAX 1u
 #define BURNING_LEVEL_MAX 7u
 
+#define HEAT_RADIUS 4u
+
 float VisualFireBaseIntensity;
 float VisualFireHeatWeight;
 float VisualSmokeBaseIntensity;
@@ -39,6 +41,7 @@ uint FireFuelHeatWeight;
 uint FireFuelBurnDownPressureNumerator;
 uint FireFuelBurnDownPressureDenominator;
 uint FireFuelBurnDownRollSeed;
+uint FireCellStepIntervalTicks;
 
 struct CellDeltaGpu
 {
@@ -436,7 +439,7 @@ uint IgnitionThreshold(uint flammability, uint water)
     return min(HEAT_MAX, dryThreshold + (water * FireWaterIgnitionPenalty));
 }
 
-uint StepCell(uint index, uint3 coordinate, uint cell)
+uint StepCell(uint index, uint3 coordinate, uint cell, bool shouldStepReaction)
 {
     uint fuel = Fuel(cell);
     uint heat = Heat(cell);
@@ -451,15 +454,15 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
     float neighborWeightSum = 0.0f;
     int3 current = int3((int)coordinate.x, (int)coordinate.y, (int)coordinate.z);
 
-    for (int dz = -2; dz <= 2; dz++)
+    for (int dz = -HEAT_RADIUS; dz <= HEAT_RADIUS; dz++)
     {
-        for (int dy = -2; dy <= 2; dy++)
+        for (int dy = -HEAT_RADIUS; dy <= HEAT_RADIUS; dy++)
         {
-            for (int dx = -2; dx <= 2; dx++)
+            for (int dx = -HEAT_RADIUS; dx <= HEAT_RADIUS; dx++)
             {
                 int3 offset = int3(dx, dy, dz);
                 int distanceSquared = (dx * dx) + (dy * dy) + (dz * dz);
-                if (distanceSquared == 0 || distanceSquared > 4)
+                if (distanceSquared == 0 || distanceSquared > HEAT_RADIUS * HEAT_RADIUS)
                 {
                     continue;
                 }
@@ -492,29 +495,32 @@ uint StepCell(uint index, uint3 coordinate, uint cell)
 
     if (canBurn && (burningLevel > 0u || heat >= ignitionThreshold))
     {
-        uint roll = Hash(index, Tick, Seed) & 15u;
         uint fuelBeforeBurn = fuel;
         uint burnChance = min(15u, heat + (flammability * fuelBeforeBurn));
 
         burningLevel = max(1u, min(7u, ((burnChance * 7u) + 14u) / 15u));
 
-        if (roll < burnChance)
+        if (shouldStepReaction)
         {
-            uint fuelBurnDownChance = min(
-                15u,
-                ((burnChance * FireFuelBurnDownPressureNumerator) +
-                    (max(1u, FireFuelBurnDownPressureDenominator) - 1u)) /
-                    max(1u, FireFuelBurnDownPressureDenominator));
-            uint fuelRoll = Hash(index, Tick, Seed ^ FireFuelBurnDownRollSeed) & 15u;
-
-            if (fuelRoll < fuelBurnDownChance)
+            uint roll = Hash(index, Tick, Seed) & 15u;
+            if (roll < burnChance)
             {
-                uint fuelBurnAmount = max(1u, burningLevel);
-                fuel = fuel > fuelBurnAmount ? fuel - fuelBurnAmount : 0u;
-            }
+                uint fuelBurnDownChance = min(
+                    15u,
+                    ((burnChance * FireFuelBurnDownPressureNumerator) +
+                        (max(1u, FireFuelBurnDownPressureDenominator) - 1u)) /
+                        max(1u, FireFuelBurnDownPressureDenominator));
+                uint fuelRoll = Hash(index, Tick, Seed ^ FireFuelBurnDownRollSeed) & 15u;
 
-            uint fuelHeat = ((fuelBeforeBurn * FireFuelHeatWeight) + 14u) / 15u;
-            heat = min(15u, heat + FireBurnHeatBase + flammability + fuelHeat);
+                if (fuelRoll < fuelBurnDownChance)
+                {
+                    uint fuelBurnAmount = max(1u, burningLevel);
+                    fuel = fuel > fuelBurnAmount ? fuel - fuelBurnAmount : 0u;
+                }
+
+                uint fuelHeat = ((fuelBeforeBurn * FireFuelHeatWeight) + 14u) / 15u;
+                heat = min(15u, heat + FireBurnHeatBase + flammability + fuelHeat);
+            }
         }
 
         if (fuel == 0u)
@@ -621,7 +627,9 @@ void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
     }
 
     uint oldCell = CurrentCells[index] & 0xFFFFu;
-    uint newCell = StepCell(index, id, oldCell);
+    uint fireStepInterval = max(1u, FireCellStepIntervalTicks);
+    bool shouldStepReaction = fireStepInterval == 1u || (Tick % fireStepInterval) == 0u;
+    uint newCell = StepCell(index, id, oldCell, shouldStepReaction);
     uint atmospheric = BuildAtmosphericField(index, id, oldCell, newCell);
     NextCells[index] = newCell;
     NextAtmosphericFields[index] = atmospheric;

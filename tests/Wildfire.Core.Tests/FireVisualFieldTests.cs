@@ -113,6 +113,10 @@ public sealed class FireVisualFieldTests
         Assert.Contains("uint SteamSourceFromMoistureAndHeat(uint cell)", shader);
         Assert.Contains("uint steamSource = SteamSourceFromMoistureAndHeat(newCell);", shader);
         Assert.Contains("uint StepCell", shader);
+        Assert.Contains("uint FireCellStepIntervalTicks;", shader);
+        Assert.Contains("bool shouldStepReaction = fireStepInterval == 1u || (Tick % fireStepInterval) == 0u;", shader);
+        Assert.Contains("uint newCell = StepCell(index, id, oldCell, shouldStepReaction);", shader);
+        Assert.Contains("if (shouldStepReaction)", shader);
         Assert.Contains("float EffectiveWindStrength()", shader);
         Assert.Contains("uint WindWeightedNeighborHeat(uint neighborHeat, float directionX, float directionY)", shader);
         Assert.Contains("uint CompanionMaterialClass(uint companion)", shader);

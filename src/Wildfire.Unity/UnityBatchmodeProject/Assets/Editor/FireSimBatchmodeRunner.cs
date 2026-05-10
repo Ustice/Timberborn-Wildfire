@@ -210,6 +210,7 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("FireFuelBurnDownPressureNumerator", 3);
             shader.SetInt("FireFuelBurnDownPressureDenominator", 4);
             shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)0x9E3779B9u));
+            shader.SetInt("FireCellStepIntervalTicks", 1);
         }
 
         private static DeltaSnapshot[] ReadDeltas(ComputeBuffer deltas, ComputeBuffer deltaCounter, int capacity)

@@ -53,6 +53,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private FireSimChange[] _qaBurnDamageSpendChanges = Array.Empty<FireSimChange>();
     private int _burnDurationSustainedHeatTicksPendingDispatch;
     private TimberbornQaDeltaStimulusSustainedHeatState? _qaDeltaStimulusSustainedHeatState;
+    private FireSimParameters _fireSimParameters = FireSimParameters.Default;
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
 
@@ -171,6 +172,7 @@ public sealed class TimberbornFireSystem : IDisposable
         }
 
         configurable.UpdateParameters(parameters);
+        _fireSimParameters = parameters;
         return true;
     }
 
@@ -530,6 +532,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _burnDurationSustainedHeatTicksPendingDispatch = 1;
         StartQaIgnitionPeg(new[] { heatPegChange }, "qa_burn_duration_stimulus");
 
+        int ignitionPegDispatchTicks = GetQaIgnitionPegDispatchTicks();
         _burnDurationProofState = new TimberbornQaBurnDurationProofState(
             selectedTarget.Target,
             selectedTarget.CellIndex,
@@ -539,7 +542,7 @@ public sealed class TimberbornFireSystem : IDisposable
             selectedTarget.InitialFuel,
             LastTick ?? 0,
             TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks,
-            SustainedHeatTicks: QaIgnitionPegDispatchTicks);
+            SustainedHeatTicks: ignitionPegDispatchTicks);
         _logSink.Info(ToBurnDurationProofLogToken());
 
         return new TimberbornQaBurnDurationStimulusResult(
@@ -554,8 +557,8 @@ public sealed class TimberbornFireSystem : IDisposable
             selectedTarget.InitialFuel,
             QaIgnitionHeat,
             TimberbornQaBurnDurationStimulusTargets.DefaultTimeoutTicks,
-            QaIgnitionPegDispatchTicks,
-            QueuedHeatChangeCount: QaIgnitionPegDispatchTicks);
+            ignitionPegDispatchTicks,
+            QueuedHeatChangeCount: ignitionPegDispatchTicks);
     }
 
     public IDisposable Subscribe(IFireSimListener listener)
@@ -940,15 +943,28 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         _qaIgnitionPegChanges = changes.ToArray();
         _qaIgnitionPegSource = source;
-        _qaIgnitionPegDispatchTicksRemaining = Math.Max(0, QaIgnitionPegDispatchTicks - 1);
+        int ignitionPegDispatchTicks = GetQaIgnitionPegDispatchTicks();
+        _qaIgnitionPegDispatchTicksRemaining = Math.Max(0, ignitionPegDispatchTicks - 1);
         if (_qaIgnitionPegDispatchTicksRemaining > 0)
         {
             _logSink.Info(
                 "wildfire_timberborn_qa_ignition_heat_peg_started " +
                 $"source={source} " +
                 $"cell_count={_qaIgnitionPegChanges.Length} " +
+                $"requested_dispatch_ticks={ignitionPegDispatchTicks} " +
+                $"fire_step_interval_ticks={GetFireCellStepIntervalTicks()} " +
                 $"remaining_dispatch_ticks={_qaIgnitionPegDispatchTicksRemaining}");
         }
+    }
+
+    private int GetQaIgnitionPegDispatchTicks()
+    {
+        return checked(QaIgnitionPegDispatchTicks * GetFireCellStepIntervalTicks());
+    }
+
+    private int GetFireCellStepIntervalTicks()
+    {
+        return checked((int)Math.Max(1u, _fireSimParameters.FireCellStepIntervalTicks));
     }
 
     private void RegisterPendingQaIgnitionPegChanges()

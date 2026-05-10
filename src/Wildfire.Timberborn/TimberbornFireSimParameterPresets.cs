@@ -9,7 +9,8 @@ public sealed record TimberbornFireSimParameterPreset(string Name, FireSimParame
         $"fire_ignition_point={Parameters.IgnitionPoint} " +
         $"fire_water_ignition_penalty={Parameters.FireWaterIgnitionPenalty} " +
         $"fire_fuel_heat_weight={Parameters.FireFuelHeatWeight} " +
-        $"fire_fuel_burn_down={Parameters.FireFuelBurnDownPressureNumerator}/{Parameters.FireFuelBurnDownPressureDenominator}";
+        $"fire_fuel_burn_down={Parameters.FireFuelBurnDownPressureNumerator}/{Parameters.FireFuelBurnDownPressureDenominator} " +
+        $"fire_step_interval_ticks={Parameters.FireCellStepIntervalTicks}";
 }
 
 public static class TimberbornFireSimParameterPresets
@@ -28,9 +29,9 @@ public static class TimberbornFireSimParameterPresets
             SlowReactableName,
             FireSimParameters.Default with
             {
-                IgnitionPoint = 12u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 2u,
+                FireCellStepIntervalTicks = 6u,
                 VisualSmokeFuelWeight = 0.6f,
             }),
         new(
