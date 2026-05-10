@@ -1,0 +1,1885 @@
+[
+  {
+    "spriteName": "AdvancedBreedingPodIcon",
+    "source": "Buildings/Housing/AdvancedBreedingPod/AdvancedBreedingPod.IronTeeth.blueprint.json",
+    "path": "AdvancedBreedingPodIcon.png",
+    "width": 76,
+    "height": 96
+  },
+  {
+    "spriteName": "AgoraIcon",
+    "source": "Buildings/Wellbeing/Agora/Agora.Folktails.blueprint.json",
+    "path": "AgoraIcon.png",
+    "width": 94,
+    "height": 87
+  },
+  {
+    "spriteName": "AncientAquiferDrillIcon",
+    "source": "MapEditor/Water/AncientAquiferDrill/AncientAquiferDrill.blueprint.json",
+    "path": "AncientAquiferDrillIcon.png",
+    "width": 112,
+    "height": 102
+  },
+  {
+    "spriteName": "AquaticFarmhouseIcon",
+    "source": "Buildings/Food/AquaticFarmhouse/AquaticFarmhouse.Folktails.blueprint.json",
+    "path": "AquaticFarmhouseIcon.png",
+    "width": 104,
+    "height": 92
+  },
+  {
+    "spriteName": "AquiferIcon",
+    "source": "MapEditor/Water/Aquifer/Aquifer.blueprint.json",
+    "path": "AquiferIcon.png",
+    "width": 108,
+    "height": 89
+  },
+  {
+    "spriteName": "BadtideDrainIcon",
+    "source": "MapEditor/Water/BadtideDrain/BadtideDrain.blueprint.json",
+    "path": "BadtideDrainIcon.png",
+    "width": 112,
+    "height": 109
+  },
+  {
+    "spriteName": "BadwaterDischargeIcon",
+    "source": "Buildings/Water/BadwaterDischarge/BadwaterDischarge.IronTeeth.blueprint.json",
+    "path": "BadwaterDischargeIcon.png",
+    "width": 112,
+    "height": 102
+  },
+  {
+    "spriteName": "BadwaterDomeIcon",
+    "source": "Buildings/Water/BadwaterDome/BadwaterDome.Folktails.blueprint.json",
+    "path": "BadwaterDomeIcon.png",
+    "width": 112,
+    "height": 102
+  },
+  {
+    "spriteName": "BadwaterPumpIcon",
+    "source": "Buildings/Water/BadwaterPump/BadwaterPump.Folktails.blueprint.json",
+    "path": "BadwaterPumpIcon.png",
+    "width": 108,
+    "height": 102
+  },
+  {
+    "spriteName": "BadwaterRigIcon",
+    "source": "Buildings/Water/BadwaterRig/BadwaterRig.Folktails.blueprint.json",
+    "path": "BadwaterRigIcon.png",
+    "width": 112,
+    "height": 102
+  },
+  {
+    "spriteName": "BadwaterSeepIcon",
+    "source": "MapEditor/Water/BadwaterSeep/BadwaterSeep.blueprint.json",
+    "path": "BadwaterSeepIcon.png",
+    "width": 108,
+    "height": 103
+  },
+  {
+    "spriteName": "BadwaterSourceIcon",
+    "source": "MapEditor/Water/BadwaterSource/BadwaterSource.blueprint.json",
+    "path": "BadwaterSourceIcon.png",
+    "width": 109,
+    "height": 103
+  },
+  {
+    "spriteName": "BakeryIcon",
+    "source": "Buildings/Food/Bakery/Bakery.Folktails.blueprint.json",
+    "path": "BakeryIcon.png",
+    "width": 89,
+    "height": 84
+  },
+  {
+    "spriteName": "BarrackIcon",
+    "source": "Buildings/Housing/Barrack/Barrack.IronTeeth.blueprint.json",
+    "path": "BarrackIcon.png",
+    "width": 106,
+    "height": 76
+  },
+  {
+    "spriteName": "BeaverBustIcon",
+    "source": "Buildings/Decoration/BeaverBust/BeaverBust.IronTeeth.blueprint.json",
+    "path": "BeaverBustIcon.png",
+    "width": 75,
+    "height": 81
+  },
+  {
+    "spriteName": "BeaverStatueIcon",
+    "source": "Buildings/Decoration/BeaverStatue/BeaverStatue.Folktails.blueprint.json",
+    "path": "BeaverStatueIcon.png",
+    "width": 69,
+    "height": 82
+  },
+  {
+    "spriteName": "BeehiveIcon",
+    "source": "Buildings/Food/Beehive/Beehive.Folktails.blueprint.json",
+    "path": "BeehiveIcon.png",
+    "width": 103,
+    "height": 103
+  },
+  {
+    "spriteName": "BellIcon",
+    "source": "Buildings/Decoration/Bell/Bell.IronTeeth.blueprint.json",
+    "path": "BellIcon.png",
+    "width": 86,
+    "height": 89
+  },
+  {
+    "spriteName": "BenchIcon",
+    "source": "Buildings/Decoration/Bench/Bench.Folktails.blueprint.json",
+    "path": "BenchIcon.png",
+    "width": 77,
+    "height": 79
+  },
+  {
+    "spriteName": "BirchIcon",
+    "source": "NaturalResources/Trees/Birch/Birch.blueprint.json",
+    "path": "BirchIcon.png",
+    "width": 77,
+    "height": 102
+  },
+  {
+    "spriteName": "BlockageIcon",
+    "source": "MapEditor/Objects/Blockage/Blockage.blueprint.json",
+    "path": "BlockageIcon.png",
+    "width": 101,
+    "height": 81
+  },
+  {
+    "spriteName": "BlueberryBushIcon",
+    "source": "NaturalResources/Bushes/Blueberry/BlueberryBush.blueprint.json",
+    "path": "BlueberryBushIcon.png",
+    "width": 92,
+    "height": 93
+  },
+  {
+    "spriteName": "BotAssemblerIcon",
+    "source": "Buildings/Science/BotAssembler/BotAssembler.Folktails.blueprint.json",
+    "path": "BotAssemblerIcon.png",
+    "width": 104,
+    "height": 98
+  },
+  {
+    "spriteName": "BotPartFactoryIcon",
+    "source": "Buildings/Science/BotPartFactory/BotPartFactory.Folktails.blueprint.json",
+    "path": "BotPartFactoryIcon.png",
+    "width": 96,
+    "height": 82
+  },
+  {
+    "spriteName": "BrazierIcon",
+    "source": "Buildings/Decoration/Brazier/Brazier.IronTeeth.blueprint.json",
+    "path": "BrazierIcon.png",
+    "width": 92,
+    "height": 82
+  },
+  {
+    "spriteName": "BrazierOfBondingIcon",
+    "source": "Buildings/Monuments/BrazierOfBonding/BrazierOfBonding.Folktails.blueprint.json",
+    "path": "BrazierOfBondingIcon.png",
+    "width": 96,
+    "height": 102
+  },
+  {
+    "spriteName": "BreedingPodIcon",
+    "source": "Buildings/Housing/BreedingPod/BreedingPod.IronTeeth.blueprint.json",
+    "path": "BreedingPodIcon.png",
+    "width": 73,
+    "height": 92
+  },
+  {
+    "spriteName": "BuildersHutIcon",
+    "source": "Buildings/DistrictManagement/BuildersHut/BuildersHut.Folktails.blueprint.json",
+    "path": "BuildersHutIcon.png",
+    "width": 96,
+    "height": 93
+  },
+  {
+    "spriteName": "BulletinPoleIcon",
+    "source": "Buildings/Decoration/BulletinPole/BulletinPole.Folktails.blueprint.json",
+    "path": "BulletinPoleIcon.png",
+    "width": 80,
+    "height": 90
+  },
+  {
+    "spriteName": "CampfireIcon",
+    "source": "Buildings/Wellbeing/Campfire/Campfire.Folktails.blueprint.json",
+    "path": "CampfireIcon.png",
+    "width": 89,
+    "height": 86
+  },
+  {
+    "spriteName": "CancelToolIcon",
+    "source": "explicit-bottom-bar-tool",
+    "path": "CancelToolIcon.png",
+    "width": 112,
+    "height": 109
+  },
+  {
+    "spriteName": "CanolaIcon",
+    "source": "NaturalResources/Crops/Canola/Canola.blueprint.json",
+    "path": "CanolaIcon.png",
+    "width": 110,
+    "height": 97
+  },
+  {
+    "spriteName": "CarouselIcon",
+    "source": "Buildings/Wellbeing/Carousel/Carousel.Folktails.blueprint.json",
+    "path": "CarouselIcon.png",
+    "width": 89,
+    "height": 99
+  },
+  {
+    "spriteName": "CarrotIcon",
+    "source": "NaturalResources/Crops/Carrot/Carrot.blueprint.json",
+    "path": "CarrotIcon.png",
+    "width": 106,
+    "height": 91
+  },
+  {
+    "spriteName": "CassavaIcon",
+    "source": "NaturalResources/Crops/Cassava/Cassava.blueprint.json",
+    "path": "CassavaIcon.png",
+    "width": 65,
+    "height": 64
+  },
+  {
+    "spriteName": "CattailIcon",
+    "source": "NaturalResources/Crops/Cattail/Cattail.blueprint.json",
+    "path": "CattailIcon.png",
+    "width": 111,
+    "height": 111
+  },
+  {
+    "spriteName": "CentrifugeIcon",
+    "source": "Buildings/Water/Centrifuge/Centrifuge.Folktails.blueprint.json",
+    "path": "CentrifugeIcon.png",
+    "width": 112,
+    "height": 97
+  },
+  {
+    "spriteName": "ChargingStationIcon",
+    "source": "Buildings/Science/ChargingStation/ChargingStation.IronTeeth.blueprint.json",
+    "path": "ChargingStationIcon.png",
+    "width": 108,
+    "height": 93
+  },
+  {
+    "spriteName": "ChestnutTreeIcon",
+    "source": "NaturalResources/Trees/ChestnutTree/ChestnutTree.blueprint.json",
+    "path": "ChestnutTreeIcon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "ChronometerIcon",
+    "source": "Buildings/Automation/Chronometer/Chronometer.Folktails.blueprint.json",
+    "path": "ChronometerIcon.png",
+    "width": 75,
+    "height": 96
+  },
+  {
+    "spriteName": "ClutchIcon",
+    "source": "Buildings/Power/Clutch/Clutch.Folktails.blueprint.json",
+    "path": "ClutchIcon.png",
+    "width": 110,
+    "height": 63
+  },
+  {
+    "spriteName": "CoffeeBreweryIcon",
+    "source": "Buildings/Food/CoffeeBrewery/CoffeeBrewery.IronTeeth.blueprint.json",
+    "path": "CoffeeBreweryIcon.png",
+    "width": 112,
+    "height": 107
+  },
+  {
+    "spriteName": "CoffeeBushIcon",
+    "source": "NaturalResources/Bushes/Coffee/CoffeeBush.blueprint.json",
+    "path": "CoffeeBushIcon.png",
+    "width": 107,
+    "height": 85
+  },
+  {
+    "spriteName": "CompactWaterWheelIcon",
+    "source": "Buildings/Power/CompactWaterWheel/CompactWaterWheel.IronTeeth.blueprint.json",
+    "path": "CompactWaterWheelIcon.png",
+    "width": 102,
+    "height": 80
+  },
+  {
+    "spriteName": "ContaminationBarrierIcon",
+    "source": "Buildings/Landscaping/ContaminationBarrier/ContaminationBarrier.Folktails.blueprint.json",
+    "path": "ContaminationBarrierIcon.png",
+    "width": 109,
+    "height": 74
+  },
+  {
+    "spriteName": "ContaminationSensorIcon",
+    "source": "Buildings/Automation/ContaminationSensor/ContaminationSensor.Folktails.blueprint.json",
+    "path": "ContaminationSensorIcon.png",
+    "width": 107,
+    "height": 97
+  },
+  {
+    "spriteName": "ContemplationSpotIcon",
+    "source": "Buildings/Wellbeing/ContemplationSpot/ContemplationSpot.Folktails.blueprint.json",
+    "path": "ContemplationSpotIcon.png",
+    "width": 89,
+    "height": 98
+  },
+  {
+    "spriteName": "ControlTowerIcon",
+    "source": "Buildings/Science/ControlTower/ControlTower.IronTeeth.blueprint.json",
+    "path": "ControlTowerIcon.png",
+    "width": 80,
+    "height": 101
+  },
+  {
+    "spriteName": "CornIcon",
+    "source": "NaturalResources/Crops/Corn/Corn.blueprint.json",
+    "path": "CornIcon.png",
+    "width": 66,
+    "height": 72
+  },
+  {
+    "spriteName": "DamIcon",
+    "source": "Buildings/Landscaping/Dam/Dam.Folktails.blueprint.json",
+    "path": "DamIcon.png",
+    "width": 112,
+    "height": 93
+  },
+  {
+    "spriteName": "DanceHallIcon",
+    "source": "Buildings/Wellbeing/DanceHall/DanceHall.Folktails.blueprint.json",
+    "path": "DanceHallIcon.png",
+    "width": 110,
+    "height": 95
+  },
+  {
+    "spriteName": "DandelionIcon",
+    "source": "NaturalResources/Bushes/Dandelion/Dandelion.blueprint.json",
+    "path": "DandelionIcon.png",
+    "width": 112,
+    "height": 92
+  },
+  {
+    "spriteName": "DecontaminationPodIcon",
+    "source": "Buildings/Wellbeing/DecontaminationPod/DecontaminationPod.IronTeeth.blueprint.json",
+    "path": "DecontaminationPodIcon.png",
+    "width": 104,
+    "height": 93
+  },
+  {
+    "spriteName": "DecorativeClockIcon",
+    "source": "Buildings/Decoration/DecorativeClock/DecorativeClock.IronTeeth.blueprint.json",
+    "path": "DecorativeClockIcon.png",
+    "width": 83,
+    "height": 85
+  },
+  {
+    "spriteName": "DeepBadwaterPumpIcon",
+    "source": "Buildings/Water/DeepBadwaterPump/DeepBadwaterPump.IronTeeth.blueprint.json",
+    "path": "DeepBadwaterPumpIcon.png",
+    "width": 108,
+    "height": 102
+  },
+  {
+    "spriteName": "DeepMechanicalFluidPumpIcon",
+    "source": "Buildings/Water/DeepMechanicalFluidPump/DeepMechanicalFluidPump.IronTeeth.blueprint.json",
+    "path": "DeepMechanicalFluidPumpIcon.png",
+    "width": 112,
+    "height": 97
+  },
+  {
+    "spriteName": "DeepWaterPumpIcon",
+    "source": "Buildings/Water/DeepWaterPump/DeepWaterPump.IronTeeth.blueprint.json",
+    "path": "DeepWaterPumpIcon.png",
+    "width": 110,
+    "height": 103
+  },
+  {
+    "spriteName": "DeleteGroupIcon",
+    "source": "ToolGroups/ToolGroups.Demolishing.blueprint.json",
+    "path": "DeleteGroupIcon.png",
+    "width": 87,
+    "height": 91
+  },
+  {
+    "spriteName": "DeleteObjectIcon",
+    "source": "explicit-bottom-bar-tool",
+    "path": "DeleteObjectIcon.png",
+    "width": 92,
+    "height": 86
+  },
+  {
+    "spriteName": "DeleteRecoveredGoodStackToolIcon",
+    "source": "explicit-bottom-bar-tool",
+    "path": "DeleteRecoveredGoodStackToolIcon.png",
+    "width": 104,
+    "height": 95
+  },
+  {
+    "spriteName": "DemolishResourcesTool",
+    "source": "explicit-bottom-bar-tool",
+    "path": "DemolishResourcesTool.png",
+    "width": 106,
+    "height": 101
+  },
+  {
+    "spriteName": "DepthSensorIcon",
+    "source": "Buildings/Automation/DepthSensor/DepthSensor.Folktails.blueprint.json",
+    "path": "DepthSensorIcon.png",
+    "width": 107,
+    "height": 97
+  },
+  {
+    "spriteName": "DetailerIcon",
+    "source": "Buildings/Wellbeing/Detailer/Detailer.Folktails.blueprint.json",
+    "path": "DetailerIcon.png",
+    "width": 103,
+    "height": 93
+  },
+  {
+    "spriteName": "DetonatorIcon",
+    "source": "Buildings/Automation/Detonator/Detonator.Folktails.blueprint.json",
+    "path": "DetonatorIcon.png",
+    "width": 76,
+    "height": 93
+  },
+  {
+    "spriteName": "DevPowerGeneratorIcon",
+    "source": "Buildings/Power/DevPowerGenerator/DevPowerGenerator.blueprint.json",
+    "path": "DevPowerGeneratorIcon.png",
+    "width": 82,
+    "height": 82
+  },
+  {
+    "spriteName": "DevWaterSourceIcon",
+    "source": "Buildings/Water/DevWaterSource/DevWaterSource.blueprint.json",
+    "path": "DevWaterSourceIcon.png",
+    "width": 112,
+    "height": 102
+  },
+  {
+    "spriteName": "DirtExcavatorIcon",
+    "source": "Buildings/Landscaping/DirtExcavator/DirtExcavator.Folktails.blueprint.json",
+    "path": "DirtExcavatorIcon.png",
+    "width": 112,
+    "height": 108
+  },
+  {
+    "spriteName": "DistrictCenterIcon",
+    "source": "Buildings/DistrictManagement/DistrictCenter/DistrictCenter.Folktails.blueprint.json",
+    "path": "DistrictCenterIcon.png",
+    "width": 92,
+    "height": 92
+  },
+  {
+    "spriteName": "DistrictCrossingIcon",
+    "source": "Buildings/DistrictManagement/DistrictCrossing/DistrictCrossing.Folktails.blueprint.json",
+    "path": "DistrictCrossingIcon.png",
+    "width": 101,
+    "height": 107
+  },
+  {
+    "spriteName": "DoubleDynamiteIcon",
+    "source": "Buildings/Landscaping/DoubleDynamite/DoubleDynamite.Folktails.blueprint.json",
+    "path": "DoubleDynamiteIcon.png",
+    "width": 86,
+    "height": 85
+  },
+  {
+    "spriteName": "DoubleFloodgateIcon",
+    "source": "Buildings/Landscaping/DoubleFloodgate/DoubleFloodgate.Folktails.blueprint.json",
+    "path": "DoubleFloodgateIcon.png",
+    "width": 112,
+    "height": 108
+  },
+  {
+    "spriteName": "DoubleLodgeIcon",
+    "source": "Buildings/Housing/DoubleLodge/DoubleLodge.Folktails.blueprint.json",
+    "path": "DoubleLodgeIcon.png",
+    "width": 82,
+    "height": 74
+  },
+  {
+    "spriteName": "DoublePlatformIcon",
+    "source": "Buildings/Paths/DoublePlatform/DoublePlatform.Folktails.blueprint.json",
+    "path": "DoublePlatformIcon.png",
+    "width": 86,
+    "height": 84
+  },
+  {
+    "spriteName": "DoubleShowerIcon",
+    "source": "Buildings/Wellbeing/DoubleShower/DoubleShower.IronTeeth.blueprint.json",
+    "path": "DoubleShowerIcon.png",
+    "width": 110,
+    "height": 104
+  },
+  {
+    "spriteName": "DynamiteIcon",
+    "source": "Buildings/Landscaping/Dynamite/Dynamite.Folktails.blueprint.json",
+    "path": "DynamiteIcon.png",
+    "width": 86,
+    "height": 85
+  },
+  {
+    "spriteName": "EarthRecultivatorIcon",
+    "source": "Buildings/Monuments/EarthRecultivator/EarthRecultivator.Folktails.blueprint.json",
+    "path": "EarthRecultivatorIcon.png",
+    "width": 116,
+    "height": 100
+  },
+  {
+    "spriteName": "EarthRepopulatorIcon",
+    "source": "Buildings/Monuments/EarthRepopulator/EarthRepopulator.IronTeeth.blueprint.json",
+    "path": "EarthRepopulatorIcon.png",
+    "width": 116,
+    "height": 97
+  },
+  {
+    "spriteName": "EfficientFarmHouseIcon",
+    "source": "Buildings/Food/EfficientFarmHouse/EfficientFarmHouse.Folktails.blueprint.json",
+    "path": "EfficientFarmHouseIcon.png",
+    "width": 104,
+    "height": 93
+  },
+  {
+    "spriteName": "EfficientMineIcon",
+    "source": "Buildings/Metal/EfficientMine/EfficientMine.IronTeeth.blueprint.json",
+    "path": "EfficientMineIcon.png",
+    "width": 101,
+    "height": 97
+  },
+  {
+    "spriteName": "EggplantIcon",
+    "source": "NaturalResources/Crops/Eggplant/Eggplant.blueprint.json",
+    "path": "EggplantIcon.png",
+    "width": 60,
+    "height": 65
+  },
+  {
+    "spriteName": "ExercisePlazaIcon",
+    "source": "Buildings/Wellbeing/ExercisePlaza/ExercisePlaza.IronTeeth.blueprint.json",
+    "path": "ExercisePlazaIcon.png",
+    "width": 104,
+    "height": 95
+  },
+  {
+    "spriteName": "ExplosivesFactoryIcon",
+    "source": "Buildings/Landscaping/ExplosivesFactory/ExplosivesFactory.Folktails.blueprint.json",
+    "path": "ExplosivesFactoryIcon.png",
+    "width": 89,
+    "height": 97
+  },
+  {
+    "spriteName": "FarmerMonumentIcon",
+    "source": "Buildings/Monuments/FarmerMonument/FarmerMonument.Folktails.blueprint.json",
+    "path": "FarmerMonumentIcon.png",
+    "width": 96,
+    "height": 111
+  },
+  {
+    "spriteName": "FarmHouseIcon",
+    "source": "Buildings/Food/FarmHouse/FarmHouse.IronTeeth.blueprint.json",
+    "path": "FarmHouseIcon.png",
+    "width": 106,
+    "height": 96
+  },
+  {
+    "spriteName": "FermenterIcon",
+    "source": "Buildings/Food/Fermenter/Fermenter.IronTeeth.blueprint.json",
+    "path": "FermenterIcon.png",
+    "width": 112,
+    "height": 90
+  },
+  {
+    "spriteName": "FieldsPlantingToolGroupIcon",
+    "source": "ToolGroups/ToolGroups.Fields.blueprint.json",
+    "path": "FieldsPlantingToolGroupIcon.png",
+    "width": 112,
+    "height": 104
+  },
+  {
+    "spriteName": "FillValveIcon",
+    "source": "Buildings/Landscaping/FillValve/FillValve.Folktails.blueprint.json",
+    "path": "FillValveIcon.png",
+    "width": 112,
+    "height": 93
+  },
+  {
+    "spriteName": "FireworkLauncherIcon",
+    "source": "Buildings/Automation/FireworkLauncher/FireworkLauncher.Folktails.blueprint.json",
+    "path": "FireworkLauncherIcon.png",
+    "width": 77,
+    "height": 80
+  },
+  {
+    "spriteName": "FlameOfUnityIcon",
+    "source": "Buildings/Monuments/FlameOfUnity/FlameOfUnity.IronTeeth.blueprint.json",
+    "path": "FlameOfUnityIcon.png",
+    "width": 96,
+    "height": 108
+  },
+  {
+    "spriteName": "FloodgateIcon",
+    "source": "Buildings/Landscaping/Floodgate/Floodgate.Folktails.blueprint.json",
+    "path": "FloodgateIcon.png",
+    "width": 112,
+    "height": 108
+  },
+  {
+    "spriteName": "FlowSensorIcon",
+    "source": "Buildings/Automation/FlowSensor/FlowSensor.Folktails.blueprint.json",
+    "path": "FlowSensorIcon.png",
+    "width": 107,
+    "height": 97
+  },
+  {
+    "spriteName": "FluidDumpIcon",
+    "source": "Buildings/Water/FluidDump/FluidDump.Folktails.blueprint.json",
+    "path": "FluidDumpIcon.png",
+    "width": 107,
+    "height": 100
+  },
+  {
+    "spriteName": "FoodFactoryIcon",
+    "source": "Buildings/Food/FoodFactory/FoodFactory.IronTeeth.blueprint.json",
+    "path": "FoodFactoryIcon.png",
+    "width": 112,
+    "height": 100
+  },
+  {
+    "spriteName": "ForesterIcon",
+    "source": "Buildings/Wood/Forester/Forester.Folktails.blueprint.json",
+    "path": "ForesterIcon.png",
+    "width": 95,
+    "height": 97
+  },
+  {
+    "spriteName": "ForestryPlantingToolGroupIcon",
+    "source": "ToolGroups/ToolGroups.Forestry.blueprint.json",
+    "path": "ForestryPlantingToolGroupIcon.png",
+    "width": 112,
+    "height": 112
+  },
+  {
+    "spriteName": "FountainOfJoyIcon",
+    "source": "Buildings/Monuments/FountainOfJoy/FountainOfJoy.Folktails.blueprint.json",
+    "path": "FountainOfJoyIcon.png",
+    "width": 107,
+    "height": 112
+  },
+  {
+    "spriteName": "GateIcon",
+    "source": "Buildings/Paths/Gate/Gate.Folktails.blueprint.json",
+    "path": "GateIcon.png",
+    "width": 84,
+    "height": 83
+  },
+  {
+    "spriteName": "GathererFlagIcon",
+    "source": "Buildings/Food/GathererFlag/GathererFlag.Folktails.blueprint.json",
+    "path": "GathererFlagIcon.png",
+    "width": 101,
+    "height": 103
+  },
+  {
+    "spriteName": "GearWorkshopIcon",
+    "source": "Buildings/Wood/GearWorkshop/GearWorkshop.Folktails.blueprint.json",
+    "path": "GearWorkshopIcon.png",
+    "width": 93,
+    "height": 100
+  },
+  {
+    "spriteName": "GeothermalEngineIcon",
+    "source": "Buildings/Power/GeothermalEngine/GeothermalEngine.Folktails.blueprint.json",
+    "path": "GeothermalEngineIcon.png",
+    "width": 98,
+    "height": 104
+  },
+  {
+    "spriteName": "GeothermalFieldIcon",
+    "source": "MapEditor/Objects/GeothermalField/GeothermalField.blueprint.json",
+    "path": "GeothermalFieldIcon.png",
+    "width": 102,
+    "height": 92
+  },
+  {
+    "spriteName": "GravityBatteryIcon",
+    "source": "Buildings/Power/GravityBattery/GravityBattery.Folktails.blueprint.json",
+    "path": "GravityBatteryIcon.png",
+    "width": 88,
+    "height": 101
+  },
+  {
+    "spriteName": "GreaseFactoryIcon",
+    "source": "Buildings/Science/GreaseFactory/GreaseFactory.IronTeeth.blueprint.json",
+    "path": "GreaseFactoryIcon.png",
+    "width": 110,
+    "height": 96
+  },
+  {
+    "spriteName": "GrillIcon",
+    "source": "Buildings/Food/Grill/Grill.Folktails.blueprint.json",
+    "path": "GrillIcon.png",
+    "width": 85,
+    "height": 89
+  },
+  {
+    "spriteName": "GristmillIcon",
+    "source": "Buildings/Food/Gristmill/Gristmill.Folktails.blueprint.json",
+    "path": "GristmillIcon.png",
+    "width": 92,
+    "height": 89
+  },
+  {
+    "spriteName": "HammockIcon",
+    "source": "Buildings/Decoration/Hammock/Hammock.Folktails.blueprint.json",
+    "path": "HammockIcon.png",
+    "width": 89,
+    "height": 82
+  },
+  {
+    "spriteName": "HaulingPostIcon",
+    "source": "Buildings/DistrictManagement/HaulingPost/HaulingPost.Folktails.blueprint.json",
+    "path": "HaulingPostIcon.png",
+    "width": 107,
+    "height": 106
+  },
+  {
+    "spriteName": "HedgeIcon",
+    "source": "Buildings/Decoration/Hedge/Hedge.Folktails.blueprint.json",
+    "path": "HedgeIcon.png",
+    "width": 106,
+    "height": 81
+  },
+  {
+    "spriteName": "HerbalistIcon",
+    "source": "Buildings/Wellbeing/Herbalist/Herbalist.Folktails.blueprint.json",
+    "path": "HerbalistIcon.png",
+    "width": 93,
+    "height": 95
+  },
+  {
+    "spriteName": "HttpAdapterIcon",
+    "source": "Buildings/Automation/HttpAdapter/HttpAdapter.Folktails.blueprint.json",
+    "path": "HttpAdapterIcon.png",
+    "width": 94,
+    "height": 96
+  },
+  {
+    "spriteName": "HttpLeverIcon",
+    "source": "Buildings/Automation/HttpLever/HttpLever.Folktails.blueprint.json",
+    "path": "HttpLeverIcon.png",
+    "width": 94,
+    "height": 96
+  },
+  {
+    "spriteName": "HydroponicGardenIcon",
+    "source": "Buildings/Food/HydroponicGarden/HydroponicGarden.IronTeeth.blueprint.json",
+    "path": "HydroponicGardenIcon.png",
+    "width": 112,
+    "height": 86
+  },
+  {
+    "spriteName": "ImpermeableFloorIcon",
+    "source": "Buildings/Landscaping/ImpermeableFloor/ImpermeableFloor.Folktails.blueprint.json",
+    "path": "ImpermeableFloorIcon.png",
+    "width": 98,
+    "height": 67
+  },
+  {
+    "spriteName": "IndicatorIcon",
+    "source": "Buildings/Automation/Indicator/Indicator.Folktails.blueprint.json",
+    "path": "IndicatorIcon.png",
+    "width": 86,
+    "height": 75
+  },
+  {
+    "spriteName": "IndustrialLumberMillIcon",
+    "source": "Buildings/Wood/IndustrialLumberMill/IndustrialLumberMill.IronTeeth.blueprint.json",
+    "path": "IndustrialLumberMillIcon.png",
+    "width": 92,
+    "height": 94
+  },
+  {
+    "spriteName": "InventorIcon",
+    "source": "Buildings/Science/Inventor/Inventor.Folktails.blueprint.json",
+    "path": "InventorIcon.png",
+    "width": 89,
+    "height": 84
+  },
+  {
+    "spriteName": "IrrigationBarrierIcon",
+    "source": "Buildings/Landscaping/IrrigationBarrier/IrrigationBarrier.IronTeeth.blueprint.json",
+    "path": "IrrigationBarrierIcon.png",
+    "width": 109,
+    "height": 74
+  },
+  {
+    "spriteName": "KohlrabiIcon",
+    "source": "NaturalResources/Crops/Kohlrabi/Kohlrabi.blueprint.json",
+    "path": "KohlrabiIcon.png",
+    "width": 109,
+    "height": 88
+  },
+  {
+    "spriteName": "LaborerMonumentIcon",
+    "source": "Buildings/Monuments/LaborerMonument/LaborerMonument.IronTeeth.blueprint.json",
+    "path": "LaborerMonumentIcon.png",
+    "width": 96,
+    "height": 100
+  },
+  {
+    "spriteName": "LanternIcon",
+    "source": "Buildings/Decoration/Lantern/Lantern.Folktails.blueprint.json",
+    "path": "LanternIcon.png",
+    "width": 85,
+    "height": 91
+  },
+  {
+    "spriteName": "LargeBarrackIcon",
+    "source": "Buildings/Housing/LargeBarrack/LargeBarrack.IronTeeth.blueprint.json",
+    "path": "LargeBarrackIcon.png",
+    "width": 106,
+    "height": 76
+  },
+  {
+    "spriteName": "LargeIndustrialPileIcon",
+    "source": "Buildings/Storage/LargeIndustrialPile/LargeIndustrialPile.IronTeeth.blueprint.json",
+    "path": "LargeIndustrialPileIcon.png",
+    "width": 97,
+    "height": 93
+  },
+  {
+    "spriteName": "LargePileIcon",
+    "source": "Buildings/Storage/LargePile/LargePile.Folktails.blueprint.json",
+    "path": "LargePileIcon.png",
+    "width": 97,
+    "height": 75
+  },
+  {
+    "spriteName": "LargePowerWheelIcon",
+    "source": "Buildings/Power/LargePowerWheel/LargePowerWheel.IronTeeth.blueprint.json",
+    "path": "LargePowerWheelIcon.png",
+    "width": 94,
+    "height": 92
+  },
+  {
+    "spriteName": "LargeRelicIcon",
+    "source": "MapEditor/Objects/LargeRelic/LargeRelic.blueprint.json",
+    "path": "LargeRelicIcon.png",
+    "width": 98,
+    "height": 99
+  },
+  {
+    "spriteName": "LargeRowhouseIcon",
+    "source": "Buildings/Housing/LargeRowhouse/LargeRowhouse.IronTeeth.blueprint.json",
+    "path": "LargeRowhouseIcon.png",
+    "width": 56,
+    "height": 91
+  },
+  {
+    "spriteName": "LargeTankIcon",
+    "source": "Buildings/Storage/LargeTank/LargeTank.Folktails.blueprint.json",
+    "path": "LargeTankIcon.png",
+    "width": 108,
+    "height": 96
+  },
+  {
+    "spriteName": "LargeWarehouseIcon",
+    "source": "Buildings/Storage/LargeWarehouse/LargeWarehouse.Folktails.blueprint.json",
+    "path": "LargeWarehouseIcon.png",
+    "width": 80,
+    "height": 86
+  },
+  {
+    "spriteName": "LargeWaterPumpIcon",
+    "source": "Buildings/Water/LargeWaterPump/LargeWaterPump.Folktails.blueprint.json",
+    "path": "LargeWaterPumpIcon.png",
+    "width": 112,
+    "height": 107
+  },
+  {
+    "spriteName": "LargeWaterWheelIcon",
+    "source": "Buildings/Power/LargeWaterWheel/LargeWaterWheel.IronTeeth.blueprint.json",
+    "path": "LargeWaterWheelIcon.png",
+    "width": 102,
+    "height": 91
+  },
+  {
+    "spriteName": "LargeWindTurbineIcon",
+    "source": "Buildings/Power/LargeWindTurbine/LargeWindTurbine.Folktails.blueprint.json",
+    "path": "LargeWindTurbineIcon.png",
+    "width": 86,
+    "height": 98
+  },
+  {
+    "spriteName": "LeveeIcon",
+    "source": "Buildings/Landscaping/Levee/Levee.Folktails.blueprint.json",
+    "path": "LeveeIcon.png",
+    "width": 109,
+    "height": 93
+  },
+  {
+    "spriteName": "LeverIcon",
+    "source": "Buildings/Automation/Lever/Lever.Folktails.blueprint.json",
+    "path": "LeverIcon.png",
+    "width": 79,
+    "height": 90
+  },
+  {
+    "spriteName": "LidolIcon",
+    "source": "Buildings/Wellbeing/Lido/Lido.Folktails.blueprint.json",
+    "path": "LidolIcon.png",
+    "width": 94,
+    "height": 92
+  },
+  {
+    "spriteName": "LodgeIcon",
+    "source": "Buildings/Housing/Lodge/Lodge.Folktails.blueprint.json",
+    "path": "LodgeIcon.png",
+    "width": 82,
+    "height": 58
+  },
+  {
+    "spriteName": "LumberjackFlagIcon",
+    "source": "Buildings/Wood/LumberjackFlag/LumberjackFlag.Folktails.blueprint.json",
+    "path": "LumberjackFlagIcon.png",
+    "width": 101,
+    "height": 105
+  },
+  {
+    "spriteName": "LumberMillIcon",
+    "source": "Buildings/Wood/LumberMill/LumberMill.Folktails.blueprint.json",
+    "path": "LumberMillIcon.png",
+    "width": 95,
+    "height": 98
+  },
+  {
+    "spriteName": "MangroveIcon",
+    "source": "NaturalResources/Trees/Mangrove/Mangrove.blueprint.json",
+    "path": "MangroveIcon.png",
+    "width": 109,
+    "height": 105
+  },
+  {
+    "spriteName": "MapleIcon",
+    "source": "NaturalResources/Trees/Maple/Maple.blueprint.json",
+    "path": "MapleIcon.png",
+    "width": 94,
+    "height": 105
+  },
+  {
+    "spriteName": "MechanicalFluidPumpIcon",
+    "source": "Buildings/Water/MechanicalFluidPump/MechanicalFluidPump.Folktails.blueprint.json",
+    "path": "MechanicalFluidPumpIcon.png",
+    "width": 112,
+    "height": 97
+  },
+  {
+    "spriteName": "MedicalBedIcon",
+    "source": "Buildings/Wellbeing/MedicalBed/MedicalBed.Folktails.blueprint.json",
+    "path": "MedicalBedIcon.png",
+    "width": 87,
+    "height": 88
+  },
+  {
+    "spriteName": "MediumRelicIcon",
+    "source": "MapEditor/Objects/MediumRelic/MediumRelic.blueprint.json",
+    "path": "MediumRelicIcon.png",
+    "width": 103,
+    "height": 66
+  },
+  {
+    "spriteName": "MediumTankIcon",
+    "source": "Buildings/Storage/MediumTank/MediumTank.Folktails.blueprint.json",
+    "path": "MediumTankIcon.png",
+    "width": 91,
+    "height": 76
+  },
+  {
+    "spriteName": "MediumWarehouseIcon",
+    "source": "Buildings/Storage/MediumWarehouse/MediumWarehouse.Folktails.blueprint.json",
+    "path": "MediumWarehouseIcon.png",
+    "width": 80,
+    "height": 73
+  },
+  {
+    "spriteName": "MemoryIcon",
+    "source": "Buildings/Automation/Memory/Memory.Folktails.blueprint.json",
+    "path": "MemoryIcon.png",
+    "width": 75,
+    "height": 100
+  },
+  {
+    "spriteName": "MetalFenceIcon",
+    "source": "Buildings/Decoration/MetalFence/MetalFence.IronTeeth.blueprint.json",
+    "path": "MetalFenceIcon.png",
+    "width": 105,
+    "height": 78
+  },
+  {
+    "spriteName": "MetalPlatform3x3Icon",
+    "source": "Buildings/Paths/MetalPlatform3x3/MetalPlatform3x3.Folktails.blueprint.json",
+    "path": "MetalPlatform3x3Icon.png",
+    "width": 101,
+    "height": 87
+  },
+  {
+    "spriteName": "MetalPlatform5x5Icon",
+    "source": "Buildings/Paths/MetalPlatform5x5/MetalPlatform5x5.Folktails.blueprint.json",
+    "path": "MetalPlatform5x5Icon.png",
+    "width": 101,
+    "height": 87
+  },
+  {
+    "spriteName": "MetalsmithIcon",
+    "source": "Buildings/Metal/Metalsmith/Metalsmith.IronTeeth.blueprint.json",
+    "path": "MetalsmithIcon.png",
+    "width": 93,
+    "height": 100
+  },
+  {
+    "spriteName": "MineIcon",
+    "source": "Buildings/Metal/Mine/Mine.Folktails.blueprint.json",
+    "path": "MineIcon.png",
+    "width": 101,
+    "height": 97
+  },
+  {
+    "spriteName": "MiniLodgeIcon",
+    "source": "Buildings/Housing/MiniLodge/MiniLodge.Folktails.blueprint.json",
+    "path": "MiniLodgeIcon.png",
+    "width": 84,
+    "height": 68
+  },
+  {
+    "spriteName": "MotivatoriumIcon",
+    "source": "Buildings/Wellbeing/Motivatorium/Motivatorium.IronTeeth.blueprint.json",
+    "path": "MotivatoriumIcon.png",
+    "width": 112,
+    "height": 98
+  },
+  {
+    "spriteName": "MudBathIcon",
+    "source": "Buildings/Wellbeing/MudBath/MudBath.IronTeeth.blueprint.json",
+    "path": "MudBathIcon.png",
+    "width": 96,
+    "height": 89
+  },
+  {
+    "spriteName": "MudPitIcon",
+    "source": "Buildings/Wellbeing/MudPit/MudPit.Folktails.blueprint.json",
+    "path": "MudPitIcon.png",
+    "width": 108,
+    "height": 93
+  },
+  {
+    "spriteName": "NaturalDamIcon",
+    "source": "MapEditor/Objects/NaturalDam/NaturalDam.blueprint.json",
+    "path": "NaturalDamIcon.png",
+    "width": 101,
+    "height": 71
+  },
+  {
+    "spriteName": "NaturalOverhang2x1Icon",
+    "source": "MapEditor/Objects/NaturalOverhang2x1/NaturalOverhang2x1.blueprint.json",
+    "path": "NaturalOverhang2x1Icon.png",
+    "width": 89,
+    "height": 90
+  },
+  {
+    "spriteName": "NaturalOverhang3x1Icon",
+    "source": "MapEditor/Objects/NaturalOverhang3x1/NaturalOverhang3x1.blueprint.json",
+    "path": "NaturalOverhang3x1Icon.png",
+    "width": 89,
+    "height": 90
+  },
+  {
+    "spriteName": "NaturalOverhang4x1Icon",
+    "source": "MapEditor/Objects/NaturalOverhang4x1/NaturalOverhang4x1.blueprint.json",
+    "path": "NaturalOverhang4x1Icon.png",
+    "width": 89,
+    "height": 90
+  },
+  {
+    "spriteName": "NaturalResourcesIcon",
+    "source": "explicit-bottom-bar-tool",
+    "path": "NaturalResourcesIcon.png",
+    "width": 89,
+    "height": 81
+  },
+  {
+    "spriteName": "NumbercruncherIcon",
+    "source": "Buildings/Science/Numbercruncher/Numbercruncher.IronTeeth.blueprint.json",
+    "path": "NumbercruncherIcon.png",
+    "width": 98,
+    "height": 86
+  },
+  {
+    "spriteName": "OakIcon",
+    "source": "NaturalResources/Trees/Oak/Oak.blueprint.json",
+    "path": "OakIcon.png",
+    "width": 77,
+    "height": 102
+  },
+  {
+    "spriteName": "ObservatoryIcon",
+    "source": "Buildings/Science/Observatory/Observatory.Folktails.blueprint.json",
+    "path": "ObservatoryIcon.png",
+    "width": 96,
+    "height": 88
+  },
+  {
+    "spriteName": "OilPressIcon",
+    "source": "Buildings/Food/OilPress/OilPress.IronTeeth.blueprint.json",
+    "path": "OilPressIcon.png",
+    "width": 102,
+    "height": 89
+  },
+  {
+    "spriteName": "Overhang2x1Icon",
+    "source": "Buildings/Paths/Overhang2x1/Overhang2x1.Folktails.blueprint.json",
+    "path": "Overhang2x1Icon.png",
+    "width": 97,
+    "height": 89
+  },
+  {
+    "spriteName": "Overhang3x1Icon",
+    "source": "Buildings/Paths/Overhang3x1/Overhang3x1.Folktails.blueprint.json",
+    "path": "Overhang3x1Icon.png",
+    "width": 97,
+    "height": 89
+  },
+  {
+    "spriteName": "Overhang4x1Icon",
+    "source": "Buildings/Paths/Overhang4x1/Overhang4x1.Folktails.blueprint.json",
+    "path": "Overhang4x1Icon.png",
+    "width": 97,
+    "height": 89
+  },
+  {
+    "spriteName": "Overhang5x1Icon",
+    "source": "Buildings/Paths/Overhang5x1/Overhang5x1.Folktails.blueprint.json",
+    "path": "Overhang5x1Icon.png",
+    "width": 97,
+    "height": 89
+  },
+  {
+    "spriteName": "Overhang6x1Icon",
+    "source": "Buildings/Paths/Overhang6x1/Overhang6x1.Folktails.blueprint.json",
+    "path": "Overhang6x1Icon.png",
+    "width": 97,
+    "height": 89
+  },
+  {
+    "spriteName": "PaperMillIcon",
+    "source": "Buildings/Wood/PaperMill/PaperMill.Folktails.blueprint.json",
+    "path": "PaperMillIcon.png",
+    "width": 95,
+    "height": 98
+  },
+  {
+    "spriteName": "PathIcon",
+    "source": "Buildings/Paths/Path/Path.blueprint.json",
+    "path": "PathIcon.png",
+    "width": 94,
+    "height": 94
+  },
+  {
+    "spriteName": "PineIcon",
+    "source": "NaturalResources/Trees/Pine/Pine.blueprint.json",
+    "path": "PineIcon.png",
+    "width": 84,
+    "height": 106
+  },
+  {
+    "spriteName": "PlatformIcon",
+    "source": "Buildings/Paths/Platform/Platform.Folktails.blueprint.json",
+    "path": "PlatformIcon.png",
+    "width": 86,
+    "height": 84
+  },
+  {
+    "spriteName": "PoleBannerIcon",
+    "source": "Buildings/Decoration/PoleBanner/PoleBanner.Folktails.blueprint.json",
+    "path": "PoleBannerIcon.png",
+    "width": 82,
+    "height": 95
+  },
+  {
+    "spriteName": "PopulationCounterIcon",
+    "source": "Buildings/Automation/PopulationCounter/PopulationCounter.Folktails.blueprint.json",
+    "path": "PopulationCounterIcon.png",
+    "width": 83,
+    "height": 99
+  },
+  {
+    "spriteName": "PotatoIcon",
+    "source": "NaturalResources/Crops/Potato/Potato.blueprint.json",
+    "path": "PotatoIcon.png",
+    "width": 57,
+    "height": 46
+  },
+  {
+    "spriteName": "PowerMeterIcon",
+    "source": "Buildings/Automation/PowerMeter/PowerMeter.Folktails.blueprint.json",
+    "path": "PowerMeterIcon.png",
+    "width": 75,
+    "height": 99
+  },
+  {
+    "spriteName": "PowerShaftIcon",
+    "source": "Buildings/Power/PowerShaft/PowerShaft.Folktails.blueprint.json",
+    "path": "PowerShaftIcon.png",
+    "width": 102,
+    "height": 59
+  },
+  {
+    "spriteName": "PowerWheelIcon",
+    "source": "Buildings/Power/PowerWheel/PowerWheel.Folktails.blueprint.json",
+    "path": "PowerWheelIcon.png",
+    "width": 84,
+    "height": 84
+  },
+  {
+    "spriteName": "PrintingPressIcon",
+    "source": "Buildings/Wood/PrintingPress/PrintingPress.Folktails.blueprint.json",
+    "path": "PrintingPressIcon.png",
+    "width": 96,
+    "height": 92
+  },
+  {
+    "spriteName": "PriorityToolGroupIcon",
+    "source": "ToolGroups/ToolGroups.BuilderPriority.blueprint.json",
+    "path": "PriorityToolGroupIcon.png",
+    "width": 85,
+    "height": 91
+  },
+  {
+    "spriteName": "RefineryIcon",
+    "source": "Buildings/Science/Refinery/Refinery.Folktails.blueprint.json",
+    "path": "RefineryIcon.png",
+    "width": 100,
+    "height": 90
+  },
+  {
+    "spriteName": "RelativeTerrainHeightBrushIcon",
+    "source": "explicit-bottom-bar-tool",
+    "path": "RelativeTerrainHeightBrushIcon.png",
+    "width": 110,
+    "height": 82
+  },
+  {
+    "spriteName": "RelayIcon",
+    "source": "Buildings/Automation/Relay/Relay.Folktails.blueprint.json",
+    "path": "RelayIcon.png",
+    "width": 75,
+    "height": 90
+  },
+  {
+    "spriteName": "ReservePileIcon",
+    "source": "MapEditor/Objects/ReservePile/ReservePile.blueprint.json",
+    "path": "ReservePileIcon.png",
+    "width": 98,
+    "height": 77
+  },
+  {
+    "spriteName": "ReserveTankIcon",
+    "source": "MapEditor/Objects/ReserveTank/ReserveTank.blueprint.json",
+    "path": "ReserveTankIcon.png",
+    "width": 91,
+    "height": 76
+  },
+  {
+    "spriteName": "ReserveWarehouseIcon",
+    "source": "MapEditor/Objects/ReserveWarehouse/ReserveWarehouse.blueprint.json",
+    "path": "ReserveWarehouseIcon.png",
+    "width": 81,
+    "height": 74
+  },
+  {
+    "spriteName": "ResourceCounterIcon",
+    "source": "Buildings/Automation/ResourceCounter/ResourceCounter.Folktails.blueprint.json",
+    "path": "ResourceCounterIcon.png",
+    "width": 75,
+    "height": 96
+  },
+  {
+    "spriteName": "Roof1x1Icon",
+    "source": "Buildings/Decoration/Roof1x1/Roof1x1.Folktails.blueprint.json",
+    "path": "Roof1x1Icon.png",
+    "width": 91,
+    "height": 83
+  },
+  {
+    "spriteName": "Roof1x2Icon",
+    "source": "Buildings/Decoration/Roof1x2/Roof1x2.Folktails.blueprint.json",
+    "path": "Roof1x2Icon.png",
+    "width": 96,
+    "height": 86
+  },
+  {
+    "spriteName": "Roof2x2Icon",
+    "source": "Buildings/Decoration/Roof2x2/Roof2x2.Folktails.blueprint.json",
+    "path": "Roof2x2Icon.png",
+    "width": 100,
+    "height": 91
+  },
+  {
+    "spriteName": "Roof2x3Icon",
+    "source": "Buildings/Decoration/Roof2x3/Roof2x3.Folktails.blueprint.json",
+    "path": "Roof2x3Icon.png",
+    "width": 104,
+    "height": 93
+  },
+  {
+    "spriteName": "Roof3x2Icon",
+    "source": "Buildings/Decoration/Roof3x2/Roof3x2.Folktails.blueprint.json",
+    "path": "Roof3x2Icon.png",
+    "width": 107,
+    "height": 91
+  },
+  {
+    "spriteName": "RooftopTerraceIcon",
+    "source": "Buildings/Wellbeing/RooftopTerrace/RooftopTerrace.Folktails.blueprint.json",
+    "path": "RooftopTerraceIcon.png",
+    "width": 92,
+    "height": 93
+  },
+  {
+    "spriteName": "RowhouseIcon",
+    "source": "Buildings/Housing/Rowhouse/Rowhouse.IronTeeth.blueprint.json",
+    "path": "RowhouseIcon.png",
+    "width": 53,
+    "height": 74
+  },
+  {
+    "spriteName": "RuinColumnH1Icon",
+    "source": "MapEditor/Ruins/RuinColumnH1/RuinColumnH1.blueprint.json",
+    "path": "RuinColumnH1Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH2Icon",
+    "source": "MapEditor/Ruins/RuinColumnH2/RuinColumnH2.blueprint.json",
+    "path": "RuinColumnH2Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH3Icon",
+    "source": "MapEditor/Ruins/RuinColumnH3/RuinColumnH3.blueprint.json",
+    "path": "RuinColumnH3Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH4Icon",
+    "source": "MapEditor/Ruins/RuinColumnH4/RuinColumnH4.blueprint.json",
+    "path": "RuinColumnH4Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH5Icon",
+    "source": "MapEditor/Ruins/RuinColumnH5/RuinColumnH5.blueprint.json",
+    "path": "RuinColumnH5Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH6Icon",
+    "source": "MapEditor/Ruins/RuinColumnH6/RuinColumnH6.blueprint.json",
+    "path": "RuinColumnH6Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH7Icon",
+    "source": "MapEditor/Ruins/RuinColumnH7/RuinColumnH7.blueprint.json",
+    "path": "RuinColumnH7Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "RuinColumnH8Icon",
+    "source": "MapEditor/Ruins/RuinColumnH8/RuinColumnH8.blueprint.json",
+    "path": "RuinColumnH8Icon.png",
+    "width": 92,
+    "height": 108
+  },
+  {
+    "spriteName": "ScarecrowIcon",
+    "source": "Buildings/Decoration/Scarecrow/Scarecrow.Folktails.blueprint.json",
+    "path": "ScarecrowIcon.png",
+    "width": 89,
+    "height": 96
+  },
+  {
+    "spriteName": "ScavengerFlagIcon",
+    "source": "Buildings/Metal/ScavengerFlag/ScavengerFlag.Folktails.blueprint.json",
+    "path": "ScavengerFlagIcon.png",
+    "width": 101,
+    "height": 105
+  },
+  {
+    "spriteName": "ScienceCounterIcon",
+    "source": "Buildings/Automation/ScienceCounter/ScienceCounter.Folktails.blueprint.json",
+    "path": "ScienceCounterIcon.png",
+    "width": 75,
+    "height": 98
+  },
+  {
+    "spriteName": "ScratcherIcon",
+    "source": "Buildings/Wellbeing/Scratcher/Scratcher.IronTeeth.blueprint.json",
+    "path": "ScratcherIcon.png",
+    "width": 88,
+    "height": 93
+  },
+  {
+    "spriteName": "SculptingTerrainBrushIcon",
+    "source": "explicit-bottom-bar-tool",
+    "path": "SculptingTerrainBrushIcon.png",
+    "width": 98,
+    "height": 91
+  },
+  {
+    "spriteName": "ShowerIcon",
+    "source": "Buildings/Wellbeing/Shower/Shower.Folktails.blueprint.json",
+    "path": "ShowerIcon.png",
+    "width": 110,
+    "height": 108
+  },
+  {
+    "spriteName": "ShrubIcon",
+    "source": "Buildings/Decoration/Shrub/Shrub.Folktails.blueprint.json",
+    "path": "ShrubIcon.png",
+    "width": 95,
+    "height": 89
+  },
+  {
+    "spriteName": "SlopeIcon",
+    "source": "MapEditor/Objects/Slope/Slope.blueprint.json",
+    "path": "SlopeIcon.png",
+    "width": 84,
+    "height": 70
+  },
+  {
+    "spriteName": "SluiceIcon",
+    "source": "Buildings/Landscaping/Sluice/Sluice.Folktails.blueprint.json",
+    "path": "SluiceIcon.png",
+    "width": 112,
+    "height": 93
+  },
+  {
+    "spriteName": "SmallIndustrialPileIcon",
+    "source": "Buildings/Storage/SmallIndustrialPile/SmallIndustrialPile.IronTeeth.blueprint.json",
+    "path": "SmallIndustrialPileIcon.png",
+    "width": 70,
+    "height": 82
+  },
+  {
+    "spriteName": "SmallPileIcon",
+    "source": "Buildings/Storage/SmallPile/SmallPile.Folktails.blueprint.json",
+    "path": "SmallPileIcon.png",
+    "width": 70,
+    "height": 60
+  },
+  {
+    "spriteName": "SmallRelicIcon",
+    "source": "MapEditor/Objects/SmallRelic/SmallRelic.blueprint.json",
+    "path": "SmallRelicIcon.png",
+    "width": 88,
+    "height": 60
+  },
+  {
+    "spriteName": "SmallTankIcon",
+    "source": "Buildings/Storage/SmallTank/SmallTank.Folktails.blueprint.json",
+    "path": "SmallTankIcon.png",
+    "width": 66,
+    "height": 66
+  },
+  {
+    "spriteName": "SmallWarehouseIcon",
+    "source": "Buildings/Storage/SmallWarehouse/SmallWarehouse.Folktails.blueprint.json",
+    "path": "SmallWarehouseIcon.png",
+    "width": 49,
+    "height": 66
+  },
+  {
+    "spriteName": "SmelterIcon",
+    "source": "Buildings/Metal/Smelter/Smelter.Folktails.blueprint.json",
+    "path": "SmelterIcon.png",
+    "width": 95,
+    "height": 98
+  },
+  {
+    "spriteName": "SoybeanIcon",
+    "source": "NaturalResources/Crops/Soybean/Soybean.blueprint.json",
+    "path": "SoybeanIcon.png",
+    "width": 62,
+    "height": 63
+  },
+  {
+    "spriteName": "SpadderdockIcon",
+    "source": "NaturalResources/Crops/Spadderdock/Spadderdock.blueprint.json",
+    "path": "SpadderdockIcon.png",
+    "width": 111,
+    "height": 100
+  },
+  {
+    "spriteName": "SpeakerIcon",
+    "source": "Buildings/Automation/Speaker/Speaker.Folktails.blueprint.json",
+    "path": "SpeakerIcon.png",
+    "width": 105,
+    "height": 92
+  },
+  {
+    "spriteName": "SpiralStairsIcon",
+    "source": "Buildings/Paths/SpiralStairs/SpiralStairs.Folktails.blueprint.json",
+    "path": "SpiralStairsIcon.png",
+    "width": 93,
+    "height": 93
+  },
+  {
+    "spriteName": "SquareBannerIcon",
+    "source": "Buildings/Decoration/SquareBanner/SquareBanner.Folktails.blueprint.json",
+    "path": "SquareBannerIcon.png",
+    "width": 82,
+    "height": 69
+  },
+  {
+    "spriteName": "StairsIcon",
+    "source": "Buildings/Paths/Stairs/Stairs.Folktails.blueprint.json",
+    "path": "StairsIcon.png",
+    "width": 76,
+    "height": 73
+  },
+  {
+    "spriteName": "StartingLocationIcon",
+    "source": "MapEditor/StartingLocation/StartingLocation.blueprint.json",
+    "path": "StartingLocationIcon.png",
+    "width": 80,
+    "height": 80
+  },
+  {
+    "spriteName": "SteamEngineIcon",
+    "source": "Buildings/Power/SteamEngine/SteamEngine.IronTeeth.blueprint.json",
+    "path": "SteamEngineIcon.png",
+    "width": 87,
+    "height": 86
+  },
+  {
+    "spriteName": "StreamGaugeIcon",
+    "source": "Buildings/Decoration/StreamGauge/StreamGauge.Folktails.blueprint.json",
+    "path": "StreamGaugeIcon.png",
+    "width": 103,
+    "height": 102
+  },
+  {
+    "spriteName": "SunflowerIcon",
+    "source": "NaturalResources/Crops/Sunflower/Sunflower.blueprint.json",
+    "path": "SunflowerIcon.png",
+    "width": 103,
+    "height": 107
+  },
+  {
+    "spriteName": "SuspensionBridge1x1Icon",
+    "source": "Buildings/Paths/SuspensionBridge1x1/SuspensionBridge1x1.Folktails.blueprint.json",
+    "path": "SuspensionBridge1x1Icon.png",
+    "width": 110,
+    "height": 101
+  },
+  {
+    "spriteName": "SuspensionBridge2x1Icon",
+    "source": "Buildings/Paths/SuspensionBridge2x1/SuspensionBridge2x1.Folktails.blueprint.json",
+    "path": "SuspensionBridge2x1Icon.png",
+    "width": 110,
+    "height": 101
+  },
+  {
+    "spriteName": "SuspensionBridge3x1Icon",
+    "source": "Buildings/Paths/SuspensionBridge3x1/SuspensionBridge3x1.Folktails.blueprint.json",
+    "path": "SuspensionBridge3x1Icon.png",
+    "width": 110,
+    "height": 101
+  },
+  {
+    "spriteName": "SuspensionBridge4x1Icon",
+    "source": "Buildings/Paths/SuspensionBridge4x1/SuspensionBridge4x1.Folktails.blueprint.json",
+    "path": "SuspensionBridge4x1Icon.png",
+    "width": 110,
+    "height": 101
+  },
+  {
+    "spriteName": "SuspensionBridge5x1Icon",
+    "source": "Buildings/Paths/SuspensionBridge5x1/SuspensionBridge5x1.Folktails.blueprint.json",
+    "path": "SuspensionBridge5x1Icon.png",
+    "width": 110,
+    "height": 101
+  },
+  {
+    "spriteName": "SuspensionBridge6x1Icon",
+    "source": "Buildings/Paths/SuspensionBridge6x1/SuspensionBridge6x1.Folktails.blueprint.json",
+    "path": "SuspensionBridge6x1Icon.png",
+    "width": 110,
+    "height": 101
+  },
+  {
+    "spriteName": "SwimmingPoolIcon",
+    "source": "Buildings/Wellbeing/SwimmingPool/SwimmingPool.IronTeeth.blueprint.json",
+    "path": "SwimmingPoolIcon.png",
+    "width": 109,
+    "height": 69
+  },
+  {
+    "spriteName": "TappersShackIcon",
+    "source": "Buildings/Wood/TappersShack/TappersShack.Folktails.blueprint.json",
+    "path": "TappersShackIcon.png",
+    "width": 102,
+    "height": 93
+  },
+  {
+    "spriteName": "TeethGrindstoneIcon",
+    "source": "Buildings/Wellbeing/TeethGrindstone/TeethGrindstone.Folktails.blueprint.json",
+    "path": "TeethGrindstoneIcon.png",
+    "width": 105,
+    "height": 85
+  },
+  {
+    "spriteName": "TerrainBlockIcon",
+    "source": "Buildings/Landscaping/TerrainBlock/TerrainBlock.Folktails.blueprint.json",
+    "path": "TerrainBlockIcon.png",
+    "width": 112,
+    "height": 71
+  },
+  {
+    "spriteName": "ThornsIcon",
+    "source": "MapEditor/Objects/Thorns/Thorns.blueprint.json",
+    "path": "ThornsIcon.png",
+    "width": 102,
+    "height": 80
+  },
+  {
+    "spriteName": "TimerIcon",
+    "source": "Buildings/Automation/Timer/Timer.Folktails.blueprint.json",
+    "path": "TimerIcon.png",
+    "width": 75,
+    "height": 102
+  },
+  {
+    "spriteName": "TreeToolGroupIcon",
+    "source": "ToolGroups/ToolGroups.TreeCutting.blueprint.json",
+    "path": "TreeToolGroupIcon.png",
+    "width": 94,
+    "height": 112
+  },
+  {
+    "spriteName": "TributeToIngenuityIcon",
+    "source": "Buildings/Monuments/TributeToIngenuity/TributeToIngenuity.IronTeeth.blueprint.json",
+    "path": "TributeToIngenuityIcon.png",
+    "width": 96,
+    "height": 108
+  },
+  {
+    "spriteName": "TripleDynamiteIcon",
+    "source": "Buildings/Landscaping/TripleDynamite/TripleDynamite.Folktails.blueprint.json",
+    "path": "TripleDynamiteIcon.png",
+    "width": 86,
+    "height": 85
+  },
+  {
+    "spriteName": "TripleFloodgateIcon",
+    "source": "Buildings/Landscaping/TripleFloodgate/TripleFloodgate.Folktails.blueprint.json",
+    "path": "TripleFloodgateIcon.png",
+    "width": 112,
+    "height": 108
+  },
+  {
+    "spriteName": "TripleLodgeIcon",
+    "source": "Buildings/Housing/TripleLodge/TripleLodge.Folktails.blueprint.json",
+    "path": "TripleLodgeIcon.png",
+    "width": 93,
+    "height": 75
+  },
+  {
+    "spriteName": "TriplePlatformIcon",
+    "source": "Buildings/Paths/TriplePlatform/TriplePlatform.Folktails.blueprint.json",
+    "path": "TriplePlatformIcon.png",
+    "width": 86,
+    "height": 84
+  },
+  {
+    "spriteName": "TubewayIcon",
+    "source": "Buildings/Paths/Tubeway/Tubeway.IronTeeth.blueprint.json",
+    "path": "TubewayIcon.png",
+    "width": 84,
+    "height": 62
+  },
+  {
+    "spriteName": "TubewayStationIcon",
+    "source": "Buildings/Paths/TubewayStation/TubewayStation.IronTeeth.blueprint.json",
+    "path": "TubewayStationIcon.png",
+    "width": 107,
+    "height": 94
+  },
+  {
+    "spriteName": "TunnelIcon",
+    "source": "Buildings/Landscaping/Tunnel/Tunnel.Folktails.blueprint.json",
+    "path": "TunnelIcon.png",
+    "width": 106,
+    "height": 107
+  },
+  {
+    "spriteName": "UndergroundPileIcon",
+    "source": "Buildings/Storage/UndergroundPile/UndergroundPile.Folktails.blueprint.json",
+    "path": "UndergroundPileIcon.png",
+    "width": 106,
+    "height": 86
+  },
+  {
+    "spriteName": "UndergroundRuinsIcon",
+    "source": "MapEditor/Ruins/UndergroundRuins/UndergroundRuins.blueprint.json",
+    "path": "UndergroundRuinsIcon.png",
+    "width": 102,
+    "height": 92
+  },
+  {
+    "spriteName": "UndergroundWaterDrillIcon",
+    "source": "Buildings/Water/AquiferDrill/AquiferDrill.Folktails.blueprint.json",
+    "path": "UndergroundWaterDrillIcon.png",
+    "width": 112,
+    "height": 102
+  },
+  {
+    "spriteName": "UnstableCoreIcon",
+    "source": "MapEditor/Objects/UnstableCore/UnstableCore.blueprint.json",
+    "path": "UnstableCoreIcon.png",
+    "width": 101,
+    "height": 84
+  },
+  {
+    "spriteName": "ValveIcon",
+    "source": "Buildings/Landscaping/Valve/Valve.Folktails.blueprint.json",
+    "path": "ValveIcon.png",
+    "width": 112,
+    "height": 93
+  },
+  {
+    "spriteName": "VerticalPowerShaftIcon",
+    "source": "Buildings/Power/VerticalPowerShaft/VerticalPowerShaft.Folktails.blueprint.json",
+    "path": "VerticalPowerShaftIcon.png",
+    "width": 102,
+    "height": 75
+  },
+  {
+    "spriteName": "VerticalTubewayIcon",
+    "source": "Buildings/Paths/VerticalTubeway/VerticalTubeway.IronTeeth.blueprint.json",
+    "path": "VerticalTubewayIcon.png",
+    "width": 84,
+    "height": 73
+  },
+  {
+    "spriteName": "WaterPumpIcon",
+    "source": "Buildings/Water/WaterPump/WaterPump.Folktails.blueprint.json",
+    "path": "WaterPumpIcon.png",
+    "width": 110,
+    "height": 103
+  },
+  {
+    "spriteName": "WaterSeepIcon",
+    "source": "MapEditor/Water/WaterSeep/WaterSeep.blueprint.json",
+    "path": "WaterSeepIcon.png",
+    "width": 108,
+    "height": 101
+  },
+  {
+    "spriteName": "WaterSourceIcon",
+    "source": "MapEditor/Water/WaterSource/WaterSource.blueprint.json",
+    "path": "WaterSourceIcon.png",
+    "width": 108,
+    "height": 101
+  },
+  {
+    "spriteName": "WaterWheelIcon",
+    "source": "Buildings/Power/WaterWheel/WaterWheel.Folktails.blueprint.json",
+    "path": "WaterWheelIcon.png",
+    "width": 102,
+    "height": 79
+  },
+  {
+    "spriteName": "WeatherStationIcon",
+    "source": "Buildings/Automation/WeatherStation/WeatherStation.Folktails.blueprint.json",
+    "path": "WeatherStationIcon.png",
+    "width": 83,
+    "height": 101
+  },
+  {
+    "spriteName": "WeathervaneIcon",
+    "source": "Buildings/Decoration/Weathervane/Weathervane.Folktails.blueprint.json",
+    "path": "WeathervaneIcon.png",
+    "width": 86,
+    "height": 94
+  },
+  {
+    "spriteName": "WheatIcon",
+    "source": "NaturalResources/Crops/Wheat/Wheat.blueprint.json",
+    "path": "WheatIcon.png",
+    "width": 68,
+    "height": 71
+  },
+  {
+    "spriteName": "WindTunnelIcon",
+    "source": "Buildings/Wellbeing/WindTunnel/WindTunnel.IronTeeth.blueprint.json",
+    "path": "WindTunnelIcon.png",
+    "width": 104,
+    "height": 97
+  },
+  {
+    "spriteName": "WindTurbineIcon",
+    "source": "Buildings/Power/WindTurbine/WindTurbine.Folktails.blueprint.json",
+    "path": "WindTurbineIcon.png",
+    "width": 68,
+    "height": 92
+  },
+  {
+    "spriteName": "WoodFenceIcon",
+    "source": "Buildings/Decoration/WoodFence/WoodFence.Folktails.blueprint.json",
+    "path": "WoodFenceIcon.png",
+    "width": 110,
+    "height": 82
+  },
+  {
+    "spriteName": "WoodWorkshopIcon",
+    "source": "Buildings/Wood/WoodWorkshop/WoodWorkshop.Folktails.blueprint.json",
+    "path": "WoodWorkshopIcon.png",
+    "width": 95,
+    "height": 98
+  },
+  {
+    "spriteName": "ZiplineBeamIcon",
+    "source": "Buildings/Paths/ZiplineBeam/ZiplineBeam.Folktails.blueprint.json",
+    "path": "ZiplineBeamIcon.png",
+    "width": 101,
+    "height": 73
+  },
+  {
+    "spriteName": "ZiplinePylonIcon",
+    "source": "Buildings/Paths/ZiplinePylon/ZiplinePylon.Folktails.blueprint.json",
+    "path": "ZiplinePylonIcon.png",
+    "width": 53,
+    "height": 89
+  },
+  {
+    "spriteName": "ZiplineStationIcon",
+    "source": "Buildings/Paths/ZiplineStation/ZiplineStation.Folktails.blueprint.json",
+    "path": "ZiplineStationIcon.png",
+    "width": 84,
+    "height": 94
+  }
+]

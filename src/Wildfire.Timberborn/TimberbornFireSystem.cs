@@ -22,7 +22,7 @@ public sealed record TimberbornQaDeltaStimulusSustainedHeatState(
 
 public sealed class TimberbornFireSystem : IDisposable
 {
-    private const byte QaIgnitionHeat = 15;
+    internal const byte QaIgnitionHeat = 15;
     private const byte QaIgnitionFuel = 15;
     private const byte QaIgnitionFlammability = 3;
     private const byte QaIgnitionTerrain = 1;
@@ -267,6 +267,22 @@ public sealed class TimberbornFireSystem : IDisposable
         {
             LogRegisteredChanges(source, 1);
         }
+    }
+
+    public int RegisterSustainedIgnitionChanges(IEnumerable<FireSimChange> changes, string source)
+    {
+        FireSimChange[] ignitionChanges = (changes ?? throw new ArgumentNullException(nameof(changes))).ToArray();
+        if (ignitionChanges.Length == 0)
+        {
+            return 0;
+        }
+
+        ignitionChanges
+            .ToList()
+            .ForEach(change => RegisterChange(change, source, shouldLog: false));
+        StartQaIgnitionPeg(ignitionChanges, source);
+        LogRegisteredChanges(source, ignitionChanges.Length);
+        return GetQaIgnitionPegDispatchTicks();
     }
 
     public void LogRegisteredChanges(string source, int count)

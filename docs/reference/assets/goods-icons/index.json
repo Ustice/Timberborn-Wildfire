@@ -1,0 +1,422 @@
+[
+  {
+    "spriteName": "AlgaeIcon",
+    "source": "Goods/Good.Algae.blueprint.json",
+    "path": "AlgaeIcon.png",
+    "width": 65,
+    "height": 70
+  },
+  {
+    "spriteName": "AlgaeRationIcon",
+    "source": "Goods/Good.AlgaeRation.blueprint.json",
+    "path": "AlgaeRationIcon.png",
+    "width": 70,
+    "height": 74
+  },
+  {
+    "spriteName": "AntidoteIcon",
+    "source": "Goods/Good.Antidote.blueprint.json",
+    "path": "AntidoteIcon.png",
+    "width": 68,
+    "height": 72
+  },
+  {
+    "spriteName": "BadwaterIcon",
+    "source": "Goods/Good.Badwater.blueprint.json",
+    "path": "BadwaterIcon.png",
+    "width": 66,
+    "height": 63
+  },
+  {
+    "spriteName": "BerriesIcon",
+    "source": "Goods/Good.Berries.blueprint.json",
+    "path": "BerriesIcon.png",
+    "width": 65,
+    "height": 65
+  },
+  {
+    "spriteName": "BiofuelIcon",
+    "source": "Goods/Good.Biofuel.blueprint.json",
+    "path": "BiofuelIcon.png",
+    "width": 61,
+    "height": 71
+  },
+  {
+    "spriteName": "BookIcon",
+    "source": "Goods/Good.Book.blueprint.json",
+    "path": "BookIcon.png",
+    "width": 69,
+    "height": 59
+  },
+  {
+    "spriteName": "BotChassisIcon",
+    "source": "Goods/Good.BotChassis.blueprint.json",
+    "path": "BotChassisIcon.png",
+    "width": 70,
+    "height": 78
+  },
+  {
+    "spriteName": "BotHeadIcon",
+    "source": "Goods/Good.BotHead.blueprint.json",
+    "path": "BotHeadIcon.png",
+    "width": 63,
+    "height": 75
+  },
+  {
+    "spriteName": "BotLimbIcon",
+    "source": "Goods/Good.BotLimb.blueprint.json",
+    "path": "BotLimbIcon.png",
+    "width": 74,
+    "height": 76
+  },
+  {
+    "spriteName": "BreadIcon",
+    "source": "Goods/Good.Bread.blueprint.json",
+    "path": "BreadIcon.png",
+    "width": 69,
+    "height": 59
+  },
+  {
+    "spriteName": "CanolaOilIcon",
+    "source": "Goods/Good.CanolaOil.blueprint.json",
+    "path": "CanolaOilIcon.png",
+    "width": 72,
+    "height": 76
+  },
+  {
+    "spriteName": "CanolaSeedsIcon",
+    "source": "Goods/Good.CanolaSeeds.blueprint.json",
+    "path": "CanolaSeedsIcon.png",
+    "width": 52,
+    "height": 71
+  },
+  {
+    "spriteName": "CarrotIcon",
+    "source": "Goods/Good.Carrot.blueprint.json",
+    "path": "CarrotIcon.png",
+    "width": 106,
+    "height": 91
+  },
+  {
+    "spriteName": "CassavaIcon",
+    "source": "Goods/Good.Cassava.blueprint.json",
+    "path": "CassavaIcon.png",
+    "width": 65,
+    "height": 64
+  },
+  {
+    "spriteName": "CatalystIcon",
+    "source": "Goods/Good.Catalyst.blueprint.json",
+    "path": "CatalystIcon.png",
+    "width": 46,
+    "height": 78
+  },
+  {
+    "spriteName": "CattailCrackerIcon",
+    "source": "Goods/Good.CattailCracker.blueprint.json",
+    "path": "CattailCrackerIcon.png",
+    "width": 77,
+    "height": 77
+  },
+  {
+    "spriteName": "CattailFlourIcon",
+    "source": "Goods/Good.CattailFlour.blueprint.json",
+    "path": "CattailFlourIcon.png",
+    "width": 76,
+    "height": 80
+  },
+  {
+    "spriteName": "CattailRootIcon",
+    "source": "Goods/Good.CattailRoot.blueprint.json",
+    "path": "CattailRootIcon.png",
+    "width": 70,
+    "height": 79
+  },
+  {
+    "spriteName": "ChestnutIcon",
+    "source": "Goods/Good.Chestnut.blueprint.json",
+    "path": "ChestnutIcon.png",
+    "width": 60,
+    "height": 61
+  },
+  {
+    "spriteName": "CoffeeBeanIcon",
+    "source": "Goods/Good.CoffeeBean.blueprint.json",
+    "path": "CoffeeBeanIcon.png",
+    "width": 68,
+    "height": 58
+  },
+  {
+    "spriteName": "CoffeeIcon",
+    "source": "Goods/Good.Coffee.blueprint.json",
+    "path": "CoffeeIcon.png",
+    "width": 63,
+    "height": 74
+  },
+  {
+    "spriteName": "CornIcon",
+    "source": "Goods/Good.Corn.blueprint.json",
+    "path": "CornIcon.png",
+    "width": 66,
+    "height": 72
+  },
+  {
+    "spriteName": "CornRationIcon",
+    "source": "Goods/Good.CornRation.blueprint.json",
+    "path": "CornRationIcon.png",
+    "width": 70,
+    "height": 74
+  },
+  {
+    "spriteName": "DandelionIcon",
+    "source": "Goods/Good.Dandelion.blueprint.json",
+    "path": "DandelionIcon.png",
+    "width": 112,
+    "height": 92
+  },
+  {
+    "spriteName": "DirtIcon",
+    "source": "Goods/Good.Dirt.blueprint.json",
+    "path": "DirtIcon.png",
+    "width": 80,
+    "height": 62
+  },
+  {
+    "spriteName": "EggplantIcon",
+    "source": "Goods/Good.Eggplant.blueprint.json",
+    "path": "EggplantIcon.png",
+    "width": 60,
+    "height": 65
+  },
+  {
+    "spriteName": "EggplantRationIcon",
+    "source": "Goods/Good.EggplantRation.blueprint.json",
+    "path": "EggplantRationIcon.png",
+    "width": 70,
+    "height": 74
+  },
+  {
+    "spriteName": "ExplosivesIcon",
+    "source": "Goods/Good.Explosives.blueprint.json",
+    "path": "ExplosivesIcon.png",
+    "width": 67,
+    "height": 59
+  },
+  {
+    "spriteName": "ExtractIcon",
+    "source": "Goods/Good.Extract.blueprint.json",
+    "path": "ExtractIcon.png",
+    "width": 59,
+    "height": 62
+  },
+  {
+    "spriteName": "FermentedCassavaIcon",
+    "source": "Goods/Good.FermentedCassava.blueprint.json",
+    "path": "FermentedCassavaIcon.png",
+    "width": 74,
+    "height": 72
+  },
+  {
+    "spriteName": "FermentedMushroomIcon",
+    "source": "Goods/Good.FermentedMushroom.blueprint.json",
+    "path": "FermentedMushroomIcon.png",
+    "width": 76,
+    "height": 73
+  },
+  {
+    "spriteName": "FermentedSoybeanIcon",
+    "source": "Goods/Good.FermentedSoybean.blueprint.json",
+    "path": "FermentedSoybeanIcon.png",
+    "width": 75,
+    "height": 73
+  },
+  {
+    "spriteName": "FireworksIcon",
+    "source": "Goods/Good.Fireworks.blueprint.json",
+    "path": "FireworksIcon.png",
+    "width": 59,
+    "height": 63
+  },
+  {
+    "spriteName": "GearIcon",
+    "source": "Goods/Good.Gear.blueprint.json",
+    "path": "GearIcon.png",
+    "width": 62,
+    "height": 67
+  },
+  {
+    "spriteName": "GreaseIcon",
+    "source": "Goods/Good.Grease.blueprint.json",
+    "path": "GreaseIcon.png",
+    "width": 70,
+    "height": 73
+  },
+  {
+    "spriteName": "GrilledChestnutIcon",
+    "source": "Goods/Good.GrilledChestnut.blueprint.json",
+    "path": "GrilledChestnutIcon.png",
+    "width": 60,
+    "height": 80
+  },
+  {
+    "spriteName": "GrilledPotatoIcon",
+    "source": "Goods/Good.GrilledPotato.blueprint.json",
+    "path": "GrilledPotatoIcon.png",
+    "width": 57,
+    "height": 72
+  },
+  {
+    "spriteName": "GrilledSpadderdockIcon",
+    "source": "Goods/Good.GrilledSpadderdock.blueprint.json",
+    "path": "GrilledSpadderdockIcon.png",
+    "width": 77,
+    "height": 71
+  },
+  {
+    "spriteName": "KohlrabiIcon",
+    "source": "Goods/Good.Kohlrabi.blueprint.json",
+    "path": "KohlrabiIcon.png",
+    "width": 109,
+    "height": 88
+  },
+  {
+    "spriteName": "LogIcon",
+    "source": "Goods/Good.Log.blueprint.json",
+    "path": "LogIcon.png",
+    "width": 72,
+    "height": 74
+  },
+  {
+    "spriteName": "MangroveFruitIcon",
+    "source": "Goods/Good.MangroveFruit.blueprint.json",
+    "path": "MangroveFruitIcon.png",
+    "width": 79,
+    "height": 62
+  },
+  {
+    "spriteName": "MaplePastryIcon",
+    "source": "Goods/Good.MaplePastry.blueprint.json",
+    "path": "MaplePastryIcon.png",
+    "width": 77,
+    "height": 80
+  },
+  {
+    "spriteName": "MapleSyrupIcon",
+    "source": "Goods/Good.MapleSyrup.blueprint.json",
+    "path": "MapleSyrupIcon.png",
+    "width": 77,
+    "height": 79
+  },
+  {
+    "spriteName": "MetalBlockIcon",
+    "source": "Goods/Good.MetalBlock.blueprint.json",
+    "path": "MetalBlockIcon.png",
+    "width": 73,
+    "height": 61
+  },
+  {
+    "spriteName": "MetalPartIcon",
+    "source": "Goods/Good.MetalPart.blueprint.json",
+    "path": "MetalPartIcon.png",
+    "width": 57,
+    "height": 60
+  },
+  {
+    "spriteName": "MushroomIcon",
+    "source": "Goods/Good.Mushroom.blueprint.json",
+    "path": "MushroomIcon.png",
+    "width": 58,
+    "height": 64
+  },
+  {
+    "spriteName": "PaperIcon",
+    "source": "Goods/Good.Paper.blueprint.json",
+    "path": "PaperIcon.png",
+    "width": 73,
+    "height": 57
+  },
+  {
+    "spriteName": "PineResinIcon",
+    "source": "Goods/Good.PineResin.blueprint.json",
+    "path": "PineResinIcon.png",
+    "width": 73,
+    "height": 79
+  },
+  {
+    "spriteName": "PlankIcon",
+    "source": "Goods/Good.Plank.blueprint.json",
+    "path": "PlankIcon.png",
+    "width": 71,
+    "height": 61
+  },
+  {
+    "spriteName": "PotatoIcon",
+    "source": "Goods/Good.Potato.blueprint.json",
+    "path": "PotatoIcon.png",
+    "width": 57,
+    "height": 46
+  },
+  {
+    "spriteName": "PunchCardIcon",
+    "source": "Goods/Good.PunchCard.blueprint.json",
+    "path": "PunchCardIcon.png",
+    "width": 67,
+    "height": 72
+  },
+  {
+    "spriteName": "ScrapMetalIcon",
+    "source": "Goods/Good.ScrapMetal.blueprint.json",
+    "path": "ScrapMetalIcon.png",
+    "width": 69,
+    "height": 69
+  },
+  {
+    "spriteName": "SoybeanIcon",
+    "source": "Goods/Good.Soybean.blueprint.json",
+    "path": "SoybeanIcon.png",
+    "width": 62,
+    "height": 63
+  },
+  {
+    "spriteName": "SpadderdockIcon",
+    "source": "Goods/Good.Spadderdock.blueprint.json",
+    "path": "SpadderdockIcon.png",
+    "width": 111,
+    "height": 100
+  },
+  {
+    "spriteName": "SunflowerSeedsIcon",
+    "source": "Goods/Good.SunflowerSeeds.blueprint.json",
+    "path": "SunflowerSeedsIcon.png",
+    "width": 75,
+    "height": 77
+  },
+  {
+    "spriteName": "TreatedPlankIcon",
+    "source": "Goods/Good.TreatedPlank.blueprint.json",
+    "path": "TreatedPlankIcon.png",
+    "width": 78,
+    "height": 77
+  },
+  {
+    "spriteName": "WaterIcon",
+    "source": "Goods/Good.Water.blueprint.json",
+    "path": "WaterIcon.png",
+    "width": 44,
+    "height": 65
+  },
+  {
+    "spriteName": "WheatFlourIcon",
+    "source": "Goods/Good.WheatFlour.blueprint.json",
+    "path": "WheatFlourIcon.png",
+    "width": 75,
+    "height": 80
+  },
+  {
+    "spriteName": "WheatIcon",
+    "source": "Goods/Good.Wheat.blueprint.json",
+    "path": "WheatIcon.png",
+    "width": 68,
+    "height": 71
+  }
+]
