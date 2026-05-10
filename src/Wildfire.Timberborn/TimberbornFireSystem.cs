@@ -22,7 +22,7 @@ public sealed record TimberbornQaDeltaStimulusSustainedHeatState(
 
 public sealed class TimberbornFireSystem : IDisposable
 {
-    private const byte QaIgnitionHeat = 15;
+    internal const byte QaIgnitionHeat = 15;
     private const byte QaIgnitionFuel = 15;
     private const byte QaIgnitionFlammability = 3;
     private const byte QaIgnitionTerrain = 1;
