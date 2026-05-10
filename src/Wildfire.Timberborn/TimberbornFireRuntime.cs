@@ -241,6 +241,17 @@ public sealed class TimberbornFireRuntime :
         RequireFireSystem().RegisterChange(change);
     }
 
+    public int RegisterSustainedIgnitionChanges(IEnumerable<FireSimChange> changes, string source)
+    {
+        FireSimChange[] ignitionChanges = (changes ?? throw new ArgumentNullException(nameof(changes))).ToArray();
+        if (!TryAllowExternalChange(source, ignitionChanges.Length))
+        {
+            return 0;
+        }
+
+        return RequireFireSystem().RegisterSustainedIgnitionChanges(ignitionChanges, source);
+    }
+
     public void SkipInitializeForOversizedGrid(FireGrid grid, TimberbornWorldCellImportSummary worldImportSummary)
     {
         if (grid.CellCount < 0)
