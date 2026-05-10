@@ -492,7 +492,7 @@ public sealed class TimberbornQaCommandBridge
             QaWaterSuppressionStimulusCommand,
             state,
             KnownCommands,
-            "queued_water_fuel_lock_stimulus_" +
+            "queued_water_suppression_stimulus_" +
             $"target_selector={stimulusResult.TargetSelector}_" +
             $"target_index={stimulusResult.CellIndex}_" +
             $"target_x={stimulusResult.X}_" +
@@ -563,8 +563,8 @@ public sealed class TimberbornQaCommandBridge
             KnownCommands,
             "selected_fire_sim_preset_" +
             $"name={presetResult.Name}_" +
-            $"ignition={presetResult.Parameters.FireIgnitionBaseHeat}_" +
-            $"water_fuel_lock={presetResult.Parameters.FireWaterFuelLock}");
+            $"ignition={presetResult.Parameters.IgnitionPoint}_" +
+            $"water_ignition_penalty={presetResult.Parameters.FireWaterIgnitionPenalty}");
     }
 
     private static string NormalizeCommand(string commandText)
@@ -1364,8 +1364,8 @@ public sealed record TimberbornQaCommandState(
     int? CompatibilityProbeOptionalTotal = null,
     string CompatibilityProbeDegradedFeatures = "placeholder",
     string FireSimPresetName = "default",
-    uint? FireSimPresetIgnitionBaseHeat = null,
-    uint? FireSimPresetWaterFuelLock = null,
+    uint? FireSimPresetIgnitionPoint = null,
+    uint? FireSimPresetWaterIgnitionPenalty = null,
     uint? FireSimPresetFuelHeatWeight = null,
     uint? FireSimPresetFuelBurnDownNumerator = null,
     uint? FireSimPresetFuelBurnDownDenominator = null,
@@ -1657,8 +1657,8 @@ public sealed record TimberbornQaCommandResult(
         $"compatibility_probe_optional_total={FormatNumber(State.CompatibilityProbeOptionalTotal)} " +
         $"compatibility_probe_degraded_features={TimberbornQaCommandBridge.FormatToken(State.CompatibilityProbeDegradedFeatures)} " +
         $"fire_sim_preset={TimberbornQaCommandBridge.FormatToken(State.FireSimPresetName)} " +
-        $"fire_ignition_base_heat={FormatNumber(State.FireSimPresetIgnitionBaseHeat)} " +
-        $"fire_water_fuel_lock={FormatNumber(State.FireSimPresetWaterFuelLock)} " +
+        $"fire_ignition_point={FormatNumber(State.FireSimPresetIgnitionPoint)} " +
+        $"fire_water_ignition_penalty={FormatNumber(State.FireSimPresetWaterIgnitionPenalty)} " +
         $"fire_fuel_heat_weight={FormatNumber(State.FireSimPresetFuelHeatWeight)} " +
         $"fire_fuel_burn_down={FormatFraction(State.FireSimPresetFuelBurnDownNumerator, State.FireSimPresetFuelBurnDownDenominator)} " +
         $"world_import_total_sources={FormatNumber(State.WorldImportTotalSources)} " +

@@ -301,7 +301,7 @@ public sealed class TimberbornQaCommandBridgeTests
             selector,
             new RecordingLogSink());
 
-        TimberbornQaCommandResult result = bridge.Execute("qa-fire-preset FireIgnitionBaseHeat=1");
+        TimberbornQaCommandResult result = bridge.Execute("qa-fire-preset IgnitionPoint=1");
 
         Assert.False(result.Success);
         Assert.Equal("failure", result.Status);
@@ -2045,8 +2045,8 @@ public sealed class TimberbornQaCommandBridgeTests
             CompatibilityProbeOptionalTotal: 4,
             CompatibilityProbeDegradedFeatures: "visual_effects,diagnostic_assets",
             FireSimPresetName: "slow-reactable",
-            FireSimPresetIgnitionBaseHeat: 12,
-            FireSimPresetWaterFuelLock: 5,
+            FireSimPresetIgnitionPoint: 12,
+            FireSimPresetWaterIgnitionPenalty: 2,
             FireSimPresetFuelHeatWeight: 2,
             FireSimPresetFuelBurnDownNumerator: 1,
             FireSimPresetFuelBurnDownDenominator: 2,
@@ -2168,9 +2168,9 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("compatibility_probe_optional_total=4", result.ResultToken);
         Assert.Contains("compatibility_probe_degraded_features=visual_effects,diagnostic_assets", result.ResultToken);
         Assert.Contains("fire_sim_preset=slow-reactable", result.ResultToken);
-        Assert.Contains("fire_ignition_base_heat=12", result.ResultToken);
+        Assert.Contains("fire_ignition_point=12", result.ResultToken);
         Assert.DoesNotContain("fire_burning_neighbor_heat_bonus", result.ResultToken);
-        Assert.Contains("fire_water_fuel_lock=5", result.ResultToken);
+        Assert.Contains("fire_water_ignition_penalty=2", result.ResultToken);
         Assert.Contains("fire_fuel_heat_weight=2", result.ResultToken);
         Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
         Assert.Contains("world_import_total_sources=50", result.ResultToken);
@@ -2234,20 +2234,16 @@ public sealed class TimberbornQaCommandBridgeTests
 
         Assert.Equal(["default", "slow-reactable", "harsh", "wildfire", "conservative", "high-threshold-high-bonus"], names);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("slow-reactable", out TimberbornFireSimParameterPreset? preset));
-        Assert.Equal(12u, preset.Parameters.FireIgnitionBaseHeat);
+        Assert.Equal(12u, preset.Parameters.IgnitionPoint);
         Assert.Equal(1u, preset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(2u, preset.Parameters.FireFuelBurnDownPressureDenominator);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("high-threshold-high-bonus", out TimberbornFireSimParameterPreset? highPreset));
-        Assert.Equal(5u, highPreset.Parameters.FireIgnitionBaseHeat);
-        Assert.Equal(0u, highPreset.Parameters.FireFlammabilityBurnPressure);
+        Assert.Equal(5u, highPreset.Parameters.IgnitionPoint);
         Assert.Equal(6u, highPreset.Parameters.FireFuelHeatWeight);
         Assert.Equal(0u, highPreset.Parameters.FireWaterIgnitionPenalty);
-        Assert.Equal(2u, highPreset.Parameters.FireWaterEvaporationHeat);
-        Assert.Equal(0u, highPreset.Parameters.FireWaterBurnPressurePenalty);
-        Assert.Equal(0u, highPreset.Parameters.FireCoolingBase);
         Assert.Equal(2u, highPreset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(1u, highPreset.Parameters.FireFuelBurnDownPressureDenominator);
-        Assert.False(TimberbornFireSimParameterPresets.TryGet("FireIgnitionBaseHeat=1", out _));
+        Assert.False(TimberbornFireSimParameterPresets.TryGet("IgnitionPoint=1", out _));
     }
 
     [Fact]

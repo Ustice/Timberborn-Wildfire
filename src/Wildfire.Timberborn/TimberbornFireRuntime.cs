@@ -402,7 +402,7 @@ public sealed class TimberbornFireRuntime :
         TimberbornQaWaterSuppressionStimulusResult result =
             RequireFireSystem().QueueWaterSuppressionQaStimulus(targetSelector);
         _logSink.Info(
-            "wildfire_timberborn_qa_water_fuel_lock_queued " +
+            "wildfire_timberborn_qa_water_suppression_queued " +
             $"target_selector={result.TargetSelector} " +
             $"cell_index={result.CellIndex} " +
             $"x={result.X} " +
@@ -447,8 +447,8 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             "wildfire_timberborn_fire_sim_preset_selected " +
             $"preset={TimberbornQaCommandBridge.FormatToken(result.Name)} " +
-            $"ignition={result.Parameters.FireIgnitionBaseHeat} " +
-            $"water_fuel_lock={result.Parameters.FireWaterFuelLock}");
+            $"ignition={result.Parameters.IgnitionPoint} " +
+            $"water_ignition_penalty={result.Parameters.FireWaterIgnitionPenalty}");
         if (_fireSystem is not null)
         {
             bool applied = _fireSystem.TryUpdateParameters(result.Parameters);
@@ -479,8 +479,8 @@ public sealed class TimberbornFireRuntime :
                 CompatibilityProbeOptionalTotal: _compatibilityReport.OptionalProbeCount,
                 CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken,
                 FireSimPresetName: currentPreset.Name,
-                FireSimPresetIgnitionBaseHeat: currentPreset.Parameters.FireIgnitionBaseHeat,
-                FireSimPresetWaterFuelLock: currentPreset.Parameters.FireWaterFuelLock,
+                FireSimPresetIgnitionPoint: currentPreset.Parameters.IgnitionPoint,
+                FireSimPresetWaterIgnitionPenalty: currentPreset.Parameters.FireWaterIgnitionPenalty,
                 FireSimPresetFuelHeatWeight: currentPreset.Parameters.FireFuelHeatWeight,
                 FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
                 FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
@@ -769,8 +769,8 @@ public sealed class TimberbornFireRuntime :
             CompatibilityProbeOptionalTotal: _compatibilityReport.OptionalProbeCount,
             CompatibilityProbeDegradedFeatures: _compatibilityReport.DegradedFeatureToken,
             FireSimPresetName: currentPreset.Name,
-            FireSimPresetIgnitionBaseHeat: currentPreset.Parameters.FireIgnitionBaseHeat,
-            FireSimPresetWaterFuelLock: currentPreset.Parameters.FireWaterFuelLock,
+            FireSimPresetIgnitionPoint: currentPreset.Parameters.IgnitionPoint,
+            FireSimPresetWaterIgnitionPenalty: currentPreset.Parameters.FireWaterIgnitionPenalty,
             FireSimPresetFuelHeatWeight: currentPreset.Parameters.FireFuelHeatWeight,
             FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
             FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,

@@ -6,8 +6,8 @@ public sealed record TimberbornFireSimParameterPreset(string Name, FireSimParame
 {
     public string StatusToken =>
         $"fire_sim_preset={TimberbornQaCommandBridge.FormatToken(Name)} " +
-        $"fire_ignition_base_heat={Parameters.FireIgnitionBaseHeat} " +
-        $"fire_water_fuel_lock={Parameters.FireWaterFuelLock} " +
+        $"fire_ignition_point={Parameters.IgnitionPoint} " +
+        $"fire_water_ignition_penalty={Parameters.FireWaterIgnitionPenalty} " +
         $"fire_fuel_heat_weight={Parameters.FireFuelHeatWeight} " +
         $"fire_fuel_burn_down={Parameters.FireFuelBurnDownPressureNumerator}/{Parameters.FireFuelBurnDownPressureDenominator}";
 }
@@ -28,17 +28,16 @@ public static class TimberbornFireSimParameterPresets
             SlowReactableName,
             FireSimParameters.Default with
             {
-                FireIgnitionBaseHeat = 12u,
+                IgnitionPoint = 12u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 2u,
-                FireCoolingBase = 1u,
                 VisualSmokeFuelWeight = 0.6f,
             }),
         new(
             HarshName,
             FireSimParameters.Default with
             {
-                FireIgnitionBaseHeat = 9u,
+                IgnitionPoint = 9u,
                 FireWaterIgnitionPenalty = 1u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 1u,
@@ -49,12 +48,9 @@ public static class TimberbornFireSimParameterPresets
             WildfireName,
             FireSimParameters.Default with
             {
-                FireIgnitionBaseHeat = 8u,
+                IgnitionPoint = 8u,
                 FireWaterIgnitionPenalty = 1u,
-                FireWaterEvaporationHeat = 7u,
-                FireFlammabilityBurnPressure = 3u,
                 FireBurnHeatBase = 4u,
-                FireCoolingBase = 0u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 6u,
                 VisualFireBaseIntensity = 0.82f,
@@ -73,11 +69,10 @@ public static class TimberbornFireSimParameterPresets
             ConservativeName,
             FireSimParameters.Default with
             {
-                FireIgnitionBaseHeat = 13u,
+                IgnitionPoint = 13u,
                 FireWaterIgnitionPenalty = 3u,
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 4u,
-                FireCoolingBase = 2u,
                 VisualFireBaseIntensity = 0.35f,
                 VisualSmokeBaseIntensity = 0.08f,
             }),
@@ -85,14 +80,10 @@ public static class TimberbornFireSimParameterPresets
             HighThresholdHighBonusName,
             FireSimParameters.Default with
             {
-                FireIgnitionBaseHeat = 5u,
+                IgnitionPoint = 5u,
                 FireWaterIgnitionPenalty = 0u,
-                FireWaterEvaporationHeat = 2u,
-                FireFlammabilityBurnPressure = 0u,
                 FireBurnHeatBase = 0u,
                 FireFuelHeatWeight = 6u,
-                FireWaterBurnPressurePenalty = 0u,
-                FireCoolingBase = 0u,
                 FireFuelBurnDownPressureNumerator = 2u,
                 FireFuelBurnDownPressureDenominator = 1u,
             }),
