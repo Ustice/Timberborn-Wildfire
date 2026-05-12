@@ -95,9 +95,9 @@ namespace Wildfire.UnityBatchmode
                 deltaCounter = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
                 currentCells.SetData(initialCells);
                 nextCells.SetData(initialCells);
-                currentAtmosphericFields.SetData(new uint[cellCount]);
+                currentAtmosphericFields.SetData(CellArrayOrZeros(fixture.initialAtmosphericFields, cellCount, "initialAtmosphericFields"));
                 nextAtmosphericFields.SetData(new uint[cellCount]);
-                companionFields.SetData(new uint[cellCount]);
+                companionFields.SetData(CellArrayOrZeros(fixture.companionFields, cellCount, "companionFields"));
                 LogPhase("buffer", "ok", "allocated=current,next,external,deltas,visual,atmospheric,companion");
 
                 int kernel = shader.FindKernel("SimulateFullGrid");
@@ -136,9 +136,15 @@ namespace Wildfire.UnityBatchmode
 
                 uint[] finalRawCells = new uint[cellCount];
                 currentCells.GetData(finalRawCells);
+                uint[] finalAtmosphericFields = new uint[cellCount];
+                currentAtmosphericFields.GetData(finalAtmosphericFields);
                 float[] visualSamples = new float[cellCount * 4];
                 visualFields.GetData(visualSamples);
-                return new Snapshot(finalRawCells.ConvertAll(cell => (ushort)(cell & 0xFFFFu)), ticks, VisualChecksum(visualSamples));
+                return new Snapshot(
+                    finalRawCells.ConvertAll(cell => (ushort)(cell & 0xFFFFu)),
+                    finalAtmosphericFields,
+                    ticks,
+                    VisualChecksum(visualSamples));
             }
             finally
             {
@@ -176,9 +182,10 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("Tick", tick);
             shader.SetInt("Seed", unchecked((int)fixture.seed));
             shader.SetInt("ChangeCount", 0);
-            shader.SetFloat("WindDirectionX", 0f);
-            shader.SetFloat("WindDirectionY", 0f);
-            shader.SetFloat("WindStrength", 0f);
+            FixtureWind wind = fixture.wind ?? FixtureWind.None;
+            shader.SetFloat("WindDirectionX", wind.directionX);
+            shader.SetFloat("WindDirectionY", wind.directionY);
+            shader.SetFloat("WindStrength", wind.strength);
             BindDefaultParameters(shader);
             shader.SetBuffer(kernel, "CurrentCells", currentCells);
             shader.SetBuffer(kernel, "NextCells", nextCells);
@@ -211,6 +218,22 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("FireFuelBurnDownPressureDenominator", 4);
             shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)0x9E3779B9u));
             shader.SetInt("FireCellStepIntervalTicks", 1);
+        }
+
+        private static uint[] CellArrayOrZeros(uint[] values, int cellCount, string fieldName)
+        {
+            if (values == null || values.Length == 0)
+            {
+                return new uint[cellCount];
+            }
+
+            if (values.Length != cellCount)
+            {
+                throw new InvalidOperationException(
+                    "Fixture " + fieldName + " count " + values.Length + " did not match grid cell count " + cellCount + ".");
+            }
+
+            return values;
         }
 
         private static DeltaSnapshot[] ReadDeltas(ComputeBuffer deltas, ComputeBuffer deltaCounter, int capacity)
@@ -347,6 +370,9 @@ namespace Wildfire.UnityBatchmode
         public FixtureGrid grid;
         public FixtureLayer selectedLayer;
         public PackedCellValues packedCellValues;
+        public uint[] initialAtmosphericFields;
+        public uint[] companionFields;
+        public FixtureWind wind;
 
         public static Fixture Load(string path)
         {
@@ -389,15 +415,32 @@ namespace Wildfire.UnityBatchmode
         public ushort[] values;
     }
 
+    [Serializable]
+    internal sealed class FixtureWind
+    {
+        public static readonly FixtureWind None = new FixtureWind
+        {
+            directionX = 0f,
+            directionY = 0f,
+            strength = 0f,
+        };
+
+        public float directionX;
+        public float directionY;
+        public float strength;
+    }
+
     internal sealed class Snapshot
     {
         private readonly ushort[] finalPackedCells;
+        private readonly uint[] finalAtmosphericFields;
         private readonly TickSnapshot[] ticks;
         private readonly string visualChecksum;
 
-        public Snapshot(ushort[] finalPackedCells, TickSnapshot[] ticks, string visualChecksum)
+        public Snapshot(ushort[] finalPackedCells, uint[] finalAtmosphericFields, TickSnapshot[] ticks, string visualChecksum)
         {
             this.finalPackedCells = finalPackedCells;
+            this.finalAtmosphericFields = finalAtmosphericFields;
             this.ticks = ticks;
             this.visualChecksum = visualChecksum;
         }
@@ -423,6 +466,8 @@ namespace Wildfire.UnityBatchmode
             builder.AppendLine("  \"tickCount\": " + tickCount.ToString(CultureInfo.InvariantCulture) + ",");
             AppendUshortArray(builder, "finalPackedCells", finalPackedCells, indent: "  ");
             builder.AppendLine(",");
+            AppendUintArray(builder, "finalAtmosphericFields", finalAtmosphericFields, indent: "  ");
+            builder.AppendLine(",");
             builder.AppendLine("  \"perTickDeltaCounts\": [");
             for (int index = 0; index < ticks.Length; index += 1)
             {
@@ -447,6 +492,18 @@ namespace Wildfire.UnityBatchmode
         }
 
         private static void AppendUshortArray(StringBuilder builder, string name, ushort[] values, string indent)
+        {
+            builder.AppendLine(indent + "\"" + name + "\": [");
+            for (int index = 0; index < values.Length; index += 1)
+            {
+                builder.Append(indent + "  " + values[index].ToString(CultureInfo.InvariantCulture));
+                builder.AppendLine(index + 1 == values.Length ? string.Empty : ",");
+            }
+
+            builder.Append(indent + "]");
+        }
+
+        private static void AppendUintArray(StringBuilder builder, string name, uint[] values, string indent)
         {
             builder.AppendLine(indent + "\"" + name + "\": [");
             for (int index = 0; index < values.Length; index += 1)

@@ -388,7 +388,6 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         if (states.Length == 0)
         {
             ReleaseCell(effectEvent.CellIndex);
-            _updatedVisualRegionsThisDispatch++;
             return;
         }
 
@@ -406,7 +405,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         }
 
         TimberbornPooledFireEffectKey key = TimberbornPooledFireEffectKey.FromState(state);
-        TimberbornPooledFireEffectSlot? slot = FindOrAllocateSlot(key, state.Intensity);
+        TimberbornPooledFireEffectSlot? slot = FindOrAllocateSlot(key, state.Kind, state.Intensity);
         if (slot is null)
         {
             _droppedVisualRegionsThisDispatch++;
@@ -624,7 +623,10 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         };
     }
 
-    private TimberbornPooledFireEffectSlot? FindOrAllocateSlot(TimberbornPooledFireEffectKey key, float intensity)
+    private TimberbornPooledFireEffectSlot? FindOrAllocateSlot(
+        TimberbornPooledFireEffectKey key,
+        TimberbornPooledFireEffectKind requestedKind,
+        float intensity)
     {
         if (_slotsByKey.TryGetValue(key, out TimberbornPooledFireEffectSlot? existingSlot))
         {
@@ -636,11 +638,9 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return new TimberbornPooledFireEffectSlot(_freeSlotIds.Dequeue());
         }
 
-        TimberbornPooledFireEffectSlot? replacement = _slotsById.Values
-            .OrderBy(static slot => slot.State.Intensity)
-            .ThenBy(static slot => slot.State.Tick)
-            .ThenBy(static slot => slot.SlotId)
-            .FirstOrDefault(slot => slot.State.Intensity < intensity);
+        int protectedSmokeSlots = MinimumProtectedSmokeSlots();
+        int activeSmokeSlots = _slotsById.Values.Count(static slot => IsSmokeKind(slot.State.Kind));
+        TimberbornPooledFireEffectSlot? replacement = FindReplacementSlot(requestedKind, intensity, activeSmokeSlots, protectedSmokeSlots);
         if (replacement is null)
         {
             return null;
@@ -648,6 +648,58 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
 
         _slotsByKey.Remove(TimberbornPooledFireEffectKey.FromState(replacement.State));
         return replacement;
+    }
+
+    private TimberbornPooledFireEffectSlot? FindReplacementSlot(
+        TimberbornPooledFireEffectKind requestedKind,
+        float intensity,
+        int activeSmokeSlots,
+        int protectedSmokeSlots)
+    {
+        if (IsSmokeKind(requestedKind) && activeSmokeSlots < protectedSmokeSlots)
+        {
+            TimberbornPooledFireEffectSlot? nonSmokeReplacement = _slotsById.Values
+                .Where(static slot => !IsSmokeKind(slot.State.Kind))
+                .OrderBy(static slot => slot.State.Intensity)
+                .ThenBy(static slot => slot.State.Tick)
+                .ThenBy(static slot => slot.SlotId)
+                .FirstOrDefault();
+            if (nonSmokeReplacement is not null)
+            {
+                return nonSmokeReplacement;
+            }
+        }
+
+        return _slotsById.Values
+            .Where(slot => CanReplaceSlot(slot, requestedKind, activeSmokeSlots, protectedSmokeSlots))
+            .OrderBy(static slot => slot.State.Intensity)
+            .ThenBy(static slot => slot.State.Tick)
+            .ThenBy(static slot => slot.SlotId)
+            .FirstOrDefault(slot => slot.State.Intensity < intensity);
+    }
+
+    private int MinimumProtectedSmokeSlots()
+    {
+        return Math.Max(1, Options.MaxActiveEffects / 4);
+    }
+
+    private static bool CanReplaceSlot(
+        TimberbornPooledFireEffectSlot slot,
+        TimberbornPooledFireEffectKind requestedKind,
+        int activeSmokeSlots,
+        int protectedSmokeSlots)
+    {
+        if (IsSmokeKind(slot.State.Kind) && !IsSmokeKind(requestedKind) && activeSmokeSlots <= protectedSmokeSlots)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsSmokeKind(TimberbornPooledFireEffectKind kind)
+    {
+        return kind is TimberbornPooledFireEffectKind.Smoke or TimberbornPooledFireEffectKind.ToxicSmoke;
     }
 
     private void ReleaseCell(int cellIndex)

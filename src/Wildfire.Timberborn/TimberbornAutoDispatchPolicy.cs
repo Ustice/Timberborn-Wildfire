@@ -2,7 +2,7 @@ namespace Wildfire.Timberborn;
 
 public static class TimberbornAutoDispatchPolicy
 {
-    public const int CellLimit = 500_000;
+    public const int CellLimit = 2_000_000;
 
     public static bool IsAllowedCellCount(int cellCount)
     {

@@ -702,13 +702,16 @@ public sealed class TimberbornComputeFireSimulator :
             int groupsZ = GetThreadGroups(Depth, ThreadGroupSizeZ);
             DispatchKernel(_fullGridKernel, FullGridKernelName, dispatchTick, 0, groupsX, groupsY, groupsZ);
 
+            _logSink.Info($"wildfire_timberborn_gpu_readback_started tick={dispatchTick}");
+            Stopwatch readbackStopwatch = Stopwatch.StartNew();
             CellDelta[] deltas = ReadDeltas();
+            readbackStopwatch.Stop();
             SwapCellBuffers();
             _visualFieldBindingLifecycle?.UpdateAtmosphericFieldsBuffer(_readAtmosphericFields);
             _visualFieldBindingLifecycle?.MarkUpdated(dispatchTick);
             NotifyListeners(deltas);
             _logSink.Info(
-                $"wildfire_timberborn_gpu_readback_completed tick={dispatchTick} delta_count={deltas.Length}");
+                $"wildfire_timberborn_gpu_readback_completed tick={dispatchTick} delta_count={deltas.Length} elapsed_ms={readbackStopwatch.Elapsed.TotalMilliseconds:F3}");
             return new GpuFireStepResult(deltas, dispatchTick);
         }
         catch (Exception exception)

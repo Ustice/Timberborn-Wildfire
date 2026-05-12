@@ -151,9 +151,12 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         DispatchWithDiagnostics(dispatch);
 
         _diagnostics.Info($"wildfire_gpu_simulator_readback_started tick={dispatchTick}");
+        Stopwatch readbackStopwatch = Stopwatch.StartNew();
         CellDelta[] deltas = FireSimDeltaReadback.Read(BufferGrid.Deltas);
+        readbackStopwatch.Stop();
         BufferGrid.SwapCellBuffers();
-        _diagnostics.Info($"wildfire_gpu_simulator_readback_completed tick={dispatchTick} delta_count={deltas.Length}");
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_readback_completed tick={dispatchTick} delta_count={deltas.Length} elapsed_ms={readbackStopwatch.Elapsed.TotalMilliseconds:F3}");
 
         NotifyListeners(deltas);
 

@@ -14,6 +14,8 @@ public sealed class TimberbornGpuFieldRendererOptions
         int MaxUpdatedRegionsPerDispatch = 2048,
         float MinimumVisibleIntensity = 0.01f,
         int AshBlendCellRadius = 2,
+        int PersistentAshScarCellSize = 8,
+        int MaxPersistentAshScarRegions = 4096,
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
         float DebugOverlayHeightOffset = 0.02f)
@@ -55,10 +57,28 @@ public sealed class TimberbornGpuFieldRendererOptions
                 "Debug overlay height offset cannot be negative.");
         }
 
+        if (PersistentAshScarCellSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(PersistentAshScarCellSize),
+                PersistentAshScarCellSize,
+                "Persistent ash scar cell size must be positive.");
+        }
+
+        if (MaxPersistentAshScarRegions <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxPersistentAshScarRegions),
+                MaxPersistentAshScarRegions,
+                "Persistent ash scar region limit must be positive.");
+        }
+
         this.RegionSize = RegionSize;
         this.MaxUpdatedRegionsPerDispatch = MaxUpdatedRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
         this.AshBlendCellRadius = AshBlendCellRadius;
+        this.PersistentAshScarCellSize = PersistentAshScarCellSize;
+        this.MaxPersistentAshScarRegions = MaxPersistentAshScarRegions;
         this.AshOverlayEnabled = AshOverlayEnabled;
         this.DebugOverlayEnabled = DebugOverlayEnabled;
         this.DebugOverlayHeightOffset = DebugOverlayHeightOffset;
@@ -71,6 +91,10 @@ public sealed class TimberbornGpuFieldRendererOptions
     public float MinimumVisibleIntensity { get; }
 
     public int AshBlendCellRadius { get; }
+
+    public int PersistentAshScarCellSize { get; }
+
+    public int MaxPersistentAshScarRegions { get; }
 
     public bool AshOverlayEnabled { get; }
 
@@ -97,6 +121,23 @@ public readonly record struct TimberbornGpuFieldRendererRegionState(
     float HeatHaze,
     float Intensity);
 
+public readonly record struct TimberbornGpuFieldRendererScarRegionState(
+    int RegionId,
+    int MinX,
+    int MinY,
+    int MinZ,
+    int MaxX,
+    int MaxY,
+    int MaxZ,
+    int SourceRegionCount,
+    float Ash,
+    float Visibility,
+    float Intensity);
+
+public readonly record struct TimberbornGpuFieldRendererPresentation(
+    IReadOnlyList<TimberbornGpuFieldRendererRegionState> DetailRegions,
+    IReadOnlyList<TimberbornGpuFieldRendererScarRegionState> ScarRegions);
+
 public readonly record struct TimberbornGpuFieldRendererCounters(
     bool RendererEnabled,
     bool MaterialReady,
@@ -107,6 +148,9 @@ public readonly record struct TimberbornGpuFieldRendererCounters(
     int MaxUpdatedRegionCount,
     int DroppedRegionCount,
     int InvisibleRegionCount,
+    int RenderedDetailRegionCount,
+    int RenderedScarRegionCount,
+    int PersistentAshScarSourceRegionCount,
     int MaterialFailureCount,
     uint? LastUpdatedTick,
     uint? LastNonZeroUpdatedRegionTick);
@@ -127,6 +171,9 @@ public interface ITimberbornGpuFieldRendererPresenter
 
     TimberbornGpuFieldRendererPresentationResult RenderRegions(
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions);
+
+    TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+        TimberbornGpuFieldRendererPresentation presentation);
 
     void Clear();
 }
@@ -178,6 +225,9 @@ public sealed class TimberbornGpuFieldRendererSink :
     private int _droppedRegionsThisDispatch;
     private int _invisibleRegionsThisDispatch;
     private int _materialFailuresThisDispatch;
+    private int _renderedDetailRegionsThisDispatch;
+    private int _renderedScarRegionsThisDispatch;
+    private int _persistentAshScarSourceRegionsThisDispatch;
     private int _lastNonZeroUpdatedRegionCount;
     private uint? _lastNonZeroUpdatedRegionTick;
     private uint? _currentTick;
@@ -235,6 +285,9 @@ public sealed class TimberbornGpuFieldRendererSink :
         MaxUpdatedRegionCount: Options.MaxUpdatedRegionsPerDispatch,
         DroppedRegionCount: _droppedRegionsThisDispatch,
         InvisibleRegionCount: _invisibleRegionsThisDispatch,
+        RenderedDetailRegionCount: _renderedDetailRegionsThisDispatch,
+        RenderedScarRegionCount: _renderedScarRegionsThisDispatch,
+        PersistentAshScarSourceRegionCount: _persistentAshScarSourceRegionsThisDispatch,
         MaterialFailureCount: _materialFailuresThisDispatch,
         LastUpdatedTick: _currentTick,
         LastNonZeroUpdatedRegionTick: _lastNonZeroUpdatedRegionTick);
@@ -260,6 +313,9 @@ public sealed class TimberbornGpuFieldRendererSink :
         _droppedRegionsThisDispatch = 0;
         _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
+        _renderedDetailRegionsThisDispatch = 0;
+        _renderedScarRegionsThisDispatch = 0;
+        _persistentAshScarSourceRegionsThisDispatch = 0;
     }
 
     public void UpdateVisualEffect(TimberbornFireVisualEffectEvent effectEvent)
@@ -307,12 +363,14 @@ public sealed class TimberbornGpuFieldRendererSink :
             Array.ForEach(invisibleRegionIds, regionId => _visibleRegions.Remove(regionId));
         }
 
-        TimberbornGpuFieldRendererRegionState[] renderedRegions = _visibleRegions.Values
-            .OrderByDescending(static region => region.Intensity)
-            .ThenBy(static region => region.RegionId)
-            .Take(Options.MaxUpdatedRegionsPerDispatch)
-            .ToArray();
-        TimberbornGpuFieldRendererPresentationResult presentationResult = _presenter.RenderRegions(renderedRegions);
+        TimberbornGpuFieldRendererRegionState[] renderedRegions = SelectRenderedRegions(updatedRegions);
+        TimberbornGpuFieldRendererScarRegionState[] scarRegions = SelectScarRegions(renderedRegions);
+        _renderedDetailRegionsThisDispatch = renderedRegions.Length;
+        _renderedScarRegionsThisDispatch = scarRegions.Length;
+        _persistentAshScarSourceRegionsThisDispatch = scarRegions.Sum(static region => region.SourceRegionCount);
+        TimberbornGpuFieldRendererPresentationResult presentationResult = _presenter.RenderPresentation(new TimberbornGpuFieldRendererPresentation(
+            DetailRegions: renderedRegions,
+            ScarRegions: scarRegions));
         if (presentationResult.Status == TimberbornGpuFieldRendererPresentationStatus.Failed)
         {
             _materialFailuresThisDispatch++;
@@ -336,12 +394,76 @@ public sealed class TimberbornGpuFieldRendererSink :
             $"last_nonzero_updated_regions_tick={FormatNumber(_lastNonZeroUpdatedRegionTick)} " +
             $"dropped_regions={_droppedRegionsThisDispatch} " +
             $"invisible_regions={_invisibleRegionsThisDispatch} " +
+            $"rendered_detail_regions={_renderedDetailRegionsThisDispatch} " +
+            $"rendered_scar_regions={_renderedScarRegionsThisDispatch} " +
+            $"persistent_ash_scar_source_regions={_persistentAshScarSourceRegionsThisDispatch} " +
             $"material_failures={_materialFailuresThisDispatch} " +
             $"max_updated_regions={Options.MaxUpdatedRegionsPerDispatch} " +
             $"region_size={Options.RegionSize} " +
             $"renderer_enabled={_presenter.State.RendererEnabled.ToString().ToLowerInvariant()} " +
             $"material_ready={_presenter.State.MaterialReady.ToString().ToLowerInvariant()} " +
             $"visual_field_surface_bound={_visualFieldSurface.State.IsBound.ToString().ToLowerInvariant()}");
+    }
+
+    private TimberbornGpuFieldRendererRegionState[] SelectRenderedRegions(
+        IReadOnlyCollection<TimberbornGpuFieldRendererRegionState> updatedRegions)
+    {
+        if (Options.DebugOverlayEnabled)
+        {
+            return _visibleRegions.Values
+                .OrderByDescending(static region => region.Intensity)
+                .ThenBy(static region => region.RegionId)
+                .Take(Options.MaxUpdatedRegionsPerDispatch)
+                .ToArray();
+        }
+
+        HashSet<int> updatedRegionIds = updatedRegions
+            .Select(static region => region.RegionId)
+            .ToHashSet();
+        TimberbornGpuFieldRendererRegionState[] accumulatedUpdatedRegions = updatedRegionIds
+            .Select(regionId => _visibleRegions[regionId])
+            .ToArray();
+
+        return accumulatedUpdatedRegions
+            .OrderByDescending(static region => region.Intensity)
+            .ThenBy(static region => region.RegionId)
+            .Concat(_visibleRegions.Values
+                .Where(region => !updatedRegionIds.Contains(region.RegionId))
+                .OrderByDescending(static region => region.Intensity)
+                .ThenBy(static region => region.RegionId))
+            .Take(Options.MaxUpdatedRegionsPerDispatch)
+            .ToArray();
+    }
+
+    private TimberbornGpuFieldRendererScarRegionState[] SelectScarRegions(
+        IReadOnlyCollection<TimberbornGpuFieldRendererRegionState> detailRegions)
+    {
+        if (Options.DebugOverlayEnabled)
+        {
+            return Array.Empty<TimberbornGpuFieldRendererScarRegionState>();
+        }
+
+        HashSet<int> detailRegionIds = detailRegions
+            .Select(static region => region.RegionId)
+            .ToHashSet();
+        return _visibleRegions.Values
+            .Where(region => !detailRegionIds.Contains(region.RegionId))
+            .GroupBy(region => ToScarTileKey(region, Options.PersistentAshScarCellSize))
+            .Select(static group => TimberbornGpuFieldRendererScarRegionAccumulator.ToState(group.Key, group))
+            .OrderByDescending(static region => region.Intensity)
+            .ThenBy(static region => region.RegionId)
+            .Take(Options.MaxPersistentAshScarRegions)
+            .ToArray();
+    }
+
+    private static TimberbornGpuFieldRendererScarTileKey ToScarTileKey(
+        TimberbornGpuFieldRendererRegionState region,
+        int cellSize)
+    {
+        return new TimberbornGpuFieldRendererScarTileKey(
+            region.MinX / cellSize,
+            region.MinY / cellSize,
+            region.MaxZ);
     }
 
     private TimberbornGpuFieldRendererRegionState AccumulateRegion(TimberbornGpuFieldRendererRegionState region)
@@ -368,6 +490,9 @@ public sealed class TimberbornGpuFieldRendererSink :
         _droppedRegionsThisDispatch = 0;
         _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
+        _renderedDetailRegionsThisDispatch = 0;
+        _renderedScarRegionsThisDispatch = 0;
+        _persistentAshScarSourceRegionsThisDispatch = 0;
         _lastNonZeroUpdatedRegionCount = 0;
         _lastNonZeroUpdatedRegionTick = null;
         _currentTick = null;
@@ -581,6 +706,35 @@ public sealed class TimberbornGpuFieldRendererSink :
         return value.Replace('\\', '/').Replace('"', '\'');
     }
 
+    private readonly record struct TimberbornGpuFieldRendererScarTileKey(int X, int Y, int Z)
+    {
+        public int RegionId => checked((Z * 1_000_000) + (Y * 1_000) + X);
+    }
+
+    private sealed class TimberbornGpuFieldRendererScarRegionAccumulator
+    {
+        public static TimberbornGpuFieldRendererScarRegionState ToState(
+            TimberbornGpuFieldRendererScarTileKey key,
+            IEnumerable<TimberbornGpuFieldRendererRegionState> regions)
+        {
+            TimberbornGpuFieldRendererRegionState[] sourceRegions = regions.ToArray();
+            float ash = sourceRegions.Max(static region => Math.Clamp(region.Ash, 0f, 1f));
+            float visibility = sourceRegions.Max(static region => Math.Clamp(region.Visibility, 0f, 1f));
+            return new TimberbornGpuFieldRendererScarRegionState(
+                RegionId: key.RegionId,
+                MinX: sourceRegions.Min(static region => region.MinX),
+                MinY: sourceRegions.Min(static region => region.MinY),
+                MinZ: sourceRegions.Min(static region => region.MinZ),
+                MaxX: sourceRegions.Max(static region => region.MaxX),
+                MaxY: sourceRegions.Max(static region => region.MaxY),
+                MaxZ: sourceRegions.Max(static region => region.MaxZ),
+                SourceRegionCount: sourceRegions.Length,
+                Ash: ash,
+                Visibility: visibility,
+                Intensity: ash * Math.Max(visibility, 0.001f));
+        }
+    }
+
     private sealed class TimberbornGpuFieldRendererRegionAccumulator
     {
         private float _fire;
@@ -734,6 +888,14 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     public TimberbornGpuFieldRendererPresentationResult RenderRegions(
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
     {
+        return RenderPresentation(new TimberbornGpuFieldRendererPresentation(
+            DetailRegions: regions,
+            ScarRegions: Array.Empty<TimberbornGpuFieldRendererScarRegionState>()));
+    }
+
+    public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+        TimberbornGpuFieldRendererPresentation presentation)
+    {
         try
         {
             EnsureObjects();
@@ -742,10 +904,10 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 return TimberbornGpuFieldRendererPresentationResult.Disabled("mesh_unavailable");
             }
 
-            BuildMesh(_mesh, regions, _heightOffset, _debugOverlayEnabled);
+            BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
             if (_root is not null)
             {
-                _root.SetActive(regions.Count > 0);
+                _root.SetActive(presentation.DetailRegions.Count > 0 || presentation.ScarRegions.Count > 0);
             }
 
             return TimberbornGpuFieldRendererPresentationResult.Applied;
@@ -868,13 +1030,14 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
 
     private static void BuildMesh(
         Mesh mesh,
-        IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions,
+        TimberbornGpuFieldRendererPresentation presentation,
         float heightOffset,
         bool debugOverlayEnabled)
     {
+        IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions = presentation.DetailRegions;
         if (!debugOverlayEnabled)
         {
-            BuildAshOverlayMesh(mesh, regions, heightOffset);
+            BuildAshOverlayMesh(mesh, presentation, heightOffset);
             return;
         }
 
@@ -905,9 +1068,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
 
     private static void BuildAshOverlayMesh(
         Mesh mesh,
-        IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions,
+        TimberbornGpuFieldRendererPresentation presentation,
         float heightOffset)
     {
+        TimberbornGpuFieldRendererRegionState[] regions = presentation.ScarRegions
+            .Select(static scarRegion => ToRegionState(scarRegion))
+            .Concat(presentation.DetailRegions)
+            .ToArray();
         Dictionary<(int X, int Y, int Z), float> ashByCell = regions
             .GroupBy(static region => (region.MinX, region.MinY, region.MaxZ))
             .ToDictionary(
@@ -932,6 +1099,30 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         mesh.uv = uvs;
         mesh.triangles = triangles;
         mesh.RecalculateBounds();
+    }
+
+    private static TimberbornGpuFieldRendererRegionState ToRegionState(
+        TimberbornGpuFieldRendererScarRegionState scarRegion)
+    {
+        float ash = Math.Clamp(scarRegion.Ash * 0.65f, 0f, 1f);
+        float visibility = Math.Clamp(scarRegion.Visibility, 0f, 1f);
+        return new TimberbornGpuFieldRendererRegionState(
+            RegionId: scarRegion.RegionId,
+            Tick: 0,
+            MinX: scarRegion.MinX,
+            MinY: scarRegion.MinY,
+            MinZ: scarRegion.MinZ,
+            MaxX: scarRegion.MaxX,
+            MaxY: scarRegion.MaxY,
+            MaxZ: scarRegion.MaxZ,
+            SampleCount: scarRegion.SourceRegionCount,
+            Fire: 0f,
+            Smoke: 0f,
+            Ash: ash,
+            Steam: 0f,
+            Visibility: visibility,
+            HeatHaze: 0f,
+            Intensity: ash * Math.Max(visibility, 0.001f));
     }
 
     private static IEnumerable<Vector3> ToVertices(
@@ -1294,6 +1485,12 @@ public sealed class NullTimberbornGpuFieldRendererPresenter : ITimberbornGpuFiel
 
     public TimberbornGpuFieldRendererPresentationResult RenderRegions(
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
+    {
+        return TimberbornGpuFieldRendererPresentationResult.Disabled("null_presenter");
+    }
+
+    public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+        TimberbornGpuFieldRendererPresentation presentation)
     {
         return TimberbornGpuFieldRendererPresentationResult.Disabled("null_presenter");
     }

@@ -20,7 +20,14 @@
 #define TERRAIN_MAX 1u
 #define BURNING_LEVEL_MAX 7u
 
-#define HEAT_RADIUS 4u
+#define HEAT_SEARCH_RADIUS 4
+#define ATMOSPHERIC_TRANSPORT_RADIUS 1
+
+static const float HeatReach = 3.5f; // 3.5
+static const float WindStretch = 1.5f;
+static const float AtmosphericDrift = 1.0f;
+static const uint AtmosphericDecay = 1u;
+static const float ContaminationCarry = 1.0f;
 
 float VisualFireBaseIntensity;
 float VisualFireHeatWeight;
@@ -262,6 +269,98 @@ uint DecayBy(uint value, uint decay)
     return value > decay ? value - decay : 0u;
 }
 
+float EffectiveWindStrength()
+{
+    return saturate(WindStrength);
+}
+
+float2 EffectiveWindDirection()
+{
+    float2 wind = float2(WindDirectionX, WindDirectionY);
+    float windLength = length(wind);
+    return windLength > 0.001f ? wind / windLength : float2(0.0f, 0.0f);
+}
+
+float HeatFalloff(float t)
+{
+    float remaining = saturate(1.0f - t);
+    return remaining * remaining;
+}
+
+float WindAlignment(float2 direction)
+{
+    float directionLength = length(direction);
+    if (directionLength <= 0.001f || EffectiveWindStrength() <= 0.001f)
+    {
+        return 0.0f;
+    }
+
+    float2 wind = EffectiveWindDirection();
+    return dot(direction / directionLength, wind);
+}
+
+float PolarEllipseReach(float alignment)
+{
+    float stretch = 1.0f + (WindStretch * EffectiveWindStrength());
+    float headReach = HeatReach * stretch;
+    float backReach = HeatReach / stretch;
+    float eccentricity = (headReach - backReach) / max(0.001f, headReach + backReach);
+    float semiMajor = (headReach + backReach) * 0.5f;
+    float semiLatusRectum = semiMajor * (1.0f - (eccentricity * eccentricity));
+
+    return max(0.001f, semiLatusRectum / max(0.001f, 1.0f - (eccentricity * alignment)));
+}
+
+float HeatKernelWeight(float3 sourceToTarget)
+{
+    float distance = length(sourceToTarget);
+    if (distance <= 0.001f)
+    {
+        return 0.0f;
+    }
+
+    float2 horizontal = sourceToTarget.xy;
+    float reach = length(horizontal) > 0.001f
+        ? PolarEllipseReach(WindAlignment(horizontal))
+        : HeatReach;
+
+    return HeatFalloff(distance / reach);
+}
+
+float AtmosphericTransportWeight(float2 sourceToTarget)
+{
+    float distance = length(sourceToTarget);
+    if (distance <= 0.001f)
+    {
+        return 1.0f;
+    }
+
+    float falloff = 1.0f / (1.0f + distance);
+    float drift = max(0.0f, 1.0f + (WindAlignment(sourceToTarget) * AtmosphericDrift * EffectiveWindStrength()));
+    return saturate(falloff * drift);
+}
+
+uint TransportAtmosphericValue(uint value, float weight, uint decay)
+{
+    if (value == 0u || weight <= 0.001f)
+    {
+        return 0u;
+    }
+
+    uint transported = min(7u, (uint)round((float)value * weight));
+    return DecayBy(transported, decay);
+}
+
+uint TransportAtmosphericContamination(uint contamination, float weight, uint transportedField)
+{
+    if (transportedField == 0u || contamination == 0u || weight <= 0.001f)
+    {
+        return 0u;
+    }
+
+    return min(7u, (uint)round((float)contamination * weight * ContaminationCarry));
+}
+
 uint SteamSourceFromMoistureAndHeat(uint cell)
 {
     uint water = Water(cell);
@@ -274,65 +373,11 @@ uint NeighborAtmospheric(uint3 coordinate)
     return CurrentAtmosphericFields[ToIndex(coordinate)] & 0xFFFFu;
 }
 
-uint NeighborSmokeContribution(uint3 coordinate, uint penalty)
+uint SourceContamination(uint companion)
 {
-    return DecayBy(AtmosphericSmoke(NeighborAtmospheric(coordinate)), penalty);
-}
-
-uint NeighborSmokeContaminationContribution(uint3 coordinate, uint penalty)
-{
-    uint atmospheric = NeighborAtmospheric(coordinate);
-    uint smoke = DecayBy(AtmosphericSmoke(atmospheric), penalty);
-    return smoke == 0u ? 0u : AtmosphericSmokeContamination(atmospheric);
-}
-
-float EffectiveWindStrength()
-{
-    return saturate(WindStrength * 0.5f);
-}
-
-uint WindSmokePenalty(float directionX, float directionY)
-{
-    float strength = EffectiveWindStrength();
-    if (strength <= 0.01f)
-    {
-        return 1u;
-    }
-
-    float alignment = (directionX * WindDirectionX) + (directionY * WindDirectionY);
-    if (alignment > 0.35f && strength > 0.45f)
-    {
-        return 0u;
-    }
-
-    if (alignment < -0.35f && strength > 0.45f)
-    {
-        return 2u;
-    }
-
-    return 1u;
-}
-
-uint WindWeightedNeighborHeat(uint neighborHeat, float directionX, float directionY)
-{
-    float strength = EffectiveWindStrength();
-    if (strength <= 0.01f || neighborHeat == 0u)
-    {
-        return neighborHeat;
-    }
-
-    float alignment = (directionX * WindDirectionX) + (directionY * WindDirectionY);
-    if (alignment > 0.35f)
-    {
-        return min(15u, neighborHeat + (uint)round((float)neighborHeat * strength));
-    }
-
-    if (alignment < -0.35f)
-    {
-        return (uint)round((float)neighborHeat * (1.0f - strength));
-    }
-
-    return neighborHeat;
+    uint contaminationBehavior = CompanionContaminationBehavior(companion);
+    uint ashQuality = CompanionAshQuality(companion);
+    return (contaminationBehavior == 2u || contaminationBehavior == 4u || ashQuality == 3u) ? 7u : 0u;
 }
 
 uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newCell)
@@ -341,62 +386,67 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint companion = CompanionFields[index];
     bool hotFuel = Terrain(newCell) == 1u && Fuel(newCell) > 0u && Heat(newCell) > 0u;
     uint fuelDrop = Fuel(oldCell) > Fuel(newCell) ? Fuel(oldCell) - Fuel(newCell) : 0u;
-    uint contaminationBehavior = CompanionContaminationBehavior(companion);
-    uint ashQuality = CompanionAshQuality(companion);
-    uint sourceContamination = (contaminationBehavior == 2u || contaminationBehavior == 4u || ashQuality == 3u) ? 7u : 0u;
-    uint ashContaminationSource = ashQuality == 3u ? 7u : sourceContamination;
+    uint sourceContamination = SourceContamination(companion);
 
-    uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);
-    uint smoke = DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
-    uint smokeContamination = smoke == 0u ? 0u : AtmosphericSmokeContamination(oldAtmospheric);
-    uint ash = DecayBy(AtmosphericAsh(oldAtmospheric), 0u);
-    uint ashContamination = ash == 0u ? 0u : AtmosphericAshContamination(oldAtmospheric);
+    uint steam = 0u;
+    uint smoke = 0u;
+    uint smokeContamination = 0u;
+    uint ash = 0u;
+    uint ashContamination = 0u;
+    int2 current = int2((int)coordinate.x, (int)coordinate.y);
+
+    for (int dy = -ATMOSPHERIC_TRANSPORT_RADIUS; dy <= ATMOSPHERIC_TRANSPORT_RADIUS; dy++)
+    {
+        for (int dx = -ATMOSPHERIC_TRANSPORT_RADIUS; dx <= ATMOSPHERIC_TRANSPORT_RADIUS; dx++)
+        {
+            int2 source = current + int2(dx, dy);
+            if (source.x < 0 || source.y < 0 || source.x >= (int)Width || source.y >= (int)Height)
+            {
+                continue;
+            }
+
+            uint atmospheric = NeighborAtmospheric(uint3((uint)source.x, (uint)source.y, coordinate.z));
+            float weight = AtmosphericTransportWeight(float2((float)-dx, (float)-dy));
+            uint steamContribution = TransportAtmosphericValue(AtmosphericSteam(atmospheric), weight, AtmosphericDecay + 1u);
+            uint smokeContribution = TransportAtmosphericValue(AtmosphericSmoke(atmospheric), weight, AtmosphericDecay);
+            uint ashContribution = TransportAtmosphericValue(AtmosphericAsh(atmospheric), weight, AtmosphericDecay > 0u ? AtmosphericDecay - 1u : 0u);
+
+            steam = max(steam, steamContribution);
+            smoke = max(smoke, smokeContribution);
+            smokeContamination = max(
+                smokeContamination,
+                TransportAtmosphericContamination(AtmosphericSmokeContamination(atmospheric), weight, smokeContribution));
+            ash = max(ash, ashContribution);
+            ashContamination = max(
+                ashContamination,
+                TransportAtmosphericContamination(AtmosphericAshContamination(atmospheric), weight, ashContribution));
+        }
+    }
 
     if (coordinate.z > 0u)
     {
         uint below = NeighborAtmospheric(uint3(coordinate.x, coordinate.y, coordinate.z - 1u));
-        steam = max(steam, DecayBy(AtmosphericSteam(below), 1u));
-        smoke = max(smoke, DecayBy(AtmosphericSmoke(below), 1u));
-        smokeContamination = max(smokeContamination, smoke == 0u ? 0u : AtmosphericSmokeContamination(below));
-    }
-
-    if (coordinate.x > 0u)
-    {
-        uint penalty = WindSmokePenalty(1.0f, 0.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), penalty));
-    }
-
-    if (coordinate.x + 1u < Width)
-    {
-        uint penalty = WindSmokePenalty(-1.0f, 0.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), penalty));
-    }
-
-    if (coordinate.y > 0u)
-    {
-        uint penalty = WindSmokePenalty(0.0f, 1.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), penalty));
-    }
-
-    if (coordinate.y + 1u < Height)
-    {
-        uint penalty = WindSmokePenalty(0.0f, -1.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), penalty));
+        uint belowSteam = TransportAtmosphericValue(AtmosphericSteam(below), 0.5f, AtmosphericDecay + 1u);
+        uint belowSmoke = TransportAtmosphericValue(AtmosphericSmoke(below), 0.5f, AtmosphericDecay);
+        uint belowAsh = TransportAtmosphericValue(AtmosphericAsh(below), 0.5f, AtmosphericDecay > 0u ? AtmosphericDecay - 1u : 0u);
+        steam = max(steam, belowSteam);
+        smoke = max(smoke, belowSmoke);
+        smokeContamination = max(smokeContamination, TransportAtmosphericContamination(AtmosphericSmokeContamination(below), 0.5f, belowSmoke));
+        ash = max(ash, belowAsh);
+        ashContamination = max(ashContamination, TransportAtmosphericContamination(AtmosphericAshContamination(below), 0.5f, belowAsh));
     }
 
     uint steamSource = SteamSourceFromMoistureAndHeat(newCell);
     uint smokeSource = hotFuel ? min(5u, 1u + (Heat(newCell) / 3u)) : 0u;
-    uint ashSource = min(7u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
+    uint smokeDepositAsh = AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u;
+    uint ashSource = min(7u, fuelDrop + smokeDepositAsh);
 
     steam = max(steam, steamSource);
     smoke = max(smoke, smokeSource);
     smokeContamination = max(smokeContamination, smokeSource == 0u ? 0u : sourceContamination);
     ash = max(ash, ashSource);
-    ashContamination = max(ashContamination, ashSource == 0u ? 0u : ashContaminationSource);
+    ashContamination = max(ashContamination, fuelDrop == 0u ? 0u : sourceContamination);
+    ashContamination = max(ashContamination, smokeDepositAsh == 0u ? 0u : AtmosphericSmokeContamination(oldAtmospheric));
     bool source = steamSource > 0u || smokeSource > 0u || ashSource > 0u;
     return PackAtmospheric(min(7u, steam), min(7u, smoke), min(7u, smokeContamination), min(7u, ash), min(7u, ashContamination), source);
 }
@@ -413,8 +463,7 @@ void WriteVisualField(uint index, uint cell, uint atmospheric)
 void AddNeighbor(
     uint3 coordinate,
     int3 offset,
-    inout float windWeightedHeatSum,
-    inout float neighborWeightSum)
+    inout float heatPressure)
 {
     uint index = ToIndex(coordinate);
     uint companion = CompanionFields[index];
@@ -424,13 +473,8 @@ void AddNeighbor(
     }
 
     uint cell = CurrentCells[index] & 0xFFFFu;
-    float distance = length(float3(offset));
-    float weight = 1.0f / max(1.0f, distance);
-    float horizontalDistance = length(float2(offset.x, offset.y));
-    float directionX = horizontalDistance > 0.001f ? -(float)offset.x / horizontalDistance : 0.0f;
-    float directionY = horizontalDistance > 0.001f ? -(float)offset.y / horizontalDistance : 0.0f;
-    windWeightedHeatSum += (float)WindWeightedNeighborHeat(Heat(cell), directionX, directionY) * weight;
-    neighborWeightSum += weight;
+    float weight = HeatKernelWeight(float3((float)-offset.x, (float)-offset.y, (float)-offset.z));
+    heatPressure = max(heatPressure, (float)Heat(cell) * weight);
 }
 
 uint IgnitionThreshold(uint flammability, uint water)
@@ -450,19 +494,18 @@ uint StepCell(uint index, uint3 coordinate, uint cell, bool shouldStepReaction)
 
     bool wasIgnitedBeforeNeighborExchange = burningLevel > 0u;
     uint ignitionThreshold = IgnitionThreshold(flammability, water);
-    float windWeightedNeighborHeatSum = 0.0f;
-    float neighborWeightSum = 0.0f;
+    float heatPressure = 0.0f;
     int3 current = int3((int)coordinate.x, (int)coordinate.y, (int)coordinate.z);
 
-    for (int dz = -HEAT_RADIUS; dz <= HEAT_RADIUS; dz++)
+    for (int dz = -HEAT_SEARCH_RADIUS; dz <= HEAT_SEARCH_RADIUS; dz++)
     {
-        for (int dy = -HEAT_RADIUS; dy <= HEAT_RADIUS; dy++)
+        for (int dy = -HEAT_SEARCH_RADIUS; dy <= HEAT_SEARCH_RADIUS; dy++)
         {
-            for (int dx = -HEAT_RADIUS; dx <= HEAT_RADIUS; dx++)
+            for (int dx = -HEAT_SEARCH_RADIUS; dx <= HEAT_SEARCH_RADIUS; dx++)
             {
                 int3 offset = int3(dx, dy, dz);
                 int distanceSquared = (dx * dx) + (dy * dy) + (dz * dz);
-                if (distanceSquared == 0 || distanceSquared > HEAT_RADIUS * HEAT_RADIUS)
+                if (distanceSquared == 0 || distanceSquared > HEAT_SEARCH_RADIUS * HEAT_SEARCH_RADIUS)
                 {
                     continue;
                 }
@@ -474,12 +517,12 @@ uint StepCell(uint index, uint3 coordinate, uint cell, bool shouldStepReaction)
                     continue;
                 }
 
-                AddNeighbor(uint3((uint)neighbor.x, (uint)neighbor.y, (uint)neighbor.z), offset, windWeightedNeighborHeatSum, neighborWeightSum);
+                AddNeighbor(uint3((uint)neighbor.x, (uint)neighbor.y, (uint)neighbor.z), offset, heatPressure);
             }
         }
     }
 
-    heat = min(15u, (uint)round(((float)heat + windWeightedNeighborHeatSum) / (1.0f + neighborWeightSum)));
+    heat = max(heat, min(15u, (uint)round(heatPressure)));
     if (wasIgnitedBeforeNeighborExchange && heat < ignitionThreshold)
     {
         heat = ignitionThreshold;
@@ -490,7 +533,7 @@ uint StepCell(uint index, uint3 coordinate, uint cell, bool shouldStepReaction)
         water -= 1u;
     }
 
-    bool canBurn = terrain == 1u && fuel > 0u;
+    bool canBurn = terrain == 1u && fuel > 0u && flammability > 0u;
     ignitionThreshold = IgnitionThreshold(flammability, water);
 
     if (canBurn && (burningLevel > 0u || heat >= ignitionThreshold))
@@ -514,7 +557,7 @@ uint StepCell(uint index, uint3 coordinate, uint cell, bool shouldStepReaction)
 
                 if (fuelRoll < fuelBurnDownChance)
                 {
-                    uint fuelBurnAmount = max(1u, burningLevel);
+                    uint fuelBurnAmount = 1u;
                     fuel = fuel > fuelBurnAmount ? fuel - fuelBurnAmount : 0u;
                 }
 

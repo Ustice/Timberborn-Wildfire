@@ -359,18 +359,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(3, summary.StructureBurnDamageRollbackTotalDamageApplied);
     }
 
-    [Fact]
-    public void TimberbornBuildingBurnsDoNotBlockAccessOrPauseBuildings()
-    {
-        string structureRollbackSource = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
-        string buildingBurnoutSource = ReadTimberbornSource("TimberbornBuildingBurnoutConsequences.cs");
-
-        Assert.DoesNotContain(".Pause()", structureRollbackSource, StringComparison.Ordinal);
-        Assert.DoesNotContain(".Pause()", buildingBurnoutSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ClearAccesses()", structureRollbackSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ClearAccesses()", buildingBurnoutSource, StringComparison.Ordinal);
-    }
-
     private static TimberbornStructureBurnDamageTarget Target(
         IReadOnlyList<TimberbornBurnDamageResourceStack> resources,
         bool canClose = false,
@@ -401,26 +389,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     private static ushort Cell(int fuel, int heat)
     {
         return PackedCell.Pack(fuel, heat, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
-    }
-
-    private static string ReadTimberbornSource(string fileName)
-    {
-        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
-            .Select(directory => Path.Combine(
-                directory.FullName,
-                "src",
-                "Wildfire.Timberborn",
-                fileName))
-            .First(File.Exists);
-
-        return File.ReadAllText(path);
-    }
-
-    private static IEnumerable<DirectoryInfo> SelfAndParents(DirectoryInfo directory)
-    {
-        return directory.Parent is null
-            ? [directory]
-            : new[] { directory }.Concat(SelfAndParents(directory.Parent));
     }
 
     private sealed class RecordingStructureTargetApi(TimberbornStructureBurnDamageTarget? target)

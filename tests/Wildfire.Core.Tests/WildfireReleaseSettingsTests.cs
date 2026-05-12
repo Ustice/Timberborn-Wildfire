@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Timberborn.SettingsSystem;
 using Wildfire.Timberborn;
 
@@ -24,16 +23,6 @@ public sealed class WildfireReleaseSettingsTests
                 1,
                 type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                     .Count(static constructor => constructor.GetParameters().Length > 0)));
-    }
-
-    [Fact]
-    public void ReleaseSettingsInitializerSourceHasOneParameterfulConstructor()
-    {
-        string source = ReadReleaseSettingsSource();
-
-        Assert.Single(Regex.Matches(
-            source,
-            @"\b(?:public|private|internal)\s+WildfireReleaseSettingsInitializer\s*\("));
     }
 
     [Fact]
@@ -410,23 +399,4 @@ public sealed class WildfireReleaseSettingsTests
         }
     }
 
-    private static string ReadReleaseSettingsSource()
-    {
-        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
-            .Select(directory => Path.Combine(
-                directory.FullName,
-                "src",
-                "Wildfire.Timberborn",
-                "WildfireReleaseSettings.cs"))
-            .First(File.Exists);
-
-        return File.ReadAllText(path);
-    }
-
-    private static IEnumerable<DirectoryInfo> SelfAndParents(DirectoryInfo directory)
-    {
-        return directory.Parent is null
-            ? new[] { directory }
-            : new[] { directory }.Concat(SelfAndParents(directory.Parent));
-    }
 }

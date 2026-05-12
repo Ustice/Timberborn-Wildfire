@@ -1868,6 +1868,9 @@ public sealed class TimberbornQaCommandBridgeTests
     [Fact]
     public void TimberbornRuntimeAutoDispatchGuardDisablesLargeLiveMaps()
     {
+        FireGrid largeValidationMap = new(256, 256, 23);
+
+        Assert.True(TimberbornAutoDispatchPolicy.IsAllowedCellCount(largeValidationMap.CellCount));
         Assert.True(TimberbornAutoDispatchPolicy.IsAllowedCellCount(TimberbornAutoDispatchPolicy.CellLimit));
         Assert.False(TimberbornAutoDispatchPolicy.IsAllowedCellCount(TimberbornAutoDispatchPolicy.CellLimit + 1));
         Assert.Throws<ArgumentOutOfRangeException>(() => TimberbornAutoDispatchPolicy.IsAllowedCellCount(-1));
