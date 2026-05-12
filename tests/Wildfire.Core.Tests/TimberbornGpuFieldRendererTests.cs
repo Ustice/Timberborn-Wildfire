@@ -455,6 +455,78 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void CloudLayerRendersSmokeSteamAndToxicSmokeWithoutAsh()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 0f, smoke: 0.6f, ash: 0f, visibility: 1f, steam: 0.4f, smokeContamination: 0.5f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0,
+                CloudRegionSize: 2,
+                MaxCloudRegionsPerDispatch: 4),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(18);
+        sink.UpdateVisualEffect(EffectEvent(0, 18));
+        sink.CompleteVisualEffectDispatch(18);
+
+        Assert.Empty(presenter.RenderedRegions);
+        TimberbornGpuFieldRendererCloudRegionState cloudRegion = Assert.Single(presenter.RenderedCloudRegions);
+        Assert.Equal(0, cloudRegion.RegionId);
+        Assert.Equal(0.6f, cloudRegion.Smoke, precision: 4);
+        Assert.Equal(0.4f, cloudRegion.Steam, precision: 4);
+        Assert.Equal(0.5f, cloudRegion.SmokeContamination, precision: 4);
+        Assert.Equal(1, sink.Counters.RenderedCloudRegionCount);
+        Assert.Equal(1, sink.Counters.SmokeCloudSourceRegionCount);
+        Assert.Equal(1, sink.Counters.SteamCloudSourceRegionCount);
+        Assert.Equal(1, sink.Counters.ToxicSmokeCloudSourceRegionCount);
+        Assert.Contains(logSink.InfoMessages, static message => message.Contains("rendered_cloud_regions=1", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CloudLayerAggregatesAtmosphereIntoCoarserTransientRegions()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [0] = Sample(0, fire: 0f, smoke: 0.4f, ash: 0f, visibility: 1f, steam: 0.1f),
+            [1] = Sample(1, fire: 0f, smoke: 0.8f, ash: 0f, visibility: 1f, steam: 0.2f),
+            [8] = Sample(8, fire: 0f, smoke: 0.3f, ash: 0f, visibility: 1f, steam: 0.9f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader, width: 4, height: 4);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0,
+                CloudRegionSize: 2,
+                MaxCloudRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(19);
+        sink.UpdateVisualEffect(EffectEvent(0, 19));
+        sink.UpdateVisualEffect(EffectEvent(1, 19));
+        sink.UpdateVisualEffect(EffectEvent(8, 19));
+        sink.CompleteVisualEffectDispatch(19);
+
+        Assert.Equal(2, presenter.RenderedCloudRegions.Count);
+        Assert.Contains(presenter.RenderedCloudRegions, static region =>
+            region.MinX == 0 && region.MaxX == 1 && region.SampleCount == 2 && region.Smoke == 0.8f);
+        Assert.Contains(presenter.RenderedCloudRegions, static region =>
+            region.MinY == 2 && region.Steam == 0.9f);
+    }
+
+    [Fact]
     public void GpuFieldRendererCanDisableAshOverlayForHeadlessTelemetry()
     {
         RecordingFireLogSink logSink = new();
@@ -556,7 +628,9 @@ public sealed class TimberbornGpuFieldRendererTests
         float fire,
         float smoke,
         float ash,
-        float visibility)
+        float visibility,
+        float steam = 0f,
+        float smokeContamination = 0f)
     {
         return new TimberbornGpuVisualFieldSample(
             CellIndex: cellIndex,
@@ -564,7 +638,9 @@ public sealed class TimberbornGpuFieldRendererTests
             Fire: fire,
             Smoke: smoke,
             Ash: ash,
-            Visibility: visibility);
+            Visibility: visibility,
+            Steam: steam,
+            SmokeContamination: smokeContamination);
     }
 
     private static TimberbornFireVisualEffectEvent EffectEvent(int cellIndex, uint tick)
@@ -586,6 +662,8 @@ public sealed class TimberbornGpuFieldRendererTests
 
         public List<TimberbornGpuFieldRendererScarRegionState> RenderedScarRegions { get; private set; } = [];
 
+        public List<TimberbornGpuFieldRendererCloudRegionState> RenderedCloudRegions { get; private set; } = [];
+
         public TimberbornGpuFieldRendererPresenterState State { get; } = new(
             RendererEnabled: true,
             MaterialReady: true);
@@ -595,7 +673,8 @@ public sealed class TimberbornGpuFieldRendererTests
         {
             return RenderPresentation(new TimberbornGpuFieldRendererPresentation(
                 DetailRegions: regions,
-                ScarRegions: Array.Empty<TimberbornGpuFieldRendererScarRegionState>()));
+                ScarRegions: Array.Empty<TimberbornGpuFieldRendererScarRegionState>(),
+                CloudRegions: Array.Empty<TimberbornGpuFieldRendererCloudRegionState>()));
         }
 
         public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
@@ -603,6 +682,7 @@ public sealed class TimberbornGpuFieldRendererTests
         {
             RenderedRegions = presentation.DetailRegions.ToList();
             RenderedScarRegions = presentation.ScarRegions.ToList();
+            RenderedCloudRegions = presentation.CloudRegions.ToList();
             return TimberbornGpuFieldRendererPresentationResult.Applied;
         }
 
@@ -610,6 +690,7 @@ public sealed class TimberbornGpuFieldRendererTests
         {
             RenderedRegions.Clear();
             RenderedScarRegions.Clear();
+            RenderedCloudRegions.Clear();
         }
     }
 

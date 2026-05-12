@@ -522,6 +522,89 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
+    public void SaturatedPoolPreservesSteamWhenFireWouldOtherwiseEvictIt()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f),
+                    [1] = Sample(1, fire: 1f, smoke: 0f, ash: 0f),
+                    [2] = Sample(2, fire: 0f, smoke: 0f, ash: 0f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 2, MaxUpdatedVisualRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(13);
+        new[]
+            {
+                EffectEvent(0, tick: 13),
+                EffectEvent(1, tick: 13),
+                new TimberbornFireVisualEffectEvent(
+                    CellIndex: 2,
+                    Tick: 13,
+                    Kind: TimberbornFireVisualEffectKind.WaterChanged,
+                    Fuel: 10,
+                    Heat: 8,
+                    OldWater: 3,
+                    Water: 1,
+                    IsBurning: false),
+            }
+            .ToList()
+            .ForEach(sink.UpdateVisualEffect);
+        sink.CompleteVisualEffectDispatch(13);
+
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Steam);
+    }
+
+    [Fact]
+    public void AtmosphericParticleEffectsCanBeDisabledWhenCloudRendererOwnsSmokeAndSteam()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 1f, smoke: 0.8f, ash: 0f, steam: 5f / 7f, smokeContamination: 0.6f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(
+                MaxActiveEffects: 4,
+                MaxUpdatedVisualRegionsPerDispatch: 8,
+                AtmosphericParticleEffectsEnabled: false),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(17);
+        sink.UpdateVisualEffect(new TimberbornFireVisualEffectEvent(
+            CellIndex: 0,
+            Tick: 17,
+            Kind: TimberbornFireVisualEffectKind.WaterChanged,
+            Fuel: 10,
+            Heat: 8,
+            OldWater: 3,
+            Water: 1,
+            IsBurning: true));
+        sink.CompleteVisualEffectDispatch(17);
+
+        TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
+        Assert.Equal(TimberbornPooledFireEffectKind.Fire, state.Kind);
+        Assert.Equal(1, sink.Counters.ActivePooledEffectCount);
+        Assert.Equal(1, sink.Counters.UpdatedVisualRegionCount);
+    }
+
+    [Fact]
     public void DeltaConsumerResetsAndCompletesPooledEffectDispatchEvenWithoutVisualEvents()
     {
         RecordingFireLogSink logSink = new();

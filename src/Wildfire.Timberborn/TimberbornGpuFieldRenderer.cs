@@ -16,6 +16,10 @@ public sealed class TimberbornGpuFieldRendererOptions
         int AshBlendCellRadius = 2,
         int PersistentAshScarCellSize = 8,
         int MaxPersistentAshScarRegions = 4096,
+        int CloudRegionSize = 4,
+        int MaxCloudRegionsPerDispatch = 2048,
+        bool CloudLayerEnabled = true,
+        float MinimumVisibleCloudIntensity = 0.01f,
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
         float DebugOverlayHeightOffset = 0.02f)
@@ -73,12 +77,40 @@ public sealed class TimberbornGpuFieldRendererOptions
                 "Persistent ash scar region limit must be positive.");
         }
 
+        if (CloudRegionSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(CloudRegionSize),
+                CloudRegionSize,
+                "Cloud region size must be positive.");
+        }
+
+        if (MaxCloudRegionsPerDispatch <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxCloudRegionsPerDispatch),
+                MaxCloudRegionsPerDispatch,
+                "Cloud region limit must be positive.");
+        }
+
+        if (MinimumVisibleCloudIntensity < 0f)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MinimumVisibleCloudIntensity),
+                MinimumVisibleCloudIntensity,
+                "Minimum visible cloud intensity cannot be negative.");
+        }
+
         this.RegionSize = RegionSize;
         this.MaxUpdatedRegionsPerDispatch = MaxUpdatedRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
         this.AshBlendCellRadius = AshBlendCellRadius;
         this.PersistentAshScarCellSize = PersistentAshScarCellSize;
         this.MaxPersistentAshScarRegions = MaxPersistentAshScarRegions;
+        this.CloudRegionSize = CloudRegionSize;
+        this.MaxCloudRegionsPerDispatch = MaxCloudRegionsPerDispatch;
+        this.CloudLayerEnabled = CloudLayerEnabled;
+        this.MinimumVisibleCloudIntensity = MinimumVisibleCloudIntensity;
         this.AshOverlayEnabled = AshOverlayEnabled;
         this.DebugOverlayEnabled = DebugOverlayEnabled;
         this.DebugOverlayHeightOffset = DebugOverlayHeightOffset;
@@ -95,6 +127,14 @@ public sealed class TimberbornGpuFieldRendererOptions
     public int PersistentAshScarCellSize { get; }
 
     public int MaxPersistentAshScarRegions { get; }
+
+    public int CloudRegionSize { get; }
+
+    public int MaxCloudRegionsPerDispatch { get; }
+
+    public bool CloudLayerEnabled { get; }
+
+    public float MinimumVisibleCloudIntensity { get; }
 
     public bool AshOverlayEnabled { get; }
 
@@ -134,9 +174,26 @@ public readonly record struct TimberbornGpuFieldRendererScarRegionState(
     float Visibility,
     float Intensity);
 
+public readonly record struct TimberbornGpuFieldRendererCloudRegionState(
+    int RegionId,
+    uint Tick,
+    int MinX,
+    int MinY,
+    int MinZ,
+    int MaxX,
+    int MaxY,
+    int MaxZ,
+    int SampleCount,
+    float Smoke,
+    float Steam,
+    float SmokeContamination,
+    float Visibility,
+    float Intensity);
+
 public readonly record struct TimberbornGpuFieldRendererPresentation(
     IReadOnlyList<TimberbornGpuFieldRendererRegionState> DetailRegions,
-    IReadOnlyList<TimberbornGpuFieldRendererScarRegionState> ScarRegions);
+    IReadOnlyList<TimberbornGpuFieldRendererScarRegionState> ScarRegions,
+    IReadOnlyList<TimberbornGpuFieldRendererCloudRegionState> CloudRegions);
 
 public readonly record struct TimberbornGpuFieldRendererCounters(
     bool RendererEnabled,
@@ -150,7 +207,11 @@ public readonly record struct TimberbornGpuFieldRendererCounters(
     int InvisibleRegionCount,
     int RenderedDetailRegionCount,
     int RenderedScarRegionCount,
+    int RenderedCloudRegionCount,
     int PersistentAshScarSourceRegionCount,
+    int SmokeCloudSourceRegionCount,
+    int SteamCloudSourceRegionCount,
+    int ToxicSmokeCloudSourceRegionCount,
     int MaterialFailureCount,
     uint? LastUpdatedTick,
     uint? LastNonZeroUpdatedRegionTick);
@@ -220,6 +281,7 @@ public sealed class TimberbornGpuFieldRendererSink :
     private readonly ITimberbornGpuFieldRendererPresenter _presenter;
     private readonly ITimberbornAshOverlaySurfaceProvider _ashOverlaySurfaceProvider;
     private readonly Dictionary<int, TimberbornGpuFieldRendererRegionAccumulator> _regionsThisDispatch = new();
+    private readonly Dictionary<int, TimberbornGpuFieldRendererCloudRegionAccumulator> _cloudRegionsThisDispatch = new();
     private readonly Dictionary<int, TimberbornGpuFieldRendererRegionState> _visibleRegions = new();
     private int _updatedRegionsThisDispatch;
     private int _droppedRegionsThisDispatch;
@@ -227,7 +289,11 @@ public sealed class TimberbornGpuFieldRendererSink :
     private int _materialFailuresThisDispatch;
     private int _renderedDetailRegionsThisDispatch;
     private int _renderedScarRegionsThisDispatch;
+    private int _renderedCloudRegionsThisDispatch;
     private int _persistentAshScarSourceRegionsThisDispatch;
+    private int _smokeCloudSourceRegionsThisDispatch;
+    private int _steamCloudSourceRegionsThisDispatch;
+    private int _toxicSmokeCloudSourceRegionsThisDispatch;
     private int _lastNonZeroUpdatedRegionCount;
     private uint? _lastNonZeroUpdatedRegionTick;
     private uint? _currentTick;
@@ -287,7 +353,11 @@ public sealed class TimberbornGpuFieldRendererSink :
         InvisibleRegionCount: _invisibleRegionsThisDispatch,
         RenderedDetailRegionCount: _renderedDetailRegionsThisDispatch,
         RenderedScarRegionCount: _renderedScarRegionsThisDispatch,
+        RenderedCloudRegionCount: _renderedCloudRegionsThisDispatch,
         PersistentAshScarSourceRegionCount: _persistentAshScarSourceRegionsThisDispatch,
+        SmokeCloudSourceRegionCount: _smokeCloudSourceRegionsThisDispatch,
+        SteamCloudSourceRegionCount: _steamCloudSourceRegionsThisDispatch,
+        ToxicSmokeCloudSourceRegionCount: _toxicSmokeCloudSourceRegionsThisDispatch,
         MaterialFailureCount: _materialFailuresThisDispatch,
         LastUpdatedTick: _currentTick,
         LastNonZeroUpdatedRegionTick: _lastNonZeroUpdatedRegionTick);
@@ -309,13 +379,18 @@ public sealed class TimberbornGpuFieldRendererSink :
     {
         _currentTick = tick;
         _regionsThisDispatch.Clear();
+        _cloudRegionsThisDispatch.Clear();
         _updatedRegionsThisDispatch = 0;
         _droppedRegionsThisDispatch = 0;
         _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
         _renderedDetailRegionsThisDispatch = 0;
         _renderedScarRegionsThisDispatch = 0;
+        _renderedCloudRegionsThisDispatch = 0;
         _persistentAshScarSourceRegionsThisDispatch = 0;
+        _smokeCloudSourceRegionsThisDispatch = 0;
+        _steamCloudSourceRegionsThisDispatch = 0;
+        _toxicSmokeCloudSourceRegionsThisDispatch = 0;
     }
 
     public void UpdateVisualEffect(TimberbornFireVisualEffectEvent effectEvent)
@@ -365,12 +440,19 @@ public sealed class TimberbornGpuFieldRendererSink :
 
         TimberbornGpuFieldRendererRegionState[] renderedRegions = SelectRenderedRegions(updatedRegions);
         TimberbornGpuFieldRendererScarRegionState[] scarRegions = SelectScarRegions(renderedRegions);
+        TimberbornGpuFieldRendererCloudRegionState[] cloudRegions = SelectCloudRegions();
         _renderedDetailRegionsThisDispatch = renderedRegions.Length;
         _renderedScarRegionsThisDispatch = scarRegions.Length;
+        _renderedCloudRegionsThisDispatch = cloudRegions.Length;
         _persistentAshScarSourceRegionsThisDispatch = scarRegions.Sum(static region => region.SourceRegionCount);
+        _smokeCloudSourceRegionsThisDispatch = cloudRegions.Count(region => region.Smoke >= Options.MinimumVisibleCloudIntensity);
+        _steamCloudSourceRegionsThisDispatch = cloudRegions.Count(region => region.Steam >= Options.MinimumVisibleCloudIntensity);
+        _toxicSmokeCloudSourceRegionsThisDispatch = cloudRegions.Count(region =>
+            region.Smoke * region.SmokeContamination >= Options.MinimumVisibleCloudIntensity);
         TimberbornGpuFieldRendererPresentationResult presentationResult = _presenter.RenderPresentation(new TimberbornGpuFieldRendererPresentation(
             DetailRegions: renderedRegions,
-            ScarRegions: scarRegions));
+            ScarRegions: scarRegions,
+            CloudRegions: cloudRegions));
         if (presentationResult.Status == TimberbornGpuFieldRendererPresentationStatus.Failed)
         {
             _materialFailuresThisDispatch++;
@@ -396,7 +478,11 @@ public sealed class TimberbornGpuFieldRendererSink :
             $"invisible_regions={_invisibleRegionsThisDispatch} " +
             $"rendered_detail_regions={_renderedDetailRegionsThisDispatch} " +
             $"rendered_scar_regions={_renderedScarRegionsThisDispatch} " +
+            $"rendered_cloud_regions={_renderedCloudRegionsThisDispatch} " +
             $"persistent_ash_scar_source_regions={_persistentAshScarSourceRegionsThisDispatch} " +
+            $"smoke_cloud_source_regions={_smokeCloudSourceRegionsThisDispatch} " +
+            $"steam_cloud_source_regions={_steamCloudSourceRegionsThisDispatch} " +
+            $"toxic_smoke_cloud_source_regions={_toxicSmokeCloudSourceRegionsThisDispatch} " +
             $"material_failures={_materialFailuresThisDispatch} " +
             $"max_updated_regions={Options.MaxUpdatedRegionsPerDispatch} " +
             $"region_size={Options.RegionSize} " +
@@ -485,6 +571,7 @@ public sealed class TimberbornGpuFieldRendererSink :
     public void Clear()
     {
         _regionsThisDispatch.Clear();
+        _cloudRegionsThisDispatch.Clear();
         _visibleRegions.Clear();
         _updatedRegionsThisDispatch = 0;
         _droppedRegionsThisDispatch = 0;
@@ -492,7 +579,11 @@ public sealed class TimberbornGpuFieldRendererSink :
         _materialFailuresThisDispatch = 0;
         _renderedDetailRegionsThisDispatch = 0;
         _renderedScarRegionsThisDispatch = 0;
+        _renderedCloudRegionsThisDispatch = 0;
         _persistentAshScarSourceRegionsThisDispatch = 0;
+        _smokeCloudSourceRegionsThisDispatch = 0;
+        _steamCloudSourceRegionsThisDispatch = 0;
+        _toxicSmokeCloudSourceRegionsThisDispatch = 0;
         _lastNonZeroUpdatedRegionCount = 0;
         _lastNonZeroUpdatedRegionTick = null;
         _currentTick = null;
@@ -526,6 +617,11 @@ public sealed class TimberbornGpuFieldRendererSink :
             .InspectCells(new[] { effectEvent.CellIndex })
             .Single();
         (int x, int y, int z) = FromIndex(binding, sample.CellIndex);
+        if (Options.CloudLayerEnabled && !Options.DebugOverlayEnabled)
+        {
+            AddSampleToCloudRegion(binding, effectEvent.Tick, x, y, z, sample);
+        }
+
         if (!Options.DebugOverlayEnabled && sample.Ash <= 0f)
         {
             return;
@@ -557,6 +653,54 @@ public sealed class TimberbornGpuFieldRendererSink :
                 : item.Sample.Ash > 0f)
             .ToList()
             .ForEach(item => AddSampleToRegion(binding, effectEvent.Tick, item.X, item.Y, item.Z, item.Sample));
+    }
+
+    private TimberbornGpuFieldRendererCloudRegionState[] SelectCloudRegions()
+    {
+        if (!Options.CloudLayerEnabled || Options.DebugOverlayEnabled)
+        {
+            return Array.Empty<TimberbornGpuFieldRendererCloudRegionState>();
+        }
+
+        return _cloudRegionsThisDispatch.Values
+            .Select(static accumulator => accumulator.ToState())
+            .Where(region => region.Intensity >= Options.MinimumVisibleCloudIntensity)
+            .OrderByDescending(static region => region.Intensity)
+            .ThenBy(static region => region.RegionId)
+            .Take(Options.MaxCloudRegionsPerDispatch)
+            .ToArray();
+    }
+
+    private void AddSampleToCloudRegion(
+        TimberbornGpuVisualFieldSurfaceBinding binding,
+        uint tick,
+        int x,
+        int y,
+        int z,
+        TimberbornGpuVisualFieldSample sample)
+    {
+        float smoke = Math.Clamp(sample.Smoke, 0f, 1f);
+        float steam = Math.Clamp(sample.Steam, 0f, 1f);
+        float smokeContamination = Math.Clamp(sample.SmokeContamination, 0f, 1f);
+        float intensity = Math.Max(smoke, steam) * Math.Max(sample.Visibility, 0.001f);
+        if (intensity < Options.MinimumVisibleCloudIntensity)
+        {
+            return;
+        }
+
+        int regionId = ToRegionId(binding, x, y, z, Options.CloudRegionSize, debugOverlayEnabled: false);
+        if (!_cloudRegionsThisDispatch.TryGetValue(regionId, out TimberbornGpuFieldRendererCloudRegionAccumulator? accumulator))
+        {
+            accumulator = new TimberbornGpuFieldRendererCloudRegionAccumulator(
+                regionId,
+                tick,
+                x,
+                y,
+                z);
+            _cloudRegionsThisDispatch[regionId] = accumulator;
+        }
+
+        accumulator.Add(x, y, z, smoke, steam, smokeContamination, Math.Clamp(sample.Visibility, 0f, 1f));
     }
 
     private void AddSampleToRegion(
@@ -735,6 +879,88 @@ public sealed class TimberbornGpuFieldRendererSink :
         }
     }
 
+    private sealed class TimberbornGpuFieldRendererCloudRegionAccumulator
+    {
+        private float _smoke;
+        private float _steam;
+        private float _smokeContamination;
+        private float _visibility;
+
+        public TimberbornGpuFieldRendererCloudRegionAccumulator(
+            int regionId,
+            uint tick,
+            int x,
+            int y,
+            int z)
+        {
+            RegionId = regionId;
+            Tick = tick;
+            MinX = MaxX = x;
+            MinY = MaxY = y;
+            MinZ = MaxZ = z;
+        }
+
+        public int RegionId { get; }
+
+        public uint Tick { get; }
+
+        public int MinX { get; private set; }
+
+        public int MinY { get; private set; }
+
+        public int MinZ { get; private set; }
+
+        public int MaxX { get; private set; }
+
+        public int MaxY { get; private set; }
+
+        public int MaxZ { get; private set; }
+
+        public int SampleCount { get; private set; }
+
+        public void Add(
+            int x,
+            int y,
+            int z,
+            float smoke,
+            float steam,
+            float smokeContamination,
+            float visibility)
+        {
+            MinX = Math.Min(MinX, x);
+            MinY = Math.Min(MinY, y);
+            MinZ = Math.Min(MinZ, z);
+            MaxX = Math.Max(MaxX, x);
+            MaxY = Math.Max(MaxY, y);
+            MaxZ = Math.Max(MaxZ, z);
+            SampleCount++;
+            _smoke = Math.Max(_smoke, Math.Clamp(smoke, 0f, 1f));
+            _steam = Math.Max(_steam, Math.Clamp(steam, 0f, 1f));
+            _smokeContamination = Math.Max(_smokeContamination, Math.Clamp(smokeContamination, 0f, 1f));
+            _visibility = Math.Max(_visibility, Math.Clamp(visibility, 0f, 1f));
+        }
+
+        public TimberbornGpuFieldRendererCloudRegionState ToState()
+        {
+            float intensity = Math.Max(_smoke, _steam) * Math.Max(_visibility, 0.001f);
+            return new TimberbornGpuFieldRendererCloudRegionState(
+                RegionId,
+                Tick,
+                MinX,
+                MinY,
+                MinZ,
+                MaxX,
+                MaxY,
+                MaxZ,
+                SampleCount,
+                _smoke,
+                _steam,
+                _smokeContamination,
+                _visibility,
+                intensity);
+        }
+    }
+
     private sealed class TimberbornGpuFieldRendererRegionAccumulator
     {
         private float _fire;
@@ -890,7 +1116,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     {
         return RenderPresentation(new TimberbornGpuFieldRendererPresentation(
             DetailRegions: regions,
-            ScarRegions: Array.Empty<TimberbornGpuFieldRendererScarRegionState>()));
+            ScarRegions: Array.Empty<TimberbornGpuFieldRendererScarRegionState>(),
+            CloudRegions: Array.Empty<TimberbornGpuFieldRendererCloudRegionState>()));
     }
 
     public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
@@ -907,7 +1134,10 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
             if (_root is not null)
             {
-                _root.SetActive(presentation.DetailRegions.Count > 0 || presentation.ScarRegions.Count > 0);
+                _root.SetActive(
+                    presentation.DetailRegions.Count > 0 ||
+                    presentation.ScarRegions.Count > 0 ||
+                    presentation.CloudRegions.Count > 0);
             }
 
             return TimberbornGpuFieldRendererPresentationResult.Applied;
@@ -1080,18 +1310,35 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             .ToDictionary(
                 static group => group.Key,
                 static group => Math.Clamp(group.Max(static region => region.Ash), 0f, 1f));
-        Vector3[] vertices = regions
+        Vector3[] ashVertices = regions
             .SelectMany(region => ToSoftAshVertices(region, heightOffset))
             .ToArray();
-        Color[] colors = regions
+        Color[] ashColors = regions
             .SelectMany(region => ToSoftAshColors(region, ashByCell))
             .ToArray();
-        Vector2[] uvs = regions
+        Vector2[] ashUvs = regions
             .SelectMany(static region => ToSoftAshUvs(region))
             .ToArray();
-        int[] triangles = regions
+        int[] ashTriangles = regions
             .SelectMany(static (_, index) => ToSoftAshTriangles(index * 9))
             .ToArray();
+        Vector3[] cloudVertices = presentation.CloudRegions
+            .SelectMany(cloudRegion => ToCloudVertices(cloudRegion, heightOffset))
+            .ToArray();
+        Color[] cloudColors = presentation.CloudRegions
+            .SelectMany(static cloudRegion => ToCloudColors(cloudRegion))
+            .ToArray();
+        Vector2[] cloudUvs = presentation.CloudRegions
+            .SelectMany(static cloudRegion => ToCloudUvs(cloudRegion))
+            .ToArray();
+        int cloudVertexOffset = ashVertices.Length;
+        int[] cloudTriangles = presentation.CloudRegions
+            .SelectMany((_, index) => ToCloudTriangles(cloudVertexOffset + index * 4))
+            .ToArray();
+        Vector3[] vertices = ashVertices.Concat(cloudVertices).ToArray();
+        Color[] colors = ashColors.Concat(cloudColors).ToArray();
+        Vector2[] uvs = ashUvs.Concat(cloudUvs).ToArray();
+        int[] triangles = ashTriangles.Concat(cloudTriangles).ToArray();
 
         mesh.Clear();
         mesh.vertices = vertices;
@@ -1235,6 +1482,55 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         return ashByCell.TryGetValue((x, y, z), out float ash)
             ? ash
             : 0f;
+    }
+
+    private static IEnumerable<Vector3> ToCloudVertices(
+        TimberbornGpuFieldRendererCloudRegionState region,
+        float heightOffset)
+    {
+        float padding = 0.5f;
+        float minX = Math.Max(0f, region.MinX - padding);
+        float maxX = region.MaxX + 1f + padding;
+        float minZ = Math.Max(0f, region.MinY - padding);
+        float maxZ = region.MaxY + 1f + padding;
+        float lift = 0.85f + region.Steam * 0.45f + region.Smoke * 0.25f;
+        float y = region.MaxZ + heightOffset + lift;
+        return new[]
+        {
+            new Vector3(minX, y, minZ),
+            new Vector3(maxX, y, minZ),
+            new Vector3(minX, y, maxZ),
+            new Vector3(maxX, y, maxZ),
+        };
+    }
+
+    private static IEnumerable<Color> ToCloudColors(TimberbornGpuFieldRendererCloudRegionState region)
+    {
+        float toxic = Math.Clamp(region.Smoke * region.SmokeContamination, 0f, 1f);
+        float smoke = Math.Clamp(region.Smoke, 0f, 1f);
+        float steam = Math.Clamp(region.Steam, 0f, 1f);
+        float red = Math.Clamp(0.42f + steam * 0.38f + toxic * 0.18f - smoke * 0.08f, 0f, 1f);
+        float green = Math.Clamp(0.42f + steam * 0.38f + toxic * 0.28f - smoke * 0.1f, 0f, 1f);
+        float blue = Math.Clamp(0.42f + steam * 0.48f - toxic * 0.18f - smoke * 0.08f, 0f, 1f);
+        float alpha = Math.Clamp(Math.Max(smoke, steam) * region.Visibility * 0.42f, 0f, 0.62f);
+        Color color = new(red, green, blue, alpha);
+        return Enumerable.Repeat(color, 4);
+    }
+
+    private static IEnumerable<Vector2> ToCloudUvs(TimberbornGpuFieldRendererCloudRegionState region)
+    {
+        return new[]
+        {
+            new Vector2(region.MinX / AshOverlayTextureWorldSizeCells, region.MinY / AshOverlayTextureWorldSizeCells),
+            new Vector2((region.MaxX + 1f) / AshOverlayTextureWorldSizeCells, region.MinY / AshOverlayTextureWorldSizeCells),
+            new Vector2(region.MinX / AshOverlayTextureWorldSizeCells, (region.MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+            new Vector2((region.MaxX + 1f) / AshOverlayTextureWorldSizeCells, (region.MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+        };
+    }
+
+    private static IEnumerable<int> ToCloudTriangles(int offset)
+    {
+        return new[] { offset, offset + 2, offset + 1, offset + 2, offset + 3, offset + 1 };
     }
 
     private static IEnumerable<Vector2> ToUvs(

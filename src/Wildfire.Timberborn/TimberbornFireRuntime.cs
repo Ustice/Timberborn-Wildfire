@@ -87,7 +87,9 @@ public sealed class TimberbornFireRuntime :
         _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
             visualFieldSurface,
             _logSink,
-            windProvider);
+            windProvider,
+            new TimberbornPooledFireEffectOptions(AtmosphericParticleEffectsEnabled: false),
+            new TimberbornUnityPooledFireEffectPresenter(_logSink));
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
             _logSink);
