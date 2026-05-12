@@ -13,6 +13,7 @@ namespace Wildfire.Timberborn;
 
 public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBurnConsequenceApi
 {
+    private static readonly string[] BurnedTexturePropertyNames = { "_MainTex", "_BaseMap" };
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
     private readonly Dictionary<string, BlockObject> _treeTargetsByStableId;
@@ -158,10 +159,9 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         if (updatedMaterialCount == 0)
         {
             _logSink.Warning(
-                "wildfire_timberborn_tree_burned_leftover_skipped " +
+                "wildfire_timberborn_tree_burned_leftover_texture_skipped " +
                 $"reason=renderer_material_missing stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
                 $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)}");
-            return new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true);
         }
 
         _logSink.Info(
@@ -198,26 +198,33 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
 
     private Material? CreateBurnedMaterialOrOriginal(Material? source, string textureLabel)
     {
-        if (source is null ||
-            IsBurnedMaterial(source) ||
-            !source.HasProperty("_MainTex") ||
-            source.mainTexture is null)
+        if (source is null || IsBurnedMaterial(source))
         {
             return source;
         }
 
-        Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(source.mainTexture, textureLabel);
-        return burnedTexture is null ? source : CreateBurnedMaterial(source, burnedTexture);
+        TexturePropertyBinding? textureBinding = BurnedTexturePropertyNames
+            .Select(propertyName => TryGetTexture(source, propertyName))
+            .FirstOrDefault(static binding => binding.HasValue);
+        if (!textureBinding.HasValue)
+        {
+            return source;
+        }
+
+        Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(textureBinding.Value.Texture, textureLabel);
+        return burnedTexture is null
+            ? source
+            : CreateBurnedMaterial(source, burnedTexture, textureBinding.Value.PropertyName);
     }
 
-    private static Material CreateBurnedMaterial(Material source, Texture burnedTexture)
+    private static Material CreateBurnedMaterial(Material source, Texture burnedTexture, string propertyName)
     {
         Material material = new(source)
         {
             name = $"{source.name} Wildfire Burned",
-            mainTexture = burnedTexture,
             hideFlags = HideFlags.HideAndDontSave,
         };
+        material.SetTexture(propertyName, burnedTexture);
         return material;
     }
 
@@ -225,6 +232,19 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
     {
         return material.name.EndsWith(" Wildfire Burned", StringComparison.Ordinal);
     }
+
+    private static TexturePropertyBinding? TryGetTexture(Material material, string propertyName)
+    {
+        if (!material.HasProperty(propertyName))
+        {
+            return null;
+        }
+
+        Texture texture = material.GetTexture(propertyName);
+        return texture is null ? null : new TexturePropertyBinding(propertyName, texture);
+    }
+
+    private readonly record struct TexturePropertyBinding(string PropertyName, Texture Texture);
 
     private static string StableTreeTargetId(BlockObject blockObject)
     {

@@ -77,18 +77,22 @@ public sealed class TimberbornFireRuntime :
         _playerFireAlertCameraFocus = playerFireAlertCameraFocus ??
             throw new ArgumentNullException(nameof(playerFireAlertCameraFocus));
         _logSink = new UnityTimberbornFireLogSink();
+        TimberbornGpuFieldRendererOptions gpuFieldRendererOptions = new(CloudLayerEnabled: false);
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
             _logSink,
-            TimberbornGpuFieldRendererOptions.Default,
-            new TimberbornUnityGpuFieldRendererPresenter(_logSink, TimberbornGpuFieldRendererOptions.Default),
+            gpuFieldRendererOptions,
+            new TimberbornUnityGpuFieldRendererPresenter(_logSink, gpuFieldRendererOptions),
             new TimberbornTerrainAshOverlaySurfaceProvider(mapSize, terrainService));
         _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
             visualFieldSurface,
             _logSink,
             windProvider,
-            new TimberbornPooledFireEffectOptions(AtmosphericParticleEffectsEnabled: false),
+            new TimberbornPooledFireEffectOptions(
+                MaxActiveEffects: 384,
+                MaxUpdatedVisualRegionsPerDispatch: 192,
+                AtmosphericParticleEffectsEnabled: true),
             new TimberbornUnityPooledFireEffectPresenter(_logSink));
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),

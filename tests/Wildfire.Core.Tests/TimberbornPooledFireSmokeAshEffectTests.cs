@@ -739,6 +739,17 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             "SteamEngineSmoke"));
     }
 
+    [Fact]
+    public void UnityPresenterUpdatesTransformWhenReusingEffectInstances()
+    {
+        Assert.True(TimberbornUnityPooledFireEffectPresenter.ShouldUpdateTransformForReusedInstance(
+            TimberbornPooledFireEffectKind.Fire));
+        Assert.True(TimberbornUnityPooledFireEffectPresenter.ShouldUpdateTransformForReusedInstance(
+            TimberbornPooledFireEffectKind.Smoke));
+        Assert.True(TimberbornUnityPooledFireEffectPresenter.ShouldUpdateTransformForReusedInstance(
+            TimberbornPooledFireEffectKind.Steam));
+    }
+
     private static TimberbornGpuVisualFieldSurface CreateBoundSurface(
         RecordingFireLogSink logSink,
         RecordingVisualFieldDataReader dataReader)

@@ -174,6 +174,15 @@ public readonly record struct TimberbornGpuFieldRendererScarRegionState(
     float Visibility,
     float Intensity);
 
+public readonly record struct TimberbornGpuFieldRendererAshFieldCell(
+    int RegionId,
+    int X,
+    int Y,
+    int Z,
+    float Ash,
+    float Visibility,
+    float Intensity);
+
 public readonly record struct TimberbornGpuFieldRendererCloudRegionState(
     int RegionId,
     uint Tick,
@@ -193,7 +202,8 @@ public readonly record struct TimberbornGpuFieldRendererCloudRegionState(
 public readonly record struct TimberbornGpuFieldRendererPresentation(
     IReadOnlyList<TimberbornGpuFieldRendererRegionState> DetailRegions,
     IReadOnlyList<TimberbornGpuFieldRendererScarRegionState> ScarRegions,
-    IReadOnlyList<TimberbornGpuFieldRendererCloudRegionState> CloudRegions);
+    IReadOnlyList<TimberbornGpuFieldRendererCloudRegionState> CloudRegions,
+    IReadOnlyList<TimberbornGpuFieldRendererAshFieldCell> AshFieldCells);
 
 public readonly record struct TimberbornGpuFieldRendererCounters(
     bool RendererEnabled,
@@ -441,6 +451,7 @@ public sealed class TimberbornGpuFieldRendererSink :
         TimberbornGpuFieldRendererRegionState[] renderedRegions = SelectRenderedRegions(updatedRegions);
         TimberbornGpuFieldRendererScarRegionState[] scarRegions = SelectScarRegions(renderedRegions);
         TimberbornGpuFieldRendererCloudRegionState[] cloudRegions = SelectCloudRegions();
+        TimberbornGpuFieldRendererAshFieldCell[] ashFieldCells = SelectAshFieldCells();
         _renderedDetailRegionsThisDispatch = renderedRegions.Length;
         _renderedScarRegionsThisDispatch = scarRegions.Length;
         _renderedCloudRegionsThisDispatch = cloudRegions.Length;
@@ -452,7 +463,8 @@ public sealed class TimberbornGpuFieldRendererSink :
         TimberbornGpuFieldRendererPresentationResult presentationResult = _presenter.RenderPresentation(new TimberbornGpuFieldRendererPresentation(
             DetailRegions: renderedRegions,
             ScarRegions: scarRegions,
-            CloudRegions: cloudRegions));
+            CloudRegions: cloudRegions,
+            AshFieldCells: ashFieldCells));
         if (presentationResult.Status == TimberbornGpuFieldRendererPresentationStatus.Failed)
         {
             _materialFailuresThisDispatch++;
@@ -539,6 +551,27 @@ public sealed class TimberbornGpuFieldRendererSink :
             .OrderByDescending(static region => region.Intensity)
             .ThenBy(static region => region.RegionId)
             .Take(Options.MaxPersistentAshScarRegions)
+            .ToArray();
+    }
+
+    private TimberbornGpuFieldRendererAshFieldCell[] SelectAshFieldCells()
+    {
+        if (Options.DebugOverlayEnabled)
+        {
+            return Array.Empty<TimberbornGpuFieldRendererAshFieldCell>();
+        }
+
+        return _visibleRegions.Values
+            .Where(static region => region.Ash > 0f)
+            .OrderBy(static region => region.RegionId)
+            .Select(static region => new TimberbornGpuFieldRendererAshFieldCell(
+                RegionId: region.RegionId,
+                X: region.MinX,
+                Y: region.MinY,
+                Z: region.MaxZ,
+                Ash: Math.Clamp(region.Ash, 0f, 1f),
+                Visibility: Math.Clamp(region.Visibility, 0f, 1f),
+                Intensity: Math.Clamp(region.Ash, 0f, 1f) * Math.Max(Math.Clamp(region.Visibility, 0f, 1f), 0.001f)))
             .ToArray();
     }
 
@@ -1068,9 +1101,11 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private const float AshOverlayThresholdLow = 0.08f;
     private const float AshOverlayThresholdHigh = 0.92f;
     private const int AshOverlayRenderQueueOffset = -100;
+    private const float CloudOverlayUvSentinel = -2f;
     private static readonly int MainTexturePropertyId = Shader.PropertyToID("_MainTex");
     private static readonly int BaseMapPropertyId = Shader.PropertyToID("_BaseMap");
     private static readonly int AshTexturePropertyId = Shader.PropertyToID("_AshTex");
+    private static readonly int AshIntensityTexturePropertyId = Shader.PropertyToID("_AshIntensityTex");
     private static readonly int MaskTexturePropertyId = Shader.PropertyToID("_MaskTex");
     private static readonly int MaxOpacityPropertyId = Shader.PropertyToID("_MaxOpacity");
     private static readonly int SigmoidSharpnessPropertyId = Shader.PropertyToID("_SigmoidSharpness");
@@ -1088,6 +1123,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private MeshRenderer? _renderer;
     private Material? _material;
     private Texture2D? _ashOverlayTexture;
+    private Texture2D? _ashIntensityTexture;
     private Texture2D? _ashOverlayMaskTexture;
     private int _materialFailureCount;
 
@@ -1117,7 +1153,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         return RenderPresentation(new TimberbornGpuFieldRendererPresentation(
             DetailRegions: regions,
             ScarRegions: Array.Empty<TimberbornGpuFieldRendererScarRegionState>(),
-            CloudRegions: Array.Empty<TimberbornGpuFieldRendererCloudRegionState>()));
+            CloudRegions: Array.Empty<TimberbornGpuFieldRendererCloudRegionState>(),
+            AshFieldCells: Array.Empty<TimberbornGpuFieldRendererAshFieldCell>()));
     }
 
     public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
@@ -1131,7 +1168,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 return TimberbornGpuFieldRendererPresentationResult.Disabled("mesh_unavailable");
             }
 
-            BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
+            AshFieldTextureSnapshot? ashFieldTexture = UpdateAshIntensityTexture(presentation.AshFieldCells);
+            BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled, ashFieldTexture);
             if (_root is not null)
             {
                 _root.SetActive(
@@ -1183,6 +1221,12 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         {
             UnityEngine.Object.Destroy(_ashOverlayTexture);
             _ashOverlayTexture = null;
+        }
+
+        if (_ashIntensityTexture is not null)
+        {
+            UnityEngine.Object.Destroy(_ashIntensityTexture);
+            _ashIntensityTexture = null;
         }
 
         if (_shaderBundle is not null)
@@ -1242,6 +1286,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         _material.SetTexture(MainTexturePropertyId, _ashOverlayTexture);
         _material.SetTexture(BaseMapPropertyId, _ashOverlayTexture);
         _material.SetTexture(AshTexturePropertyId, _ashOverlayTexture);
+        _ashIntensityTexture = CreateAshIntensityTexture(1, 1);
+        _material.SetTexture(AshIntensityTexturePropertyId, _ashIntensityTexture);
         _material.SetTexture(MaskTexturePropertyId, _ashOverlayMaskTexture);
         _material.SetFloat(MaxOpacityPropertyId, AshOverlayMaxOpacity);
         _material.SetFloat(SigmoidSharpnessPropertyId, AshOverlaySigmoidSharpness);
@@ -1258,16 +1304,78 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         _renderer.sortingOrder = 2;
     }
 
+    private AshFieldTextureSnapshot? UpdateAshIntensityTexture(
+        IReadOnlyList<TimberbornGpuFieldRendererAshFieldCell> ashFieldCells)
+    {
+        if (_debugOverlayEnabled || ashFieldCells.Count == 0 || _material is null)
+        {
+            return null;
+        }
+
+        int minX = ashFieldCells.Min(static cell => cell.X);
+        int maxX = ashFieldCells.Max(static cell => cell.X);
+        int minY = ashFieldCells.Min(static cell => cell.Y);
+        int maxY = ashFieldCells.Max(static cell => cell.Y);
+        int width = Math.Max(1, maxX - minX + 1);
+        int height = Math.Max(1, maxY - minY + 1);
+        if (_ashIntensityTexture is null || _ashIntensityTexture.width != width || _ashIntensityTexture.height != height)
+        {
+            if (_ashIntensityTexture is not null)
+            {
+                UnityEngine.Object.Destroy(_ashIntensityTexture);
+            }
+
+            _ashIntensityTexture = CreateAshIntensityTexture(width, height);
+            _material.SetTexture(AshIntensityTexturePropertyId, _ashIntensityTexture);
+        }
+
+        Color32[] pixels = Enumerable.Repeat(new Color32(0, 0, 0, 0), width * height).ToArray();
+        foreach (TimberbornGpuFieldRendererAshFieldCell cell in ashFieldCells)
+        {
+            int pixelX = cell.X - minX;
+            int pixelY = cell.Y - minY;
+            int pixelIndex = pixelY * width + pixelX;
+            byte ash = (byte)Math.Round(Math.Clamp(cell.Ash, 0f, 1f) * byte.MaxValue);
+            if (ash > pixels[pixelIndex].r)
+            {
+                pixels[pixelIndex] = new Color32(ash, ash, ash, ash);
+            }
+        }
+
+        _ashIntensityTexture.SetPixels32(pixels);
+        _ashIntensityTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        return new AshFieldTextureSnapshot(minX, minY, width, height, ashFieldCells);
+    }
+
+    private static Texture2D CreateAshIntensityTexture(int width, int height)
+    {
+        Texture2D texture = new(
+            width,
+            height,
+            TextureFormat.RGBA32,
+            mipChain: false)
+        {
+            name = "Wildfire_AshIntensityField",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+            hideFlags = HideFlags.DontSave,
+        };
+        texture.SetPixels32(Enumerable.Repeat(new Color32(0, 0, 0, 0), width * height).ToArray());
+        texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+        return texture;
+    }
+
     private static void BuildMesh(
         Mesh mesh,
         TimberbornGpuFieldRendererPresentation presentation,
         float heightOffset,
-        bool debugOverlayEnabled)
+        bool debugOverlayEnabled,
+        AshFieldTextureSnapshot? ashFieldTexture)
     {
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions = presentation.DetailRegions;
         if (!debugOverlayEnabled)
         {
-            BuildAshOverlayMesh(mesh, presentation, heightOffset);
+            BuildAshOverlayMesh(mesh, presentation, heightOffset, ashFieldTexture);
             return;
         }
 
@@ -1280,6 +1388,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         Vector2[] uvs = regions
             .SelectMany(region => ToUvs(region, debugOverlayEnabled))
             .ToArray();
+        Vector2[] uv2s = Enumerable.Repeat(new Vector2(-1f, -1f), vertices.Length).ToArray();
         int[] triangles = regions
             .SelectMany((_, index) =>
             {
@@ -1292,6 +1401,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         mesh.vertices = vertices;
         mesh.colors = colors;
         mesh.uv = uvs;
+        mesh.uv2 = uv2s;
         mesh.triangles = triangles;
         mesh.RecalculateBounds();
     }
@@ -1299,29 +1409,55 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private static void BuildAshOverlayMesh(
         Mesh mesh,
         TimberbornGpuFieldRendererPresentation presentation,
-        float heightOffset)
+        float heightOffset,
+        AshFieldTextureSnapshot? ashFieldTexture)
     {
-        TimberbornGpuFieldRendererRegionState[] regions = presentation.ScarRegions
-            .Select(static scarRegion => ToRegionState(scarRegion))
-            .Concat(presentation.DetailRegions)
-            .ToArray();
-        Dictionary<(int X, int Y, int Z), float> ashByCell = regions
+        TimberbornGpuFieldRendererRegionState[] legacyRegions = ashFieldTexture is null
+            ? presentation.ScarRegions
+                .Select(static scarRegion => ToRegionState(scarRegion))
+                .Concat(presentation.DetailRegions)
+                .ToArray()
+            : Array.Empty<TimberbornGpuFieldRendererRegionState>();
+        Dictionary<(int X, int Y, int Z), float> ashByCell = legacyRegions
             .GroupBy(static region => (region.MinX, region.MinY, region.MaxZ))
             .ToDictionary(
                 static group => group.Key,
                 static group => Math.Clamp(group.Max(static region => region.Ash), 0f, 1f));
-        Vector3[] ashVertices = regions
+        Vector3[] legacyAshVertices = legacyRegions
             .SelectMany(region => ToSoftAshVertices(region, heightOffset))
             .ToArray();
-        Color[] ashColors = regions
+        Color[] legacyAshColors = legacyRegions
             .SelectMany(region => ToSoftAshColors(region, ashByCell))
             .ToArray();
-        Vector2[] ashUvs = regions
+        Vector2[] legacyAshUvs = legacyRegions
             .SelectMany(static region => ToSoftAshUvs(region))
             .ToArray();
-        int[] ashTriangles = regions
+        Vector2[] legacyAshUv2s = Enumerable.Repeat(new Vector2(-1f, -1f), legacyAshVertices.Length).ToArray();
+        int[] legacyAshTriangles = legacyRegions
             .SelectMany(static (_, index) => ToSoftAshTriangles(index * 9))
             .ToArray();
+
+        AshFieldTextureQuad[] ashFieldQuads = ashFieldTexture is null
+            ? Array.Empty<AshFieldTextureQuad>()
+            : ashFieldTexture.Value.Cells
+                .GroupBy(static cell => cell.Z)
+                .Select(group => AshFieldTextureQuad.From(ashFieldTexture.Value, group.Key, group))
+                .ToArray();
+        Vector3[] ashFieldVertices = ashFieldQuads
+            .SelectMany(quad => quad.ToVertices(heightOffset))
+            .ToArray();
+        Color[] ashFieldColors = Enumerable.Repeat(Color.white, ashFieldVertices.Length).ToArray();
+        Vector2[] ashFieldUvs = ashFieldQuads
+            .SelectMany(static quad => quad.ToPatternUvs())
+            .ToArray();
+        Vector2[] ashFieldUv2s = ashFieldQuads
+            .SelectMany(static quad => quad.ToIntensityUvs())
+            .ToArray();
+        int fieldVertexOffset = legacyAshVertices.Length;
+        int[] ashFieldTriangles = ashFieldQuads
+            .SelectMany((_, index) => ToCloudTriangles(fieldVertexOffset + index * 4))
+            .ToArray();
+
         Vector3[] cloudVertices = presentation.CloudRegions
             .SelectMany(cloudRegion => ToCloudVertices(cloudRegion, heightOffset))
             .ToArray();
@@ -1331,19 +1467,24 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         Vector2[] cloudUvs = presentation.CloudRegions
             .SelectMany(static cloudRegion => ToCloudUvs(cloudRegion))
             .ToArray();
-        int cloudVertexOffset = ashVertices.Length;
+        Vector2[] cloudUv2s = Enumerable.Repeat(
+            new Vector2(CloudOverlayUvSentinel, CloudOverlayUvSentinel),
+            cloudVertices.Length).ToArray();
+        int cloudVertexOffset = legacyAshVertices.Length + ashFieldVertices.Length;
         int[] cloudTriangles = presentation.CloudRegions
-            .SelectMany((_, index) => ToCloudTriangles(cloudVertexOffset + index * 4))
+            .SelectMany((_, index) => ToVolumetricCloudTriangles(cloudVertexOffset + index * 8))
             .ToArray();
-        Vector3[] vertices = ashVertices.Concat(cloudVertices).ToArray();
-        Color[] colors = ashColors.Concat(cloudColors).ToArray();
-        Vector2[] uvs = ashUvs.Concat(cloudUvs).ToArray();
-        int[] triangles = ashTriangles.Concat(cloudTriangles).ToArray();
+        Vector3[] vertices = legacyAshVertices.Concat(ashFieldVertices).Concat(cloudVertices).ToArray();
+        Color[] colors = legacyAshColors.Concat(ashFieldColors).Concat(cloudColors).ToArray();
+        Vector2[] uvs = legacyAshUvs.Concat(ashFieldUvs).Concat(cloudUvs).ToArray();
+        Vector2[] uv2s = legacyAshUv2s.Concat(ashFieldUv2s).Concat(cloudUv2s).ToArray();
+        int[] triangles = legacyAshTriangles.Concat(ashFieldTriangles).Concat(cloudTriangles).ToArray();
 
         mesh.Clear();
         mesh.vertices = vertices;
         mesh.colors = colors;
         mesh.uv = uvs;
+        mesh.uv2 = uv2s;
         mesh.triangles = triangles;
         mesh.RecalculateBounds();
     }
@@ -1493,14 +1634,20 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         float maxX = region.MaxX + 1f + padding;
         float minZ = Math.Max(0f, region.MinY - padding);
         float maxZ = region.MaxY + 1f + padding;
-        float lift = 0.85f + region.Steam * 0.45f + region.Smoke * 0.25f;
-        float y = region.MaxZ + heightOffset + lift;
+        float centerX = (minX + maxX) * 0.5f;
+        float centerZ = (minZ + maxZ) * 0.5f;
+        float baseY = region.MaxZ + heightOffset + 0.35f;
+        float topY = baseY + 1.45f + Math.Max(region.Smoke, region.Steam) * 1.2f;
         return new[]
         {
-            new Vector3(minX, y, minZ),
-            new Vector3(maxX, y, minZ),
-            new Vector3(minX, y, maxZ),
-            new Vector3(maxX, y, maxZ),
+            new Vector3(minX, baseY, centerZ),
+            new Vector3(maxX, baseY, centerZ),
+            new Vector3(minX, topY, centerZ),
+            new Vector3(maxX, topY, centerZ),
+            new Vector3(centerX, baseY, minZ),
+            new Vector3(centerX, baseY, maxZ),
+            new Vector3(centerX, topY, minZ),
+            new Vector3(centerX, topY, maxZ),
         };
     }
 
@@ -1509,28 +1656,40 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         float toxic = Math.Clamp(region.Smoke * region.SmokeContamination, 0f, 1f);
         float smoke = Math.Clamp(region.Smoke, 0f, 1f);
         float steam = Math.Clamp(region.Steam, 0f, 1f);
-        float red = Math.Clamp(0.42f + steam * 0.38f + toxic * 0.18f - smoke * 0.08f, 0f, 1f);
-        float green = Math.Clamp(0.42f + steam * 0.38f + toxic * 0.28f - smoke * 0.1f, 0f, 1f);
-        float blue = Math.Clamp(0.42f + steam * 0.48f - toxic * 0.18f - smoke * 0.08f, 0f, 1f);
-        float alpha = Math.Clamp(Math.Max(smoke, steam) * region.Visibility * 0.42f, 0f, 0.62f);
+        float red = Math.Clamp(0.36f + steam * 0.48f + toxic * 0.22f - smoke * 0.1f, 0f, 1f);
+        float green = Math.Clamp(0.36f + steam * 0.5f - toxic * 0.18f - smoke * 0.12f, 0f, 1f);
+        float blue = Math.Clamp(0.36f + steam * 0.58f - toxic * 0.24f - smoke * 0.08f, 0f, 1f);
+        float cloud = Math.Max(smoke, steam);
+        float alpha = cloud <= 0f
+            ? 0f
+            : Math.Clamp((0.14f + cloud * 0.68f) * region.Visibility, 0f, 0.82f);
         Color color = new(red, green, blue, alpha);
-        return Enumerable.Repeat(color, 4);
+        return Enumerable.Repeat(color, 8);
     }
 
     private static IEnumerable<Vector2> ToCloudUvs(TimberbornGpuFieldRendererCloudRegionState region)
     {
         return new[]
         {
-            new Vector2(region.MinX / AshOverlayTextureWorldSizeCells, region.MinY / AshOverlayTextureWorldSizeCells),
-            new Vector2((region.MaxX + 1f) / AshOverlayTextureWorldSizeCells, region.MinY / AshOverlayTextureWorldSizeCells),
-            new Vector2(region.MinX / AshOverlayTextureWorldSizeCells, (region.MaxY + 1f) / AshOverlayTextureWorldSizeCells),
-            new Vector2((region.MaxX + 1f) / AshOverlayTextureWorldSizeCells, (region.MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
         };
     }
 
     private static IEnumerable<int> ToCloudTriangles(int offset)
     {
         return new[] { offset, offset + 2, offset + 1, offset + 2, offset + 3, offset + 1 };
+    }
+
+    private static IEnumerable<int> ToVolumetricCloudTriangles(int offset)
+    {
+        return ToCloudTriangles(offset).Concat(ToCloudTriangles(offset + 4));
     }
 
     private static IEnumerable<Vector2> ToUvs(
@@ -1676,6 +1835,75 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         texture.filterMode = FilterMode.Trilinear;
         texture.wrapMode = wrapMode;
         return texture;
+    }
+
+    private readonly record struct AshFieldTextureSnapshot(
+        int MinX,
+        int MinY,
+        int Width,
+        int Height,
+        IReadOnlyList<TimberbornGpuFieldRendererAshFieldCell> Cells);
+
+    private readonly record struct AshFieldTextureQuad(
+        int MinX,
+        int MinY,
+        int MaxX,
+        int MaxY,
+        int Z,
+        AshFieldTextureSnapshot Texture)
+    {
+        public static AshFieldTextureQuad From(
+            AshFieldTextureSnapshot texture,
+            int z,
+            IEnumerable<TimberbornGpuFieldRendererAshFieldCell> cells)
+        {
+            TimberbornGpuFieldRendererAshFieldCell[] cellsInLayer = cells.ToArray();
+            return new AshFieldTextureQuad(
+                MinX: cellsInLayer.Min(static cell => cell.X),
+                MinY: cellsInLayer.Min(static cell => cell.Y),
+                MaxX: cellsInLayer.Max(static cell => cell.X),
+                MaxY: cellsInLayer.Max(static cell => cell.Y),
+                Z: z,
+                Texture: texture);
+        }
+
+        public IEnumerable<Vector3> ToVertices(float heightOffset)
+        {
+            float y = Z + heightOffset;
+            return new[]
+            {
+                new Vector3(MinX, y, MinY),
+                new Vector3(MaxX + 1f, y, MinY),
+                new Vector3(MinX, y, MaxY + 1f),
+                new Vector3(MaxX + 1f, y, MaxY + 1f),
+            };
+        }
+
+        public IEnumerable<Vector2> ToPatternUvs()
+        {
+            return new[]
+            {
+                new Vector2(MinX / AshOverlayTextureWorldSizeCells, MinY / AshOverlayTextureWorldSizeCells),
+                new Vector2((MaxX + 1f) / AshOverlayTextureWorldSizeCells, MinY / AshOverlayTextureWorldSizeCells),
+                new Vector2(MinX / AshOverlayTextureWorldSizeCells, (MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+                new Vector2((MaxX + 1f) / AshOverlayTextureWorldSizeCells, (MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+            };
+        }
+
+        public IEnumerable<Vector2> ToIntensityUvs()
+        {
+            float minU = (MinX - Texture.MinX) / Math.Max(Texture.Width, 1f);
+            float maxU = (MaxX - Texture.MinX + 1f) / Math.Max(Texture.Width, 1f);
+            float minV = (MinY - Texture.MinY) / Math.Max(Texture.Height, 1f);
+            float maxV = (MaxY - Texture.MinY + 1f) / Math.Max(Texture.Height, 1f);
+            return new[]
+            {
+                new Vector2(minU, minV),
+                new Vector2(maxU, minV),
+                new Vector2(minU, maxV),
+                new Vector2(maxU, maxV),
+            };
+        }
     }
 
     private readonly record struct AshOverlayQuadBounds(float MinX, float MaxX, float MinZ, float MaxZ);

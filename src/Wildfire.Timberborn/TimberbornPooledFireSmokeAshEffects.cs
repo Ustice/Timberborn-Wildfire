@@ -1003,15 +1003,19 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         GameObject instance = GetOrCreateInstance(state, resolution.Prefab, out bool created);
         instance.name = $"Wildfire {state.Kind} Effect {state.SlotId}";
         instance.SetActive(true);
+        if (created || ShouldUpdateTransformForReusedInstance(state.Kind))
+        {
+            TimberbornPooledFireEffectLocalPosition position = ToUnityLocalPosition(state);
+            instance.transform.localPosition = new Vector3(position.X, position.Y, position.Z);
+            instance.transform.localScale = Vector3.one;
+        }
+
         if (state.Kind == TimberbornPooledFireEffectKind.Fire && !created)
         {
             ConfigureParticleEmission(instance, state);
         }
         else
         {
-            TimberbornPooledFireEffectLocalPosition position = ToUnityLocalPosition(state);
-            instance.transform.localPosition = new Vector3(position.X, position.Y, position.Z);
-            instance.transform.localScale = Vector3.one;
             ConfigureParticleSystem(instance, state);
         }
 
@@ -1092,6 +1096,17 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             string.Equals(existingPrefabName, requestedPrefabName, StringComparison.Ordinal);
     }
 
+    public static bool ShouldUpdateTransformForReusedInstance(TimberbornPooledFireEffectKind kind)
+    {
+        return kind is
+            TimberbornPooledFireEffectKind.Fire or
+            TimberbornPooledFireEffectKind.Smoke or
+            TimberbornPooledFireEffectKind.ToxicSmoke or
+            TimberbornPooledFireEffectKind.Steam or
+            TimberbornPooledFireEffectKind.Ash or
+            TimberbornPooledFireEffectKind.ToxicAsh;
+    }
+
     private GameObject GetOrCreateInstance(
         TimberbornPooledFireEffectState state,
         GameObject nativePrefab,
@@ -1162,6 +1177,7 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             StartSizeMax(state.Kind, visibleIntensity));
         main.startColor = new ParticleSystem.MinMaxGradient(
             TimberbornProceduralFireSmokeAshEffectPrefabCatalog.StartColor(state.Kind, visibleIntensity));
+        main.maxParticles = MaxParticles(state.Kind);
 
         ParticleSystem.EmissionModule emission = particleSystem.emission;
         emission.rateOverTime = new ParticleSystem.MinMaxCurve(EmissionRate(state.Kind, visibleIntensity));
@@ -1224,9 +1240,9 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         return kind switch
         {
             TimberbornPooledFireEffectKind.Fire => Lerp(6f, 32f, intensity),
-            TimberbornPooledFireEffectKind.Smoke => Lerp(1f, 4.5f, intensity),
-            TimberbornPooledFireEffectKind.ToxicSmoke => Lerp(0.75f, 3.5f, intensity),
-            TimberbornPooledFireEffectKind.Steam => Lerp(3f, 13.5f, intensity),
+            TimberbornPooledFireEffectKind.Smoke => Lerp(0.45f, 2.2f, intensity),
+            TimberbornPooledFireEffectKind.ToxicSmoke => Lerp(0.35f, 1.8f, intensity),
+            TimberbornPooledFireEffectKind.Steam => Lerp(0.7f, 3.2f, intensity),
             TimberbornPooledFireEffectKind.ToxicAsh => Lerp(3f, 14f, intensity),
             _ => Lerp(4f, 18f, intensity),
         };
@@ -1239,11 +1255,24 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(
                 Lerp(0.55f, 0.75f, intensity),
                 Lerp(0.8f, 1.05f, intensity)),
-            TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(4.8f),
-            TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(5.4f),
-            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(4.8f),
+            TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(3.2f),
+            TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(3.4f),
+            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(2.2f),
             TimberbornPooledFireEffectKind.ToxicAsh => new ParticleSystem.MinMaxCurve(2.1f),
             _ => new ParticleSystem.MinMaxCurve(1.8f),
+        };
+    }
+
+    private static int MaxParticles(TimberbornPooledFireEffectKind kind)
+    {
+        return kind switch
+        {
+            TimberbornPooledFireEffectKind.Fire => 32,
+            TimberbornPooledFireEffectKind.Smoke => 18,
+            TimberbornPooledFireEffectKind.ToxicSmoke => 18,
+            TimberbornPooledFireEffectKind.Steam => 14,
+            TimberbornPooledFireEffectKind.ToxicAsh => 18,
+            _ => 16,
         };
     }
 
