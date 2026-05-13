@@ -783,14 +783,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         out TimberbornPooledFireEffectState state)
     {
         float fire = Clamp01(sample.Fire);
-        float smoke = Clamp01(sample.Smoke);
+        float smoke = Clamp01(sample.AtmosphericSmoke);
         float ash = Clamp01(sample.Ash);
         float smokeContamination = Clamp01(sample.SmokeContamination);
         float ashContamination = Clamp01(sample.AshContamination);
         float moistureDrop = Clamp01(Math.Max(0, effectEvent.OldWater - effectEvent.Water) / 3f);
-        float steam = kind == TimberbornPooledFireEffectKind.Steam
-            ? moistureDrop
-            : Clamp01(sample.Steam);
+        float steam = Clamp01(sample.Steam);
         float visibility = Clamp01(sample.Visibility);
         float fieldValue = FieldValue(kind, fire, smoke, steam, ash, smokeContamination, ashContamination);
         float intensity = fieldValue * visibility;

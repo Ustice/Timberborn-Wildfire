@@ -17,7 +17,8 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
                     Fire: 0.1f,
                     Smoke: 0.8f,
                     Ash: 0.3f,
-                    Visibility: 1f),
+                    Visibility: 1f,
+                    AtmosphericSmoke: 0.8f),
             });
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
         RecordingPooledEffectPresenter presenter = new();
@@ -189,7 +190,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
-    public void SteamIntensityComesFromPackedCellWaterDrop()
+    public void SteamIntensityComesFromAtmosphericSteamSample()
     {
         RecordingFireLogSink logSink = new();
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
@@ -197,7 +198,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             new RecordingVisualFieldDataReader(
                 sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
                 {
-                    [6] = Sample(6, fire: 0.1f, smoke: 0f, ash: 0f, steam: 0f),
+                    [6] = Sample(6, fire: 0.1f, smoke: 0f, ash: 0f, steam: 5f / 7f),
                 }));
         RecordingPooledEffectPresenter presenter = new();
         TimberbornPooledFireSmokeAshEffectSink sink = new(
@@ -221,12 +222,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
         Assert.Equal(TimberbornPooledFireEffectKind.Steam, state.Kind);
         Assert.Equal(2f / 3f, state.MoistureDrop, precision: 4);
-        Assert.Equal(2f / 3f, state.Steam, precision: 4);
-        Assert.Equal(2f / 3f, state.Intensity, precision: 4);
+        Assert.Equal(5f / 7f, state.Steam, precision: 4);
+        Assert.Equal(5f / 7f, state.Intensity, precision: 4);
     }
 
     [Fact]
-    public void AtmosphericSteamSampleDoesNotCreateSteamWithoutPackedWaterDrop()
+    public void AtmosphericSteamSampleCreatesSteamWithoutPackedWaterDrop()
     {
         RecordingFireLogSink logSink = new();
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
@@ -255,8 +256,10 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             IsBurning: false));
         sink.CompleteVisualEffectDispatch(22);
 
-        Assert.Empty(presenter.UpdatedEffects);
-        Assert.Equal(0, sink.Counters.ActivePooledEffectCount);
+        TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
+        Assert.Equal(TimberbornPooledFireEffectKind.Steam, state.Kind);
+        Assert.Equal(5f / 7f, state.Steam, precision: 4);
+        Assert.Equal(1, sink.Counters.ActivePooledEffectCount);
     }
 
     [Fact]
@@ -532,7 +535,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
                 {
                     [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f),
                     [1] = Sample(1, fire: 1f, smoke: 0f, ash: 0f),
-                    [2] = Sample(2, fire: 0f, smoke: 0f, ash: 0f),
+                    [2] = Sample(2, fire: 0f, smoke: 0f, ash: 0f, steam: 5f / 7f),
                 }));
         RecordingPooledEffectPresenter presenter = new();
         TimberbornPooledFireSmokeAshEffectSink sink = new(
@@ -784,6 +787,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             Ash: ash,
             Visibility: 1f,
             Steam: steam,
+            AtmosphericSmoke: smoke,
             SmokeContamination: smokeContamination,
             AshContamination: ashContamination);
     }
