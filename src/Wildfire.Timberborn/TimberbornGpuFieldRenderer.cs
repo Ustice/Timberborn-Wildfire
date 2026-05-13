@@ -2,6 +2,7 @@ using Timberborn.MapStateSystem;
 using Timberborn.TerrainSystem;
 using UnityEngine;
 using System.Reflection;
+using Wildfire.Core;
 
 namespace Wildfire.Timberborn;
 
@@ -293,6 +294,7 @@ public sealed class TimberbornGpuFieldRendererSink :
     private readonly Dictionary<int, TimberbornGpuFieldRendererRegionAccumulator> _regionsThisDispatch = new();
     private readonly Dictionary<int, TimberbornGpuFieldRendererCloudRegionAccumulator> _cloudRegionsThisDispatch = new();
     private readonly Dictionary<int, TimberbornGpuFieldRendererRegionState> _visibleRegions = new();
+    private readonly HashSet<(int X, int Y, int Z)> _ashSuppressedSurfaces = new();
     private int _updatedRegionsThisDispatch;
     private int _droppedRegionsThisDispatch;
     private int _invisibleRegionsThisDispatch;
@@ -373,6 +375,25 @@ public sealed class TimberbornGpuFieldRendererSink :
         LastNonZeroUpdatedRegionTick: _lastNonZeroUpdatedRegionTick);
 
     public IReadOnlyDictionary<int, TimberbornGpuFieldRendererRegionState> VisibleRegions => _visibleRegions;
+
+    public void SetAshSuppressedSurfaces(
+        FireGrid grid,
+        ReadOnlySpan<WildfireCompanionField> companionFields)
+    {
+        _ashSuppressedSurfaces.Clear();
+        if (companionFields.IsEmpty)
+        {
+            return;
+        }
+
+        companionFields
+            .ToArray()
+            .Select((field, index) => (field, index))
+            .Where(static item => item.field.State.MaterialClass is WildfireMaterialClass.Water or WildfireMaterialClass.Badwater)
+            .Select(item => grid.FromIndex(item.index))
+            .ToList()
+            .ForEach(coordinates => _ashSuppressedSurfaces.Add(coordinates));
+    }
 
     private static ITimberbornGpuFieldRendererPresenter CreateDefaultPresenter(
         ITimberbornFireLogSink logSink,
@@ -606,6 +627,7 @@ public sealed class TimberbornGpuFieldRendererSink :
         _regionsThisDispatch.Clear();
         _cloudRegionsThisDispatch.Clear();
         _visibleRegions.Clear();
+        _ashSuppressedSurfaces.Clear();
         _updatedRegionsThisDispatch = 0;
         _droppedRegionsThisDispatch = 0;
         _invisibleRegionsThisDispatch = 0;
@@ -655,7 +677,7 @@ public sealed class TimberbornGpuFieldRendererSink :
             AddSampleToCloudRegion(binding, effectEvent.Tick, x, y, z, sample);
         }
 
-        if (!Options.DebugOverlayEnabled && effectEvent.Water > 0)
+        if (!Options.DebugOverlayEnabled && IsAshSuppressedSurface(x, y, z))
         {
             RemoveAshOverlayCells(binding, x, y, z);
             return;
@@ -677,7 +699,8 @@ public sealed class TimberbornGpuFieldRendererSink :
                         ? (cell.X, cell.Y, Z: surfaceZ, cell.Weight)
                         : ((int X, int Y, int Z, float Weight)?)null)
                 .Where(static cell => cell.HasValue)
-                .Select(static cell => cell!.Value);
+                .Select(static cell => cell!.Value)
+                .Where(cell => !IsAshSuppressedSurface(cell.X, cell.Y, cell.Z));
 
         affectedCells
             .Select(cell => (
@@ -692,6 +715,11 @@ public sealed class TimberbornGpuFieldRendererSink :
                 : item.Sample.Ash > 0f)
             .ToList()
             .ForEach(item => AddSampleToRegion(binding, effectEvent.Tick, item.X, item.Y, item.Z, item.Sample));
+    }
+
+    private bool IsAshSuppressedSurface(int x, int y, int z)
+    {
+        return _ashSuppressedSurfaces.Contains((x, y, z));
     }
 
     private void RemoveAshOverlayCells(

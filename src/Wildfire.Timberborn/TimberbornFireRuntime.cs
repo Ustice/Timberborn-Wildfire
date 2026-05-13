@@ -217,6 +217,7 @@ public sealed class TimberbornFireRuntime :
             _logSink,
             CreateDeltaConsumerSinks());
         fireSystem.Initialize(grid, sources, companionFields);
+        _gpuFieldRenderer.SetAshSuppressedSurfaces(grid, companionFields);
         _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
         Configure(fireSystem, cadence);
         _logSink.Info(

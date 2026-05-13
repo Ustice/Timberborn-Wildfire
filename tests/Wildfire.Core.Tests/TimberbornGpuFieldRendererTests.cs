@@ -1,4 +1,5 @@
 using Wildfire.Timberborn;
+using Wildfire.Core;
 
 namespace Wildfire.Core.Tests;
 
@@ -492,7 +493,7 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
-    public void AshOverlayClearsAccumulatedAshWhenCellBecomesWet()
+    public void AshOverlayDoesNotClearAccumulatedAshForPackedWetnessAlone()
     {
         RecordingFireLogSink logSink = new();
         RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
@@ -517,13 +518,13 @@ public sealed class TimberbornGpuFieldRendererTests
         sink.UpdateVisualEffect(WetEffectEvent(5, 19));
         sink.CompleteVisualEffectDispatch(19);
 
-        Assert.Empty(sink.VisibleRegions);
-        Assert.Empty(presenter.RenderedRegions);
-        Assert.Empty(presenter.RenderedAshFieldCells);
+        Assert.Single(sink.VisibleRegions);
+        Assert.Single(presenter.RenderedRegions);
+        Assert.Single(presenter.RenderedAshFieldCells);
     }
 
     [Fact]
-    public void AshOverlayDoesNotRenderNewAshOnWetCells()
+    public void AshOverlayDoesNotRenderNewAshOnImportedWaterSurface()
     {
         RecordingFireLogSink logSink = new();
         RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
@@ -540,14 +541,47 @@ public sealed class TimberbornGpuFieldRendererTests
                 AshBlendCellRadius: 0),
             presenter,
             new FixedAshOverlaySurfaceProvider(surfaceZ: 0));
+        sink.SetAshSuppressedSurfaces(
+            new FireGrid(4, 4, 1),
+            WaterCompanionFields(cellIndex: 5, cellCount: 16));
 
         sink.BeginVisualEffectDispatch(20);
-        sink.UpdateVisualEffect(WetEffectEvent(5, 20));
+        sink.UpdateVisualEffect(EffectEvent(5, 20));
         sink.CompleteVisualEffectDispatch(20);
 
         Assert.Empty(sink.VisibleRegions);
         Assert.Empty(presenter.RenderedRegions);
         Assert.Empty(presenter.RenderedAshFieldCells);
+    }
+
+    [Fact]
+    public void AshOverlayBleedSkipsImportedWaterSurfaceCells()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [5] = Sample(5, fire: 0f, smoke: 0f, ash: 0.7f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 1),
+            presenter,
+            new FixedAshOverlaySurfaceProvider(surfaceZ: 0));
+        sink.SetAshSuppressedSurfaces(
+            new FireGrid(4, 4, 1),
+            WaterCompanionFields(cellIndex: 4, cellCount: 16));
+
+        sink.BeginVisualEffectDispatch(21);
+        sink.UpdateVisualEffect(EffectEvent(5, 21));
+        sink.CompleteVisualEffectDispatch(21);
+
+        Assert.DoesNotContain(presenter.RenderedRegions, static region => region.RegionId == 4);
+        Assert.Contains(presenter.RenderedRegions, static region => region.RegionId == 5);
     }
 
     [Fact]
@@ -796,6 +830,18 @@ public sealed class TimberbornGpuFieldRendererTests
             OldWater: 0,
             Water: 3,
             IsBurning: false);
+    }
+
+    private static WildfireCompanionField[] WaterCompanionFields(int cellIndex, int cellCount)
+    {
+        WildfireCompanionField[] companionFields = Enumerable
+            .Repeat(WildfireCompanionField.Empty, cellCount)
+            .ToArray();
+        companionFields[cellIndex] = new WildfireCompanionField(
+            TargetId: 0,
+            WildfireCompanionFieldState.FromMaterialProfile(
+                WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Water)));
+        return companionFields;
     }
 
     private sealed class RecordingGpuFieldRendererPresenter : ITimberbornGpuFieldRendererPresenter
