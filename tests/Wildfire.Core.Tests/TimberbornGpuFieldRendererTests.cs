@@ -492,6 +492,65 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void AshOverlayClearsAccumulatedAshWhenCellBecomesWet()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [5] = Sample(5, fire: 0f, smoke: 0f, ash: 0.7f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0),
+            presenter,
+            new FixedAshOverlaySurfaceProvider(surfaceZ: 0));
+
+        sink.BeginVisualEffectDispatch(18);
+        sink.UpdateVisualEffect(EffectEvent(5, 18));
+        sink.CompleteVisualEffectDispatch(18);
+        sink.BeginVisualEffectDispatch(19);
+        sink.UpdateVisualEffect(WetEffectEvent(5, 19));
+        sink.CompleteVisualEffectDispatch(19);
+
+        Assert.Empty(sink.VisibleRegions);
+        Assert.Empty(presenter.RenderedRegions);
+        Assert.Empty(presenter.RenderedAshFieldCells);
+    }
+
+    [Fact]
+    public void AshOverlayDoesNotRenderNewAshOnWetCells()
+    {
+        RecordingFireLogSink logSink = new();
+        RecordingVisualFieldDataReader dataReader = new(new Dictionary<int, TimberbornGpuVisualFieldSample>
+        {
+            [5] = Sample(5, fire: 0f, smoke: 0f, ash: 0.7f, visibility: 1f),
+        });
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink sink = new(
+            surface,
+            logSink,
+            new TimberbornGpuFieldRendererOptions(
+                RegionSize: 1,
+                AshBlendCellRadius: 0),
+            presenter,
+            new FixedAshOverlaySurfaceProvider(surfaceZ: 0));
+
+        sink.BeginVisualEffectDispatch(20);
+        sink.UpdateVisualEffect(WetEffectEvent(5, 20));
+        sink.CompleteVisualEffectDispatch(20);
+
+        Assert.Empty(sink.VisibleRegions);
+        Assert.Empty(presenter.RenderedRegions);
+        Assert.Empty(presenter.RenderedAshFieldCells);
+    }
+
+    [Fact]
     public void CloudLayerRendersSmokeSteamAndToxicSmokeWithoutAsh()
     {
         RecordingFireLogSink logSink = new();
@@ -724,6 +783,19 @@ public sealed class TimberbornGpuFieldRendererTests
             OldWater: 0,
             Water: 0,
             IsBurning: true);
+    }
+
+    private static TimberbornFireVisualEffectEvent WetEffectEvent(int cellIndex, uint tick)
+    {
+        return new TimberbornFireVisualEffectEvent(
+            CellIndex: cellIndex,
+            Tick: tick,
+            Kind: TimberbornFireVisualEffectKind.WaterChanged,
+            Fuel: 10,
+            Heat: 10,
+            OldWater: 0,
+            Water: 3,
+            IsBurning: false);
     }
 
     private sealed class RecordingGpuFieldRendererPresenter : ITimberbornGpuFieldRendererPresenter

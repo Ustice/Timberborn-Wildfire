@@ -22,7 +22,7 @@ public sealed class TimberbornGpuFieldRendererOptions
         float MinimumVisibleCloudIntensity = 0.01f,
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
-        float DebugOverlayHeightOffset = 0.02f)
+        float DebugOverlayHeightOffset = 0.006f)
     {
         if (RegionSize <= 0)
         {
@@ -655,6 +655,12 @@ public sealed class TimberbornGpuFieldRendererSink :
             AddSampleToCloudRegion(binding, effectEvent.Tick, x, y, z, sample);
         }
 
+        if (!Options.DebugOverlayEnabled && effectEvent.Water > 0)
+        {
+            RemoveAshOverlayCells(binding, x, y, z);
+            return;
+        }
+
         if (!Options.DebugOverlayEnabled && sample.Ash <= 0f)
         {
             return;
@@ -686,6 +692,32 @@ public sealed class TimberbornGpuFieldRendererSink :
                 : item.Sample.Ash > 0f)
             .ToList()
             .ForEach(item => AddSampleToRegion(binding, effectEvent.Tick, item.X, item.Y, item.Z, item.Sample));
+    }
+
+    private void RemoveAshOverlayCells(
+        TimberbornGpuVisualFieldSurfaceBinding binding,
+        int x,
+        int y,
+        int z)
+    {
+        if (!Options.AshOverlayEnabled)
+        {
+            return;
+        }
+
+        GetAshBlendCells(binding, x, y, z, Options.AshBlendCellRadius)
+            .Select(cell => _ashOverlaySurfaceProvider.TryProjectToSurfaceZ(
+                cell.X,
+                cell.Y,
+                z,
+                out int surfaceZ)
+                    ? ToRegionId(binding, cell.X, cell.Y, surfaceZ, Options.RegionSize, debugOverlayEnabled: false)
+                    : (int?)null)
+            .Where(static regionId => regionId.HasValue)
+            .Select(static regionId => regionId!.Value)
+            .Distinct()
+            .ToList()
+            .ForEach(regionId => _visibleRegions.Remove(regionId));
     }
 
     private TimberbornGpuFieldRendererCloudRegionState[] SelectCloudRegions()
@@ -1100,7 +1132,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private const float AshOverlaySigmoidSharpness = 14f;
     private const float AshOverlayThresholdLow = 0.08f;
     private const float AshOverlayThresholdHigh = 0.92f;
-    private const int AshOverlayRenderQueueOffset = -100;
+    private const int AshOverlayRenderQueueOffset = -500;
     private const float CloudOverlayUvSentinel = -2f;
     private static readonly int MainTexturePropertyId = Shader.PropertyToID("_MainTex");
     private static readonly int BaseMapPropertyId = Shader.PropertyToID("_BaseMap");
@@ -1301,7 +1333,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         _renderer.sharedMaterial = _material;
         _renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         _renderer.receiveShadows = false;
-        _renderer.sortingOrder = 2;
+        _renderer.sortingOrder = -100;
     }
 
     private AshFieldTextureSnapshot? UpdateAshIntensityTexture(
