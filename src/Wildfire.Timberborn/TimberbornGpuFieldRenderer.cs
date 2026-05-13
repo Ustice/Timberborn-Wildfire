@@ -23,7 +23,7 @@ public sealed class TimberbornGpuFieldRendererOptions
         float MinimumVisibleCloudIntensity = 0.01f,
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
-        float DebugOverlayHeightOffset = 1.035f)
+        float DebugOverlayHeightOffset = 0.035f)
     {
         if (RegionSize <= 0)
         {
@@ -1320,11 +1320,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             hideFlags = HideFlags.DontSave,
         };
         meshFilter.sharedMesh = _mesh;
-        Shader? shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent");
+        Shader? shader = _debugOverlayEnabled
+            ? Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent")
+            : LoadAshOverlayShader();
         if (shader is null)
         {
-            _logSink.Warning("wildfire_timberborn_gpu_field_renderer_material_unavailable shader=Sprites/Default");
-            throw new InvalidOperationException("No transparent shader was available for the GPU field renderer.");
+            _logSink.Warning("wildfire_timberborn_gpu_field_renderer_material_unavailable shader=Wildfire/AshOverlay");
+            throw new InvalidOperationException("The ash overlay shader was not available for the GPU field renderer.");
         }
 
         _material = new Material(shader)
@@ -1506,7 +1508,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         Vector3[] ashFieldVertices = ashFieldQuads
             .SelectMany(quad => quad.ToVertices(heightOffset))
             .ToArray();
-        Color[] ashFieldColors = Enumerable.Repeat(Color.white, ashFieldVertices.Length).ToArray();
+        Color[] ashFieldColors = Enumerable.Repeat(new Color(1f, 1f, 1f, 0f), ashFieldVertices.Length).ToArray();
         Vector2[] ashFieldUvs = ashFieldQuads
             .SelectMany(static quad => quad.ToPatternUvs())
             .ToArray();

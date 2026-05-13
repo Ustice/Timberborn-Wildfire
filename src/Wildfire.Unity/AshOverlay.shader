@@ -76,13 +76,13 @@ Shader "Wildfire/AshOverlay"
                 }
 
                 float textureAsh = tex2D(_AshIntensityTex, i.uv2).r;
-                float ash = i.uv2.x < 0.0 ? saturate(i.color.a) : saturate(max(textureAsh, i.color.a));
+                float ash = i.uv2.x < 0.0 ? saturate(i.color.a) : saturate(textureAsh);
                 fixed4 ashTexel = tex2D(_AshTex, i.uv);
                 float mask = tex2D(_MaskTex, i.uv).r;
                 float midpoint = lerp(_ThresholdHigh, _ThresholdLow, ash);
                 float coverage = 1.0 / (1.0 + exp(-_SigmoidSharpness * (mask - midpoint)));
                 float3 visibleAsh = max(ashTexel.rgb, float3(0.24, 0.23, 0.21));
-                float alpha = max(coverage * ash * _MaxOpacity, ash * 0.42);
+                float alpha = coverage * ash * _MaxOpacity;
                 return fixed4(visibleAsh, saturate(alpha));
             }
             ENDCG
