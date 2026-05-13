@@ -1318,12 +1318,10 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             hideFlags = HideFlags.DontSave,
         };
         meshFilter.sharedMesh = _mesh;
-        Shader? shader = _debugOverlayEnabled
-            ? Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent")
-            : LoadAshOverlayShader();
+        Shader? shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent");
         if (shader is null)
         {
-            _logSink.Warning("wildfire_timberborn_gpu_field_renderer_material_unavailable shader=Wildfire/AshOverlay");
+            _logSink.Warning("wildfire_timberborn_gpu_field_renderer_material_unavailable shader=Sprites/Default");
             throw new InvalidOperationException("No transparent shader was available for the GPU field renderer.");
         }
 
