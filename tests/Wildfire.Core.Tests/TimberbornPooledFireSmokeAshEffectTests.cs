@@ -116,6 +116,42 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
+    public void AtmosphericUpdatesCreateFreshParticlesWhilePreviousParticlesFinish()
+    {
+        RecordingFireLogSink logSink = new();
+        Dictionary<int, TimberbornGpuVisualFieldSample> samples = new()
+        {
+            [4] = Sample(4, fire: 0f, smoke: 0.7f, ash: 0f),
+        };
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(sampleByCellIndex: samples));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 4, MaxUpdatedVisualRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(30);
+        sink.UpdateVisualEffect(EffectEvent(cellIndex: 4, tick: 30));
+        sink.CompleteVisualEffectDispatch(30);
+        sink.BeginVisualEffectDispatch(31);
+        sink.UpdateVisualEffect(EffectEvent(cellIndex: 4, tick: 31));
+        sink.CompleteVisualEffectDispatch(31);
+
+        Assert.Equal(2, sink.Counters.ActivePooledEffectCount);
+        Assert.Equal(2, presenter.ActiveEffects.Count);
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Smoke && state.Intensity == 0f);
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Smoke && state.Intensity > 0f);
+        Assert.Empty(presenter.ReleasedSlotIds);
+    }
+
+    [Fact]
     public void KeepsPoolBoundedAndReplacesWeakestEffectDeterministically()
     {
         RecordingFireLogSink logSink = new();

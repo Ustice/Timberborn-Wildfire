@@ -253,7 +253,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
     public TimberbornPooledFireEffectOptions Options { get; }
 
     public TimberbornPooledFireEffectCounters Counters => new(
-        ActivePooledEffectCount: _slotsByKey.Count,
+        ActivePooledEffectCount: _slotsById.Count,
         UpdatedVisualRegionCount: _updatedVisualRegionsThisDispatch,
         LastNonZeroUpdatedVisualRegionCount: _lastNonZeroUpdatedVisualRegionCount,
         MaxActivePooledEffectCount: Options.MaxActiveEffects,
@@ -318,7 +318,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         _logSink.Info(
             "wildfire_timberborn_pooled_fire_effects_updated " +
             $"tick={tick} " +
-            $"active_pooled_effects={_slotsByKey.Count} " +
+            $"active_pooled_effects={_slotsById.Count} " +
             $"updated_visual_regions={_updatedVisualRegionsThisDispatch} " +
             $"last_nonzero_updated_visual_regions={_lastNonZeroUpdatedVisualRegionCount} " +
             $"last_nonzero_updated_visual_regions_tick={FormatNumber(_lastNonZeroUpdatedVisualRegionTick)} " +
@@ -409,6 +409,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         }
 
         TimberbornPooledFireEffectKey key = TimberbornPooledFireEffectKey.FromState(state);
+        if (IsAtmosphericKind(state.Kind) && _slotsByKey.TryGetValue(key, out TimberbornPooledFireEffectSlot? existingAtmosphericSlot))
+        {
+            StopEmittingSlot(existingAtmosphericSlot);
+            _slotsByKey.Remove(key);
+        }
+
         TimberbornPooledFireEffectSlot? slot = FindOrAllocateSlot(key, state.Kind, state.Intensity);
         if (slot is null)
         {
@@ -452,7 +458,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
 
     private void RefreshActiveEffects(uint tick)
     {
-        if (_slotsByKey.Count == 0)
+        if (_slotsById.Count == 0)
         {
             return;
         }
@@ -462,7 +468,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return;
         }
 
-        TimberbornPooledFireEffectSlot[] slots = _slotsByKey.Values
+        TimberbornPooledFireEffectSlot[] slots = _slotsById.Values
             .OrderBy(static slot => slot.SlotId)
             .ToArray();
 
@@ -472,7 +478,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
                 tick >= slot.State.Tick &&
                 tick - slot.State.Tick >= FinishedAnimationLifetimeTicks(slot.State.Kind))
             .ToList()
-            .ForEach(slot => ReleaseKey(TimberbornPooledFireEffectKey.FromState(slot.State)));
+            .ForEach(ReleaseSlot);
 
         TimberbornPooledFireEffectSlot[] slotsToRefresh = slots
             .Where(slot => slot.State.Tick != tick &&
@@ -530,6 +536,11 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
                     ReleaseKey(key);
                 }
 
+                return;
+            }
+
+            if (IsAtmosphericKind(slot.State.Kind))
+            {
                 return;
             }
 
@@ -728,6 +739,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return;
         }
 
+        ReleaseSlot(slot);
+    }
+
+    private void ReleaseSlot(TimberbornPooledFireEffectSlot slot)
+    {
+        TimberbornPooledFireEffectKey key = TimberbornPooledFireEffectKey.FromState(slot.State);
         _slotsByKey.Remove(key);
         _slotsById.Remove(slot.SlotId);
         _freeSlotIds.Enqueue(slot.SlotId);
