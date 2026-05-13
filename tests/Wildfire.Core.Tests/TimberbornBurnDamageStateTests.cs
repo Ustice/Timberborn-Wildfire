@@ -27,7 +27,7 @@ public sealed class TimberbornBurnDamageStateTests
     }
 
     [Fact]
-    public void CapacityUsesYieldAndConstructionInvestmentFromResourceCatalog()
+    public void CapacityUsesYieldAndConstructionInvestmentFromBurnDamageProfiles()
     {
         TimberbornBurnDamageDescriptor descriptor = new(
             "Building.LumberMill",
@@ -43,15 +43,15 @@ public sealed class TimberbornBurnDamageStateTests
 
         TimberbornBurnDamageCapacity capacity = calculator.Calculate(descriptor);
 
-        Assert.Equal(7, capacity.Capacity);
-        Assert.Equal(2, capacity.FuelValue);
+        Assert.Equal(33, capacity.Capacity);
+        Assert.Equal(12, capacity.FuelValue);
         Assert.Equal(2, capacity.Flammability);
         Assert.Equal(["Log", "Plank", "Water"], capacity.AccountedResourceIds);
         Assert.Empty(capacity.MissingResourceIds);
     }
 
     [Fact]
-    public void TreeLogCapacityUsesCatalogFuelForTreeAndStructureLogs()
+    public void LogCapacityUsesBurnDamageFuelForTreeAndStructureLogs()
     {
         TimberbornBurnDamageDescriptor treeDescriptor = new(
             "Tree.Oak",
@@ -68,10 +68,10 @@ public sealed class TimberbornBurnDamageStateTests
         TimberbornBurnDamageCapacity treeCapacity = calculator.Calculate(treeDescriptor);
         TimberbornBurnDamageCapacity structureCapacity = calculator.Calculate(structureDescriptor);
 
-        Assert.Equal(16, treeCapacity.Capacity);
-        Assert.Equal(2, treeCapacity.FuelValue);
-        Assert.Equal(16, structureCapacity.Capacity);
-        Assert.Equal(2, structureCapacity.FuelValue);
+        Assert.Equal(96, treeCapacity.Capacity);
+        Assert.Equal(12, treeCapacity.FuelValue);
+        Assert.Equal(96, structureCapacity.Capacity);
+        Assert.Equal(12, structureCapacity.FuelValue);
     }
 
     [Fact]
@@ -121,8 +121,8 @@ public sealed class TimberbornBurnDamageStateTests
 
         TimberbornBurnDamageTargetState state = service.States[targetKey];
         TimberbornBurnDamageStateSnapshot snapshot = Assert.Single(service.CaptureState());
-        Assert.Equal(5, state.DamageCapacity);
-        Assert.Equal(2, state.FuelValue);
+        Assert.Equal(27, state.DamageCapacity);
+        Assert.Equal(12, state.FuelValue);
         Assert.Equal(2, state.Flammability);
         Assert.Equal(["Log", "Plank", "Water"], state.AccountedResourceIds);
         Assert.Equal(state.FuelValue, snapshot.FuelValue);
@@ -160,13 +160,13 @@ public sealed class TimberbornBurnDamageStateTests
                     [new TimberbornCellCoordinates(1, 0, 0)]),
             ]);
 
-        Assert.Equal(10, summary.TotalDamageCapacity);
-        Assert.Equal(10, summary.MaxDamageCapacity);
+        Assert.Equal(60, summary.TotalDamageCapacity);
+        Assert.Equal(60, summary.MaxDamageCapacity);
         Assert.Equal(1, summary.ZeroCapacityTargetCount);
         string logToken = Assert.Single(logSink.InfoMessages);
         Assert.Contains("wildfire_timberborn_burn_damage_targets_registered", logToken);
-        Assert.Contains("burn_capacity_total=10", logToken);
-        Assert.Contains("burn_capacity_max=10", logToken);
+        Assert.Contains("burn_capacity_total=60", logToken);
+        Assert.Contains("burn_capacity_max=60", logToken);
         Assert.Contains("burn_capacity_zero_targets=1", logToken);
     }
 

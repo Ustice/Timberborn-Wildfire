@@ -1,5 +1,6 @@
 using Timberborn.SingletonSystem;
 using Timberborn.QuickNotificationSystem;
+using Timberborn.BlockSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Navigation;
 using Timberborn.SelectionSystem;
@@ -31,6 +32,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornBeaverHazardAvoidanceSink _beaverHazardAvoidance;
     private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
     private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
+    private readonly TimberbornAshFieldService _ashFieldService;
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private ITimberbornCropBurnConsequenceApi _cropBurnConsequenceApi =
@@ -69,7 +71,8 @@ public sealed class TimberbornFireRuntime :
         ITimberbornWindProvider windProvider,
         INavMeshObjectFactory navMeshObjectFactory,
         MapSize mapSize,
-        ITerrainService terrainService)
+        ITerrainService terrainService,
+        IBlockService blockService)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
@@ -105,6 +108,12 @@ public sealed class TimberbornFireRuntime :
             visualFieldSurface,
             new TimberbornNavMeshBeaverHazardBlocker(navMeshObjectFactory, _logSink),
             _logSink);
+        _ashFieldService = new TimberbornAshFieldService(
+            new TimberbornGrowableAshGrowthAdapter(
+                blockService ?? throw new ArgumentNullException(nameof(blockService)),
+                CurrentGrid,
+                _logSink),
+            _logSink);
         EntitySelectionService selectionService =
             entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService));
         _selectedTreeTargetProvider = new TimberbornSelectedTreeTargetProvider(
@@ -135,6 +144,7 @@ public sealed class TimberbornFireRuntime :
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.Clear();
         _beaverHazardAvoidance.Clear();
+        _ashFieldService.Clear();
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
@@ -211,6 +221,7 @@ public sealed class TimberbornFireRuntime :
         RunCompatibilityProbesIfNeeded();
         TimberbornCompatibilityRuntimeGate.ThrowIfRequiredProbesFailed(_compatibilityReport, _logSink);
         _explosiveInfrastructureHeatPulseSink = new TimberbornQueuedFireSimHeatPulseSink(grid);
+        _ashFieldService.Clear();
         TimberbornFireSystem fireSystem = new(
             simulatorFactory,
             new TimberbornFireCellMapper(),
@@ -973,6 +984,23 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=water_infrastructure_fire");
         }
+        if (_burnDamageService is not null)
+        {
+            _logSink.Info(
+                "wildfire_timberborn_delta_consequence_sink_bound " +
+                "lane=ash_field " +
+                "growth_api=growable_increase_progress");
+        }
+    }
+
+    private FireGrid? CurrentGrid()
+    {
+        return _fireSystem is { IsInitialized: true } fireSystem
+            ? new FireGrid(
+                fireSystem.Width ?? throw new InvalidOperationException("Fire system width is unavailable."),
+                fireSystem.Height ?? throw new InvalidOperationException("Fire system height is unavailable."),
+                fireSystem.Depth ?? throw new InvalidOperationException("Fire system depth is unavailable."))
+            : null;
     }
 
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
@@ -1044,7 +1072,10 @@ public sealed class TimberbornFireRuntime :
                 : new TimberbornWaterInfrastructureFireSink(
                     _waterInfrastructureFireTargetApi,
                     logSink: _logSink,
-                    burnDamageTargets: _burnDamageService));
+                    burnDamageTargets: _burnDamageService),
+            ashFieldSink: _burnDamageService is null
+                ? null
+                : new TimberbornAshFieldSink(_burnDamageService, _ashFieldService));
     }
 
     private bool TryAllowExternalChange(string source, int? count)

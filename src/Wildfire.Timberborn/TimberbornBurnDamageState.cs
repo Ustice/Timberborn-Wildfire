@@ -157,7 +157,17 @@ public sealed record TimberbornBurnDamageCapacity(
 
 public sealed class TimberbornBurnDamageCapacityCalculator
 {
-    private const byte TreeLogFuelValue = 2;
+    private const byte LogBurnDamageFuelValue = 12;
+    private const byte ProcessedWoodBurnDamageFuelValue = 3;
+    private const byte OrganicProduceBurnDamageFuelValue = 3;
+    private static readonly HashSet<string> InertZeroFuelResources = new(StringComparer.Ordinal)
+    {
+        "Badwater",
+        "Dirt",
+        "MetalBlock",
+        "ScrapMetal",
+        "Water",
+    };
 
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
 
@@ -236,10 +246,42 @@ public sealed class TimberbornBurnDamageCapacityCalculator
         TimberbornBurnDamageDescriptor descriptor,
         TimberbornResourceFuelProfile profile)
     {
-        return descriptor.TargetKind == TimberbornBurnDamageTargetKind.Tree &&
-            profile.ResourceId == "Log"
-                ? profile with { FuelValue = TreeLogFuelValue }
-                : profile;
+        if (profile.ResourceId == "Log")
+        {
+            return profile with
+            {
+                FuelValue = LogBurnDamageFuelValue,
+                Flammability = AtLeast(profile.Flammability, 1),
+            };
+        }
+
+        if (profile.ResourceId is "Plank" or "TreatedPlank")
+        {
+            return profile with
+            {
+                FuelValue = AtLeast(profile.FuelValue, ProcessedWoodBurnDamageFuelValue),
+                Flammability = AtLeast(profile.Flammability, 1),
+            };
+        }
+
+        if (descriptor.MaterialKind == TimberbornBurnMaterialKind.Organic &&
+            descriptor.TargetKind is TimberbornBurnDamageTargetKind.Crop or TimberbornBurnDamageTargetKind.Resource &&
+            profile.FuelValue == 0 &&
+            !InertZeroFuelResources.Contains(profile.ResourceId))
+        {
+            return profile with
+            {
+                FuelValue = OrganicProduceBurnDamageFuelValue,
+                Flammability = AtLeast(profile.Flammability, 1),
+            };
+        }
+
+        return profile;
+    }
+
+    private static byte AtLeast(byte value, byte minimum)
+    {
+        return value < minimum ? minimum : value;
     }
 }
 
