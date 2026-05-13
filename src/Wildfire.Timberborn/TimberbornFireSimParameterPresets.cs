@@ -49,11 +49,11 @@ public static class TimberbornFireSimParameterPresets
             WildfireName,
             FireSimParameters.Default with
             {
-                IgnitionPoint = 8u,
+                IgnitionPoint = 6u, //8u
                 FireWaterIgnitionPenalty = 1u,
                 FireBurnHeatBase = 4u,
                 FireFuelBurnDownPressureNumerator = 1u,
-                FireFuelBurnDownPressureDenominator = 6u,
+                FireFuelBurnDownPressureDenominator = 10u, //6u
                 VisualFireBaseIntensity = 0.82f,
                 VisualFireHeatWeight = 0.6f,
                 VisualSmokeBaseIntensity = 0.34f,

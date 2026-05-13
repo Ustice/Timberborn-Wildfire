@@ -153,6 +153,8 @@ public sealed record TimberbornBurnDamageCapacity(
 
 public sealed class TimberbornBurnDamageCapacityCalculator
 {
+    private const byte TreeLogFuelValue = 2;
+
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
 
     public TimberbornBurnDamageCapacityCalculator()
@@ -186,10 +188,10 @@ public sealed class TimberbornBurnDamageCapacityCalculator
             .OrderBy(static resourceId => resourceId)
             .ToArray();
         TimberbornResourceFuelProfile[] profiles = knownStacks
-            .Select(stack => _resourceFuelCatalog.Lookup(stack.ResourceId))
+            .Select(stack => EffectiveProfile(descriptor, _resourceFuelCatalog.Lookup(stack.ResourceId)))
             .ToArray();
         int capacity = knownStacks
-            .Select(stack => stack.Amount * _resourceFuelCatalog.Lookup(stack.ResourceId).FuelValue)
+            .Select(stack => stack.Amount * EffectiveProfile(descriptor, _resourceFuelCatalog.Lookup(stack.ResourceId)).FuelValue)
             .Sum();
         int fuelValue = profiles
             .Select(static profile => (int)profile.FuelValue)
@@ -210,6 +212,16 @@ public sealed class TimberbornBurnDamageCapacityCalculator
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(static resourceId => resourceId)
                 .ToArray());
+    }
+
+    private static TimberbornResourceFuelProfile EffectiveProfile(
+        TimberbornBurnDamageDescriptor descriptor,
+        TimberbornResourceFuelProfile profile)
+    {
+        return descriptor.TargetKind == TimberbornBurnDamageTargetKind.Tree &&
+            profile.ResourceId == "Log"
+                ? profile with { FuelValue = TreeLogFuelValue }
+                : profile;
     }
 }
 

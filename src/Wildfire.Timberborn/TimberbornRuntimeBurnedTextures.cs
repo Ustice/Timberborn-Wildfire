@@ -3,6 +3,7 @@ using Timberborn.BlockSystem;
 using Timberborn.Cutting;
 using Timberborn.EntitySystem;
 using Timberborn.Gathering;
+using Timberborn.GoodStackSystem;
 using Timberborn.Goods;
 using Timberborn.NaturalResourcesLifecycle;
 using Timberborn.NaturalResourcesMoisture;
@@ -40,6 +41,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         return consequence.Kind switch
         {
             TimberbornTreeBurnConsequenceKind.DryTree => ApplyDryTree(consequence),
+            TimberbornTreeBurnConsequenceKind.ReduceYield => ApplyYieldLoss(consequence),
             TimberbornTreeBurnConsequenceKind.KillTree => ApplyKillTree(consequence),
             TimberbornTreeBurnConsequenceKind.MarkBurnedVisual => ApplyBurnedVisual(consequence),
             TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover => ApplyBurnedLeftover(consequence),
@@ -77,6 +79,17 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(TextureLabel(consequence, blockObject))} " +
             $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
+        return new TimberbornTreeBurnConsequenceResult(Applied: true, SafeApiUnavailable: false);
+    }
+
+    private TimberbornTreeBurnConsequenceResult ApplyYieldLoss(TimberbornTreeBurnConsequence consequence)
+    {
+        _logSink.Info(
+            "wildfire_timberborn_tree_yield_reduce_skipped " +
+            "reason=native_cuttable_yield_decrease_triggers_cut " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+            $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
+            $"yield_lost={consequence.YieldLost} remaining_yield={consequence.RemainingYield}");
         return new TimberbornTreeBurnConsequenceResult(Applied: true, SafeApiUnavailable: false);
     }
 
@@ -152,6 +165,15 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         }
 
         cuttable.Yielder.RemoveRemainingYield();
+        if (blockObject.TryGetComponent(out GoodStack goodStack))
+        {
+            foreach (GoodAmount goodAmount in goodStack.Inventory.Stock.ToArray())
+            {
+                goodStack.Inventory.Take(goodAmount);
+            }
+
+            TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
+        }
         cuttable.ShowLeftoverModel();
 
         string textureLabel = TextureLabel(consequence, blockObject);

@@ -43,11 +43,35 @@ public sealed class TimberbornBurnDamageStateTests
 
         TimberbornBurnDamageCapacity capacity = calculator.Calculate(descriptor);
 
-        Assert.Equal(54, capacity.Capacity);
-        Assert.Equal(12, capacity.FuelValue);
+        Assert.Equal(7, capacity.Capacity);
+        Assert.Equal(2, capacity.FuelValue);
         Assert.Equal(2, capacity.Flammability);
         Assert.Equal(["Log", "Plank", "Water"], capacity.AccountedResourceIds);
         Assert.Empty(capacity.MissingResourceIds);
+    }
+
+    [Fact]
+    public void TreeLogCapacityUsesCatalogFuelForTreeAndStructureLogs()
+    {
+        TimberbornBurnDamageDescriptor treeDescriptor = new(
+            "Tree.Oak",
+            TimberbornBurnDamageTargetKind.Tree,
+            TimberbornBurnMaterialKind.Wood,
+            resourceYields: [new TimberbornBurnDamageResourceStack("Log", 8)]);
+        TimberbornBurnDamageDescriptor structureDescriptor = new(
+            "Building.LogPile",
+            TimberbornBurnDamageTargetKind.Structure,
+            TimberbornBurnMaterialKind.Constructed,
+            constructionResources: [new TimberbornBurnDamageResourceStack("Log", 8)]);
+        TimberbornBurnDamageCapacityCalculator calculator = new();
+
+        TimberbornBurnDamageCapacity treeCapacity = calculator.Calculate(treeDescriptor);
+        TimberbornBurnDamageCapacity structureCapacity = calculator.Calculate(structureDescriptor);
+
+        Assert.Equal(16, treeCapacity.Capacity);
+        Assert.Equal(2, treeCapacity.FuelValue);
+        Assert.Equal(16, structureCapacity.Capacity);
+        Assert.Equal(2, structureCapacity.FuelValue);
     }
 
     [Fact]
@@ -60,14 +84,14 @@ public sealed class TimberbornBurnDamageStateTests
             resourceYields:
             [
                 new TimberbornBurnDamageResourceStack("MysteryCrop", 8),
-                new TimberbornBurnDamageResourceStack("Carrot", 2),
+                new TimberbornBurnDamageResourceStack("Paper", 2),
             ]);
         TimberbornBurnDamageCapacityCalculator calculator = new();
 
         TimberbornBurnDamageCapacity capacity = calculator.Calculate(descriptor);
 
-        Assert.Equal(6, capacity.Capacity);
-        Assert.Equal(["Carrot"], capacity.AccountedResourceIds);
+        Assert.Equal(2, capacity.Capacity);
+        Assert.Equal(["Paper"], capacity.AccountedResourceIds);
         Assert.Equal(["MysteryCrop"], capacity.MissingResourceIds);
     }
 
@@ -97,8 +121,8 @@ public sealed class TimberbornBurnDamageStateTests
 
         TimberbornBurnDamageTargetState state = service.States[targetKey];
         TimberbornBurnDamageStateSnapshot snapshot = Assert.Single(service.CaptureState());
-        Assert.Equal(34, state.DamageCapacity);
-        Assert.Equal(12, state.FuelValue);
+        Assert.Equal(5, state.DamageCapacity);
+        Assert.Equal(2, state.FuelValue);
         Assert.Equal(2, state.Flammability);
         Assert.Equal(["Log", "Plank", "Water"], state.AccountedResourceIds);
         Assert.Equal(state.FuelValue, snapshot.FuelValue);
@@ -136,13 +160,13 @@ public sealed class TimberbornBurnDamageStateTests
                     [new TimberbornCellCoordinates(1, 0, 0)]),
             ]);
 
-        Assert.Equal(60, summary.TotalDamageCapacity);
-        Assert.Equal(60, summary.MaxDamageCapacity);
+        Assert.Equal(10, summary.TotalDamageCapacity);
+        Assert.Equal(10, summary.MaxDamageCapacity);
         Assert.Equal(1, summary.ZeroCapacityTargetCount);
         string logToken = Assert.Single(logSink.InfoMessages);
         Assert.Contains("wildfire_timberborn_burn_damage_targets_registered", logToken);
-        Assert.Contains("burn_capacity_total=60", logToken);
-        Assert.Contains("burn_capacity_max=60", logToken);
+        Assert.Contains("burn_capacity_total=10", logToken);
+        Assert.Contains("burn_capacity_max=10", logToken);
         Assert.Contains("burn_capacity_zero_targets=1", logToken);
     }
 
@@ -156,9 +180,9 @@ public sealed class TimberbornBurnDamageStateTests
                 grid,
                 [
                     new TimberbornLiveCropBurnDamageCandidate(
-                        "crop-kohlrabi-live-1",
-                        "Kohlrabi.Folktails",
-                        "Kohlrabi",
+                        "crop-corn-live-1",
+                        "Corn.Folktails",
+                        "Corn",
                         1,
                         [
                             new TimberbornCellCoordinates(25, 25, 3),
@@ -183,27 +207,28 @@ public sealed class TimberbornBurnDamageStateTests
         Assert.Equal(2, summary.OwnedCellCount);
         Assert.Equal(TimberbornBurnDamageTargetKind.Crop, state.TargetKind);
         Assert.Equal(TimberbornBurnMaterialKind.Organic, state.MaterialKind);
-        Assert.Equal(["Kohlrabi"], state.AccountedResourceIds);
+        Assert.Equal(["Corn"], state.AccountedResourceIds);
         Assert.True(state.DamageCapacity > 0);
         Assert.Contains(cropCellIndex, state.OwnedCellIndices);
         Assert.Equal(state.TargetKey, service.TargetKeyByCellIndex[cropCellIndex]);
     }
 
     [Fact]
-    public void LiveCropCollectorRegistersBlueberryHarvestableAsOrganicResourceTarget()
+    public void LiveCropCollectorRegistersBurnableHarvestableAsOrganicResourceTarget()
     {
         FireGrid grid = new(50, 50, 23);
-        int blueberryCellIndex = grid.ToIndex(12, 13, 2);
+        int harvestableCellIndex = grid.ToIndex(12, 13, 2);
         TimberbornLiveCropBurnDamageTargets targets =
             TimberbornLiveCropBurnDamageTargetCollector.CollectCandidates(
                 grid,
                 [
                     new TimberbornLiveCropBurnDamageCandidate(
-                        "harvestable-blueberry-live-1",
-                        "BlueberryBush",
-                        "Berries",
+                        "harvestable-paper-live-1",
+                        "PaperPlant",
+                        "Paper",
                         3,
-                        [new TimberbornCellCoordinates(12, 13, 2)]),
+                        [new TimberbornCellCoordinates(12, 13, 2)],
+                        TimberbornLiveYieldSource.Gatherable),
                 ]);
         TimberbornBurnDamageService service = new(targets.DescriptorCatalog);
 
@@ -214,30 +239,30 @@ public sealed class TimberbornBurnDamageStateTests
         Assert.Equal(1, summary.OwnedCellCount);
         Assert.Equal(TimberbornBurnDamageTargetKind.Resource, state.TargetKind);
         Assert.Equal(TimberbornBurnMaterialKind.Organic, state.MaterialKind);
-        Assert.Equal(["Berries"], state.AccountedResourceIds);
-        Assert.Equal(9, state.DamageCapacity);
-        Assert.Contains(blueberryCellIndex, state.OwnedCellIndices);
-        Assert.Equal(state.TargetKey, service.TargetKeyByCellIndex[blueberryCellIndex]);
+        Assert.Equal(["Paper"], state.AccountedResourceIds);
+        Assert.Equal(3, state.DamageCapacity);
+        Assert.Contains(harvestableCellIndex, state.OwnedCellIndices);
+        Assert.Equal(state.TargetKey, service.TargetKeyByCellIndex[harvestableCellIndex]);
     }
 
     [Fact]
-    public void SelectedBlueberryLiveShapeRegistersFromSelectedObjectWhenGlobalRegistrationIsEmpty()
+    public void SelectedBurnableHarvestableLiveShapeRegistersFromSelectedObjectWhenGlobalRegistrationIsEmpty()
     {
         FireGrid grid = new(50, 50, 23);
-        int blueberryCellIndex = grid.ToIndex(12, 13, 2);
+        int harvestableCellIndex = grid.ToIndex(12, 13, 2);
         TimberbornLiveCropBurnDamageTargets selectedTargets =
             TimberbornLiveCropBurnDamageTargetCollector.CollectSelectedObject(
                 grid,
-                "selected-blueberry-live-1",
-                "BlueberryBush(Clone)",
+                "selected-paper-live-1",
+                "PaperPlant(Clone)",
                 [
                     new LiveShapeGatherable(
                         new LiveShapeYielder(
-                            new LiveShapeGoodAmount("Berries", 3),
-                            new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Berries", 3)))),
+                            new LiveShapeGoodAmount("Paper", 3),
+                            new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Paper", 3)))),
                     new LiveShapeDirectYielder(
-                        new LiveShapeGoodAmount("Berries", 3),
-                        new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Berries", 3))),
+                        new LiveShapeGoodAmount("Paper", 3),
+                        new LiveShapeYielderSpec(new LiveShapeGoodAmountSpec("Paper", 3))),
                 ],
                 [new TimberbornCellCoordinates(12, 13, 2)]);
         TimberbornBurnDamageService service = new(
@@ -250,19 +275,19 @@ public sealed class TimberbornBurnDamageStateTests
         TimberbornQaSelectedCropTarget target = TimberbornSelectedCropTargetProvider.ResolveSelectedTarget(
             grid,
             service.States,
-            [blueberryCellIndex]);
+            [harvestableCellIndex]);
         TimberbornBurnDamageTargetState state = Assert.Single(service.States.Values);
 
         Assert.Equal(1, summary.TargetCount);
         Assert.Equal(1, summary.OwnedCellCount);
-        Assert.Equal(new TimberbornBurnDamageTargetKey("selected-blueberry-live-1"), state.TargetKey);
-        Assert.Equal("BlueberryBush(Clone)", state.SpecId);
+        Assert.Equal(new TimberbornBurnDamageTargetKey("selected-paper-live-1"), state.TargetKey);
+        Assert.Equal("PaperPlant(Clone)", state.SpecId);
         Assert.Equal(TimberbornBurnDamageTargetKind.Resource, state.TargetKind);
         Assert.Equal(TimberbornBurnMaterialKind.Organic, state.MaterialKind);
-        Assert.Equal(["Berries"], state.AccountedResourceIds);
-        Assert.Equal(9, state.DamageCapacity);
+        Assert.Equal(["Paper"], state.AccountedResourceIds);
+        Assert.Equal(3, state.DamageCapacity);
         Assert.Equal(new TimberbornQaSelectedCropTarget(
-            blueberryCellIndex,
+            harvestableCellIndex,
             12,
             13,
             2,
@@ -273,15 +298,15 @@ public sealed class TimberbornBurnDamageStateTests
     public void LiveCropCollectorIgnoresCuttableTreeLogTargets()
     {
         FireGrid grid = new(50, 50, 23);
-        int blueberryCellIndex = grid.ToIndex(12, 13, 2);
+        int harvestableCellIndex = grid.ToIndex(12, 13, 2);
         TimberbornLiveCropBurnDamageTargets targets =
             TimberbornLiveCropBurnDamageTargetCollector.CollectCandidates(
                 grid,
                 [
                     new TimberbornLiveCropBurnDamageCandidate(
-                        "harvestable-blueberry-live-1",
-                        "BlueberryBush",
-                        "Berries",
+                        "harvestable-paper-live-1",
+                        "PaperPlant",
+                        "Paper",
                         3,
                         [new TimberbornCellCoordinates(12, 13, 2)],
                         TimberbornLiveYieldSource.Gatherable),
@@ -299,10 +324,10 @@ public sealed class TimberbornBurnDamageStateTests
         TimberbornBurnDamageTargetState state = Assert.Single(service.States.Values);
 
         Assert.Equal(1, summary.TargetCount);
-        Assert.Equal(new TimberbornBurnDamageTargetKey("harvestable-blueberry-live-1"), state.TargetKey);
-        Assert.Equal(["Berries"], state.AccountedResourceIds);
+        Assert.Equal(new TimberbornBurnDamageTargetKey("harvestable-paper-live-1"), state.TargetKey);
+        Assert.Equal(["Paper"], state.AccountedResourceIds);
         Assert.DoesNotContain("Log", state.AccountedResourceIds);
-        Assert.Contains(blueberryCellIndex, state.OwnedCellIndices);
+        Assert.Contains(harvestableCellIndex, state.OwnedCellIndices);
     }
 
     [Fact]
@@ -415,18 +440,18 @@ public sealed class TimberbornBurnDamageStateTests
     public void ApplyDamageRecordsUnresolvedCellsAndBoundsDamageByCapacity()
     {
         FireGrid grid = new(2, 1, 1);
-        TimberbornBurnDamageTargetKey targetKey = new("crop-carrot-1");
+        TimberbornBurnDamageTargetKey targetKey = new("crop-paper-1");
         TimberbornBurnDamageService service = CreateService(
             new TimberbornBurnDamageDescriptor(
-                "Crop.Carrot",
+                "Crop.Paper",
                 TimberbornBurnDamageTargetKind.Crop,
                 TimberbornBurnMaterialKind.Organic,
-                resourceYields: [new TimberbornBurnDamageResourceStack("Carrot", 1)]));
+                resourceYields: [new TimberbornBurnDamageResourceStack("Paper", 3)]));
         service.RegisterTargets(
             grid,
             [new TimberbornBurnDamageTargetRegistration(
                 targetKey,
-                "Crop.Carrot",
+                "Crop.Paper",
                 [new TimberbornCellCoordinates(0, 0, 0)])]);
 
         TimberbornBurnDamageApplySummary first = service.ApplyDamage(
@@ -455,7 +480,7 @@ public sealed class TimberbornBurnDamageStateTests
             "Tree.Maple",
             TimberbornBurnDamageTargetKind.Tree,
             TimberbornBurnMaterialKind.Wood,
-            resourceYields: [new TimberbornBurnDamageResourceStack("Log", 2)]);
+            resourceYields: [new TimberbornBurnDamageResourceStack("Log", 3)]);
         TimberbornBurnDamageTargetKey targetKey = new("tree-maple-2");
         TimberbornBurnDamageService original = CreateService(descriptor);
         original.RegisterTargets(
