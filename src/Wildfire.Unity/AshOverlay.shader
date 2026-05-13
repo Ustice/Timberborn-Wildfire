@@ -75,7 +75,7 @@ Shader "Wildfire/AshOverlay"
                 }
 
                 float textureAsh = tex2D(_AshIntensityTex, i.uv2).r;
-                float ash = i.uv2.x < 0.0 ? saturate(i.color.a) : saturate(textureAsh);
+                float ash = i.uv2.x < 0.0 ? saturate(i.color.a) : saturate(max(textureAsh, i.color.a));
                 fixed4 ashTexel = tex2D(_AshTex, i.uv);
                 float mask = tex2D(_MaskTex, i.uv).r;
                 float midpoint = lerp(_ThresholdHigh, _ThresholdLow, ash);
