@@ -512,6 +512,7 @@ public sealed class TimberbornGpuFieldRendererSink :
             $"rendered_detail_regions={_renderedDetailRegionsThisDispatch} " +
             $"rendered_scar_regions={_renderedScarRegionsThisDispatch} " +
             $"rendered_cloud_regions={_renderedCloudRegionsThisDispatch} " +
+            $"rendered_ash_field_cells={ashFieldCells.Length} " +
             $"persistent_ash_scar_source_regions={_persistentAshScarSourceRegionsThisDispatch} " +
             $"smoke_cloud_source_regions={_smokeCloudSourceRegionsThisDispatch} " +
             $"steam_cloud_source_regions={_steamCloudSourceRegionsThisDispatch} " +
@@ -1235,7 +1236,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 _root.SetActive(
                     presentation.DetailRegions.Count > 0 ||
                     presentation.ScarRegions.Count > 0 ||
-                    presentation.CloudRegions.Count > 0);
+                    presentation.CloudRegions.Count > 0 ||
+                    presentation.AshFieldCells.Count > 0);
             }
 
             return TimberbornGpuFieldRendererPresentationResult.Applied;
