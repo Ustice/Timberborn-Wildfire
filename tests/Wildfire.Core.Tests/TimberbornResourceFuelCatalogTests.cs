@@ -26,9 +26,9 @@ public sealed class TimberbornResourceFuelCatalogTests
         Assert.Equal("MysteryResource", profile.ResourceId);
         Assert.Equal(1, profile.FuelValue);
         Assert.Equal(0, profile.Flammability);
-        Assert.Equal(TimberbornResourceSmokeProfile.LightOrganic, profile.SmokeProfile);
-        Assert.Equal(TimberbornResourceResidueQuality.Unresolved, profile.ResidueQuality);
-        Assert.Equal(TimberbornResourceHazardClass.Unknown, profile.HazardClass);
+        Assert.False(profile.Explosive);
+        Assert.False(profile.Contaminated);
+        Assert.False(profile.Known);
     }
 
     [Fact]
@@ -39,74 +39,69 @@ public sealed class TimberbornResourceFuelCatalogTests
         Assert.Equal("", profile.ResourceId);
         Assert.Equal(1, profile.FuelValue);
         Assert.Equal(0, profile.Flammability);
-        Assert.Equal(TimberbornResourceHazardClass.Unknown, profile.HazardClass);
+        Assert.False(profile.Known);
     }
 
     [Theory]
-    [InlineData("Dirt", TimberbornResourceResidueQuality.Mineral)]
-    [InlineData("MetalBlock", TimberbornResourceResidueQuality.Metal)]
-    [InlineData("MetalPart", TimberbornResourceResidueQuality.Metal)]
-    [InlineData("ScrapMetal", TimberbornResourceResidueQuality.Metal)]
-    [InlineData("Water", TimberbornResourceResidueQuality.None)]
-    public void LookupClassifiesStoneMetalAndWaterAsInert(string resourceId, TimberbornResourceResidueQuality residueQuality)
+    [InlineData("Dirt")]
+    [InlineData("MetalBlock")]
+    [InlineData("MetalPart")]
+    [InlineData("ScrapMetal")]
+    [InlineData("Water")]
+    public void LookupClassifiesStoneMetalAndWaterAsInert(string resourceId)
     {
         TimberbornResourceFuelProfile profile = TimberbornResourceFuelCatalog.Default.Lookup(resourceId);
 
         Assert.Equal(0, profile.FuelValue);
         Assert.Equal(0, profile.Flammability);
-        Assert.Equal(TimberbornResourceSmokeProfile.None, profile.SmokeProfile);
-        Assert.Equal(residueQuality, profile.ResidueQuality);
-        Assert.Equal(TimberbornResourceHazardClass.Inert, profile.HazardClass);
+        Assert.False(profile.Explosive);
+        Assert.False(profile.Contaminated);
+        Assert.True(profile.Known);
     }
 
     [Theory]
-    [InlineData("Log", 12, 2, TimberbornResourceSmokeProfile.DryWood)]
-    [InlineData("Plank", 10, 2, TimberbornResourceSmokeProfile.DryWood)]
-    [InlineData("Gear", 8, 2, TimberbornResourceSmokeProfile.DryWood)]
-    [InlineData("Paper", 5, 3, TimberbornResourceSmokeProfile.Paper)]
-    [InlineData("Book", 6, 3, TimberbornResourceSmokeProfile.Paper)]
+    [InlineData("Log", 2, 1)]
+    [InlineData("Plank", 1, 2)]
+    [InlineData("Gear", 1, 1)]
+    [InlineData("Paper", 1, 3)]
+    [InlineData("Book", 1, 3)]
     public void LookupClassifiesDryGoodsAsBurnableFuel(
         string resourceId,
         byte fuelValue,
-        byte flammability,
-        TimberbornResourceSmokeProfile smokeProfile)
+        byte flammability)
     {
         TimberbornResourceFuelProfile profile = TimberbornResourceFuelCatalog.Default.Lookup(resourceId);
 
         Assert.Equal(fuelValue, profile.FuelValue);
         Assert.Equal(flammability, profile.Flammability);
-        Assert.Equal(smokeProfile, profile.SmokeProfile);
-        Assert.Equal(TimberbornResourceHazardClass.DryFuel, profile.HazardClass);
+        Assert.False(profile.Explosive);
+        Assert.False(profile.Contaminated);
+        Assert.True(profile.Known);
     }
 
     [Fact]
-    public void LookupSeparatesFoodAndMedicineLikeResourcesFromDryFuel()
+    public void LookupMarksContaminatedResourcesExplicitly()
     {
-        TimberbornResourceFuelProfile carrot = TimberbornResourceFuelCatalog.Default.Lookup("Carrot");
-        TimberbornResourceFuelProfile canolaOil = TimberbornResourceFuelCatalog.Default.Lookup("CanolaOil");
-        TimberbornResourceFuelProfile antidote = TimberbornResourceFuelCatalog.Default.Lookup("Antidote");
+        TimberbornResourceFuelProfile badwater = TimberbornResourceFuelCatalog.Default.Lookup("Badwater");
 
-        Assert.Equal(TimberbornResourceHazardClass.FoodLike, carrot.HazardClass);
-        Assert.Equal(TimberbornResourceResidueQuality.SpoiledOrganic, carrot.ResidueQuality);
-        Assert.Equal(TimberbornResourceHazardClass.FoodLike, canolaOil.HazardClass);
-        Assert.Equal(TimberbornResourceSmokeProfile.Oily, canolaOil.SmokeProfile);
-        Assert.Equal(TimberbornResourceHazardClass.MedicineLike, antidote.HazardClass);
-        Assert.Equal(TimberbornResourceSmokeProfile.Chemical, antidote.SmokeProfile);
+        Assert.True(badwater.Known);
+        Assert.True(badwater.Contaminated);
+        Assert.False(badwater.Explosive);
     }
 
     [Fact]
-    public void LookupClassifiesVolatileAndExplosiveResourcesWithoutHighFuelDefault()
+    public void LookupMarksExplosiveResourcesExplicitly()
     {
         TimberbornResourceFuelProfile biofuel = TimberbornResourceFuelCatalog.Default.Lookup("Biofuel");
         TimberbornResourceFuelProfile explosives = TimberbornResourceFuelCatalog.Default.Lookup("Explosives");
         TimberbornResourceFuelProfile fireworks = TimberbornResourceFuelCatalog.Default.Lookup("Fireworks");
 
-        Assert.Equal(TimberbornResourceHazardClass.Volatile, biofuel.HazardClass);
-        Assert.Equal(8, biofuel.FuelValue);
-        Assert.Equal(TimberbornResourceHazardClass.Explosive, explosives.HazardClass);
-        Assert.Equal(4, explosives.FuelValue);
-        Assert.Equal(TimberbornResourceHazardClass.Explosive, fireworks.HazardClass);
-        Assert.Equal(4, fireworks.FuelValue);
+        Assert.False(biofuel.Explosive);
+        Assert.Equal(2, biofuel.FuelValue);
+        Assert.True(explosives.Explosive);
+        Assert.Equal(1, explosives.FuelValue);
+        Assert.True(fireworks.Explosive);
+        Assert.Equal(1, fireworks.FuelValue);
     }
 
     [Fact]
@@ -120,7 +115,7 @@ public sealed class TimberbornResourceFuelCatalogTests
             grid,
             [resourceAdapter.CreateStockpileResourceSource(0, 0, 0, "Log")]);
 
-        Assert.Equal(PackedCell.Pack(fuel: 12, heat: 0, flammability: 2, water: 0, terrain: 1, burningLevel: 0), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 2, heat: 0, flammability: 1, water: 0, terrain: 1, burningLevel: 0), cells[0]);
     }
 
     [Fact]

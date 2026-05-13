@@ -140,7 +140,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
                 [
                     new TimberbornStoredGoodStack("Explosives", 2),
                     new TimberbornStoredGoodStack("MysteryGood", 3),
-                    new TimberbornStoredGoodStack("Carrot", 5),
+                    new TimberbornStoredGoodStack("Paper", 5),
                 ],
                 CanMutateInventory: true));
         TimberbornStoredGoodBurnConsequenceSink sink = new(inventoryApi);
@@ -152,7 +152,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
         Assert.Equal(2, summary.HazardousGoodCount);
         Assert.Equal(1, summary.SkippedUnknownResourceCount);
         Assert.Equal(5, summary.DestroyedItemCount);
-        Assert.Equal([new TimberbornStoredGoodStack("Carrot", 5)], inventoryApi.DestroyedStacks);
+        Assert.Equal([new TimberbornStoredGoodStack("Paper", 5)], inventoryApi.DestroyedStacks);
     }
 
     [Fact]

@@ -1,0 +1,10 @@
+{
+  "WildfireBurnableSpec": {
+    "Type": "building",
+    "Fuel": 9,
+    "Destruction Threshold": 8,
+    "Flammability": 3,
+    "Explosive": false,
+    "Contaminated": false
+  }
+}

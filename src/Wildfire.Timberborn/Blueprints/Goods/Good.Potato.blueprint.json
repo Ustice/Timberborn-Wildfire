@@ -1,0 +1,10 @@
+{
+  "WildfireFuelSpec": {
+    "Type": "good",
+    "Fuel": 0,
+    "Destruction Threshold": 0,
+    "Flammability": 1,
+    "Explosive": false,
+    "Contaminated": false
+  }
+}

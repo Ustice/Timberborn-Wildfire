@@ -193,20 +193,18 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
             .Select(stack => new ClassifiedStack(stack, _resourceFuelCatalog.Lookup(stack.ResourceId)))
             .ToArray();
         int skippedUnknownResourceCount = classifiedStacks
-            .Count(stack => stack.Profile.HazardClass == TimberbornResourceHazardClass.Unknown);
+            .Count(static stack => !stack.Profile.Known);
         int hazardousGoodCount = classifiedStacks
-            .Where(static stack => stack.Profile.HazardClass is
-                TimberbornResourceHazardClass.Explosive or
-                TimberbornResourceHazardClass.Volatile)
+            .Where(static stack => stack.Profile.Explosive || stack.Profile.Contaminated)
             .Sum(static stack => stack.Stack.Amount);
         int skippedNonBurnableItemCount = classifiedStacks
             .Where(static stack => stack.Profile.FuelValue == 0)
             .Sum(static stack => stack.Stack.Amount);
         TimberbornStoredGoodStack[] burnableStacks = classifiedStacks
             .Where(static stack => stack.Profile.FuelValue > 0)
-            .Where(static stack => stack.Profile.HazardClass is not TimberbornResourceHazardClass.Unknown)
-            .Where(static stack => stack.Profile.HazardClass is not TimberbornResourceHazardClass.Explosive)
-            .Where(static stack => stack.Profile.HazardClass is not TimberbornResourceHazardClass.Volatile)
+            .Where(static stack => stack.Profile.Known)
+            .Where(static stack => !stack.Profile.Explosive)
+            .Where(static stack => !stack.Profile.Contaminated)
             .OrderByDescending(static stack => stack.Profile.Flammability)
             .ThenByDescending(static stack => stack.Profile.FuelValue)
             .ThenBy(static stack => stack.Stack.ResourceId, StringComparer.Ordinal)
