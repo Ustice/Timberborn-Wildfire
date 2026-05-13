@@ -1161,7 +1161,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private const float AshOverlaySigmoidSharpness = 14f;
     private const float AshOverlayThresholdLow = 0.08f;
     private const float AshOverlayThresholdHigh = 0.92f;
-    private const int AshOverlayRenderQueueOffset = -500;
+    private const int AshOverlayRenderQueueOffset = -10;
     private const float CloudOverlayUvSentinel = -2f;
     private static readonly int MainTexturePropertyId = Shader.PropertyToID("_MainTex");
     private static readonly int BaseMapPropertyId = Shader.PropertyToID("_BaseMap");

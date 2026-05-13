@@ -14,7 +14,7 @@ Shader "Wildfire/AshOverlay"
     {
         Tags
         {
-            "Queue" = "Transparent-500"
+            "Queue" = "Transparent-10"
             "RenderType" = "Transparent"
             "IgnoreProjector" = "True"
         }
