@@ -23,7 +23,7 @@ public sealed class TimberbornGpuFieldRendererOptions
         float MinimumVisibleCloudIntensity = 0.01f,
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
-        float DebugOverlayHeightOffset = 0.006f)
+        float DebugOverlayHeightOffset = 0.035f)
     {
         if (RegionSize <= 0)
         {
