@@ -454,6 +454,7 @@ public sealed class TimberbornComputeFireSimulator :
     IGpuFireSimulator,
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
+    ITimberbornFireSimPersistenceState,
     IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
@@ -659,6 +660,60 @@ public sealed class TimberbornComputeFireSimulator :
             $"water_ignition_penalty={parameters.FireWaterIgnitionPenalty} " +
             $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator} " +
             $"fire_step_interval_ticks={parameters.FireCellStepIntervalTicks}");
+    }
+
+    public TimberbornFireSimPersistenceSnapshot CaptureFireSimState()
+    {
+        ThrowIfDisposed();
+
+        uint[] cells = new uint[Grid.CellCount];
+        uint[] atmosphericFields = new uint[Grid.CellCount];
+        _readCells.GetData(cells);
+        _readAtmosphericFields.GetData(atmosphericFields);
+
+        return new TimberbornFireSimPersistenceSnapshot(
+            Width,
+            Height,
+            Depth,
+            _tick,
+            cells.Select(static cell => checked((ushort)(cell & 0xFFFFu))).ToArray(),
+            atmosphericFields);
+    }
+
+    public void RestoreFireSimState(TimberbornFireSimPersistenceSnapshot snapshot)
+    {
+        if (snapshot is null)
+        {
+            throw new ArgumentNullException(nameof(snapshot));
+        }
+
+        ThrowIfDisposed();
+        if (snapshot.Width != Width ||
+            snapshot.Height != Height ||
+            snapshot.Depth != Depth ||
+            snapshot.Cells.Count != Grid.CellCount)
+        {
+            throw new ArgumentException("FireSim persistence snapshot dimensions do not match the live simulator.", nameof(snapshot));
+        }
+
+        uint[] cells = snapshot.Cells.Select(static cell => (uint)cell).ToArray();
+        _readCells.SetData(cells);
+        _writeCells.SetData(cells);
+        if (snapshot.AtmosphericFields.Count == Grid.CellCount)
+        {
+            uint[] atmosphericFields = snapshot.AtmosphericFields.ToArray();
+            _readAtmosphericFields.SetData(atmosphericFields);
+            _writeAtmosphericFields.SetData(atmosphericFields);
+            _visualFieldBindingLifecycle?.UpdateAtmosphericFieldsBuffer(_readAtmosphericFields);
+        }
+
+        _tick = snapshot.Tick;
+        _visualFieldBindingLifecycle?.MarkUpdated(_tick);
+        _logSink.Info(
+            "wildfire_timberborn_gpu_simulator_state_restored " +
+            $"tick={_tick} " +
+            $"cell_count={Grid.CellCount} " +
+            $"atmospheric_fields={snapshot.AtmosphericFields.Count}");
     }
 
     public void RegisterChange(FireSimChange change)

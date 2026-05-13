@@ -216,6 +216,39 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
+    public void DeltaConsumerMarksAffectedContaminatedCellsAsTaintedAsh()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornBurnDamageService burnDamageService = CreateService(
+            new TimberbornBurnDamageDescriptor(
+                "Crop.Carrot",
+                TimberbornBurnDamageTargetKind.Crop,
+                TimberbornBurnMaterialKind.Organic,
+                resourceYields: [new TimberbornBurnDamageResourceStack("Carrot", 1)]));
+        burnDamageService.RegisterTargets(
+            grid,
+            [Registration("crop-carrot-1", "Crop.Carrot", [new TimberbornCellCoordinates(0, 0, 0)])]);
+        RecordingAshGrowthAdapter growthAdapter = new();
+        TimberbornAshFieldService ashFieldService = new(growthAdapter);
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(
+                burnDamageSink: burnDamageService,
+                ashFieldSink: new TimberbornAshFieldSink(
+                    burnDamageService,
+                    ashFieldService,
+                    affectedCellContaminationProvider: _ => true)));
+
+        TimberbornFireDeltaConsumerSummary summary =
+            consumer.Consume(41, [Delta(0, oldFuel: 3, newFuel: 0)]);
+
+        Assert.True(ashFieldService.TryGetEntry(0, out TimberbornAshFieldEntry entry));
+        Assert.Equal(WildfireAshQuality.Tainted, entry.Quality);
+        Assert.Equal(1, summary.AshFieldTaintedAshCellCount);
+        Assert.Empty(growthAdapter.Requests);
+    }
+
+    [Fact]
     public void UnavailableGrowthAdapterReportsSkippedUnsafeApi()
     {
         TimberbornAshFieldService service = new(UnavailableTimberbornAshGrowthAdapter.Instance);

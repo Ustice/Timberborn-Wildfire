@@ -6,6 +6,8 @@ using Timberborn.Navigation;
 using Timberborn.SelectionSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.TerrainSystem;
+using Timberborn.SoilContaminationSystem;
+using Timberborn.WorldPersistence;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -15,6 +17,7 @@ public sealed class TimberbornFireRuntime :
     ILoadableSingleton,
     IUnloadableSingleton,
     IUpdatableSingleton,
+    ISaveableSingleton,
     ITimberbornQaCommandStateProvider,
     ITimberbornQaDeltaStimulus,
     ITimberbornQaBuildingBurnoutStimulus,
@@ -33,6 +36,8 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
     private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
     private readonly TimberbornAshFieldService _ashFieldService;
+    private readonly ISingletonLoader _singletonLoader;
+    private readonly ISoilContaminationService _soilContaminationService;
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private ITimberbornCropBurnConsequenceApi _cropBurnConsequenceApi =
@@ -59,6 +64,7 @@ public sealed class TimberbornFireRuntime :
     private string? _autoDispatchDisabledReason;
     private long _gameUpdateId;
     private bool _isLoaded;
+    private TimberbornWildfirePersistenceSnapshot? _pendingPersistenceSnapshot;
 
     public TimberbornFireRuntime(
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
@@ -72,15 +78,20 @@ public sealed class TimberbornFireRuntime :
         INavMeshObjectFactory navMeshObjectFactory,
         MapSize mapSize,
         ITerrainService terrainService,
-        IBlockService blockService)
+        IBlockService blockService,
+        ISoilContaminationService soilContaminationService,
+        ISingletonLoader singletonLoader)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
             throw new ArgumentNullException(nameof(fireSimParameterPresetState));
+        _singletonLoader = singletonLoader ?? throw new ArgumentNullException(nameof(singletonLoader));
+        _soilContaminationService = soilContaminationService ??
+            throw new ArgumentNullException(nameof(soilContaminationService));
         _playerFireAlertCameraFocus = playerFireAlertCameraFocus ??
             throw new ArgumentNullException(nameof(playerFireAlertCameraFocus));
         _logSink = new UnityTimberbornFireLogSink();
-        TimberbornGpuFieldRendererOptions gpuFieldRendererOptions = new(CloudLayerEnabled: false);
+        TimberbornGpuFieldRendererOptions gpuFieldRendererOptions = new(CloudLayerEnabled: true);
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
@@ -124,6 +135,7 @@ public sealed class TimberbornFireRuntime :
     public void Load()
     {
         _isLoaded = true;
+        LoadPersistentState();
         RunCompatibilityProbesIfNeeded();
         _logSink.Info(
             $"wildfire_timberborn_adapter_started cadence_interval_ms={TimberbornFireCadence.Default.Interval.TotalMilliseconds:F0}");
@@ -156,6 +168,26 @@ public sealed class TimberbornFireRuntime :
         _isLoaded = false;
         _logSink.Info("wildfire_timberborn_adapter_stopped");
         _logSink.Info("wildfire_timberborn_runtime_unloaded");
+    }
+
+    public void Save(ISingletonSaver singletonSaver)
+    {
+        if (singletonSaver is null)
+        {
+            throw new ArgumentNullException(nameof(singletonSaver));
+        }
+
+        TimberbornWildfirePersistenceSnapshot snapshot = CapturePersistentState();
+        string encoded = TimberbornWildfirePersistenceCodec.Encode(snapshot);
+        singletonSaver
+            .GetSingleton(TimberbornWildfirePersistenceKeys.Singleton)
+            .Set(TimberbornWildfirePersistenceKeys.Snapshot, encoded);
+        _logSink.Info(
+            "wildfire_timberborn_persistence_saved " +
+            $"version={snapshot.PersistenceVersion} " +
+            $"firesim_saved={(snapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
+            $"ash_entries={snapshot.AshField.Entries.Count} " +
+            $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
     }
 
     public void UpdateSingleton()
@@ -227,10 +259,20 @@ public sealed class TimberbornFireRuntime :
             new TimberbornFireCellMapper(),
             _logSink,
             CreateDeltaConsumerSinks());
-        fireSystem.Initialize(grid, sources, companionFields);
+        if (_pendingPersistenceSnapshot?.FireSim is { } fireSimSnapshot)
+        {
+            fireSystem.InitializeFromPersistentFireSimState(grid, sources, companionFields, fireSimSnapshot);
+        }
+        else
+        {
+            fireSystem.Initialize(grid, sources, companionFields);
+        }
+
+        RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);
         _gpuFieldRenderer.SetAshSuppressedSurfaces(grid, companionFields);
         _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
         Configure(fireSystem, cadence);
+        _pendingPersistenceSnapshot = null;
         _logSink.Info(
             $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth} {_lastWorldImportSummary.StatusToken}");
     }
@@ -1003,6 +1045,60 @@ public sealed class TimberbornFireRuntime :
             : null;
     }
 
+    private TimberbornWildfirePersistenceSnapshot CapturePersistentState()
+    {
+        return new TimberbornWildfirePersistenceSnapshot(
+            TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion,
+            _fireSystem?.CapturePersistentFireSimState(),
+            _ashFieldService.SaveSnapshot(),
+            TimberbornWildfirePersistenceCodec.CaptureConsequences(_burnDamageService));
+    }
+
+    private void LoadPersistentState()
+    {
+        try
+        {
+            if (_singletonLoader.TryGetSingleton(TimberbornWildfirePersistenceKeys.Singleton, out var loader) &&
+                loader.Has(TimberbornWildfirePersistenceKeys.Snapshot))
+            {
+                _pendingPersistenceSnapshot = TimberbornWildfirePersistenceCodec.Decode(
+                    loader.Get(TimberbornWildfirePersistenceKeys.Snapshot));
+                _logSink.Info(
+                    "wildfire_timberborn_persistence_loaded " +
+                    $"version={_pendingPersistenceSnapshot.PersistenceVersion} " +
+                    $"firesim_saved={(_pendingPersistenceSnapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
+                    $"ash_entries={_pendingPersistenceSnapshot.AshField.Entries.Count} " +
+                    $"consequence_burn_damage_entries={_pendingPersistenceSnapshot.Consequences.BurnDamageStates.Count}");
+                return;
+            }
+
+            _pendingPersistenceSnapshot = null;
+            _logSink.Info("wildfire_timberborn_persistence_load_skipped reason=no_saved_state");
+        }
+        catch (Exception exception)
+        {
+            _pendingPersistenceSnapshot = null;
+            _logSink.Warning(
+                "wildfire_timberborn_persistence_load_failed " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+        }
+    }
+
+    private void RestorePersistentConsequenceAndAshState(TimberbornWildfirePersistenceSnapshot? snapshot)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        TimberbornWildfirePersistenceCodec.RestoreConsequences(_burnDamageService, snapshot.Consequences);
+        _ashFieldService.RestoreSnapshot(snapshot.FireSim?.Tick ?? 0, snapshot.AshField);
+        _logSink.Info(
+            "wildfire_timberborn_persistence_runtime_state_restored " +
+            $"ash_entries={snapshot.AshField.Entries.Count} " +
+            $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
+    }
+
     private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
     {
         return new TimberbornFireDeltaConsumerSinks(
@@ -1075,7 +1171,29 @@ public sealed class TimberbornFireRuntime :
                     burnDamageTargets: _burnDamageService),
             ashFieldSink: _burnDamageService is null
                 ? null
-                : new TimberbornAshFieldSink(_burnDamageService, _ashFieldService));
+                : new TimberbornAshFieldSink(
+                    _burnDamageService,
+                    _ashFieldService,
+                    affectedCellContaminationProvider: IsAffectedCellContaminated));
+    }
+
+    private bool IsAffectedCellContaminated(int cellIndex)
+    {
+        try
+        {
+            FireGrid grid = _fireSystem?.RequireInitializedGrid() ??
+                throw new InvalidOperationException("Fire system grid is unavailable.");
+            (int x, int y, int z) = grid.FromIndex(cellIndex);
+            return _soilContaminationService.SoilIsContaminated(new Vector3Int(x, y, z));
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_ash_contamination_lookup_failed " +
+                $"cell_index={cellIndex} " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
+            return true;
+        }
     }
 
     private bool TryAllowExternalChange(string source, int? count)

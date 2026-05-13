@@ -271,6 +271,13 @@ public sealed class UnityShaderExecutionHarnessTests
             Ash: 0,
             AshContamination: 0,
             Source: false).Pack();
+        atmosphericFields[ToIndex(3, 1, width)] = new WildfireAtmosphericFieldState(
+            Steam: 0,
+            Smoke: 7,
+            SmokeContamination: 0,
+            Ash: 7,
+            AshContamination: 0,
+            Source: false).Pack();
         atmosphericFields[ToIndex(9, 1, width)] = new WildfireAtmosphericFieldState(
             Steam: 0,
             Smoke: 7,
@@ -300,17 +307,19 @@ public sealed class UnityShaderExecutionHarnessTests
 
         WildfireAtmosphericFieldState contaminatedSmokeSource = AtmosphereAt(capture, 1, 1);
         WildfireAtmosphericFieldState contaminatedSmokeDeposit = AtmosphereAt(capture, 5, 1);
+        WildfireAtmosphericFieldState taintedTransitCell = AtmosphereAt(capture, 3, 1);
         WildfireAtmosphericFieldState cleanSmokeDeposit = AtmosphereAt(capture, 9, 1);
-        WildfireAtmosphericFieldState coldContaminatedCell = AtmosphereAt(capture, 3, 1);
 
         Assert.True(contaminatedSmokeSource.Smoke > 0);
         Assert.True(contaminatedSmokeSource.SmokeContamination > 0);
         Assert.True(contaminatedSmokeDeposit.Ash > 0);
         Assert.True(contaminatedSmokeDeposit.AshContamination > 0);
+        Assert.True(taintedTransitCell.Smoke > 0);
+        Assert.True(taintedTransitCell.SmokeContamination > 0);
+        Assert.True(taintedTransitCell.Ash > 0);
+        Assert.True(taintedTransitCell.AshContamination > 0);
         Assert.True(cleanSmokeDeposit.Ash > 0);
         Assert.Equal(0, cleanSmokeDeposit.AshContamination);
-        Assert.Equal(0, coldContaminatedCell.SmokeContamination);
-        Assert.Equal(0, coldContaminatedCell.AshContamination);
     }
 
     [Fact]

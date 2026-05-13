@@ -405,7 +405,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             CellIndex: consequence.CellIndex,
             ConstructionResources: TimberbornBurnDamageResourceGuesses.ForStructure(blockObject.Name),
             CanClose: false,
-            CanApplyRollbackVisual: canEnterUnfinishedState,
+            CanApplyRollbackVisual: true,
             CanRepairAfterDanger: canEnterUnfinishedState);
     }
 
@@ -431,12 +431,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             if (request.RollbackStage is TimberbornStructureBurnRollbackStage.PartialConstruction or
                 TimberbornStructureBurnRollbackStage.Unfinished)
             {
-                enteredUnfinishedState = TryEnterUnfinishedState(blockObject);
+                enteredUnfinishedState = target.CanRepairAfterDanger && TryEnterUnfinishedState(blockObject);
             }
 
             ConstructionSite? constructionSite = TryGetConstructionSite(blockObject, coordinates);
             removedConstructionMaterialCount = RemoveConstructionMaterials(constructionSite, target);
-            resetConstructionProgress = request.RepairBlocked &&
+            resetConstructionProgress = target.CanRepairAfterDanger &&
+                request.RepairBlocked &&
                 TrySetConstructionProgress(constructionSite, buildTimeProgressInHours: 0f);
             burnedMaterialCount = ApplyBurnedTextures(blockObject, target.SpecId);
             hasBurnedTextures = burnedMaterialCount > 0 || HasBurnedTextures(blockObject);
@@ -492,12 +493,24 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     {
         try
         {
-            return blockObject.IsFinished;
+            return blockObject.IsFinished && !HasFinishedStateReentryListener(blockObject);
         }
         catch
         {
             return false;
         }
+    }
+
+    private static bool HasFinishedStateReentryListener(BlockObject blockObject)
+    {
+        return blockObject.GetComponentsAllocating<Component>()
+            .Concat(blockObject.Transform.GetComponentsInChildren<Component>(includeInactive: true))
+            .Where(static component => component is not null)
+            .Select(static component => component.GetType())
+            .Distinct()
+            .Any(static type => type.GetMethod(
+                "OnEnterFinishedState",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) is not null);
     }
 
     private static bool TryEnterUnfinishedState(BlockObject blockObject)

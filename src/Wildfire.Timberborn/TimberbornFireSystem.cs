@@ -216,6 +216,62 @@ public sealed class TimberbornFireSystem : IDisposable
             $"wildfire_timberborn_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
     }
 
+    public void InitializeFromPersistentFireSimState(
+        FireGrid grid,
+        IEnumerable<TimberbornCellSource> sources,
+        ReadOnlySpan<WildfireCompanionField> companionFields,
+        TimberbornFireSimPersistenceSnapshot snapshot)
+    {
+        if (sources is null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
+
+        if (snapshot is null)
+        {
+            throw new ArgumentNullException(nameof(snapshot));
+        }
+
+        if (snapshot.Width != grid.Width ||
+            snapshot.Height != grid.Height ||
+            snapshot.Depth != grid.Depth ||
+            snapshot.Cells.Count != grid.CellCount)
+        {
+            Initialize(grid, sources, companionFields);
+            _logSink.Warning(
+                "wildfire_timberborn_firesim_persistence_skipped " +
+                "reason=dimension_mismatch " +
+                $"saved={snapshot.Width}x{snapshot.Height}x{snapshot.Depth} " +
+                $"current={grid.Width}x{grid.Height}x{grid.Depth}");
+            return;
+        }
+
+        Initialize(grid, sources, companionFields);
+        if (_fireSimulator is ITimberbornFireSimPersistenceState persistenceState)
+        {
+            persistenceState.RestoreFireSimState(snapshot);
+            LastTick = snapshot.Tick;
+            LastDeltaCount = 0;
+            _logSink.Info(
+                "wildfire_timberborn_firesim_persistence_restored " +
+                $"tick={snapshot.Tick} " +
+                $"cell_count={snapshot.Cells.Count}");
+        }
+        else
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_firesim_persistence_skipped " +
+                "reason=snapshot_api_unavailable");
+        }
+    }
+
+    public TimberbornFireSimPersistenceSnapshot? CapturePersistentFireSimState()
+    {
+        return _fireSimulator is ITimberbornFireSimPersistenceState persistenceState
+            ? persistenceState.CaptureFireSimState()
+            : null;
+    }
+
     public GpuFireStepResult Tick()
     {
         IGpuFireSimulator fireSimulator = RequireSimulator();

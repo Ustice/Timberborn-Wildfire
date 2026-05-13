@@ -451,15 +451,18 @@ public sealed class TimberbornAshFieldSink : ITimberbornAshFieldSink
     private readonly ITimberbornBurnDamageTargetStateProvider _targetStateProvider;
     private readonly TimberbornAshFieldService _ashFieldService;
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
+    private readonly Func<int, bool> _affectedCellContaminationProvider;
 
     public TimberbornAshFieldSink(
         ITimberbornBurnDamageTargetStateProvider targetStateProvider,
         TimberbornAshFieldService ashFieldService,
-        TimberbornResourceFuelCatalog? resourceFuelCatalog = null)
+        TimberbornResourceFuelCatalog? resourceFuelCatalog = null,
+        Func<int, bool>? affectedCellContaminationProvider = null)
     {
         _targetStateProvider = targetStateProvider ?? throw new ArgumentNullException(nameof(targetStateProvider));
         _ashFieldService = ashFieldService ?? throw new ArgumentNullException(nameof(ashFieldService));
         _resourceFuelCatalog = resourceFuelCatalog ?? TimberbornResourceFuelCatalog.Default;
+        _affectedCellContaminationProvider = affectedCellContaminationProvider ?? (_ => false);
     }
 
     public TimberbornAshFieldSummary ApplyConsequences(
@@ -502,7 +505,7 @@ public sealed class TimberbornAshFieldSink : ITimberbornAshFieldSink
             state.MaterialKind,
             strength,
             IsSourceContaminated: IsSourceContaminated(state),
-            IsAffectedCellContaminated: false,
+            IsAffectedCellContaminated: _affectedCellContaminationProvider(decision.CellIndex),
             state.AccountedResourceIds);
     }
 

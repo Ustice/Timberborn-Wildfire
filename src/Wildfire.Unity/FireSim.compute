@@ -447,6 +447,8 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     ash = max(ash, ashSource);
     ashContamination = max(ashContamination, fuelDrop == 0u ? 0u : sourceContamination);
     ashContamination = max(ashContamination, smokeDepositAsh == 0u ? 0u : AtmosphericSmokeContamination(oldAtmospheric));
+    smokeContamination = max(smokeContamination, smoke == 0u ? 0u : sourceContamination);
+    ashContamination = max(ashContamination, ash == 0u ? 0u : sourceContamination);
     bool source = steamSource > 0u || smokeSource > 0u || ashSource > 0u;
     return PackAtmospheric(min(7u, steam), min(7u, smoke), min(7u, smokeContamination), min(7u, ash), min(7u, ashContamination), source);
 }

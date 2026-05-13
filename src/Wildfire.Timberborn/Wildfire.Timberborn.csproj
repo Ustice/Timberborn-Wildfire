@@ -21,6 +21,14 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.MapStateSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.Persistence">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Persistence.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.WorldPersistence">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WorldPersistence.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.MapIndexSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.MapIndexSystem.dll</HintPath>
       <Private>false</Private>
@@ -171,6 +179,10 @@
     </Reference>
     <Reference Include="Timberborn.SoilMoistureSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilMoistureSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.SoilContaminationSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilContaminationSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.WindSystem">
