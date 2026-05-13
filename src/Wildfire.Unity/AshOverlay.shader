@@ -20,7 +20,7 @@ Shader "Wildfire/AshOverlay"
         }
 
         Blend SrcAlpha OneMinusSrcAlpha
-        ZTest Always
+        ZTest LEqual
         ZWrite Off
         Cull Off
 
@@ -81,7 +81,10 @@ Shader "Wildfire/AshOverlay"
                 float mask = tex2D(_MaskTex, i.uv).r;
                 float midpoint = lerp(_ThresholdHigh, _ThresholdLow, ash);
                 float coverage = 1.0 / (1.0 + exp(-_SigmoidSharpness * (mask - midpoint)));
-                float3 visibleAsh = max(ashTexel.rgb, float3(0.24, 0.23, 0.21));
+                float3 visibleAsh = lerp(
+                    float3(0.10, 0.085, 0.07),
+                    ashTexel.rgb * float3(0.58, 0.52, 0.45),
+                    0.55);
                 float alpha = coverage * ash * _MaxOpacity;
                 return fixed4(visibleAsh, saturate(alpha));
             }
