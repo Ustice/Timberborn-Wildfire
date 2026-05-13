@@ -20,6 +20,7 @@ Shader "Wildfire/AshOverlay"
         }
 
         Blend SrcAlpha OneMinusSrcAlpha
+        ZTest Always
         ZWrite Off
         Cull Off
 
@@ -80,11 +81,9 @@ Shader "Wildfire/AshOverlay"
                 float mask = tex2D(_MaskTex, i.uv).r;
                 float midpoint = lerp(_ThresholdHigh, _ThresholdLow, ash);
                 float coverage = 1.0 / (1.0 + exp(-_SigmoidSharpness * (mask - midpoint)));
-                float3 worldNormal = float3(0.0, 1.0, 0.0);
-                float3 ambient = ShadeSH9(float4(worldNormal, 1.0)).rgb;
-                float3 direct = _LightColor0.rgb * saturate(dot(worldNormal, normalize(_WorldSpaceLightPos0.xyz)));
-                float3 litAsh = ashTexel.rgb * max(ambient + direct, 0.04);
-                return fixed4(litAsh, coverage * ash * _MaxOpacity);
+                float3 visibleAsh = max(ashTexel.rgb, float3(0.24, 0.23, 0.21));
+                float alpha = max(coverage * ash * _MaxOpacity, ash * 0.42);
+                return fixed4(visibleAsh, saturate(alpha));
             }
             ENDCG
         }
