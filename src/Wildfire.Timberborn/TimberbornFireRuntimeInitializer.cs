@@ -179,7 +179,10 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         }
         catch (Exception exception)
         {
-            _logSink.Warning($"wildfire_timberborn_runtime_initialize_failed message=\"{exception.Message}\"");
+            _logSink.Warning(
+                "wildfire_timberborn_runtime_initialize_failed " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)} " +
+                $"details={TimberbornQaCommandBridge.FormatToken(exception.ToString())}");
         }
     }
 
@@ -218,10 +221,12 @@ public sealed class TimberbornBuildingCellSourceProvider : ITimberbornWorldCellS
             .Where(static building => !building.Component.TryGetComponent(out Stockpile _))
             .SelectMany((building, buildingIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(building.Component)
                 .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
-                .Select(coordinates => _buildingAdapter.CreateWoodLikeSource(coordinates.x, coordinates.y, coordinates.z) with
-                {
-                    CompanionTargetId = checked((uint)buildingIndex + 1u),
-                }))
+                .Select(coordinates => _buildingAdapter.CreateBuildingSource(
+                    coordinates.x,
+                    coordinates.y,
+                    coordinates.z,
+                    building.BlockObject.Name,
+                    checked((uint)buildingIndex + 1u))))
             .ToArray();
 
         return new TimberbornWorldCellImportProviderResult("buildings", sources);
@@ -249,6 +254,7 @@ public sealed class TimberbornNaturalResourceCellSourceProvider : ITimberbornWor
                     coordinates.x,
                     coordinates.y,
                     coordinates.z,
+                    resource.Name,
                     checked((uint)resourceIndex + 1u))))
             .ToArray();
         TimberbornCellSource[] cropSources = blockObjects
@@ -259,6 +265,7 @@ public sealed class TimberbornNaturalResourceCellSourceProvider : ITimberbornWor
                     coordinates.x,
                     coordinates.y,
                     coordinates.z,
+                    resource.Name,
                     checked((uint)resourceIndex + 1u))))
             .ToArray();
         TimberbornCellSource[] vegetationSources = blockObjects
@@ -528,10 +535,14 @@ public sealed class TimberbornPausableBuildingCellSourceProvider : ITimberbornWo
     {
         TimberbornCellSource[] sources = EnumerateSurfaceCandidates(grid)
             .Where(cell => _blockService.GetObjectsWithComponentAt<PausableBuilding>(cell.Coordinates).Any())
-            .Select(cell => _buildingAdapter.CreateWoodLikeSource(cell.X, cell.Y, cell.Z) with
-            {
-                CompanionTargetId = checked((uint)cell.Index + 1u),
-            })
+            .Select(cell => _blockService.GetObjectsWithComponentAt<PausableBuilding>(cell.Coordinates)
+                .Select(building => _buildingAdapter.CreateBuildingSource(
+                    cell.X,
+                    cell.Y,
+                    cell.Z,
+                    building.GetComponent<BlockObject>().Name,
+                    checked((uint)cell.Index + 1u)))
+                .First())
             .ToArray();
 
         return new TimberbornWorldCellImportProviderResult("buildings", sources);

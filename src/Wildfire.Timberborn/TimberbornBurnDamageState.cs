@@ -73,7 +73,8 @@ public sealed record TimberbornBurnDamageDescriptor
         TimberbornBurnDamageTargetKind targetKind,
         TimberbornBurnMaterialKind materialKind,
         IReadOnlyList<TimberbornBurnDamageResourceStack>? resourceYields = null,
-        IReadOnlyList<TimberbornBurnDamageResourceStack>? constructionResources = null)
+        IReadOnlyList<TimberbornBurnDamageResourceStack>? constructionResources = null,
+        TimberbornBurnableProfile? burnableProfile = null)
     {
         if (string.IsNullOrWhiteSpace(specId))
         {
@@ -85,6 +86,7 @@ public sealed record TimberbornBurnDamageDescriptor
         MaterialKind = materialKind;
         ResourceYields = (resourceYields ?? Array.Empty<TimberbornBurnDamageResourceStack>()).ToArray();
         ConstructionResources = (constructionResources ?? Array.Empty<TimberbornBurnDamageResourceStack>()).ToArray();
+        BurnableProfile = burnableProfile;
     }
 
     public string SpecId { get; }
@@ -96,6 +98,8 @@ public sealed record TimberbornBurnDamageDescriptor
     public IReadOnlyList<TimberbornBurnDamageResourceStack> ResourceYields { get; }
 
     public IReadOnlyList<TimberbornBurnDamageResourceStack> ConstructionResources { get; }
+
+    public TimberbornBurnableProfile? BurnableProfile { get; }
 
     public bool HasResourceAccounting => ResourceYields.Count > 0 || ConstructionResources.Count > 0;
 }
@@ -172,6 +176,20 @@ public sealed class TimberbornBurnDamageCapacityCalculator
         if (descriptor is null)
         {
             throw new ArgumentNullException(nameof(descriptor));
+        }
+
+        if (descriptor.BurnableProfile is { } burnableProfile &&
+            burnableProfile.Known &&
+            descriptor.TargetKind is not TimberbornBurnDamageTargetKind.Tree and
+                not TimberbornBurnDamageTargetKind.Crop and
+                not TimberbornBurnDamageTargetKind.Resource)
+        {
+            return new TimberbornBurnDamageCapacity(
+                Capacity: burnableProfile.DamageCapacity,
+                FuelValue: burnableProfile.FuelValue,
+                Flammability: burnableProfile.Flammability,
+                MissingResourceIds: Array.Empty<string>(),
+                AccountedResourceIds: new[] { burnableProfile.SpecId });
         }
 
         TimberbornBurnDamageResourceStack[] stacks = descriptor.ResourceYields

@@ -203,6 +203,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Blueprints\**\*.blueprint.json" />
     <EmbeddedResource Include="Assets\WildfireAshGround2048.png" />
     <EmbeddedResource Include="Assets\WildfireAshMask4096Levels.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolIcon.png" />

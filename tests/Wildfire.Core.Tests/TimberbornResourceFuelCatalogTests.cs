@@ -105,6 +105,119 @@ public sealed class TimberbornResourceFuelCatalogTests
     }
 
     [Fact]
+    public void BurnableCatalogReadsTreeCropAndBuildingBlueprintValues()
+    {
+        TimberbornBurnableCatalog catalog = TimberbornBurnableCatalog.Default;
+
+        TimberbornBurnableProfile pine = catalog.Lookup("Tree.Pine");
+        TimberbornBurnableProfile corn = catalog.Lookup("Corn");
+        TimberbornBurnableProfile lumberMill = catalog.Lookup("LumberMill.Folktails");
+
+        Assert.Equal("Pine", pine.SpecId);
+        Assert.Equal("tree", pine.Type);
+        Assert.Equal(8, pine.FuelValue);
+        Assert.Equal(6, pine.DestructionThreshold);
+        Assert.Equal(3, pine.Flammability);
+        Assert.True(pine.IsBurnable);
+        Assert.Equal("Corn", corn.SpecId);
+        Assert.Equal(2, corn.FuelValue);
+        Assert.Equal(2, corn.DamageCapacity);
+        Assert.Equal("LumberMill.Folktails", lumberMill.SpecId);
+        Assert.Equal(3, lumberMill.FuelValue);
+        Assert.Equal(2, lumberMill.DamageCapacity);
+        Assert.Equal(1, lumberMill.Flammability);
+    }
+
+    [Fact]
+    public void CatalogsFallBackToEmbeddedBlueprintsWhenRuntimePathIsUnavailable()
+    {
+        string unavailableRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"wildfire-missing-blueprints-{Guid.NewGuid():N}");
+
+        TimberbornResourceFuelCatalog fuelCatalog = TimberbornResourceFuelCatalog.FromBlueprintRoot(unavailableRoot);
+        TimberbornBurnableCatalog burnableCatalog = TimberbornBurnableCatalog.FromBlueprintRoot(unavailableRoot);
+
+        Assert.Equal(60, fuelCatalog.KnownResourceIds.Count);
+        Assert.Equal(2, fuelCatalog.Lookup("Log").FuelValue);
+        Assert.Equal(8, burnableCatalog.Lookup("Pine").FuelValue);
+        Assert.Equal(3, burnableCatalog.Lookup("LumberMill.Folktails").FuelValue);
+    }
+
+    [Fact]
+    public void BurnableCatalogPreservesFactionSpecificBuildingProfiles()
+    {
+        TimberbornBurnableCatalog catalog = TimberbornBurnableCatalog.Default;
+
+        TimberbornBurnableProfile folktailsStatue = catalog.Lookup("BeaverStatue.Folktails");
+        TimberbornBurnableProfile ironTeethStatue = catalog.Lookup("BeaverStatue.IronTeeth");
+        TimberbornBurnableProfile ambiguousStatue = catalog.Lookup("BeaverStatue");
+
+        Assert.Equal(11, folktailsStatue.FuelValue);
+        Assert.Equal(10, folktailsStatue.DamageCapacity);
+        Assert.True(folktailsStatue.IsBurnable);
+        Assert.Equal(0, ironTeethStatue.FuelValue);
+        Assert.False(ironTeethStatue.IsBurnable);
+        Assert.False(ambiguousStatue.Known);
+    }
+
+    [Fact]
+    public void ResourceAdaptersMapNaturalResourcesFromBurnableBlueprints()
+    {
+        TimberbornResourceAdapter resourceAdapter = new();
+        TimberbornFireCellMapper mapper = new();
+        FireGrid grid = new(3, 1, 1);
+
+        ushort[] cells = mapper.CreateInitialCells(
+            grid,
+            [
+                resourceAdapter.CreateTreeSource(0, 0, 0, "Pine"),
+                resourceAdapter.CreateCropSource(1, 0, 0, "Corn"),
+                resourceAdapter.CreateCropSource(2, 0, 0, "Carrot"),
+            ]);
+
+        Assert.Equal(PackedCell.Pack(fuel: 8, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 2, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), cells[1]);
+        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0), cells[2]);
+    }
+
+    [Fact]
+    public void BuildingAdapterMapsBuildingBlueprintValuesAndNonBurnableProfiles()
+    {
+        TimberbornBuildingAdapter buildingAdapter = new();
+        TimberbornFireCellMapper mapper = new();
+        FireGrid grid = new(2, 1, 1);
+
+        ushort[] cells = mapper.CreateInitialCells(
+            grid,
+            [
+                buildingAdapter.CreateBuildingSource(0, 0, 0, "LumberMill.Folktails"),
+                buildingAdapter.CreateBuildingSource(1, 0, 0, "BeaverStatue.IronTeeth"),
+            ]);
+
+        Assert.Equal(PackedCell.Pack(fuel: 3, heat: 0, flammability: 1, water: 0, terrain: 1, burningLevel: 0), cells[0]);
+        Assert.Equal(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0), cells[1]);
+    }
+
+    [Fact]
+    public void BurnDamageCapacityUsesBuildingBurnableBlueprintValuesForState()
+    {
+        TimberbornBurnableProfile lumberMill = TimberbornBurnableCatalog.Default.Lookup("LumberMill.Folktails");
+        TimberbornBurnDamageDescriptor descriptor = new(
+            "LumberMill.Folktails",
+            TimberbornBurnDamageTargetKind.Structure,
+            TimberbornBurnMaterialKind.Constructed,
+            constructionResources: [new TimberbornBurnDamageResourceStack("Log", 99)],
+            burnableProfile: lumberMill);
+        TimberbornBurnDamageCapacity capacity = new TimberbornBurnDamageCapacityCalculator().Calculate(descriptor);
+
+        Assert.Equal(2, capacity.Capacity);
+        Assert.Equal(3, capacity.FuelValue);
+        Assert.Equal(1, capacity.Flammability);
+        Assert.Equal(["LumberMill.Folktails"], capacity.AccountedResourceIds);
+    }
+
+    [Fact]
     public void ResourceAdapterMapsKnownResourceIdsToStockpileSources()
     {
         TimberbornResourceAdapter resourceAdapter = new();

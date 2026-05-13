@@ -101,6 +101,8 @@ public static class TimberbornBurnDamageResourceGuesses
 
 public static class TimberbornLiveBurnDamageTargetCollector
 {
+    private static readonly TimberbornBurnableCatalog BurnableCatalog = TimberbornBurnableCatalog.Default;
+
     public static TimberbornLiveBurnDamageTargets Collect(EntityRegistry entityRegistry, FireGrid grid)
     {
         if (entityRegistry is null)
@@ -214,11 +216,16 @@ public static class TimberbornLiveBurnDamageTargetCollector
             .Select(static coordinates => new TimberbornCellCoordinates(coordinates.x, coordinates.y, coordinates.z))
             .Distinct()
             .ToArray();
+        TimberbornBurnableProfile burnableProfile = BurnableCatalog.Lookup(specId);
+        TimberbornBurnMaterialKind resolvedMaterialKind = burnableProfile.Known && !burnableProfile.IsBurnable
+            ? TimberbornBurnMaterialKind.NonBurnable
+            : constructionResources.Count == 0 ? TimberbornBurnMaterialKind.NonBurnable : materialKind;
         TimberbornBurnDamageDescriptor descriptor = new(
             specId,
             targetKind,
-            constructionResources.Count == 0 ? TimberbornBurnMaterialKind.NonBurnable : materialKind,
-            constructionResources: constructionResources);
+            resolvedMaterialKind,
+            constructionResources: constructionResources,
+            burnableProfile: burnableProfile.Known ? burnableProfile : null);
         TimberbornBurnDamageTargetRegistration registration = new(
             new TimberbornBurnDamageTargetKey(stableId),
             specId,
@@ -243,11 +250,16 @@ public static class TimberbornLiveBurnDamageTargetCollector
             .Select(static coordinates => new TimberbornCellCoordinates(coordinates.x, coordinates.y, coordinates.z))
             .Distinct()
             .ToArray();
+        TimberbornBurnableProfile burnableProfile = BurnableCatalog.Lookup(specId);
+        TimberbornBurnMaterialKind resolvedMaterialKind = burnableProfile.Known && !burnableProfile.IsBurnable
+            ? TimberbornBurnMaterialKind.NonBurnable
+            : resourceYields.Count == 0 ? TimberbornBurnMaterialKind.NonBurnable : materialKind;
         TimberbornBurnDamageDescriptor descriptor = new(
             specId,
             targetKind,
-            resourceYields.Count == 0 ? TimberbornBurnMaterialKind.NonBurnable : materialKind,
-            resourceYields: resourceYields);
+            resolvedMaterialKind,
+            resourceYields: resourceYields,
+            burnableProfile: burnableProfile.Known ? burnableProfile : null);
         TimberbornBurnDamageTargetRegistration registration = new(
             new TimberbornBurnDamageTargetKey(stableId),
             specId,

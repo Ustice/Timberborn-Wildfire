@@ -57,7 +57,6 @@ const defaultUnityExecutable =
   "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
 const assetBundleTarget = "StandaloneOSX";
 const privateComputeShaderFolderName = "ComputeShaders";
-const generatedBlueprintsDir = join(repoRoot, "src", "Wildfire.Timberborn", "Blueprints");
 const assetBundleArtifacts: AssetBundleArtifact[] = [
   {
     builderMethod: "Wildfire.UnityBatchmode.FireSimAssetBundleBuilder.Build",
@@ -344,11 +343,6 @@ const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
       required: false,
     })),
     ...assetBundlePlan,
-    {
-      from: generatedBlueprintsDir,
-      to: join(targetDir, "Blueprints"),
-      required: true,
-    },
   ];
 };
 
@@ -523,7 +517,6 @@ const assertTargetShape = (targetDir: string): void => {
     join(targetDir, "manifest.json"),
     ...requiredAssemblies.map((name) => join(targetDir, "Scripts", name)),
     ...assetBundleArtifacts.map((artifact) => join(targetDir, privateComputeShaderFolderName, artifact.name)),
-    join(targetDir, "Blueprints", "Goods", "Good.Log.blueprint.json"),
   ];
 
   expectedPaths

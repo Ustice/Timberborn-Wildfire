@@ -406,6 +406,7 @@ public static class TimberbornLiveCropBurnDamageTargetCollector
     };
 
     private static readonly TimberbornResourceFuelCatalog ResourceFuelCatalog = TimberbornResourceFuelCatalog.Default;
+    private static readonly TimberbornBurnableCatalog BurnableCatalog = TimberbornBurnableCatalog.Default;
 
     public static TimberbornLiveCropBurnDamageTargets Collect(EntityRegistry entityRegistry, FireGrid grid)
     {
@@ -611,6 +612,7 @@ public static class TimberbornLiveCropBurnDamageTargetCollector
             ? resourceId
             : candidate.SpecId.Trim();
         int amount = Math.Max(0, candidate.YieldAmount);
+        TimberbornBurnableProfile burnableProfile = BurnableCatalog.Lookup(specId);
         TimberbornCellCoordinates[] ownedCells = candidate.OwnedCells
             .Where(cell => IsInsideGrid(cell, grid))
             .Distinct()
@@ -621,7 +623,8 @@ public static class TimberbornLiveCropBurnDamageTargetCollector
             ownedCells.Length == 0 ||
             !IsAcceptedCropBurnYield(candidate.YieldSource, specId, resourceId) ||
             !ResourceFuelCatalog.Contains(resourceId) ||
-            ResourceFuelCatalog.Lookup(resourceId).FuelValue == 0)
+            ResourceFuelCatalog.Lookup(resourceId).FuelValue == 0 ||
+            (burnableProfile.Known && !burnableProfile.IsBurnable))
         {
             return null;
         }
@@ -633,7 +636,8 @@ public static class TimberbornLiveCropBurnDamageTargetCollector
             specId,
             targetKind,
             TimberbornBurnMaterialKind.Organic,
-            resourceYields: new[] { new TimberbornBurnDamageResourceStack(resourceId, amount) });
+            resourceYields: new[] { new TimberbornBurnDamageResourceStack(resourceId, amount) },
+            burnableProfile: burnableProfile.Known ? burnableProfile : null);
         TimberbornBurnDamageTargetRegistration registration = new(
             new TimberbornBurnDamageTargetKey(candidate.StableId),
             specId,
