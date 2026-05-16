@@ -650,6 +650,12 @@ public sealed class TimberbornComputeFireSimulator :
 
     public TimberbornGpuVisualFieldSurfaceState VisualFieldSurfaceState => _visualFieldSurface.State;
 
+    // Exposed for the GPU indirect renderer. _visualFields is constant after init.
+    public ComputeBuffer VisualFieldsBuffer => _visualFields;
+
+    // Exposed for the GPU indirect renderer. Swaps each tick via SwapCellBuffers().
+    public ComputeBuffer CurrentAtmosphericFieldsBuffer => _readAtmosphericFields;
+
     public void UpdateParameters(FireSimParameters parameters)
     {
         _parameters = parameters;

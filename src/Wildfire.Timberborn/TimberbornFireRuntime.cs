@@ -49,6 +49,7 @@ public sealed class TimberbornFireRuntime :
     private TimberbornBurnDamageService? _burnDamageService;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
+    private TimberbornGpuIndirectFireRenderer? _gpuIndirectRenderer;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
     private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
     private bool _compatibilityProbesRan;
@@ -116,6 +117,8 @@ public sealed class TimberbornFireRuntime :
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         _fireSystem?.Dispose();
+        _gpuIndirectRenderer?.Dispose();
+        _gpuIndirectRenderer = null;
         _explosiveInfrastructureHeatPulseSink?.Detach();
         _gpuFieldRenderer.Clear();
         _pooledFireEffects.Clear();
@@ -137,6 +140,8 @@ public sealed class TimberbornFireRuntime :
 
     public void UpdateSingleton()
     {
+        _gpuIndirectRenderer?.OnUpdate();
+
         if (_dispatcher is null)
         {
             return;
@@ -206,6 +211,12 @@ public sealed class TimberbornFireRuntime :
         fireSystem.Initialize(grid, sources, companionFields);
         _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
         Configure(fireSystem, cadence);
+        if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)
+        {
+            _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink);
+            _gpuIndirectRenderer.Initialize();
+        }
+
         _logSink.Info(
             $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth} {_lastWorldImportSummary.StatusToken}");
     }

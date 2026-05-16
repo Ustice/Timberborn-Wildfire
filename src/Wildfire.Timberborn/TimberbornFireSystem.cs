@@ -132,6 +132,8 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public bool IsInitialized => _fireSimulator is not null;
 
+    public IGpuFireSimulator? Simulator => _fireSimulator;
+
     public int? Width => _fireSimulator?.Width;
 
     public int? Height => _fireSimulator?.Height;
