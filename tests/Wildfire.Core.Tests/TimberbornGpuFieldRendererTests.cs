@@ -93,6 +93,18 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void FireSimTaintableMaterialsCanEmitContaminatedSmokeFromSoilContamination()
+    {
+        string source = ReadUnitySource("FireSim.compute");
+
+        Assert.Contains("uint CompanionSoilContamination(uint companion)", source, StringComparison.Ordinal);
+        Assert.Contains("return (companion >> 25) & 0x7u;", source, StringComparison.Ordinal);
+        Assert.Contains("sourceContamination == 0u && contaminationBehavior == 1u", source, StringComparison.Ordinal);
+        Assert.Contains("sourceContamination = CompanionSoilContamination(companion);", source, StringComparison.Ordinal);
+        Assert.Contains("smokeContamination = max(smokeContamination, smokeSource == 0u ? 0u : sourceContamination);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SmokeAndSteamRenderersUseReleasePuffTuning()
     {
         string cloudShader = ReadUnitySource("WildfireCloud.shader");
@@ -116,11 +128,19 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("float slotActivation = smoothstep(slotThreshold", cloudShader, StringComparison.Ordinal);
         Assert.Contains(": saturate(intensity * 1.35);", cloudShader, StringComparison.Ordinal);
         Assert.Contains("float slotThreshold = saturate(lerp(0.0, 0.46, orderedSlot)", cloudShader, StringComparison.Ordinal);
-        Assert.Contains("float breakup = lerp(smoothstep(0.26, 0.84, noise), 1.0, isSteam);", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("float smokeBreakup = smoothstep(0.34, 0.92, noise);", cloudShader, StringComparison.Ordinal);
         Assert.Contains("float smokePhase = frac(_Time.y", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("float smokeAngle = seedC * 6.2831853", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("float contaminationStrength = saturate(i.contam);", cloudShader, StringComparison.Ordinal);
         Assert.Contains("jitter += windDir * windStrength", cloudShader, StringComparison.Ordinal);
-        Assert.Contains("_steamMaterial.SetFloat(\"_MaxSteamHeight\", 2.35f);", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_steamMaterial.SetFloat(\"_MaxOpacity\",    0.48f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("private const float SteamUpSpeed  = 1.45f;", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("private const float SteamDownSpeed = 3.75f;", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smoothingShader.SetFloat( \"_SteamDownSpeed\",SteamDownSpeed);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("float puffPhase = frac(_Time.y * 0.18", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("jitter += windDir * windStrength * puffPhase * 0.18;", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("_steamMaterial.SetFloat(\"_Radius\",        0.66f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_steamMaterial.SetFloat(\"_MaxSteamHeight\", 1.45f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_steamMaterial.SetFloat(\"_MaxOpacity\",    0.36f);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("lerp(0.34, 0.82, intensity)", ashOverlayShader, StringComparison.Ordinal);
     }
 

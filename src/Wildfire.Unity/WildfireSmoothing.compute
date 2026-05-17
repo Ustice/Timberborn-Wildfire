@@ -13,6 +13,8 @@ float _FireUpSpeed;
 float _FireDownSpeed;
 float _SmokeUpSpeed;
 float _SmokeDownSpeed;
+float _SteamUpSpeed;
+float _SteamDownSpeed;
 float _DeltaTime;
 uint  _CellCount;
 
@@ -35,8 +37,8 @@ void SmoothFields(uint3 id : SV_DispatchThreadID)
     float4 current = _SmoothedFields[i];
 
     // Asymmetric lerp: fast ramp-up (ignition response), slow ramp-down (particle lifetime feel).
-    float4 upRate   = float4(_FireUpSpeed,   _SmokeUpSpeed,   _SmokeUpSpeed,   _SmokeUpSpeed);
-    float4 downRate = float4(_FireDownSpeed, _SmokeDownSpeed, _SmokeDownSpeed, _SmokeDownSpeed);
+    float4 upRate   = float4(_FireUpSpeed,   _SmokeUpSpeed,   _SmokeUpSpeed,   _SteamUpSpeed);
+    float4 downRate = float4(_FireDownSpeed, _SmokeDownSpeed, _SmokeDownSpeed, _SteamDownSpeed);
     float4 rate     = current < target ? upRate : downRate;
     float4 alpha    = saturate(rate * _DeltaTime);
 

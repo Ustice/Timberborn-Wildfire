@@ -366,6 +366,12 @@ public sealed class TimberbornFireRuntime :
                             TimberbornQaFieldTargetSelectors.Bush)
                     : null,
                 beaverExposureTarget);
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.ContaminatedTree)
+        {
+            _playerFireAlertCameraFocus.SetLatestFocusCell(result.CellIndex);
+            _playerFireAlertCameraFocus.FocusLatestFireCell();
+        }
+
         _logSink.Info(
             "wildfire_timberborn_qa_delta_stimulus_queued " +
             $"target_selector={result.TargetSelector} " +

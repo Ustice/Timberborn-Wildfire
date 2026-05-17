@@ -166,15 +166,15 @@ Shader "Wildfire/Cloud"
                 if (isSteam > 0.5 && puffsPerCell > 1u)
                 {
                     float stagger   = (float)puffSlot / (float)puffsPerCell;
-                    float puffPhase = frac(_Time.y * 0.68 + stagger + seedA * 0.23);
+                    float puffPhase = frac(_Time.y * 0.18 + stagger + seedA * 0.23);
 
                     heightY = puffPhase * _MaxSteamHeight;
 
-                    float envelope = sin(puffPhase * 3.14159265);
-                    sizeMult  = 0.34 + envelope * 0.82;
-                    alphaMult = envelope * lerp(0.72, 1.0, seedB);
-                    jitter *= lerp(0.38, 0.88, envelope);
-                    jitter += windDir * windStrength * puffPhase * 0.52;
+                    float envelope = smoothstep(0.0, 0.30, puffPhase) * (1.0 - smoothstep(0.76, 1.0, puffPhase));
+                    sizeMult  = 0.42 + envelope * 0.54;
+                    alphaMult = envelope * lerp(0.56, 0.86, seedB);
+                    jitter *= lerp(0.28, 0.56, envelope);
+                    jitter += windDir * windStrength * puffPhase * 0.18;
                 }
                 else if (puffsPerCell > 1u)
                 {
@@ -213,13 +213,24 @@ Shader "Wildfire/Cloud"
                 float3 camUp    = float3(UNITY_MATRIX_V[0][1], UNITY_MATRIX_V[1][1], UNITY_MATRIX_V[2][1]);
 
                 float2 corner = BillboardCorners[vertexID];
+                float2 uvCorner = corner;
+                if (isSteam < 0.5)
+                {
+                    float smokeAngle = seedC * 6.2831853 + sin(_Time.y * 0.037 + seedD * 6.2831853) * 0.18;
+                    float smokeSin = sin(smokeAngle);
+                    float smokeCos = cos(smokeAngle);
+                    corner = float2(
+                        uvCorner.x * smokeCos - uvCorner.y * smokeSin,
+                        uvCorner.x * smokeSin + uvCorner.y * smokeCos);
+                }
+
                 float  r      = _Radius * sizeMult;
                 float3 vPos   = worldPos +
                     camRight * (corner.x * r * widthMult) +
                     camUp * (corner.y * r * heightMult);
 
                 o.pos       = UnityWorldToClipPos(vPos);
-                o.uv        = corner + 0.5;
+                o.uv        = uvCorner + 0.5;
                 o.intensity = renderIntensity * alphaMult;
                 o.contam    = contam;
                 o.seed      = seedA;
@@ -241,12 +252,17 @@ Shader "Wildfire/Cloud"
                     i.worldPos.xz * (isSteam > 0.5 ? 0.10 : 0.16) +
                     i.seed * 19.0 +
                     _Time.y * (isSteam > 0.5 ? 0.18 : 0.055));
-                float breakup = lerp(smoothstep(0.26, 0.84, noise), 1.0, isSteam);
-                float alpha = body * softEdge * lowerFade * upperFade * lerp(0.32, 1.0, breakup);
+                float smokeBreakup = smoothstep(0.34, 0.92, noise);
+                float breakup = lerp(smokeBreakup, 1.0, isSteam);
+                float alpha = body * softEdge * lowerFade * upperFade * lerp(0.18, 1.0, breakup);
                 alpha *= i.intensity * _MaxOpacity;
 
                 float3 smokeBase = lerp(_BaseColor.rgb * 0.72, _BaseColor.rgb * 1.18, noise);
-                float3 dirtyBase = lerp(smokeBase, _ContamColor.rgb, saturate(i.contam) * 0.82);
+                float contaminationStrength = saturate(i.contam);
+                alpha *= lerp(1.0, 0.82, contaminationStrength);
+                float3 contaminatedSmoke = lerp(_BaseColor.rgb * float3(0.58, 0.52, 0.50), _ContamColor.rgb, 0.54);
+                float3 dirtyBase = lerp(smokeBase, contaminatedSmoke, contaminationStrength * 0.72);
+                dirtyBase = lerp(dirtyBase, _ContamColor.rgb * 0.74, contaminationStrength * (1.0 - noise) * 0.20);
                 float3 steamBase = lerp(_BaseColor.rgb * 0.86, float3(1.0, 1.0, 1.0), saturate(i.uv.y + noise * 0.34));
                 float3 col = lerp(dirtyBase, steamBase, isSteam);
                 return fixed4(col, alpha);

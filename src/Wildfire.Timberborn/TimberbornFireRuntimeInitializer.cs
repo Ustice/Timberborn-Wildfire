@@ -5,6 +5,7 @@ using Timberborn.EntitySystem;
 using Timberborn.MapIndexSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
+using Timberborn.SoilContaminationSystem;
 using Timberborn.SoilMoistureSystem;
 using Timberborn.Stockpiles;
 using Timberborn.TerrainSystem;
@@ -23,6 +24,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     private readonly MapSize _mapSize;
     private readonly ITerrainService _terrainService;
     private readonly ISoilMoistureService _soilMoistureService;
+    private readonly ISoilContaminationService _soilContaminationService;
     private readonly MapIndexService _mapIndexService;
     private readonly IBlockService _blockService;
     private readonly EntityRegistry _entityRegistry;
@@ -38,6 +40,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         MapSize mapSize,
         ITerrainService terrainService,
         ISoilMoistureService soilMoistureService,
+        ISoilContaminationService soilContaminationService,
         MapIndexService mapIndexService,
         IBlockService blockService,
         EntityRegistry entityRegistry)
@@ -47,6 +50,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
         _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
         _soilMoistureService = soilMoistureService ?? throw new ArgumentNullException(nameof(soilMoistureService));
+        _soilContaminationService = soilContaminationService ?? throw new ArgumentNullException(nameof(soilContaminationService));
         _mapIndexService = mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService));
         _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
         _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
@@ -194,6 +198,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                 _mapSize,
                 _terrainService,
                 _soilMoistureService,
+                _soilContaminationService,
                 _mapIndexService),
             new TimberbornNaturalResourceCellSourceProvider(_entityRegistry),
             new TimberbornInfrastructureCellSourceProvider(_entityRegistry),
@@ -596,10 +601,11 @@ public sealed class TimberbornTerrainWorldCellSourceProvider : ITimberbornWorldC
     private readonly MapSize _mapSize;
     private readonly ITerrainService _terrainService;
     private readonly ISoilMoistureService? _soilMoistureService;
+    private readonly ISoilContaminationService? _soilContaminationService;
     private readonly MapIndexService? _mapIndexService;
 
     public TimberbornTerrainWorldCellSourceProvider(MapSize mapSize, ITerrainService terrainService)
-        : this(mapSize, terrainService, soilMoistureService: null, mapIndexService: null)
+        : this(mapSize, terrainService, soilMoistureService: null, soilContaminationService: null, mapIndexService: null)
     {
     }
 
@@ -607,11 +613,13 @@ public sealed class TimberbornTerrainWorldCellSourceProvider : ITimberbornWorldC
         MapSize mapSize,
         ITerrainService terrainService,
         ISoilMoistureService? soilMoistureService,
+        ISoilContaminationService? soilContaminationService,
         MapIndexService? mapIndexService)
     {
         _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
         _terrainService = terrainService ?? throw new ArgumentNullException(nameof(terrainService));
         _soilMoistureService = soilMoistureService;
+        _soilContaminationService = soilContaminationService;
         _mapIndexService = mapIndexService;
     }
 
@@ -646,7 +654,8 @@ public sealed class TimberbornTerrainWorldCellSourceProvider : ITimberbornWorldC
                 coordinates.y,
                 coordinates.z,
                 isSolid: true,
-                wetness: ReadTerrainWetness(coordinates)));
+                wetness: ReadTerrainWetness(coordinates),
+                soilContamination: ReadSoilContamination(coordinates)));
     }
 
     private byte ReadTerrainWetness(Vector3Int coordinates)
@@ -660,6 +669,26 @@ public sealed class TimberbornTerrainWorldCellSourceProvider : ITimberbornWorldC
         {
             int index = _mapIndexService.CellToIndex(new Vector2Int(coordinates.x, coordinates.y));
             return TimberbornTerrainAdapter.QuantizeSoilMoisture(_soilMoistureService.SoilMoisture(index));
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private byte ReadSoilContamination(Vector3Int coordinates)
+    {
+        if (_soilContaminationService is null || _mapIndexService is null)
+        {
+            return 0;
+        }
+
+        try
+        {
+            int index = _mapIndexService.CellToIndex(new Vector2Int(coordinates.x, coordinates.y));
+            return TimberbornTerrainAdapter.QuantizeSoilContamination(
+                _soilContaminationService.Contamination(index),
+                _soilContaminationService.SoilIsContaminated(coordinates));
         }
         catch
         {

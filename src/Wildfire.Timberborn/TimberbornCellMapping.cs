@@ -37,7 +37,7 @@ public readonly record struct TimberbornCellFootprint(int X, int Y, int Z, int W
     }
 }
 
-public readonly record struct TimberbornTerrainCell(bool IsSolid, byte Wetness = 0);
+public readonly record struct TimberbornTerrainCell(bool IsSolid, byte Wetness = 0, byte SoilContamination = 0);
 
 public readonly record struct TimberbornBuildingCell(
     byte Fuel,
@@ -86,12 +86,33 @@ public sealed class TimberbornTerrainAdapter
         return (byte)Math.Clamp((int)Math.Floor(soilMoisture) / 4, 0, 3);
     }
 
-    public TimberbornCellSource CreateSource(int x, int y, int z, bool isSolid, byte wetness = 0)
+    public static byte QuantizeSoilContamination(float soilContamination, bool isContaminated)
+    {
+        if (!isContaminated || float.IsNaN(soilContamination) || soilContamination <= 0f)
+        {
+            return 0;
+        }
+
+        if (float.IsPositiveInfinity(soilContamination))
+        {
+            return 7;
+        }
+
+        return (byte)Math.Clamp((int)Math.Ceiling((soilContamination / 0.9f) * 7f), 1, 7);
+    }
+
+    public TimberbornCellSource CreateSource(
+        int x,
+        int y,
+        int z,
+        bool isSolid,
+        byte wetness = 0,
+        byte soilContamination = 0)
     {
         WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Terrain);
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Terrain: new TimberbornTerrainCell(isSolid, wetness),
+            Terrain: new TimberbornTerrainCell(isSolid, wetness, soilContamination),
             MaterialClass: isSolid ? profile.MaterialClass : WildfireMaterialClass.Empty);
     }
 }
@@ -457,7 +478,10 @@ public sealed class TimberbornFireCellMapper
                     .First();
                 fields[group.Key] = new WildfireCompanionField(
                     targetId,
-                    WildfireCompanionFieldState.FromMaterialProfile(profile));
+                    WildfireCompanionFieldState.FromMaterialProfile(profile) with
+                    {
+                        SoilContamination = SelectSoilContamination(cellSources),
+                    });
             });
 
         return fields;
@@ -523,6 +547,15 @@ public sealed class TimberbornFireCellMapper
         }
 
         return source.Terrain is { IsSolid: true } ? 1 : 0;
+    }
+
+    private static byte SelectSoilContamination(IEnumerable<TimberbornCellSource> sources)
+    {
+        int contamination = sources
+            .Select(static source => (int)(source.Terrain?.SoilContamination ?? 0))
+            .DefaultIfEmpty(0)
+            .Max();
+        return (byte)contamination;
     }
 
     private static IEnumerable<MaterialContribution> EnumerateMaterialContributions(TimberbornCellSource source)

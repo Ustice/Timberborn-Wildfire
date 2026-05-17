@@ -36,7 +36,7 @@ const usage = `Usage:
 Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
-  qa-delta-stimulus [burnable|tree|vegetation|crop|storage|building]
+  qa-delta-stimulus [burnable|tree|contaminated-tree|vegetation|crop|storage|building]
                             Queue heat on an imported burnable field target.
   qa-building-burnout-stimulus
                             Queue heat and fuel depletion on a real pausable building target.

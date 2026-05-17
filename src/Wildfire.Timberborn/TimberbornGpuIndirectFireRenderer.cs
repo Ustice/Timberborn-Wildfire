@@ -34,6 +34,8 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const float FireDownSpeed = 2.0f;
     private const float SmokeUpSpeed  = 3.0f;
     private const float SmokeDownSpeed = 1.0f;
+    private const float SteamUpSpeed  = 1.45f;
+    private const float SteamDownSpeed = 3.75f;
 
     private readonly TimberbornComputeFireSimulator _simulator;
     private readonly FireGrid _grid;
@@ -273,10 +275,10 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
-        _steamMaterial.SetFloat("_Radius",        0.78f);
+        _steamMaterial.SetFloat("_Radius",        0.66f);
         _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
-        _steamMaterial.SetFloat("_MaxSteamHeight", 2.35f);
-        _steamMaterial.SetFloat("_MaxOpacity",    0.48f);
+        _steamMaterial.SetFloat("_MaxSteamHeight", 1.45f);
+        _steamMaterial.SetFloat("_MaxOpacity",    0.36f);
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
     }
@@ -301,6 +303,8 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smoothingShader.SetFloat( "_FireDownSpeed", FireDownSpeed);
         _smoothingShader.SetFloat( "_SmokeUpSpeed",  SmokeUpSpeed);
         _smoothingShader.SetFloat( "_SmokeDownSpeed",SmokeDownSpeed);
+        _smoothingShader.SetFloat( "_SteamUpSpeed",  SteamUpSpeed);
+        _smoothingShader.SetFloat( "_SteamDownSpeed",SteamDownSpeed);
     }
 
     private Shader LoadShader(string assetName)
