@@ -28,7 +28,6 @@ public sealed class TimberbornFireRuntime :
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
     private readonly TimberbornGpuFieldRendererSink _gpuFieldRenderer;
-    private readonly TimberbornPooledFireSmokeAshEffectSink _pooledFireEffects;
     private readonly TimberbornPlayerFireAlertSink _playerFireAlerts;
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
     private readonly TimberbornBeaverFieldExposureTelemetry _beaverFieldExposureTelemetry;
@@ -97,14 +96,6 @@ public sealed class TimberbornFireRuntime :
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
             _logSink,
             new TimberbornGpuFieldRendererOptions(IndirectFireRendererActive: true));
-        _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
-            visualFieldSurface,
-            _logSink,
-            windProvider,
-            new TimberbornPooledFireEffectOptions(
-                MaxActiveEffects: 384,
-                MaxUpdatedVisualRegionsPerDispatch: 192),
-            new TimberbornUnityPooledFireEffectPresenter(_logSink));
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
             _logSink);
@@ -151,7 +142,6 @@ public sealed class TimberbornFireRuntime :
         _gpuIndirectRenderer = null;
         _explosiveInfrastructureHeatPulseSink?.Detach();
         _gpuFieldRenderer.Clear();
-        _pooledFireEffects.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.Clear();
         _beaverHazardAvoidance.Clear();
@@ -590,7 +580,6 @@ public sealed class TimberbornFireRuntime :
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
-        TimberbornPooledFireEffectCounters pooledEffectCounters = _pooledFireEffects.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
         TimberbornBeaverHazardAvoidanceCounters beaverHazardAvoidanceCounters = _beaverHazardAvoidance.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
@@ -815,16 +804,16 @@ public sealed class TimberbornFireRuntime :
             BeaverHazardAvoidanceSkippedNoSafeApi: beaverHazardAvoidanceCounters.SkippedNoSafeApiCount,
             BeaverHazardAvoidanceFailedRestrictions: beaverHazardAvoidanceCounters.FailedRestrictionCount,
             BeaverHazardAvoidanceLastUpdatedTick: beaverHazardAvoidanceCounters.LastUpdatedTick,
-            ActivePooledFireEffectCount: pooledEffectCounters.ActivePooledEffectCount,
-            UpdatedVisualRegionCount: pooledEffectCounters.UpdatedVisualRegionCount,
-            LastNonZeroUpdatedVisualRegionCount: pooledEffectCounters.LastNonZeroUpdatedVisualRegionCount,
-            LastNonZeroUpdatedVisualRegionTick: pooledEffectCounters.LastNonZeroUpdatedVisualRegionTick,
-            MaxPooledFireEffectCount: pooledEffectCounters.MaxActivePooledEffectCount,
-            MaxUpdatedVisualRegionCount: pooledEffectCounters.MaxUpdatedVisualRegionCount,
-            PooledFireEffectPresentationFailureCount: pooledEffectCounters.PresentationFailureCount,
-            PooledFireEffectsVisibleEnabled: pooledEffectCounters.VisibleEffectsEnabled,
-            PooledFireEffectsNativePrefabResolved: pooledEffectCounters.NativeEffectPrefabResolved,
-            PooledFireEffectsNativePrefabName: pooledEffectCounters.LastNativeEffectPrefabName,
+            ActivePooledFireEffectCount: 0,
+            UpdatedVisualRegionCount: 0,
+            LastNonZeroUpdatedVisualRegionCount: 0,
+            LastNonZeroUpdatedVisualRegionTick: null,
+            MaxPooledFireEffectCount: 0,
+            MaxUpdatedVisualRegionCount: 0,
+            PooledFireEffectPresentationFailureCount: 0,
+            PooledFireEffectsVisibleEnabled: false,
+            PooledFireEffectsNativePrefabResolved: false,
+            PooledFireEffectsNativePrefabName: null,
             BurnDurationProofTarget: burnDurationProof.Target,
             BurnDurationProofTargetIndex: burnDurationProof.CellIndex,
             BurnDurationProofTargetX: burnDurationProof.X,
@@ -953,7 +942,6 @@ public sealed class TimberbornFireRuntime :
         _explosiveInfrastructureHeatPulseSink?.Attach(fireSystem);
         _debugVisualSink.Clear();
         _gpuFieldRenderer.Clear();
-        _pooledFireEffects.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.ConfigureGrid(
             new FireGrid(
@@ -987,7 +975,6 @@ public sealed class TimberbornFireRuntime :
             $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=gpu_field_renderer");
-        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=pooled_fire_smoke_ash_effects");
         _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert");
         if (_buildingBurnoutConsequenceApi is not null)
         {
@@ -1115,7 +1102,6 @@ public sealed class TimberbornFireRuntime :
             debugVisualSink: _debugVisualSink,
             visualEffectSink: new TimberbornCompositeFireVisualEffectSink(
                 _gpuFieldRenderer,
-                _pooledFireEffects,
                 _beaverHazardAvoidance),
             alertSink: _playerFireAlerts,
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
