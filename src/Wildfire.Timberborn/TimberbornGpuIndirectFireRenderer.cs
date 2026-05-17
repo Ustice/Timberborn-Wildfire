@@ -8,7 +8,7 @@ namespace Wildfire.Timberborn;
 // Graphics.DrawProceduralIndirect — no CPU readback, no mesh rebuilds per frame.
 //
 // Flame:  5 tongue slots per cell, each a bent 4-faced pyramid (36 verts).  Additive blend.
-// Smoke:  1 billboard quad per cell drawn with alpha blend.
+// Smoke:  SmokePuffsPerCell staggered billboard quads per cell drawn with alpha blend.
 // Steam:  SteamPuffsPerCell rising billboard quads per cell drawn with alpha blend.
 //
 // A smoothing compute pass runs each frame, lerping a _SmoothedFields buffer toward
@@ -25,6 +25,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const int MaxTonguesPerCell  = 5;
     private const int VertsPerTongue     = 36;  // 4 pyramid faces × 9 verts (bottom quad + top tri)
     private const int VertsPerCloud      = 6;
+    private const int SmokePuffsPerCell  = 3;
     private const int SteamPuffsPerCell  = 3;
 
     // Asymmetric smoothing rates (exponential lerp per second).
@@ -218,7 +219,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeArgsBuffer.SetData(new uint[]
         {
             (uint)VertsPerCloud,
-            (uint)cellCount,
+            (uint)(cellCount * SmokePuffsPerCell),
             0u,
             0u,
         });
@@ -249,16 +250,22 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _smokeMaterial.SetColor("_BaseColor",   new Color(0.45f, 0.45f, 0.45f));
         _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
+        _smokeMaterial.SetFloat("_Radius",        1.18f);
+        _smokeMaterial.SetFloat("_HeightOffset",  1.32f);
+        _smokeMaterial.SetFloat("_MaxOpacity",    0.38f);
         _smokeMaterial.SetFloat("_IsSteam",       0f);
-        _smokeMaterial.SetFloat("_PuffsPerCell",   1f);
+        _smokeMaterial.SetFloat("_PuffsPerCell",  (float)SmokePuffsPerCell);
 
         _steamMaterial = new Material(cloudShader) { name = "wildfire_steam" };
         _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
+        _steamMaterial.SetFloat("_Radius",        0.72f);
+        _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
+        _steamMaterial.SetFloat("_MaxSteamHeight", 2.35f);
+        _steamMaterial.SetFloat("_MaxOpacity",    0.34f);
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
-        _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
     }
 
     private void LoadSmoothingShader()

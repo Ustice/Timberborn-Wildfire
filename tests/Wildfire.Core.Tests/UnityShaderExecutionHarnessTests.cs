@@ -323,6 +323,68 @@ public sealed class UnityShaderExecutionHarnessTests
     }
 
     [Fact]
+    public void UnityHarnessAshFallsToOakBaseInsteadOfUpperTreeBlocksWhenEnabled()
+    {
+        AssertAshFallsToStackBaseInsteadOfUpperBlocks(
+            "oak-stack-ash-falls-to-base",
+            WildfireMaterialClass.Tree);
+    }
+
+    [Fact]
+    public void UnityHarnessAshFallsToBuildingBaseInsteadOfUpperBuildingBlocksWhenEnabled()
+    {
+        AssertAshFallsToStackBaseInsteadOfUpperBlocks(
+            "building-stack-ash-falls-to-base",
+            WildfireMaterialClass.Building);
+    }
+
+    private static void AssertAshFallsToStackBaseInsteadOfUpperBlocks(string scenario, WildfireMaterialClass materialClass)
+    {
+        int width = 1;
+        int height = 1;
+        int depth = 3;
+        ushort[] cells = Enumerable.Repeat(PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 0, burningLevel: 0), width * height * depth)
+            .ToArray();
+        uint[] atmosphericFields = new uint[cells.Length];
+        atmosphericFields[ToIndex(0, 0, 2, width, height)] = new WildfireAtmosphericFieldState(
+            Steam: 0,
+            Smoke: 0,
+            SmokeContamination: 0,
+            Ash: 7,
+            AshContamination: 0,
+            Source: false).Pack();
+        uint[] companionFields = Enumerable.Repeat(Companion(materialClass), cells.Length)
+            .ToArray();
+
+        ShaderSnapshotFixture fixture = CreateFixture(
+            scenario,
+            width,
+            height,
+            cells,
+            depth: depth,
+            initialAtmosphericFields: atmosphericFields,
+            companionFields: companionFields,
+            wind: FireSimWind.None);
+
+        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
+        if (capture is null)
+        {
+            return;
+        }
+
+        WildfireCompanionFieldState baseTree = CompanionAt(capture, 0, 0, 0);
+        WildfireCompanionFieldState middleTree = CompanionAt(capture, 0, 0, 1);
+        WildfireCompanionFieldState topTree = CompanionAt(capture, 0, 0, 2);
+
+        Assert.Equal(materialClass, baseTree.MaterialClass);
+        Assert.Equal(3, baseTree.AshStrength & 0x3);
+        Assert.Equal(materialClass, middleTree.MaterialClass);
+        Assert.Equal(0, middleTree.AshStrength & 0x3);
+        Assert.Equal(materialClass, topTree.MaterialClass);
+        Assert.Equal(0, topTree.AshStrength & 0x3);
+    }
+
+    [Fact]
     public void UnityHarnessFuelBurnDownCoverageRunsFromFixturesWhenEnabled()
     {
         FuelBurnDownResult[] results = FuelBurnDownScenarios
@@ -439,16 +501,17 @@ public sealed class UnityShaderExecutionHarnessTests
         int width,
         int height,
         ushort[] cells,
+        int depth = 1,
         uint[]? initialAtmosphericFields = null,
         uint[]? companionFields = null,
         FireSimWind? wind = null)
     {
-        Assert.Equal(width * height, cells.Length);
+        Assert.Equal(width * height * depth, cells.Length);
         return new ShaderSnapshotFixture(
             FormatVersion: 1,
             Scenario: scenario,
             Seed: 1,
-            Grid: new ComputeGridDimensions(width, height, 1),
+            Grid: new ComputeGridDimensions(width, height, depth),
             SelectedLayer: new ShaderSnapshotLayer(0, 0, width * height),
             InitialCells: cells,
             InitialAtmosphericFields: initialAtmosphericFields,
@@ -475,9 +538,31 @@ public sealed class UnityShaderExecutionHarnessTests
         return WildfireAtmosphericFieldState.Unpack(capture.FinalAtmosphericFields[ToIndex(x, y, capture.Grid.Width)]);
     }
 
+    private static WildfireCompanionFieldState CompanionAt(ShaderSnapshotCapture capture, int x, int y, int z)
+    {
+        Assert.NotNull(capture.FinalCompanionFields);
+        return WildfireCompanionFieldState.Unpack(capture.FinalCompanionFields[ToIndex(x, y, z, capture.Grid.Width, capture.Grid.Height)]);
+    }
+
     private static int ToIndex(int x, int y, int width)
     {
         return x + (y * width);
+    }
+
+    private static int ToIndex(int x, int y, int z, int width, int height)
+    {
+        return x + (y * width) + (z * width * height);
+    }
+
+    private static uint Companion(WildfireMaterialClass materialClass)
+    {
+        return new WildfireCompanionFieldState(
+            materialClass,
+            BurnCapacity: 0,
+            BurnHistory: 0,
+            AshStrength: 0,
+            WildfireAshQuality.Fertile,
+            WildfireContaminationBehavior.None).Pack();
     }
 
     private static uint ContaminatedCompanion()

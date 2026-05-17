@@ -4,6 +4,8 @@ Ask questions. Jason isn't always right, and he wants to know when he is wrong. 
 
 Use `~/repos` instead of `/Users/jasonkleinberg/repos`
 
+When visually reviewing screenshots or captures, check the whole scene for anything off, not only the specific symptom you set out to verify.
+
 ## Markdown
 
 - Add one blank line before and after each heading.

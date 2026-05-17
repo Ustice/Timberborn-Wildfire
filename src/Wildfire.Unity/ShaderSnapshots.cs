@@ -61,6 +61,7 @@ public sealed record ShaderSnapshotCapture(
     ushort[] FinalPackedCells,
     ShaderSnapshotTick[] Ticks,
     uint[]? FinalAtmosphericFields = null,
+    uint[]? FinalCompanionFields = null,
     ShaderSnapshotVisual? Visual = null);
 
 public sealed record ShaderSnapshotTick(
@@ -361,6 +362,11 @@ public static class ShaderSnapshotJson
             "finalAtmosphericFields",
             dimensions,
             sourceName);
+        uint[]? finalCompanionFields = ReadOptionalUInt32CellArray(
+            root,
+            "finalCompanionFields",
+            dimensions,
+            sourceName);
 
         return new ShaderSnapshotCapture(
             scenario,
@@ -370,6 +376,7 @@ public static class ShaderSnapshotJson
             finalPackedCells,
             ticks,
             finalAtmosphericFields,
+            finalCompanionFields,
             visual);
     }
 
@@ -423,6 +430,7 @@ public static class ShaderSnapshotJson
             TickCount: capture.TickCount,
             FinalPackedCells: capture.FinalPackedCells,
             FinalAtmosphericFields: capture.FinalAtmosphericFields,
+            FinalCompanionFields: capture.FinalCompanionFields,
             PerTickDeltaCounts: capture.Ticks.Select(static tick => tick.DeltaCount).ToArray(),
             PerTickDeltas: capture.Ticks,
             Visual: capture.Visual);
@@ -509,6 +517,7 @@ public static class ShaderSnapshotJson
         int TickCount,
         ushort[] FinalPackedCells,
         uint[]? FinalAtmosphericFields,
+        uint[]? FinalCompanionFields,
         int[] PerTickDeltaCounts,
         ShaderSnapshotTick[] PerTickDeltas,
         ShaderSnapshotVisual? Visual);
@@ -546,6 +555,7 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
         AddHeaderDifferences(expected, actual, differences, maxDifferences);
         AddFinalCellDifferences(expected, actual, differences, maxDifferences);
         AddFinalAtmosphericFieldDifferences(expected, actual, differences, maxDifferences);
+        AddFinalCompanionFieldDifferences(expected, actual, differences, maxDifferences);
         AddTickDifferences(expected, actual, differences, maxDifferences);
         AddVisualDifferences(expected, actual, differences, maxDifferences);
 
@@ -617,6 +627,44 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
             .Where(index => expected.FinalAtmosphericFields[index] != actual.FinalAtmosphericFields[index])
             .Take(Math.Max(0, maxDifferences - differences.Count))
             .Select(index => $"finalAtmosphericFields[{index}] expected 0x{expected.FinalAtmosphericFields[index]:X4}, got 0x{actual.FinalAtmosphericFields[index]:X4}.")
+            .ToList()
+            .ForEach(differences.Add);
+    }
+
+    private static void AddFinalCompanionFieldDifferences(
+        ShaderSnapshotCapture expected,
+        ShaderSnapshotCapture actual,
+        List<string> differences,
+        int maxDifferences)
+    {
+        if (expected.FinalCompanionFields is null && actual.FinalCompanionFields is null)
+        {
+            return;
+        }
+
+        if (expected.FinalCompanionFields is null || actual.FinalCompanionFields is null)
+        {
+            AddIfDifferent(
+                differences,
+                "finalCompanionFields.present",
+                expected.FinalCompanionFields is not null,
+                actual.FinalCompanionFields is not null,
+                maxDifferences);
+            return;
+        }
+
+        AddIfDifferent(
+            differences,
+            "finalCompanionFields.length",
+            expected.FinalCompanionFields.Length,
+            actual.FinalCompanionFields.Length,
+            maxDifferences);
+
+        int compareLength = Math.Min(expected.FinalCompanionFields.Length, actual.FinalCompanionFields.Length);
+        Enumerable.Range(0, compareLength)
+            .Where(index => expected.FinalCompanionFields[index] != actual.FinalCompanionFields[index])
+            .Take(Math.Max(0, maxDifferences - differences.Count))
+            .Select(index => $"finalCompanionFields[{index}] expected 0x{expected.FinalCompanionFields[index]:X8}, got 0x{actual.FinalCompanionFields[index]:X8}.")
             .ToList()
             .ForEach(differences.Add);
     }

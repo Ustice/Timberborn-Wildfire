@@ -112,6 +112,7 @@ public interface ITimberbornGpuFieldRendererCounterProvider
 
 public readonly record struct TimberbornGpuFieldRendererPresentation(
     object? CompanionFieldsBuffer = null,
+    object? AtmosphericFieldsBuffer = null,
     int GridWidth = 0,
     int GridHeight = 0,
     int GridDepth = 0);
@@ -243,6 +244,7 @@ public sealed class TimberbornGpuFieldRendererSink :
         bool hasRenderBinding = _visualFieldSurface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding renderBinding);
         TimberbornGpuFieldRendererPresentation presentation = new(
             CompanionFieldsBuffer: hasRenderBinding ? renderBinding.CompanionFieldsBuffer : null,
+            AtmosphericFieldsBuffer: hasRenderBinding ? renderBinding.AtmosphericFieldsBuffer : null,
             GridWidth: hasRenderBinding ? renderBinding.Width : 0,
             GridHeight: hasRenderBinding ? renderBinding.Height : 0,
             GridDepth: hasRenderBinding ? renderBinding.Depth : 0);
@@ -306,7 +308,9 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private static readonly int AshTexturePropertyId = Shader.PropertyToID("_AshTex");
     private static readonly int MaskTexturePropertyId = Shader.PropertyToID("_MaskTex");
     private static readonly int CompanionFieldsPropertyId = Shader.PropertyToID("_CompanionFields");
+    private static readonly int AtmosphericFieldsPropertyId = Shader.PropertyToID("_AtmosphericFields");
     private static readonly int UseCompanionAshPropertyId = Shader.PropertyToID("_UseCompanionAsh");
+    private static readonly int UseAtmosphericAshPropertyId = Shader.PropertyToID("_UseAtmosphericAsh");
     private static readonly int GridWidthPropertyId = Shader.PropertyToID("_GridWidth");
     private static readonly int GridHeightPropertyId = Shader.PropertyToID("_GridHeight");
     private static readonly int GridDepthPropertyId = Shader.PropertyToID("_GridDepth");
@@ -400,7 +404,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             presentation.GridWidth > 0 &&
             presentation.GridHeight > 0 &&
             presentation.GridDepth > 0;
+        bool useAtmosphericAsh = !_debugOverlayEnabled &&
+            presentation.AtmosphericFieldsBuffer is not null &&
+            presentation.GridWidth > 0 &&
+            presentation.GridHeight > 0 &&
+            presentation.GridDepth > 0;
         _material.SetFloat(UseCompanionAshPropertyId, useCompanionAsh ? 1f : 0f);
+        _material.SetFloat(UseAtmosphericAshPropertyId, useAtmosphericAsh ? 1f : 0f);
         _material.SetInt(GridWidthPropertyId, Math.Max(0, presentation.GridWidth));
         _material.SetInt(GridHeightPropertyId, Math.Max(0, presentation.GridHeight));
         _material.SetInt(GridDepthPropertyId, Math.Max(0, presentation.GridDepth));
@@ -417,6 +427,16 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 break;
             default:
                 _material.SetFloat(UseCompanionAshPropertyId, 0f);
+                break;
+        }
+
+        switch (presentation.AtmosphericFieldsBuffer)
+        {
+            case ComputeBuffer computeBuffer:
+                _material.SetBuffer(AtmosphericFieldsPropertyId, computeBuffer);
+                break;
+            default:
+                _material.SetFloat(UseAtmosphericAshPropertyId, 0f);
                 break;
         }
     }
