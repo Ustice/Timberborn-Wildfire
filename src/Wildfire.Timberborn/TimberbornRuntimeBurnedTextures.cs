@@ -474,7 +474,19 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
         TryRemoveGatherableYield(blockObject);
         TryKillNaturalResource(blockObject);
-        return ApplyBurnedTextures(consequence, blockObject, "wildfire_timberborn_crop_burned_leftover_applied");
+        blockObject.gameObject.SetActive(false);
+
+        _logSink.Info(
+            "wildfire_timberborn_crop_burned_leftover_applied " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(TextureLabel(consequence, blockObject))} " +
+            $"deleted=true");
+        return new TimberbornCropBurnConsequenceResult(
+            MatchedCropTarget: true,
+            YieldLost: 0,
+            KilledCrop: true,
+            VisualStateUpdated: true,
+            SkippedUnsafeApi: false);
     }
 
     private TimberbornCropBurnConsequenceResult ApplyBurnedTextures(

@@ -106,6 +106,7 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
         bool selectionStarted,
         bool selectingArea)
     {
+        _blockObjectSelectionDrawer?.StopDrawing();
         try
         {
             TimberbornBurnSelectedEntityResult[] results = BurnBlockObjects(blockObjects, out int sustainedHeatDispatchTicks)
