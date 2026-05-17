@@ -53,6 +53,8 @@ const unityProjectPath = join(repoRoot, "src", "Wildfire.Unity", "UnityBatchmode
 const computeShaderPath = join(repoRoot, "src", "Wildfire.Unity", "FireSim.compute");
 const flameShaderPath   = join(repoRoot, "src", "Wildfire.Unity", "WildfireFlame.shader");
 const cloudShaderPath   = join(repoRoot, "src", "Wildfire.Unity", "WildfireCloud.shader");
+const smoothShaderPath  = join(repoRoot, "src", "Wildfire.Unity", "WildfireSmoothing.compute");
+const ashOverlayShaderPath = join(repoRoot, "src", "Wildfire.Unity", "AshOverlay.shader");
 const defaultUnityExecutable =
   process.env.WILDFIRE_UNITY_EXECUTABLE ??
   "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
@@ -79,7 +81,15 @@ const assetBundleArtifacts: AssetBundleArtifact[] = [
     manifestName: "wildfire_effects_mac.manifest",
     name: "wildfire_effects_mac",
     requiredAsset: "Assets/WildfireGenerated/WildfireFlame.shader",
-    extraCliArgs: ["--flame", flameShaderPath, "--cloud", cloudShaderPath],
+    extraCliArgs: ["--flame", flameShaderPath, "--cloud", cloudShaderPath, "--smooth", smoothShaderPath],
+  },
+  {
+    builderMethod: "Wildfire.UnityBatchmode.AshOverlayAssetBundleBuilder.Build",
+    logName: "ash-overlay-assetbundle-build.log",
+    manifestName: "wildfire_visual_mac.manifest",
+    name: "wildfire_visual_mac",
+    requiredAsset: "Assets/WildfireGenerated/AshOverlay.shader",
+    extraCliArgs: ["--shader", ashOverlayShaderPath],
   },
 ];
 const manifest = {

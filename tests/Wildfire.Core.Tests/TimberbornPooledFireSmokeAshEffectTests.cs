@@ -439,7 +439,10 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         TimberbornPooledFireSmokeAshEffectSink sink = new(
             surface,
             logSink,
-            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 320, MaxUpdatedVisualRegionsPerDispatch: 320),
+            new TimberbornPooledFireEffectOptions(
+                MaxActiveEffects: 320,
+                MaxUpdatedVisualRegionsPerDispatch: 320,
+                MaxRefreshedCellsPerDispatch: 320),
             presenter);
 
         sink.BeginVisualEffectDispatch(41);

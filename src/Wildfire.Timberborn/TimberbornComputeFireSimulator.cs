@@ -710,6 +710,7 @@ public sealed class TimberbornComputeFireSimulator :
             CellDelta[] deltas = ReadDeltas();
             SwapCellBuffers();
             _visualFieldBindingLifecycle?.UpdateAtmosphericFieldsBuffer(_readAtmosphericFields);
+            _visualFieldBindingLifecycle?.UpdateCompanionFieldsBuffer(_companionFields);
             _visualFieldBindingLifecycle?.MarkUpdated(dispatchTick);
             NotifyListeners(deltas);
             _logSink.Info(

@@ -1,0 +1,44 @@
+// Per-frame temporal smoothing for fire/smoke/steam visual intensities.
+// Lerps smoothed values toward the live sim values each frame, giving
+// ramp-up and ramp-down rather than instantaneous pops.
+//
+// _SmoothedFields layout per cell: float4(fire, smoke, smokeContam, steam)
+#pragma kernel SmoothFields
+
+StructuredBuffer<float4>   _VisualFields;       // fire sim output
+StructuredBuffer<uint>     _AtmosphericFields;  // packed: bits 0-2=steam 3-5=smoke 6-8=smokeContam
+RWStructuredBuffer<float4> _SmoothedFields;
+
+float _FireUpSpeed;
+float _FireDownSpeed;
+float _SmokeUpSpeed;
+float _SmokeDownSpeed;
+float _DeltaTime;
+uint  _CellCount;
+
+[numthreads(64, 1, 1)]
+void SmoothFields(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _CellCount)
+        return;
+
+    float4 vis = _VisualFields[i];
+    uint   atm = _AtmosphericFields[i];
+
+    float targetFire      = vis.x;
+    float targetSmoke     = (float)((atm >> 3u) & 0x7u) / 7.0;
+    float targetSmokeCont = (float)((atm >> 6u) & 0x7u) / 7.0;
+    float targetSteam     = (float)((atm >> 0u) & 0x7u) / 7.0;
+
+    float4 target  = float4(targetFire, targetSmoke, targetSmokeCont, targetSteam);
+    float4 current = _SmoothedFields[i];
+
+    // Asymmetric lerp: fast ramp-up (ignition response), slow ramp-down (particle lifetime feel).
+    float4 upRate   = float4(_FireUpSpeed,   _SmokeUpSpeed,   _SmokeUpSpeed,   _SmokeUpSpeed);
+    float4 downRate = float4(_FireDownSpeed, _SmokeDownSpeed, _SmokeDownSpeed, _SmokeDownSpeed);
+    float4 rate     = current < target ? upRate : downRate;
+    float4 alpha    = saturate(rate * _DeltaTime);
+
+    _SmoothedFields[i] = lerp(current, target, alpha);
+}

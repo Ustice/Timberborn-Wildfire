@@ -77,7 +77,8 @@ public sealed class TimberbornFireRuntime :
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
-            _logSink);
+            _logSink,
+            new TimberbornGpuFieldRendererOptions(IndirectFireRendererActive: true));
         _pooledFireEffects = new TimberbornPooledFireSmokeAshEffectSink(
             visualFieldSurface,
             _logSink,

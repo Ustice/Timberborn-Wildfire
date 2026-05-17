@@ -21,7 +21,8 @@ public sealed class TimberbornPooledFireEffectOptions
         int MaxActiveEffects = 512,
         int MaxUpdatedVisualRegionsPerDispatch = 512,
         float MinimumVisibleIntensity = 0.01f,
-        uint SteamEffectLifetimeTicks = 2)
+        uint SteamEffectLifetimeTicks = 2,
+        int MaxRefreshedCellsPerDispatch = 32)
     {
         if (MaxActiveEffects <= 0)
         {
@@ -47,6 +48,14 @@ public sealed class TimberbornPooledFireEffectOptions
                 "The minimum visible intensity cannot be negative.");
         }
 
+        if (MaxRefreshedCellsPerDispatch <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxRefreshedCellsPerDispatch),
+                MaxRefreshedCellsPerDispatch,
+                "The refreshed cell limit must be positive.");
+        }
+
         if (SteamEffectLifetimeTicks == 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -59,6 +68,7 @@ public sealed class TimberbornPooledFireEffectOptions
         this.MaxUpdatedVisualRegionsPerDispatch = MaxUpdatedVisualRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
         this.SteamEffectLifetimeTicks = SteamEffectLifetimeTicks;
+        this.MaxRefreshedCellsPerDispatch = MaxRefreshedCellsPerDispatch;
     }
 
     public int MaxActiveEffects { get; }
@@ -68,6 +78,8 @@ public sealed class TimberbornPooledFireEffectOptions
     public float MinimumVisibleIntensity { get; }
 
     public uint SteamEffectLifetimeTicks { get; }
+
+    public int MaxRefreshedCellsPerDispatch { get; }
 }
 
 public readonly record struct TimberbornPooledFireEffectState(
@@ -193,6 +205,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
     private uint? _lastNonZeroUpdatedVisualRegionTick;
     private string? _lastNativeEffectPrefabName;
     private uint? _currentTick;
+    private int _refreshCycleOffset;
 
     public TimberbornPooledFireSmokeAshEffectSink(
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
@@ -479,6 +492,21 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         {
             return;
         }
+
+        // Round-robin over slots so at most MaxRefreshedCellsPerDispatch cells are read per tick.
+        // This caps synchronous GPU readback cost regardless of how many effects are active.
+        int cap = Options.MaxRefreshedCellsPerDispatch;
+        if (slotsToRefresh.Length > cap)
+        {
+            int offset = _refreshCycleOffset % slotsToRefresh.Length;
+            slotsToRefresh = slotsToRefresh
+                .Skip(offset)
+                .Concat(slotsToRefresh.Take(offset))
+                .Take(cap)
+                .ToArray();
+        }
+
+        _refreshCycleOffset = (_refreshCycleOffset + cap) % Math.Max(1, slots.Length);
 
         int[] cellIndices = slotsToRefresh
             .Select(static slot => slot.State.CellIndex)

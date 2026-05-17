@@ -1,5 +1,6 @@
-using UnityEngine;
+using System.IO;
 using System.Reflection;
+using UnityEngine;
 
 namespace Wildfire.Timberborn;
 
@@ -11,10 +12,10 @@ public sealed class TimberbornGpuFieldRendererOptions
         int RegionSize = 1,
         int MaxUpdatedRegionsPerDispatch = 2048,
         float MinimumVisibleIntensity = 0.01f,
-        int AshBlendCellRadius = 2,
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
-        float DebugOverlayHeightOffset = 0.02f)
+        float DebugOverlayHeightOffset = 0.02f,
+        bool IndirectFireRendererActive = false)
     {
         if (RegionSize <= 0)
         {
@@ -37,14 +38,6 @@ public sealed class TimberbornGpuFieldRendererOptions
                 "Minimum visible intensity cannot be negative.");
         }
 
-        if (AshBlendCellRadius < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(AshBlendCellRadius),
-                AshBlendCellRadius,
-                "Ash blend radius cannot be negative.");
-        }
-
         if (DebugOverlayHeightOffset < 0f)
         {
             throw new ArgumentOutOfRangeException(
@@ -56,10 +49,10 @@ public sealed class TimberbornGpuFieldRendererOptions
         this.RegionSize = RegionSize;
         this.MaxUpdatedRegionsPerDispatch = MaxUpdatedRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
-        this.AshBlendCellRadius = AshBlendCellRadius;
         this.AshOverlayEnabled = AshOverlayEnabled;
         this.DebugOverlayEnabled = DebugOverlayEnabled;
         this.DebugOverlayHeightOffset = DebugOverlayHeightOffset;
+        this.IndirectFireRendererActive = IndirectFireRendererActive;
     }
 
     public int RegionSize { get; }
@@ -68,13 +61,16 @@ public sealed class TimberbornGpuFieldRendererOptions
 
     public float MinimumVisibleIntensity { get; }
 
-    public int AshBlendCellRadius { get; }
-
     public bool AshOverlayEnabled { get; }
 
     public bool DebugOverlayEnabled { get; }
 
     public float DebugOverlayHeightOffset { get; }
+
+    // When true, fire/smoke/steam are rendered by TimberbornGpuIndirectFireRenderer; this
+    // sink only needs to run for cells that carry ash (skipping the per-cell GetData stall
+    // for every other visual-effect event).
+    public bool IndirectFireRendererActive { get; }
 }
 
 public readonly record struct TimberbornGpuFieldRendererRegionState(
@@ -114,12 +110,21 @@ public interface ITimberbornGpuFieldRendererCounterProvider
     TimberbornGpuFieldRendererCounters Counters { get; }
 }
 
+public readonly record struct TimberbornGpuFieldRendererPresentation(
+    object? CompanionFieldsBuffer = null,
+    int GridWidth = 0,
+    int GridHeight = 0,
+    int GridDepth = 0);
+
 public interface ITimberbornGpuFieldRendererPresenter
 {
     TimberbornGpuFieldRendererPresenterState State { get; }
 
     TimberbornGpuFieldRendererPresentationResult RenderRegions(
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions);
+
+    TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+        TimberbornGpuFieldRendererPresentation presentation);
 
     void Clear();
 }
@@ -164,15 +169,7 @@ public sealed class TimberbornGpuFieldRendererSink :
     private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly ITimberbornGpuFieldRendererPresenter _presenter;
-    private readonly Dictionary<int, TimberbornGpuFieldRendererRegionAccumulator> _regionsThisDispatch = new();
-    private readonly Dictionary<int, TimberbornGpuFieldRendererRegionState> _visibleRegions = new();
-    private int _updatedRegionsThisDispatch;
-    private int _droppedRegionsThisDispatch;
-    private int _invisibleRegionsThisDispatch;
     private int _materialFailuresThisDispatch;
-    private int _lastNonZeroUpdatedRegionCount;
-    private uint? _lastNonZeroUpdatedRegionTick;
-    private uint? _currentTick;
 
     public TimberbornGpuFieldRendererSink(
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
@@ -182,6 +179,14 @@ public sealed class TimberbornGpuFieldRendererSink :
             logSink,
             TimberbornGpuFieldRendererOptions.Default,
             CreateDefaultPresenter(logSink, TimberbornGpuFieldRendererOptions.Default))
+    {
+    }
+
+    public TimberbornGpuFieldRendererSink(
+        ITimberbornGpuVisualFieldSurface visualFieldSurface,
+        ITimberbornFireLogSink logSink,
+        TimberbornGpuFieldRendererOptions options)
+        : this(visualFieldSurface, logSink, options, CreateDefaultPresenter(logSink, options))
     {
     }
 
@@ -203,17 +208,15 @@ public sealed class TimberbornGpuFieldRendererSink :
         RendererEnabled: _presenter.State.RendererEnabled,
         MaterialReady: _presenter.State.MaterialReady,
         VisualFieldSurfaceBound: _visualFieldSurface.State.IsBound,
-        VisibleRegionCount: _visibleRegions.Count,
-        UpdatedRegionCount: _updatedRegionsThisDispatch,
-        LastNonZeroUpdatedRegionCount: _lastNonZeroUpdatedRegionCount,
-        MaxUpdatedRegionCount: Options.MaxUpdatedRegionsPerDispatch,
-        DroppedRegionCount: _droppedRegionsThisDispatch,
-        InvisibleRegionCount: _invisibleRegionsThisDispatch,
+        VisibleRegionCount: 0,
+        UpdatedRegionCount: 0,
+        LastNonZeroUpdatedRegionCount: 0,
+        MaxUpdatedRegionCount: 0,
+        DroppedRegionCount: 0,
+        InvisibleRegionCount: 0,
         MaterialFailureCount: _materialFailuresThisDispatch,
-        LastUpdatedTick: _currentTick,
-        LastNonZeroUpdatedRegionTick: _lastNonZeroUpdatedRegionTick);
-
-    public IReadOnlyDictionary<int, TimberbornGpuFieldRendererRegionState> VisibleRegions => _visibleRegions;
+        LastUpdatedTick: null,
+        LastNonZeroUpdatedRegionTick: null);
 
     private static ITimberbornGpuFieldRendererPresenter CreateDefaultPresenter(
         ITimberbornFireLogSink logSink,
@@ -228,62 +231,22 @@ public sealed class TimberbornGpuFieldRendererSink :
 
     public void BeginVisualEffectDispatch(uint tick)
     {
-        _currentTick = tick;
-        _regionsThisDispatch.Clear();
-        _updatedRegionsThisDispatch = 0;
-        _droppedRegionsThisDispatch = 0;
-        _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
     }
 
     public void UpdateVisualEffect(TimberbornFireVisualEffectEvent effectEvent)
     {
-        try
-        {
-            UpdateVisualEffectCore(effectEvent);
-        }
-        catch (Exception exception)
-        {
-            _materialFailuresThisDispatch++;
-            _logSink.Warning(
-                "wildfire_timberborn_gpu_field_renderer_failed " +
-                $"stage=update tick={effectEvent.Tick} cell_index={effectEvent.CellIndex} " +
-                $"message=\"{EscapeLogValue(exception.Message)}\"");
-        }
     }
 
     public void CompleteVisualEffectDispatch(uint tick)
     {
-        _currentTick = tick;
-        TimberbornGpuFieldRendererRegionState[] candidateRegions = _regionsThisDispatch.Values
-            .Select(static accumulator => accumulator.ToState())
-            .ToArray();
-        TimberbornGpuFieldRendererRegionState[] visibleCandidateRegions = candidateRegions
-            .Where(region => region.Intensity >= Options.MinimumVisibleIntensity)
-            .OrderByDescending(static region => region.Intensity)
-            .ThenBy(static region => region.RegionId)
-            .ToArray();
-        TimberbornGpuFieldRendererRegionState[] updatedRegions = visibleCandidateRegions
-            .Take(Options.MaxUpdatedRegionsPerDispatch)
-            .ToArray();
-        _updatedRegionsThisDispatch = updatedRegions.Length;
-        int droppedByLimit = Math.Max(0, visibleCandidateRegions.Length - updatedRegions.Length);
-        _droppedRegionsThisDispatch += droppedByLimit;
-        _invisibleRegionsThisDispatch = candidateRegions.Length - visibleCandidateRegions.Length;
-
-        Array.ForEach(updatedRegions, region => _visibleRegions[region.RegionId] = region);
-        int[] invisibleRegionIds = candidateRegions
-            .Where(region => region.Intensity < Options.MinimumVisibleIntensity)
-            .Select(static region => region.RegionId)
-            .ToArray();
-        Array.ForEach(invisibleRegionIds, regionId => _visibleRegions.Remove(regionId));
-
-        TimberbornGpuFieldRendererRegionState[] renderedRegions = _visibleRegions.Values
-            .OrderByDescending(static region => region.Intensity)
-            .ThenBy(static region => region.RegionId)
-            .Take(Options.MaxUpdatedRegionsPerDispatch)
-            .ToArray();
-        TimberbornGpuFieldRendererPresentationResult presentationResult = _presenter.RenderRegions(renderedRegions);
+        bool hasRenderBinding = _visualFieldSurface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding renderBinding);
+        TimberbornGpuFieldRendererPresentation presentation = new(
+            CompanionFieldsBuffer: hasRenderBinding ? renderBinding.CompanionFieldsBuffer : null,
+            GridWidth: hasRenderBinding ? renderBinding.Width : 0,
+            GridHeight: hasRenderBinding ? renderBinding.Height : 0,
+            GridDepth: hasRenderBinding ? renderBinding.Depth : 0);
+        TimberbornGpuFieldRendererPresentationResult presentationResult = _presenter.RenderPresentation(presentation);
         if (presentationResult.Status == TimberbornGpuFieldRendererPresentationStatus.Failed)
         {
             _materialFailuresThisDispatch++;
@@ -292,24 +255,10 @@ public sealed class TimberbornGpuFieldRendererSink :
                 $"stage=presenter tick={tick} message=\"{EscapeLogValue(presentationResult.Message ?? "presentation failed")}\"");
         }
 
-        if (updatedRegions.Length > 0)
-        {
-            _lastNonZeroUpdatedRegionCount = updatedRegions.Length;
-            _lastNonZeroUpdatedRegionTick = tick;
-        }
-
         _logSink.Info(
             "wildfire_timberborn_gpu_field_renderer_updated " +
             $"tick={tick} " +
-            $"visible_regions={_visibleRegions.Count} " +
-            $"updated_regions={updatedRegions.Length} " +
-            $"last_nonzero_updated_regions={_lastNonZeroUpdatedRegionCount} " +
-            $"last_nonzero_updated_regions_tick={FormatNumber(_lastNonZeroUpdatedRegionTick)} " +
-            $"dropped_regions={_droppedRegionsThisDispatch} " +
-            $"invisible_regions={_invisibleRegionsThisDispatch} " +
             $"material_failures={_materialFailuresThisDispatch} " +
-            $"max_updated_regions={Options.MaxUpdatedRegionsPerDispatch} " +
-            $"region_size={Options.RegionSize} " +
             $"renderer_enabled={_presenter.State.RendererEnabled.ToString().ToLowerInvariant()} " +
             $"material_ready={_presenter.State.MaterialReady.ToString().ToLowerInvariant()} " +
             $"visual_field_surface_bound={_visualFieldSurface.State.IsBound.ToString().ToLowerInvariant()}");
@@ -317,15 +266,7 @@ public sealed class TimberbornGpuFieldRendererSink :
 
     public void Clear()
     {
-        _regionsThisDispatch.Clear();
-        _visibleRegions.Clear();
-        _updatedRegionsThisDispatch = 0;
-        _droppedRegionsThisDispatch = 0;
-        _invisibleRegionsThisDispatch = 0;
         _materialFailuresThisDispatch = 0;
-        _lastNonZeroUpdatedRegionCount = 0;
-        _lastNonZeroUpdatedRegionTick = null;
-        _currentTick = null;
         try
         {
             _presenter.Clear();
@@ -339,253 +280,53 @@ public sealed class TimberbornGpuFieldRendererSink :
         }
     }
 
-    private void UpdateVisualEffectCore(TimberbornFireVisualEffectEvent effectEvent)
-    {
-        if (_currentTick != effectEvent.Tick)
-        {
-            BeginVisualEffectDispatch(effectEvent.Tick);
-        }
-
-        if (!_visualFieldSurface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding binding))
-        {
-            _droppedRegionsThisDispatch++;
-            return;
-        }
-
-        TimberbornGpuVisualFieldSample sample = _visualFieldSurface
-            .InspectCells(new[] { effectEvent.CellIndex })
-            .Single();
-        (int x, int y, int z) = FromIndex(binding, sample.CellIndex);
-        IEnumerable<(int X, int Y, int Z, float Weight)> affectedCells = Options.AshOverlayEnabled && !Options.DebugOverlayEnabled
-            ? GetAshBlendCells(binding, x, y, z, Options.AshBlendCellRadius)
-            : Enumerable.Repeat((X: x, Y: y, Z: z, Weight: 1f), 1);
-
-        affectedCells
-            .Select(cell => (cell.X, cell.Y, cell.Z, Sample: WeightAshSample(sample, cell.Weight)))
-            .Where(static item => item.Sample.Ash > 0f || item.Sample.Fire > 0f || item.Sample.Smoke > 0f || item.Sample.Steam > 0f)
-            .ToList()
-            .ForEach(item => AddSampleToRegion(binding, effectEvent.Tick, item.X, item.Y, item.Z, item.Sample));
-    }
-
-    private void AddSampleToRegion(
-        TimberbornGpuVisualFieldSurfaceBinding binding,
-        uint tick,
-        int x,
-        int y,
-        int z,
-        TimberbornGpuVisualFieldSample sample)
-    {
-        int regionId = ToRegionId(binding, x, y, z, Options.RegionSize);
-        if (!_regionsThisDispatch.TryGetValue(regionId, out TimberbornGpuFieldRendererRegionAccumulator? accumulator))
-        {
-            if (_regionsThisDispatch.Count >= Options.MaxUpdatedRegionsPerDispatch)
-            {
-                _droppedRegionsThisDispatch++;
-                return;
-            }
-
-            accumulator = new TimberbornGpuFieldRendererRegionAccumulator(
-                regionId,
-                tick,
-                x,
-                y,
-                z,
-                Options.DebugOverlayEnabled);
-            _regionsThisDispatch[regionId] = accumulator;
-        }
-
-        accumulator.Add(x, y, z, sample);
-    }
-
-    private static IEnumerable<(int X, int Y, int Z, float Weight)> GetAshBlendCells(
-        TimberbornGpuVisualFieldSurfaceBinding binding,
-        int x,
-        int y,
-        int z,
-        int radius)
-    {
-        int minX = Math.Max(0, x - radius);
-        int maxX = Math.Min(binding.Width - 1, x + radius);
-        int minY = Math.Max(0, y - radius);
-        int maxY = Math.Min(binding.Height - 1, y + radius);
-
-        return Enumerable.Range(minX, maxX - minX + 1)
-            .SelectMany(blendX => Enumerable.Range(minY, maxY - minY + 1)
-                .Select(blendY =>
-                {
-                    float distance = MathF.Sqrt(((blendX - x) * (blendX - x)) + ((blendY - y) * (blendY - y)));
-                    float falloff = radius == 0
-                        ? 1f
-                        : SmoothStep01(Math.Clamp(1f - (distance / (radius + 0.75f)), 0f, 1f));
-                    return (X: blendX, Y: blendY, Z: z, Weight: falloff);
-                }))
-            .Where(static cell => cell.Weight > 0.025f);
-    }
-
-    private static TimberbornGpuVisualFieldSample WeightAshSample(
-        TimberbornGpuVisualFieldSample sample,
-        float weight)
-    {
-        float clampedWeight = Math.Clamp(weight, 0f, 1f);
-        return sample with
-        {
-            Fire = sample.Fire * clampedWeight * 0.2f,
-            Smoke = sample.Smoke * clampedWeight * 0.35f,
-            Ash = sample.Ash * clampedWeight,
-            Steam = sample.Steam * clampedWeight * 0.35f,
-            Visibility = Math.Max(sample.Visibility * clampedWeight, sample.Ash * clampedWeight),
-        };
-    }
-
-    private static float SmoothStep01(float value)
-    {
-        float clamped = Math.Clamp(value, 0f, 1f);
-        return clamped * clamped * (3f - (2f * clamped));
-    }
-
-    private static (int X, int Y, int Z) FromIndex(TimberbornGpuVisualFieldSurfaceBinding binding, int cellIndex)
-    {
-        int layerSize = binding.Width * binding.Height;
-        int z = cellIndex / layerSize;
-        int remainder = cellIndex % layerSize;
-        int y = remainder / binding.Width;
-        int x = remainder % binding.Width;
-        return (x, y, z);
-    }
-
-    private static int ToRegionId(TimberbornGpuVisualFieldSurfaceBinding binding, int x, int y, int z, int regionSize)
-    {
-        int regionsX = checked((binding.Width + regionSize - 1) / regionSize);
-        int regionsY = checked((binding.Height + regionSize - 1) / regionSize);
-        int regionX = x / regionSize;
-        int regionY = y / regionSize;
-        int regionZ = z;
-        return checked(regionZ * regionsX * regionsY + regionY * regionsX + regionX);
-    }
-
-    private static string FormatNumber(uint? value)
-    {
-        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
-    }
-
     private static string EscapeLogValue(string value)
     {
         return value.Replace('\\', '/').Replace('"', '\'');
-    }
-
-    private sealed class TimberbornGpuFieldRendererRegionAccumulator
-    {
-        private float _fire;
-        private float _smoke;
-        private float _ash;
-        private float _visibility;
-        private float _heatHaze;
-        private float _steam;
-        private readonly bool _debugOverlayEnabled;
-
-        public TimberbornGpuFieldRendererRegionAccumulator(
-            int regionId,
-            uint tick,
-            int x,
-            int y,
-            int z,
-            bool debugOverlayEnabled)
-        {
-            RegionId = regionId;
-            Tick = tick;
-            MinX = MaxX = x;
-            MinY = MaxY = y;
-            MinZ = MaxZ = z;
-            _debugOverlayEnabled = debugOverlayEnabled;
-        }
-
-        public int RegionId { get; }
-
-        public uint Tick { get; }
-
-        public int MinX { get; private set; }
-
-        public int MinY { get; private set; }
-
-        public int MinZ { get; private set; }
-
-        public int MaxX { get; private set; }
-
-        public int MaxY { get; private set; }
-
-        public int MaxZ { get; private set; }
-
-        public int SampleCount { get; private set; }
-
-        public void Add(int x, int y, int z, TimberbornGpuVisualFieldSample sample)
-        {
-            MinX = Math.Min(MinX, x);
-            MinY = Math.Min(MinY, y);
-            MinZ = Math.Min(MinZ, z);
-            MaxX = Math.Max(MaxX, x);
-            MaxY = Math.Max(MaxY, y);
-            MaxZ = Math.Max(MaxZ, z);
-            SampleCount++;
-            _fire = Math.Max(_fire, Clamp01(sample.Fire));
-            _smoke = Math.Max(_smoke, Clamp01(sample.Smoke));
-            _ash = Math.Max(_ash, Clamp01(sample.Ash));
-            _visibility = Math.Max(_visibility, Clamp01(sample.Visibility));
-            _heatHaze = Math.Max(_heatHaze, Clamp01(sample.Fire * sample.Visibility));
-            _steam = Math.Max(_steam, Clamp01(sample.Steam));
-        }
-
-        public TimberbornGpuFieldRendererRegionState ToState()
-        {
-            float dominantField = _debugOverlayEnabled
-                ? Math.Max(_fire, Math.Max(_smoke, Math.Max(_ash, Math.Max(_steam, _heatHaze))))
-                : _ash;
-            float intensity = dominantField * Math.Max(_visibility, 0.001f);
-            return new TimberbornGpuFieldRendererRegionState(
-                RegionId,
-                Tick,
-                MinX,
-                MinY,
-                MinZ,
-                MaxX,
-                MaxY,
-                MaxZ,
-                SampleCount,
-                _fire,
-                _smoke,
-                _ash,
-                _steam,
-                _visibility,
-                _heatHaze,
-                intensity);
-        }
-
-        private static float Clamp01(float value)
-        {
-            return Math.Clamp(value, 0f, 1f);
-        }
     }
 }
 
 public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFieldRendererPresenter
 {
-    private const int AshOverlayMaskTextureSize = 96;
-    private const int AshOverlayTextureSize = 4096;
-    private const float AshOverlayTextureWorldSizeCells = 32f;
-    private const string AshOverlayTextureResourceName = "Wildfire.Timberborn.Assets.WildfireAshOverlay4096.png";
-    private const float AshOverlayCoreRadius = 0.1f;
-    private const float AshOverlayFeatherRadius = 0.68f;
+    private const int AshOverlayTextureSize = 2048;
+    private const float AshOverlayTextureWorldSizeCells = 16f;
+    private const string AshOverlayTextureResourceName = "Wildfire.Timberborn.Assets.WildfireAshGround2048.png";
+    private const string AshOverlayMaskTextureResourceName = "Wildfire.Timberborn.Assets.WildfireAshMask2048Levels.png";
+    private const string AshOverlayShaderBundleMac = "wildfire_visual_mac";
+    private const string AshOverlayShaderBundleWindows = "wildfire_visual_win";
+    private const string AshOverlayShaderAssetSuffix = "ashoverlay.shader";
+    private const float AshOverlayMaxOpacity = 0.9f;
+    private const float AshOverlayLevel1Coverage = 0.30f;
+    private const float AshOverlayLevel2Coverage = 0.65f;
+    private const float AshOverlayLevel3Coverage = 0.92f;
+    private const float AshOverlayCoverageSoftness = 0.065f;
+    private const int AshOverlayRenderQueueOffset = -10;
     private static readonly int MainTexturePropertyId = Shader.PropertyToID("_MainTex");
     private static readonly int BaseMapPropertyId = Shader.PropertyToID("_BaseMap");
+    private static readonly int AshTexturePropertyId = Shader.PropertyToID("_AshTex");
+    private static readonly int MaskTexturePropertyId = Shader.PropertyToID("_MaskTex");
+    private static readonly int CompanionFieldsPropertyId = Shader.PropertyToID("_CompanionFields");
+    private static readonly int UseCompanionAshPropertyId = Shader.PropertyToID("_UseCompanionAsh");
+    private static readonly int GridWidthPropertyId = Shader.PropertyToID("_GridWidth");
+    private static readonly int GridHeightPropertyId = Shader.PropertyToID("_GridHeight");
+    private static readonly int GridDepthPropertyId = Shader.PropertyToID("_GridDepth");
+    private static readonly int MaxOpacityPropertyId = Shader.PropertyToID("_MaxOpacity");
+    private static readonly int Level1CoveragePropertyId = Shader.PropertyToID("_Level1Coverage");
+    private static readonly int Level2CoveragePropertyId = Shader.PropertyToID("_Level2Coverage");
+    private static readonly int Level3CoveragePropertyId = Shader.PropertyToID("_Level3Coverage");
+    private static readonly int CoverageSoftnessPropertyId = Shader.PropertyToID("_CoverageSoftness");
     private static readonly int ColorPropertyId = Shader.PropertyToID("_Color");
     private static readonly int BaseColorPropertyId = Shader.PropertyToID("_BaseColor");
 
     private readonly ITimberbornFireLogSink _logSink;
     private readonly float _heightOffset;
     private readonly bool _debugOverlayEnabled;
+    private AssetBundle? _shaderBundle;
     private GameObject? _root;
     private Mesh? _mesh;
     private MeshRenderer? _renderer;
     private Material? _material;
+    private Texture2D? _ashOverlayTexture;
     private Texture2D? _ashOverlayMaskTexture;
     private int _materialFailureCount;
 
@@ -612,6 +353,12 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     public TimberbornGpuFieldRendererPresentationResult RenderRegions(
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
     {
+        return RenderPresentation(new TimberbornGpuFieldRendererPresentation());
+    }
+
+    public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+        TimberbornGpuFieldRendererPresentation presentation)
+    {
         try
         {
             EnsureObjects();
@@ -620,10 +367,16 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 return TimberbornGpuFieldRendererPresentationResult.Disabled("mesh_unavailable");
             }
 
-            BuildMesh(_mesh, regions, _heightOffset, _debugOverlayEnabled);
+            BindCompanionAshPresentation(presentation);
+            BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
             if (_root is not null)
             {
-                _root.SetActive(regions.Count > 0);
+                bool hasCompanionAsh = !_debugOverlayEnabled &&
+                    presentation.CompanionFieldsBuffer is not null &&
+                    presentation.GridWidth > 0 &&
+                    presentation.GridHeight > 0 &&
+                    presentation.GridDepth > 0;
+                _root.SetActive(hasCompanionAsh);
             }
 
             return TimberbornGpuFieldRendererPresentationResult.Applied;
@@ -632,6 +385,39 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         {
             _materialFailureCount++;
             return TimberbornGpuFieldRendererPresentationResult.Failed(exception.Message);
+        }
+    }
+
+    private void BindCompanionAshPresentation(TimberbornGpuFieldRendererPresentation presentation)
+    {
+        if (_material is null)
+        {
+            return;
+        }
+
+        bool useCompanionAsh = !_debugOverlayEnabled &&
+            presentation.CompanionFieldsBuffer is not null &&
+            presentation.GridWidth > 0 &&
+            presentation.GridHeight > 0 &&
+            presentation.GridDepth > 0;
+        _material.SetFloat(UseCompanionAshPropertyId, useCompanionAsh ? 1f : 0f);
+        _material.SetInt(GridWidthPropertyId, Math.Max(0, presentation.GridWidth));
+        _material.SetInt(GridHeightPropertyId, Math.Max(0, presentation.GridHeight));
+        _material.SetInt(GridDepthPropertyId, Math.Max(0, presentation.GridDepth));
+
+        if (!useCompanionAsh)
+        {
+            return;
+        }
+
+        switch (presentation.CompanionFieldsBuffer)
+        {
+            case ComputeBuffer computeBuffer:
+                _material.SetBuffer(CompanionFieldsPropertyId, computeBuffer);
+                break;
+            default:
+                _material.SetFloat(UseCompanionAshPropertyId, 0f);
+                break;
         }
     }
 
@@ -655,10 +441,22 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             _material = null;
         }
 
+        if (_ashOverlayTexture is not null)
+        {
+            UnityEngine.Object.Destroy(_ashOverlayTexture);
+            _ashOverlayTexture = null;
+        }
+
         if (_ashOverlayMaskTexture is not null)
         {
             UnityEngine.Object.Destroy(_ashOverlayMaskTexture);
             _ashOverlayMaskTexture = null;
+        }
+
+        if (_shaderBundle is not null)
+        {
+            _shaderBundle.Unload(unloadAllLoadedObjects: true);
+            _shaderBundle = null;
         }
 
         _renderer = null;
@@ -684,11 +482,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             hideFlags = HideFlags.DontSave,
         };
         meshFilter.sharedMesh = _mesh;
-        Shader? shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent");
+        Shader? shader = _debugOverlayEnabled
+            ? Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent")
+            : LoadAshOverlayShader();
         if (shader is null)
         {
-            _logSink.Warning("wildfire_timberborn_gpu_field_renderer_material_unavailable shader=Sprites/Default");
-            throw new InvalidOperationException("No transparent shader was available for the GPU field renderer.");
+            _logSink.Warning("wildfire_timberborn_gpu_field_renderer_material_unavailable shader=Wildfire/AshOverlay");
+            throw new InvalidOperationException("The ash overlay shader was not available for the GPU field renderer.");
         }
 
         _material = new Material(shader)
@@ -697,35 +497,87 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             hideFlags = HideFlags.DontSave,
         };
         ConfigureTransparentMaterial(_material);
+        _ashOverlayTexture = CreateTextureFromResource(
+            AshOverlayTextureResourceName,
+            "Wildfire_AshGround2048",
+            TextureWrapMode.Repeat);
         _ashOverlayMaskTexture = _debugOverlayEnabled
-            ? CreateAshOverlayMaskTexture()
-            : CreateAshOverlayTexture();
-        _material.SetTexture(MainTexturePropertyId, _ashOverlayMaskTexture);
-        _material.SetTexture(BaseMapPropertyId, _ashOverlayMaskTexture);
+            ? _ashOverlayTexture
+            : CreateTextureFromResource(
+                AshOverlayMaskTextureResourceName,
+                "Wildfire_AshMask2048Levels",
+                TextureWrapMode.Repeat);
+        _material.SetTexture(MainTexturePropertyId, _ashOverlayTexture);
+        _material.SetTexture(BaseMapPropertyId, _ashOverlayTexture);
+        _material.SetTexture(AshTexturePropertyId, _ashOverlayTexture);
+        _material.SetTexture(MaskTexturePropertyId, _ashOverlayMaskTexture);
+        _material.SetFloat(MaxOpacityPropertyId, AshOverlayMaxOpacity);
+        _material.SetFloat(Level1CoveragePropertyId, AshOverlayLevel1Coverage);
+        _material.SetFloat(Level2CoveragePropertyId, AshOverlayLevel2Coverage);
+        _material.SetFloat(Level3CoveragePropertyId, AshOverlayLevel3Coverage);
+        _material.SetFloat(CoverageSoftnessPropertyId, AshOverlayCoverageSoftness);
         _material.SetColor(ColorPropertyId, Color.white);
         _material.SetColor(BaseColorPropertyId, Color.white);
+        _material.renderQueue = _debugOverlayEnabled
+            ? (int)UnityEngine.Rendering.RenderQueue.Transparent + 500
+            : (int)UnityEngine.Rendering.RenderQueue.Transparent + AshOverlayRenderQueueOffset;
         _renderer.sharedMaterial = _material;
         _renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         _renderer.receiveShadows = false;
-        _renderer.sortingOrder = 2;
+        _renderer.sortingOrder = -100;
+    }
+
+    private static Texture2D CreateTextureFromResource(
+        string resourceName,
+        string textureName,
+        TextureWrapMode wrapMode)
+    {
+        using Stream stream = Assembly.GetExecutingAssembly()
+            .GetManifestResourceStream(resourceName) ??
+            throw new InvalidOperationException(
+                $"Embedded ash overlay texture resource was not found: {resourceName}");
+        using MemoryStream memoryStream = new();
+        stream.CopyTo(memoryStream);
+        Texture2D texture = new(
+            AshOverlayTextureSize,
+            AshOverlayTextureSize,
+            TextureFormat.RGBA32,
+            mipChain: true)
+        {
+            name = textureName,
+            filterMode = FilterMode.Trilinear,
+            wrapMode = wrapMode,
+            hideFlags = HideFlags.DontSave,
+        };
+        if (!texture.LoadImage(memoryStream.ToArray(), markNonReadable: false))
+        {
+            UnityEngine.Object.Destroy(texture);
+            throw new InvalidOperationException("Unity could not decode the embedded Wildfire ash overlay texture.");
+        }
+
+        texture.filterMode = FilterMode.Trilinear;
+        texture.wrapMode = wrapMode;
+        return texture;
     }
 
     private static void BuildMesh(
         Mesh mesh,
-        IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions,
+        TimberbornGpuFieldRendererPresentation presentation,
         float heightOffset,
         bool debugOverlayEnabled)
     {
-        Vector3[] vertices = regions
-            .SelectMany(region => ToVertices(region, heightOffset))
+        AshFieldCellQuad[] ashFieldQuads = SelectAshFieldQuads(presentation).ToArray();
+        Vector3[] vertices = ashFieldQuads
+            .SelectMany(quad => quad.ToVertices(heightOffset))
             .ToArray();
-        Color[] colors = regions
-            .SelectMany(region => ToColors(region, debugOverlayEnabled))
+        Color[] colors = Enumerable.Repeat(new Color(1f, 1f, 1f, 0f), vertices.Length).ToArray();
+        Vector2[] uvs = ashFieldQuads
+            .SelectMany(quad => quad.ToPatternUvs())
             .ToArray();
-        Vector2[] uvs = regions
-            .SelectMany(region => ToUvs(region, debugOverlayEnabled))
+        Vector2[] uv2s = ashFieldQuads
+            .SelectMany(static quad => quad.ToCellIndexUvs())
             .ToArray();
-        int[] triangles = regions
+        int[] triangles = ashFieldQuads
             .SelectMany((_, index) =>
             {
                 int offset = index * 4;
@@ -737,119 +589,62 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         mesh.vertices = vertices;
         mesh.colors = colors;
         mesh.uv = uvs;
+        mesh.uv2 = uv2s;
         mesh.triangles = triangles;
         mesh.RecalculateBounds();
     }
 
-    private static IEnumerable<Vector3> ToVertices(
-        TimberbornGpuFieldRendererRegionState region,
-        float heightOffset)
+    private static IEnumerable<AshFieldCellQuad> SelectAshFieldQuads(TimberbornGpuFieldRendererPresentation presentation)
     {
-        AshOverlayQuadBounds bounds = ToAshOverlayQuadBounds(region);
-        float y = region.MaxZ + heightOffset;
-
-        return new[]
+        if (presentation.CompanionFieldsBuffer is null ||
+            presentation.GridWidth <= 0 ||
+            presentation.GridHeight <= 0 ||
+            presentation.GridDepth <= 0)
         {
-            new Vector3(bounds.MinX, y, bounds.MinZ),
-            new Vector3(bounds.MaxX, y, bounds.MinZ),
-            new Vector3(bounds.MinX, y, bounds.MaxZ),
-            new Vector3(bounds.MaxX, y, bounds.MaxZ),
-        };
+            yield break;
+        }
+
+        for (int z = 0; z < presentation.GridDepth; z++)
+        {
+            yield return new AshFieldCellQuad(
+                checked(z * presentation.GridWidth * presentation.GridHeight),
+                0,
+                0,
+                presentation.GridWidth - 1,
+                presentation.GridHeight - 1,
+                z);
+        }
     }
 
-    private static IEnumerable<Color> ToColors(TimberbornGpuFieldRendererRegionState region, bool debugOverlayEnabled)
+    private readonly record struct AshFieldCellQuad(int CellIndex, int MinX, int MinY, int MaxX, int MaxY, int Z)
     {
-        Color center = debugOverlayEnabled
-            ? ToDebugColor(region)
-            : ToAshColor(region);
-        return Enumerable.Repeat(center, 4);
-    }
-
-    private static IEnumerable<Vector2> ToUvs(
-        TimberbornGpuFieldRendererRegionState region,
-        bool debugOverlayEnabled)
-    {
-        if (debugOverlayEnabled)
+        public IEnumerable<Vector3> ToVertices(float heightOffset)
         {
+            float y = Z + heightOffset;
             return new[]
             {
-                new Vector2(0f, 0f),
-                new Vector2(1f, 0f),
-                new Vector2(0f, 1f),
-                new Vector2(1f, 1f),
+                new Vector3(MinX, y, MinY),
+                new Vector3(MaxX + 1f, y, MinY),
+                new Vector3(MinX, y, MaxY + 1f),
+                new Vector3(MaxX + 1f, y, MaxY + 1f),
             };
         }
 
-        AshOverlayQuadBounds bounds = ToAshOverlayQuadBounds(region);
-        return new[]
+        public IEnumerable<Vector2> ToPatternUvs()
         {
-            new Vector2(bounds.MinX / AshOverlayTextureWorldSizeCells, bounds.MinZ / AshOverlayTextureWorldSizeCells),
-            new Vector2(bounds.MaxX / AshOverlayTextureWorldSizeCells, bounds.MinZ / AshOverlayTextureWorldSizeCells),
-            new Vector2(bounds.MinX / AshOverlayTextureWorldSizeCells, bounds.MaxZ / AshOverlayTextureWorldSizeCells),
-            new Vector2(bounds.MaxX / AshOverlayTextureWorldSizeCells, bounds.MaxZ / AshOverlayTextureWorldSizeCells),
-        };
-    }
+            return new[]
+            {
+                new Vector2(MinX / AshOverlayTextureWorldSizeCells, MinY / AshOverlayTextureWorldSizeCells),
+                new Vector2((MaxX + 1f) / AshOverlayTextureWorldSizeCells, MinY / AshOverlayTextureWorldSizeCells),
+                new Vector2(MinX / AshOverlayTextureWorldSizeCells, (MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+                new Vector2((MaxX + 1f) / AshOverlayTextureWorldSizeCells, (MaxY + 1f) / AshOverlayTextureWorldSizeCells),
+            };
+        }
 
-    private static AshOverlayQuadBounds ToAshOverlayQuadBounds(TimberbornGpuFieldRendererRegionState region)
-    {
-        float minX = region.MinX;
-        float maxX = region.MaxX + 1f;
-        float minZ = region.MinY;
-        float maxZ = region.MaxY + 1f;
-        float centerX = (minX + maxX) * 0.5f;
-        float centerZ = (minZ + maxZ) * 0.5f;
-        float ashSpread = 0.74f + Math.Clamp(region.Ash, 0f, 1f) * 0.72f;
-        float radiusX = Math.Max((maxX - minX) * 0.5f, 0.65f) + ashSpread;
-        float radiusZ = Math.Max((maxZ - minZ) * 0.5f, 0.65f) + ashSpread;
-
-        return new AshOverlayQuadBounds(
-            centerX - radiusX,
-            centerX + radiusX,
-            centerZ - radiusZ,
-            centerZ + radiusZ);
-    }
-
-    private static Color ToAshColor(TimberbornGpuFieldRendererRegionState region)
-    {
-        float ash = Math.Clamp(region.Ash, 0f, 1f);
-        float darkNoise = StableNoise(region.RegionId, salt: 17);
-        float paleNoise = StableNoise(region.RegionId, salt: 43);
-        Color charcoal = new(
-            Math.Clamp(0.18f + darkNoise * 0.035f, 0f, 1f),
-            Math.Clamp(0.18f + darkNoise * 0.03f, 0f, 1f),
-            Math.Clamp(0.17f + darkNoise * 0.03f, 0f, 1f),
-            1f);
-        Color paleAsh = new(
-            Math.Clamp(0.34f + paleNoise * 0.045f, 0f, 1f),
-            Math.Clamp(0.33f + paleNoise * 0.04f, 0f, 1f),
-            Math.Clamp(0.31f + paleNoise * 0.04f, 0f, 1f),
-            1f);
-        Color color = Color.Lerp(charcoal, paleAsh, Math.Clamp((ash - 0.45f) * 1.35f, 0f, 1f));
-        color.a = Math.Clamp(0.024f + ash * 0.075f, 0f, 0.105f);
-        return color;
-    }
-
-    private static Color ToDebugColor(TimberbornGpuFieldRendererRegionState region)
-    {
-        float red = Math.Clamp(region.Fire + region.HeatHaze * 0.4f + region.Ash * 0.2f, 0f, 1f);
-        float green = Math.Clamp(region.Fire * 0.45f + region.Steam * 0.5f + region.Smoke * 0.25f, 0f, 1f);
-        float blue = Math.Clamp(region.Steam * 0.75f + region.Smoke * 0.35f + region.Ash * 0.25f, 0f, 1f);
-        float alpha = Math.Clamp(region.Intensity * 0.7f, 0f, 0.85f);
-        return new Color(red, green, blue, alpha);
-    }
-
-    private static float StableNoise(int value, int salt)
-    {
-        unchecked
+        public IEnumerable<Vector2> ToCellIndexUvs()
         {
-            uint hash = (uint)value;
-            hash ^= (uint)salt * 0x9E3779B9u;
-            hash ^= hash >> 16;
-            hash *= 0x7FEB352Du;
-            hash ^= hash >> 15;
-            hash *= 0x846CA68Bu;
-            hash ^= hash >> 16;
-            return (hash & 0x00FFFFFFu) / 16777215f;
+            // uv2.x = 0 tells the shader to use the companion buffer; uv2.y = Z layer
+            return Enumerable.Repeat(new Vector2(0f, Z), 4);
         }
     }
 
@@ -869,148 +664,135 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         }
     }
 
-    private static Texture2D CreateAshOverlayMaskTexture()
+    private Shader? LoadAshOverlayShader()
     {
-        Color32[] pixels = Enumerable.Range(0, AshOverlayMaskTextureSize * AshOverlayMaskTextureSize)
-            .Select(index =>
+        Shader? loaded = Shader.Find("Wildfire/AshOverlay");
+        if (loaded is not null)
+        {
+            return loaded;
+        }
+
+        string bundleName = Application.platform switch
+        {
+            RuntimePlatform.OSXEditor or RuntimePlatform.OSXPlayer => AshOverlayShaderBundleMac,
+            RuntimePlatform.WindowsEditor or RuntimePlatform.WindowsPlayer => AshOverlayShaderBundleWindows,
+            _ => throw new PlatformNotSupportedException(
+                $"Wildfire ash overlay AssetBundle is not packaged for Unity platform {Application.platform}."),
+        };
+        string bundlePath = GetAssetBundlePath(bundleName);
+        if (!File.Exists(bundlePath))
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_ash_overlay_shader_missing bundle={bundleName} path=\"{EscapeLogValue(bundlePath)}\"");
+            return null;
+        }
+
+        _shaderBundle = AssetBundle.LoadFromFile(bundlePath);
+        if (_shaderBundle is null)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_ash_overlay_shader_load_failed bundle={bundleName} reason=null_bundle");
+            return null;
+        }
+
+        string[] assetNames = _shaderBundle.GetAllAssetNames();
+        string? shaderAssetName = assetNames.FirstOrDefault(name =>
+            name.EndsWith(AshOverlayShaderAssetSuffix, StringComparison.OrdinalIgnoreCase));
+        if (shaderAssetName is null)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_ash_overlay_shader_missing_asset bundle={bundleName} assets={string.Join(",", assetNames)}");
+            return null;
+        }
+
+        Shader? shader = _shaderBundle.LoadAsset<Shader>(shaderAssetName);
+        if (shader is null)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_ash_overlay_shader_load_failed bundle={bundleName} asset={shaderAssetName} reason=null_shader");
+            return null;
+        }
+
+        _logSink.Info(
+            $"wildfire_timberborn_ash_overlay_shader_loaded bundle={bundleName} asset={shaderAssetName}");
+        return shader;
+    }
+
+    private static string GetAssetBundlePath(string bundleName)
+    {
+        string? assemblyDir = TryGetDirectoryName(typeof(WildfireConfigurator).Assembly.Location);
+        string? modDir = TryGetParentDirectory(assemblyDir);
+        if (modDir is not null)
+        {
+            string candidate = Path.Combine(modDir, TimberbornGpuIndirectFireRenderer.PrivateBundleDirectoryName, bundleName);
+            if (File.Exists(candidate))
             {
-                int x = index % AshOverlayMaskTextureSize;
-                int z = index / AshOverlayMaskTextureSize;
-                float u = (x + 0.5f) / AshOverlayMaskTextureSize;
-                float v = (z + 0.5f) / AshOverlayMaskTextureSize;
-                return CreateAshOverlayMaskPixel(u, v);
-            })
-            .ToArray();
-        Texture2D texture = new(
-            AshOverlayMaskTextureSize,
-            AshOverlayMaskTextureSize,
-            TextureFormat.RGBA32,
-            mipChain: false)
-        {
-            name = "Wildfire_AshOverlayMask",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            hideFlags = HideFlags.DontSave,
-        };
-        texture.SetPixels32(pixels);
-        texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
-        return texture;
-    }
-
-    private static Texture2D CreateAshOverlayTexture()
-    {
-        using Stream stream = Assembly.GetExecutingAssembly()
-            .GetManifestResourceStream(AshOverlayTextureResourceName) ??
-            throw new InvalidOperationException(
-                $"Embedded ash overlay texture resource was not found: {AshOverlayTextureResourceName}");
-        using MemoryStream memoryStream = new();
-        stream.CopyTo(memoryStream);
-        Texture2D texture = new(
-            AshOverlayTextureSize,
-            AshOverlayTextureSize,
-            TextureFormat.RGBA32,
-            mipChain: true)
-        {
-            name = "Wildfire_AshOverlay4096",
-            filterMode = FilterMode.Trilinear,
-            wrapMode = TextureWrapMode.Repeat,
-            hideFlags = HideFlags.DontSave,
-        };
-        if (!texture.LoadImage(memoryStream.ToArray(), markNonReadable: false))
-        {
-            UnityEngine.Object.Destroy(texture);
-            throw new InvalidOperationException("Unity could not decode the embedded Wildfire ash overlay texture.");
+                return candidate;
+            }
         }
 
-        texture.filterMode = FilterMode.Trilinear;
-        texture.wrapMode = TextureWrapMode.Repeat;
-        return texture;
-    }
-
-    private readonly record struct AshOverlayQuadBounds(float MinX, float MaxX, float MinZ, float MaxZ);
-
-    private static Color32 CreateAshOverlayMaskPixel(float u, float v)
-    {
-        float coverage = AshOverlayCoverage(u, v);
-        if (coverage <= 0.002f)
+        string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(home))
         {
-            return new Color32(255, 255, 255, 0);
+            string candidate = Path.Combine(
+                home, "Documents", "Timberborn", "Mods", "Wildfire",
+                TimberbornGpuIndirectFireRenderer.PrivateBundleDirectoryName, bundleName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
         }
 
-        float detailNoise = FractalNoise(u * 18.5f, v * 18.5f, 31);
-        float coarseNoise = FractalNoise(u * 5.75f, v * 5.75f, 53);
-        float breakup = Lerp(0.58f, 1.12f, detailNoise) *
-            Lerp(0.82f, 1.08f, coarseNoise);
-        byte alpha = ToByte(Math.Clamp(coverage * breakup, 0f, 1f));
-        return new Color32(255, 255, 255, alpha);
-    }
-
-    private static float AshOverlayCoverage(float u, float v)
-    {
-        float dx = u - 0.5f;
-        float dz = v - 0.5f;
-        float radialDistance = MathF.Sqrt((dx * dx) + (dz * dz));
-        float squareDistance = Math.Max(Math.Abs(dx), Math.Abs(dz));
-        float terrainDistance = Lerp(radialDistance, squareDistance, 0.32f);
-        float coverage = 1f - SmoothStep(AshOverlayCoreRadius, AshOverlayFeatherRadius, terrainDistance);
-        float terrainNoise = (FractalNoise(u * 8.5f, v * 8.5f, 101) - 0.5f) * 0.28f;
-        float edgeNoise = (FractalNoise(u * 21f, v * 21f, 131) - 0.5f) * 0.18f;
-        return Math.Clamp(coverage + (coverage * (terrainNoise + edgeNoise)), 0f, 1f);
-    }
-
-    private static float FractalNoise(float x, float z, int salt)
-    {
-        float first = ValueNoise(x, z, salt);
-        float second = ValueNoise((x * 2.07f) + 19.1f, (z * 2.07f) - 7.3f, salt + 37);
-        float third = ValueNoise((x * 4.13f) - 11.4f, (z * 4.13f) + 5.9f, salt + 71);
-        return Math.Clamp((first * 0.55f) + (second * 0.3f) + (third * 0.15f), 0f, 1f);
-    }
-
-    private static float ValueNoise(float x, float z, int salt)
-    {
-        int x0 = (int)Math.Floor(x);
-        int z0 = (int)Math.Floor(z);
-        float xFraction = x - x0;
-        float zFraction = z - z0;
-        float sx = SmoothStep01(xFraction);
-        float sz = SmoothStep01(zFraction);
-        float a = HashNoise(x0, z0, salt);
-        float b = HashNoise(x0 + 1, z0, salt);
-        float c = HashNoise(x0, z0 + 1, salt);
-        float d = HashNoise(x0 + 1, z0 + 1, salt);
-        return Lerp(Lerp(a, b, sx), Lerp(c, d, sx), sz);
-    }
-
-    private static float HashNoise(int x, int z, int salt)
-    {
-        unchecked
+        string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        if (!string.IsNullOrWhiteSpace(docs))
         {
-            int value = (x * 374761393) + (z * 668265263) + (salt * 1442695041);
-            value = (value ^ (value >> 13)) * 1274126177;
-            value ^= value >> 16;
-            return (value & 0x7FFFFFFF) / (float)int.MaxValue;
+            return Path.Combine(
+                docs, "Timberborn", "Mods", "Wildfire",
+                TimberbornGpuIndirectFireRenderer.PrivateBundleDirectoryName, bundleName);
+        }
+
+        throw new InvalidOperationException(
+            $"Could not resolve a path for Wildfire ash overlay AssetBundle '{bundleName}'.");
+    }
+
+    private static string? TryGetDirectoryName(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            string resolved = Path.IsPathRooted(path) ? path : Path.GetFullPath(path);
+            return Path.GetDirectoryName(resolved);
+        }
+        catch
+        {
+            return null;
         }
     }
 
-    private static float SmoothStep(float edge0, float edge1, float value)
+    private static string? TryGetParentDirectory(string? path)
     {
-        return SmoothStep01(Math.Clamp((value - edge0) / (edge1 - edge0), 0f, 1f));
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Directory.GetParent(path)?.FullName;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
-    private static float SmoothStep01(float value)
+    private static string EscapeLogValue(string value)
     {
-        float clamped = Math.Clamp(value, 0f, 1f);
-        return clamped * clamped * (3f - (2f * clamped));
-    }
-
-    private static float Lerp(float a, float b, float t)
-    {
-        return a + ((b - a) * t);
-    }
-
-    private static byte ToByte(float value)
-    {
-        return (byte)Math.Round(Math.Clamp(value, 0f, 1f) * 255f);
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 }
 
@@ -1028,6 +810,12 @@ public sealed class NullTimberbornGpuFieldRendererPresenter : ITimberbornGpuFiel
 
     public TimberbornGpuFieldRendererPresentationResult RenderRegions(
         IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
+    {
+        return TimberbornGpuFieldRendererPresentationResult.Disabled("null_presenter");
+    }
+
+    public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+        TimberbornGpuFieldRendererPresentation presentation)
     {
         return TimberbornGpuFieldRendererPresentationResult.Disabled("null_presenter");
     }

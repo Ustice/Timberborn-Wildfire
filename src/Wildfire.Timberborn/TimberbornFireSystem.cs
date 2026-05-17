@@ -55,6 +55,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private TimberbornQaDeltaStimulusSustainedHeatState? _qaDeltaStimulusSustainedHeatState;
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
+    private FireSimParameters _fireSimParameters = FireSimParameters.Default;
 
     public TimberbornFireSystem(IGpuFireSimulator fireSimulator)
         : this(fireSimulator, new TimberbornFireCellMapper(), NullTimberbornFireLogSink.Instance)
@@ -173,6 +174,7 @@ public sealed class TimberbornFireSystem : IDisposable
         }
 
         configurable.UpdateParameters(parameters);
+        _fireSimParameters = parameters;
         return true;
     }
 
@@ -952,6 +954,16 @@ public sealed class TimberbornFireSystem : IDisposable
         StartQaIgnitionPeg(changes, source);
         LogRegisteredChanges(source, changes.Length);
         return changes.Length;
+    }
+
+    private int GetQaIgnitionPegDispatchTicks()
+    {
+        return checked(QaIgnitionPegDispatchTicks * GetFireCellStepIntervalTicks());
+    }
+
+    private int GetFireCellStepIntervalTicks()
+    {
+        return checked((int)Math.Max(1u, _fireSimParameters.FireCellStepIntervalTicks));
     }
 
     private void StartQaIgnitionPeg(FireSimChange[] changes, string source)

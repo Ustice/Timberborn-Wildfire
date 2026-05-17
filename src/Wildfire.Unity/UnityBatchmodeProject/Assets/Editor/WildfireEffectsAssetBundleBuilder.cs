@@ -7,8 +7,9 @@ namespace Wildfire.UnityBatchmode
 {
     public static class WildfireEffectsAssetBundleBuilder
     {
-        private const string FlameAssetPath  = "Assets/WildfireGenerated/WildfireFlame.shader";
-        private const string CloudAssetPath  = "Assets/WildfireGenerated/WildfireCloud.shader";
+        private const string FlameAssetPath    = "Assets/WildfireGenerated/WildfireFlame.shader";
+        private const string CloudAssetPath    = "Assets/WildfireGenerated/WildfireCloud.shader";
+        private const string SmoothAssetPath   = "Assets/WildfireGenerated/WildfireSmoothing.compute";
 
         public static void Build()
         {
@@ -22,8 +23,9 @@ namespace Wildfire.UnityBatchmode
                     "bundle=" + arguments.BundleName +
                     " output=" + arguments.OutputDirectory);
 
-                ImportShader(arguments.FlameShaderPath, FlameAssetPath, arguments.BundleName);
-                ImportShader(arguments.CloudShaderPath, CloudAssetPath, arguments.BundleName);
+                ImportShader(arguments.FlameShaderPath,  FlameAssetPath,  arguments.BundleName);
+                ImportShader(arguments.CloudShaderPath,  CloudAssetPath,  arguments.BundleName);
+                ImportAsset( arguments.SmoothShaderPath, SmoothAssetPath, arguments.BundleName);
 
                 Directory.CreateDirectory(arguments.OutputDirectory);
 
@@ -32,14 +34,14 @@ namespace Wildfire.UnityBatchmode
                     new AssetBundleBuild
                     {
                         assetBundleName = arguments.BundleName,
-                        assetNames = new[] { FlameAssetPath, CloudAssetPath },
+                        assetNames = new[] { FlameAssetPath, CloudAssetPath, SmoothAssetPath },
                     },
                 };
 
                 Debug.Log(
                     "wildfire_effects_builder phase=build " +
                     "target=" + arguments.BuildTarget +
-                    " assets=" + FlameAssetPath + "," + CloudAssetPath);
+                    " assets=" + FlameAssetPath + "," + CloudAssetPath + "," + SmoothAssetPath);
 
                 AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(
                     arguments.OutputDirectory,
@@ -116,6 +118,41 @@ namespace Wildfire.UnityBatchmode
                 " bundle=" + bundleName);
         }
 
+        private static void ImportAsset(string sourcePath, string assetPath, string bundleName)
+        {
+            if (!File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException(
+                    "Wildfire effects asset source was not found: " + sourcePath, sourcePath);
+            }
+
+            string assetDirectory = Path.Combine(Application.dataPath, "WildfireGenerated");
+            Directory.CreateDirectory(assetDirectory);
+
+            string fileName = Path.GetFileName(assetPath);
+            string absoluteAssetPath = Path.Combine(assetDirectory, fileName);
+            File.Copy(sourcePath, absoluteAssetPath, overwrite: true);
+
+            AssetDatabase.ImportAsset(
+                assetPath,
+                ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh();
+
+            AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+            if (importer == null)
+            {
+                throw new InvalidOperationException(
+                    "Unity imported " + fileName + " but did not expose an AssetImporter.");
+            }
+
+            importer.assetBundleName = bundleName;
+            importer.SaveAndReimport();
+            Debug.Log(
+                "wildfire_effects_builder phase=import " +
+                "status=ok asset=" + assetPath +
+                " bundle=" + bundleName);
+        }
+
         private static string Escape(string value)
         {
             return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
@@ -126,6 +163,7 @@ namespace Wildfire.UnityBatchmode
     {
         public string FlameShaderPath;
         public string CloudShaderPath;
+        public string SmoothShaderPath;
         public string OutputDirectory;
         public string BundleName;
         public BuildTarget BuildTarget;
@@ -134,11 +172,12 @@ namespace Wildfire.UnityBatchmode
         {
             return new EffectsAssetBundleBuildArguments
             {
-                FlameShaderPath = ValueAfter(args, "--flame"),
-                CloudShaderPath = ValueAfter(args, "--cloud"),
-                OutputDirectory = ValueAfter(args, "--output"),
-                BundleName      = ValueAfter(args, "--bundle"),
-                BuildTarget     = ParseBuildTarget(ValueAfter(args, "--target")),
+                FlameShaderPath  = ValueAfter(args, "--flame"),
+                CloudShaderPath  = ValueAfter(args, "--cloud"),
+                SmoothShaderPath = ValueAfter(args, "--smooth"),
+                OutputDirectory  = ValueAfter(args, "--output"),
+                BundleName       = ValueAfter(args, "--bundle"),
+                BuildTarget      = ParseBuildTarget(ValueAfter(args, "--target")),
             };
         }
 

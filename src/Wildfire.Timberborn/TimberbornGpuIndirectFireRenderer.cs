@@ -7,36 +7,51 @@ namespace Wildfire.Timberborn;
 // Renders fire, smoke, and steam directly from the GPU simulation buffers via
 // Graphics.DrawProceduralIndirect — no CPU readback, no mesh rebuilds per frame.
 //
-// Flame: 5 tongue slots per cell, each a 3-vertex triangle drawn additive.
-// Smoke/Steam: 1 billboard quad per cell drawn with alpha blend.
+// Flame:  5 tongue slots per cell, each a bent 4-faced pyramid (36 verts).  Additive blend.
+// Smoke:  1 billboard quad per cell drawn with alpha blend.
+// Steam:  SteamPuffsPerCell rising billboard quads per cell drawn with alpha blend.
+//
+// A smoothing compute pass runs each frame, lerping a _SmoothedFields buffer toward
+// the live sim values so intensities ramp up/down rather than popping.
 //
 // Initialize() is called once after the simulator is created with a valid grid.
-// OnUpdate() is called every game frame to issue the GPU draw calls.
+// OnUpdate() is called every game frame to run the smoothing pass and issue draw calls.
 public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
 {
     public const string MacBundleName = "wildfire_effects_mac";
     public const string WindowsBundleName = "wildfire_effects_win";
     public const string PrivateBundleDirectoryName = "ComputeShaders";
 
-    private const int MaxTonguesPerCell = 5;
-    private const int VertsPerTongue = 3;
-    private const int VertsPerCloud = 6;
+    private const int MaxTonguesPerCell  = 5;
+    private const int VertsPerTongue     = 36;  // 4 pyramid faces × 9 verts (bottom quad + top tri)
+    private const int VertsPerCloud      = 6;
+    private const int SteamPuffsPerCell  = 3;
+
+    // Asymmetric smoothing rates (exponential lerp per second).
+    // Fast ramp-up for immediate ignition feedback; slow ramp-down for particle-lifetime feel.
+    private const float FireUpSpeed   = 4.0f;
+    private const float FireDownSpeed = 2.0f;
+    private const float SmokeUpSpeed  = 3.0f;
+    private const float SmokeDownSpeed = 1.0f;
 
     private readonly TimberbornComputeFireSimulator _simulator;
     private readonly FireGrid _grid;
     private readonly ITimberbornFireLogSink _logSink;
 
     private ComputeBuffer? _cellPositionsBuffer;
+    private ComputeBuffer? _smoothedFieldsBuffer;
     private ComputeBuffer? _flameArgsBuffer;
     private ComputeBuffer? _smokeArgsBuffer;
     private ComputeBuffer? _steamArgsBuffer;
-    private Material? _flameMaterial;
-    private Material? _smokeMaterial;
-    private Material? _steamMaterial;
-    private AssetBundle? _bundle;
-    private Bounds _gridBounds;
-    private bool _initialized;
-    private bool _disposed;
+    private Material?      _flameMaterial;
+    private Material?      _smokeMaterial;
+    private Material?      _steamMaterial;
+    private ComputeShader? _smoothingShader;
+    private int            _smoothingKernel;
+    private AssetBundle?   _bundle;
+    private Bounds         _gridBounds;
+    private bool           _initialized;
+    private bool           _disposed;
 
     public TimberbornGpuIndirectFireRenderer(
         TimberbornComputeFireSimulator simulator,
@@ -61,8 +76,10 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         {
             LoadBundle();
             BuildCellPositionsBuffer();
+            BuildSmoothedFieldsBuffer();
             BuildIndirectArgsBuffers();
             BuildMaterials();
+            LoadSmoothingShader();
             _gridBounds = ComputeGridBounds();
             _initialized = true;
             _logSink.Info(
@@ -86,13 +103,16 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
             return;
         }
 
-        // The atmospheric buffer swaps each simulation tick; re-bind the current pointer.
-        // material.SetBuffer is cheap — just sets a native pointer.
+        // The atmospheric buffer swaps each simulation tick; re-bind before the smoothing dispatch.
         ComputeBuffer atmosphericBuffer = _simulator.CurrentAtmosphericFieldsBuffer;
-        _smokeMaterial!.SetBuffer("_AtmosphericFields", atmosphericBuffer);
-        _steamMaterial!.SetBuffer("_AtmosphericFields", atmosphericBuffer);
+        _smoothingShader!.SetBuffer(_smoothingKernel, "_AtmosphericFields", atmosphericBuffer);
+        _smoothingShader.SetFloat("_DeltaTime", Time.deltaTime);
 
-        // Issue GPU-driven draw calls. Zero per-frame CPU work below this line.
+        // Smooth visual intensities toward live sim values (ramp-up/ramp-down).
+        int threadGroups = (_grid.CellCount + 63) / 64;
+        _smoothingShader.Dispatch(_smoothingKernel, threadGroups, 1, 1);
+
+        // GPU-driven draw calls — no per-frame CPU work below this line.
         Graphics.DrawProceduralIndirect(
             _flameMaterial!, _gridBounds, MeshTopology.Triangles, _flameArgsBuffer!);
         Graphics.DrawProceduralIndirect(
@@ -147,9 +167,9 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
 
     private void BuildCellPositionsBuffer()
     {
-        int width = _grid.Width;
+        int width  = _grid.Width;
         int height = _grid.Height;
-        int depth = _grid.Depth;
+        int depth  = _grid.Depth;
         int cellCount = _grid.CellCount;
 
         Vector3[] positions = new Vector3[cellCount];
@@ -160,7 +180,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
                 for (int x = 0; x < width; x++)
                 {
                     int idx = x + y * width + z * width * height;
-                    // Timberborn grid (x=east, y=north, z=level) → Unity world (x=east, y=up, z=north)
+                    // Timberborn (x=east, y=north, z=level) → Unity world (x=east, y=up, z=north)
                     positions[idx] = new Vector3(x + 0.5f, z, y + 0.5f);
                 }
             }
@@ -169,6 +189,14 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _cellPositionsBuffer = new ComputeBuffer(cellCount, sizeof(float) * 3, ComputeBufferType.Structured);
         _cellPositionsBuffer.SetData(positions);
         _cellPositionsBuffer.name = "wildfire.cell_world_positions";
+    }
+
+    private void BuildSmoothedFieldsBuffer()
+    {
+        // float4 per cell: (smoothedFire, smoothedSmoke, smoothedSmokeContam, smoothedSteam).
+        // Starts at zero; the smoothing compute fills it each frame.
+        _smoothedFieldsBuffer = new ComputeBuffer(_grid.CellCount, sizeof(float) * 4, ComputeBufferType.Structured);
+        _smoothedFieldsBuffer.name = "wildfire.smoothed_fields";
     }
 
     private void BuildIndirectArgsBuffers()
@@ -200,7 +228,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _steamArgsBuffer.SetData(new uint[]
         {
             (uint)VertsPerCloud,
-            (uint)cellCount,
+            (uint)(cellCount * SteamPuffsPerCell),
             0u,
             0u,
         });
@@ -213,35 +241,44 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         Shader cloudShader = LoadShader("WildfireCloud");
 
         _flameMaterial = new Material(flameShader) { name = "wildfire_flame" };
-        _flameMaterial.SetBuffer("_VisualFields", _simulator.VisualFieldsBuffer);
+        _flameMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _flameMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
 
         _smokeMaterial = new Material(cloudShader) { name = "wildfire_smoke" };
+        _smokeMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _smokeMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
-        _smokeMaterial.SetColor("_BaseColor", new Color(0.45f, 0.45f, 0.45f));
-        _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));
-        _smokeMaterial.SetFloat("_IsSteam", 0f);
+        _smokeMaterial.SetColor("_BaseColor",   new Color(0.45f, 0.45f, 0.45f));
+        _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
+        _smokeMaterial.SetFloat("_IsSteam",       0f);
+        _smokeMaterial.SetFloat("_PuffsPerCell",   1f);
 
         _steamMaterial = new Material(cloudShader) { name = "wildfire_steam" };
+        _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
-        _steamMaterial.SetColor("_BaseColor", new Color(0.92f, 0.94f, 0.96f));
-        _steamMaterial.SetFloat("_IsSteam", 1f);
+        _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
+        _steamMaterial.SetFloat("_IsSteam",       1f);
+        _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
+        _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
+    }
+
+    private void LoadSmoothingShader()
+    {
+        _smoothingShader = LoadComputeShader("WildfireSmoothing");
+        _smoothingKernel = _smoothingShader.FindKernel("SmoothFields");
+
+        _smoothingShader.SetBuffer(_smoothingKernel, "_VisualFields",   _simulator.VisualFieldsBuffer);
+        _smoothingShader.SetBuffer(_smoothingKernel, "_SmoothedFields", _smoothedFieldsBuffer!);
+        _smoothingShader.SetInt(   "_CellCount",   _grid.CellCount);
+        _smoothingShader.SetFloat( "_FireUpSpeed",   FireUpSpeed);
+        _smoothingShader.SetFloat( "_FireDownSpeed", FireDownSpeed);
+        _smoothingShader.SetFloat( "_SmokeUpSpeed",  SmokeUpSpeed);
+        _smoothingShader.SetFloat( "_SmokeDownSpeed",SmokeDownSpeed);
     }
 
     private Shader LoadShader(string assetName)
     {
-        string[] assetPaths = _bundle!.GetAllAssetNames();
-        string? path = assetPaths.FirstOrDefault(p =>
-            p.EndsWith(assetName + ".shader", StringComparison.OrdinalIgnoreCase));
-
-        if (path is null)
-        {
-            throw new InvalidOperationException(
-                $"Wildfire effects AssetBundle did not contain {assetName}.shader. " +
-                $"Assets: {string.Join(",", assetPaths)}");
-        }
-
-        Shader? shader = _bundle.LoadAsset<Shader>(path);
+        string path = FindAssetPath(assetName + ".shader");
+        Shader? shader = _bundle!.LoadAsset<Shader>(path);
         if (shader == null)
         {
             throw new InvalidOperationException(
@@ -252,9 +289,38 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         return shader;
     }
 
+    private ComputeShader LoadComputeShader(string assetName)
+    {
+        string path = FindAssetPath(assetName + ".compute");
+        ComputeShader? shader = _bundle!.LoadAsset<ComputeShader>(path);
+        if (shader == null)
+        {
+            throw new InvalidOperationException(
+                $"Unity loaded '{path}' but it was not a valid ComputeShader asset.");
+        }
+
+        _logSink.Info($"wildfire_timberborn_effects_compute_loaded name={assetName}");
+        return shader;
+    }
+
+    private string FindAssetPath(string fileName)
+    {
+        string[] assetPaths = _bundle!.GetAllAssetNames();
+        string? path = assetPaths.FirstOrDefault(p =>
+            p.EndsWith(fileName, StringComparison.OrdinalIgnoreCase));
+
+        if (path is null)
+        {
+            throw new InvalidOperationException(
+                $"Wildfire effects AssetBundle did not contain {fileName}. " +
+                $"Assets: {string.Join(",", assetPaths)}");
+        }
+
+        return path;
+    }
+
     private Bounds ComputeGridBounds()
     {
-        // Cover the entire fire grid plus vertical room for flame tongues and clouds.
         float cx = _grid.Width  * 0.5f;
         float cz = _grid.Height * 0.5f;
         float cy = _grid.Depth  * 0.5f + 2f;
@@ -266,13 +332,16 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private void DisposeGpuResources()
     {
         _cellPositionsBuffer?.Dispose();
+        _smoothedFieldsBuffer?.Dispose();
         _flameArgsBuffer?.Dispose();
         _smokeArgsBuffer?.Dispose();
         _steamArgsBuffer?.Dispose();
-        _cellPositionsBuffer = null;
-        _flameArgsBuffer = null;
-        _smokeArgsBuffer = null;
-        _steamArgsBuffer = null;
+        _cellPositionsBuffer  = null;
+        _smoothedFieldsBuffer = null;
+        _flameArgsBuffer      = null;
+        _smokeArgsBuffer      = null;
+        _steamArgsBuffer      = null;
+        _smoothingShader      = null;
 
         DestroyMaterial(ref _flameMaterial);
         DestroyMaterial(ref _smokeMaterial);

@@ -58,7 +58,7 @@ RWStructuredBuffer<uint> CurrentCells;
 RWStructuredBuffer<uint> NextCells;
 RWStructuredBuffer<uint> CurrentAtmosphericFields;
 RWStructuredBuffer<uint> NextAtmosphericFields;
-StructuredBuffer<uint> CompanionFields;
+RWStructuredBuffer<uint> CompanionFields;
 StructuredBuffer<FireSimChangeGpu> ExternalChanges;
 AppendStructuredBuffer<CellDeltaGpu> Deltas;
 RWStructuredBuffer<float4> VisualFields;
@@ -247,6 +247,27 @@ uint CompanionAshQuality(uint companion)
     return (companion >> 20) & 0x3u;
 }
 
+uint CompanionAshStrength(uint companion)
+{
+    return (companion >> 16) & 0xFu;
+}
+
+uint CompanionAshLevel(uint companion)
+{
+    return CompanionAshStrength(companion) & 0x3u;
+}
+
+uint CompanionAshContaminationLevel(uint companion)
+{
+    return (CompanionAshStrength(companion) >> 2) & 0x3u;
+}
+
+uint WithCompanionAshLevels(uint companion, uint ashLevel, uint ashContaminationLevel)
+{
+    uint packedAsh = (min(3u, ashLevel) & 0x3u) | ((min(3u, ashContaminationLevel) & 0x3u) << 2);
+    return (companion & ~(0xFu << 16)) | (packedAsh << 16);
+}
+
 uint CompanionMaterialClass(uint companion)
 {
     return companion & 0xFFu;
@@ -272,6 +293,57 @@ uint SteamSourceFromMoistureAndHeat(uint cell)
 uint NeighborAtmospheric(uint3 coordinate)
 {
     return CurrentAtmosphericFields[ToIndex(coordinate)] & 0xFFFFu;
+}
+
+uint SourceContamination(uint companion)
+{
+    uint contaminationBehavior = CompanionContaminationBehavior(companion);
+    uint ashQuality = CompanionAshQuality(companion);
+    return (contaminationBehavior == 2u || contaminationBehavior == 4u || ashQuality == 3u) ? 7u : 0u;
+}
+
+uint FalloutAshLevel(uint atmospheric)
+{
+    uint ash = AtmosphericAsh(atmospheric);
+    if (ash == 0u)
+    {
+        return 0u;
+    }
+
+    return min(3u, max(1u, (ash + 1u) / 2u));
+}
+
+uint FalloutAshContaminationLevel(uint atmospheric)
+{
+    uint contamination = AtmosphericAshContamination(atmospheric);
+    if (contamination == 0u)
+    {
+        return 0u;
+    }
+
+    return min(3u, max(1u, (contamination + 1u) / 2u));
+}
+
+uint UpdateCompanionAsh(uint companion, uint oldCell, uint newCell, uint atmospheric)
+{
+    uint ashLevel = CompanionAshLevel(companion);
+    uint ashContaminationLevel = CompanionAshContaminationLevel(companion);
+    uint falloutAshLevel = FalloutAshLevel(atmospheric);
+    uint falloutContaminationLevel = FalloutAshContaminationLevel(atmospheric);
+
+    ashLevel = max(ashLevel, falloutAshLevel);
+    ashContaminationLevel = max(ashContaminationLevel, falloutContaminationLevel);
+
+    if (Water(newCell) > 0u && ashLevel > 0u)
+    {
+        ashLevel -= 1u;
+        if (ashLevel == 0u)
+        {
+            ashContaminationLevel = 0u;
+        }
+    }
+
+    return WithCompanionAshLevels(companion, ashLevel, ashContaminationLevel);
 }
 
 uint NeighborSmokeContribution(uint3 coordinate, uint penalty)
@@ -629,8 +701,10 @@ void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
     uint oldAtmospheric = CurrentAtmosphericFields[index];
     uint newCell = StepCell(index, id, oldCell, oldAtmospheric);
     uint atmospheric = BuildAtmosphericField(index, id, oldCell, newCell);
+    uint companion = UpdateCompanionAsh(CompanionFields[index], oldCell, newCell, atmospheric);
     NextCells[index] = newCell;
     NextAtmosphericFields[index] = atmospheric;
+    CompanionFields[index] = companion;
     WriteVisualField(index, newCell, atmospheric);
     AppendDelta(index, oldCell, newCell);
 }

@@ -70,6 +70,29 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         int cellCount,
         int strideBytes,
         IReadOnlyList<string> channels)
+        : this(
+            visualFieldsBuffer,
+            atmosphericFieldsBuffer,
+            companionFieldsBuffer: null,
+            width,
+            height,
+            depth,
+            cellCount,
+            strideBytes,
+            channels)
+    {
+    }
+
+    public TimberbornGpuVisualFieldSurfaceBinding(
+        object visualFieldsBuffer,
+        object? atmosphericFieldsBuffer,
+        object? companionFieldsBuffer,
+        int width,
+        int height,
+        int depth,
+        int cellCount,
+        int strideBytes,
+        IReadOnlyList<string> channels)
     {
         if (visualFieldsBuffer is null)
         {
@@ -97,6 +120,7 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
 
         VisualFieldsBuffer = visualFieldsBuffer;
         AtmosphericFieldsBuffer = atmosphericFieldsBuffer;
+        CompanionFieldsBuffer = companionFieldsBuffer;
         Width = width;
         Height = height;
         Depth = depth;
@@ -108,6 +132,8 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
     public object VisualFieldsBuffer { get; }
 
     public object? AtmosphericFieldsBuffer { get; }
+
+    public object? CompanionFieldsBuffer { get; }
 
     public int Width { get; }
 
@@ -138,6 +164,21 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         return new TimberbornGpuVisualFieldSurfaceBinding(
             VisualFieldsBuffer,
             atmosphericFieldsBuffer,
+            CompanionFieldsBuffer,
+            Width,
+            Height,
+            Depth,
+            CellCount,
+            StrideBytes,
+            Channels);
+    }
+
+    public TimberbornGpuVisualFieldSurfaceBinding WithCompanionFieldsBuffer(object? companionFieldsBuffer)
+    {
+        return new TimberbornGpuVisualFieldSurfaceBinding(
+            VisualFieldsBuffer,
+            AtmosphericFieldsBuffer,
+            companionFieldsBuffer,
             Width,
             Height,
             Depth,
@@ -431,6 +472,14 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         if (_isBound)
         {
             _surface.Bind(_binding.WithAtmosphericFieldsBuffer(atmosphericFieldsBuffer));
+        }
+    }
+
+    public void UpdateCompanionFieldsBuffer(object? companionFieldsBuffer)
+    {
+        if (_isBound)
+        {
+            _surface.Bind(_binding.WithCompanionFieldsBuffer(companionFieldsBuffer));
         }
     }
 
