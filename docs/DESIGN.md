@@ -606,7 +606,7 @@ Release-scope behavior is conservative:
 
 - Required: exposure telemetry by field class, work-cancellation decisions, safe no-op counters, and player-facing aggregated danger feedback.
 - Accepted if API-safe: avoidance/path-cost hints, coughing slowdown, singed injury, and burned severe injury.
-- Deferred: automatic death, forced incapacitation, native contamination coupling, ash collection behavior, firefighting panic, faction-specific response behavior, and arbitrary path graph mutation.
+- Deferred: automatic death, forced incapacitation, native contamination coupling, beaver health effects from ash, firefighting panic, faction-specific response behavior, and arbitrary path graph mutation.
 
 Validation should use the real field outputs, not hard-coded per-beaver triggers. Deterministic tests can emulate field samples, but live QA must prove that a real fire or suppression event produces beaver exposure telemetry before any behavior is accepted.
 
@@ -625,7 +625,16 @@ Ash quality should be explicit:
 - `spent`: visible or historical ash without growth benefit.
 - `tainted`: contaminated ash with no fertility benefit unless a later decontamination mechanic says otherwise.
 
-For the first gameplay pass, fertile ash can increase plant growth speed. Later work may allow beavers to collect fertile ash and place it in fields. Controlled burns can become a useful strategy for fuel management and soil improvement, but the field should have caps, decay, or application limits so burning land is not always optimal.
+For the first gameplay pass, fertile ash can increase plant growth speed. Beavers can later collect fertile ash as a `FertileAsh` good and place it back onto player-designated planting areas. Controlled burns can become a useful strategy for fuel management and soil improvement, but the field should have caps, decay, or application limits so burning land is not always optimal.
+
+Fertile ash placement should use Timberborn-style area tools instead of automatic spreading from storage. Add two toolbar options:
+
+- `Fertilize crops` in the `Fields` tool group. This tool designates crop planting squares and is serviced by Farmhouse-style workers for plantables whose resource group is `Farmhouse`.
+- `Fertilize trees and bushes` in the `Forestry` tool group. This tool designates forestry planting squares and is serviced by Forester-style workers for plantables whose resource group is `Forester`, including berry bushes, coffee bushes, dandelions, and trees.
+
+Both tools should share one designation and application backend. Dragging over squares creates fertile-ash application designations; a remove mode clears them. Workers should consume `FertileAsh` from available inventory, apply a bounded amount of fertile ash strength to the designated cell, and then let the existing ash field service and growable adapter apply the growth benefit. `1 FertileAsh` good should map back to the same ash strength used by collection, currently `25` strength. Designations on tainted ash cells should remain blocked and must not consume goods unless a later explicit decontamination mechanic is designed.
+
+The toolbar tools should expose enough status to explain the job loop: crop designations, forestry designations, pending cells, applied cells, consumed goods, skipped cells with no goods, skipped cells with no eligible growable, tainted-blocked cells, and safe-API failures. This is player-designated field work, not a second fire simulation rule and not a separate growth multiplier outside the ash field service.
 
 Underbrush, grass, and overgrowth are future fuel-load mechanics. A later design can model overgrown trees or irrigated fields as fast-burning surface fuel while mature trees burn more slowly. That should stay separate from the first ash-field implementation.
 

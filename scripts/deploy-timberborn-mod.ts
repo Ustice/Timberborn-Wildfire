@@ -3,7 +3,9 @@
 import {
   copyFileSync,
   existsSync,
+  cpSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -51,6 +53,7 @@ const lockInfoPath = join(lockDir, "lock.json");
 const modFolderName = "Wildfire";
 const unityProjectPath = join(repoRoot, "src", "Wildfire.Unity", "UnityBatchmodeProject");
 const computeShaderPath = join(repoRoot, "src", "Wildfire.Unity", "FireSim.compute");
+const timberbornDataPath = join(repoRoot, "src", "Wildfire.Timberborn", "Data");
 const flameShaderPath   = join(repoRoot, "src", "Wildfire.Unity", "WildfireFlame.shader");
 const cloudShaderPath   = join(repoRoot, "src", "Wildfire.Unity", "WildfireCloud.shader");
 const smoothShaderPath  = join(repoRoot, "src", "Wildfire.Unity", "WildfireSmoothing.compute");
@@ -355,6 +358,25 @@ const createCopyPlan = (options: DeployOptions): CopyPlan[] => {
   ];
 };
 
+const copyModData = (targetDir: string, dryRun: boolean): void => {
+  if (!existsSync(timberbornDataPath)) {
+    return;
+  }
+
+  if (dryRun) {
+    readdirSync(timberbornDataPath).forEach((entry) => {
+      log(`dry-run copy ${join(timberbornDataPath, entry)} -> ${join(targetDir, entry)}`);
+    });
+    return;
+  }
+
+  mkdirSync(targetDir, { recursive: true });
+  readdirSync(timberbornDataPath).forEach((entry) => {
+    cpSync(join(timberbornDataPath, entry), join(targetDir, entry), { recursive: true });
+    log(`copied ${join(timberbornDataPath, entry)} -> ${join(targetDir, entry)}`);
+  });
+};
+
 const runUnityAssetBundleBuild = (options: DeployOptions): void => {
   if (options.skipAssetBundle) {
     log("skip_asset_bundle=true");
@@ -464,6 +486,7 @@ const printPlan = (options: DeployOptions, plan: CopyPlan[]): void => {
   log(`asset_bundle_target=${assetBundleTarget}`);
   log(`asset_bundles=${assetBundleArtifacts.map((artifact) => artifact.name).join(",")}`);
   log(`asset_bundle_output_dir=${getAssetBundleOutputDir()}`);
+  log(`mod_data=${timberbornDataPath}`);
   log(`skip_asset_bundle=${options.skipAssetBundle}`);
   log(`mods_dir=${options.modsDir}`);
   log(`target_dir=${targetDir}`);
@@ -569,6 +592,7 @@ const main = (): void => {
     }
 
     writeManifest(targetDir, options.dryRun);
+    copyModData(targetDir, options.dryRun);
     copyArtifacts(plan, options.dryRun);
 
     if (!options.dryRun) {

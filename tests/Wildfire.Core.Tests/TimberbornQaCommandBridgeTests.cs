@@ -2090,7 +2090,25 @@ public sealed class TimberbornQaCommandBridgeTests
             WorldImportResolvedInfrastructureCells: 0,
             WorldImportResolvedWaterCells: 0,
             WorldImportResolvedBadwaterCells: 0,
-            WorldImportSafeUnavailableCount: 3);
+            WorldImportSafeUnavailableCount: 3,
+            AshFieldEntries: 4,
+            AshFieldFertileCells: 2,
+            AshFieldSpentCells: 1,
+            AshFieldTaintedCells: 1,
+            AshFieldGrowthCandidateCells: 2,
+            AshFieldGrowthAppliedGrowables: 1,
+            AshFieldGrowthSkippedTaintedCells: 1,
+            AshFieldGrowthSkippedUnsafeApis: 0,
+            TaintedAshPoisonCandidateCells: 1,
+            TaintedAshPoisonAppliedCells: 1,
+            TaintedAshPoisonSkippedNoSafeApi: 0,
+            FertileAshGathererPosts: 2,
+            FertileAshCollectionCandidateCells: 2,
+            FertileAshCollectionReachableCells: 1,
+            FertileAshCollectedGoods: 1,
+            FertileAshCollectionDepletedCells: 1,
+            FertileAshCollectionSkippedTaintedOrSpentCells: 2,
+            FertileAshCollectionSkippedInventoryApi: 0);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -2192,6 +2210,24 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("world_import_resolved_vegetation_cells=3", result.ResultToken);
         Assert.Contains("world_import_resolved_tree_cells=2", result.ResultToken);
         Assert.Contains("world_import_safe_unavailable=3", result.ResultToken);
+        Assert.Contains("ash_field_entries=4", result.ResultToken);
+        Assert.Contains("ash_field_fertile_cells=2", result.ResultToken);
+        Assert.Contains("ash_field_spent_cells=1", result.ResultToken);
+        Assert.Contains("ash_field_tainted_cells=1", result.ResultToken);
+        Assert.Contains("ash_field_growth_candidate_cells=2", result.ResultToken);
+        Assert.Contains("ash_field_growth_applied_growables=1", result.ResultToken);
+        Assert.Contains("ash_field_growth_skipped_tainted_cells=1", result.ResultToken);
+        Assert.Contains("ash_field_growth_skipped_unsafe_apis=0", result.ResultToken);
+        Assert.Contains("tainted_ash_poison_candidate_cells=1", result.ResultToken);
+        Assert.Contains("tainted_ash_poison_applied_cells=1", result.ResultToken);
+        Assert.Contains("tainted_ash_poison_skipped_no_safe_api=0", result.ResultToken);
+        Assert.Contains("fertile_ash_gatherer_posts=2", result.ResultToken);
+        Assert.Contains("fertile_ash_collection_candidate_cells=2", result.ResultToken);
+        Assert.Contains("fertile_ash_collection_reachable_cells=1", result.ResultToken);
+        Assert.Contains("fertile_ash_collected_goods=1", result.ResultToken);
+        Assert.Contains("fertile_ash_collection_depleted_cells=1", result.ResultToken);
+        Assert.Contains("fertile_ash_collection_skipped_tainted_or_spent_cells=2", result.ResultToken);
+        Assert.Contains("fertile_ash_collection_skipped_inventory_api=0", result.ResultToken);
     }
 
     [Fact]

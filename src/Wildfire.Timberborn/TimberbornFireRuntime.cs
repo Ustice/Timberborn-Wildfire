@@ -35,6 +35,8 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
     private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
     private readonly TimberbornAshFieldService _ashFieldService;
+    private readonly TimberbornTaintedAshSoilPoisoningService _taintedAshSoilPoisoningService;
+    private readonly TimberbornFertileAshCollectionService _fertileAshCollectionService;
     private readonly ISingletonLoader _singletonLoader;
     private readonly ISoilContaminationService _soilContaminationService;
     private readonly WildfireReleaseSettings _releaseSettings;
@@ -115,6 +117,12 @@ public sealed class TimberbornFireRuntime :
                 CurrentGrid,
                 _logSink),
             _logSink);
+        _taintedAshSoilPoisoningService = new TimberbornTaintedAshSoilPoisoningService(
+            new TimberbornSoilContaminationAshPoisoningAdapter(_soilContaminationService, CurrentGrid, _logSink),
+            _logSink);
+        _fertileAshCollectionService = new TimberbornFertileAshCollectionService(
+            new TimberbornGathererPostFertileAshCollectionAdapter(entityRegistry, CurrentGrid, _logSink),
+            _logSink);
         EntitySelectionService selectionService =
             entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService));
         _selectedTreeTargetProvider = new TimberbornSelectedTreeTargetProvider(
@@ -148,6 +156,8 @@ public sealed class TimberbornFireRuntime :
         _playerFireAlertCameraFocus.Clear();
         _beaverHazardAvoidance.Clear();
         _ashFieldService.Clear();
+        _taintedAshSoilPoisoningService.Clear();
+        _fertileAshCollectionService.Clear();
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
@@ -198,6 +208,9 @@ public sealed class TimberbornFireRuntime :
 
             if (result.DidDispatch)
             {
+                uint tick = result.Step?.Tick ?? _fireSystem?.LastTick ?? 0;
+                _taintedAshSoilPoisoningService.Apply(tick, _ashFieldService.Entries);
+                _fertileAshCollectionService.Apply(tick, _ashFieldService);
                 _logSink.Info(
                     $"wildfire_timberborn_runtime_dispatched game_update_id={_gameUpdateId} tick={result.Step?.Tick} delta_count={result.Step?.Deltas.Count}");
             }
@@ -606,6 +619,11 @@ public sealed class TimberbornFireRuntime :
             fireSystem.QaDeltaStimulusSustainedHeatState;
         TimberbornSelectedCropTargetDiagnostics selectedCropDiagnostics =
             _selectedCropTargetProvider.LastDiagnostics;
+        TimberbornAshFieldSummary ashFieldSummary = _ashFieldService.LastSummary;
+        TimberbornTaintedAshSoilPoisoningSummary taintedAshSummary =
+            _taintedAshSoilPoisoningService.LastSummary;
+        TimberbornFertileAshCollectionSummary fertileAshCollectionSummary =
+            _fertileAshCollectionService.LastSummary;
 
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
@@ -768,6 +786,24 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerWaterInfrastructureSkippedNoSafeApiCount: deltaConsumerSummary.WaterInfrastructureSkippedNoSafeApiCount,
             LastDeltaConsumerWaterInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.WaterInfrastructureRepairEligibleTargetCount,
             LastDeltaConsumerWaterInfrastructureTotalDamageApplied: deltaConsumerSummary.WaterInfrastructureTotalDamageApplied,
+            AshFieldEntries: _ashFieldService.Entries.Count,
+            AshFieldFertileCells: ashFieldSummary.FertileAshCellCount,
+            AshFieldSpentCells: ashFieldSummary.SpentAshCellCount,
+            AshFieldTaintedCells: ashFieldSummary.TaintedAshCellCount,
+            AshFieldGrowthCandidateCells: ashFieldSummary.GrowthCandidateCellCount,
+            AshFieldGrowthAppliedGrowables: ashFieldSummary.GrowthAppliedGrowableCount,
+            AshFieldGrowthSkippedTaintedCells: ashFieldSummary.GrowthSkippedTaintedCellCount,
+            AshFieldGrowthSkippedUnsafeApis: ashFieldSummary.GrowthSkippedUnsafeApiCount,
+            TaintedAshPoisonCandidateCells: taintedAshSummary.CandidateCellCount,
+            TaintedAshPoisonAppliedCells: taintedAshSummary.AppliedCellCount,
+            TaintedAshPoisonSkippedNoSafeApi: taintedAshSummary.SkippedNoSafeApiCount,
+            FertileAshGathererPosts: fertileAshCollectionSummary.GathererPostCount,
+            FertileAshCollectionCandidateCells: fertileAshCollectionSummary.CandidateCellCount,
+            FertileAshCollectionReachableCells: fertileAshCollectionSummary.ReachableCellCount,
+            FertileAshCollectedGoods: fertileAshCollectionSummary.CollectedGoodCount,
+            FertileAshCollectionDepletedCells: fertileAshCollectionSummary.DepletedAshCellCount,
+            FertileAshCollectionSkippedTaintedOrSpentCells: fertileAshCollectionSummary.SkippedTaintedOrSpentCellCount,
+            FertileAshCollectionSkippedInventoryApi: fertileAshCollectionSummary.SkippedInventoryApiCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,

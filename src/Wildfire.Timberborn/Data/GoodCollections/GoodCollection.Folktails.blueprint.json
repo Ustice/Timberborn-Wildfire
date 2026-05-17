@@ -1,0 +1,8 @@
+{
+  "GoodCollectionSpec": {
+    "CollectionId": "Folktails",
+    "Goods#append": [
+      "FertileAsh"
+    ]
+  }
+}

@@ -93,6 +93,11 @@ public sealed record TimberbornAshFieldSnapshot(
     int PersistenceVersion,
     IReadOnlyList<TimberbornAshFieldEntry> Entries);
 
+public readonly record struct TimberbornAshFieldCollectionRemoval(
+    int CellIndex,
+    int StrengthRemoved,
+    bool RemovedEntry);
+
 public readonly record struct TimberbornAshFieldSummary(
     uint Tick,
     int SourceEventCount,
@@ -149,6 +154,7 @@ public sealed class TimberbornAshFieldService
 {
     public const int MaxStrength = 100;
     public const int DefaultDecayPerTick = 1;
+    public const string FertileAshGoodId = "FertileAsh";
 
     private readonly Dictionary<int, TimberbornAshFieldEntry> _entries = new();
     private readonly ITimberbornAshGrowthAdapter _growthAdapter;
@@ -228,6 +234,29 @@ public sealed class TimberbornAshFieldService
     public TimberbornAshFieldSummary Advance(uint tick)
     {
         return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: 0);
+    }
+
+    public TimberbornAshFieldCollectionRemoval RemoveCollectedFertileStrength(
+        int cellIndex,
+        int strengthToRemove)
+    {
+        if (strengthToRemove <= 0 ||
+            !_entries.TryGetValue(cellIndex, out TimberbornAshFieldEntry entry) ||
+            entry.Quality != WildfireAshQuality.Fertile)
+        {
+            return new TimberbornAshFieldCollectionRemoval(cellIndex, 0, RemovedEntry: false);
+        }
+
+        int removedStrength = Math.Min(entry.Strength, strengthToRemove);
+        int remainingStrength = entry.Strength - removedStrength;
+        if (remainingStrength <= 0)
+        {
+            _entries.Remove(cellIndex);
+            return new TimberbornAshFieldCollectionRemoval(cellIndex, removedStrength, RemovedEntry: true);
+        }
+
+        _entries[cellIndex] = entry with { Strength = remainingStrength };
+        return new TimberbornAshFieldCollectionRemoval(cellIndex, removedStrength, RemovedEntry: false);
     }
 
     public TimberbornAshFieldSnapshot SaveSnapshot()

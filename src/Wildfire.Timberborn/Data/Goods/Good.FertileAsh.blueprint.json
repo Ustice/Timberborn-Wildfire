@@ -1,0 +1,25 @@
+{
+  "GoodSpec": {
+    "Id": "FertileAsh",
+    "BackwardCompatibleIds": [],
+    "ConsumptionEffects": [],
+    "GoodType": "Box",
+    "StockpileVisualization": "Box",
+    "VisibleContainer": "Box",
+    "ContainerColor": {
+      "r": 0.2901961,
+      "g": 0.2901961,
+      "b": 0.2901961,
+      "a": 1.0
+    },
+    "ContainerMaterial": "",
+    "CarryingAnimation": "CarryInHands",
+    "Weight": 1,
+    "GoodGroupId": "Materials",
+    "GoodOrder": 8060,
+    "Icon": "Sprites/Goods/DirtIcon",
+    "ForceImport": true,
+    "DisplayNameLocKey": "Good.FertileAsh.DisplayName",
+    "PluralDisplayNameLocKey": "Good.FertileAsh.PluralDisplayName"
+  }
+}

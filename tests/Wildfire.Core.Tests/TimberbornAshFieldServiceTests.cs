@@ -267,6 +267,91 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(0, summary.GrowthAppliedGrowableCount);
     }
 
+    [Fact]
+    public void TaintedAshSoilPoisoningSkipsUnavailableNativeMutation()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        service.ApplySources(
+            60,
+            [
+                SourceEvent(
+                    cellIndex: 12,
+                    materialKind: TimberbornBurnMaterialKind.Organic,
+                    strength: 100,
+                    isAffectedCellContaminated: true),
+            ]);
+        TimberbornTaintedAshSoilPoisoningService poisoning = new();
+
+        TimberbornTaintedAshSoilPoisoningSummary summary = poisoning.Apply(61, service.Entries);
+
+        Assert.Equal(1, summary.CandidateCellCount);
+        Assert.Equal(0, summary.AppliedCellCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+    }
+
+    [Fact]
+    public void FertileAshCollectionDepletesOnlyCollectedFertileCells()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        service.ApplySources(
+            70,
+            [
+                SourceEvent(
+                    cellIndex: 13,
+                    materialKind: TimberbornBurnMaterialKind.Organic,
+                    strength: 50),
+                SourceEvent(
+                    cellIndex: 14,
+                    materialKind: TimberbornBurnMaterialKind.Organic,
+                    strength: 100,
+                    isSourceContaminated: true),
+            ]);
+        TimberbornFertileAshCollectionService collection = new(new RecordingFertileAshCollectionAdapter(
+            [
+                new TimberbornFertileAshCollectedCell(
+                    CellIndex: 13,
+                    StrengthToRemove: TimberbornFertileAshCollectionService.StrengthPerGood,
+                    GoodAmount: 1),
+            ]));
+
+        TimberbornFertileAshCollectionSummary summary = collection.Apply(71, service);
+
+        Assert.Equal(1, summary.CollectedGoodCount);
+        Assert.Equal(0, summary.DepletedAshCellCount);
+        Assert.Equal(1, summary.SkippedTaintedOrSpentCellCount);
+        Assert.True(service.TryGetEntry(13, out TimberbornAshFieldEntry fertile));
+        Assert.Equal(25, fertile.Strength);
+        Assert.True(service.TryGetEntry(14, out TimberbornAshFieldEntry tainted));
+        Assert.Equal(WildfireAshQuality.Tainted, tainted.Quality);
+    }
+
+    [Fact]
+    public void FertileAshCollectionRemovesFullyCollectedCell()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        service.ApplySources(
+            80,
+            [
+                SourceEvent(
+                    cellIndex: 15,
+                    materialKind: TimberbornBurnMaterialKind.Organic,
+                    strength: 25),
+            ]);
+        TimberbornFertileAshCollectionService collection = new(new RecordingFertileAshCollectionAdapter(
+            [
+                new TimberbornFertileAshCollectedCell(
+                    CellIndex: 15,
+                    StrengthToRemove: TimberbornFertileAshCollectionService.StrengthPerGood,
+                    GoodAmount: 1),
+            ]));
+
+        TimberbornFertileAshCollectionSummary summary = collection.Apply(81, service);
+
+        Assert.Equal(1, summary.CollectedGoodCount);
+        Assert.Equal(1, summary.DepletedAshCellCount);
+        Assert.False(service.TryGetEntry(15, out _));
+    }
+
     private static TimberbornAshSourceEvent SourceEvent(
         int cellIndex,
         TimberbornBurnMaterialKind materialKind,
@@ -330,6 +415,24 @@ public sealed class TimberbornAshFieldServiceTests
                 AppliedGrowableCount: applied,
                 SkippedUnsafeApiCount: 0,
                 SkippedUnsupportedGrowableCount: requests.Count - applied);
+        }
+    }
+
+    private sealed class RecordingFertileAshCollectionAdapter(
+        IReadOnlyList<TimberbornFertileAshCollectedCell> collectedCells)
+        : ITimberbornFertileAshCollectionAdapter
+    {
+        public TimberbornFertileAshCollectionAdapterResult Collect(
+            uint tick,
+            IReadOnlyList<TimberbornFertileAshCollectionCandidate> candidates)
+        {
+            return new TimberbornFertileAshCollectionAdapterResult(
+                GathererPostCount: 1,
+                CandidateCellCount: candidates.Count,
+                ReachableCellCount: collectedCells.Count,
+                CollectedGoodCount: collectedCells.Sum(static cell => cell.GoodAmount),
+                SkippedInventoryApiCount: 0,
+                CollectedCells: collectedCells);
         }
     }
 

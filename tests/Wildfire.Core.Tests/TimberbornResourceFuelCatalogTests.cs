@@ -10,12 +10,13 @@ public sealed class TimberbornResourceFuelCatalogTests
     {
         TimberbornResourceFuelCatalog catalog = TimberbornResourceFuelCatalog.Default;
 
-        Assert.Equal(60, catalog.KnownResourceIds.Count);
+        Assert.Equal(61, catalog.KnownResourceIds.Count);
         Assert.Contains("Log", catalog.KnownResourceIds);
         Assert.Contains("Water", catalog.KnownResourceIds);
         Assert.Contains("Antidote", catalog.KnownResourceIds);
         Assert.Contains("Explosives", catalog.KnownResourceIds);
         Assert.Contains("Fireworks", catalog.KnownResourceIds);
+        Assert.Contains("FertileAsh", catalog.KnownResourceIds);
     }
 
     [Fact]
@@ -48,6 +49,7 @@ public sealed class TimberbornResourceFuelCatalogTests
     [InlineData("MetalPart")]
     [InlineData("ScrapMetal")]
     [InlineData("Water")]
+    [InlineData("FertileAsh")]
     public void LookupClassifiesStoneMetalAndWaterAsInert(string resourceId)
     {
         TimberbornResourceFuelProfile profile = TimberbornResourceFuelCatalog.Default.Lookup(resourceId);
@@ -138,8 +140,9 @@ public sealed class TimberbornResourceFuelCatalogTests
         TimberbornResourceFuelCatalog fuelCatalog = TimberbornResourceFuelCatalog.FromBlueprintRoot(unavailableRoot);
         TimberbornBurnableCatalog burnableCatalog = TimberbornBurnableCatalog.FromBlueprintRoot(unavailableRoot);
 
-        Assert.Equal(60, fuelCatalog.KnownResourceIds.Count);
+        Assert.Equal(61, fuelCatalog.KnownResourceIds.Count);
         Assert.Equal(2, fuelCatalog.Lookup("Log").FuelValue);
+        Assert.Equal(0, fuelCatalog.Lookup("FertileAsh").FuelValue);
         Assert.Equal(8, burnableCatalog.Lookup("Pine").FuelValue);
         Assert.Equal(3, burnableCatalog.Lookup("LumberMill.Folktails").FuelValue);
     }
