@@ -10,14 +10,15 @@ Shader "Wildfire/Cloud"
 {
     Properties
     {
-        _BaseColor      ("Base Color",                Color)       = (0.45, 0.45, 0.45, 1)
+        _BaseColor      ("Base Color",                Color)       = (0.34, 0.35, 0.34, 1)
         _ContamColor    ("Contamination Color",       Color)       = (0.35, 0.05, 0.10, 1)
         _Radius         ("Billboard Radius (world)",  Float)       = 1.1
         _HeightOffset   ("Center Height Offset",      Float)       = 1.2
         _MaxSteamHeight ("Steam Rise Height (world)", Float)       = 2.2
-        _MaxOpacity     ("Max Opacity",               Range(0, 1)) = 0.36
+        _MaxOpacity     ("Max Opacity",               Range(0, 1)) = 0.48
         _IsSteam        ("Is Steam (0=smoke 1=steam)",Float)       = 0
         _PuffsPerCell   ("Puffs Per Cell",            Float)       = 1
+        _Wind           ("Wind X,Y,Strength",         Vector)      = (0, 0, 0, 0)
     }
     SubShader
     {
@@ -53,6 +54,7 @@ Shader "Wildfire/Cloud"
             float  _MaxOpacity;
             float  _IsSteam;
             float  _PuffsPerCell;
+            float4 _Wind;
 
             // Six corners: two CCW triangles forming a screen-facing quad.
             static const float2 BillboardCorners[6] =
@@ -124,8 +126,11 @@ Shader "Wildfire/Cloud"
 
                 float intensity = _IsSteam > 0.5 ? steam : smoke;
                 float contam    = _IsSteam > 0.5 ? 0.0  : smokeContam;
+                float renderIntensity = _IsSteam > 0.5
+                    ? intensity
+                    : saturate(intensity * 1.10);
 
-                if (intensity < 0.015)
+                if (renderIntensity < 0.015)
                 {
                     o.pos       = float4(2.0, 2.0, 2.0, 1.0);
                     o.uv        = float2(0.5, 0.5);
@@ -148,6 +153,8 @@ Shader "Wildfire/Cloud"
                 float sizeMult  = 1.0;
                 float alphaMult = 1.0;
                 float heightY   = _HeightOffset;
+                float windStrength = saturate(_Wind.z);
+                float2 windDir = length(_Wind.xy) > 0.001 ? normalize(_Wind.xy) : float2(0.0, 0.0);
                 float2 jitter = (float2(seedA, seedB) - 0.5) * (isSteam > 0.5 ? 0.44 : 0.72);
                 float widthMult = isSteam > 0.5
                     ? lerp(0.72, 1.08, seedC)
@@ -167,15 +174,35 @@ Shader "Wildfire/Cloud"
                     sizeMult  = 0.34 + envelope * 0.82;
                     alphaMult = envelope * lerp(0.72, 1.0, seedB);
                     jitter *= lerp(0.38, 0.88, envelope);
+                    jitter += windDir * windStrength * puffPhase * 0.52;
                 }
                 else if (puffsPerCell > 1u)
                 {
                     float stagger = (float)puffSlot / (float)puffsPerCell;
-                    float drift = _Time.y * lerp(0.035, 0.075, seedD) + stagger * 6.2831853;
-                    jitter += float2(sin(drift), cos(drift * 0.73 + seedA * 6.2831853)) * 0.11;
-                    heightY += (seedD - 0.5) * 0.38;
-                    sizeMult = lerp(0.86, 1.28, seedA);
-                    alphaMult = lerp(0.58, 0.92, seedB);
+                    float drift = _Time.y * lerp(0.018, 0.038, seedD) + stagger * 6.2831853;
+                    float smokePhase = frac(_Time.y * lerp(0.045, 0.075, seedD) + stagger + seedA * 0.37);
+                    float smokeEnvelope = smoothstep(0.02, 0.22, smokePhase) * (1.0 - smoothstep(0.72, 1.0, smokePhase));
+                    float orderedSlot = (float)puffSlot / max(1.0, (float)(puffsPerCell - 1u));
+                    float slotThreshold = saturate(lerp(0.0, 0.58, orderedSlot) * lerp(0.82, 1.18, seedC));
+                    float slotActivation = smoothstep(slotThreshold, min(1.0, slotThreshold + 0.20), renderIntensity);
+                    if (slotActivation * smokeEnvelope < 0.004)
+                    {
+                        o.pos       = float4(2.0, 2.0, 2.0, 1.0);
+                        o.uv        = float2(0.5, 0.5);
+                        o.intensity = 0.0;
+                        o.contam    = 0.0;
+                        o.seed      = seedA;
+                        o.isSteam   = isSteam;
+                        o.worldPos  = worldPos;
+                        return o;
+                    }
+
+                    jitter += float2(sin(drift), cos(drift * 0.73 + seedA * 6.2831853)) * 0.055;
+                    jitter += windDir * windStrength * (smokePhase * 0.82 + seedA * 0.16);
+                    jitter += float2(-windDir.y, windDir.x) * windStrength * sin(_Time.y * 0.21 + seedB * 6.2831853) * 0.08;
+                    heightY += (seedD - 0.5) * 0.48 + smokePhase * lerp(0.22, 0.50, windStrength);
+                    sizeMult = lerp(0.72, 1.44, saturate(renderIntensity * 0.78 + seedA * 0.42));
+                    alphaMult = slotActivation * smokeEnvelope * lerp(0.78, 1.10, seedB) * lerp(0.68, 1.38, renderIntensity);
                 }
 
                 worldPos.xz += jitter;
@@ -193,7 +220,7 @@ Shader "Wildfire/Cloud"
 
                 o.pos       = UnityWorldToClipPos(vPos);
                 o.uv        = corner + 0.5;
-                o.intensity = intensity * alphaMult;
+                o.intensity = renderIntensity * alphaMult;
                 o.contam    = contam;
                 o.seed      = seedA;
                 o.isSteam   = isSteam;
@@ -214,7 +241,8 @@ Shader "Wildfire/Cloud"
                     i.worldPos.xz * (isSteam > 0.5 ? 0.10 : 0.16) +
                     i.seed * 19.0 +
                     _Time.y * (isSteam > 0.5 ? 0.18 : 0.055));
-                float alpha = body * softEdge * lowerFade * upperFade * lerp(0.42, 1.0, noise);
+                float breakup = lerp(smoothstep(0.30, 0.88, noise), 1.0, isSteam);
+                float alpha = body * softEdge * lowerFade * upperFade * lerp(0.24, 1.0, breakup);
                 alpha *= i.intensity * _MaxOpacity;
 
                 float3 smokeBase = lerp(_BaseColor.rgb * 0.76, _BaseColor.rgb * 1.28, noise);

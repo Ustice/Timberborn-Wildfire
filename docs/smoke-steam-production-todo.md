@@ -10,7 +10,7 @@ Make smoke and steam release-ready in `~/repos/wildfire-smoke-steam-release-anal
 - Keep the simulation core host-agnostic.
 - Keep the visual path GPU-buffer/shader-driven.
 - Temporary screenshots are for inspection only. Delete them before final.
-- Do not end the turn until the visuals pass a critical in-game review or a real blocker is documented.
+- Do not end the turn until the visuals pass a critical in-game review or a real blocker is documented. This is the active session guardrail if context is compressed.
 
 ## Ordered Todo
 
@@ -49,4 +49,3 @@ Make smoke and steam release-ready in `~/repos/wildfire-smoke-steam-release-anal
    - If stochastic placement does not work, try another GPU/shader-driven approach.
    - Do not use region aggregation unless later evidence shows shader/lifecycle variation cannot solve it.
    - Re-run `git diff --check`, focused tests, deploy dry-run/build as needed, and final live visual inspection.
-
