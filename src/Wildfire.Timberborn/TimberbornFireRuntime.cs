@@ -39,6 +39,7 @@ public sealed class TimberbornFireRuntime :
     private readonly ISoilContaminationService _soilContaminationService;
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
+    private readonly ITimberbornWindProvider _windProvider;
     private ITimberbornCropBurnConsequenceApi _cropBurnConsequenceApi =
         UnavailableTimberbornCropBurnConsequenceApi.Instance;
     private ITimberbornTreeBurnConsequenceApi _treeBurnConsequenceApi =
@@ -85,6 +86,7 @@ public sealed class TimberbornFireRuntime :
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
             throw new ArgumentNullException(nameof(fireSimParameterPresetState));
+        _windProvider = windProvider ?? throw new ArgumentNullException(nameof(windProvider));
         _singletonLoader = singletonLoader ?? throw new ArgumentNullException(nameof(singletonLoader));
         _soilContaminationService = soilContaminationService ??
             throw new ArgumentNullException(nameof(soilContaminationService));
@@ -264,7 +266,7 @@ public sealed class TimberbornFireRuntime :
         Configure(fireSystem, cadence);
         if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)
         {
-            _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink);
+            _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink, _windProvider);
             _gpuIndirectRenderer.Initialize();
         }
 
@@ -364,6 +366,12 @@ public sealed class TimberbornFireRuntime :
                             TimberbornQaFieldTargetSelectors.Bush)
                     : null,
                 beaverExposureTarget);
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.ContaminatedTree)
+        {
+            _playerFireAlertCameraFocus.SetLatestFocusCell(result.CellIndex);
+            _playerFireAlertCameraFocus.FocusLatestFireCell();
+        }
+
         _logSink.Info(
             "wildfire_timberborn_qa_delta_stimulus_queued " +
             $"target_selector={result.TargetSelector} " +

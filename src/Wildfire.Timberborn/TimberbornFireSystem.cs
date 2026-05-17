@@ -490,17 +490,27 @@ public sealed class TimberbornFireSystem : IDisposable
                 BurnDamageSpendFuel: target.SpendFuel);
         }
 
-        TimberbornImportedFieldTarget ignitionTarget = normalizedSelector == TimberbornQaFieldTargetSelectors.CenterTree
-            ? FindImportedTarget(
+        TimberbornImportedFieldTarget ignitionTarget = normalizedSelector switch
+        {
+            TimberbornQaFieldTargetSelectors.CenterTree => FindImportedTarget(
                 candidate => IsBurnableImportedTarget(candidate) &&
                     candidate.MaterialClass == WildfireMaterialClass.Tree,
                 OrderByCenterDistance(grid),
-                $"No imported center tree field target was found for QA delta stimulus selector '{normalizedSelector}'.")
-            : FindImportedTarget(
+                $"No imported center tree field target was found for QA delta stimulus selector '{normalizedSelector}'."),
+            TimberbornQaFieldTargetSelectors.ContaminatedTree => FindImportedTarget(
+                candidate => IsBurnableImportedTarget(candidate) &&
+                    candidate.MaterialClass == WildfireMaterialClass.Tree &&
+                    candidate.SoilContamination > 0,
+                OrderByDescendingSoilContamination(),
+                $"No imported contaminated tree field target was found for QA delta stimulus selector '{normalizedSelector}'."),
+            _ => FindImportedTarget(
                 candidate => IsBurnableImportedTarget(candidate) &&
                     TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector),
-                $"No imported burnable field target was found for QA delta stimulus selector '{normalizedSelector}'.");
-        int queuedHeatChangeCount = RegisterIgnitionCluster(grid, ignitionTarget.CellIndex, "qa_delta_stimulus");
+                $"No imported burnable field target was found for QA delta stimulus selector '{normalizedSelector}'."),
+        };
+        int queuedHeatChangeCount = normalizedSelector == TimberbornQaFieldTargetSelectors.ContaminatedTree
+            ? RegisterForcedIgnitionCluster(grid, ignitionTarget.CellIndex, "qa_delta_stimulus")
+            : RegisterIgnitionCluster(grid, ignitionTarget.CellIndex, "qa_delta_stimulus");
 
         return new TimberbornQaDeltaStimulusResult(
             normalizedSelector,
@@ -1013,6 +1023,43 @@ public sealed class TimberbornFireSystem : IDisposable
         return changes.Length;
     }
 
+    private int RegisterForcedIgnitionCluster(FireGrid grid, int centerCellIndex, string source)
+    {
+        int centerX = centerCellIndex % grid.Width;
+        int centerY = (centerCellIndex / grid.Width) % grid.Height;
+        int centerZ = centerCellIndex / (grid.Width * grid.Height);
+        FireSimChange[] changes = _importedTargets
+            .Where(IsBurnableImportedTarget)
+            .Where(target => Math.Abs(target.X - centerX) <= 1 &&
+                Math.Abs(target.Y - centerY) <= 1 &&
+                Math.Abs(target.Z - centerZ) <= 1)
+            .OrderBy(target => Math.Abs(target.X - centerX) +
+                Math.Abs(target.Y - centerY) +
+                Math.Abs(target.Z - centerZ))
+            .ThenBy(static target => target.CellIndex)
+            .Take(9)
+            .Select(static target => new FireSimChange(
+                CellIndex: target.CellIndex,
+                SetFuel: QaIgnitionFuel,
+                SetHeat: QaIgnitionHeat,
+                SetFlammability: QaIgnitionFlammability,
+                SetWater: QaIgnitionWater,
+                SetBurningLevel: 7))
+            .ToArray();
+
+        if (changes.Length == 0)
+        {
+            throw new InvalidOperationException("No imported burnable field targets were found for the QA forced ignition cluster.");
+        }
+
+        changes
+            .ToList()
+            .ForEach(change => RegisterChange(change, source, shouldLog: false));
+        StartQaIgnitionPeg(changes, source);
+        LogRegisteredChanges(source, changes.Length);
+        return changes.Length;
+    }
+
     private int GetQaIgnitionPegDispatchTicks()
     {
         return checked(QaIgnitionPegDispatchTicks * GetFireCellStepIntervalTicks());
@@ -1451,6 +1498,15 @@ public sealed class TimberbornFireSystem : IDisposable
         return dx * dx + dy * dy + dz * dz;
     }
 
+    private static Func<IEnumerable<TimberbornImportedFieldTarget>, IOrderedEnumerable<TimberbornImportedFieldTarget>>
+        OrderByDescendingSoilContamination()
+    {
+        return targets => targets
+            .OrderByDescending(static target => target.SoilContamination)
+            .ThenByDescending(static target => PackedCell.Fuel(target.InitialCell))
+            .ThenBy(static target => target.CellIndex);
+    }
+
     private static TimberbornImportedFieldTarget[] CreateImportedTargets(
         FireGrid grid,
         IReadOnlyList<ushort> initialCells,
@@ -1467,7 +1523,8 @@ public sealed class TimberbornFireSystem : IDisposable
                     z,
                     companionFields[index].State.MaterialClass,
                     companionFields[index].TargetId,
-                    initialCells[index]);
+                    initialCells[index],
+                    companionFields[index].State.SoilContamination);
             })
             .Where(static target => target.MaterialClass != WildfireMaterialClass.Empty)
             .ToArray();
@@ -1669,7 +1726,8 @@ public readonly record struct TimberbornImportedFieldTarget(
     int Z,
     WildfireMaterialClass MaterialClass,
     uint CompanionTargetId,
-    ushort InitialCell);
+    ushort InitialCell,
+    byte SoilContamination = 0);
 
 public readonly record struct TimberbornQaBurnDamageProbeTarget(
     TimberbornBurnDamageTargetState State,

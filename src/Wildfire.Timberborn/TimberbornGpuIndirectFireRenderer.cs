@@ -8,7 +8,7 @@ namespace Wildfire.Timberborn;
 // Graphics.DrawProceduralIndirect — no CPU readback, no mesh rebuilds per frame.
 //
 // Flame:  5 tongue slots per cell, each a bent 4-faced pyramid (36 verts).  Additive blend.
-// Smoke:  1 billboard quad per cell drawn with alpha blend.
+// Smoke:  SmokePuffsPerCell staggered billboard quads per cell drawn with alpha blend.
 // Steam:  SteamPuffsPerCell rising billboard quads per cell drawn with alpha blend.
 //
 // A smoothing compute pass runs each frame, lerping a _SmoothedFields buffer toward
@@ -25,6 +25,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const int MaxTonguesPerCell  = 5;
     private const int VertsPerTongue     = 36;  // 4 pyramid faces × 9 verts (bottom quad + top tri)
     private const int VertsPerCloud      = 6;
+    private const int SmokePuffsPerCell  = 6;
     private const int SteamPuffsPerCell  = 3;
 
     // Asymmetric smoothing rates (exponential lerp per second).
@@ -33,10 +34,13 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const float FireDownSpeed = 2.0f;
     private const float SmokeUpSpeed  = 3.0f;
     private const float SmokeDownSpeed = 1.0f;
+    private const float SteamUpSpeed  = 1.45f;
+    private const float SteamDownSpeed = 3.75f;
 
     private readonly TimberbornComputeFireSimulator _simulator;
     private readonly FireGrid _grid;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly ITimberbornWindProvider _windProvider;
 
     private ComputeBuffer? _cellPositionsBuffer;
     private ComputeBuffer? _smoothedFieldsBuffer;
@@ -57,10 +61,20 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         TimberbornComputeFireSimulator simulator,
         FireGrid grid,
         ITimberbornFireLogSink logSink)
+        : this(simulator, grid, logSink, NullTimberbornWindProvider.Instance)
+    {
+    }
+
+    public TimberbornGpuIndirectFireRenderer(
+        TimberbornComputeFireSimulator simulator,
+        FireGrid grid,
+        ITimberbornFireLogSink logSink,
+        ITimberbornWindProvider windProvider)
     {
         _simulator = simulator ?? throw new ArgumentNullException(nameof(simulator));
         _grid = grid;
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
+        _windProvider = windProvider ?? throw new ArgumentNullException(nameof(windProvider));
     }
 
     public bool IsInitialized => _initialized;
@@ -111,6 +125,8 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         // Smooth visual intensities toward live sim values (ramp-up/ramp-down).
         int threadGroups = (_grid.CellCount + 63) / 64;
         _smoothingShader.Dispatch(_smoothingKernel, threadGroups, 1, 1);
+
+        BindWind();
 
         // GPU-driven draw calls — no per-frame CPU work below this line.
         Graphics.DrawProceduralIndirect(
@@ -218,7 +234,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeArgsBuffer.SetData(new uint[]
         {
             (uint)VertsPerCloud,
-            (uint)cellCount,
+            (uint)(cellCount * SmokePuffsPerCell),
             0u,
             0u,
         });
@@ -247,20 +263,32 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeMaterial = new Material(cloudShader) { name = "wildfire_smoke" };
         _smokeMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _smokeMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
-        _smokeMaterial.SetColor("_BaseColor",   new Color(0.45f, 0.45f, 0.45f));
+        _smokeMaterial.SetColor("_BaseColor",   new Color(0.27f, 0.28f, 0.27f));
         _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
-        _smokeMaterial.SetFloat("_MaxOpacity",    0.56f);
+        _smokeMaterial.SetFloat("_Radius",        1.14f);
+        _smokeMaterial.SetFloat("_HeightOffset",  3.24f);
+        _smokeMaterial.SetFloat("_MaxOpacity",    0.62f);
         _smokeMaterial.SetFloat("_IsSteam",       0f);
-        _smokeMaterial.SetFloat("_PuffsPerCell",   1f);
+        _smokeMaterial.SetFloat("_PuffsPerCell",  (float)SmokePuffsPerCell);
 
         _steamMaterial = new Material(cloudShader) { name = "wildfire_steam" };
         _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
-        _steamMaterial.SetFloat("_MaxOpacity",    0.45f);
+        _steamMaterial.SetFloat("_Radius",        0.66f);
+        _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
+        _steamMaterial.SetFloat("_MaxSteamHeight", 1.45f);
+        _steamMaterial.SetFloat("_MaxOpacity",    0.36f);
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
-        _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
+    }
+
+    private void BindWind()
+    {
+        FireSimWind wind = _windProvider.CurrentWind.Normalized();
+        Vector4 cloudWind = new(wind.DirectionX, wind.DirectionY, wind.Strength, 0f);
+        _smokeMaterial!.SetVector("_Wind", cloudWind);
+        _steamMaterial!.SetVector("_Wind", cloudWind);
     }
 
     private void LoadSmoothingShader()
@@ -275,6 +303,8 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smoothingShader.SetFloat( "_FireDownSpeed", FireDownSpeed);
         _smoothingShader.SetFloat( "_SmokeUpSpeed",  SmokeUpSpeed);
         _smoothingShader.SetFloat( "_SmokeDownSpeed",SmokeDownSpeed);
+        _smoothingShader.SetFloat( "_SteamUpSpeed",  SteamUpSpeed);
+        _smoothingShader.SetFloat( "_SteamDownSpeed",SteamDownSpeed);
     }
 
     private Shader LoadShader(string assetName)

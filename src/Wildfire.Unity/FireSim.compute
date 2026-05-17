@@ -321,6 +321,11 @@ uint CompanionContaminationBehavior(uint companion)
     return (companion >> 22) & 0x7u;
 }
 
+uint CompanionSoilContamination(uint companion)
+{
+    return (companion >> 25) & 0x7u;
+}
+
 uint DecayBy(uint value, uint decay)
 {
     return value > decay ? value - decay : 0u;
@@ -476,7 +481,12 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint fuelDrop = Fuel(oldCell) > Fuel(newCell) ? Fuel(oldCell) - Fuel(newCell) : 0u;
     uint contaminationBehavior = CompanionContaminationBehavior(companion);
     uint ashQuality = CompanionAshQuality(companion);
-    uint sourceContamination = (contaminationBehavior == 2u || contaminationBehavior == 4u || ashQuality == 3u) ? 7u : 0u;
+    uint sourceContamination = SourceContamination(companion);
+    if (sourceContamination == 0u && contaminationBehavior == 1u)
+    {
+        sourceContamination = CompanionSoilContamination(companion);
+    }
+
     uint ashContaminationSource = ashQuality == 3u ? 7u : sourceContamination;
 
     uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);

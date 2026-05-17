@@ -6,7 +6,8 @@ public readonly record struct WildfireCompanionFieldState(
     byte BurnHistory,
     byte AshStrength,
     WildfireAshQuality AshQuality,
-    WildfireContaminationBehavior ContaminationBehavior)
+    WildfireContaminationBehavior ContaminationBehavior,
+    byte SoilContamination = 0)
 {
     public static readonly WildfireCompanionFieldState Empty = new(
         WildfireMaterialClass.Empty,
@@ -31,7 +32,8 @@ public readonly record struct WildfireCompanionFieldState(
             ((uint)Math.Clamp((int)BurnHistory, 0, 15) << 12) |
             ((uint)Math.Clamp((int)AshStrength, 0, 15) << 16) |
             (((uint)AshQuality & 0x3u) << 20) |
-            (((uint)ContaminationBehavior & 0x7u) << 22);
+            (((uint)ContaminationBehavior & 0x7u) << 22) |
+            ((uint)Math.Clamp((int)SoilContamination, 0, 7) << 25);
     }
 
     public static WildfireCompanionFieldState FromMaterialProfile(WildfireMaterialFieldProfile profile)
@@ -42,7 +44,8 @@ public readonly record struct WildfireCompanionFieldState(
             BurnHistory: 0,
             AshStrength: 0,
             profile.AshQuality,
-            profile.ContaminationBehavior);
+            profile.ContaminationBehavior,
+            SoilContamination: 0);
     }
 
     public static WildfireCompanionFieldState Unpack(uint packed)
@@ -53,7 +56,8 @@ public readonly record struct WildfireCompanionFieldState(
             BurnHistory: (byte)((packed >> 12) & 0xFu),
             AshStrength: (byte)((packed >> 16) & 0xFu),
             (WildfireAshQuality)((packed >> 20) & 0x3u),
-            (WildfireContaminationBehavior)((packed >> 22) & 0x7u));
+            (WildfireContaminationBehavior)((packed >> 22) & 0x7u),
+            SoilContamination: (byte)((packed >> 25) & 0x7u));
     }
 }
 

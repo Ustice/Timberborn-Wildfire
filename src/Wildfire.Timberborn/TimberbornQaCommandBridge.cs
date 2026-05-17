@@ -930,6 +930,7 @@ public static class TimberbornQaFieldTargetSelectors
 {
     public const string Default = "burnable";
     public const string Tree = "tree";
+    public const string ContaminatedTree = "contaminated-tree";
     public const string SelectedTree = "selected-tree";
     public const string CenterTree = "center-tree";
     public const string BeaverExposure = "beaver-exposure";
@@ -950,6 +951,7 @@ public static class TimberbornQaFieldTargetSelectors
     {
         Default,
         Tree,
+        ContaminatedTree,
         SelectedTree,
         CenterTree,
         BeaverExposure,
@@ -988,6 +990,7 @@ public static class TimberbornQaFieldTargetSelectors
         {
             Default => true,
             Tree => materialClass == WildfireMaterialClass.Tree,
+            ContaminatedTree => materialClass == WildfireMaterialClass.Tree,
             SelectedTree => materialClass == WildfireMaterialClass.Tree,
             CenterTree => materialClass == WildfireMaterialClass.Tree,
             BeaverExposure => false,

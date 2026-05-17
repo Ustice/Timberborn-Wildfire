@@ -183,6 +183,46 @@ public sealed class TimberbornFireCellMapperTests
         Assert.Equal((byte)expectedWater, TimberbornTerrainAdapter.QuantizeSoilMoisture(soilMoisture));
     }
 
+    [Theory]
+    [InlineData(0.0f, false, 0)]
+    [InlineData(0.0f, true, 0)]
+    [InlineData(0.05f, false, 0)]
+    [InlineData(0.05f, true, 1)]
+    [InlineData(0.2f, true, 2)]
+    [InlineData(0.45f, true, 4)]
+    [InlineData(0.9f, true, 7)]
+    [InlineData(9.0f, true, 7)]
+    public void TerrainAdapterQuantizesSoilContaminationToCompanionBand(
+        float soilContamination,
+        bool isContaminated,
+        int expectedContamination)
+    {
+        Assert.Equal(
+            (byte)expectedContamination,
+            TimberbornTerrainAdapter.QuantizeSoilContamination(soilContamination, isContaminated));
+    }
+
+    [Fact]
+    public void CreateCompanionFieldsCarriesTerrainSoilContaminationUnderBurnableMaterial()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornFireCellMapper mapper = new();
+        TimberbornTerrainAdapter terrainAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+
+        WildfireCompanionField companion = Assert.Single(mapper.CreateCompanionFields(
+            grid,
+            [
+                terrainAdapter.CreateSource(0, 0, 0, isSolid: true, soilContamination: 5),
+                resourceAdapter.CreateTreeSource(0, 0, 0, companionTargetId: 99u),
+            ]));
+
+        Assert.Equal(WildfireMaterialClass.Tree, companion.State.MaterialClass);
+        Assert.Equal(99u, companion.TargetId);
+        Assert.Equal(5, companion.State.SoilContamination);
+        Assert.Equal(5, WildfireCompanionFieldState.Unpack(companion.State.Pack()).SoilContamination);
+    }
+
     [Fact]
     public void CreateMappedCellsMapsMultiCellVerticalFootprints()
     {

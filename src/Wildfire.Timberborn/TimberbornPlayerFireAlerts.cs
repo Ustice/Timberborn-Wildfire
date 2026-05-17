@@ -296,7 +296,7 @@ public sealed class TimberbornPlayerFireAlertCameraFocus :
         return clickTarget;
     }
 
-    private void FocusLatestFireCell()
+    public void FocusLatestFireCell()
     {
         if (_grid is not { } grid || _latestFocusCellIndex is not { } cellIndex)
         {
