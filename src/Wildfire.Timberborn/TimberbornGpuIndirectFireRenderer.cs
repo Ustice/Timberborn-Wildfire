@@ -249,6 +249,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _smokeMaterial.SetColor("_BaseColor",   new Color(0.45f, 0.45f, 0.45f));
         _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
+        _smokeMaterial.SetFloat("_MaxOpacity",    0.56f);
         _smokeMaterial.SetFloat("_IsSteam",       0f);
         _smokeMaterial.SetFloat("_PuffsPerCell",   1f);
 
@@ -256,6 +257,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
+        _steamMaterial.SetFloat("_MaxOpacity",    0.45f);
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
         _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground

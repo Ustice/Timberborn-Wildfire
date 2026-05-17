@@ -36,7 +36,9 @@ Shader "Wildfire/AshOverlay"
             sampler2D _AshTex;
             sampler2D _MaskTex;
             StructuredBuffer<uint> _CompanionFields;
+            StructuredBuffer<uint> _AtmosphericFields;
             float _UseCompanionAsh;
+            float _UseAtmosphericAsh;
             int _GridWidth;
             int _GridHeight;
             int _GridDepth;
@@ -109,6 +111,48 @@ Shader "Wildfire/AshOverlay"
                     (float)((companion >> 18) & 0x3u) / 3.0);
             }
 
+            uint CompanionMaterialClass(int x, int y, int z)
+            {
+                if (x < 0 || y < 0 || z < 0 || x >= _GridWidth || y >= _GridHeight || z >= _GridDepth)
+                {
+                    return 0u;
+                }
+
+                return _CompanionFields[CompanionIndex(x, y, z)] & 0xFFu;
+            }
+
+            bool IsEntityMaterial(int x, int y, int z)
+            {
+                uint materialClass = CompanionMaterialClass(x, y, z);
+                return materialClass == 2u ||
+                    materialClass == 3u ||
+                    materialClass == 4u ||
+                    materialClass == 5u ||
+                    materialClass == 6u ||
+                    materialClass == 7u;
+            }
+
+            bool IsAshLandingSurface(int x, int y, int z)
+            {
+                uint materialClass = CompanionMaterialClass(x, y, z);
+                return materialClass == 1u || (IsEntityMaterial(x, y, z) && CompanionMaterialClass(x, y, z - 1) != materialClass);
+            }
+
+            float2 AtmosphericFalloutAshAndContamination(int x, int y, int z)
+            {
+                if (_UseAtmosphericAsh <= 0.5 || x < 0 || y < 0 || z < 0 || x >= _GridWidth || y >= _GridHeight || z >= _GridDepth)
+                {
+                    return float2(0.0, 0.0);
+                }
+
+                uint atmospheric = _AtmosphericFields[CompanionIndex(x, y, z)] & 0xFFFFu;
+                uint ash = (atmospheric >> 9) & 0x7u;
+                uint contamination = (atmospheric >> 12) & 0x7u;
+                float ashLevel = ash == 0u ? 0.0 : (float)min(3u, max(1u, (ash + 1u) / 2u)) / 3.0;
+                float contaminationLevel = contamination == 0u ? 0.0 : (float)min(3u, max(1u, (contamination + 1u) / 2u)) / 3.0;
+                return float2(ashLevel, contaminationLevel);
+            }
+
             float2 AshBoundaryWarp(float2 worldXz)
             {
                 float2 tileUv = worldXz / 16.0;
@@ -131,6 +175,11 @@ Shader "Wildfire/AshOverlay"
                 float2 samplePoint = worldPos.xz + AshBoundaryWarp(worldPos.xz) - 0.5;
                 int x = (int)floor(samplePoint.x);
                 int y = (int)floor(samplePoint.y);
+                if (!IsAshLandingSurface(x, y, z))
+                {
+                    return float2(0.0, 0.0);
+                }
+
                 float2 blend = float2(
                     AshBoundaryBlend(frac(samplePoint.x)),
                     AshBoundaryBlend(frac(samplePoint.y)));
@@ -142,7 +191,26 @@ Shader "Wildfire/AshOverlay"
                     CompanionAshAndContamination(x, y + 1, z),
                     CompanionAshAndContamination(x + 1, y + 1, z),
                     blend.x);
-                return lerp(lower, upper, blend.y);
+                float2 projectedAsh = lerp(lower, upper, blend.y);
+                for (int scanZ = z + 1; scanZ < _GridDepth; scanZ += 1)
+                {
+                    if (IsAshLandingSurface(x, y, scanZ))
+                    {
+                        break;
+                    }
+
+                    float2 atmosphericLower = lerp(
+                        AtmosphericFalloutAshAndContamination(x, y, scanZ),
+                        AtmosphericFalloutAshAndContamination(x + 1, y, scanZ),
+                        blend.x);
+                    float2 atmosphericUpper = lerp(
+                        AtmosphericFalloutAshAndContamination(x, y + 1, scanZ),
+                        AtmosphericFalloutAshAndContamination(x + 1, y + 1, scanZ),
+                        blend.x);
+                    projectedAsh = max(projectedAsh, lerp(atmosphericLower, atmosphericUpper, blend.y));
+                }
+
+                return projectedAsh;
             }
 
             float CoverageForAsh(float ash)
@@ -379,7 +447,7 @@ Shader "Wildfire/AshOverlay"
                     float lowerFade = smoothstep(-0.08, 0.16, centered.y);
                     float upperFade = 1.0 - smoothstep(isSteam ? 0.42 : 0.68, 1.04, centered.y);
                     float alpha = body * softEdge * lowerFade * upperFade * lerp(0.62, 1.0, breakup);
-                    alpha *= (isSteam ? lerp(0.16, 0.42, intensity) : lerp(0.26, 0.66, intensity)) * i.color.a;
+                    alpha *= (isSteam ? lerp(0.16, 0.42, intensity) : lerp(0.34, 0.82, intensity)) * i.color.a;
                     float3 smokeClean = lerp(float3(0.34, 0.34, 0.32), float3(0.70, 0.70, 0.66), breakup);
                     float3 smokeDirty = lerp(float3(0.26, 0.20, 0.18), float3(0.55, 0.43, 0.38), breakup);
                     float3 steamColor = lerp(float3(0.74, 0.90, 1.0), float3(1.0, 1.0, 1.0), saturate(i.uv.y + breakup * 0.32));

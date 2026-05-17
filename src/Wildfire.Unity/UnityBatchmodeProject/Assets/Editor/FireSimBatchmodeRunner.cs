@@ -138,11 +138,14 @@ namespace Wildfire.UnityBatchmode
                 currentCells.GetData(finalRawCells);
                 uint[] finalAtmosphericFields = new uint[cellCount];
                 currentAtmosphericFields.GetData(finalAtmosphericFields);
+                uint[] finalCompanionFields = new uint[cellCount];
+                companionFields.GetData(finalCompanionFields);
                 float[] visualSamples = new float[cellCount * 4];
                 visualFields.GetData(visualSamples);
                 return new Snapshot(
                     finalRawCells.ConvertAll(cell => (ushort)(cell & 0xFFFFu)),
                     finalAtmosphericFields,
+                    finalCompanionFields,
                     ticks,
                     VisualChecksum(visualSamples));
             }
@@ -439,13 +442,15 @@ namespace Wildfire.UnityBatchmode
     {
         private readonly ushort[] finalPackedCells;
         private readonly uint[] finalAtmosphericFields;
+        private readonly uint[] finalCompanionFields;
         private readonly TickSnapshot[] ticks;
         private readonly string visualChecksum;
 
-        public Snapshot(ushort[] finalPackedCells, uint[] finalAtmosphericFields, TickSnapshot[] ticks, string visualChecksum)
+        public Snapshot(ushort[] finalPackedCells, uint[] finalAtmosphericFields, uint[] finalCompanionFields, TickSnapshot[] ticks, string visualChecksum)
         {
             this.finalPackedCells = finalPackedCells;
             this.finalAtmosphericFields = finalAtmosphericFields;
+            this.finalCompanionFields = finalCompanionFields;
             this.ticks = ticks;
             this.visualChecksum = visualChecksum;
         }
@@ -472,6 +477,8 @@ namespace Wildfire.UnityBatchmode
             AppendUshortArray(builder, "finalPackedCells", finalPackedCells, indent: "  ");
             builder.AppendLine(",");
             AppendUintArray(builder, "finalAtmosphericFields", finalAtmosphericFields, indent: "  ");
+            builder.AppendLine(",");
+            AppendUintArray(builder, "finalCompanionFields", finalCompanionFields, indent: "  ");
             builder.AppendLine(",");
             builder.AppendLine("  \"perTickDeltaCounts\": [");
             for (int index = 0; index < ticks.Length; index += 1)

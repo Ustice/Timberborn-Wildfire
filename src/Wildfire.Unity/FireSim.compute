@@ -273,6 +273,49 @@ uint CompanionMaterialClass(uint companion)
     return companion & 0xFFu;
 }
 
+bool IsEntityMaterial(uint companion)
+{
+    uint materialClass = CompanionMaterialClass(companion);
+    return materialClass == 2u ||
+        materialClass == 3u ||
+        materialClass == 4u ||
+        materialClass == 5u ||
+        materialClass == 6u ||
+        materialClass == 7u;
+}
+
+bool IsAshLandingSurface(uint companion, uint3 coordinate)
+{
+    if (CompanionMaterialClass(companion) == 1u)
+    {
+        return true;
+    }
+
+    if (!IsEntityMaterial(companion))
+    {
+        return false;
+    }
+
+    if (coordinate.z == 0u)
+    {
+        return true;
+    }
+
+    uint belowCompanion = CompanionFields[ToIndex(uint3(coordinate.x, coordinate.y, coordinate.z - 1u))];
+    return CompanionMaterialClass(belowCompanion) != CompanionMaterialClass(companion);
+}
+
+bool IsAshLandingSurfaceAt(uint3 coordinate)
+{
+    if (coordinate.x >= Width || coordinate.y >= Height || coordinate.z >= Depth)
+    {
+        return false;
+    }
+
+    uint companion = CompanionFields[ToIndex(coordinate)];
+    return IsAshLandingSurface(companion, coordinate);
+}
+
 uint CompanionContaminationBehavior(uint companion)
 {
     return (companion >> 22) & 0x7u;
@@ -324,12 +367,30 @@ uint FalloutAshContaminationLevel(uint atmospheric)
     return min(3u, max(1u, (contamination + 1u) / 2u));
 }
 
-uint UpdateCompanionAsh(uint companion, uint oldCell, uint newCell, uint atmospheric)
+uint UpdateCompanionAsh(uint companion, uint3 coordinate, uint oldCell, uint newCell, uint atmospheric)
 {
     uint ashLevel = CompanionAshLevel(companion);
     uint ashContaminationLevel = CompanionAshContaminationLevel(companion);
+    if (!IsAshLandingSurface(companion, coordinate))
+    {
+        return WithCompanionAshLevels(companion, 0u, 0u);
+    }
+
     uint falloutAshLevel = FalloutAshLevel(atmospheric);
     uint falloutContaminationLevel = FalloutAshContaminationLevel(atmospheric);
+
+    for (uint z = coordinate.z + 1u; z < Depth; z += 1u)
+    {
+        uint aboveIndex = ToIndex(uint3(coordinate.x, coordinate.y, z));
+        if (IsAshLandingSurfaceAt(uint3(coordinate.x, coordinate.y, z)))
+        {
+            break;
+        }
+
+        uint aboveAtmospheric = CurrentAtmosphericFields[aboveIndex] & 0xFFFFu;
+        falloutAshLevel = max(falloutAshLevel, FalloutAshLevel(aboveAtmospheric));
+        falloutContaminationLevel = max(falloutContaminationLevel, FalloutAshContaminationLevel(aboveAtmospheric));
+    }
 
     ashLevel = max(ashLevel, falloutAshLevel);
     ashContaminationLevel = max(ashContaminationLevel, falloutContaminationLevel);
@@ -701,7 +762,7 @@ void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
     uint oldAtmospheric = CurrentAtmosphericFields[index];
     uint newCell = StepCell(index, id, oldCell, oldAtmospheric);
     uint atmospheric = BuildAtmosphericField(index, id, oldCell, newCell);
-    uint companion = UpdateCompanionAsh(CompanionFields[index], oldCell, newCell, atmospheric);
+    uint companion = UpdateCompanionAsh(CompanionFields[index], id, oldCell, newCell, atmospheric);
     NextCells[index] = newCell;
     NextAtmosphericFields[index] = atmospheric;
     CompanionFields[index] = companion;

@@ -15,7 +15,7 @@ Shader "Wildfire/Cloud"
         _Radius         ("Billboard Radius (world)",  Float)       = 0.65
         _HeightOffset   ("Center Height Offset",      Float)       = 1.2
         _MaxSteamHeight ("Steam Rise Height (world)", Float)       = 1.8
-        _MaxOpacity     ("Max Opacity",               Range(0, 1)) = 0.45
+        _MaxOpacity     ("Max Opacity",               Range(0, 1)) = 0.56
         _IsSteam        ("Is Steam (0=smoke 1=steam)",Float)       = 0
         _PuffsPerCell   ("Puffs Per Cell",            Float)       = 1
     }
