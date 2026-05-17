@@ -474,7 +474,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
         TryRemoveGatherableYield(blockObject);
         TryKillNaturalResource(blockObject);
-        blockObject.gameObject.SetActive(false);
+        blockObject.Transform.gameObject.SetActive(false);
 
         _logSink.Info(
             "wildfire_timberborn_crop_burned_leftover_applied " +

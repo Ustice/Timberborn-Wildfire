@@ -23,6 +23,13 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornBurnSelectedEntityTool>().AsSingleton();
         Bind<TimberbornDemolitionBurnToolButton>().AsSingleton();
         MultiBind<BottomBarModule>().ToProvider<DemolitionBurnToolBottomBarModuleProvider>().AsSingleton();
+        Bind<TimberbornFertilizeDesignationService>().AsSingleton();
+        Bind<TimberbornFertilizeCropsTool>().AsSingleton();
+        Bind<TimberbornFertilizeTreesTool>().AsSingleton();
+        Bind<TimberbornFertilizeCropsToolButton>().AsSingleton();
+        Bind<TimberbornFertilizeTreesToolButton>().AsSingleton();
+        MultiBind<BottomBarModule>().ToProvider<FertilizeCropsToolBottomBarModuleProvider>().AsSingleton();
+        MultiBind<BottomBarModule>().ToProvider<FertilizeTreesToolBottomBarModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
     }
 
@@ -39,6 +46,40 @@ public sealed class WildfireConfigurator : Configurator
         {
             BottomBarModule.Builder builder = new();
             builder.AddLeftSectionElement(_button, 51);
+            return builder.Build();
+        }
+    }
+
+    private sealed class FertilizeCropsToolBottomBarModuleProvider : IProvider<BottomBarModule>
+    {
+        private readonly TimberbornFertilizeCropsToolButton _button;
+
+        public FertilizeCropsToolBottomBarModuleProvider(TimberbornFertilizeCropsToolButton button)
+        {
+            _button = button ?? throw new ArgumentNullException(nameof(button));
+        }
+
+        public BottomBarModule Get()
+        {
+            BottomBarModule.Builder builder = new();
+            builder.AddLeftSectionElement(_button, 52);
+            return builder.Build();
+        }
+    }
+
+    private sealed class FertilizeTreesToolBottomBarModuleProvider : IProvider<BottomBarModule>
+    {
+        private readonly TimberbornFertilizeTreesToolButton _button;
+
+        public FertilizeTreesToolBottomBarModuleProvider(TimberbornFertilizeTreesToolButton button)
+        {
+            _button = button ?? throw new ArgumentNullException(nameof(button));
+        }
+
+        public BottomBarModule Get()
+        {
+            BottomBarModule.Builder builder = new();
+            builder.AddLeftSectionElement(_button, 53);
             return builder.Build();
         }
     }

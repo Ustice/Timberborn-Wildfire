@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Timberborn.BlockSystem;
 using Timberborn.EntitySystem;
 using Timberborn.GoodStackSystem;
 using Timberborn.Goods;
