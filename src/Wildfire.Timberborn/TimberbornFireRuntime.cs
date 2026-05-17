@@ -968,6 +968,28 @@ public sealed class TimberbornFireRuntime :
         _burnDamageService = burnDamageService ?? throw new ArgumentNullException(nameof(burnDamageService));
     }
 
+    public bool ApplyPlayerFertileAshDesignation(int cellIndex, int strength)
+    {
+        uint tick = _fireSystem?.LastTick ?? 0;
+        var sourceEvent = new TimberbornAshSourceEvent(
+            cellIndex,
+            tick,
+            TimberbornAshSourceKind.Unknown,
+            TimberbornBurnMaterialKind.Organic,
+            strength,
+            IsSourceContaminated: false,
+            IsAffectedCellContaminated: false,
+            Array.Empty<string>());
+        _ashFieldService.ApplySources(tick, new[] { sourceEvent });
+        return true;
+    }
+
+    public bool IsCellTaintedAsh(int cellIndex)
+    {
+        return _ashFieldService.TryGetEntry(cellIndex, out TimberbornAshFieldEntry entry) &&
+            entry.Quality == WildfireAshQuality.Tainted;
+    }
+
     private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
     {
         _fireSystem?.Dispose();
