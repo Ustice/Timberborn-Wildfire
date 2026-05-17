@@ -10,12 +10,12 @@ Shader "Wildfire/Cloud"
 {
     Properties
     {
-        _BaseColor      ("Base Color",                Color)       = (0.34, 0.35, 0.34, 1)
+        _BaseColor      ("Base Color",                Color)       = (0.27, 0.28, 0.27, 1)
         _ContamColor    ("Contamination Color",       Color)       = (0.35, 0.05, 0.10, 1)
         _Radius         ("Billboard Radius (world)",  Float)       = 1.1
         _HeightOffset   ("Center Height Offset",      Float)       = 1.2
         _MaxSteamHeight ("Steam Rise Height (world)", Float)       = 2.2
-        _MaxOpacity     ("Max Opacity",               Range(0, 1)) = 0.48
+        _MaxOpacity     ("Max Opacity",               Range(0, 1)) = 0.62
         _IsSteam        ("Is Steam (0=smoke 1=steam)",Float)       = 0
         _PuffsPerCell   ("Puffs Per Cell",            Float)       = 1
         _Wind           ("Wind X,Y,Strength",         Vector)      = (0, 0, 0, 0)
@@ -128,7 +128,7 @@ Shader "Wildfire/Cloud"
                 float contam    = _IsSteam > 0.5 ? 0.0  : smokeContam;
                 float renderIntensity = _IsSteam > 0.5
                     ? intensity
-                    : saturate(intensity * 1.10);
+                    : saturate(intensity * 1.35);
 
                 if (renderIntensity < 0.015)
                 {
@@ -183,9 +183,9 @@ Shader "Wildfire/Cloud"
                     float smokePhase = frac(_Time.y * lerp(0.045, 0.075, seedD) + stagger + seedA * 0.37);
                     float smokeEnvelope = smoothstep(0.02, 0.22, smokePhase) * (1.0 - smoothstep(0.72, 1.0, smokePhase));
                     float orderedSlot = (float)puffSlot / max(1.0, (float)(puffsPerCell - 1u));
-                    float slotThreshold = saturate(lerp(0.0, 0.58, orderedSlot) * lerp(0.82, 1.18, seedC));
-                    float slotActivation = smoothstep(slotThreshold, min(1.0, slotThreshold + 0.20), renderIntensity);
-                    if (slotActivation * smokeEnvelope < 0.004)
+                    float slotThreshold = saturate(lerp(0.0, 0.46, orderedSlot) * lerp(0.76, 1.12, seedC));
+                    float slotActivation = smoothstep(slotThreshold, min(1.0, slotThreshold + 0.18), renderIntensity);
+                    if (slotActivation * smokeEnvelope < 0.002)
                     {
                         o.pos       = float4(2.0, 2.0, 2.0, 1.0);
                         o.uv        = float2(0.5, 0.5);
@@ -201,8 +201,8 @@ Shader "Wildfire/Cloud"
                     jitter += windDir * windStrength * (smokePhase * 0.82 + seedA * 0.16);
                     jitter += float2(-windDir.y, windDir.x) * windStrength * sin(_Time.y * 0.21 + seedB * 6.2831853) * 0.08;
                     heightY += (seedD - 0.5) * 0.48 + smokePhase * lerp(0.22, 0.50, windStrength);
-                    sizeMult = lerp(0.72, 1.44, saturate(renderIntensity * 0.78 + seedA * 0.42));
-                    alphaMult = slotActivation * smokeEnvelope * lerp(0.78, 1.10, seedB) * lerp(0.68, 1.38, renderIntensity);
+                    sizeMult = lerp(0.78, 1.56, saturate(renderIntensity * 0.84 + seedA * 0.42));
+                    alphaMult = slotActivation * smokeEnvelope * lerp(0.84, 1.18, seedB) * lerp(0.78, 1.56, renderIntensity);
                 }
 
                 worldPos.xz += jitter;
@@ -241,11 +241,11 @@ Shader "Wildfire/Cloud"
                     i.worldPos.xz * (isSteam > 0.5 ? 0.10 : 0.16) +
                     i.seed * 19.0 +
                     _Time.y * (isSteam > 0.5 ? 0.18 : 0.055));
-                float breakup = lerp(smoothstep(0.30, 0.88, noise), 1.0, isSteam);
-                float alpha = body * softEdge * lowerFade * upperFade * lerp(0.24, 1.0, breakup);
+                float breakup = lerp(smoothstep(0.26, 0.84, noise), 1.0, isSteam);
+                float alpha = body * softEdge * lowerFade * upperFade * lerp(0.32, 1.0, breakup);
                 alpha *= i.intensity * _MaxOpacity;
 
-                float3 smokeBase = lerp(_BaseColor.rgb * 0.76, _BaseColor.rgb * 1.28, noise);
+                float3 smokeBase = lerp(_BaseColor.rgb * 0.72, _BaseColor.rgb * 1.18, noise);
                 float3 dirtyBase = lerp(smokeBase, _ContamColor.rgb, saturate(i.contam) * 0.82);
                 float3 steamBase = lerp(_BaseColor.rgb * 0.86, float3(1.0, 1.0, 1.0), saturate(i.uv.y + noise * 0.34));
                 float3 col = lerp(dirtyBase, steamBase, isSteam);

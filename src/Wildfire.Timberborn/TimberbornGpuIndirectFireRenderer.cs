@@ -25,7 +25,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const int MaxTonguesPerCell  = 5;
     private const int VertsPerTongue     = 36;  // 4 pyramid faces × 9 verts (bottom quad + top tri)
     private const int VertsPerCloud      = 6;
-    private const int SmokePuffsPerCell  = 5;
+    private const int SmokePuffsPerCell  = 6;
     private const int SteamPuffsPerCell  = 3;
 
     // Asymmetric smoothing rates (exponential lerp per second).
@@ -261,11 +261,11 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeMaterial = new Material(cloudShader) { name = "wildfire_smoke" };
         _smokeMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _smokeMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
-        _smokeMaterial.SetColor("_BaseColor",   new Color(0.34f, 0.35f, 0.34f));
+        _smokeMaterial.SetColor("_BaseColor",   new Color(0.27f, 0.28f, 0.27f));
         _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
-        _smokeMaterial.SetFloat("_Radius",        1.06f);
-        _smokeMaterial.SetFloat("_HeightOffset",  3.18f);
-        _smokeMaterial.SetFloat("_MaxOpacity",    0.48f);
+        _smokeMaterial.SetFloat("_Radius",        1.14f);
+        _smokeMaterial.SetFloat("_HeightOffset",  3.24f);
+        _smokeMaterial.SetFloat("_MaxOpacity",    0.62f);
         _smokeMaterial.SetFloat("_IsSteam",       0f);
         _smokeMaterial.SetFloat("_PuffsPerCell",  (float)SmokePuffsPerCell);
 
@@ -273,10 +273,10 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
         _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
-        _steamMaterial.SetFloat("_Radius",        0.72f);
+        _steamMaterial.SetFloat("_Radius",        0.78f);
         _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
         _steamMaterial.SetFloat("_MaxSteamHeight", 2.35f);
-        _steamMaterial.SetFloat("_MaxOpacity",    0.40f);
+        _steamMaterial.SetFloat("_MaxOpacity",    0.48f);
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
     }

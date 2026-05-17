@@ -103,23 +103,24 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("float CloudNoise(float2 p)", cloudShader, StringComparison.Ordinal);
         Assert.Contains("worldPos.xz += jitter;", cloudShader, StringComparison.Ordinal);
         Assert.DoesNotContain("sphereShade", cloudShader, StringComparison.Ordinal);
-        Assert.Contains("private const int SmokePuffsPerCell  = 5;", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("private const int SmokePuffsPerCell  = 6;", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("(uint)(cellCount * SmokePuffsPerCell)", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_smokeMaterial.SetColor(\"_BaseColor\",   new Color(0.34f, 0.35f, 0.34f));", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_smokeMaterial.SetFloat(\"_Radius\",        1.06f);", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_smokeMaterial.SetFloat(\"_HeightOffset\",  3.18f);", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_smokeMaterial.SetFloat(\"_MaxOpacity\",    0.48f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smokeMaterial.SetColor(\"_BaseColor\",   new Color(0.27f, 0.28f, 0.27f));", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smokeMaterial.SetFloat(\"_Radius\",        1.14f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smokeMaterial.SetFloat(\"_HeightOffset\",  3.24f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smokeMaterial.SetFloat(\"_MaxOpacity\",    0.62f);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_smokeMaterial.SetFloat(\"_PuffsPerCell\",  (float)SmokePuffsPerCell);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_smokeMaterial!.SetVector(\"_Wind\", cloudWind);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink, _windProvider)", ReadTimberbornSource("TimberbornFireRuntime.cs"), StringComparison.Ordinal);
         Assert.Contains("float orderedSlot = (float)puffSlot", cloudShader, StringComparison.Ordinal);
         Assert.Contains("float slotActivation = smoothstep(slotThreshold", cloudShader, StringComparison.Ordinal);
-        Assert.Contains(": saturate(intensity * 1.10);", cloudShader, StringComparison.Ordinal);
-        Assert.Contains("float breakup = lerp(smoothstep(0.30, 0.88, noise), 1.0, isSteam);", cloudShader, StringComparison.Ordinal);
+        Assert.Contains(": saturate(intensity * 1.35);", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("float slotThreshold = saturate(lerp(0.0, 0.46, orderedSlot)", cloudShader, StringComparison.Ordinal);
+        Assert.Contains("float breakup = lerp(smoothstep(0.26, 0.84, noise), 1.0, isSteam);", cloudShader, StringComparison.Ordinal);
         Assert.Contains("float smokePhase = frac(_Time.y", cloudShader, StringComparison.Ordinal);
         Assert.Contains("jitter += windDir * windStrength", cloudShader, StringComparison.Ordinal);
         Assert.Contains("_steamMaterial.SetFloat(\"_MaxSteamHeight\", 2.35f);", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_steamMaterial.SetFloat(\"_MaxOpacity\",    0.40f);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_steamMaterial.SetFloat(\"_MaxOpacity\",    0.48f);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("lerp(0.34, 0.82, intensity)", ashOverlayShader, StringComparison.Ordinal);
     }
 
