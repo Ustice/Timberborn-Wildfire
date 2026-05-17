@@ -872,10 +872,15 @@ public sealed class TimberbornComputeFireSimulator :
         _shader.SetFloat("VisualVisibilityHeatWeight", _parameters.VisualVisibilityHeatWeight);
         _shader.SetFloat("VisualVisibilitySmokeWeight", _parameters.VisualVisibilitySmokeWeight);
         _shader.SetFloat("VisualVisibilityAshWeight", _parameters.VisualVisibilityAshWeight);
-        _shader.SetInt("IgnitionPoint", unchecked((int)_parameters.IgnitionPoint));
+        _shader.SetInt("FireIgnitionBaseHeat", unchecked((int)_parameters.IgnitionPoint));
         _shader.SetInt("FireWaterIgnitionPenalty", unchecked((int)_parameters.FireWaterIgnitionPenalty));
+        _shader.SetInt("FireWaterFuelLock", 2);
+        _shader.SetInt("FireWaterEvaporationHeat", 2);
+        _shader.SetInt("FireFlammabilityBurnPressure", 2);
+        _shader.SetInt("FireWaterBurnPressurePenalty", 0);
         _shader.SetInt("FireBurnHeatBase", unchecked((int)_parameters.FireBurnHeatBase));
         _shader.SetInt("FireFuelHeatWeight", unchecked((int)_parameters.FireFuelHeatWeight));
+        _shader.SetInt("FireCoolingBase", 0);
         _shader.SetInt("FireFuelBurnDownPressureNumerator", unchecked((int)_parameters.FireFuelBurnDownPressureNumerator));
         _shader.SetInt("FireFuelBurnDownPressureDenominator", unchecked((int)_parameters.FireFuelBurnDownPressureDenominator));
         _shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)_parameters.FireFuelBurnDownRollSeed));
