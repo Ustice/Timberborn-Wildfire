@@ -201,7 +201,7 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
             strideBytes: 16);
 
         Assert.Equal("harsh", factory.CurrentPreset.Name);
-        Assert.Equal(9u, factory.CurrentPreset.Parameters.FireIgnitionBaseHeat);
+        Assert.Equal(9u, factory.CurrentPreset.Parameters.IgnitionPoint);
 
         lifecycle.Bind();
         lifecycle.MarkUpdated(33);

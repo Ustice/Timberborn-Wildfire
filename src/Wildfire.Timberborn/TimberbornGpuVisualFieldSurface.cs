@@ -204,6 +204,7 @@ public sealed record TimberbornGpuVisualFieldSample(
     float Ash,
     float Visibility,
     float Steam = 0f,
+    float AtmosphericSmoke = 0f,
     float SmokeContamination = 0f,
     float AshContamination = 0f,
     bool Source = false);
@@ -541,6 +542,7 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
             Ash: sample[0].z,
             Visibility: sample[0].w,
             Steam: atmospheric.Steam / 7f,
+            AtmosphericSmoke: atmospheric.Smoke / 7f,
             SmokeContamination: atmospheric.SmokeContamination / 7f,
             AshContamination: atmospheric.AshContamination / 7f,
             Source: atmospheric.Source);

@@ -95,6 +95,8 @@ public sealed class TimberbornFireDeltaConsumer
             _sinks.PowerInfrastructureFireSink.ApplyConsequences(tick, decisions);
         TimberbornWaterInfrastructureFireSummary waterInfrastructureSummary =
             _sinks.WaterInfrastructureFireSink.ApplyConsequences(tick, decisions);
+        TimberbornAshFieldSummary ashFieldSummary =
+            _sinks.AshFieldSink.ApplyConsequences(tick, decisions);
 
         TimberbornFireAlertEvent[] alertEvents = decisions
             .Where(static decision => decision.ShouldEmitAlert)
@@ -122,6 +124,7 @@ public sealed class TimberbornFireDeltaConsumer
             pathInfrastructureSummary,
             powerInfrastructureSummary,
             waterInfrastructureSummary,
+            ashFieldSummary,
             alertEvents.Length);
         if (LastSummary.WaterChangedCount > 0)
         {
@@ -645,6 +648,19 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int WaterInfrastructureSkippedNoSafeApiCount,
     int WaterInfrastructureRepairEligibleTargetCount,
     int WaterInfrastructureTotalDamageApplied,
+    int AshFieldSourceEventCount,
+    int AshFieldNewAshCellCount,
+    int AshFieldFertileAshCellCount,
+    int AshFieldSpentAshCellCount,
+    int AshFieldTaintedAshCellCount,
+    int AshFieldDecayedAshCellCount,
+    int AshFieldGrowthCandidateCellCount,
+    int AshFieldGrowthAppliedGrowableCount,
+    int AshFieldGrowthSkippedTaintedCellCount,
+    int AshFieldGrowthSkippedUnsafeApiCount,
+    int AshFieldGrowthSkippedUnsupportedGrowableCount,
+    int AshFieldPersistenceSaveCount,
+    int AshFieldPersistenceLoadCount,
     int AlertCount,
     int MaxHeat)
 {
@@ -772,6 +788,19 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         WaterInfrastructureSkippedNoSafeApiCount: 0,
         WaterInfrastructureRepairEligibleTargetCount: 0,
         WaterInfrastructureTotalDamageApplied: 0,
+        AshFieldSourceEventCount: 0,
+        AshFieldNewAshCellCount: 0,
+        AshFieldFertileAshCellCount: 0,
+        AshFieldSpentAshCellCount: 0,
+        AshFieldTaintedAshCellCount: 0,
+        AshFieldDecayedAshCellCount: 0,
+        AshFieldGrowthCandidateCellCount: 0,
+        AshFieldGrowthAppliedGrowableCount: 0,
+        AshFieldGrowthSkippedTaintedCellCount: 0,
+        AshFieldGrowthSkippedUnsafeApiCount: 0,
+        AshFieldGrowthSkippedUnsupportedGrowableCount: 0,
+        AshFieldPersistenceSaveCount: 0,
+        AshFieldPersistenceLoadCount: 0,
         AlertCount: 0,
         MaxHeat: 0);
 
@@ -795,6 +824,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         TimberbornPathInfrastructureFireSummary pathInfrastructureSummary,
         TimberbornPowerInfrastructureFireSummary powerInfrastructureSummary,
         TimberbornWaterInfrastructureFireSummary waterInfrastructureSummary,
+        TimberbornAshFieldSummary ashFieldSummary,
         int alertCount)
     {
         return new TimberbornFireDeltaConsumerSummary(
@@ -921,6 +951,19 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             waterInfrastructureSummary.SkippedNoSafeApiCount,
             waterInfrastructureSummary.RepairEligibleTargetCount,
             waterInfrastructureSummary.TotalDamageApplied,
+            ashFieldSummary.SourceEventCount,
+            ashFieldSummary.NewAshCellCount,
+            ashFieldSummary.FertileAshCellCount,
+            ashFieldSummary.SpentAshCellCount,
+            ashFieldSummary.TaintedAshCellCount,
+            ashFieldSummary.DecayedAshCellCount,
+            ashFieldSummary.GrowthCandidateCellCount,
+            ashFieldSummary.GrowthAppliedGrowableCount,
+            ashFieldSummary.GrowthSkippedTaintedCellCount,
+            ashFieldSummary.GrowthSkippedUnsafeApiCount,
+            ashFieldSummary.GrowthSkippedUnsupportedGrowableCount,
+            ashFieldSummary.PersistenceSaveCount,
+            ashFieldSummary.PersistenceLoadCount,
             alertCount,
             decisions.Select(static decision => decision.NewHeat).DefaultIfEmpty(0).Max());
     }
@@ -1051,6 +1094,19 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"water_infrastructure_skipped_no_safe_api={WaterInfrastructureSkippedNoSafeApiCount} " +
             $"water_infrastructure_repair_eligible_targets={WaterInfrastructureRepairEligibleTargetCount} " +
             $"water_infrastructure_total_damage_applied={WaterInfrastructureTotalDamageApplied} " +
+            $"ash_field_source_events={AshFieldSourceEventCount} " +
+            $"ash_field_new_cells={AshFieldNewAshCellCount} " +
+            $"ash_field_fertile_cells={AshFieldFertileAshCellCount} " +
+            $"ash_field_spent_cells={AshFieldSpentAshCellCount} " +
+            $"ash_field_tainted_cells={AshFieldTaintedAshCellCount} " +
+            $"ash_field_decayed_cells={AshFieldDecayedAshCellCount} " +
+            $"ash_field_growth_candidate_cells={AshFieldGrowthCandidateCellCount} " +
+            $"ash_field_growth_applied_growables={AshFieldGrowthAppliedGrowableCount} " +
+            $"ash_field_growth_skipped_tainted_cells={AshFieldGrowthSkippedTaintedCellCount} " +
+            $"ash_field_growth_skipped_unsafe_apis={AshFieldGrowthSkippedUnsafeApiCount} " +
+            $"ash_field_growth_skipped_unsupported_growables={AshFieldGrowthSkippedUnsupportedGrowableCount} " +
+            $"ash_field_persistence_saves={AshFieldPersistenceSaveCount} " +
+            $"ash_field_persistence_loads={AshFieldPersistenceLoadCount} " +
             $"alerts={AlertCount} " +
             $"max_heat={MaxHeat}";
     }
@@ -1076,6 +1132,7 @@ public sealed class TimberbornFireDeltaConsumerSinks
         ITimberbornPathInfrastructureFireSink? pathInfrastructureFireSink = null,
         ITimberbornPowerInfrastructureFireSink? powerInfrastructureFireSink = null,
         ITimberbornWaterInfrastructureFireSink? waterInfrastructureFireSink = null,
+        ITimberbornAshFieldSink? ashFieldSink = null,
         ITimberbornFireAlertSink? alertSink = null)
     {
         DebugVisualSink = debugVisualSink ?? NullTimberbornFireDebugVisualSink.Instance;
@@ -1101,6 +1158,7 @@ public sealed class TimberbornFireDeltaConsumerSinks
             powerInfrastructureFireSink ?? NullTimberbornPowerInfrastructureFireSink.Instance;
         WaterInfrastructureFireSink =
             waterInfrastructureFireSink ?? NullTimberbornWaterInfrastructureFireSink.Instance;
+        AshFieldSink = ashFieldSink ?? NullTimberbornAshFieldSink.Instance;
         AlertSink = alertSink ?? NullTimberbornFireAlertSink.Instance;
     }
 
@@ -1133,6 +1191,8 @@ public sealed class TimberbornFireDeltaConsumerSinks
     public ITimberbornPowerInfrastructureFireSink PowerInfrastructureFireSink { get; }
 
     public ITimberbornWaterInfrastructureFireSink WaterInfrastructureFireSink { get; }
+
+    public ITimberbornAshFieldSink AshFieldSink { get; }
 
     public ITimberbornFireAlertSink AlertSink { get; }
 }

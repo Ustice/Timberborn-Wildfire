@@ -47,8 +47,8 @@ public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimul
         _logSink.Info(
             "wildfire_timberborn_gpu_factory_preset " +
             $"preset={TimberbornQaCommandBridge.FormatToken(preset.Name)} " +
-            $"ignition={preset.Parameters.FireIgnitionBaseHeat} " +
-            $"water_fuel_lock={preset.Parameters.FireWaterFuelLock}");
+            $"ignition={preset.Parameters.IgnitionPoint} " +
+            $"water_ignition_penalty={preset.Parameters.FireWaterIgnitionPenalty}");
         TimberbornComputeFireSimulator simulator = new(
             grid,
             initialCells,
@@ -454,6 +454,7 @@ public sealed class TimberbornComputeFireSimulator :
     IGpuFireSimulator,
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
+    ITimberbornFireSimPersistenceState,
     IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
@@ -661,9 +662,64 @@ public sealed class TimberbornComputeFireSimulator :
         _parameters = parameters;
         _logSink.Info(
             "wildfire_timberborn_gpu_parameters_updated " +
-            $"ignition={parameters.FireIgnitionBaseHeat} " +
-            $"water_fuel_lock={parameters.FireWaterFuelLock} " +
-            $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator}");
+            $"ignition={parameters.IgnitionPoint} " +
+            $"water_ignition_penalty={parameters.FireWaterIgnitionPenalty} " +
+            $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator} " +
+            $"fire_step_interval_ticks={parameters.FireCellStepIntervalTicks}");
+    }
+
+    public TimberbornFireSimPersistenceSnapshot CaptureFireSimState()
+    {
+        ThrowIfDisposed();
+
+        uint[] cells = new uint[Grid.CellCount];
+        uint[] atmosphericFields = new uint[Grid.CellCount];
+        _readCells.GetData(cells);
+        _readAtmosphericFields.GetData(atmosphericFields);
+
+        return new TimberbornFireSimPersistenceSnapshot(
+            Width,
+            Height,
+            Depth,
+            _tick,
+            cells.Select(static cell => checked((ushort)(cell & 0xFFFFu))).ToArray(),
+            atmosphericFields);
+    }
+
+    public void RestoreFireSimState(TimberbornFireSimPersistenceSnapshot snapshot)
+    {
+        if (snapshot is null)
+        {
+            throw new ArgumentNullException(nameof(snapshot));
+        }
+
+        ThrowIfDisposed();
+        if (snapshot.Width != Width ||
+            snapshot.Height != Height ||
+            snapshot.Depth != Depth ||
+            snapshot.Cells.Count != Grid.CellCount)
+        {
+            throw new ArgumentException("FireSim persistence snapshot dimensions do not match the live simulator.", nameof(snapshot));
+        }
+
+        uint[] cells = snapshot.Cells.Select(static cell => (uint)cell).ToArray();
+        _readCells.SetData(cells);
+        _writeCells.SetData(cells);
+        if (snapshot.AtmosphericFields.Count == Grid.CellCount)
+        {
+            uint[] atmosphericFields = snapshot.AtmosphericFields.ToArray();
+            _readAtmosphericFields.SetData(atmosphericFields);
+            _writeAtmosphericFields.SetData(atmosphericFields);
+            _visualFieldBindingLifecycle?.UpdateAtmosphericFieldsBuffer(_readAtmosphericFields);
+        }
+
+        _tick = snapshot.Tick;
+        _visualFieldBindingLifecycle?.MarkUpdated(_tick);
+        _logSink.Info(
+            "wildfire_timberborn_gpu_simulator_state_restored " +
+            $"tick={_tick} " +
+            $"cell_count={Grid.CellCount} " +
+            $"atmospheric_fields={snapshot.AtmosphericFields.Count}");
     }
 
     public void RegisterChange(FireSimChange change)
@@ -707,14 +763,17 @@ public sealed class TimberbornComputeFireSimulator :
             int groupsZ = GetThreadGroups(Depth, ThreadGroupSizeZ);
             DispatchKernel(_fullGridKernel, FullGridKernelName, dispatchTick, 0, groupsX, groupsY, groupsZ);
 
+            _logSink.Info($"wildfire_timberborn_gpu_readback_started tick={dispatchTick}");
+            Stopwatch readbackStopwatch = Stopwatch.StartNew();
             CellDelta[] deltas = ReadDeltas();
+            readbackStopwatch.Stop();
             SwapCellBuffers();
             _visualFieldBindingLifecycle?.UpdateAtmosphericFieldsBuffer(_readAtmosphericFields);
             _visualFieldBindingLifecycle?.UpdateCompanionFieldsBuffer(_companionFields);
             _visualFieldBindingLifecycle?.MarkUpdated(dispatchTick);
             NotifyListeners(deltas);
             _logSink.Info(
-                $"wildfire_timberborn_gpu_readback_completed tick={dispatchTick} delta_count={deltas.Length}");
+                $"wildfire_timberborn_gpu_readback_completed tick={dispatchTick} delta_count={deltas.Length} elapsed_ms={readbackStopwatch.Elapsed.TotalMilliseconds:F3}");
             return new GpuFireStepResult(deltas, dispatchTick);
         }
         catch (Exception exception)
@@ -813,18 +872,14 @@ public sealed class TimberbornComputeFireSimulator :
         _shader.SetFloat("VisualVisibilityHeatWeight", _parameters.VisualVisibilityHeatWeight);
         _shader.SetFloat("VisualVisibilitySmokeWeight", _parameters.VisualVisibilitySmokeWeight);
         _shader.SetFloat("VisualVisibilityAshWeight", _parameters.VisualVisibilityAshWeight);
-        _shader.SetInt("FireIgnitionBaseHeat", unchecked((int)_parameters.FireIgnitionBaseHeat));
+        _shader.SetInt("IgnitionPoint", unchecked((int)_parameters.IgnitionPoint));
         _shader.SetInt("FireWaterIgnitionPenalty", unchecked((int)_parameters.FireWaterIgnitionPenalty));
-        _shader.SetInt("FireWaterFuelLock", unchecked((int)_parameters.FireWaterFuelLock));
-        _shader.SetInt("FireWaterEvaporationHeat", unchecked((int)_parameters.FireWaterEvaporationHeat));
-        _shader.SetInt("FireFlammabilityBurnPressure", unchecked((int)_parameters.FireFlammabilityBurnPressure));
-        _shader.SetInt("FireWaterBurnPressurePenalty", unchecked((int)_parameters.FireWaterBurnPressurePenalty));
         _shader.SetInt("FireBurnHeatBase", unchecked((int)_parameters.FireBurnHeatBase));
         _shader.SetInt("FireFuelHeatWeight", unchecked((int)_parameters.FireFuelHeatWeight));
-        _shader.SetInt("FireCoolingBase", unchecked((int)_parameters.FireCoolingBase));
         _shader.SetInt("FireFuelBurnDownPressureNumerator", unchecked((int)_parameters.FireFuelBurnDownPressureNumerator));
         _shader.SetInt("FireFuelBurnDownPressureDenominator", unchecked((int)_parameters.FireFuelBurnDownPressureDenominator));
         _shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)_parameters.FireFuelBurnDownRollSeed));
+        _shader.SetInt("FireCellStepIntervalTicks", unchecked((int)_parameters.FireCellStepIntervalTicks));
     }
 
     private CellDelta[] ReadDeltas()

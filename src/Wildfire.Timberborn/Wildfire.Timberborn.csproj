@@ -21,6 +21,14 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.MapStateSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.Persistence">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Persistence.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.WorldPersistence">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WorldPersistence.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.MapIndexSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.MapIndexSystem.dll</HintPath>
       <Private>false</Private>
@@ -43,6 +51,10 @@
     </Reference>
     <Reference Include="Timberborn.Gathering">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Gathering.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Growing">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Growing.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Cutting">
@@ -79,6 +91,10 @@
     </Reference>
     <Reference Include="Timberborn.Goods">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Goods.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.GoodStackSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.GoodStackSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.ConstructionSites">
@@ -165,6 +181,10 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilMoistureSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.SoilContaminationSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilContaminationSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.WindSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WindSystem.dll</HintPath>
       <Private>false</Private>
@@ -199,9 +219,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Blueprints\**\*.blueprint.json" />
     <EmbeddedResource Include="Assets\WildfireAshOverlay4096.png" />
     <EmbeddedResource Include="Assets\WildfireAshGround2048.png" />
     <EmbeddedResource Include="Assets\WildfireAshMask2048Levels.png" />
+    <EmbeddedResource Include="Assets\WildfireAshMask4096Levels.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolIcon.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolCursorLarge.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolCursorSmall.png" />

@@ -73,7 +73,8 @@ public sealed record TimberbornBurnDamageDescriptor
         TimberbornBurnDamageTargetKind targetKind,
         TimberbornBurnMaterialKind materialKind,
         IReadOnlyList<TimberbornBurnDamageResourceStack>? resourceYields = null,
-        IReadOnlyList<TimberbornBurnDamageResourceStack>? constructionResources = null)
+        IReadOnlyList<TimberbornBurnDamageResourceStack>? constructionResources = null,
+        TimberbornBurnableProfile? burnableProfile = null)
     {
         if (string.IsNullOrWhiteSpace(specId))
         {
@@ -85,6 +86,7 @@ public sealed record TimberbornBurnDamageDescriptor
         MaterialKind = materialKind;
         ResourceYields = (resourceYields ?? Array.Empty<TimberbornBurnDamageResourceStack>()).ToArray();
         ConstructionResources = (constructionResources ?? Array.Empty<TimberbornBurnDamageResourceStack>()).ToArray();
+        BurnableProfile = burnableProfile;
     }
 
     public string SpecId { get; }
@@ -96,6 +98,8 @@ public sealed record TimberbornBurnDamageDescriptor
     public IReadOnlyList<TimberbornBurnDamageResourceStack> ResourceYields { get; }
 
     public IReadOnlyList<TimberbornBurnDamageResourceStack> ConstructionResources { get; }
+
+    public TimberbornBurnableProfile? BurnableProfile { get; }
 
     public bool HasResourceAccounting => ResourceYields.Count > 0 || ConstructionResources.Count > 0;
 }
@@ -153,6 +157,18 @@ public sealed record TimberbornBurnDamageCapacity(
 
 public sealed class TimberbornBurnDamageCapacityCalculator
 {
+    private const byte LogBurnDamageFuelValue = 12;
+    private const byte ProcessedWoodBurnDamageFuelValue = 3;
+    private const byte OrganicProduceBurnDamageFuelValue = 3;
+    private static readonly HashSet<string> InertZeroFuelResources = new(StringComparer.Ordinal)
+    {
+        "Badwater",
+        "Dirt",
+        "MetalBlock",
+        "ScrapMetal",
+        "Water",
+    };
+
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
 
     public TimberbornBurnDamageCapacityCalculator()
@@ -172,6 +188,20 @@ public sealed class TimberbornBurnDamageCapacityCalculator
             throw new ArgumentNullException(nameof(descriptor));
         }
 
+        if (descriptor.BurnableProfile is { } burnableProfile &&
+            burnableProfile.Known &&
+            descriptor.TargetKind is not TimberbornBurnDamageTargetKind.Tree and
+                not TimberbornBurnDamageTargetKind.Crop and
+                not TimberbornBurnDamageTargetKind.Resource)
+        {
+            return new TimberbornBurnDamageCapacity(
+                Capacity: burnableProfile.DamageCapacity,
+                FuelValue: burnableProfile.FuelValue,
+                Flammability: burnableProfile.Flammability,
+                MissingResourceIds: Array.Empty<string>(),
+                AccountedResourceIds: new[] { burnableProfile.SpecId });
+        }
+
         TimberbornBurnDamageResourceStack[] stacks = descriptor.ResourceYields
             .Concat(descriptor.ConstructionResources)
             .Where(static stack => stack.Amount > 0)
@@ -186,10 +216,10 @@ public sealed class TimberbornBurnDamageCapacityCalculator
             .OrderBy(static resourceId => resourceId)
             .ToArray();
         TimberbornResourceFuelProfile[] profiles = knownStacks
-            .Select(stack => _resourceFuelCatalog.Lookup(stack.ResourceId))
+            .Select(stack => EffectiveProfile(descriptor, _resourceFuelCatalog.Lookup(stack.ResourceId)))
             .ToArray();
         int capacity = knownStacks
-            .Select(stack => stack.Amount * _resourceFuelCatalog.Lookup(stack.ResourceId).FuelValue)
+            .Select(stack => stack.Amount * EffectiveProfile(descriptor, _resourceFuelCatalog.Lookup(stack.ResourceId)).FuelValue)
             .Sum();
         int fuelValue = profiles
             .Select(static profile => (int)profile.FuelValue)
@@ -210,6 +240,48 @@ public sealed class TimberbornBurnDamageCapacityCalculator
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(static resourceId => resourceId)
                 .ToArray());
+    }
+
+    private static TimberbornResourceFuelProfile EffectiveProfile(
+        TimberbornBurnDamageDescriptor descriptor,
+        TimberbornResourceFuelProfile profile)
+    {
+        if (profile.ResourceId == "Log")
+        {
+            return profile with
+            {
+                FuelValue = LogBurnDamageFuelValue,
+                Flammability = AtLeast(profile.Flammability, 1),
+            };
+        }
+
+        if (profile.ResourceId is "Plank" or "TreatedPlank")
+        {
+            return profile with
+            {
+                FuelValue = AtLeast(profile.FuelValue, ProcessedWoodBurnDamageFuelValue),
+                Flammability = AtLeast(profile.Flammability, 1),
+            };
+        }
+
+        if (descriptor.MaterialKind == TimberbornBurnMaterialKind.Organic &&
+            descriptor.TargetKind is TimberbornBurnDamageTargetKind.Crop or TimberbornBurnDamageTargetKind.Resource &&
+            profile.FuelValue == 0 &&
+            !InertZeroFuelResources.Contains(profile.ResourceId))
+        {
+            return profile with
+            {
+                FuelValue = OrganicProduceBurnDamageFuelValue,
+                Flammability = AtLeast(profile.Flammability, 1),
+            };
+        }
+
+        return profile;
+    }
+
+    private static byte AtLeast(byte value, byte minimum)
+    {
+        return value < minimum ? minimum : value;
     }
 }
 

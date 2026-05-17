@@ -1,0 +1,10 @@
+{
+  "WildfireBurnableSpec": {
+    "Type": "bush",
+    "Fuel": 1,
+    "Destruction Threshold": 0,
+    "Flammability": 1,
+    "Explosive": false,
+    "Contaminated": false
+  }
+}

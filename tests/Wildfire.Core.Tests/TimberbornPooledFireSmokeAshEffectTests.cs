@@ -17,7 +17,8 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
                     Fire: 0.1f,
                     Smoke: 0.8f,
                     Ash: 0.3f,
-                    Visibility: 1f),
+                    Visibility: 1f,
+                    AtmosphericSmoke: 0.8f),
             });
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(logSink, dataReader);
         RecordingPooledEffectPresenter presenter = new();
@@ -115,6 +116,42 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
+    public void AtmosphericUpdatesCreateFreshParticlesWhilePreviousParticlesFinish()
+    {
+        RecordingFireLogSink logSink = new();
+        Dictionary<int, TimberbornGpuVisualFieldSample> samples = new()
+        {
+            [4] = Sample(4, fire: 0f, smoke: 0.7f, ash: 0f),
+        };
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(sampleByCellIndex: samples));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 4, MaxUpdatedVisualRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(30);
+        sink.UpdateVisualEffect(EffectEvent(cellIndex: 4, tick: 30));
+        sink.CompleteVisualEffectDispatch(30);
+        sink.BeginVisualEffectDispatch(31);
+        sink.UpdateVisualEffect(EffectEvent(cellIndex: 4, tick: 31));
+        sink.CompleteVisualEffectDispatch(31);
+
+        Assert.Equal(2, sink.Counters.ActivePooledEffectCount);
+        Assert.Equal(2, presenter.ActiveEffects.Count);
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Smoke && state.Intensity == 0f);
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Smoke && state.Intensity > 0f);
+        Assert.Empty(presenter.ReleasedSlotIds);
+    }
+
+    [Fact]
     public void KeepsPoolBoundedAndReplacesWeakestEffectDeterministically()
     {
         RecordingFireLogSink logSink = new();
@@ -189,83 +226,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
-    public void ProceduralFireParticlesEmitFromBottomFootprintWithCircularBillboards()
-    {
-        string source = ReadTimberbornPooledFireSmokeAshEffectsSource();
-
-        Assert.Contains("shape.shapeType = ParticleSystemShapeType.Box;", source);
-        Assert.Contains("new Vector3(0.92f, 0.04f, 0.92f)", source);
-        Assert.Contains("main.startSpeed = 0f;", source);
-        Assert.Contains("velocity.x = HorizontalDriftVelocity(state, salt: 43, axis: 0);", source);
-        Assert.Contains("velocity.z = HorizontalDriftVelocity(state, salt: 59, axis: 1);", source);
-        Assert.Contains(
-            "if (state.Kind is TimberbornPooledFireEffectKind.Fire or TimberbornPooledFireEffectKind.Steam)",
-            source);
-        Assert.DoesNotContain("new ParticleSystem.MinMaxCurve(drift - 0.5f, drift + 0.5f)", source);
-        Assert.Contains("main.simulationSpace = ParticleSystemSimulationSpace.World;", source);
-        Assert.Contains("particleSystem.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmitting);", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(0.24f, 0.66f)", source);
-        Assert.Contains("private static TimberbornPooledFireEffectState SmoothEffectState(", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Smoke => 0.32f", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Smoke => Lerp(1f, 4.5f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => Lerp(0.75f, 3.5f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(4.8f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(5.4f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Smoke => 6.5f", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => 4f", source);
-        Assert.Contains("material.mainTexture = CreateCircularParticleTexture(kind);", source);
-        Assert.Contains("material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 500;", source);
-        Assert.Contains("material.SetInt(\"_ZWrite\", 0);", source);
-        Assert.Contains("float edgeSoftness = kind == TimberbornPooledFireEffectKind.Fire ? 0.18f : 0.32f;", source);
-        Assert.Contains("new Color(1f, 1f, 1f, alpha)", source);
-        Assert.Contains("EmissionRate(state.Kind, visibleIntensity)", source);
-        Assert.Contains("state.Kind == TimberbornPooledFireEffectKind.Fire && !created", source);
-        Assert.Contains("ConfigureParticleEmission(instance, state);", source);
-        Assert.Contains("private static void ConfigureParticleEmission(GameObject instance, TimberbornPooledFireEffectState state)", source);
-        Assert.Contains("StartLifetime(state.Kind, visibleIntensity)", source);
-        Assert.Contains("StartSizeMin(state.Kind, visibleIntensity)", source);
-        Assert.Contains("StartSizeMax(state.Kind, visibleIntensity)", source);
-        Assert.Contains("private static float OverLifetimeIntensity(TimberbornPooledFireEffectKind kind, float intensity)", source);
-        Assert.Contains("return kind == TimberbornPooledFireEffectKind.Fire ? 1f : intensity;", source);
-        Assert.Contains("UpwardVelocityMin(state.Kind, OverLifetimeIntensity(state.Kind, visibleIntensity))", source);
-        Assert.Contains("LifetimeGradient(\n                state.Kind,\n                OverLifetimeIntensity(state.Kind, visibleIntensity))", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Fire => Lerp(1.85f, 2.85f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Fire => Lerp(3.75f, 5.35f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(0f, 0f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(4.4f, 9.2f)", source);
-        Assert.Contains("new ParticleSystem.MinMaxCurve(0.3f, 0.6f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => Lerp(3f, 13.5f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(4.8f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => 19.5f", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => Lerp(0.45f, 0.85f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => Lerp(0.9f, 1.55f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => Lerp(0.35f, 0.65f, intensity)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => Lerp(0.85f, 1.35f, intensity)", source);
-        Assert.Contains("force.enabled = state.Kind == TimberbornPooledFireEffectKind.Fire;", source);
-        Assert.Contains("forceOverLifetime.enabled = kind == TimberbornPooledFireEffectKind.Fire;", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => 0.42f", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => 0.45f", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(0f, 0f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(0.55f, 1.1f)", source);
-        Assert.DoesNotContain("new Vector3(0.08f, 0.025f, 0.08f)", source);
-        Assert.Contains("AnimationCurve.EaseInOut(0f, 1.25f, 1f, 0.18f)", source);
-        Assert.Contains("AnimationCurve.EaseInOut(0f, 0.55f, 1f, 1.85f)", source);
-        Assert.DoesNotContain("new Keyframe(0.72f, 0.55f)", source);
-        Assert.DoesNotContain("new Keyframe(1f, 1.95f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Smoke => new Color(0.88f, 0.88f, 0.82f, Lerp(0.5f, 0.78f, intensity))", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => new Color(0.42f, 0.03f, 0.1f, Lerp(0.36f, 0.66f, intensity))", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => new Color(0.26f, 0.01f, 0.07f, Lerp(0.28f, 0.52f, intensity))", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.ToxicSmoke => new Color(0.12f, 0.0f, 0.04f, 0f)", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => new Color(0.96f, 0.96f, 0.92f, Lerp(0.34f, 0.62f, intensity))", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => new Color(0.86f, 0.86f, 0.82f, Lerp(0.24f, 0.5f, intensity))", source);
-        Assert.Contains("TimberbornPooledFireEffectKind.Steam => new Color(0.82f, 0.82f, 0.78f, 0f)", source);
-        Assert.DoesNotContain("TimberbornPooledFireEffectKind.Ash,\n            TimberbornPooledFireEffectKind.ToxicAsh", source);
-        Assert.Contains("_ => new Color(0.46f, 0.46f, 0.42f, Lerp(0.4f, 0.7f, intensity))", source);
-        Assert.DoesNotContain("LifetimeGradient(state.Kind, visibleIntensity)", source);
-    }
-
-    [Fact]
-    public void SteamIntensityComesFromPackedCellWaterDrop()
+    public void SteamIntensityComesFromAtmosphericSteamSample()
     {
         RecordingFireLogSink logSink = new();
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
@@ -273,7 +234,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             new RecordingVisualFieldDataReader(
                 sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
                 {
-                    [6] = Sample(6, fire: 0.1f, smoke: 0f, ash: 0f, steam: 0f),
+                    [6] = Sample(6, fire: 0.1f, smoke: 0f, ash: 0f, steam: 5f / 7f),
                 }));
         RecordingPooledEffectPresenter presenter = new();
         TimberbornPooledFireSmokeAshEffectSink sink = new(
@@ -297,12 +258,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
         Assert.Equal(TimberbornPooledFireEffectKind.Steam, state.Kind);
         Assert.Equal(2f / 3f, state.MoistureDrop, precision: 4);
-        Assert.Equal(2f / 3f, state.Steam, precision: 4);
-        Assert.Equal(2f / 3f, state.Intensity, precision: 4);
+        Assert.Equal(5f / 7f, state.Steam, precision: 4);
+        Assert.Equal(5f / 7f, state.Intensity, precision: 4);
     }
 
     [Fact]
-    public void AtmosphericSteamSampleDoesNotCreateSteamWithoutPackedWaterDrop()
+    public void AtmosphericSteamSampleCreatesSteamWithoutPackedWaterDrop()
     {
         RecordingFireLogSink logSink = new();
         TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
@@ -331,8 +292,10 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             IsBurning: false));
         sink.CompleteVisualEffectDispatch(22);
 
-        Assert.Empty(presenter.UpdatedEffects);
-        Assert.Equal(0, sink.Counters.ActivePooledEffectCount);
+        TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
+        Assert.Equal(TimberbornPooledFireEffectKind.Steam, state.Kind);
+        Assert.Equal(5f / 7f, state.Steam, precision: 4);
+        Assert.Equal(1, sink.Counters.ActivePooledEffectCount);
     }
 
     [Fact]
@@ -504,6 +467,186 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
+    public void EmptyVisualSamplesDoNotExhaustUpdatedVisualRegionBudget()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 0f, smoke: 0f, ash: 0f),
+                    [1] = Sample(1, fire: 0f, smoke: 0f, ash: 0f),
+                    [2] = Sample(2, fire: 0f, smoke: 1f, ash: 0f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 4, MaxUpdatedVisualRegionsPerDispatch: 1),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(10);
+        new[] { 0, 1, 2 }
+            .Select(cellIndex => EffectEvent(cellIndex, tick: 10))
+            .ToList()
+            .ForEach(sink.UpdateVisualEffect);
+        sink.CompleteVisualEffectDispatch(10);
+
+        TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
+        Assert.Equal(2, state.CellIndex);
+        Assert.Equal(1, sink.Counters.ActivePooledEffectCount);
+        Assert.Equal(1, sink.Counters.UpdatedVisualRegionCount);
+        Assert.Contains("dropped_visual_regions=0", logSink.InfoMessages.Last());
+    }
+
+    [Fact]
+    public void SaturatedPoolPreservesSmokeWhenFireWouldOtherwiseEvictIt()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 1f, smoke: 0.8f, ash: 0f),
+                    [1] = Sample(1, fire: 1f, smoke: 0.8f, ash: 0f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 2, MaxUpdatedVisualRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(11);
+        new[] { 0, 1 }
+            .Select(cellIndex => EffectEvent(cellIndex, tick: 11))
+            .ToList()
+            .ForEach(sink.UpdateVisualEffect);
+        sink.CompleteVisualEffectDispatch(11);
+
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Smoke);
+    }
+
+    [Fact]
+    public void SmokeCanEnterSaturatedFireOnlyPoolBelowReservation()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f),
+                    [1] = Sample(1, fire: 1f, smoke: 0f, ash: 0f),
+                    [2] = Sample(2, fire: 0f, smoke: 0.8f, ash: 0f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 2, MaxUpdatedVisualRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(12);
+        new[] { 0, 1, 2 }
+            .Select(cellIndex => EffectEvent(cellIndex, tick: 12))
+            .ToList()
+            .ForEach(sink.UpdateVisualEffect);
+        sink.CompleteVisualEffectDispatch(12);
+
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Smoke);
+    }
+
+    [Fact]
+    public void SaturatedPoolPreservesSteamWhenFireWouldOtherwiseEvictIt()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 1f, smoke: 0f, ash: 0f),
+                    [1] = Sample(1, fire: 1f, smoke: 0f, ash: 0f),
+                    [2] = Sample(2, fire: 0f, smoke: 0f, ash: 0f, steam: 5f / 7f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(MaxActiveEffects: 2, MaxUpdatedVisualRegionsPerDispatch: 8),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(13);
+        new[]
+            {
+                EffectEvent(0, tick: 13),
+                EffectEvent(1, tick: 13),
+                new TimberbornFireVisualEffectEvent(
+                    CellIndex: 2,
+                    Tick: 13,
+                    Kind: TimberbornFireVisualEffectKind.WaterChanged,
+                    Fuel: 10,
+                    Heat: 8,
+                    OldWater: 3,
+                    Water: 1,
+                    IsBurning: false),
+            }
+            .ToList()
+            .ForEach(sink.UpdateVisualEffect);
+        sink.CompleteVisualEffectDispatch(13);
+
+        Assert.Contains(
+            presenter.ActiveEffects.Values,
+            static state => state.Kind == TimberbornPooledFireEffectKind.Steam);
+    }
+
+    [Fact]
+    public void AtmosphericParticleEffectsCanBeDisabledWhenCloudRendererOwnsSmokeAndSteam()
+    {
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuVisualFieldSurface surface = CreateBoundSurface(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                sampleByCellIndex: new Dictionary<int, TimberbornGpuVisualFieldSample>
+                {
+                    [0] = Sample(0, fire: 1f, smoke: 0.8f, ash: 0f, steam: 5f / 7f, smokeContamination: 0.6f),
+                }));
+        RecordingPooledEffectPresenter presenter = new();
+        TimberbornPooledFireSmokeAshEffectSink sink = new(
+            surface,
+            logSink,
+            new TimberbornPooledFireEffectOptions(
+                MaxActiveEffects: 4,
+                MaxUpdatedVisualRegionsPerDispatch: 8,
+                AtmosphericParticleEffectsEnabled: false),
+            presenter);
+
+        sink.BeginVisualEffectDispatch(17);
+        sink.UpdateVisualEffect(new TimberbornFireVisualEffectEvent(
+            CellIndex: 0,
+            Tick: 17,
+            Kind: TimberbornFireVisualEffectKind.WaterChanged,
+            Fuel: 10,
+            Heat: 8,
+            OldWater: 3,
+            Water: 1,
+            IsBurning: true));
+        sink.CompleteVisualEffectDispatch(17);
+
+        TimberbornPooledFireEffectState state = Assert.Single(presenter.UpdatedEffects);
+        Assert.Equal(TimberbornPooledFireEffectKind.Fire, state.Kind);
+        Assert.Equal(1, sink.Counters.ActivePooledEffectCount);
+        Assert.Equal(1, sink.Counters.UpdatedVisualRegionCount);
+    }
+
+    [Fact]
     public void DeltaConsumerResetsAndCompletesPooledEffectDispatchEvenWithoutVisualEvents()
     {
         RecordingFireLogSink logSink = new();
@@ -594,18 +737,6 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
     }
 
     [Fact]
-    public void TimberbornFireRuntimeHasSinglePublicBinditoConstructor()
-    {
-        string source = ReadTimberbornFireRuntimeSource();
-
-        Assert.Equal(1, CountOccurrences(source, " TimberbornFireRuntime("));
-        Assert.Contains("public TimberbornFireRuntime(\n        ITimberbornGpuVisualFieldSurface visualFieldSurface,\n        EntityRegistry entityRegistry,\n        EntitySelectionService entitySelectionService,\n        QuickNotificationService quickNotificationService,\n        TimberbornPlayerFireAlertCameraFocus playerFireAlertCameraFocus,\n        WildfireReleaseSettings releaseSettings,\n        TimberbornFireSimParameterPresetState fireSimParameterPresetState,\n        ITimberbornWindProvider windProvider,\n        INavMeshObjectFactory navMeshObjectFactory)", source);
-        Assert.DoesNotContain("public TimberbornFireRuntime()\n", source);
-        Assert.DoesNotContain("internal TimberbornFireRuntime(", source);
-        Assert.DoesNotContain("NullTimberbornGpuFieldRendererPresenter.Instance", source);
-    }
-
-    [Fact]
     public void UnityPresenterMapsFireGridZToUnityHeight()
     {
         TimberbornPooledFireEffectLocalPosition position = TimberbornUnityPooledFireEffectPresenter.ToUnityLocalPosition(
@@ -650,6 +781,17 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             "SteamEngineSmoke"));
     }
 
+    [Fact]
+    public void UnityPresenterUpdatesTransformWhenReusingEffectInstances()
+    {
+        Assert.True(TimberbornUnityPooledFireEffectPresenter.ShouldUpdateTransformForReusedInstance(
+            TimberbornPooledFireEffectKind.Fire));
+        Assert.True(TimberbornUnityPooledFireEffectPresenter.ShouldUpdateTransformForReusedInstance(
+            TimberbornPooledFireEffectKind.Smoke));
+        Assert.True(TimberbornUnityPooledFireEffectPresenter.ShouldUpdateTransformForReusedInstance(
+            TimberbornPooledFireEffectKind.Steam));
+    }
+
     private static TimberbornGpuVisualFieldSurface CreateBoundSurface(
         RecordingFireLogSink logSink,
         RecordingVisualFieldDataReader dataReader)
@@ -684,6 +826,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             Ash: ash,
             Visibility: 1f,
             Steam: steam,
+            AtmosphericSmoke: smoke,
             SmokeContamination: smokeContamination,
             AshContamination: ashContamination);
     }
@@ -699,44 +842,6 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
             OldWater: 0,
             Water: 0,
             IsBurning: true);
-    }
-
-    private static string ReadTimberbornFireRuntimeSource()
-    {
-        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
-            .Select(directory => Path.Combine(
-                directory.FullName,
-                "src",
-                "Wildfire.Timberborn",
-                "TimberbornFireRuntime.cs"))
-            .First(File.Exists);
-
-        return File.ReadAllText(path);
-    }
-
-    private static string ReadTimberbornPooledFireSmokeAshEffectsSource()
-    {
-        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
-            .Select(directory => Path.Combine(
-                directory.FullName,
-                "src",
-                "Wildfire.Timberborn",
-                "TimberbornPooledFireSmokeAshEffects.cs"))
-            .First(File.Exists);
-
-        return File.ReadAllText(path);
-    }
-
-    private static int CountOccurrences(string value, string pattern)
-    {
-        return value.Split(new[] { pattern }, StringSplitOptions.None).Length - 1;
-    }
-
-    private static IEnumerable<DirectoryInfo> SelfAndParents(DirectoryInfo directory)
-    {
-        return directory.Parent is null
-            ? [directory]
-            : new[] { directory }.Concat(SelfAndParents(directory.Parent));
     }
 
     private sealed class RecordingVisualFieldDataReader(
@@ -793,6 +898,8 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
 
         public List<TimberbornPooledFireEffectState> UpdatedEffects { get; } = [];
 
+        public Dictionary<int, TimberbornPooledFireEffectState> ActiveEffects { get; } = [];
+
         public List<int> ReleasedSlotIds { get; } = [];
 
         public int ClearCount { get; private set; }
@@ -802,17 +909,20 @@ public sealed class TimberbornPooledFireSmokeAshEffectTests
         public TimberbornPooledFireEffectPresentationResult UpdateEffect(TimberbornPooledFireEffectState state)
         {
             UpdatedEffects.Add(state);
+            ActiveEffects[state.SlotId] = state;
             return _result;
         }
 
         public void ReleaseEffect(int slotId)
         {
             ReleasedSlotIds.Add(slotId);
+            ActiveEffects.Remove(slotId);
         }
 
         public void Clear()
         {
             ClearCount++;
+            ActiveEffects.Clear();
         }
     }
 

@@ -90,8 +90,9 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
     private readonly HashSet<TimberbornBurnDamageTargetKey> _driedTargets = new();
     private readonly HashSet<TimberbornBurnDamageTargetKey> _killedTargets = new();
     private readonly HashSet<TimberbornBurnDamageTargetKey> _leftoverTargets = new();
-    private const int TreeDeathDamageNumerator = 1;
-    private const int TreeDeathDamageDenominator = 5;
+    private const int BurnedDeadFuelThreshold = 12;
+    private const int BurnedLeftoverFuelThreshold = 0;
+    private const int DryWaterThreshold = 0;
 
     public TimberbornTreeBurnConsequenceSink(
         TimberbornBurnDamageService burnDamageService,
@@ -117,19 +118,28 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             .Where(static hit => hit.HasValue)
             .Select(static hit => hit!.Value)
             .ToArray();
-        TimberbornBurnDamageTargetState[] consideredTreeTargets = treeHits
-            .Select(static hit => hit.State)
-            .GroupBy(static state => state.TargetKey)
-            .Select(static group => group.First())
+        TreeCandidateTarget[] consideredTreeTargets = treeHits
+            .GroupBy(static hit => hit.State.TargetKey)
+            .Select(static group => new TreeCandidateTarget(
+                group.First().State,
+                group.Min(static hit => hit.CurrentFuel),
+                group.Min(static hit => hit.CurrentWater)))
             .ToArray();
         TimberbornTreeBurnTargetOutcome[] outcomes = consideredTreeTargets
-            .Select(state => ApplyTreeTargetConsequence(tick, state))
+            .Select(target => ApplyTreeTargetConsequence(
+                tick,
+                target.State,
+                target.CurrentFuel,
+                target.CurrentWater))
+            .ToArray();
+        TimberbornBurnDamageTargetState[] consideredTreeTargetStates = consideredTreeTargets
+            .Select(static target => target.State)
             .ToArray();
 
         TimberbornTreeBurnConsequenceSummary summary = new(
             Tick: tick,
             ConsideredTreeTargetCount: consideredTreeTargets.Length,
-            BurnableTreeTargetCount: consideredTreeTargets.Count(static state =>
+            BurnableTreeTargetCount: consideredTreeTargetStates.Count(static state =>
                 state.MaterialKind is not TimberbornBurnMaterialKind.NonBurnable &&
                 state.DamageCapacity > 0 &&
                 state.MissingResourceIds.Count == 0),
@@ -138,8 +148,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             VisualStateUpdateCount: outcomes.Count(static outcome => outcome.VisualUpdated),
             DuplicateCellSuppressedCount: _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
             UnmappedTargetCount: _burnDamageService.LastApplySummary.UnresolvedCellCount,
-            UnknownCuttableResourceCount: consideredTreeTargets.Count(static state => state.MissingResourceIds.Count > 0),
-            NonBurnableTreeTargetCount: consideredTreeTargets.Count(static state =>
+            UnknownCuttableResourceCount: consideredTreeTargetStates.Count(static state => state.MissingResourceIds.Count > 0),
+            NonBurnableTreeTargetCount: consideredTreeTargetStates.Count(static state =>
                 state.MaterialKind is TimberbornBurnMaterialKind.NonBurnable ||
                 (state.DamageCapacity == 0 && state.MissingResourceIds.Count == 0)),
             SkippedUnsafeApiCount: outcomes.Sum(static outcome => outcome.SkippedUnsafeApiCount));
@@ -158,7 +168,9 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
     private TreeCandidateHit? CreateTreeCandidateHit(TimberbornFireCellDeltaDecision decision)
     {
-        if (decision.OldFuel <= decision.NewFuel ||
+        bool fuelConsumed = decision.OldFuel > decision.NewFuel;
+        bool moistureEvaporated = decision.OldWater > decision.NewWater;
+        if ((!fuelConsumed && !moistureEvaporated) ||
             !_burnDamageService.TargetKeyByCellIndex.TryGetValue(decision.CellIndex, out TimberbornBurnDamageTargetKey targetKey) ||
             !_burnDamageService.States.TryGetValue(targetKey, out TimberbornBurnDamageTargetState state) ||
             !TimberbornTreeBurnTargetClassifier.IsTreeOrCuttable(state))
@@ -166,12 +178,14 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             return null;
         }
 
-        return new TreeCandidateHit(decision.CellIndex, state);
+        return new TreeCandidateHit(decision.CellIndex, state, decision.NewFuel, decision.NewWater);
     }
 
     private TimberbornTreeBurnTargetOutcome ApplyTreeTargetConsequence(
         uint tick,
-        TimberbornBurnDamageTargetState state)
+        TimberbornBurnDamageTargetState state,
+        int currentFuel,
+        int currentWater)
     {
         if (!TimberbornTreeBurnTargetClassifier.IsTreeOrCuttable(state))
         {
@@ -197,22 +211,29 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             ? appliedYieldLoss
             : 0;
         int incrementalYieldLoss = Math.Max(0, targetYieldLost - alreadyAppliedYieldLoss);
-        TimberbornTreeBurnTargetOutcome dryingOutcome = ApplyDryingConsequences(tick, state, initialYield, targetYieldLost);
+        bool shouldMarkBurnedLeftover = ShouldMarkBurnedLeftover(currentFuel);
+        bool shouldKillTree = shouldMarkBurnedLeftover || ShouldMarkBurnedDead(currentFuel);
+        bool shouldDryTree = ShouldDryTree(currentFuel, currentWater);
+        int displayedTargetYieldLost = shouldMarkBurnedLeftover ? initialYield : targetYieldLost;
+        TimberbornTreeBurnTargetOutcome dryingOutcome =
+            !shouldDryTree || shouldKillTree || _killedTargets.Contains(state.TargetKey)
+                ? TimberbornTreeBurnTargetOutcome.BurnableNoChange
+                : ApplyDryingConsequences(tick, state, initialYield, targetYieldLost);
         TimberbornTreeBurnTargetOutcome yieldOutcome = incrementalYieldLoss > 0
             ? ApplyYieldLoss(tick, state, incrementalYieldLoss, initialYield, targetYieldLost)
             : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
         TimberbornTreeBurnTargetOutcome deathOutcome =
-            ShouldKillTree(state)
+            shouldKillTree
                 ? ApplyDeathConsequences(
                     tick,
                     state,
                     initialYield,
-                    targetYieldLost,
-                    markBurnedDeadVisual: !ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost))
+                    displayedTargetYieldLost,
+                    markBurnedDeadVisual: !shouldMarkBurnedLeftover)
                 : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
         TimberbornTreeBurnTargetOutcome leftoverOutcome =
-            ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost)
-                ? ApplyBurnedLeftoverConsequences(tick, state, initialYield, targetYieldLost)
+            shouldMarkBurnedLeftover
+                ? ApplyBurnedLeftoverConsequences(tick, state, initialYield, displayedTargetYieldLost)
                 : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
 
         return TimberbornTreeBurnTargetOutcome.Combine(
@@ -408,19 +429,19 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         return Math.Clamp(state.DamageTaken / fuelValuePerYield, 0, initialYield);
     }
 
-    private static bool ShouldKillTree(TimberbornBurnDamageTargetState state)
+    private static bool ShouldDryTree(int currentFuel, int currentWater)
     {
-        return state.DamageCapacity > 0 &&
-            state.DamageTaken * TreeDeathDamageDenominator > state.DamageCapacity * TreeDeathDamageNumerator;
+        return currentWater <= DryWaterThreshold && currentFuel >= BurnedDeadFuelThreshold;
     }
 
-    private static bool ShouldMarkBurnedLeftover(
-        TimberbornBurnDamageTargetState state,
-        int initialYield,
-        int targetYieldLost)
+    private static bool ShouldMarkBurnedDead(int currentFuel)
     {
-        return initialYield > 0 &&
-            (state.IsFullyDamaged || targetYieldLost >= initialYield);
+        return currentFuel < BurnedDeadFuelThreshold;
+    }
+
+    private static bool ShouldMarkBurnedLeftover(int currentFuel)
+    {
+        return currentFuel <= BurnedLeftoverFuelThreshold;
     }
 
     private static int CountUnavailable(TimberbornTreeBurnConsequenceResult result)
@@ -430,7 +451,14 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
     private readonly record struct TreeCandidateHit(
         int CellIndex,
-        TimberbornBurnDamageTargetState State);
+        TimberbornBurnDamageTargetState State,
+        int CurrentFuel,
+        int CurrentWater);
+
+    private readonly record struct TreeCandidateTarget(
+        TimberbornBurnDamageTargetState State,
+        int CurrentFuel,
+        int CurrentWater);
 
     private readonly record struct TimberbornTreeBurnTargetOutcome(
         bool Burnable,

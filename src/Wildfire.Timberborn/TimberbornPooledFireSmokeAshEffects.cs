@@ -22,7 +22,8 @@ public sealed class TimberbornPooledFireEffectOptions
         int MaxUpdatedVisualRegionsPerDispatch = 512,
         float MinimumVisibleIntensity = 0.01f,
         uint SteamEffectLifetimeTicks = 2,
-        int MaxRefreshedCellsPerDispatch = 32)
+        int MaxRefreshedCellsPerDispatch = 32,
+        bool AtmosphericParticleEffectsEnabled = true)
     {
         if (MaxActiveEffects <= 0)
         {
@@ -48,14 +49,6 @@ public sealed class TimberbornPooledFireEffectOptions
                 "The minimum visible intensity cannot be negative.");
         }
 
-        if (MaxRefreshedCellsPerDispatch <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(MaxRefreshedCellsPerDispatch),
-                MaxRefreshedCellsPerDispatch,
-                "The refreshed cell limit must be positive.");
-        }
-
         if (SteamEffectLifetimeTicks == 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -64,11 +57,20 @@ public sealed class TimberbornPooledFireEffectOptions
                 "The steam effect lifetime must be positive.");
         }
 
+        if (MaxRefreshedCellsPerDispatch <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxRefreshedCellsPerDispatch),
+                MaxRefreshedCellsPerDispatch,
+                "The refreshed cell limit must be positive.");
+        }
+
         this.MaxActiveEffects = MaxActiveEffects;
         this.MaxUpdatedVisualRegionsPerDispatch = MaxUpdatedVisualRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
         this.SteamEffectLifetimeTicks = SteamEffectLifetimeTicks;
         this.MaxRefreshedCellsPerDispatch = MaxRefreshedCellsPerDispatch;
+        this.AtmosphericParticleEffectsEnabled = AtmosphericParticleEffectsEnabled;
     }
 
     public int MaxActiveEffects { get; }
@@ -80,6 +82,8 @@ public sealed class TimberbornPooledFireEffectOptions
     public uint SteamEffectLifetimeTicks { get; }
 
     public int MaxRefreshedCellsPerDispatch { get; }
+
+    public bool AtmosphericParticleEffectsEnabled { get; }
 }
 
 public readonly record struct TimberbornPooledFireEffectState(
@@ -205,7 +209,6 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
     private uint? _lastNonZeroUpdatedVisualRegionTick;
     private string? _lastNativeEffectPrefabName;
     private uint? _currentTick;
-    private int _refreshCycleOffset;
 
     public TimberbornPooledFireSmokeAshEffectSink(
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
@@ -262,7 +265,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
     public TimberbornPooledFireEffectOptions Options { get; }
 
     public TimberbornPooledFireEffectCounters Counters => new(
-        ActivePooledEffectCount: _slotsByKey.Count,
+        ActivePooledEffectCount: _slotsById.Count,
         UpdatedVisualRegionCount: _updatedVisualRegionsThisDispatch,
         LastNonZeroUpdatedVisualRegionCount: _lastNonZeroUpdatedVisualRegionCount,
         MaxActivePooledEffectCount: Options.MaxActiveEffects,
@@ -327,7 +330,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         _logSink.Info(
             "wildfire_timberborn_pooled_fire_effects_updated " +
             $"tick={tick} " +
-            $"active_pooled_effects={_slotsByKey.Count} " +
+            $"active_pooled_effects={_slotsById.Count} " +
             $"updated_visual_regions={_updatedVisualRegionsThisDispatch} " +
             $"last_nonzero_updated_visual_regions={_lastNonZeroUpdatedVisualRegionCount} " +
             $"last_nonzero_updated_visual_regions_tick={FormatNumber(_lastNonZeroUpdatedVisualRegionTick)} " +
@@ -401,7 +404,6 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         if (states.Length == 0)
         {
             ReleaseCell(effectEvent.CellIndex);
-            _updatedVisualRegionsThisDispatch++;
             return;
         }
 
@@ -419,7 +421,13 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         }
 
         TimberbornPooledFireEffectKey key = TimberbornPooledFireEffectKey.FromState(state);
-        TimberbornPooledFireEffectSlot? slot = FindOrAllocateSlot(key, state.Intensity);
+        if (IsAtmosphericKind(state.Kind) && _slotsByKey.TryGetValue(key, out TimberbornPooledFireEffectSlot? existingAtmosphericSlot))
+        {
+            StopEmittingSlot(existingAtmosphericSlot);
+            _slotsByKey.Remove(key);
+        }
+
+        TimberbornPooledFireEffectSlot? slot = FindOrAllocateSlot(key, state.Kind, state.Intensity);
         if (slot is null)
         {
             _droppedVisualRegionsThisDispatch++;
@@ -462,7 +470,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
 
     private void RefreshActiveEffects(uint tick)
     {
-        if (_slotsByKey.Count == 0)
+        if (_slotsById.Count == 0)
         {
             return;
         }
@@ -472,7 +480,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return;
         }
 
-        TimberbornPooledFireEffectSlot[] slots = _slotsByKey.Values
+        TimberbornPooledFireEffectSlot[] slots = _slotsById.Values
             .OrderBy(static slot => slot.SlotId)
             .ToArray();
 
@@ -482,7 +490,7 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
                 tick >= slot.State.Tick &&
                 tick - slot.State.Tick >= FinishedAnimationLifetimeTicks(slot.State.Kind))
             .ToList()
-            .ForEach(slot => ReleaseKey(TimberbornPooledFireEffectKey.FromState(slot.State)));
+            .ForEach(ReleaseSlot);
 
         TimberbornPooledFireEffectSlot[] slotsToRefresh = slots
             .Where(slot => slot.State.Tick != tick &&
@@ -493,20 +501,13 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return;
         }
 
-        // Round-robin over slots so at most MaxRefreshedCellsPerDispatch cells are read per tick.
-        // This caps synchronous GPU readback cost regardless of how many effects are active.
-        int cap = Options.MaxRefreshedCellsPerDispatch;
-        if (slotsToRefresh.Length > cap)
+        int refreshCap = Options.MaxRefreshedCellsPerDispatch;
+        if (slotsToRefresh.Length > refreshCap)
         {
-            int offset = _refreshCycleOffset % slotsToRefresh.Length;
             slotsToRefresh = slotsToRefresh
-                .Skip(offset)
-                .Concat(slotsToRefresh.Take(offset))
-                .Take(cap)
+                .Take(refreshCap)
                 .ToArray();
         }
-
-        _refreshCycleOffset = (_refreshCycleOffset + cap) % Math.Max(1, slots.Length);
 
         int[] cellIndices = slotsToRefresh
             .Select(static slot => slot.State.CellIndex)
@@ -555,6 +556,11 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
                     ReleaseKey(key);
                 }
 
+                return;
+            }
+
+            if (IsAtmosphericKind(slot.State.Kind))
+            {
                 return;
             }
 
@@ -652,7 +658,10 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         };
     }
 
-    private TimberbornPooledFireEffectSlot? FindOrAllocateSlot(TimberbornPooledFireEffectKey key, float intensity)
+    private TimberbornPooledFireEffectSlot? FindOrAllocateSlot(
+        TimberbornPooledFireEffectKey key,
+        TimberbornPooledFireEffectKind requestedKind,
+        float intensity)
     {
         if (_slotsByKey.TryGetValue(key, out TimberbornPooledFireEffectSlot? existingSlot))
         {
@@ -664,11 +673,13 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return new TimberbornPooledFireEffectSlot(_freeSlotIds.Dequeue());
         }
 
-        TimberbornPooledFireEffectSlot? replacement = _slotsById.Values
-            .OrderBy(static slot => slot.State.Intensity)
-            .ThenBy(static slot => slot.State.Tick)
-            .ThenBy(static slot => slot.SlotId)
-            .FirstOrDefault(slot => slot.State.Intensity < intensity);
+        int protectedAtmosphericSlots = MinimumProtectedAtmosphericSlots();
+        int activeAtmosphericSlots = _slotsById.Values.Count(static slot => IsAtmosphericKind(slot.State.Kind));
+        TimberbornPooledFireEffectSlot? replacement = FindReplacementSlot(
+            requestedKind,
+            intensity,
+            activeAtmosphericSlots,
+            protectedAtmosphericSlots);
         if (replacement is null)
         {
             return null;
@@ -676,6 +687,60 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
 
         _slotsByKey.Remove(TimberbornPooledFireEffectKey.FromState(replacement.State));
         return replacement;
+    }
+
+    private TimberbornPooledFireEffectSlot? FindReplacementSlot(
+        TimberbornPooledFireEffectKind requestedKind,
+        float intensity,
+        int activeAtmosphericSlots,
+        int protectedAtmosphericSlots)
+    {
+        if (IsAtmosphericKind(requestedKind) && activeAtmosphericSlots < protectedAtmosphericSlots)
+        {
+            TimberbornPooledFireEffectSlot? nonAtmosphericReplacement = _slotsById.Values
+                .Where(static slot => !IsAtmosphericKind(slot.State.Kind))
+                .OrderBy(static slot => slot.State.Intensity)
+                .ThenBy(static slot => slot.State.Tick)
+                .ThenBy(static slot => slot.SlotId)
+                .FirstOrDefault();
+            if (nonAtmosphericReplacement is not null)
+            {
+                return nonAtmosphericReplacement;
+            }
+        }
+
+        return _slotsById.Values
+            .Where(slot => CanReplaceSlot(slot, requestedKind, activeAtmosphericSlots, protectedAtmosphericSlots))
+            .OrderBy(static slot => slot.State.Intensity)
+            .ThenBy(static slot => slot.State.Tick)
+            .ThenBy(static slot => slot.SlotId)
+            .FirstOrDefault(slot => slot.State.Intensity < intensity);
+    }
+
+    private int MinimumProtectedAtmosphericSlots()
+    {
+        return Math.Max(1, Options.MaxActiveEffects / 4);
+    }
+
+    private static bool CanReplaceSlot(
+        TimberbornPooledFireEffectSlot slot,
+        TimberbornPooledFireEffectKind requestedKind,
+        int activeAtmosphericSlots,
+        int protectedAtmosphericSlots)
+    {
+        if (IsAtmosphericKind(slot.State.Kind) && !IsAtmosphericKind(requestedKind) && activeAtmosphericSlots <= protectedAtmosphericSlots)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsAtmosphericKind(TimberbornPooledFireEffectKind kind)
+    {
+        return kind is TimberbornPooledFireEffectKind.Smoke or
+            TimberbornPooledFireEffectKind.ToxicSmoke or
+            TimberbornPooledFireEffectKind.Steam;
     }
 
     private void ReleaseCell(int cellIndex)
@@ -694,6 +759,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
             return;
         }
 
+        ReleaseSlot(slot);
+    }
+
+    private void ReleaseSlot(TimberbornPooledFireEffectSlot slot)
+    {
+        TimberbornPooledFireEffectKey key = TimberbornPooledFireEffectKey.FromState(slot.State);
         _slotsByKey.Remove(key);
         _slotsById.Remove(slot.SlotId);
         _freeSlotIds.Enqueue(slot.SlotId);
@@ -716,13 +787,18 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         TimberbornFireVisualEffectEvent effectEvent,
         TimberbornGpuVisualFieldSample sample)
     {
-        TimberbornPooledFireEffectKind[] lanes = new[]
-        {
-            TimberbornPooledFireEffectKind.Fire,
-            TimberbornPooledFireEffectKind.Steam,
-            TimberbornPooledFireEffectKind.Smoke,
-            TimberbornPooledFireEffectKind.ToxicSmoke,
-        };
+        TimberbornPooledFireEffectKind[] lanes = Options.AtmosphericParticleEffectsEnabled
+            ? new[]
+            {
+                TimberbornPooledFireEffectKind.Fire,
+                TimberbornPooledFireEffectKind.Steam,
+                TimberbornPooledFireEffectKind.Smoke,
+                TimberbornPooledFireEffectKind.ToxicSmoke,
+            }
+            : new[]
+            {
+                TimberbornPooledFireEffectKind.Fire,
+            };
         return lanes
             .Select(kind => TryCreateEffectState(
                 binding,
@@ -744,14 +820,12 @@ public sealed class TimberbornPooledFireSmokeAshEffectSink :
         out TimberbornPooledFireEffectState state)
     {
         float fire = Clamp01(sample.Fire);
-        float smoke = Clamp01(sample.Smoke);
+        float smoke = Clamp01(sample.AtmosphericSmoke);
         float ash = Clamp01(sample.Ash);
         float smokeContamination = Clamp01(sample.SmokeContamination);
         float ashContamination = Clamp01(sample.AshContamination);
         float moistureDrop = Clamp01(Math.Max(0, effectEvent.OldWater - effectEvent.Water) / 3f);
-        float steam = kind == TimberbornPooledFireEffectKind.Steam
-            ? moistureDrop
-            : Clamp01(sample.Steam);
+        float steam = Clamp01(sample.Steam);
         float visibility = Clamp01(sample.Visibility);
         float fieldValue = FieldValue(kind, fire, smoke, steam, ash, smokeContamination, ashContamination);
         float intensity = fieldValue * visibility;
@@ -964,15 +1038,19 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         GameObject instance = GetOrCreateInstance(state, resolution.Prefab, out bool created);
         instance.name = $"Wildfire {state.Kind} Effect {state.SlotId}";
         instance.SetActive(true);
+        if (created || ShouldUpdateTransformForReusedInstance(state.Kind))
+        {
+            TimberbornPooledFireEffectLocalPosition position = ToUnityLocalPosition(state);
+            instance.transform.localPosition = new Vector3(position.X, position.Y, position.Z);
+            instance.transform.localScale = Vector3.one;
+        }
+
         if (state.Kind == TimberbornPooledFireEffectKind.Fire && !created)
         {
             ConfigureParticleEmission(instance, state);
         }
         else
         {
-            TimberbornPooledFireEffectLocalPosition position = ToUnityLocalPosition(state);
-            instance.transform.localPosition = new Vector3(position.X, position.Y, position.Z);
-            instance.transform.localScale = Vector3.one;
             ConfigureParticleSystem(instance, state);
         }
 
@@ -1053,6 +1131,17 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             string.Equals(existingPrefabName, requestedPrefabName, StringComparison.Ordinal);
     }
 
+    public static bool ShouldUpdateTransformForReusedInstance(TimberbornPooledFireEffectKind kind)
+    {
+        return kind is
+            TimberbornPooledFireEffectKind.Fire or
+            TimberbornPooledFireEffectKind.Smoke or
+            TimberbornPooledFireEffectKind.ToxicSmoke or
+            TimberbornPooledFireEffectKind.Steam or
+            TimberbornPooledFireEffectKind.Ash or
+            TimberbornPooledFireEffectKind.ToxicAsh;
+    }
+
     private GameObject GetOrCreateInstance(
         TimberbornPooledFireEffectState state,
         GameObject nativePrefab,
@@ -1123,6 +1212,7 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             StartSizeMax(state.Kind, visibleIntensity));
         main.startColor = new ParticleSystem.MinMaxGradient(
             TimberbornProceduralFireSmokeAshEffectPrefabCatalog.StartColor(state.Kind, visibleIntensity));
+        main.maxParticles = MaxParticles(state.Kind);
 
         ParticleSystem.EmissionModule emission = particleSystem.emission;
         emission.rateOverTime = new ParticleSystem.MinMaxCurve(EmissionRate(state.Kind, visibleIntensity));
@@ -1185,9 +1275,9 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         return kind switch
         {
             TimberbornPooledFireEffectKind.Fire => Lerp(6f, 32f, intensity),
-            TimberbornPooledFireEffectKind.Smoke => Lerp(1f, 4.5f, intensity),
-            TimberbornPooledFireEffectKind.ToxicSmoke => Lerp(0.75f, 3.5f, intensity),
-            TimberbornPooledFireEffectKind.Steam => Lerp(3f, 13.5f, intensity),
+            TimberbornPooledFireEffectKind.Smoke => Lerp(0.45f, 2.2f, intensity),
+            TimberbornPooledFireEffectKind.ToxicSmoke => Lerp(0.35f, 1.8f, intensity),
+            TimberbornPooledFireEffectKind.Steam => Lerp(0.7f, 3.2f, intensity),
             TimberbornPooledFireEffectKind.ToxicAsh => Lerp(3f, 14f, intensity),
             _ => Lerp(4f, 18f, intensity),
         };
@@ -1200,11 +1290,24 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             TimberbornPooledFireEffectKind.Fire => new ParticleSystem.MinMaxCurve(
                 Lerp(0.55f, 0.75f, intensity),
                 Lerp(0.8f, 1.05f, intensity)),
-            TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(4.8f),
-            TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(5.4f),
-            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(4.8f),
+            TimberbornPooledFireEffectKind.Smoke => new ParticleSystem.MinMaxCurve(3.2f),
+            TimberbornPooledFireEffectKind.ToxicSmoke => new ParticleSystem.MinMaxCurve(3.4f),
+            TimberbornPooledFireEffectKind.Steam => new ParticleSystem.MinMaxCurve(2.2f),
             TimberbornPooledFireEffectKind.ToxicAsh => new ParticleSystem.MinMaxCurve(2.1f),
             _ => new ParticleSystem.MinMaxCurve(1.8f),
+        };
+    }
+
+    private static int MaxParticles(TimberbornPooledFireEffectKind kind)
+    {
+        return kind switch
+        {
+            TimberbornPooledFireEffectKind.Fire => 32,
+            TimberbornPooledFireEffectKind.Smoke => 18,
+            TimberbornPooledFireEffectKind.ToxicSmoke => 18,
+            TimberbornPooledFireEffectKind.Steam => 14,
+            TimberbornPooledFireEffectKind.ToxicAsh => 18,
+            _ => 16,
         };
     }
 
@@ -1316,7 +1419,8 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
             _logSink.Info(
                 "wildfire_timberborn_pooled_fire_effect_native_prefab_resolved " +
                 $"kind={kind.ToString().ToLowerInvariant()} " +
-                $"prefab={FormatLogToken(resolution.PrefabName)}");
+                $"prefab={FormatLogToken(resolution.PrefabName)} " +
+                RenderOrderToken(resolution.Prefab));
         }
         else
         {
@@ -1327,6 +1431,19 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
         }
 
         return resolution;
+    }
+
+    private static string RenderOrderToken(GameObject? prefab)
+    {
+        ParticleSystemRenderer? renderer = prefab is null
+            ? null
+            : prefab.GetComponent<ParticleSystemRenderer>();
+        Material? material = renderer?.sharedMaterial;
+        return renderer is null
+            ? "render_queue=placeholder sorting_order=placeholder sorting_fudge=placeholder"
+            : $"render_queue={material?.renderQueue.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder"} " +
+                $"sorting_order={renderer.sortingOrder.ToString(System.Globalization.CultureInfo.InvariantCulture)} " +
+                $"sorting_fudge={renderer.sortingFudge.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
     }
 
     private static string FormatLogToken(string? value)
@@ -1359,6 +1476,10 @@ public sealed class TimberbornUnityPooledFireEffectPresenter : ITimberbornPooled
 
 public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
 {
+    private const int AtmosphericParticleRenderQueueOffset = 700;
+    private const int AtmosphericParticleSortingOrder = 20;
+    private const float AtmosphericParticleSortingFudge = 1f;
+
     public static TimberbornNativeFireEffectPrefabResolution Resolve(TimberbornPooledFireEffectKind kind)
     {
         GameObject prefab = CreatePrefab(kind);
@@ -1514,6 +1635,7 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
 
         ParticleSystemRenderer renderer = prefab.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        ConfigureParticleRendererOrdering(renderer);
         Shader? shader = Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default");
         if (shader is not null)
         {
@@ -1523,6 +1645,12 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         return prefab;
     }
 
+    private static void ConfigureParticleRendererOrdering(ParticleSystemRenderer renderer)
+    {
+        renderer.sortingOrder = AtmosphericParticleSortingOrder;
+        renderer.sortingFudge = AtmosphericParticleSortingFudge;
+    }
+
     private static Material CreateParticleMaterial(Shader shader, TimberbornPooledFireEffectKind kind)
     {
         Material material = new(shader)
@@ -1530,7 +1658,7 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
             hideFlags = HideFlags.DontSave,
         };
         material.mainTexture = CreateCircularParticleTexture(kind);
-        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 500;
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + AtmosphericParticleRenderQueueOffset;
         if (material.HasProperty("_ZWrite"))
         {
             material.SetInt("_ZWrite", 0);
@@ -1577,9 +1705,9 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         return kind switch
         {
             TimberbornPooledFireEffectKind.Fire => new Color(1f, 0.9f, 0.35f, Lerp(0.24f, 0.58f, intensity)),
-            TimberbornPooledFireEffectKind.Smoke => new Color(0.88f, 0.88f, 0.82f, Lerp(0.5f, 0.78f, intensity)),
+            TimberbornPooledFireEffectKind.Smoke => new Color(0.68f, 0.68f, 0.62f, Lerp(0.5f, 0.78f, intensity)),
             TimberbornPooledFireEffectKind.ToxicSmoke => new Color(0.42f, 0.03f, 0.1f, Lerp(0.36f, 0.66f, intensity)),
-            TimberbornPooledFireEffectKind.Steam => new Color(0.96f, 0.96f, 0.92f, Lerp(0.34f, 0.62f, intensity)),
+            TimberbornPooledFireEffectKind.Steam => new Color(1f, 1f, 0.98f, Lerp(0.34f, 0.62f, intensity)),
             TimberbornPooledFireEffectKind.ToxicAsh => new Color(0.52f, 0.58f, 0.38f, Lerp(0.34f, 0.64f, intensity)),
             _ => new Color(0.46f, 0.46f, 0.42f, Lerp(0.4f, 0.7f, intensity)),
         };
@@ -1595,9 +1723,9 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         return kind switch
         {
             TimberbornPooledFireEffectKind.Fire => new Color(1f, 0.32f, 0.04f, Lerp(0.62f, 0.94f, intensity)),
-            TimberbornPooledFireEffectKind.Smoke => new Color(0.74f, 0.74f, 0.68f, Lerp(0.4f, 0.64f, intensity)),
+            TimberbornPooledFireEffectKind.Smoke => new Color(0.48f, 0.48f, 0.44f, Lerp(0.4f, 0.64f, intensity)),
             TimberbornPooledFireEffectKind.ToxicSmoke => new Color(0.26f, 0.01f, 0.07f, Lerp(0.28f, 0.52f, intensity)),
-            TimberbornPooledFireEffectKind.Steam => new Color(0.86f, 0.86f, 0.82f, Lerp(0.24f, 0.5f, intensity)),
+            TimberbornPooledFireEffectKind.Steam => new Color(0.96f, 0.98f, 1f, Lerp(0.24f, 0.5f, intensity)),
             TimberbornPooledFireEffectKind.ToxicAsh => new Color(0.38f, 0.5f, 0.32f, Lerp(0.24f, 0.48f, intensity)),
             _ => new Color(0.42f, 0.42f, 0.39f, Lerp(0.28f, 0.52f, intensity)),
         };
@@ -1608,9 +1736,9 @@ public static class TimberbornProceduralFireSmokeAshEffectPrefabCatalog
         return kind switch
         {
             TimberbornPooledFireEffectKind.Fire => new Color(0.45f, 0.03f, 0.01f, 0f),
-            TimberbornPooledFireEffectKind.Smoke => new Color(0.62f, 0.62f, 0.58f, 0f),
+            TimberbornPooledFireEffectKind.Smoke => new Color(0.38f, 0.38f, 0.35f, 0f),
             TimberbornPooledFireEffectKind.ToxicSmoke => new Color(0.12f, 0.0f, 0.04f, 0f),
-            TimberbornPooledFireEffectKind.Steam => new Color(0.82f, 0.82f, 0.78f, 0f),
+            TimberbornPooledFireEffectKind.Steam => new Color(0.92f, 0.94f, 0.96f, 0f),
             TimberbornPooledFireEffectKind.ToxicAsh => new Color(0.28f, 0.38f, 0.24f, 0f),
             _ => new Color(0.32f, 0.32f, 0.3f, 0f),
         };

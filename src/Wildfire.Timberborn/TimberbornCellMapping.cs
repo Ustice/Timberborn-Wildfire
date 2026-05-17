@@ -103,6 +103,18 @@ public sealed class TimberbornBuildingAdapter
     public const byte NonBurnableFuel = 0;
     public const byte NonBurnableFlammability = 0;
 
+    private readonly TimberbornBurnableCatalog _burnableCatalog;
+
+    public TimberbornBuildingAdapter()
+        : this(TimberbornBurnableCatalog.Default)
+    {
+    }
+
+    public TimberbornBuildingAdapter(TimberbornBurnableCatalog burnableCatalog)
+    {
+        _burnableCatalog = burnableCatalog ?? throw new ArgumentNullException(nameof(burnableCatalog));
+    }
+
     public TimberbornCellSource CreateSource(int x, int y, int z, byte fuel, byte flammability)
     {
         return CreateSource(x, y, z, fuel, flammability, TimberbornBuildingMaterialKind.WoodLike);
@@ -138,6 +150,27 @@ public sealed class TimberbornBuildingAdapter
             TimberbornBuildingMaterialKind.WoodLike);
     }
 
+    public TimberbornCellSource CreateBuildingSource(int x, int y, int z, string specId, uint companionTargetId = 0)
+    {
+        TimberbornBurnableProfile profile = _burnableCatalog.Lookup(specId);
+        if (!profile.Known)
+        {
+            return CreateWoodLikeSource(x, y, z) with { CompanionTargetId = companionTargetId };
+        }
+
+        TimberbornBuildingMaterialKind kind = profile.IsBurnable
+            ? TimberbornBuildingMaterialKind.WoodLike
+            : TimberbornBuildingMaterialKind.NonBurnable;
+        return CreateSource(
+            x,
+            y,
+            z,
+            profile.FuelValue,
+            profile.Flammability,
+            kind,
+            companionTargetId);
+    }
+
     public TimberbornCellSource CreateNonBurnableSource(int x, int y, int z)
     {
         return CreateSource(
@@ -170,15 +203,24 @@ public sealed class TimberbornResourceAdapter
     public const byte VegetationFlammability = 3;
 
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
+    private readonly TimberbornBurnableCatalog _burnableCatalog;
 
     public TimberbornResourceAdapter()
-        : this(TimberbornResourceFuelCatalog.Default)
+        : this(TimberbornResourceFuelCatalog.Default, TimberbornBurnableCatalog.Default)
     {
     }
 
     public TimberbornResourceAdapter(TimberbornResourceFuelCatalog resourceFuelCatalog)
+        : this(resourceFuelCatalog, TimberbornBurnableCatalog.Default)
+    {
+    }
+
+    public TimberbornResourceAdapter(
+        TimberbornResourceFuelCatalog resourceFuelCatalog,
+        TimberbornBurnableCatalog burnableCatalog)
     {
         _resourceFuelCatalog = resourceFuelCatalog ?? throw new ArgumentNullException(nameof(resourceFuelCatalog));
+        _burnableCatalog = burnableCatalog ?? throw new ArgumentNullException(nameof(burnableCatalog));
     }
 
     public TimberbornCellSource CreateSource(
@@ -225,6 +267,11 @@ public sealed class TimberbornResourceAdapter
         return _resourceFuelCatalog.Lookup(resourceId);
     }
 
+    public TimberbornBurnableProfile LookupBurnableProfile(string specId)
+    {
+        return _burnableCatalog.Lookup(specId);
+    }
+
     public TimberbornCellSource CreateVegetationSource(int x, int y, int z)
     {
         return CreateSource(
@@ -251,6 +298,22 @@ public sealed class TimberbornResourceAdapter
             companionTargetId);
     }
 
+    public TimberbornCellSource CreateTreeSource(int x, int y, int z, string specId, uint companionTargetId = 0)
+    {
+        TimberbornBurnableProfile profile = _burnableCatalog.Lookup(specId);
+        return profile.Known
+            ? CreateSource(
+                x,
+                y,
+                z,
+                profile.FuelValue,
+                profile.Flammability,
+                TimberbornResourceKind.Vegetation,
+                WildfireMaterialClass.Tree,
+                companionTargetId)
+            : CreateTreeSource(x, y, z, companionTargetId);
+    }
+
     public TimberbornCellSource CreateCropSource(int x, int y, int z, uint companionTargetId = 0)
     {
         WildfireMaterialFieldProfile profile = WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Crop);
@@ -263,6 +326,22 @@ public sealed class TimberbornResourceAdapter
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Crop,
             companionTargetId);
+    }
+
+    public TimberbornCellSource CreateCropSource(int x, int y, int z, string specId, uint companionTargetId = 0)
+    {
+        TimberbornBurnableProfile profile = _burnableCatalog.Lookup(specId);
+        return profile.Known
+            ? CreateSource(
+                x,
+                y,
+                z,
+                profile.FuelValue,
+                profile.Flammability,
+                TimberbornResourceKind.Vegetation,
+                WildfireMaterialClass.Crop,
+                companionTargetId)
+            : CreateCropSource(x, y, z, companionTargetId);
     }
 
     public TimberbornCellSource CreateSource(

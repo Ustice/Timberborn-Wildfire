@@ -1,5 +1,7 @@
 {
   "scripts": {
+    "blueprints:check": "bun scripts/generate-wildfire-fuel-blueprints.ts --check",
+    "blueprints:generate": "bun scripts/generate-wildfire-fuel-blueprints.ts",
     "kanban:audit": "bun scripts/audit-kanban.ts",
     "typecheck": "tsc --noEmit"
   },

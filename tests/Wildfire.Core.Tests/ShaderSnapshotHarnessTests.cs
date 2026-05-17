@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Wildfire.Cli;
+using Wildfire.Core;
 using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
@@ -73,6 +74,47 @@ public sealed class ShaderSnapshotHarnessTests
         Assert.Equal(0, (int?)snapshot["perTickDeltaCounts"]?[1]);
         Assert.Equal(1, (int?)snapshot["perTickDeltas"]?[0]?["deltas"]?[0]?["cellIndex"]);
         Assert.Equal("heat:0000002A", (string?)snapshot["visual"]?["checksum"]);
+    }
+
+    [Fact]
+    public void FixtureLoaderReadsOptionalWindAtmosphericAndCompanionFields()
+    {
+        uint atmospheric = new WildfireAtmosphericFieldState(
+            Steam: 1,
+            Smoke: 2,
+            SmokeContamination: 3,
+            Ash: 4,
+            AshContamination: 5,
+            Source: true).Pack();
+        uint companion = new WildfireCompanionFieldState(
+            WildfireMaterialClass.Badwater,
+            BurnCapacity: 0,
+            BurnHistory: 0,
+            AshStrength: 0,
+            WildfireAshQuality.Tainted,
+            WildfireContaminationBehavior.TaintedSource).Pack();
+        ShaderSnapshotFixture source = new(
+            FormatVersion: 1,
+            Scenario: "field-model-fixture",
+            Seed: 12,
+            Grid: new ComputeGridDimensions(2, 1, 1),
+            SelectedLayer: new ShaderSnapshotLayer(0, 0, 2),
+            InitialCells: [0x1001, 0x1002],
+            InitialAtmosphericFields: [atmospheric, 0u],
+            CompanionFields: [companion, 0u],
+            Wind: new FireSimWind(1f, 0f, 0.75f));
+
+        ShaderSnapshotFixture loaded = ShaderSnapshotFixtureLoader.Load(ShaderSnapshotJson.SerializeFixture(source));
+
+        Assert.Equal(source.InitialAtmosphericFields, loaded.InitialAtmosphericFields);
+        Assert.Equal(source.CompanionFields, loaded.CompanionFields);
+        Assert.Equal(source.Wind, loaded.Wind);
+
+        RecordingComputeBufferAllocator allocator = new();
+        using ComputeBufferGrid grid = loaded.CreateBufferGrid(allocator);
+
+        Assert.Equal([atmospheric, 0u], allocator.CurrentAtmosphericFields.UploadedValues);
+        Assert.Equal([companion, 0u], allocator.CompanionFields.UploadedValues);
     }
 
     [Fact]
@@ -214,12 +256,24 @@ public sealed class ShaderSnapshotHarnessTests
     {
         public RecordingComputeBufferHandle CurrentCells { get; private set; } = null!;
 
+        public RecordingComputeBufferHandle CurrentAtmosphericFields { get; private set; } = null!;
+
+        public RecordingComputeBufferHandle CompanionFields { get; private set; } = null!;
+
         public IComputeBufferHandle Allocate(string name, int count, int strideBytes)
         {
             RecordingComputeBufferHandle handle = new(name, count, strideBytes);
             if (name == "wildfire.current_cells")
             {
                 CurrentCells = handle;
+            }
+            else if (name == "wildfire.current_atmospheric_fields")
+            {
+                CurrentAtmosphericFields = handle;
+            }
+            else if (name == "wildfire.companion_fields")
+            {
+                CompanionFields = handle;
             }
 
             return handle;

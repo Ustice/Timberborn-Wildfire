@@ -90,41 +90,40 @@ effectiveWindStrength = saturate(windStrength * 0.5)
 
 When the neighbor is upwind of the target, heat is boosted by up to the effective wind strength. When it is downwind, heat is reduced by the same factor. Crosswind neighbors use their raw heat.
 
-Water acts as anti-fuel before ignition:
+Water raises the ignition threshold while it remains in the cell:
 
 ```text
-lockedFuel = min(fuel, water * FireWaterFuelLock)
-effectiveFuel = fuel - lockedFuel
-canBurn = terrain == 1 and effectiveFuel > 0
+ignitionThreshold = clamp(IgnitionPoint - flammability + water * FireWaterIgnitionPenalty, 0, 15)
+canBurn = terrain == 1 and fuel > 0
 ```
 
-Water also evaporates when the cell is hot enough:
+Water dries down only after heat reaches the cell:
 
 ```text
-if water > 0 and heat > FireWaterEvaporationHeat:
+if water > 0 and heat > 0:
     water -= 1
 ```
 
 Ignition remains stochastic:
 
 ```text
-ignitionThreshold = FireIgnitionBaseHeat - flammability
-burnPressure = heat
+ignitionThreshold = clamp(IgnitionPoint - flammability + water * FireWaterIgnitionPenalty, 0, 15)
+burnPressure = heat + flammability * fuel
 burnChance = min(15, burnPressure)
-burnsThisTick = canBurn and heat >= ignitionThreshold and random4bit < burnChance
+burnsThisTick = canBurn and (wasBurning or heat >= ignitionThreshold) and random4bit < burnChance
 ```
 
 When a cell burns, fuel burn-down is a second stochastic roll:
 
 ```text
 fuelBurnDownChance = min(15, ceil(burnChance * FireFuelBurnDownPressureNumerator / FireFuelBurnDownPressureDenominator))
-fuel -= random4bit < fuelBurnDownChance ? 1 : 0
+fuel -= random4bit < fuelBurnDownChance ? burningLevel : 0
 ```
 
-Burning also regenerates heat from the remaining effective fuel:
+Burning also regenerates heat from fuel:
 
 ```text
-fuelHeat = ceil(effectiveFuel * FireFuelHeatWeight / 15)
+fuelHeat = ceil(fuel * FireFuelHeatWeight / 15)
 heat = min(15, heat + flammability + fuelHeat)
 ```
 
@@ -132,9 +131,8 @@ The currently tuned live preset uses these nonzero levers:
 
 | Lever | Value |
 | --- | ---: |
-| FireIgnitionBaseHeat | 5 |
-| FireWaterFuelLock | 5 |
-| FireWaterEvaporationHeat | 2 |
+| IgnitionPoint | 5 |
+| FireWaterIgnitionPenalty | 0 |
 | FireFuelHeatWeight | 6 |
 | FireFuelBurnDownPressureNumerator | 2 |
 | FireFuelBurnDownPressureDenominator | 1 |

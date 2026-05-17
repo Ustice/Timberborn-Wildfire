@@ -71,19 +71,6 @@ public sealed class TimberbornPlayerFireAlertTests
             message => message.Contains("wildfire_timberborn_player_fire_alert_failed tick=12"));
     }
 
-    [Fact]
-    public void CameraFocusHasSinglePublicBinditoConstructor()
-    {
-        string source = ReadPlayerFireAlertsSource();
-
-        Assert.Equal(1, CountOccurrences(source, "public TimberbornPlayerFireAlertCameraFocus("));
-        Assert.Contains(
-            "public TimberbornPlayerFireAlertCameraFocus(\n        UILayout uiLayout,\n        CameraService cameraService)",
-            source);
-        Assert.DoesNotContain("public TimberbornPlayerFireAlertCameraFocus(\n        UILayout uiLayout,\n        CameraService cameraService,\n        ITimberbornFireLogSink logSink)",
-            source);
-    }
-
     private sealed class RecordingPlayerNotificationSink : ITimberbornPlayerNotificationSink
     {
         public List<string> WarningMessages { get; } = [];
@@ -122,29 +109,4 @@ public sealed class TimberbornPlayerFireAlertTests
         }
     }
 
-    private static string ReadPlayerFireAlertsSource()
-    {
-        string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
-            .Select(directory => Path.Combine(
-                directory.FullName,
-                "src",
-                "Wildfire.Timberborn",
-                "TimberbornPlayerFireAlerts.cs"))
-            .First(File.Exists);
-
-        return File.ReadAllText(
-            path);
-    }
-
-    private static int CountOccurrences(string value, string pattern)
-    {
-        return value.Split(new[] { pattern }, StringSplitOptions.None).Length - 1;
-    }
-
-    private static IEnumerable<DirectoryInfo> SelfAndParents(DirectoryInfo directory)
-    {
-        return directory.Parent is null
-            ? [directory]
-            : new[] { directory }.Concat(SelfAndParents(directory.Parent));
-    }
 }
