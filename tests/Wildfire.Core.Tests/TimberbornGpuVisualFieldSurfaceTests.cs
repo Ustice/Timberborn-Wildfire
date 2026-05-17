@@ -262,17 +262,7 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
             TickCount: 9,
             VisualFieldSurfaceBound: true,
             VisualFieldSurfaceCellCount: 24,
-            VisualFieldSurfaceLastUpdatedTick: 9,
-            ActivePooledFireEffectCount: 3,
-            UpdatedVisualRegionCount: 2,
-            LastNonZeroUpdatedVisualRegionCount: 2,
-            LastNonZeroUpdatedVisualRegionTick: 9,
-            MaxPooledFireEffectCount: 64,
-            MaxUpdatedVisualRegionCount: 128,
-            PooledFireEffectPresentationFailureCount: 0,
-            PooledFireEffectsVisibleEnabled: true,
-            PooledFireEffectsNativePrefabResolved: true,
-            PooledFireEffectsNativePrefabName: "SmelterSmoke");
+            VisualFieldSurfaceLastUpdatedTick: 9);
         TimberbornQaCommandBridge bridge = new(
             new RecordingStateProvider(state),
             new RecordingQaLogSink());
@@ -282,16 +272,6 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
         Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
         Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
         Assert.Contains("visual_field_surface_updated_tick=9", result.ResultToken);
-        Assert.Contains("active_pooled_fire_effects=3", result.ResultToken);
-        Assert.Contains("updated_visual_regions=2", result.ResultToken);
-        Assert.Contains("last_nonzero_updated_visual_regions=2", result.ResultToken);
-        Assert.Contains("last_nonzero_updated_visual_regions_tick=9", result.ResultToken);
-        Assert.Contains("max_pooled_fire_effects=64", result.ResultToken);
-        Assert.Contains("max_updated_visual_regions=128", result.ResultToken);
-        Assert.Contains("pooled_fire_effect_presentation_failures=0", result.ResultToken);
-        Assert.Contains("pooled_fire_effects_visible_enabled=true", result.ResultToken);
-        Assert.Contains("pooled_fire_effects_native_prefab_resolved=true", result.ResultToken);
-        Assert.Contains("pooled_fire_effects_native_prefab=SmelterSmoke", result.ResultToken);
     }
 
     private sealed class RecordingVisualFieldSimulator(TimberbornGpuVisualFieldSurfaceState surfaceState) :

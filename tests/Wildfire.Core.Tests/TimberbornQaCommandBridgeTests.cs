@@ -2040,16 +2040,6 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverHazardAvoidanceSkippedNoSafeApi: 57,
             BeaverHazardAvoidanceFailedRestrictions: 58,
             BeaverHazardAvoidanceLastUpdatedTick: 59,
-            ActivePooledFireEffectCount: 26,
-            UpdatedVisualRegionCount: 27,
-            LastNonZeroUpdatedVisualRegionCount: 31,
-            LastNonZeroUpdatedVisualRegionTick: 32,
-            MaxPooledFireEffectCount: 28,
-            MaxUpdatedVisualRegionCount: 29,
-            PooledFireEffectPresentationFailureCount: 33,
-            PooledFireEffectsVisibleEnabled: true,
-            PooledFireEffectsNativePrefabResolved: true,
-            PooledFireEffectsNativePrefabName: "CampfireFire",
             BurnDurationProofTarget: "medium",
             BurnDurationProofTargetIndex: 42,
             BurnDurationProofTargetX: 5,
@@ -2164,16 +2154,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_hazard_avoidance_skipped_no_safe_api=57", result.ResultToken);
         Assert.Contains("beaver_hazard_avoidance_failed_restrictions=58", result.ResultToken);
         Assert.Contains("beaver_hazard_avoidance_updated_tick=59", result.ResultToken);
-        Assert.Contains("active_pooled_fire_effects=26", result.ResultToken);
-        Assert.Contains("updated_visual_regions=27", result.ResultToken);
-        Assert.Contains("last_nonzero_updated_visual_regions=31", result.ResultToken);
-        Assert.Contains("last_nonzero_updated_visual_regions_tick=32", result.ResultToken);
-        Assert.Contains("max_pooled_fire_effects=28", result.ResultToken);
-        Assert.Contains("max_updated_visual_regions=29", result.ResultToken);
-        Assert.Contains("pooled_fire_effect_presentation_failures=33", result.ResultToken);
-        Assert.Contains("pooled_fire_effects_visible_enabled=true", result.ResultToken);
-        Assert.Contains("pooled_fire_effects_native_prefab_resolved=true", result.ResultToken);
-        Assert.Contains("pooled_fire_effects_native_prefab=CampfireFire", result.ResultToken);
         Assert.Contains("burn_duration_proof_target=medium", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_index=42", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_x=5", result.ResultToken);
