@@ -34,6 +34,19 @@ If a sub-agent must edit a ticket file directly, the coordinator should say so e
 
 ## Recommended Sprint Split
 
+### Current Next Sprint: Visual, Beaver, And Ash Verification
+
+The next active sprint charter is [sprint-11-visual-beaver-ash-verification.md](sprints/sprint-11-visual-beaver-ash-verification.md).
+
+Include:
+
+- `TWF-067`: smoke readability implementation.
+- `TWF-073`: beaver field behavior harness implementation.
+- `TWF-078`: persistent ash field service live verification.
+- `TWF-082`: fertile ash collection/application live verification.
+
+Why: the board was reconciled after off-sprint ash/fertility implementation. `TWF-078` and `TWF-082` should be verified before more ash or contamination work starts, while `TWF-067` and `TWF-073` are the current dependency-ready implementation lanes. Release packaging remains later work.
+
 ### Sprint 5: Safety Rails And Test Surfaces
 
 Goal: make the next gameplay work reproducible and safe.
@@ -142,7 +155,6 @@ Why: release packaging should describe and capture the actual product. Do not sp
 
 Keep these deferred until the release path is stable or Jason explicitly pulls them forward:
 
-- `TWF-082`: fertile ash collection and application.
 - `TWF-083`: overgrowth and surface fuel load.
 - `TWF-120` through `TWF-125`: faction fire response, Fire Wardens, Fire Bell bucket brigades, Emberpelt stamping, fans, and fire berms.
 

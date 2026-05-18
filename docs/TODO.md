@@ -127,6 +127,6 @@ Follow-on gates:
 
 - Sprint 8: live QA recovery and blocked evidence triage.
 - Sprint 9: real field replacement and real-field proof closed as mixed done/blocked. `Fuel` is accepted as the stable `50x50` Sprint 9 surface, but `TWF-144` and `TWF-148` are blocked on making normal gameplay visuals plainly visible.
-- Sprint 11: `TWF-078` persistent ash field service and `TWF-082` fertile ash collection/application are implemented off-sprint and now sit in `04-verify`; run live QA before building more ash features on top. Next dependency-ready implementation choices are `TWF-067` smoke tuning and `TWF-073` beaver field behavior harness, while world aftermath should continue with `TWF-079`/`TWF-081` after ash verification.
+- Sprint 11: visual, beaver, and ash verification. Included tickets are `TWF-067`, `TWF-073`, `TWF-078`, and `TWF-082`; see [../kanban/sprints/sprint-11-visual-beaver-ash-verification.md](../kanban/sprints/sprint-11-visual-beaver-ash-verification.md).
 - Later: visual consequences and aftermath from real fields should continue from [world-consequence-first-pass.md](world-consequence-first-pass.md) once `TWF-144`/`TWF-148` are unblocked.
 - Sprint 12: release packaging and Steam Workshop.
