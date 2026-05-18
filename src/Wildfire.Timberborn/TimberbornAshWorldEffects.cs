@@ -465,7 +465,10 @@ public sealed class TimberbornGathererPostFertileAshCollectionAdapter : ITimberb
     private static GathererPostTarget? CreateGathererTarget(
         TimberbornEntityComponentCells.TimberbornEntityComponentBlockObject<GathererFlag> item)
     {
-        if (!item.Component.TryGetComponent(out Inventory inventory))
+        List<Inventory> inventoryList = new();
+        item.Component.GetComponents<Inventory>(inventoryList);
+        Inventory? inventory = inventoryList.Count > 0 ? inventoryList[0] : null;
+        if (inventory is null)
         {
             return null;
         }

@@ -209,8 +209,7 @@ public sealed class TimberbornFireRuntime :
             if (result.DidDispatch)
             {
                 uint tick = result.Step?.Tick ?? _fireSystem?.LastTick ?? 0;
-                _taintedAshSoilPoisoningService.Apply(tick, _ashFieldService.Entries);
-                _fertileAshCollectionService.Apply(tick, _ashFieldService);
+                TryApplyAshWorldEffects(tick);
                 _logSink.Info(
                     $"wildfire_timberborn_runtime_dispatched game_update_id={_gameUpdateId} tick={result.Step?.Tick} delta_count={result.Step?.Deltas.Count}");
             }
@@ -219,6 +218,29 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Warning(
                 $"wildfire_timberborn_runtime_dispatch_failed game_update_id={_gameUpdateId} message=\"{exception.Message}\"");
+        }
+    }
+
+    private void TryApplyAshWorldEffects(uint tick)
+    {
+        try
+        {
+            _taintedAshSoilPoisoningService.Apply(tick, _ashFieldService.Entries);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_tainted_ash_apply_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+        }
+
+        try
+        {
+            _fertileAshCollectionService.Apply(tick, _ashFieldService);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_fertile_ash_apply_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
         }
     }
 
