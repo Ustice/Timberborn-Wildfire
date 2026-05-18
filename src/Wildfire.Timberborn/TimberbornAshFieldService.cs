@@ -379,7 +379,7 @@ public sealed class TimberbornAshFieldService
         return existing with
         {
             Quality = mergedQuality,
-            Strength = Math.Clamp(Math.Max(existing.Strength, strength), 1, MaxStrength),
+            Strength = Math.Clamp(existing.Strength + strength, 1, MaxStrength),
             SourceKind = sourceEvent.SourceKind,
             UpdatedTick = tick,
         };

@@ -352,6 +352,19 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.False(service.TryGetEntry(15, out _));
     }
 
+    [Fact]
+    public void RepeatedSourceEventsOnSameCellAccumulateStrength()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+
+        service.ApplySources(10, [SourceEvent(cellIndex: 20, materialKind: TimberbornBurnMaterialKind.Wood, strength: 10)]);
+        service.ApplySources(11, [SourceEvent(cellIndex: 20, materialKind: TimberbornBurnMaterialKind.Wood, strength: 10)]);
+        service.ApplySources(12, [SourceEvent(cellIndex: 20, materialKind: TimberbornBurnMaterialKind.Wood, strength: 10)]);
+
+        Assert.True(service.TryGetEntry(20, out TimberbornAshFieldEntry entry));
+        Assert.True(entry.Strength > 10, $"Expected accumulated strength > 10, got {entry.Strength}");
+    }
+
     private static TimberbornAshSourceEvent SourceEvent(
         int cellIndex,
         TimberbornBurnMaterialKind materialKind,
