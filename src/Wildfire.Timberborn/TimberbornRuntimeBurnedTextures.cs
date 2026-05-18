@@ -15,6 +15,8 @@ namespace Wildfire.Timberborn;
 public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBurnConsequenceApi
 {
     private static readonly string[] BurnedTexturePropertyNames = { "_MainTex", "_BaseMap" };
+    private static readonly string[] TintPropertyNames = { "_Color", "_BaseColor" };
+    private static readonly Color CharredTintColor = new(0.12f, 0.10f, 0.08f, 1f);
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
     private readonly Dictionary<string, BlockObject> _treeTargetsByStableId;
@@ -34,6 +36,18 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
                 static group => group.Key,
                 static group => group.OrderBy(static blockObject => RuntimeHelpers.GetHashCode(blockObject)).First(),
                 StringComparer.Ordinal);
+
+        foreach (BlockObject blockObject in _treeTargetsByStableId.Values)
+        {
+            if (blockObject.TryGetComponent(out Cuttable cuttable) && IsInLeftoverState(cuttable))
+            {
+                int restored = ApplyBurnedTextures(blockObject, blockObject.Name);
+                if (restored == 0)
+                {
+                    ApplyCharredTintToActive(blockObject);
+                }
+            }
+        }
     }
 
     public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence consequence)
@@ -174,16 +188,22 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
 
             TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
         }
+        string textureLabel = TextureLabel(consequence, blockObject);
+        ApplyBurnedTextures(blockObject, textureLabel);
+
         cuttable.ShowLeftoverModel();
 
-        string textureLabel = TextureLabel(consequence, blockObject);
         int updatedMaterialCount = ApplyBurnedTextures(blockObject, textureLabel);
         if (updatedMaterialCount == 0)
         {
-            _logSink.Warning(
-                "wildfire_timberborn_tree_burned_leftover_texture_skipped " +
-                $"reason=renderer_material_missing stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
-                $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)}");
+            updatedMaterialCount = ApplyCharredTintToActive(blockObject);
+            if (updatedMaterialCount == 0)
+            {
+                _logSink.Warning(
+                    "wildfire_timberborn_tree_burned_leftover_texture_skipped " +
+                    $"reason=renderer_material_missing stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                    $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)}");
+            }
         }
 
         _logSink.Info(
@@ -192,6 +212,68 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
             $"materials={updatedMaterialCount}");
         return new TimberbornTreeBurnConsequenceResult(Applied: true, SafeApiUnavailable: false);
+    }
+
+    private int ApplyCharredTintToActive(BlockObject blockObject)
+    {
+        return blockObject.Transform
+            .GetComponentsInChildren<Renderer>(includeInactive: false)
+            .Sum(static renderer => ApplyCharredTint(renderer));
+    }
+
+    private static int ApplyCharredTint(Renderer renderer)
+    {
+        Material?[] materials = renderer.sharedMaterials;
+        int count = 0;
+        Material?[] updated = materials.Select(material =>
+        {
+            if (material is null || IsBurnedMaterial(material))
+            {
+                return material;
+            }
+
+            string? tintProp = TintPropertyNames.FirstOrDefault(p => material.HasProperty(p));
+            if (tintProp is null)
+            {
+                return material;
+            }
+
+            Material tinted = new(material)
+            {
+                name = $"{material.name} Wildfire Burned",
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+            tinted.SetColor(tintProp, CharredTintColor);
+            count++;
+            return tinted;
+        }).ToArray();
+
+        if (count > 0)
+        {
+            renderer.sharedMaterials = updated;
+        }
+
+        return count;
+    }
+
+    private static bool IsInLeftoverState(Cuttable cuttable)
+    {
+        try
+        {
+            System.Reflection.FieldInfo? field = cuttable.GetType().GetField(
+                "_leftoverModel",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (field?.GetValue(cuttable) is GameObject leftoverModel)
+            {
+                return leftoverModel.activeSelf;
+            }
+        }
+        catch
+        {
+            // ignore reflection failures
+        }
+
+        return false;
     }
 
     private int ApplyBurnedTextures(BlockObject blockObject, string textureLabel)
@@ -474,7 +556,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
         TryRemoveGatherableYield(blockObject);
         TryKillNaturalResource(blockObject);
-        blockObject.Transform.gameObject.SetActive(false);
+        UnityEngine.Object.Destroy(blockObject.Transform.gameObject);
 
         _logSink.Info(
             "wildfire_timberborn_crop_burned_leftover_applied " +

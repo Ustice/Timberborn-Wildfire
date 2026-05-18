@@ -281,6 +281,7 @@ public sealed class TimberbornFireRuntime :
         {
             _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink, _windProvider);
             _gpuIndirectRenderer.Initialize();
+            _gpuIndirectRenderer.OnUpdate();
         }
 
         _pendingPersistenceSnapshot = null;

@@ -8,7 +8,7 @@ namespace Wildfire.Timberborn;
 
 public sealed class TimberbornFertilizeCropsToolButton : IBottomBarElementsProvider
 {
-    private const string FarmingToolGroupId = "Farming";
+    private const string FarmingToolGroupId = "Fields";
     private const string BurnToolImageName = "DemolishResourcesTool";
 
     private readonly TimberbornFertilizeCropsTool _tool;

@@ -613,20 +613,27 @@ public static class TimberbornLiveCropBurnDamageTargetCollector
             : candidate.SpecId.Trim();
         int amount = Math.Max(0, candidate.YieldAmount);
         TimberbornBurnableProfile burnableProfile = BurnableCatalog.Lookup(specId);
+        bool isEntityBurnable = burnableProfile.Known && burnableProfile.IsBurnable;
         TimberbornCellCoordinates[] ownedCells = candidate.OwnedCells
             .Where(cell => IsInsideGrid(cell, grid))
             .Distinct()
             .ToArray();
 
         if (resourceId.Length == 0 ||
-            amount <= 0 ||
             ownedCells.Length == 0 ||
             !IsAcceptedCropBurnYield(candidate.YieldSource, specId, resourceId) ||
-            !ResourceFuelCatalog.Contains(resourceId) ||
-            ResourceFuelCatalog.Lookup(resourceId).FuelValue == 0 ||
-            (burnableProfile.Known && !burnableProfile.IsBurnable))
+            (burnableProfile.Known && !burnableProfile.IsBurnable) ||
+            (!isEntityBurnable && (
+                amount <= 0 ||
+                !ResourceFuelCatalog.Contains(resourceId) ||
+                ResourceFuelCatalog.Lookup(resourceId).FuelValue == 0)))
         {
             return null;
+        }
+
+        if (isEntityBurnable)
+        {
+            amount = Math.Max(1, amount);
         }
 
         TimberbornBurnDamageTargetKind targetKind = IsCropName(specId) || IsCropName(resourceId)
