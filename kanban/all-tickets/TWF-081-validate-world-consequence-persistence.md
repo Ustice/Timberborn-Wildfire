@@ -64,5 +64,6 @@ The world consequence design introduces durable state beyond transient simulator
 
 ## Notes
 
+- 2026-05-17 coordinator/code reconciliation: ash-field persistence and fertile-designation persistence code exists, and deterministic persistence coverage passed in the local test suite. This ticket remains open as a QA gate because live save/reload evidence still needs to prove ash entries, burn damage state, burned visuals, fertile designations, and any contamination-aware aftermath survive in an actual Timberborn save without duplication or stale UI/runtime state.
 - Relevant design reference: `docs/DESIGN.md` section 20, especially burn damage, ash, contamination, and persistence expectations.
 - Prefer the generated scenario from `TWF-119` when it exists; otherwise capture the exact save and setup used.

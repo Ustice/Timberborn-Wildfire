@@ -157,6 +157,8 @@ Status and `qa-readiness` should expose:
 
 Live QA should burn one clean organic target and one contaminated or contaminated-soil target. Passing evidence must include a copied `Player.log`, a `status` or `qa-readiness` result with nonzero fertile and tainted ash counters, growth or safe-unavailable growth telemetry, tainted soil-poisoning applied or safe-unavailable telemetry, and Gatherer Post collection of `FertileAsh` or an explicit inventory API blocker. Save/reload QA should confirm ash entries survive through Wildfire persistence before collection depletes them.
 
+Fertile ash application adds two player-facing toolbar paths: crop fertilizing and forestry fertilizing. Deterministic and live QA should prove that designations consume `1` `FertileAsh` good, apply `25` ash strength through the ash field service, persist crop and forestry designations across save/reload, skip tainted cells without consuming goods, and report no-inventory or safe-API failures clearly.
+
 ## Beaver Field Effects
 
 `TWF-071` accepts a conservative beaver-facing field contract. Fire, heat, smoke, toxic smoke, steam, toxic steam, ash aftermath, and wet suppression are field inputs from the simulator or Timberborn-side consequence fields. The release ladder is exposure telemetry, avoidance or work interruption, reversible debuffs, incapacitation, then death. Automatic death, forced incapacitation, native contamination coupling, beaver health effects from ash, firefighting panic, faction-specific response behavior, and arbitrary path graph mutation are deferred until separate tickets prove safe APIs and recoverability.

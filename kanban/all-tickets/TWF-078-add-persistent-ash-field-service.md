@@ -69,5 +69,7 @@ The design separates visual ash from gameplay ash. The GPU visual field can show
 
 ## Notes
 
-- This ticket does not implement beaver collection or manual field application of ash.
+- 2026-05-17 coordinator/code reconciliation: implementation exists on `main` ahead of `origin/main` in `3712f4d4` plus follow-up fixes. Code surfaces include `TimberbornAshFieldService`, `TimberbornAshWorldEffects`, `TimberbornFireRuntime` persistence/status wiring, `FertileAsh` blueprints/localization, and QA/status telemetry for ash quality, growth, tainted soil poisoning, and fertile ash collection. Deterministic verification passed with `git diff --check origin/main..HEAD`, `bun run typecheck`, and `dotnet test Wildfire.slnx --no-restore` (`436` tests).
+- Moved to `04-verify` because the code is implemented and locally tested, but required live QA still needs accepted evidence for fertile/tainted ash creation, save/reload, growth or safe-unavailable growth telemetry, and collection behavior.
+- Collection/application work overlapped and landed with this off-sprint implementation; see `TWF-082` for the player-facing fertile-ash loop verification gate.
 - Relevant design references: `docs/DESIGN.md` section 20, "Ash And Fertility" and `docs/ARCHITECTURE.md` "Ash Field Service".

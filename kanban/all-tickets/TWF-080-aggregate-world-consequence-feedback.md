@@ -79,4 +79,5 @@ The design says player feedback should distinguish active fire, building damage,
 ## Notes
 
 - `TWF-042` provided the first fire alert. This ticket broadens feedback after richer consequence lanes exist.
+- 2026-05-17 coordinator/code reconciliation: ash and fertile-ash telemetry now exist in `status`/`qa-readiness`, but this ticket is still open because those counters are not yet aggregated into bounded player-facing consequence feedback.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Player Feedback".

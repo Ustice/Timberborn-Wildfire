@@ -43,6 +43,11 @@ The design treats automatic ash fertility as the first gameplay pass, but the lo
 - Worker.
 - Follow [worker.md](../roles/worker.md).
 
+## Implementation Notes
+
+- 2026-05-17 coordinator/code reconciliation: implementation exists on `main` ahead of `origin/main`. Code surfaces include `TimberbornFertileAshCollectionService`, `TimberbornGathererPostFertileAshCollectionAdapter`, `TimberbornFertilizeDesignationService`, `TimberbornFertilizeCropsTool`, `TimberbornFertilizeTreesTool`, `TimberbornFertilizeToolButtons`, `FertileAsh` goods/collections/localization, and runtime hooks for consuming `FertileAsh` into player designations. Deterministic verification passed with `git diff --check origin/main..HEAD`, `bun run typecheck`, and `dotnet test Wildfire.slnx --no-restore` (`436` tests).
+- Required live QA still needs to prove Gatherer Post collection, inventory mutation, designation application, tainted-cell blocking, save/reload of designations, and player-facing toolbar usability or capture exact API blockers.
+
 ## Verification
 
 - Run `git diff --check`.
@@ -52,5 +57,5 @@ The design treats automatic ash fertility as the first gameplay pass, but the lo
 
 ## Notes
 
-- This is deferred future work, not required for the first ash field pass.
+- Moved from `08-deferred` to `04-verify` because the collection/application loop is no longer merely future work. Required live QA still needs to prove Gatherer Post collection, inventory mutation, designation application, tainted-cell blocking, save/reload of designations, and player-facing toolbar usability or capture exact API blockers.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Ash And Fertility".
