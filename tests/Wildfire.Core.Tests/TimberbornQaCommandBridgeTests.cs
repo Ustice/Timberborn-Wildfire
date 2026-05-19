@@ -2027,7 +2027,7 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldExposureBurnCells: 46,
             BeaverFieldExposureContaminatedSmokeCells: 47,
             BeaverFieldExposureToxicCells: 48,
-            BeaverFieldExposureToxicSteamCells: 49,
+            BeaverFieldExposureSteamCells: 49,
             BeaverFieldExposureTaintedAftermathCells: 50,
             BeaverFieldExposureSkippedNoPositionApi: 51,
             BeaverFieldExposureSkippedBoundedSampling: 52,
@@ -2159,7 +2159,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_exposure_burn_cells=46", result.ResultToken);
         Assert.Contains("beaver_field_exposure_contaminated_smoke_cells=47", result.ResultToken);
         Assert.Contains("beaver_field_exposure_toxic_cells=48", result.ResultToken);
-        Assert.Contains("beaver_field_exposure_toxic_steam_cells=49", result.ResultToken);
+        Assert.Contains("beaver_field_exposure_steam_cells=49", result.ResultToken);
         Assert.Contains("beaver_field_exposure_tainted_aftermath_cells=50", result.ResultToken);
         Assert.Contains("beaver_field_exposure_skipped_no_position_api=51", result.ResultToken);
         Assert.Contains("beaver_field_exposure_skipped_bounded_sampling=52", result.ResultToken);

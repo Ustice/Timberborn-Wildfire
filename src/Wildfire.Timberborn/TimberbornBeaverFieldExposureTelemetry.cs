@@ -10,7 +10,6 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
     public const float RespiratorySmokeThreshold = 0.18f;
     public const float BurnFireThreshold = 0.12f;
     public const float ToxicSmokeThreshold = 0.55f;
-    public const float ToxicSteamThreshold = 0.55f;
     public const float TaintedAftermathAshThreshold = 0.35f;
     public const int MaxSampleCellsPerBeaver = 9;
 
@@ -162,10 +161,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
         int toxicCells = samples.Count(static sample =>
             sample.Smoke >= ToxicSmokeThreshold ||
             sample.SmokeContamination >= ToxicSmokeThreshold);
-        int toxicSteamCells = samples.Count(static sample =>
-            sample.Steam >= RespiratorySmokeThreshold &&
-            (sample.SmokeContamination >= ToxicSteamThreshold ||
-                sample.AshContamination >= ToxicSteamThreshold));
+        int steamCells = samples.Count(static sample => sample.Steam >= RespiratorySmokeThreshold);
         int taintedAftermathCells = samples.Count(static sample =>
             sample.Ash >= TaintedAftermathAshThreshold &&
             sample.AshContamination > 0f &&
@@ -181,7 +177,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             burnCells,
             contaminatedSmokeCells,
             toxicCells,
-            toxicSteamCells,
+            steamCells,
             taintedAftermathCells);
     }
 
@@ -227,7 +223,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             $"respiratory_cells={snapshot.RespiratoryExposureCells} " +
             $"burn_cells={snapshot.BurnExposureCells} " +
             $"toxic_cells={snapshot.ToxicExposureCells} " +
-            $"toxic_steam_cells={snapshot.ToxicSteamCells} " +
+            $"steam_cells={snapshot.SteamCells} " +
             $"tainted_aftermath_cells={snapshot.TaintedAftermathCells} " +
             $"skipped_no_position_api={snapshot.SkippedNoPositionApi} " +
             $"skipped_bounded_sampling={snapshot.SkippedBoundedSampling}");
@@ -401,7 +397,7 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
     int BurnExposureCells,
     int ContaminatedSmokeCells,
     int ToxicExposureCells,
-    int ToxicSteamCells,
+    int SteamCells,
     int TaintedAftermathCells,
     int SkippedNoPositionApi,
     int SkippedBoundedSampling,
@@ -419,7 +415,7 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
             BurnExposureCells: 0,
             ContaminatedSmokeCells: 0,
             ToxicExposureCells: 0,
-            ToxicSteamCells: 0,
+            SteamCells: 0,
             TaintedAftermathCells: 0,
             SkippedNoPositionApi: 1,
             SkippedBoundedSampling: 0,
@@ -440,7 +436,7 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
             BurnExposureCells: classifications.Sum(static classification => classification.BurnExposureCells),
             ContaminatedSmokeCells: classifications.Sum(static classification => classification.ContaminatedSmokeCells),
             ToxicExposureCells: classifications.Sum(static classification => classification.ToxicExposureCells),
-            ToxicSteamCells: classifications.Sum(static classification => classification.ToxicSteamCells),
+            SteamCells: classifications.Sum(static classification => classification.SteamCells),
             TaintedAftermathCells: classifications.Sum(static classification => classification.TaintedAftermathCells),
             SkippedNoPositionApi: skippedNoPositionApi,
             SkippedBoundedSampling: skippedBoundedSampling,
@@ -458,7 +454,7 @@ public sealed record TimberbornBeaverFieldExposureClassification(
     int BurnExposureCells,
     int ContaminatedSmokeCells,
     int ToxicExposureCells,
-    int ToxicSteamCells,
+    int SteamCells,
     int TaintedAftermathCells)
 {
     public bool HasExposure =>
@@ -466,6 +462,6 @@ public sealed record TimberbornBeaverFieldExposureClassification(
         BurnExposureCells > 0 ||
         ContaminatedSmokeCells > 0 ||
         ToxicExposureCells > 0 ||
-        ToxicSteamCells > 0 ||
+        SteamCells > 0 ||
         TaintedAftermathCells > 0;
 }

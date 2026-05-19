@@ -27,7 +27,7 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 
 - Implement the narrowest safe Timberborn adapter surface that can identify beaver positions or beaver-adjacent cells.
 - Sample accepted wildfire fields from the existing visual-field or packed-cell surfaces without mutating the simulation grid.
-- Classify exposure separately for respiratory danger, burn danger, contaminated smoke, toxic steam, and tainted aftermath where field data can support it.
+- Classify exposure separately for respiratory danger, burn danger, contaminated smoke, clean steam, and tainted aftermath where field data can support it.
 - Report bounded telemetry for exposed beavers or candidate cells through status, `qa-readiness`, logs, or a dedicated QA command.
 - Avoid per-beaver spam; aggregate counts and only include bounded sample details.
 - Add deterministic tests for exposure classification where possible.
@@ -47,7 +47,7 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 - Start with the safest read-only beaver position surface available in the Timberborn adapter.
 - Exposure can be sampled over multiple game ticks; it does not need to process every beaver in the same tick if batching avoids frame spikes.
 - Keep detail samples bounded, such as a few beaver IDs, cells, and classifications, with aggregate counts for the rest.
-- Expected counters include sampled beavers, exposed beavers, respiratory exposure cells, heat exposure cells, toxic exposure cells, tainted aftermath cells, batching skips, and unavailable API skips.
+- Expected counters include sampled beavers, exposed beavers, respiratory exposure cells, heat exposure cells, toxic smoke cells, clean steam cells, tainted aftermath cells, batching skips, and unavailable API skips.
 - Safe no-op behavior should report that beaver position sampling is unavailable without changing simulation or beaver state.
 
 ## Verification
@@ -60,9 +60,9 @@ Before changing pathing, work, injury, or panic behavior, Wildfire needs a safe 
 
 - This ticket should not alter beaver behavior. It is the instrumentation layer for later behavior changes.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects" and "Contamination Interaction".
-- 2026-05-05 worker: added a telemetry-only beaver exposure sampler that reads Timberborn beaver entity positions through `EntityRegistry`, samples the existing GPU visual-field surface, classifies respiratory, burn, toxic, toxic steam, contaminated smoke, and tainted-afterburn exposure counters, and exposes aggregate status/`qa-readiness` fields. Focused deterministic coverage passed for classification, aggregate field sampling, and safe-unavailable position API reporting.
-- 2026-05-06 worker fix: reviewer follow-up corrected toxic steam classification so sampled steam plus toxic atmospheric contamination increments `ToxicSteamCells` instead of staying permanently zero. Added deterministic coverage for toxic steam, clean/non-toxic steam, sampler log token output, and existing status token surfacing. Verification: `dotnet test tests/Wildfire.Core.Tests/Wildfire.Core.Tests.csproj --filter "FullyQualifiedName~TimberbornBeaverFieldExposureTelemetryTests|FullyQualifiedName~TimberbornQaCommandBridgeTests"` passed.
-- 2026-05-06 review failed after toxic-steam fix: the sampler caps inspected distinct candidate cells at 256 but reports every beaver as sampled with no skipped/batching counter, so larger settlements could underreport exposure silently. Moved back to `03-in-progress`; add bounded-sampling skip telemetry or batching before live QA.
+- 2026-05-19 design correction: steam is clean suppression vapor only; toxic exposure belongs to contaminated smoke or tainted aftermath.
+- 2026-05-05 worker: added a telemetry-only beaver exposure sampler that reads Timberborn beaver entity positions through `EntityRegistry`, samples the existing GPU visual-field surface, classifies respiratory, burn, toxic, clean steam, contaminated smoke, and tainted-afterburn exposure counters, and exposes aggregate status/`qa-readiness` fields. Focused deterministic coverage passed for classification, aggregate field sampling, and safe-unavailable position API reporting.
+- 2026-05-06 review failed after follow-up exposure fixes: the sampler caps inspected distinct candidate cells at 256 but reports every beaver as sampled with no skipped/batching counter, so larger settlements could underreport exposure silently. Moved back to `03-in-progress`; add bounded-sampling skip telemetry or batching before live QA.
 - 2026-05-06 worker bounded-sampling fix: sampled beaver count now includes only beavers whose full candidate-cell set was inspected under the 256-cell visual-surface cap, and skipped partial beavers are exposed through aggregate log/status token `beaver_field_exposure_skipped_bounded_sampling`. Added deterministic cap coverage and status token coverage; verification: `dotnet test tests/Wildfire.Core.Tests/Wildfire.Core.Tests.csproj --filter "FullyQualifiedName~TimberbornBeaverFieldExposureTelemetryTests|FullyQualifiedName~TimberbornQaCommandBridgeTests"` and `git diff --check` passed.
 - 2026-05-06 fresh review passed the bounded-sampling fix with no blocking findings. Reviewer confirmed sampled beaver count now only includes fully inspected candidate-cell sets under the 256-cell cap, and skipped partial beavers surface through snapshot, log, runtime status, and command bridge tokens. Verification passed: `git diff --check` and focused beaver telemetry plus QA command bridge tests with `90/90`. Keep in `04-verify`; live loaded-save exposure telemetry QA remains required before integration.
 - 2026-05-06 live QA failed under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/TWF-072-qa-20260506T201200Z` using `/Users/jasonkleinberg/Documents/Timberborn/ExperimentalSaves/QA Tunnels and Booms/2026-05-06 16h04m, Day 2-5.autosave.timber`. Telemetry was available and safe, but the controlled fields did not overlap sampled beaver candidate cells.

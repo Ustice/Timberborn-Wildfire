@@ -27,7 +27,7 @@ Wildfire currently defines fire simulation, visual fields, alerts, and building 
 
 ## Requirements
 
-- Define beaver-facing effects for active fire, heat, smoke, toxic smoke, steam, toxic steam, ash or aftermath, and wet suppression fields.
+- Define beaver-facing effects for active fire, heat, smoke, toxic smoke, clean steam, ash or aftermath, and wet suppression fields.
 - Decide which effects are release scope and which are deferred.
 - Define the respiratory progression: coughing slowdown, choking incapacitation or sleep-like behavior, and death after sustained severe exposure.
 - Define the burn progression: singed injury, burned work-preventing severe injury, and death after sustained direct heat or flame exposure.
@@ -58,3 +58,4 @@ Wildfire currently defines fire simulation, visual fields, alerts, and building 
 - If Timberborn exposes no safe API for a desired beaver consequence, defer that consequence explicitly instead of forcing it through reflection.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects".
 - 2026-05-05 researcher: expanded the accepted beaver field contract. Release scope is exposure telemetry, work interruption or avoidance, safe no-op counters, aggregated player feedback, and reversible coughing/singed/burned effects only when a native API is proven safe. Choking, death, native contamination coupling, ash collection, faction response, panic, and arbitrary path graph mutation are deferred gates. Downstream implementation must consume real field samples or deterministic field fixtures rather than hard-coded beaver triggers.
+- 2026-05-19 design correction: steam is clean suppression vapor only. There is no toxic steam or contaminated steam beaver class.

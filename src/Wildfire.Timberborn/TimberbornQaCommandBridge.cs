@@ -1338,7 +1338,7 @@ public sealed record TimberbornQaCommandState(
     int? BeaverFieldExposureBurnCells = null,
     int? BeaverFieldExposureContaminatedSmokeCells = null,
     int? BeaverFieldExposureToxicCells = null,
-    int? BeaverFieldExposureToxicSteamCells = null,
+    int? BeaverFieldExposureSteamCells = null,
     int? BeaverFieldExposureTaintedAftermathCells = null,
     int? BeaverFieldExposureSkippedNoPositionApi = null,
     int? BeaverFieldExposureSkippedBoundedSampling = null,
@@ -1640,7 +1640,7 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_exposure_burn_cells={FormatNumber(State.BeaverFieldExposureBurnCells)} " +
         $"beaver_field_exposure_contaminated_smoke_cells={FormatNumber(State.BeaverFieldExposureContaminatedSmokeCells)} " +
         $"beaver_field_exposure_toxic_cells={FormatNumber(State.BeaverFieldExposureToxicCells)} " +
-        $"beaver_field_exposure_toxic_steam_cells={FormatNumber(State.BeaverFieldExposureToxicSteamCells)} " +
+        $"beaver_field_exposure_steam_cells={FormatNumber(State.BeaverFieldExposureSteamCells)} " +
         $"beaver_field_exposure_tainted_aftermath_cells={FormatNumber(State.BeaverFieldExposureTaintedAftermathCells)} " +
         $"beaver_field_exposure_skipped_no_position_api={FormatNumber(State.BeaverFieldExposureSkippedNoPositionApi)} " +
         $"beaver_field_exposure_skipped_bounded_sampling={FormatNumber(State.BeaverFieldExposureSkippedBoundedSampling)} " +

@@ -165,7 +165,7 @@ The first direct-moisture target is soil moisture. A later nice-to-have is incre
 
 - Soil moisture evaporation may be implemented when a safe mutable soil-moisture path is found.
 - Standing-water evaporation should wait until water-volume mutation and save/reload behavior are proven.
-- Badwater or contaminated water should remain contaminated; heating it can create toxic steam or contaminated ash, but must not cleanse it.
+- Badwater or contaminated water should remain contaminated; heating it can create steam and contaminated ash, but steam itself is clean and must not carry contamination or cleanse the water.
 
 Required proof:
 
@@ -321,7 +321,7 @@ Do not:
 
 - Change water suppression semantics.
 - Evaporate soil moisture or standing water.
-- Apply toxic steam beaver behavior unless that classification is already provided by `TWF-079` and consumed by `TWF-086`.
+- Add steam exposure telemetry only if it reads simulator steam state directly.
 
 Done when:
 
@@ -582,7 +582,7 @@ Do:
 
 - Add read-only adapter probes for contaminated soil, badwater, contaminated water, contaminated goods, and contaminated entities where safe.
 - Classify ash as contaminated when source or soil is contaminated.
-- Classify toxic smoke and toxic steam for downstream beaver telemetry.
+- Classify toxic smoke for downstream beaver telemetry.
 - Assert that heat/fire never reduces contamination.
 - Report skipped unsafe contamination APIs.
 
@@ -848,7 +848,7 @@ Do:
 - Research water-volume mutation first if no safe path is already proven.
 - Apply bounded heat-driven evaporation.
 - Preserve badwater/contaminated-water identity.
-- Emit toxic steam classification when contaminated water evaporates.
+- Emit clean steam when heated water evaporates.
 
 Do not:
 
@@ -925,7 +925,7 @@ Done when:
 
 Purpose:
 
-- Implement toxic smoke and toxic steam behavior using the shared harness and contamination classifications.
+- Implement toxic smoke behavior using the shared harness and contamination classifications.
 
 Start from:
 
@@ -936,7 +936,7 @@ Start from:
 Do:
 
 - Progress respiratory exposure faster than normal smoke.
-- Keep toxic smoke and toxic steam distinguishable in telemetry.
+- Keep toxic smoke distinguishable from clean steam in telemetry.
 - Attempt native badwater contamination effects only after live API proof.
 - Preserve treatment/recovery telemetry where native effects are used.
 
@@ -1019,7 +1019,7 @@ Summary of existing ticket changes:
 - `TWF-076` needs the crop rule tightened from yield-loss-plus-optional visual marking to death on burn, burned dead texture, and destruction at full fuel depletion.
 - `TWF-077` should own structure closure, proportional material destruction, construction-threshold burned phases, repair gating, and burned texture application.
 - `TWF-078` owns persistent ash field storage, quality, decay, and persistence.
-- `TWF-079` owns contamination-aware classification and should feed contaminated ash, toxic smoke, toxic steam, and no-decontamination invariants.
+- `TWF-079` owns contamination-aware classification and should feed contaminated ash, toxic smoke, and no-decontamination invariants.
 - `TWF-080` owns aggregated player feedback after source consequence lanes exist.
 - `TWF-081` owns save/reload validation for durable consequence state.
 - `TWF-082` remains later collection/application work; the first fertile ash pass is a field growth multiplier, not a collectible good.

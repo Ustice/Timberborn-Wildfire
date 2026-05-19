@@ -555,19 +555,23 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
         }
 
         TryRemoveGatherableYield(blockObject);
+        TryClearGoodStack(blockObject);
         TryKillNaturalResource(blockObject);
-        UnityEngine.Object.Destroy(blockObject.Transform.gameObject);
+        TimberbornCropBurnConsequenceResult visualResult = ApplyBurnedTextures(
+            consequence,
+            blockObject,
+            "wildfire_timberborn_crop_burned_leftover_texture_applied");
 
         _logSink.Info(
             "wildfire_timberborn_crop_burned_leftover_applied " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(TextureLabel(consequence, blockObject))} " +
-            $"deleted=true");
+            "deleted=false reason=unsafe_destroy_deferred");
         return new TimberbornCropBurnConsequenceResult(
             MatchedCropTarget: true,
             YieldLost: 0,
             KilledCrop: true,
-            VisualStateUpdated: true,
+            VisualStateUpdated: visualResult.VisualStateUpdated,
             SkippedUnsafeApi: false);
     }
 
@@ -677,6 +681,22 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
         }
 
         return TryInvokeNoArgumentMethod(gatherableYieldGrower, "RemoveYield");
+    }
+
+    private static bool TryClearGoodStack(BlockObject blockObject)
+    {
+        if (!blockObject.TryGetComponent(out GoodStack goodStack))
+        {
+            return false;
+        }
+
+        foreach (GoodAmount goodAmount in goodStack.Inventory.Stock.ToArray())
+        {
+            goodStack.Inventory.Take(goodAmount);
+        }
+
+        TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
+        return true;
     }
 
     private static bool TryGetYielder(BlockObject blockObject, out Yielder yielder)

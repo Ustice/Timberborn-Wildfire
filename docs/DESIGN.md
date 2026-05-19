@@ -583,8 +583,7 @@ Field meanings for beavers:
 - Heat: non-flame thermal danger. Release scope is path-cost or avoidance telemetry, work interruption, singed exposure at high heat, and recovery once heat falls.
 - Smoke: respiratory danger from burning fuel. Release scope is exposure telemetry and coughing slowdown if a safe debuff path exists.
 - Toxic smoke: respiratory danger from contaminated burn sources or badwater-adjacent fire. Release scope is stronger exposure weighting and explicit toxic telemetry; native contamination effects are allowed only after live API proof.
-- Steam: white smoke-like suppression byproduct from heated water. Release scope is visual and mild respiratory/visibility telemetry, not injury by default.
-- Toxic steam: badwater or contaminated-water steam. Release scope is toxic respiratory telemetry and optional native contamination path after proof.
+- Steam: clean white smoke-like suppression byproduct from heated water. Release scope is visual and mild respiratory/visibility telemetry, not injury by default. Steam is not toxic and does not carry contamination.
 - Ash aftermath: simulator-owned ash field aftermath. Release scope is path/feedback telemetry only; ash resource, hazard, collection, and fertility behavior should read simulator ash state through adapter services.
 - Wet suppression fields: safer from flame but may create steam. Release scope is reduced burn danger plus steam exposure, not a beaver penalty by itself.
 
@@ -637,9 +636,9 @@ Contaminated burnable material can burn, but it should produce toxic smoke and t
 
 Contaminated soil remains contaminated after fire. Ash deposited on contaminated soil should be `tainted`, not `fertile`, unless a later explicit decontamination mechanic changes that.
 
-Water suppresses fire and can create steam. Badwater or contaminated water should also suppress fire, but heating it should create toxic steam or toxic smoke exposure. Fire should not turn badwater into safe water.
+Water suppresses fire and can create steam. Badwater or contaminated water should also suppress fire, but heating it does not create toxic or contaminated steam. Fire should not turn badwater into safe water, and any toxic exposure should come from contaminated smoke or tainted aftermath rather than a steam contamination lane.
 
-Beavers exposed to contaminated smoke, toxic steam, or tainted aftermath can advance the respiratory or burn progressions faster and may also use Timberborn-native badwater contamination effects if live API tests prove that path safe. Wildfire should reuse native contamination graphics and treatment flows where possible, but it should not silently conflate ordinary smoke, burn injury, and native contamination if the player needs to understand the cause.
+Beavers exposed to contaminated smoke or tainted aftermath can advance the respiratory or burn progressions faster and may also use Timberborn-native badwater contamination effects if live API tests prove that path safe. Wildfire should reuse native contamination graphics and treatment flows where possible, but it should not silently conflate ordinary smoke, steam, burn injury, and native contamination if the player needs to understand the cause.
 
 ### Player Feedback
 

@@ -871,7 +871,7 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldExposureBurnCells: beaverExposure.BurnExposureCells,
             BeaverFieldExposureContaminatedSmokeCells: beaverExposure.ContaminatedSmokeCells,
             BeaverFieldExposureToxicCells: beaverExposure.ToxicExposureCells,
-            BeaverFieldExposureToxicSteamCells: beaverExposure.ToxicSteamCells,
+            BeaverFieldExposureSteamCells: beaverExposure.SteamCells,
             BeaverFieldExposureTaintedAftermathCells: beaverExposure.TaintedAftermathCells,
             BeaverFieldExposureSkippedNoPositionApi: beaverExposure.SkippedNoPositionApi,
             BeaverFieldExposureSkippedBoundedSampling: beaverExposure.SkippedBoundedSampling,

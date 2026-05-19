@@ -39,11 +39,11 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
         Assert.Equal(1, classification.BurnExposureCells);
         Assert.Equal(2, classification.ToxicExposureCells);
         Assert.Equal(1, classification.TaintedAftermathCells);
-        Assert.Equal(1, classification.ToxicSteamCells);
+        Assert.Equal(1, classification.SteamCells);
     }
 
     [Fact]
-    public void ClassifyDoesNotConflateCleanSteamWithToxicSteam()
+    public void ClassifyCountsCleanSteamWithoutTreatingItAsToxic()
     {
         FireGrid grid = new(3, 3, 1);
         IReadOnlyList<int> candidateCells = TimberbornBeaverFieldExposureTelemetry.CandidateCellIndices(
@@ -75,8 +75,9 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
                 candidateCells,
                 samples);
 
-        Assert.False(classification.HasExposure);
-        Assert.Equal(0, classification.ToxicSteamCells);
+        Assert.True(classification.HasExposure);
+        Assert.Equal(2, classification.SteamCells);
+        Assert.Equal(0, classification.ToxicExposureCells);
     }
 
     [Fact]
@@ -122,7 +123,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
         Assert.Equal(1, snapshot.BurnExposureCells);
         Assert.Equal(1, snapshot.TaintedAftermathCells);
         Assert.Equal(9, surface.LastInspectedCellIndices.Count);
-        Assert.Contains("toxic_steam_cells=0", logSink.InfoMessages.Single());
+        Assert.Contains("steam_cells=0", logSink.InfoMessages.Single());
     }
 
     [Fact]

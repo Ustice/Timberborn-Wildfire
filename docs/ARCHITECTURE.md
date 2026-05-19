@@ -174,7 +174,7 @@ Responsibilities:
 
 ### Beaver Exposure Service
 
-The beaver exposure service translates fire, heat, smoke, steam, toxic steam, ash, and contamination-adjacent fields into beaver-facing effects. It should be built as an evidence ladder: exposure telemetry first, then debuffs, then incapacitation, then death.
+The beaver exposure service translates fire, heat, smoke, clean steam, ash, and contamination-adjacent fields into beaver-facing effects. It should be built as an evidence ladder: exposure telemetry first, then debuffs, then incapacitation, then death.
 
 The service reads sampled simulator fields and compact-delta-driven field summaries. It does not write packed cells and does not infer alternate spread rules. Timberborn-owned behavior adapters can cancel unsafe work, apply native status effects, change path costs, or report safe no-op outcomes, but only through narrow wrappers with telemetry.
 
@@ -212,7 +212,7 @@ Contamination stays a Timberborn-owned environmental and status concern. The sim
 
 Timberborn consequence services should apply these rules:
 
-- Contaminated burnable material can burn and can produce toxic smoke, toxic steam, or tainted ash.
+- Contaminated burnable material can burn and can produce toxic smoke or tainted ash.
 - Contaminated water or badwater can suppress fire but does not become clean water.
 - Contaminated soil remains contaminated after fire.
 - Ash on contaminated soil is tainted rather than fertile.

@@ -8,6 +8,7 @@ dependencies:
   - TWF-065
   - TWF-066
   - TWF-067
+  - TWF-162
 write_scope:
   - src/Wildfire.Timberborn/**
   - tests/Wildfire.Core.Tests/**
@@ -25,6 +26,8 @@ Make steam readable as its own live visual effect when water suppression or wet 
 
 Steam is different from smoke: it should communicate water meeting heat, not fuel burning. Wildfire already has water-suppression proof, and the pooled presentation path can resolve native steam-like prefabs such as `SteamEngineSmoke`. Release tuning needs a separate pass so suppression feedback is visible and not confused with smoke or ash.
 
+Steam is clean in Wildfire. Do not add toxic steam, contaminated steam, or a steam contamination lane while tuning this effect.
+
 ## Requirements
 
 - Use the existing pooled presentation and visual-field surface.
@@ -33,6 +36,7 @@ Steam is different from smoke: it should communicate water meeting heat, not fue
 - Prefer Timberborn-native steam or vapor-like prefabs before custom art.
 - Tune presentation concerns such as prefab choice, scale, placement, lifetime, intensity thresholds, and water-versus-smoke selection.
 - Keep water suppression semantics in the GPU simulation and adapter inputs; do not add Timberborn-owned fire rules.
+- Read simulator steam state directly; do not infer steam from water-delta shortcuts.
 - Capture high-resolution recordings and screenshots showing steam as distinct from fire and smoke.
 - Preserve command output, copied `Player.log`, artifact paths, and final QA lock state.
 - Document accepted steam-effect evidence in `docs/TEST_PLAN.md`.
@@ -41,6 +45,7 @@ Steam is different from smoke: it should communicate water meeting heat, not fue
 
 - `TWF-065` provides the recording tool.
 - `TWF-066` and `TWF-067` establish the active fire and smoke baselines that steam must remain visually distinct from.
+- `TWF-162` aligns steam transport and authority with the smoke/ash field model.
 
 ## Role
 
@@ -56,4 +61,5 @@ Steam is different from smoke: it should communicate water meeting heat, not fue
 ## Notes
 
 - If current visual-field channels cannot distinguish steam cleanly from smoke, record the smallest shader or visual-field follow-up instead of forcing misleading presentation.
+- Relevant source-of-truth note: [docs/steam-simulation-model.md](../../docs/steam-simulation-model.md).
 - Relevant design references: `docs/DESIGN.md` section 17 and `docs/ARCHITECTURE.md` "Field Visual Presentation Service".
