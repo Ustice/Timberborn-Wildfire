@@ -373,43 +373,384 @@ uint UpdateCompanionAsh(uint companion, uint3 coordinate, uint oldCell, uint new
     return companion;
 }
 
-uint NeighborSmokeContribution(uint3 coordinate, uint penalty)
-{
-    return DecayBy(AtmosphericSmoke(NeighborAtmospheric(coordinate)), penalty);
-}
-
-uint NeighborSmokeContaminationContribution(uint3 coordinate, uint penalty)
-{
-    uint atmospheric = NeighborAtmospheric(coordinate);
-    uint smoke = DecayBy(AtmosphericSmoke(atmospheric), penalty);
-    return smoke == 0u ? 0u : AtmosphericSmokeContamination(atmospheric);
-}
-
 float EffectiveWindStrength()
 {
-    return saturate(WindStrength * 0.5f);
+    return saturate(WindStrength);
 }
 
-uint WindSmokePenalty(float directionX, float directionY)
+float SmokeMoveProbability(uint sourceSmoke)
 {
-    float strength = EffectiveWindStrength();
-    if (strength <= 0.01f)
+    return saturate(0.08f + ((float)sourceSmoke * 0.018f) + (EffectiveWindStrength() * 0.07f));
+}
+
+float SmokeDirectionWeight(float directionX, float directionY, bool diagonal, bool upward, bool downward)
+{
+    if (upward)
     {
-        return 1u;
+        return 0.75f;
     }
 
+    if (downward)
+    {
+        return 0.22f;
+    }
+
+    float strength = EffectiveWindStrength();
     float alignment = (directionX * WindDirectionX) + (directionY * WindDirectionY);
-    if (alignment > 0.35f && strength > 0.45f)
+    float baseWeight = diagonal ? 0.55f : 1.0f;
+    return max(0.05f, baseWeight * (1.0f + (alignment * strength * 1.5f)));
+}
+
+float SmokeMoveWeight(uint3 sourceCoordinate, uint3 targetCoordinate)
+{
+    if (targetCoordinate.z == sourceCoordinate.z + 1u &&
+        targetCoordinate.x == sourceCoordinate.x &&
+        targetCoordinate.y == sourceCoordinate.y &&
+        targetCoordinate.z < Depth)
+    {
+        return SmokeDirectionWeight(0.0f, 0.0f, false, true, false);
+    }
+
+    if (sourceCoordinate.z > 0u &&
+        targetCoordinate.z + 1u == sourceCoordinate.z &&
+        targetCoordinate.x == sourceCoordinate.x &&
+        targetCoordinate.y == sourceCoordinate.y)
+    {
+        return SmokeDirectionWeight(0.0f, 0.0f, false, false, true);
+    }
+
+    if (targetCoordinate.z != sourceCoordinate.z)
+    {
+        return 0.0f;
+    }
+
+    int dx = (int)targetCoordinate.x - (int)sourceCoordinate.x;
+    int dy = (int)targetCoordinate.y - (int)sourceCoordinate.y;
+    uint adx = (uint)abs(dx);
+    uint ady = (uint)abs(dy);
+    if (adx > 1u || ady > 1u || (adx == 0u && ady == 0u))
+    {
+        return 0.0f;
+    }
+
+    bool diagonal = adx == 1u && ady == 1u;
+    float length = diagonal ? 1.4142135f : 1.0f;
+    return SmokeDirectionWeight((float)dx / length, (float)dy / length, diagonal, false, false);
+}
+
+bool SameCoordinate(uint3 left, uint3 right)
+{
+    return left.x == right.x && left.y == right.y && left.z == right.z;
+}
+
+bool IsSmokeMoveTargetOpen(uint3 targetCoordinate)
+{
+    if (targetCoordinate.x >= Width || targetCoordinate.y >= Height || targetCoordinate.z >= Depth)
+    {
+        return false;
+    }
+
+    return Terrain(CurrentCells[ToIndex(targetCoordinate)]) == 0u;
+}
+
+float AddSmokeMoveCandidate(float total, uint3 sourceCoordinate, uint3 targetCoordinate)
+{
+    if (!IsSmokeMoveTargetOpen(targetCoordinate))
+    {
+        return total;
+    }
+
+    return total + SmokeMoveWeight(sourceCoordinate, targetCoordinate);
+}
+
+float AddSmokeMoveSinkCandidate(float total, float directionX, float directionY, bool diagonal, bool upward)
+{
+    return total + SmokeDirectionWeight(directionX, directionY, diagonal, upward, false);
+}
+
+float SmokeMoveWeightTotal(uint3 sourceCoordinate)
+{
+    float total = 0.0f;
+    if (sourceCoordinate.z + 1u < Depth)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y, sourceCoordinate.z + 1u));
+    }
+    else
+    {
+        total = AddSmokeMoveSinkCandidate(total, 0.0f, 0.0f, false, true);
+    }
+
+    if (sourceCoordinate.z > 0u)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y, sourceCoordinate.z - 1u));
+    }
+
+    if (sourceCoordinate.x > 0u)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x - 1u, sourceCoordinate.y, sourceCoordinate.z));
+    }
+    else
+    {
+        total = AddSmokeMoveSinkCandidate(total, -1.0f, 0.0f, false, false);
+    }
+
+    if (sourceCoordinate.x + 1u < Width)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x + 1u, sourceCoordinate.y, sourceCoordinate.z));
+    }
+    else
+    {
+        total = AddSmokeMoveSinkCandidate(total, 1.0f, 0.0f, false, false);
+    }
+
+    if (sourceCoordinate.y > 0u)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y - 1u, sourceCoordinate.z));
+    }
+    else
+    {
+        total = AddSmokeMoveSinkCandidate(total, 0.0f, -1.0f, false, false);
+    }
+
+    if (sourceCoordinate.y + 1u < Height)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y + 1u, sourceCoordinate.z));
+    }
+    else
+    {
+        total = AddSmokeMoveSinkCandidate(total, 0.0f, 1.0f, false, false);
+    }
+
+    if (sourceCoordinate.x > 0u && sourceCoordinate.y > 0u)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x - 1u, sourceCoordinate.y - 1u, sourceCoordinate.z));
+    }
+    else if (sourceCoordinate.x == 0u || sourceCoordinate.y == 0u)
+    {
+        total = AddSmokeMoveSinkCandidate(total, -0.70710677f, -0.70710677f, true, false);
+    }
+
+    if (sourceCoordinate.x + 1u < Width && sourceCoordinate.y > 0u)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x + 1u, sourceCoordinate.y - 1u, sourceCoordinate.z));
+    }
+    else if (sourceCoordinate.x + 1u >= Width || sourceCoordinate.y == 0u)
+    {
+        total = AddSmokeMoveSinkCandidate(total, 0.70710677f, -0.70710677f, true, false);
+    }
+
+    if (sourceCoordinate.x > 0u && sourceCoordinate.y + 1u < Height)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x - 1u, sourceCoordinate.y + 1u, sourceCoordinate.z));
+    }
+    else if (sourceCoordinate.x == 0u || sourceCoordinate.y + 1u >= Height)
+    {
+        total = AddSmokeMoveSinkCandidate(total, -0.70710677f, 0.70710677f, true, false);
+    }
+
+    if (sourceCoordinate.x + 1u < Width && sourceCoordinate.y + 1u < Height)
+    {
+        total = AddSmokeMoveCandidate(total, sourceCoordinate, uint3(sourceCoordinate.x + 1u, sourceCoordinate.y + 1u, sourceCoordinate.z));
+    }
+    else if (sourceCoordinate.x + 1u >= Width || sourceCoordinate.y + 1u >= Height)
+    {
+        total = AddSmokeMoveSinkCandidate(total, 0.70710677f, 0.70710677f, true, false);
+    }
+
+    return total;
+}
+
+bool SmokeMoveRollPasses(uint sourceIndex, uint sourceSmoke, float totalWeight)
+{
+    if (sourceSmoke == 0u || totalWeight <= 0.0f)
+    {
+        return false;
+    }
+
+    uint roll = Hash(sourceIndex + 0x68bc21ebu, Tick, Seed) & 0xFFFFu;
+    return ((float)roll / 65535.0f) < SmokeMoveProbability(sourceSmoke);
+}
+
+bool SmokeCandidateReceivesMove(inout float cursor, float choice, uint3 sourceCoordinate, uint3 candidateCoordinate, uint3 targetCoordinate)
+{
+    if (!IsSmokeMoveTargetOpen(candidateCoordinate))
+    {
+        return false;
+    }
+
+    float weight = SmokeMoveWeight(sourceCoordinate, candidateCoordinate);
+    if (weight <= 0.0f)
+    {
+        return false;
+    }
+
+    float start = cursor;
+    cursor += weight;
+    return SameCoordinate(candidateCoordinate, targetCoordinate) && choice >= start && choice < cursor;
+}
+
+void SkipSmokeMoveSink(inout float cursor, float directionX, float directionY, bool diagonal, bool upward)
+{
+    cursor += SmokeDirectionWeight(directionX, directionY, diagonal, upward, false);
+}
+
+bool SmokeSourceChoosesTarget(uint3 sourceCoordinate, uint3 targetCoordinate, uint sourceSmoke)
+{
+    uint sourceIndex = ToIndex(sourceCoordinate);
+    float totalWeight = SmokeMoveWeightTotal(sourceCoordinate);
+    if (!SmokeMoveRollPasses(sourceIndex, sourceSmoke, totalWeight))
+    {
+        return false;
+    }
+
+    float choice = ((float)(Hash(sourceIndex + 0x13579bdfu, Tick, Seed) & 0xFFFFu) / 65535.0f) * totalWeight;
+    float cursor = 0.0f;
+    if (sourceCoordinate.z + 1u < Depth &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y, sourceCoordinate.z + 1u), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.z + 1u >= Depth)
+    {
+        SkipSmokeMoveSink(cursor, 0.0f, 0.0f, false, true);
+    }
+
+    if (sourceCoordinate.z > 0u &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y, sourceCoordinate.z - 1u), targetCoordinate))
+    {
+        return true;
+    }
+
+    if (sourceCoordinate.x > 0u &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x - 1u, sourceCoordinate.y, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.x == 0u)
+    {
+        SkipSmokeMoveSink(cursor, -1.0f, 0.0f, false, false);
+    }
+
+    if (sourceCoordinate.x + 1u < Width &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x + 1u, sourceCoordinate.y, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.x + 1u >= Width)
+    {
+        SkipSmokeMoveSink(cursor, 1.0f, 0.0f, false, false);
+    }
+
+    if (sourceCoordinate.y > 0u &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y - 1u, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.y == 0u)
+    {
+        SkipSmokeMoveSink(cursor, 0.0f, -1.0f, false, false);
+    }
+
+    if (sourceCoordinate.y + 1u < Height &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x, sourceCoordinate.y + 1u, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.y + 1u >= Height)
+    {
+        SkipSmokeMoveSink(cursor, 0.0f, 1.0f, false, false);
+    }
+
+    if (sourceCoordinate.x > 0u && sourceCoordinate.y > 0u &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x - 1u, sourceCoordinate.y - 1u, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.x == 0u || sourceCoordinate.y == 0u)
+    {
+        SkipSmokeMoveSink(cursor, -0.70710677f, -0.70710677f, true, false);
+    }
+
+    if (sourceCoordinate.x + 1u < Width && sourceCoordinate.y > 0u &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x + 1u, sourceCoordinate.y - 1u, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.x + 1u >= Width || sourceCoordinate.y == 0u)
+    {
+        SkipSmokeMoveSink(cursor, 0.70710677f, -0.70710677f, true, false);
+    }
+
+    if (sourceCoordinate.x > 0u && sourceCoordinate.y + 1u < Height &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x - 1u, sourceCoordinate.y + 1u, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.x == 0u || sourceCoordinate.y + 1u >= Height)
+    {
+        SkipSmokeMoveSink(cursor, -0.70710677f, 0.70710677f, true, false);
+    }
+
+    if (sourceCoordinate.x + 1u < Width && sourceCoordinate.y + 1u < Height &&
+        SmokeCandidateReceivesMove(cursor, choice, sourceCoordinate, uint3(sourceCoordinate.x + 1u, sourceCoordinate.y + 1u, sourceCoordinate.z), targetCoordinate))
+    {
+        return true;
+    }
+    else if (sourceCoordinate.x + 1u >= Width || sourceCoordinate.y + 1u >= Height)
+    {
+        SkipSmokeMoveSink(cursor, 0.70710677f, 0.70710677f, true, false);
+    }
+
+    return false;
+}
+
+uint SmokeMoveAmount(uint3 sourceCoordinate, uint3 targetCoordinate)
+{
+    uint sourceSmoke = DecayBy(AtmosphericSmoke(NeighborAtmospheric(sourceCoordinate)), 1u);
+    return SmokeSourceChoosesTarget(sourceCoordinate, targetCoordinate, sourceSmoke) ? 1u : 0u;
+}
+
+uint SmokeMovedOutAmount(uint3 sourceCoordinate)
+{
+    uint sourceSmoke = DecayBy(AtmosphericSmoke(NeighborAtmospheric(sourceCoordinate)), 1u);
+    uint sourceIndex = ToIndex(sourceCoordinate);
+    return SmokeMoveRollPasses(sourceIndex, sourceSmoke, SmokeMoveWeightTotal(sourceCoordinate)) ? 1u : 0u;
+}
+
+void AddSmokeContribution(inout uint smokeTotal, inout uint contaminationWeightedTotal, uint smokeContribution, uint contamination)
+{
+    if (smokeContribution == 0u)
+    {
+        return;
+    }
+
+    smokeTotal += smokeContribution;
+    contaminationWeightedTotal += smokeContribution * contamination;
+}
+
+void AddMovedSmokeContribution(
+    inout uint smokeTotal,
+    inout uint contaminationWeightedTotal,
+    uint3 sourceCoordinate,
+    uint3 targetCoordinate)
+{
+    uint atmospheric = NeighborAtmospheric(sourceCoordinate);
+    uint smokeContribution = SmokeMoveAmount(sourceCoordinate, targetCoordinate);
+    AddSmokeContribution(
+        smokeTotal,
+        contaminationWeightedTotal,
+        smokeContribution,
+        AtmosphericSmokeContamination(atmospheric));
+}
+
+uint DilutedSmokeContamination(uint smokeTotal, uint contaminationWeightedTotal)
+{
+    if (smokeTotal == 0u)
     {
         return 0u;
     }
 
-    if (alignment < -0.35f && strength > 0.45f)
-    {
-        return 2u;
-    }
-
-    return 1u;
+    return min(7u, (contaminationWeightedTotal + (smokeTotal / 2u)) / smokeTotal);
 }
 
 uint WindWeightedNeighborHeat(uint neighborHeat, float directionX, float directionY)
@@ -451,8 +792,16 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint ashContaminationSource = ashQuality == 3u ? 7u : sourceContamination;
 
     uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);
-    uint smoke = DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
-    uint smokeContamination = smoke == 0u ? 0u : AtmosphericSmokeContamination(oldAtmospheric);
+    uint smokeTotal = 0u;
+    uint smokeContaminationWeightedTotal = 0u;
+    uint retainedSmoke = DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
+    uint movedOutSmoke = SmokeMovedOutAmount(coordinate);
+    retainedSmoke = retainedSmoke > movedOutSmoke ? retainedSmoke - movedOutSmoke : 0u;
+    AddSmokeContribution(
+        smokeTotal,
+        smokeContaminationWeightedTotal,
+        retainedSmoke,
+        AtmosphericSmokeContamination(oldAtmospheric));
     bool isAshLandingSurface = Terrain(newCell) == 1u || IsAshLandingSurface(companion, coordinate);
     uint ash = isAshLandingSurface ? AtmosphericAsh(oldAtmospheric) : 0u;
     uint ashContamination = ash == 0u ? 0u : AtmosphericAshContamination(oldAtmospheric);
@@ -475,36 +824,83 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     {
         uint below = NeighborAtmospheric(uint3(coordinate.x, coordinate.y, coordinate.z - 1u));
         steam = max(steam, DecayBy(AtmosphericSteam(below), 1u));
-        smoke = max(smoke, DecayBy(AtmosphericSmoke(below), 1u));
-        smokeContamination = max(smokeContamination, smoke == 0u ? 0u : AtmosphericSmokeContamination(below));
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x, coordinate.y, coordinate.z - 1u),
+            coordinate);
     }
 
     if (coordinate.x > 0u)
     {
-        uint penalty = WindSmokePenalty(1.0f, 0.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x - 1u, coordinate.y, coordinate.z), penalty));
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x - 1u, coordinate.y, coordinate.z),
+            coordinate);
     }
 
     if (coordinate.x + 1u < Width)
     {
-        uint penalty = WindSmokePenalty(-1.0f, 0.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x + 1u, coordinate.y, coordinate.z), penalty));
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x + 1u, coordinate.y, coordinate.z),
+            coordinate);
     }
 
     if (coordinate.y > 0u)
     {
-        uint penalty = WindSmokePenalty(0.0f, 1.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x, coordinate.y - 1u, coordinate.z), penalty));
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x, coordinate.y - 1u, coordinate.z),
+            coordinate);
     }
 
     if (coordinate.y + 1u < Height)
     {
-        uint penalty = WindSmokePenalty(0.0f, -1.0f);
-        smoke = max(smoke, NeighborSmokeContribution(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), penalty));
-        smokeContamination = max(smokeContamination, NeighborSmokeContaminationContribution(uint3(coordinate.x, coordinate.y + 1u, coordinate.z), penalty));
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x, coordinate.y + 1u, coordinate.z),
+            coordinate);
+    }
+
+    if (coordinate.x > 0u && coordinate.y > 0u)
+    {
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x - 1u, coordinate.y - 1u, coordinate.z),
+            coordinate);
+    }
+
+    if (coordinate.x + 1u < Width && coordinate.y > 0u)
+    {
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x + 1u, coordinate.y - 1u, coordinate.z),
+            coordinate);
+    }
+
+    if (coordinate.x > 0u && coordinate.y + 1u < Height)
+    {
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x - 1u, coordinate.y + 1u, coordinate.z),
+            coordinate);
+    }
+
+    if (coordinate.x + 1u < Width && coordinate.y + 1u < Height)
+    {
+        AddMovedSmokeContribution(
+            smokeTotal,
+            smokeContaminationWeightedTotal,
+            uint3(coordinate.x + 1u, coordinate.y + 1u, coordinate.z),
+            coordinate);
     }
 
     uint steamSource = SteamSourceFromMoistureAndHeat(newCell);
@@ -512,8 +908,9 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint ashSource = min(3u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
 
     steam = max(steam, steamSource);
-    smoke = max(smoke, smokeSource);
-    smokeContamination = max(smokeContamination, smokeSource == 0u ? 0u : sourceContamination);
+    AddSmokeContribution(smokeTotal, smokeContaminationWeightedTotal, smokeSource, sourceContamination);
+    uint smoke = min(7u, smokeTotal);
+    uint smokeContamination = DilutedSmokeContamination(smokeTotal, smokeContaminationWeightedTotal);
     ash = max(ash, ashSource);
     ashContamination = max(ashContamination, ashSource == 0u ? 0u : ashContaminationSource);
     if (isAshLandingSurface && Water(newCell) > 0u && ash > 0u)

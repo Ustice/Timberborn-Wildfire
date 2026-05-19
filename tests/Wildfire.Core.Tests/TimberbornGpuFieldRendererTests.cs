@@ -99,7 +99,33 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("return (companion >> 25) & 0x7u;", source, StringComparison.Ordinal);
         Assert.Contains("sourceContamination == 0u && contaminationBehavior == 1u", source, StringComparison.Ordinal);
         Assert.Contains("sourceContamination = CompanionSoilContamination(companion);", source, StringComparison.Ordinal);
-        Assert.Contains("smokeContamination = max(smokeContamination, smokeSource == 0u ? 0u : sourceContamination);", source, StringComparison.Ordinal);
+        Assert.Contains("AddSmokeContribution(smokeTotal, smokeContaminationWeightedTotal, smokeSource, sourceContamination);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FireSimUsesDeterministicStochasticSmokeMovementAndDilution()
+    {
+        string source = ReadUnitySource("FireSim.compute");
+
+        Assert.Contains("float SmokeMoveProbability(uint sourceSmoke)", source, StringComparison.Ordinal);
+        Assert.Contains("return saturate(0.08f + ((float)sourceSmoke * 0.018f) + (EffectiveWindStrength() * 0.07f));", source, StringComparison.Ordinal);
+        Assert.Contains("bool SmokeSourceChoosesTarget(uint3 sourceCoordinate, uint3 targetCoordinate, uint sourceSmoke)", source, StringComparison.Ordinal);
+        Assert.Contains("uint SmokeMovedOutAmount(uint3 sourceCoordinate)", source, StringComparison.Ordinal);
+        Assert.Contains("retainedSmoke = retainedSmoke > movedOutSmoke ? retainedSmoke - movedOutSmoke : 0u;", source, StringComparison.Ordinal);
+        Assert.Contains("uint smokeContribution = SmokeMoveAmount(sourceCoordinate, targetCoordinate);", source, StringComparison.Ordinal);
+        Assert.Contains("return 0.75f;", source, StringComparison.Ordinal);
+        Assert.Contains("return 0.22f;", source, StringComparison.Ordinal);
+        Assert.Contains("uint3(sourceCoordinate.x, sourceCoordinate.y, sourceCoordinate.z - 1u)", source, StringComparison.Ordinal);
+        Assert.Contains("bool IsSmokeMoveTargetOpen(uint3 targetCoordinate)", source, StringComparison.Ordinal);
+        Assert.Contains("return Terrain(CurrentCells[ToIndex(targetCoordinate)]) == 0u;", source, StringComparison.Ordinal);
+        Assert.Contains("float AddSmokeMoveSinkCandidate(float total, float directionX, float directionY, bool diagonal, bool upward)", source, StringComparison.Ordinal);
+        Assert.Contains("void SkipSmokeMoveSink(inout float cursor, float directionX, float directionY, bool diagonal, bool upward)", source, StringComparison.Ordinal);
+        Assert.Contains("uint DilutedSmokeContamination(uint smokeTotal, uint contaminationWeightedTotal)", source, StringComparison.Ordinal);
+        Assert.Contains("smokeTotal += smokeContribution;", source, StringComparison.Ordinal);
+        Assert.Contains("contaminationWeightedTotal += smokeContribution * contamination;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("StochasticSmokeAmount", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("WindSmokePenalty", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("smokeContamination = max(smokeContamination", source, StringComparison.Ordinal);
     }
 
     [Fact]

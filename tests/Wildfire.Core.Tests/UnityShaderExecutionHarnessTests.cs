@@ -256,6 +256,47 @@ public sealed class UnityShaderExecutionHarnessTests
     }
 
     [Fact]
+    public void UnityHarnessSmokeContaminationDilutesWhenCleanSmokeMixesWhenEnabled()
+    {
+        int width = 5;
+        int height = 3;
+        ushort[] cells = CreateTerrainCells(width, height);
+        uint[] atmosphericFields = new uint[cells.Length];
+        atmosphericFields[ToIndex(1, 1, width)] = new WildfireAtmosphericFieldState(
+            Steam: 0,
+            Smoke: 7,
+            SmokeContamination: 7,
+            Ash: 0,
+            AshContamination: 0,
+            Source: false).Pack();
+        atmosphericFields[ToIndex(2, 1, width)] = new WildfireAtmosphericFieldState(
+            Steam: 0,
+            Smoke: 7,
+            SmokeContamination: 0,
+            Ash: 0,
+            AshContamination: 0,
+            Source: false).Pack();
+        ShaderSnapshotFixture fixture = CreateFixture(
+            "field-model-smoke-contamination-dilution",
+            width,
+            height,
+            cells,
+            initialAtmosphericFields: atmosphericFields,
+            wind: FireSimWind.None);
+
+        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
+        if (capture is null)
+        {
+            return;
+        }
+
+        WildfireAtmosphericFieldState mixedSmoke = AtmosphereAt(capture, 2, 1);
+
+        Assert.True(mixedSmoke.Smoke > 0);
+        Assert.InRange(mixedSmoke.SmokeContamination, 1, 6);
+    }
+
+    [Fact]
     public void UnityHarnessContaminationRidesSmokeAndAshWhenEnabled()
     {
         int width = 11;
