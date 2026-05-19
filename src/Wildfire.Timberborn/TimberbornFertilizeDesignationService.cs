@@ -218,46 +218,63 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
     private InventoryTarget[] CollectFertileAshInventories()
     {
         return _entityRegistry.Entities
-            .Select(entity =>
-            {
-                if (!entity.TryGetComponent(out GoodStack goodStack))
-                {
-                    return (InventoryTarget?)null;
-                }
-
-                bool hasFertileAsh = goodStack.Inventory.Stock
-                    .Any(ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0);
-                if (!hasFertileAsh)
-                {
-                    return null;
-                }
-
-                if (!entity.TryGetComponent(out BlockObject blockObject))
-                {
-                    return null;
-                }
-
-                Vector3Int[] coords = blockObject.PositionedBlocks.GetOccupiedCoordinates().ToArray();
-                if (coords.Length == 0)
-                {
-                    return null;
-                }
-
-                Vector3Int center = coords
-                    .OrderBy(static c => c.x)
-                    .ThenBy(static c => c.y)
-                    .ThenBy(static c => c.z)
-                    .Skip(coords.Length / 2)
-                    .First();
-
-                return (InventoryTarget?)new InventoryTarget(
-                    RuntimeHelpers.GetHashCode(goodStack),
-                    center,
-                    goodStack.Inventory);
-            })
+            .Select(CreateInventoryTargetSafely)
             .Where(static t => t.HasValue)
             .Select(static t => t!.Value)
             .ToArray();
+    }
+
+    private static InventoryTarget? CreateInventoryTarget(EntityComponent entity)
+    {
+        if (!entity.TryGetComponent(out GoodStack goodStack))
+        {
+            return null;
+        }
+
+        bool hasFertileAsh = goodStack.Inventory.Stock
+            .Any(ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0);
+        if (!hasFertileAsh)
+        {
+            return null;
+        }
+
+        if (!entity.TryGetComponent(out BlockObject blockObject))
+        {
+            return null;
+        }
+
+        Vector3Int[] coords = blockObject.PositionedBlocks.GetOccupiedCoordinates().ToArray();
+        if (coords.Length == 0)
+        {
+            return null;
+        }
+
+        Vector3Int center = coords
+            .OrderBy(static c => c.x)
+            .ThenBy(static c => c.y)
+            .ThenBy(static c => c.z)
+            .Skip(coords.Length / 2)
+            .First();
+
+        return new InventoryTarget(
+            RuntimeHelpers.GetHashCode(goodStack),
+            center,
+            goodStack.Inventory);
+    }
+
+    private static InventoryTarget? CreateInventoryTargetSafely(EntityComponent entity)
+    {
+        try
+        {
+            return CreateInventoryTarget(entity);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "wildfire_fertilize_inventory_scan_skipped " +
+                $"reason={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
+            return null;
+        }
     }
 
     private static InventoryTarget? FindNearbyInventoryWithFertileAsh(

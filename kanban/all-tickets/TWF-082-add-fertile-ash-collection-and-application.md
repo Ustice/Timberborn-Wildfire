@@ -26,10 +26,10 @@ The design treats automatic ash fertility as the first gameplay pass, but the lo
 
 ## Requirements
 
-- Build on the ash field service rather than the temporary visual ash channel.
+- Build on simulator-owned ash state once `TWF-157` and `TWF-158` land; until then, treat the current ash field service as a transitional adapter/read model.
 - Define how fertile ash becomes collectable without duplicating or losing field state.
 - Add a good, job, hauling, storage, building, or field-application path only through safe Timberborn APIs.
-- Preserve ash quality; tainted ash should not be usable as fertilizer unless a later decontamination mechanic exists.
+- Preserve ash contamination; contaminated ash should not be usable as fertilizer unless a later decontamination mechanic exists.
 - Add deterministic tests for collection eligibility, resource accounting, application, and decay or depletion.
 - Capture live QA evidence for collection and field application, or document the exact Timberborn API blocker.
 - Update `docs/DESIGN.md` only if the accepted gameplay loop changes.
@@ -47,6 +47,7 @@ The design treats automatic ash fertility as the first gameplay pass, but the lo
 
 - 2026-05-17 coordinator/code reconciliation: implementation exists on `main` ahead of `origin/main`. Code surfaces include `TimberbornFertileAshCollectionService`, `TimberbornGathererPostFertileAshCollectionAdapter`, `TimberbornFertilizeDesignationService`, `TimberbornFertilizeCropsTool`, `TimberbornFertilizeTreesTool`, `TimberbornFertilizeToolButtons`, `FertileAsh` goods/collections/localization, and runtime hooks for consuming `FertileAsh` into player designations. Deterministic verification passed with `git diff --check origin/main..HEAD`, `bun run typecheck`, and `dotnet test Wildfire.slnx --no-restore` (`436` tests).
 - Required live QA still needs to prove Gatherer Post collection, inventory mutation, designation application, tainted-cell blocking, save/reload of designations, and player-facing toolbar usability or capture exact API blockers.
+- 2026-05-19 ash-model update: `1 FertileAsh` now maps to `1` uncontaminated simulator ash unit, not `25` service strength. `TWF-158` and `TWF-160` own routing collection/application through queued simulator ash mutations.
 
 ## Verification
 
@@ -58,4 +59,4 @@ The design treats automatic ash fertility as the first gameplay pass, but the lo
 ## Notes
 
 - Moved from `08-deferred` to `04-verify` because the collection/application loop is no longer merely future work. Required live QA still needs to prove Gatherer Post collection, inventory mutation, designation application, tainted-cell blocking, save/reload of designations, and player-facing toolbar usability or capture exact API blockers.
-- Relevant design reference: `docs/DESIGN.md` section 20, "Ash And Fertility".
+- Relevant design reference: `docs/DESIGN.md` section 20, "Ash And Fertility" and `docs/ash-simulation-model.md`.

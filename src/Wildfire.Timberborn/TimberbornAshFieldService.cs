@@ -290,6 +290,38 @@ public sealed class TimberbornAshFieldService
         return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: 0);
     }
 
+    public TimberbornAshFieldSummary SyncFromAtmosphericFields(
+        uint tick,
+        IReadOnlyList<uint> atmosphericFields)
+    {
+        if (atmosphericFields is null)
+        {
+            throw new ArgumentNullException(nameof(atmosphericFields));
+        }
+
+        _entries.Clear();
+        atmosphericFields
+            .Select(static (packed, index) => (State: WildfireAtmosphericFieldState.Unpack(packed), CellIndex: index))
+            .Where(static item => item.State.Ash > 0)
+            .ToList()
+            .ForEach(item =>
+            {
+                WildfireAshQuality quality = item.State.AshContamination > 0
+                    ? WildfireAshQuality.Tainted
+                    : WildfireAshQuality.Fertile;
+                _entries[item.CellIndex] = new TimberbornAshFieldEntry(
+                    item.CellIndex,
+                    quality,
+                    item.State.Ash * TimberbornFertileAshCollectionService.StrengthPerGood,
+                    TimberbornAshSourceKind.Unknown,
+                    CreatedTick: tick,
+                    UpdatedTick: tick,
+                    TimberbornAshFieldEntry.CurrentPersistenceVersion);
+            });
+
+        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: _entries.Count);
+    }
+
     private TimberbornAshFieldSummary UpdateAndApplyGrowth(uint tick, int sourceEventCount, int newAshCells)
     {
         int decayedAshCells = DecayEntries(tick);

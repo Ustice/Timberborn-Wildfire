@@ -48,6 +48,16 @@
 
 Detailed sprint boundaries live in [../kanban/sprint-planning.md](../kanban/sprint-planning.md). Sprint 5 closeout lives in [../kanban/sprints/sprint-05.md](../kanban/sprints/sprint-05.md), and the active Sprint 6 charter lives in [../kanban/sprints/sprint-06.md](../kanban/sprints/sprint-06.md).
 
+### Ash Simulator Model Follow-Up
+
+The current ash authority direction lives in [ash-simulation-model.md](ash-simulation-model.md). The implementation should move as one coordinated ash-model wave, but the durable work items are split so the board can track the different proof gates:
+
+- [ ] `TWF-157`: migrate ash amount and contamination to simulator transport state.
+- [ ] `TWF-158`: add queued simulator ash mutations for Timberborn actions.
+- [ ] `TWF-159`: drive ash presentation from simulator state without renderer projection.
+- [ ] `TWF-160`: sync ash persistence, status, harvest, and fertile application with simulator state.
+- [ ] `TWF-161`: rename ash field concepts after the behavior migration is proven.
+
 ### Completed Gameplay Foundation
 
 - [x] Sprint 1: prove the live GPU loop.

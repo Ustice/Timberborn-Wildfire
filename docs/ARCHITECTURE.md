@@ -7,7 +7,7 @@ Wildfire separates simulation authority from host integration. There is one auth
 - `Wildfire.Core` owns packed cells, grid helpers, deterministic fixture hashing, change records, delta records, and GPU simulator contracts.
 - `Wildfire.Cli` owns seeded scenario preview and fixture input inspection.
 - `Wildfire.Unity` owns compute buffers, HLSL rule translation, shader dispatch, compact delta readback, and GPU visual fields.
-- `Wildfire.Timberborn` owns terrain/building/resource/water adapters, event registration, overlay updates, pooled effects, alerts, burn damage, ash fields, beaver exposure, contamination interaction, persistence, and gameplay consequences.
+- `Wildfire.Timberborn` owns terrain/building/resource/water adapters, event registration, overlay updates, pooled effects, alerts, burn damage, ash adapter services, beaver exposure, contamination interaction, persistence, and gameplay consequences.
 
 ## Boundary Rules
 
@@ -17,7 +17,7 @@ Wildfire separates simulation authority from host integration. There is one auth
 - GPU visuals may be driven by simulation buffers, but gameplay changes flow through C# deltas.
 - Fire spread rules live in compute shaders, not in a second C# execution path.
 - Fire does not reduce contamination. Contamination-aware effects are Timberborn-side consequences of simulator fields and deltas.
-- Persistent gameplay ash is separate from the temporary GPU visual ash channel.
+- Ash is simulator-owned transport state; ash presentation and Timberborn gameplay adapters read or queue changes against that state.
 - Fire and smoke visuals are field-based presentation, not one effect object per tile.
 
 ## Timberborn Compatibility Boundary
@@ -114,7 +114,7 @@ Timberborn consequence services consume compact deltas and visual or exposure sa
 
 ### Field Visual Presentation Service
 
-The field visual presentation service owns fire, smoke, steam, and temporary visual ash rendering from the GPU visual field. It should use compact deltas to bound the regions that need updates, then sample neighboring field intensity to produce larger coherent effects.
+The field visual presentation service owns fire, smoke, steam, and ash presentation from simulator fields. It should use compact deltas to bound the regions that need updates, then sample neighboring field intensity to produce larger coherent effects.
 
 Responsibilities:
 
@@ -122,7 +122,7 @@ Responsibilities:
 - Maintain bounded pooled anchors, meshes, particles, or material-driven volumes rather than one effect object per cell.
 - Scale visual presentation by sampled intensity, spread, field shape, and region size.
 - Keep visual presentation failures isolated from gameplay consequences.
-- Keep persistent gameplay ash in the ash field service, not in the temporary visual ash channel.
+- Render ash from simulator-owned ash state without creating, projecting, or mutating ash.
 
 ### Burn Damage Service
 
@@ -159,18 +159,18 @@ Responsibilities:
 - Route explosives or volatile goods through a bounded hazardous-good behavior before broader blast mechanics are considered.
 - Expose counters for item loss by resource, skipped non-burnable goods, hazardous goods, and unsafe API paths.
 
-### Ash Field Service
+### Ash Adapter Services
 
-The ash field service owns persistent gameplay ash. It does not replace the GPU visual-field ash channel, which remains derived visual output.
+Ash adapter services consume simulator ash deltas and queue bounded ash mutations from Timberborn actions. They do not own a second ash source of truth.
 
 Responsibilities:
 
-- Record ash field cells, strength, decay, and quality.
-- Represent ash quality as `none`, `fertile`, `spent`, or `tainted`.
-- Apply fertile ash growth-speed bonuses to plants that opt into ash fertility.
-- Prevent contaminated soil or contaminated burn sources from producing a fertility bonus unless a future decontamination mechanic explicitly allows it.
-- Preserve ash fields across save/load.
-- Expose future collection hooks so beavers can gather fertile ash and place it in fields.
+- Keep CPU-side persistence, status, collection, and fertility consumers synchronized from simulator ash deltas or readback.
+- Treat uncontaminated ash as fertile for gameplay purposes and contaminated ash as hazardous.
+- Queue `FertileAsh` application and ash-removal actions for the next simulator cycle.
+- Prevent contaminated ash from producing a fertility bonus unless a future decontamination mechanic explicitly allows it.
+- Preserve simulator ash state across save/load.
+- Expose collection hooks so beavers can gather uncontaminated ash as `FertileAsh` and place it in fields.
 
 ### Beaver Exposure Service
 

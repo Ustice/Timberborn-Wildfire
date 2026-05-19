@@ -148,8 +148,8 @@ Shader "Wildfire/AshOverlay"
                 uint atmospheric = _AtmosphericFields[CompanionIndex(x, y, z)] & 0xFFFFu;
                 uint ash = (atmospheric >> 9) & 0x7u;
                 uint contamination = (atmospheric >> 12) & 0x7u;
-                float ashLevel = ash == 0u ? 0.0 : (float)min(3u, max(1u, (ash + 1u) / 2u)) / 3.0;
-                float contaminationLevel = contamination == 0u ? 0.0 : (float)min(3u, max(1u, (contamination + 1u) / 2u)) / 3.0;
+                float ashLevel = (float)min(3u, ash) / 3.0;
+                float contaminationLevel = (float)min(7u, contamination) / 7.0;
                 return float2(ashLevel, contaminationLevel);
             }
 
@@ -191,26 +191,16 @@ Shader "Wildfire/AshOverlay"
                     CompanionAshAndContamination(x, y + 1, z),
                     CompanionAshAndContamination(x + 1, y + 1, z),
                     blend.x);
-                float2 projectedAsh = lerp(lower, upper, blend.y);
-                for (int scanZ = z + 1; scanZ < _GridDepth; scanZ += 1)
-                {
-                    if (IsAshLandingSurface(x, y, scanZ))
-                    {
-                        break;
-                    }
+                float2 atmosphericLower = lerp(
+                    AtmosphericFalloutAshAndContamination(x, y, z),
+                    AtmosphericFalloutAshAndContamination(x + 1, y, z),
+                    blend.x);
+                float2 atmosphericUpper = lerp(
+                    AtmosphericFalloutAshAndContamination(x, y + 1, z),
+                    AtmosphericFalloutAshAndContamination(x + 1, y + 1, z),
+                    blend.x);
 
-                    float2 atmosphericLower = lerp(
-                        AtmosphericFalloutAshAndContamination(x, y, scanZ),
-                        AtmosphericFalloutAshAndContamination(x + 1, y, scanZ),
-                        blend.x);
-                    float2 atmosphericUpper = lerp(
-                        AtmosphericFalloutAshAndContamination(x, y + 1, scanZ),
-                        AtmosphericFalloutAshAndContamination(x + 1, y + 1, scanZ),
-                        blend.x);
-                    projectedAsh = max(projectedAsh, lerp(atmosphericLower, atmosphericUpper, blend.y));
-                }
-
-                return projectedAsh;
+                return max(lerp(lower, upper, blend.y), lerp(atmosphericLower, atmosphericUpper, blend.y));
             }
 
             float CoverageForAsh(float ash)

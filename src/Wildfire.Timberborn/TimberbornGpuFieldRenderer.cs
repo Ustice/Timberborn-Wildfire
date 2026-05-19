@@ -375,12 +375,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
             if (_root is not null)
             {
-                bool hasCompanionAsh = !_debugOverlayEnabled &&
+                bool hasAshPresentation = !_debugOverlayEnabled &&
                     presentation.CompanionFieldsBuffer is not null &&
+                    presentation.AtmosphericFieldsBuffer is not null &&
                     presentation.GridWidth > 0 &&
                     presentation.GridHeight > 0 &&
                     presentation.GridDepth > 0;
-                _root.SetActive(hasCompanionAsh);
+                _root.SetActive(hasAshPresentation);
             }
 
             return TimberbornGpuFieldRendererPresentationResult.Applied;
@@ -617,6 +618,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private static IEnumerable<AshFieldCellQuad> SelectAshFieldQuads(TimberbornGpuFieldRendererPresentation presentation)
     {
         if (presentation.CompanionFieldsBuffer is null ||
+            presentation.AtmosphericFieldsBuffer is null ||
             presentation.GridWidth <= 0 ||
             presentation.GridHeight <= 0 ||
             presentation.GridDepth <= 0)

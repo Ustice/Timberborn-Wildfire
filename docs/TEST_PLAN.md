@@ -137,18 +137,18 @@ Required deterministic evidence:
 
 ## Ash Gameplay Effects
 
-Persistent gameplay ash is Timberborn-side state owned by `TimberbornAshFieldService`. It must stay separate from the GPU visual ash channel and from `PackedCell` storage.
+Ash is simulator-owned transport state and must stay out of `PackedCell`. Timberborn ash services consume simulator ash deltas or readback and queue bounded ash mutations; they must not own a competing ash source of truth.
 
 Required deterministic coverage:
 
-- Clean organic burn aftermath creates `fertile` ash and only fertile ash requests growth.
+- Clean organic burn aftermath creates uncontaminated ash and only uncontaminated ash requests growth.
 - Fertile ash growth remains bounded to a `10%` maximum multiplier and reports applied, unsupported, unsafe, and tainted-skip counters.
-- Contaminated burn sources or affected contaminated soil create `tainted` ash and never request growth.
+- Contaminated burn sources or affected contaminated soil create contaminated ash and never request growth.
 - Tainted ash soil poisoning reports candidate, applied, and safe-unavailable mutation counters without reducing native contamination.
-- Existing Gatherer Posts collect only `fertile` ash, convert `25` ash strength into `1` `FertileAsh` good, reduce ash strength after successful inventory mutation, and leave tainted or spent ash untouched.
+- Existing Gatherer Posts collect only uncontaminated ash, convert `1` ash unit into `1` `FertileAsh` good, reduce ash amount after successful inventory mutation, and leave contaminated ash untouched.
 - Collection failure must not delete ash. Inventory, gatherer, or native API failures must surface through `fertile_ash_collection_skipped_inventory_api`.
 
-Status and `qa-readiness` should expose:
+Status and `qa-readiness` should expose simulator-owned ash state and adapter effects:
 
 - `ash_field_entries`, `ash_field_fertile_cells`, `ash_field_spent_cells`, and `ash_field_tainted_cells`.
 - `ash_field_growth_candidate_cells`, `ash_field_growth_applied_growables`, `ash_field_growth_skipped_tainted_cells`, and `ash_field_growth_skipped_unsafe_apis`.
@@ -157,7 +157,7 @@ Status and `qa-readiness` should expose:
 
 Live QA should burn one clean organic target and one contaminated or contaminated-soil target. Passing evidence must include a copied `Player.log`, a `status` or `qa-readiness` result with nonzero fertile and tainted ash counters, growth or safe-unavailable growth telemetry, tainted soil-poisoning applied or safe-unavailable telemetry, and Gatherer Post collection of `FertileAsh` or an explicit inventory API blocker. Save/reload QA should confirm ash entries survive through Wildfire persistence before collection depletes them.
 
-Fertile ash application adds two player-facing toolbar paths: crop fertilizing and forestry fertilizing. Deterministic and live QA should prove that designations consume `1` `FertileAsh` good, apply `25` ash strength through the ash field service, persist crop and forestry designations across save/reload, skip tainted cells without consuming goods, and report no-inventory or safe-API failures clearly.
+Fertile ash application adds two player-facing toolbar paths: crop fertilizing and forestry fertilizing. Deterministic and live QA should prove that designations consume `1` `FertileAsh` good, queue `1` uncontaminated ash unit into simulator ash state, persist crop and forestry designations across save/reload, skip contaminated cells without consuming goods, and report no-inventory or safe-API failures clearly.
 
 ## Beaver Field Effects
 

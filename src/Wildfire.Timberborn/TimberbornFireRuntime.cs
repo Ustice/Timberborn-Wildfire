@@ -209,6 +209,7 @@ public sealed class TimberbornFireRuntime :
             if (result.DidDispatch)
             {
                 uint tick = result.Step?.Tick ?? _fireSystem?.LastTick ?? 0;
+                SyncAshReadModelFromSimulator(tick);
                 TryApplyAshWorldEffects(tick);
                 _logSink.Info(
                     $"wildfire_timberborn_runtime_dispatched game_update_id={_gameUpdateId} tick={result.Step?.Tick} delta_count={result.Step?.Deltas.Count}");
@@ -235,13 +236,24 @@ public sealed class TimberbornFireRuntime :
 
         try
         {
-            _fertileAshCollectionService.Apply(tick, _ashFieldService);
+            _fertileAshCollectionService.Apply(tick, _ashFieldService, QueueCollectedAshRemoval);
         }
         catch (Exception exception)
         {
             _logSink.Warning(
                 $"wildfire_timberborn_fertile_ash_apply_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
         }
+    }
+
+    private void SyncAshReadModelFromSimulator(uint tick)
+    {
+        TimberbornFireSimPersistenceSnapshot? fireSimSnapshot = _fireSystem?.CapturePersistentFireSimState();
+        if (fireSimSnapshot?.AtmosphericFields is not { Count: > 0 } atmosphericFields)
+        {
+            return;
+        }
+
+        _ashFieldService.SyncFromAtmosphericFields(tick, atmosphericFields);
     }
 
     public void AttachSimulator(IGpuFireSimulator fireSimulator, TimberbornFireCadence? cadence = null)
@@ -642,6 +654,7 @@ public sealed class TimberbornFireRuntime :
             fireSystem.QaDeltaStimulusSustainedHeatState;
         TimberbornSelectedCropTargetDiagnostics selectedCropDiagnostics =
             _selectedCropTargetProvider.LastDiagnostics;
+        SyncAshReadModelFromSimulator(fireSystem.LastTick ?? 0);
         TimberbornAshFieldSummary ashFieldSummary = _ashFieldService.LastSummary;
         TimberbornTaintedAshSoilPoisoningSummary taintedAshSummary =
             _taintedAshSoilPoisoningService.LastSummary;
@@ -993,18 +1006,48 @@ public sealed class TimberbornFireRuntime :
 
     public bool ApplyPlayerFertileAshDesignation(int cellIndex, int strength)
     {
-        uint tick = _fireSystem?.LastTick ?? 0;
-        var sourceEvent = new TimberbornAshSourceEvent(
-            cellIndex,
-            tick,
-            TimberbornAshSourceKind.Unknown,
-            TimberbornBurnMaterialKind.Organic,
-            strength,
-            IsSourceContaminated: false,
-            IsAffectedCellContaminated: false,
-            Array.Empty<string>());
-        _ashFieldService.ApplySources(tick, new[] { sourceEvent });
+        byte ashAmount = StrengthToAshUnits(strength);
+        if (ashAmount == 0)
+        {
+            return false;
+        }
+
+        _fireSystem?.RegisterChange(
+            new FireSimChange(
+                CellIndex: cellIndex,
+                AddAsh: ashAmount,
+                SetAshContamination: 0),
+            "fertile_ash_application");
         return true;
+    }
+
+    private void QueueCollectedAshRemoval(TimberbornFertileAshCollectedCell cell)
+    {
+        byte ashAmount = StrengthToAshUnits(cell.StrengthToRemove);
+        if (ashAmount == 0)
+        {
+            return;
+        }
+
+        _fireSystem?.RegisterChange(
+            new FireSimChange(
+                CellIndex: cell.CellIndex,
+                RemoveAsh: ashAmount),
+            "fertile_ash_collection");
+    }
+
+    private static byte StrengthToAshUnits(int strength)
+    {
+        if (strength <= 0)
+        {
+            return 0;
+        }
+
+        return checked((byte)Math.Clamp(
+            (strength + TimberbornFertileAshCollectionService.StrengthPerGood - 1) /
+                TimberbornFertileAshCollectionService.StrengthPerGood,
+            1,
+            3));
     }
 
     public bool IsCellTaintedAsh(int cellIndex)
@@ -1168,7 +1211,15 @@ public sealed class TimberbornFireRuntime :
         }
 
         TimberbornWildfirePersistenceCodec.RestoreConsequences(_burnDamageService, snapshot.Consequences);
-        _ashFieldService.RestoreSnapshot(snapshot.FireSim?.Tick ?? 0, snapshot.AshField);
+        if (snapshot.FireSim?.AtmosphericFields is { Count: > 0 } atmosphericFields &&
+            atmosphericFields.Any(static packed => WildfireAtmosphericFieldState.Unpack(packed).Ash > 0))
+        {
+            _ashFieldService.SyncFromAtmosphericFields(snapshot.FireSim.Tick, atmosphericFields);
+        }
+        else
+        {
+            _ashFieldService.RestoreSnapshot(snapshot.FireSim?.Tick ?? 0, snapshot.AshField);
+        }
         _logSink.Info(
             "wildfire_timberborn_persistence_runtime_state_restored " +
             $"ash_entries={snapshot.AshField.Entries.Count} " +

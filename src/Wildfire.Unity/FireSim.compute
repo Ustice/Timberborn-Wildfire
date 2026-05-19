@@ -12,6 +12,8 @@
 #define CHANGE_SET_FLAMMABILITY 16u
 #define CHANGE_SET_BURNING_LEVEL 32u
 #define CHANGE_SET_TERRAIN 64u
+#define CHANGE_SET_ASH 128u
+#define CHANGE_SET_ASH_CONTAMINATION 256u
 
 float VisualFireBaseIntensity;
 float VisualFireHeatWeight;
@@ -237,7 +239,7 @@ uint PackAtmospheric(uint steam, uint smoke, uint smokeContamination, uint ash, 
     return ((steam & 0x7u) << 0) |
         ((smoke & 0x7u) << 3) |
         (((smoke == 0u ? 0u : smokeContamination) & 0x7u) << 6) |
-        ((ash & 0x7u) << 9) |
+        ((min(3u, ash) & 0x7u) << 9) |
         (((ash == 0u ? 0u : ashContamination) & 0x7u) << 12) |
         (source ? 0x8000u : 0u);
 }
@@ -352,13 +354,7 @@ uint SourceContamination(uint companion)
 
 uint FalloutAshLevel(uint atmospheric)
 {
-    uint ash = AtmosphericAsh(atmospheric);
-    if (ash == 0u)
-    {
-        return 0u;
-    }
-
-    return min(3u, max(1u, (ash + 1u) / 2u));
+    return min(3u, AtmosphericAsh(atmospheric));
 }
 
 uint FalloutAshContaminationLevel(uint atmospheric)
@@ -374,42 +370,7 @@ uint FalloutAshContaminationLevel(uint atmospheric)
 
 uint UpdateCompanionAsh(uint companion, uint3 coordinate, uint oldCell, uint newCell, uint atmospheric)
 {
-    uint ashLevel = CompanionAshLevel(companion);
-    uint ashContaminationLevel = CompanionAshContaminationLevel(companion);
-    if (!IsAshLandingSurface(companion, coordinate))
-    {
-        return WithCompanionAshLevels(companion, 0u, 0u);
-    }
-
-    uint falloutAshLevel = FalloutAshLevel(atmospheric);
-    uint falloutContaminationLevel = FalloutAshContaminationLevel(atmospheric);
-
-    for (uint z = coordinate.z + 1u; z < Depth; z += 1u)
-    {
-        uint aboveIndex = ToIndex(uint3(coordinate.x, coordinate.y, z));
-        if (IsAshLandingSurfaceAt(uint3(coordinate.x, coordinate.y, z)))
-        {
-            break;
-        }
-
-        uint aboveAtmospheric = CurrentAtmosphericFields[aboveIndex] & 0xFFFFu;
-        falloutAshLevel = max(falloutAshLevel, FalloutAshLevel(aboveAtmospheric));
-        falloutContaminationLevel = max(falloutContaminationLevel, FalloutAshContaminationLevel(aboveAtmospheric));
-    }
-
-    ashLevel = max(ashLevel, falloutAshLevel);
-    ashContaminationLevel = max(ashContaminationLevel, falloutContaminationLevel);
-
-    if (Water(newCell) > 0u && ashLevel > 0u)
-    {
-        ashLevel -= 1u;
-        if (ashLevel == 0u)
-        {
-            ashContaminationLevel = 0u;
-        }
-    }
-
-    return WithCompanionAshLevels(companion, ashLevel, ashContaminationLevel);
+    return companion;
 }
 
 uint NeighborSmokeContribution(uint3 coordinate, uint penalty)
@@ -492,8 +453,23 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);
     uint smoke = DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
     uint smokeContamination = smoke == 0u ? 0u : AtmosphericSmokeContamination(oldAtmospheric);
-    uint ash = DecayBy(AtmosphericAsh(oldAtmospheric), 0u);
+    bool isAshLandingSurface = Terrain(newCell) == 1u || IsAshLandingSurface(companion, coordinate);
+    uint ash = isAshLandingSurface ? AtmosphericAsh(oldAtmospheric) : 0u;
     uint ashContamination = ash == 0u ? 0u : AtmosphericAshContamination(oldAtmospheric);
+
+    if (coordinate.z + 1u < Depth)
+    {
+        uint3 aboveCoordinate = uint3(coordinate.x, coordinate.y, coordinate.z + 1u);
+        uint aboveIndex = ToIndex(aboveCoordinate);
+        uint aboveCompanion = CompanionFields[aboveIndex];
+        if (!IsAshLandingSurface(aboveCompanion, aboveCoordinate))
+        {
+            uint aboveAtmospheric = CurrentAtmosphericFields[aboveIndex] & 0xFFFFu;
+            uint fallingAsh = AtmosphericAsh(aboveAtmospheric);
+            ash = max(ash, fallingAsh);
+            ashContamination = max(ashContamination, fallingAsh == 0u ? 0u : AtmosphericAshContamination(aboveAtmospheric));
+        }
+    }
 
     if (coordinate.z > 0u)
     {
@@ -533,15 +509,64 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     uint steamSource = SteamSourceFromMoistureAndHeat(newCell);
     uint smokeSource = hotFuel ? min(5u, 1u + (Heat(newCell) / 3u)) : 0u;
-    uint ashSource = min(7u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
+    uint ashSource = min(3u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
 
     steam = max(steam, steamSource);
     smoke = max(smoke, smokeSource);
     smokeContamination = max(smokeContamination, smokeSource == 0u ? 0u : sourceContamination);
     ash = max(ash, ashSource);
     ashContamination = max(ashContamination, ashSource == 0u ? 0u : ashContaminationSource);
+    if (isAshLandingSurface && Water(newCell) > 0u && ash > 0u)
+    {
+        ash -= 1u;
+        if (ash == 0u)
+        {
+            ashContamination = 0u;
+        }
+    }
+
     bool source = steamSource > 0u || smokeSource > 0u || ashSource > 0u;
     return PackAtmospheric(min(7u, steam), min(7u, smoke), min(7u, smokeContamination), min(7u, ash), min(7u, ashContamination), source);
+}
+
+uint ApplyAshChange(uint atmospheric, FireSimChangeGpu change)
+{
+    uint steam = AtmosphericSteam(atmospheric);
+    uint smoke = AtmosphericSmoke(atmospheric);
+    uint smokeContamination = AtmosphericSmokeContamination(atmospheric);
+    uint ash = AtmosphericAsh(atmospheric);
+    uint ashContamination = AtmosphericAshContamination(atmospheric);
+    bool source = (atmospheric & 0x8000u) != 0u;
+
+    if ((change.SetMask & CHANGE_SET_ASH) != 0u)
+    {
+        ash = (change.AddFields >> 12) & 0x3u;
+    }
+
+    if ((change.SetMask & CHANGE_SET_ASH_CONTAMINATION) != 0u)
+    {
+        ashContamination = (change.AddFields >> 14) & 0x7u;
+    }
+
+    uint addAsh = (change.AddFields >> 8) & 0x3u;
+    uint removeAsh = (change.AddFields >> 10) & 0x3u;
+    if (addAsh > 0u)
+    {
+        ash = min(3u, ash + addAsh);
+        ashContamination = max(ashContamination, (change.AddFields >> 14) & 0x7u);
+    }
+
+    if (removeAsh > 0u)
+    {
+        ash = ash > removeAsh ? ash - removeAsh : 0u;
+    }
+
+    if (ash == 0u)
+    {
+        ashContamination = 0u;
+    }
+
+    return PackAtmospheric(steam, smoke, smokeContamination, ash, ashContamination, source);
 }
 
 void WriteVisualField(uint index, uint cell, uint atmospheric)
@@ -699,6 +724,7 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
 
         uint oldCell = CurrentCells[change.CellIndex] & 0xFFFFu;
         uint cell = oldCell;
+        uint oldAtmospheric = CurrentAtmosphericFields[change.CellIndex] & 0xFFFFu;
 
         if ((change.SetMask & CHANGE_SET_CELL) != 0u)
         {
@@ -749,6 +775,7 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
         }
 
         CurrentCells[change.CellIndex] = cell;
+        CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);
         AppendDelta(change.CellIndex, oldCell, cell);
     }
 }
@@ -772,10 +799,8 @@ void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
     uint oldAtmospheric = CurrentAtmosphericFields[index];
     uint newCell = StepCell(index, id, oldCell, oldAtmospheric);
     uint atmospheric = BuildAtmosphericField(index, id, oldCell, newCell);
-    uint companion = UpdateCompanionAsh(CompanionFields[index], id, oldCell, newCell, atmospheric);
     NextCells[index] = newCell;
     NextAtmosphericFields[index] = atmospheric;
-    CompanionFields[index] = companion;
     WriteVisualField(index, newCell, atmospheric);
     AppendDelta(index, oldCell, newCell);
 }

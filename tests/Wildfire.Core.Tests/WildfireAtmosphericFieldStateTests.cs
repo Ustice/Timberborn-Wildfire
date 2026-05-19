@@ -11,7 +11,7 @@ public sealed class WildfireAtmosphericFieldStateTests
             Steam: 5,
             Smoke: 6,
             SmokeContamination: 3,
-            Ash: 4,
+            Ash: 3,
             AshContamination: 7,
             Source: true);
 
@@ -20,10 +20,27 @@ public sealed class WildfireAtmosphericFieldStateTests
         Assert.Equal(5u, (packed >> 0) & 0x7u);
         Assert.Equal(6u, (packed >> 3) & 0x7u);
         Assert.Equal(3u, (packed >> 6) & 0x7u);
-        Assert.Equal(4u, (packed >> 9) & 0x7u);
+        Assert.Equal(3u, (packed >> 9) & 0x7u);
         Assert.Equal(7u, (packed >> 12) & 0x7u);
         Assert.Equal(1u, (packed >> 15) & 0x1u);
         Assert.Equal(state, WildfireAtmosphericFieldState.Unpack(packed));
+    }
+
+    [Fact]
+    public void PackClampsAshAmountToResourceScale()
+    {
+        WildfireAtmosphericFieldState state = new(
+            Steam: 0,
+            Smoke: 0,
+            SmokeContamination: 0,
+            Ash: 7,
+            AshContamination: 7,
+            Source: false);
+
+        WildfireAtmosphericFieldState unpacked = WildfireAtmosphericFieldState.Unpack(state.Pack());
+
+        Assert.Equal(3, unpacked.Ash);
+        Assert.Equal(7, unpacked.AshContamination);
     }
 
     [Fact]

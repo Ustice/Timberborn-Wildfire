@@ -585,6 +585,26 @@ public sealed class UnityComputeFireSimulatorTests
     }
 
     [Fact]
+    public void ChangeUploadEncodesQueuedAshMutationsWithoutCorruptingSetCell()
+    {
+        uint[] encoded = FireSimChangeUpload.Encode(
+            [
+                new FireSimChange(
+                    CellIndex: 0,
+                    SetCell: 0x1234,
+                    AddAsh: 4,
+                    RemoveAsh: 5,
+                    SetAsh: 6,
+                    SetAshContamination: 9),
+            ],
+            capacity: 1);
+
+        Assert.Equal((1u << 0) | (1u << 7) | (1u << 8), encoded[1]);
+        Assert.Equal((3u << 8) | (3u << 10) | (3u << 12) | (7u << 14), encoded[2]);
+        Assert.Equal(0x1234u, encoded[3] & 0xFFFFu);
+    }
+
+    [Fact]
     public void TickKeepsRegisteredChangesWhenChangeUploadFails()
     {
         RecordingComputeBufferAllocator allocator = new();

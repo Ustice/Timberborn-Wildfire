@@ -55,7 +55,7 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
-    public void AshOverlayPresentationBindsAtmosphericAshForImmediateGroundProjection()
+    public void AshOverlayPresentationBindsAtmosphericAshWithoutProjection()
     {
         string rendererSource = ReadTimberbornGpuFieldRendererSource();
         string shaderSource = ReadUnitySource("AshOverlay.shader");
@@ -66,18 +66,17 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("Shader.PropertyToID(\"_UseAtmosphericAsh\")", rendererSource, StringComparison.Ordinal);
         Assert.Contains("StructuredBuffer<uint> _AtmosphericFields;", shaderSource, StringComparison.Ordinal);
         Assert.Contains("AtmosphericFalloutAshAndContamination", shaderSource, StringComparison.Ordinal);
-        Assert.Contains("for (int scanZ = z + 1; scanZ < _GridDepth; scanZ += 1)", shaderSource, StringComparison.Ordinal);
-        Assert.Contains("projectedAsh = max(projectedAsh, lerp(atmosphericLower, atmosphericUpper, blend.y));", shaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("for (int scanZ = z + 1; scanZ < _GridDepth; scanZ += 1)", shaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("projectedAsh = max(projectedAsh, lerp(atmosphericLower, atmosphericUpper, blend.y));", shaderSource, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void FireSimAshFalloutProjectsToSolidLandingSurfaces()
+    public void FireSimKeepsDynamicAshOutOfCompanionFields()
     {
         string source = ReadUnitySource("FireSim.compute");
 
         Assert.Contains("bool IsEntityMaterial(uint companion)", source, StringComparison.Ordinal);
         Assert.Contains("bool IsAshLandingSurface(uint companion, uint3 coordinate)", source, StringComparison.Ordinal);
-        Assert.Contains("bool IsAshLandingSurfaceAt(uint3 coordinate)", source, StringComparison.Ordinal);
         Assert.Contains("materialClass == 2u ||", source, StringComparison.Ordinal);
         Assert.Contains("materialClass == 3u ||", source, StringComparison.Ordinal);
         Assert.Contains("materialClass == 4u ||", source, StringComparison.Ordinal);
@@ -86,10 +85,9 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("materialClass == 7u;", source, StringComparison.Ordinal);
         Assert.Contains("if (CompanionMaterialClass(companion) == 1u)", source, StringComparison.Ordinal);
         Assert.Contains("return CompanionMaterialClass(belowCompanion) != CompanionMaterialClass(companion);", source, StringComparison.Ordinal);
-        Assert.Contains("return WithCompanionAshLevels(companion, 0u, 0u);", source, StringComparison.Ordinal);
-        Assert.Contains("for (uint z = coordinate.z + 1u; z < Depth; z += 1u)", source, StringComparison.Ordinal);
-        Assert.Contains("if (IsAshLandingSurfaceAt(uint3(coordinate.x, coordinate.y, z)))", source, StringComparison.Ordinal);
-        Assert.Contains("uint companion = UpdateCompanionAsh(CompanionFields[index], id, oldCell, newCell, atmospheric);", source, StringComparison.Ordinal);
+        Assert.Contains("CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CompanionFields[index] = companion;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("uint companion = UpdateCompanionAsh(CompanionFields[index], id, oldCell, newCell, atmospheric);", source, StringComparison.Ordinal);
     }
 
     [Fact]

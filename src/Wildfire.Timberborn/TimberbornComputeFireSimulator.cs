@@ -963,13 +963,19 @@ public sealed class TimberbornComputeFireSimulator :
         mask |= change.SetFlammability.HasValue ? 1u << 4 : 0u;
         mask |= change.SetBurningLevel.HasValue ? 1u << 5 : 0u;
         mask |= change.SetTerrain.HasValue ? 1u << 6 : 0u;
+        mask |= change.SetAsh.HasValue ? 1u << 7 : 0u;
+        mask |= change.SetAshContamination.HasValue ? 1u << 8 : 0u;
         return mask;
     }
 
     private static uint GetAddFields(FireSimChange change)
     {
         return Clamp(change.AddHeat, 15u) |
-            (Clamp(change.AddFuel, 15u) << 4);
+            (Clamp(change.AddFuel, 15u) << 4) |
+            (Clamp(change.AddAsh, 3u) << 8) |
+            (Clamp(change.RemoveAsh, 3u) << 10) |
+            (Clamp(change.SetAsh, 3u) << 12) |
+            (Clamp(change.SetAshContamination, 7u) << 14);
     }
 
     private static uint GetSetValues(FireSimChange change)

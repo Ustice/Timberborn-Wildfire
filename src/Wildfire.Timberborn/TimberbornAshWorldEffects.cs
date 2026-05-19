@@ -289,7 +289,10 @@ public sealed class TimberbornFertileAshCollectionService
     public TimberbornFertileAshCollectionSummary LastSummary { get; private set; } =
         TimberbornFertileAshCollectionSummary.Empty;
 
-    public TimberbornFertileAshCollectionSummary Apply(uint tick, TimberbornAshFieldService ashFieldService)
+    public TimberbornFertileAshCollectionSummary Apply(
+        uint tick,
+        TimberbornAshFieldService ashFieldService,
+        Action<TimberbornFertileAshCollectedCell>? onCollectedCell = null)
     {
         if (ashFieldService is null)
         {
@@ -304,7 +307,11 @@ public sealed class TimberbornFertileAshCollectionService
             .ToArray();
         TimberbornFertileAshCollectionAdapterResult adapterResult = _adapter.Collect(tick, candidates);
         TimberbornAshFieldCollectionRemoval[] removals = adapterResult.CollectedCells
-            .Select(cell => ashFieldService.RemoveCollectedFertileStrength(cell.CellIndex, cell.StrengthToRemove))
+            .Select(cell =>
+            {
+                onCollectedCell?.Invoke(cell);
+                return ashFieldService.RemoveCollectedFertileStrength(cell.CellIndex, cell.StrengthToRemove);
+            })
             .ToArray();
         LastSummary = new TimberbornFertileAshCollectionSummary(
             GathererPostCount: adapterResult.GathererPostCount,

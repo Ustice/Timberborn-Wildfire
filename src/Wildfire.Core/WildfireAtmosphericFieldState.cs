@@ -21,7 +21,7 @@ public readonly record struct WildfireAtmosphericFieldState(
         return ((uint)Math.Clamp((int)Steam, 0, 7) << 0) |
             ((uint)Math.Clamp((int)Smoke, 0, 7) << 3) |
             ((uint)Math.Clamp((int)SmokeContamination, 0, 7) << 6) |
-            ((uint)Math.Clamp((int)Ash, 0, 7) << 9) |
+            ((uint)Math.Clamp((int)Ash, 0, 3) << 9) |
             ((uint)Math.Clamp((int)AshContamination, 0, 7) << 12) |
             (Source ? 1u << 15 : 0u);
     }

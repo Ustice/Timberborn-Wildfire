@@ -6,6 +6,31 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornAshFieldServiceTests
 {
     [Fact]
+    public void SyncFromAtmosphericFieldsBuildsSimulatorBackedReadModel()
+    {
+        RecordingAshGrowthAdapter growthAdapter = new();
+        TimberbornAshFieldService service = new(growthAdapter);
+
+        TimberbornAshFieldSummary summary = service.SyncFromAtmosphericFields(
+            9,
+            [
+                new WildfireAtmosphericFieldState(0, 0, 0, Ash: 2, AshContamination: 0, Source: false).Pack(),
+                new WildfireAtmosphericFieldState(0, 0, 0, Ash: 3, AshContamination: 6, Source: false).Pack(),
+                WildfireAtmosphericFieldState.Empty.Pack(),
+            ]);
+
+        Assert.Equal(1, summary.FertileAshCellCount);
+        Assert.Equal(1, summary.TaintedAshCellCount);
+        Assert.Equal(1, summary.GrowthCandidateCellCount);
+        Assert.True(service.TryGetEntry(0, out TimberbornAshFieldEntry fertile));
+        Assert.Equal(WildfireAshQuality.Fertile, fertile.Quality);
+        Assert.Equal(2 * TimberbornFertileAshCollectionService.StrengthPerGood, fertile.Strength);
+        Assert.True(service.TryGetEntry(1, out TimberbornAshFieldEntry tainted));
+        Assert.Equal(WildfireAshQuality.Tainted, tainted.Quality);
+        Assert.Equal(3 * TimberbornFertileAshCollectionService.StrengthPerGood, tainted.Strength);
+    }
+
+    [Fact]
     public void CleanOrganicSourceCreatesFertileAshAndLinearGrowthRequest()
     {
         RecordingAshGrowthAdapter growthAdapter = new();

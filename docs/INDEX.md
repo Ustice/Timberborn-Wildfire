@@ -7,6 +7,7 @@ Use this page as the startup map for humans and agents.
 - [DESIGN.md](DESIGN.md) owns the simulation and gameplay design.
 - [RELEASE_DESIGN.md](RELEASE_DESIGN.md) summarizes the release-facing behavior compared with `main`.
 - [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
+- [ash-simulation-model.md](ash-simulation-model.md) owns the current ash authority, naming, and buffer-responsibility direction.
 - [fire-sim-field-model-plan.md](fire-sim-field-model-plan.md) owns the one-session worktree plan for the anisotropic heat, atmosphere, and contamination shader model.
 - [fire-sim-field-model-live-validation.md](fire-sim-field-model-live-validation.md) records live validation attempts and exact blockers for the field-model branch.
 - [world-consequence-first-pass.md](world-consequence-first-pass.md) owns the current first-pass plan for stored-item consequences, generated scenario saves, and faction fire-response ideas.

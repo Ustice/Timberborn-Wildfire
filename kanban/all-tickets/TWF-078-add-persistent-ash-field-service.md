@@ -20,19 +20,19 @@ write_scope:
 
 ## Goal
 
-Add one Timberborn-side ash field service that stores gameplay ash, fertile ash, spent ash, and contaminated or tainted ash separately from the temporary GPU visual ash channel.
+Keep the current Timberborn ash-field implementation verifiable while migrating the authoritative ash model toward simulator-owned transport state.
 
 ## Why
 
-The design separates visual ash from gameplay ash. The GPU visual field can show temporary residual heat, but plant growth, ash quality, decay, persistence, and future collection need a dedicated Timberborn-side service. Fertile ash and contaminated ash are positive and negative qualities of the same field, so they should stay in one ticket.
+This ticket implemented the first persistent gameplay-ash proof, but [docs/ash-simulation-model.md](../../docs/ash-simulation-model.md) now supersedes the older split-authority design. The existing service should be treated as a transitional adapter/read model while follow-up tickets move ash amount, contamination, persistence, status, and mutation back under simulator authority.
 
 ## Requirements
 
-- Keep `PackedCell` and the GPU visual ash channel unchanged.
-- Add an ash field service that records cells, strength, decay, and quality.
-- Represent ash quality as `none`, `fertile`, `spent`, or `tainted`.
-- Create fertile ash from accepted non-contaminated burn aftermath sources.
-- Create tainted ash from accepted contaminated burn aftermath sources.
+- Keep `PackedCell` unchanged.
+- Preserve the current ash field service until simulator-owned ash state can replace it safely.
+- Do not expand this ticket into a second permanent ash authority.
+- Keep existing deterministic and live QA gates for current fertile/tainted ash behavior.
+- Create follow-up migration work against simulator transport state instead of adding more independent service state.
 - Apply a bounded plant growth-speed bonus for plants that opt into ash fertility.
 - Prevent tainted or contaminated ash from granting a growth bonus.
 - Persist ash fields across save/load.
@@ -53,9 +53,9 @@ The design separates visual ash from gameplay ash. The GPU visual field can show
 
 ## Implementation Notes
 
-- Keep gameplay ash separate from the temporary GPU visual ash channel.
-- Store ash by simulation cell with strength, quality, creation source, decay state, and persistence version.
-- `fertile` ash should only come from accepted non-contaminated burn aftermath. `tainted` ash should come from contaminated sources or contaminated affected cells through `TWF-079`.
+- Treat this ticket as the historical implementation and verification gate for the transitional service.
+- `TWF-157` through `TWF-160` own the simulator-authoritative migration.
+- Uncontaminated simulator ash should eventually replace `fertile` service state; contaminated simulator ash should eventually replace `tainted` service state.
 - Plant-growth bonuses should be bounded and opt-in by plant category; tainted ash must never grant the bonus.
 - Expected counters include ash cells by quality, new ash cells, decayed cells, growth bonus applications, tainted bonus skips, persistence saves, and persistence loads.
 - Safe no-op cases must include missing plant growth APIs and unresolved contamination data.
@@ -72,4 +72,5 @@ The design separates visual ash from gameplay ash. The GPU visual field can show
 - 2026-05-17 coordinator/code reconciliation: implementation exists on `main` ahead of `origin/main` in `3712f4d4` plus follow-up fixes. Code surfaces include `TimberbornAshFieldService`, `TimberbornAshWorldEffects`, `TimberbornFireRuntime` persistence/status wiring, `FertileAsh` blueprints/localization, and QA/status telemetry for ash quality, growth, tainted soil poisoning, and fertile ash collection. Deterministic verification passed with `git diff --check origin/main..HEAD`, `bun run typecheck`, and `dotnet test Wildfire.slnx --no-restore` (`436` tests).
 - Moved to `04-verify` because the code is implemented and locally tested, but required live QA still needs accepted evidence for fertile/tainted ash creation, save/reload, growth or safe-unavailable growth telemetry, and collection behavior.
 - Collection/application work overlapped and landed with this off-sprint implementation; see `TWF-082` for the player-facing fertile-ash loop verification gate.
-- Relevant design references: `docs/DESIGN.md` section 20, "Ash And Fertility" and `docs/ARCHITECTURE.md` "Ash Field Service".
+- 2026-05-19 ash-model update: `docs/ash-simulation-model.md` supersedes the older split between visual ash and gameplay ash. `TWF-157` through `TWF-160` now own the migration from this transitional service to simulator-owned ash state.
+- Relevant design references: `docs/DESIGN.md` section 20, "Ash And Fertility", `docs/ARCHITECTURE.md` "Ash Adapter Services", and `docs/ash-simulation-model.md`.
