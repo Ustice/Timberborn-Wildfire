@@ -162,10 +162,14 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
     public void BindingLifecycleBindsGridMetadataAndMarksDispatchUpdates()
     {
         object visualFieldsBuffer = new();
+        object atmosphericFieldsBuffer = new();
+        object companionFieldsBuffer = new();
         TimberbornGpuVisualFieldSurface surface = new(new RecordingFireLogSink());
         TimberbornGpuVisualFieldSurfaceBindingLifecycle lifecycle = new(
             surface,
             visualFieldsBuffer,
+            atmosphericFieldsBuffer,
+            companionFieldsBuffer,
             new FireGrid(4, 3, 2),
             strideBytes: 16);
 
@@ -181,6 +185,37 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
         Assert.Equal(19u, surface.State.LastUpdatedTick);
         Assert.True(surface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding binding));
         Assert.Same(visualFieldsBuffer, binding.VisualFieldsBuffer);
+        Assert.Same(atmosphericFieldsBuffer, binding.TransportFieldsBuffer);
+        Assert.Same(companionFieldsBuffer, binding.MaterialFieldsBuffer);
+    }
+
+    [Fact]
+    public void BindingLifecycleRefreshesRestoredTransportAndMaterialBuffersBeforeDispatch()
+    {
+        object visualFieldsBuffer = new();
+        object initialTransportFieldsBuffer = new();
+        object initialMaterialFieldsBuffer = new();
+        object restoredTransportFieldsBuffer = new();
+        object restoredMaterialFieldsBuffer = new();
+        TimberbornGpuVisualFieldSurface surface = new(new RecordingFireLogSink());
+        TimberbornGpuVisualFieldSurfaceBindingLifecycle lifecycle = new(
+            surface,
+            visualFieldsBuffer,
+            initialTransportFieldsBuffer,
+            initialMaterialFieldsBuffer,
+            new FireGrid(4, 3, 2),
+            strideBytes: 16);
+
+        lifecycle.Bind();
+        lifecycle.UpdateTransportFieldsBuffer(restoredTransportFieldsBuffer);
+        lifecycle.UpdateMaterialFieldsBuffer(restoredMaterialFieldsBuffer);
+        lifecycle.MarkUpdated(41);
+
+        Assert.True(surface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding binding));
+        Assert.Same(visualFieldsBuffer, binding.VisualFieldsBuffer);
+        Assert.Same(restoredTransportFieldsBuffer, binding.TransportFieldsBuffer);
+        Assert.Same(restoredMaterialFieldsBuffer, binding.MaterialFieldsBuffer);
+        Assert.Equal(41u, surface.State.LastUpdatedTick);
     }
 
     [Fact]

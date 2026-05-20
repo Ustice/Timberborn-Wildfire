@@ -61,3 +61,7 @@ Ash is an aftermath/readability surface. A loaded paused game should show existi
 ## Notes
 
 - Created on 2026-05-20 from Jason's bug report that ash fields are not showing before the game unpauses.
+- Worker pass on 2026-05-20 found the paused-load presentation gap in the binding/render path rather than ash authority: simulator restore refreshed transport fields and ash read-model state, but the ash overlay presenter required both transport and material buffers plus a renderer pass, and those were first refreshed by the dispatch path after unpause.
+- Fix keeps simulator-owned ash authority, binds companion material fields alongside restored transport fields, and performs one GPU field renderer presentation pass during runtime initialization after persistence restore.
+- Deterministic coverage added for pre-dispatch transport/material binding, restored renderer presentation, and runtime initialization ordering.
+- Live QA remains required after review because command-responsive Timberborn was unavailable for this worker pass; QA should load an existing-ash save, remain paused, capture whole-scene screenshot/status evidence, then unpause and verify no duplicate ash entries or goods.

@@ -618,6 +618,7 @@ public sealed class TimberbornComputeFireSimulator :
                     _visualFieldSurface,
                     _visualFields,
                     _readTransportFields,
+                    _materialFields,
                     grid,
                     VisualFieldStrideBytes);
                 _visualFieldBindingLifecycle.Bind();
@@ -713,6 +714,7 @@ public sealed class TimberbornComputeFireSimulator :
             _readTransportFields.SetData(transportFields);
             _writeTransportFields.SetData(transportFields);
             _visualFieldBindingLifecycle?.UpdateTransportFieldsBuffer(_readTransportFields);
+            _visualFieldBindingLifecycle?.UpdateMaterialFieldsBuffer(_materialFields);
         }
 
         _tick = snapshot.Tick;

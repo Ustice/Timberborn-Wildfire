@@ -359,6 +359,7 @@ public sealed class TimberbornFireRuntime :
             _gpuIndirectRenderer.OnUpdate();
         }
 
+        _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);
         _pendingPersistenceSnapshot = null;
         _logSink.Info(
             $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth} {_lastWorldImportSummary.StatusToken}");
