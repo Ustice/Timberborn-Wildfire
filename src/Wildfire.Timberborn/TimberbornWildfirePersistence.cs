@@ -12,7 +12,10 @@ public sealed record TimberbornFireSimPersistenceSnapshot(
     int Depth,
     uint Tick,
     IReadOnlyList<ushort> Cells,
-    IReadOnlyList<uint> AtmosphericFields);
+    IReadOnlyList<uint> TransportFields)
+{
+    public IReadOnlyList<uint> AtmosphericFields => TransportFields;
+}
 
 public sealed record TimberbornConsequencePersistenceSnapshot(
     IReadOnlyList<TimberbornBurnDamagePersistenceEntry> BurnDamageStates);
@@ -79,7 +82,7 @@ public static class TimberbornWildfirePersistenceCodec
                 fireSim.Depth.ToString(CultureInfo.InvariantCulture),
                 fireSim.Tick.ToString(CultureInfo.InvariantCulture),
                 EncodeUInt16Array(fireSim.Cells),
-                EncodeUInt32Array(fireSim.AtmosphericFields)));
+                EncodeUInt32Array(fireSim.TransportFields)));
         }
 
         snapshot.AshField.Entries

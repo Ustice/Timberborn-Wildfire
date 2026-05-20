@@ -17,12 +17,19 @@ public readonly record struct FireSimComputeDispatch(
     IComputeBufferHandle QueuedChanges,
     IAppendComputeBufferHandle Deltas,
     IComputeBufferHandle VisualFields,
-    IComputeBufferHandle CurrentAtmosphericFields,
-    IComputeBufferHandle NextAtmosphericFields,
-    IComputeBufferHandle CompanionFields,
+    IComputeBufferHandle CurrentTransportFields,
+    IComputeBufferHandle NextTransportFields,
+    IComputeBufferHandle MaterialFields,
     FireSimParameters Parameters,
     FireSimWind Wind,
     uint ChangeCount,
     int ThreadGroupsX,
     int ThreadGroupsY,
-    int ThreadGroupsZ);
+    int ThreadGroupsZ)
+{
+    public IComputeBufferHandle CurrentAtmosphericFields => CurrentTransportFields;
+
+    public IComputeBufferHandle NextAtmosphericFields => NextTransportFields;
+
+    public IComputeBufferHandle CompanionFields => MaterialFields;
+}

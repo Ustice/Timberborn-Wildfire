@@ -1,6 +1,6 @@
 namespace Wildfire.Core;
 
-public readonly record struct WildfireCompanionFieldState(
+public readonly record struct WildfireMaterialFieldState(
     WildfireMaterialClass MaterialClass,
     byte BurnCapacity,
     byte BurnHistory,
@@ -9,7 +9,7 @@ public readonly record struct WildfireCompanionFieldState(
     WildfireContaminationBehavior ContaminationBehavior,
     byte SoilContamination = 0)
 {
-    public static readonly WildfireCompanionFieldState Empty = new(
+    public static readonly WildfireMaterialFieldState Empty = new(
         WildfireMaterialClass.Empty,
         BurnCapacity: 0,
         BurnHistory: 0,
@@ -17,7 +17,7 @@ public readonly record struct WildfireCompanionFieldState(
         WildfireAshQuality.None,
         WildfireContaminationBehavior.None);
 
-    public static readonly WildfireCompanionFieldState Unknown = new(
+    public static readonly WildfireMaterialFieldState Unknown = new(
         WildfireMaterialClass.Unknown,
         BurnCapacity: 0,
         BurnHistory: 0,
@@ -36,9 +36,9 @@ public readonly record struct WildfireCompanionFieldState(
             ((uint)Math.Clamp((int)SoilContamination, 0, 7) << 25);
     }
 
-    public static WildfireCompanionFieldState FromMaterialProfile(WildfireMaterialFieldProfile profile)
+    public static WildfireMaterialFieldState FromMaterialProfile(WildfireMaterialFieldProfile profile)
     {
-        return new WildfireCompanionFieldState(
+        return new WildfireMaterialFieldState(
             profile.MaterialClass,
             profile.BurnCapacity,
             BurnHistory: 0,
@@ -48,9 +48,9 @@ public readonly record struct WildfireCompanionFieldState(
             SoilContamination: 0);
     }
 
-    public static WildfireCompanionFieldState Unpack(uint packed)
+    public static WildfireMaterialFieldState Unpack(uint packed)
     {
-        return new WildfireCompanionFieldState(
+        return new WildfireMaterialFieldState(
             (WildfireMaterialClass)(packed & 0xFFu),
             BurnCapacity: (byte)((packed >> 8) & 0xFu),
             BurnHistory: (byte)((packed >> 12) & 0xFu),
@@ -61,11 +61,11 @@ public readonly record struct WildfireCompanionFieldState(
     }
 }
 
-public readonly record struct WildfireCompanionField(
+public readonly record struct WildfireMaterialField(
     uint TargetId,
-    WildfireCompanionFieldState State)
+    WildfireMaterialFieldState State)
 {
-    public static readonly WildfireCompanionField Empty = new(
+    public static readonly WildfireMaterialField Empty = new(
         TargetId: 0,
-        WildfireCompanionFieldState.Empty);
+        WildfireMaterialFieldState.Empty);
 }

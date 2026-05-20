@@ -20,7 +20,7 @@ public sealed class TimberbornWildfirePersistenceTests
                     PackedCell.Pack(fuel: 8, heat: 4, flammability: 3, water: 0, terrain: 1, burningLevel: 1),
                     PackedCell.Pack(fuel: 3, heat: 7, flammability: 2, water: 1, terrain: 1, burningLevel: 2),
                 ],
-                AtmosphericFields: [1u, 2u]),
+                TransportFields: [1u, 2u]),
             new TimberbornAshFieldSnapshot(
                 TimberbornAshFieldEntry.CurrentPersistenceVersion,
                 [
@@ -55,7 +55,7 @@ public sealed class TimberbornWildfirePersistenceTests
         Assert.NotNull(roundTrip.FireSim);
         Assert.Equal(42u, roundTrip.FireSim.Tick);
         Assert.Equal(snapshot.FireSim!.Cells, roundTrip.FireSim.Cells);
-        Assert.Equal(snapshot.FireSim.AtmosphericFields, roundTrip.FireSim.AtmosphericFields);
+        Assert.Equal(snapshot.FireSim.TransportFields, roundTrip.FireSim.TransportFields);
         TimberbornAshFieldEntry ashEntry = Assert.Single(roundTrip.AshField.Entries);
         Assert.Equal(WildfireAshQuality.Fertile, ashEntry.Quality);
         Assert.Equal(80, ashEntry.Strength);

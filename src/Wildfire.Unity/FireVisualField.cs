@@ -28,11 +28,11 @@ public static class FireVisualField
             ? Saturate(parameters.VisualSmokeBaseIntensity + (heat * parameters.VisualSmokeHeatWeight))
             : 0f;
         float ash = ashCandidate
-            ? Saturate(parameters.VisualAshBaseIntensity + ((1f - fuel) * parameters.VisualAshFuelWeight) + (heat * parameters.VisualAshHeatWeight))
+            ? Saturate(parameters.AshPresentationBaseIntensity + ((1f - fuel) * parameters.AshPresentationFuelWeight) + (heat * parameters.AshPresentationHeatWeight))
             : 0f;
         float visibility = MathF.Max(
             heat * parameters.VisualVisibilityHeatWeight,
-            MathF.Max(fire, MathF.Max(smoke * parameters.VisualVisibilitySmokeWeight, ash * parameters.VisualVisibilityAshWeight)));
+            MathF.Max(fire, MathF.Max(smoke * parameters.VisualVisibilitySmokeWeight, ash * parameters.AshPresentationVisibilityWeight)));
 
         return new FireVisualSample(fire, smoke, ash, visibility);
     }

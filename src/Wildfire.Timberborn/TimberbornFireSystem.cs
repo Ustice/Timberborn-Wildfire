@@ -184,13 +184,13 @@ public sealed class TimberbornFireSystem : IDisposable
     public void Initialize(FireGrid grid, IEnumerable<TimberbornCellSource> sources)
     {
         TimberbornCellSource[] sourceValues = (sources ?? throw new ArgumentNullException(nameof(sources))).ToArray();
-        Initialize(grid, sourceValues, _cellMapper.CreateCompanionFields(grid, sourceValues));
+        Initialize(grid, sourceValues, _cellMapper.CreateMaterialFields(grid, sourceValues));
     }
 
     public void Initialize(
         FireGrid grid,
         IEnumerable<TimberbornCellSource> sources,
-        ReadOnlySpan<WildfireCompanionField> companionFields)
+        ReadOnlySpan<WildfireMaterialField> materialFields)
     {
         if (sources is null)
         {
@@ -203,11 +203,11 @@ public sealed class TimberbornFireSystem : IDisposable
         }
 
         ushort[] initialCells = _cellMapper.CreateInitialCells(grid, sources);
-        WildfireCompanionField[] companionFieldValues = companionFields.ToArray();
+        WildfireMaterialField[] materialFieldValues = materialFields.ToArray();
         DisposeSimulator();
-        _fireSimulator = _simulatorFactory.Create(grid, initialCells, companionFieldValues);
+        _fireSimulator = _simulatorFactory.Create(grid, initialCells, materialFieldValues);
         _grid = grid;
-        _importedTargets = CreateImportedTargets(grid, initialCells, companionFieldValues);
+        _importedTargets = CreateImportedTargets(grid, initialCells, materialFieldValues);
         _registeredChangeCountSinceLastDispatch = 0;
         ClearQaIgnitionPeg();
         ClearQaBurnDamageSpendProbe();
@@ -224,7 +224,7 @@ public sealed class TimberbornFireSystem : IDisposable
     public void InitializeFromPersistentFireSimState(
         FireGrid grid,
         IEnumerable<TimberbornCellSource> sources,
-        ReadOnlySpan<WildfireCompanionField> companionFields,
+        ReadOnlySpan<WildfireMaterialField> materialFields,
         TimberbornFireSimPersistenceSnapshot snapshot)
     {
         if (sources is null)
@@ -242,7 +242,7 @@ public sealed class TimberbornFireSystem : IDisposable
             snapshot.Depth != grid.Depth ||
             snapshot.Cells.Count != grid.CellCount)
         {
-            Initialize(grid, sources, companionFields);
+            Initialize(grid, sources, materialFields);
             _logSink.Warning(
                 "wildfire_timberborn_firesim_persistence_skipped " +
                 "reason=dimension_mismatch " +
@@ -251,7 +251,7 @@ public sealed class TimberbornFireSystem : IDisposable
             return;
         }
 
-        Initialize(grid, sources, companionFields);
+        Initialize(grid, sources, materialFields);
         if (_fireSimulator is ITimberbornFireSimPersistenceState persistenceState)
         {
             persistenceState.RestoreFireSimState(snapshot);
@@ -1554,7 +1554,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private static TimberbornImportedFieldTarget[] CreateImportedTargets(
         FireGrid grid,
         IReadOnlyList<ushort> initialCells,
-        IReadOnlyList<WildfireCompanionField> companionFields)
+        IReadOnlyList<WildfireMaterialField> materialFields)
     {
         return Enumerable.Range(0, grid.CellCount)
             .Select(index =>
@@ -1565,10 +1565,10 @@ public sealed class TimberbornFireSystem : IDisposable
                     x,
                     y,
                     z,
-                    companionFields[index].State.MaterialClass,
-                    companionFields[index].TargetId,
+                    materialFields[index].State.MaterialClass,
+                    materialFields[index].TargetId,
                     initialCells[index],
-                    companionFields[index].State.SoilContamination);
+                    materialFields[index].State.SoilContamination);
             })
             .Where(static target => target.MaterialClass != WildfireMaterialClass.Empty)
             .ToArray();
@@ -1753,7 +1753,7 @@ public interface ITimberbornFireSimulatorFactory
     IGpuFireSimulator Create(
         FireGrid grid,
         ReadOnlySpan<ushort> initialCells,
-        ReadOnlySpan<WildfireCompanionField> companionFields);
+        ReadOnlySpan<WildfireMaterialField> materialFields);
 }
 
 public interface ITimberbornQaSelectedTreeTargetProvider

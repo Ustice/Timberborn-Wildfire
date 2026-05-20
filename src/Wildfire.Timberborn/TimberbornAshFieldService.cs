@@ -279,22 +279,22 @@ public sealed class TimberbornAshFieldService
         return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: 0, decayedAshCells: 0);
     }
 
-    public TimberbornAshFieldSummary SyncFromAtmosphericFields(
+    public TimberbornAshFieldSummary SyncFromTransportFields(
         uint tick,
-        IReadOnlyList<uint> atmosphericFields,
+        IReadOnlyList<uint> transportFields,
         int dayNumber = 0)
     {
-        if (atmosphericFields is null)
+        if (transportFields is null)
         {
-            throw new ArgumentNullException(nameof(atmosphericFields));
+            throw new ArgumentNullException(nameof(transportFields));
         }
 
         Dictionary<int, TimberbornAshFieldEntry> existingEntries = _entries.ToDictionary(
             static pair => pair.Key,
             static pair => pair.Value);
         _entries.Clear();
-        atmosphericFields
-            .Select(static (packed, index) => (State: WildfireAtmosphericFieldState.Unpack(packed), CellIndex: index))
+        transportFields
+            .Select(static (packed, index) => (State: WildfireTransportFieldState.Unpack(packed), CellIndex: index))
             .Where(static item => item.State.Ash > 0)
             .ToList()
             .ForEach(item =>
@@ -326,6 +326,14 @@ public sealed class TimberbornAshFieldService
             .ForEach(cellIndex => _lastDecayDayByCell.Remove(cellIndex));
 
         return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: _entries.Count, decayedAshCells: 0);
+    }
+
+    public TimberbornAshFieldSummary SyncFromAtmosphericFields(
+        uint tick,
+        IReadOnlyList<uint> atmosphericFields,
+        int dayNumber = 0)
+    {
+        return SyncFromTransportFields(tick, atmosphericFields, dayNumber);
     }
 
     private TimberbornAshFieldSummary UpdateAndApplyGrowth(

@@ -289,12 +289,12 @@ public sealed class TimberbornFireRuntime :
     private void SyncAshReadModelFromSimulator(uint tick)
     {
         TimberbornFireSimPersistenceSnapshot? fireSimSnapshot = _fireSystem?.CapturePersistentFireSimState();
-        if (fireSimSnapshot?.AtmosphericFields is not { Count: > 0 } atmosphericFields)
+        if (fireSimSnapshot?.TransportFields is not { Count: > 0 } atmosphericFields)
         {
             return;
         }
 
-        _ashFieldService.SyncFromAtmosphericFields(tick, atmosphericFields, CurrentDayNumber());
+        _ashFieldService.SyncFromTransportFields(tick, atmosphericFields, CurrentDayNumber());
     }
 
     public void AttachSimulator(IGpuFireSimulator fireSimulator, TimberbornFireCadence? cadence = null)
@@ -316,7 +316,7 @@ public sealed class TimberbornFireRuntime :
     public void Initialize(
         FireGrid grid,
         IEnumerable<TimberbornCellSource> sources,
-        ReadOnlySpan<WildfireCompanionField> companionFields,
+        ReadOnlySpan<WildfireMaterialField> companionFields,
         TimberbornWorldCellImportSummary worldImportSummary,
         ITimberbornFireSimulatorFactory simulatorFactory,
         TimberbornFireCadence? cadence = null)
@@ -1385,10 +1385,10 @@ public sealed class TimberbornFireRuntime :
         }
 
         TimberbornWildfirePersistenceCodec.RestoreConsequences(_burnDamageService, snapshot.Consequences);
-        if (snapshot.FireSim?.AtmosphericFields is { Count: > 0 } atmosphericFields &&
-            atmosphericFields.Any(static packed => WildfireAtmosphericFieldState.Unpack(packed).Ash > 0))
+        if (snapshot.FireSim?.TransportFields is { Count: > 0 } atmosphericFields &&
+            atmosphericFields.Any(static packed => WildfireTransportFieldState.Unpack(packed).Ash > 0))
         {
-            _ashFieldService.SyncFromAtmosphericFields(snapshot.FireSim.Tick, atmosphericFields, CurrentDayNumber());
+            _ashFieldService.SyncFromTransportFields(snapshot.FireSim.Tick, atmosphericFields, CurrentDayNumber());
         }
         else
         {

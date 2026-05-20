@@ -81,7 +81,7 @@ public sealed record TimberbornWorldCellImportSummary(
 
 public sealed record TimberbornWorldCellImportResult(
     IReadOnlyList<TimberbornCellSource> Sources,
-    WildfireCompanionField[] CompanionFields,
+    WildfireMaterialField[] MaterialFields,
     TimberbornWorldCellImportSummary Summary);
 
 public sealed class TimberbornWorldCellImporter
@@ -115,23 +115,23 @@ public sealed class TimberbornWorldCellImporter
         TimberbornCellSource[] sources = providerResults
             .SelectMany(static result => result.Sources)
             .ToArray();
-        WildfireCompanionField[] companionFields = _cellMapper.CreateCompanionFields(grid, sources);
+        WildfireMaterialField[] materialFields = _cellMapper.CreateMaterialFields(grid, sources);
 
         return new TimberbornWorldCellImportResult(
             sources,
-            companionFields,
-            CreateSummary(providerResults, sources, companionFields));
+            materialFields,
+            CreateSummary(providerResults, sources, materialFields));
     }
 
     private static TimberbornWorldCellImportSummary CreateSummary(
         IReadOnlyList<TimberbornWorldCellImportProviderResult> providerResults,
         IReadOnlyList<TimberbornCellSource> sources,
-        IReadOnlyList<WildfireCompanionField> companionFields)
+        IReadOnlyList<WildfireMaterialField> materialFields)
     {
         IReadOnlyDictionary<WildfireMaterialClass, int> sourceCountsByMaterialClass = sources
             .GroupBy(static source => source.MaterialClass)
             .ToDictionary(static group => group.Key, static group => group.Count());
-        IReadOnlyDictionary<WildfireMaterialClass, int> resolvedCountsByMaterialClass = companionFields
+        IReadOnlyDictionary<WildfireMaterialClass, int> resolvedCountsByMaterialClass = materialFields
             .GroupBy(static field => field.State.MaterialClass)
             .ToDictionary(static group => group.Key, static group => group.Count());
         IReadOnlyDictionary<string, int> providerSourceCounts = providerResults

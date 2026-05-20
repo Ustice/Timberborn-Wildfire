@@ -1,6 +1,6 @@
 namespace Wildfire.Core;
 
-public readonly record struct WildfireAtmosphericFieldState(
+public readonly record struct WildfireTransportFieldState(
     byte Steam,
     byte Smoke,
     byte SmokeContamination,
@@ -8,7 +8,7 @@ public readonly record struct WildfireAtmosphericFieldState(
     byte AshContamination,
     bool Source)
 {
-    public static readonly WildfireAtmosphericFieldState Empty = new(
+    public static readonly WildfireTransportFieldState Empty = new(
         Steam: 0,
         Smoke: 0,
         SmokeContamination: 0,
@@ -26,7 +26,7 @@ public readonly record struct WildfireAtmosphericFieldState(
             (Source ? 1u << 15 : 0u);
     }
 
-    public static WildfireAtmosphericFieldState Unpack(uint packed)
+    public static WildfireTransportFieldState Unpack(uint packed)
     {
         byte steam = (byte)((packed >> 0) & 0x7u);
         byte smoke = (byte)((packed >> 3) & 0x7u);
@@ -34,7 +34,7 @@ public readonly record struct WildfireAtmosphericFieldState(
         byte ash = (byte)((packed >> 9) & 0x7u);
         byte ashContamination = ash == 0 ? (byte)0 : (byte)((packed >> 12) & 0x7u);
 
-        return new WildfireAtmosphericFieldState(
+        return new WildfireTransportFieldState(
             steam,
             smoke,
             smokeContamination,

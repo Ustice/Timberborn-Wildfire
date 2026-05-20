@@ -60,8 +60,8 @@ public sealed class TimberbornGpuFieldRendererTests
         string rendererSource = ReadTimberbornGpuFieldRendererSource();
         string shaderSource = ReadUnitySource("AshOverlay.shader");
 
-        Assert.Contains("object? AtmosphericFieldsBuffer = null", rendererSource, StringComparison.Ordinal);
-        Assert.Contains("renderBinding.AtmosphericFieldsBuffer", rendererSource, StringComparison.Ordinal);
+        Assert.Contains("object? TransportFieldsBuffer = null", rendererSource, StringComparison.Ordinal);
+        Assert.Contains("renderBinding.TransportFieldsBuffer", rendererSource, StringComparison.Ordinal);
         Assert.Contains("Shader.PropertyToID(\"_AtmosphericFields\")", rendererSource, StringComparison.Ordinal);
         Assert.Contains("Shader.PropertyToID(\"_UseAtmosphericAsh\")", rendererSource, StringComparison.Ordinal);
         Assert.Contains("StructuredBuffer<uint> _AtmosphericFields;", shaderSource, StringComparison.Ordinal);

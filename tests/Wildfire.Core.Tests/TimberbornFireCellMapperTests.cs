@@ -203,24 +203,24 @@ public sealed class TimberbornFireCellMapperTests
     }
 
     [Fact]
-    public void CreateCompanionFieldsCarriesTerrainSoilContaminationUnderBurnableMaterial()
+    public void CreateMaterialFieldsCarriesTerrainSoilContaminationUnderBurnableMaterial()
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornFireCellMapper mapper = new();
         TimberbornTerrainAdapter terrainAdapter = new();
         TimberbornResourceAdapter resourceAdapter = new();
 
-        WildfireCompanionField companion = Assert.Single(mapper.CreateCompanionFields(
+        WildfireMaterialField material = Assert.Single(mapper.CreateMaterialFields(
             grid,
             [
                 terrainAdapter.CreateSource(0, 0, 0, isSolid: true, soilContamination: 5),
-                resourceAdapter.CreateTreeSource(0, 0, 0, companionTargetId: 99u),
+                resourceAdapter.CreateTreeSource(0, 0, 0, materialTargetId: 99u),
             ]));
 
-        Assert.Equal(WildfireMaterialClass.Tree, companion.State.MaterialClass);
-        Assert.Equal(99u, companion.TargetId);
-        Assert.Equal(5, companion.State.SoilContamination);
-        Assert.Equal(5, WildfireCompanionFieldState.Unpack(companion.State.Pack()).SoilContamination);
+        Assert.Equal(WildfireMaterialClass.Tree, material.State.MaterialClass);
+        Assert.Equal(99u, material.TargetId);
+        Assert.Equal(5, material.State.SoilContamination);
+        Assert.Equal(5, WildfireMaterialFieldState.Unpack(material.State.Pack()).SoilContamination);
     }
 
     [Fact]

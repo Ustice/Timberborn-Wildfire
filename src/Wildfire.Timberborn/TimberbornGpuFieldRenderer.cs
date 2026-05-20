@@ -111,11 +111,16 @@ public interface ITimberbornGpuFieldRendererCounterProvider
 }
 
 public readonly record struct TimberbornGpuFieldRendererPresentation(
-    object? CompanionFieldsBuffer = null,
-    object? AtmosphericFieldsBuffer = null,
+    object? MaterialFieldsBuffer = null,
+    object? TransportFieldsBuffer = null,
     int GridWidth = 0,
     int GridHeight = 0,
-    int GridDepth = 0);
+    int GridDepth = 0)
+{
+    public object? CompanionFieldsBuffer => MaterialFieldsBuffer;
+
+    public object? AtmosphericFieldsBuffer => TransportFieldsBuffer;
+}
 
 public interface ITimberbornGpuFieldRendererPresenter
 {
@@ -243,8 +248,8 @@ public sealed class TimberbornGpuFieldRendererSink :
     {
         bool hasRenderBinding = _visualFieldSurface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding renderBinding);
         TimberbornGpuFieldRendererPresentation presentation = new(
-            CompanionFieldsBuffer: hasRenderBinding ? renderBinding.CompanionFieldsBuffer : null,
-            AtmosphericFieldsBuffer: hasRenderBinding ? renderBinding.AtmosphericFieldsBuffer : null,
+            MaterialFieldsBuffer: hasRenderBinding ? renderBinding.MaterialFieldsBuffer : null,
+            TransportFieldsBuffer: hasRenderBinding ? renderBinding.TransportFieldsBuffer : null,
             GridWidth: hasRenderBinding ? renderBinding.Width : 0,
             GridHeight: hasRenderBinding ? renderBinding.Height : 0,
             GridDepth: hasRenderBinding ? renderBinding.Depth : 0);
@@ -371,13 +376,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 return TimberbornGpuFieldRendererPresentationResult.Disabled("mesh_unavailable");
             }
 
-            BindCompanionAshPresentation(presentation);
+            BindAshPresentation(presentation);
             BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
             if (_root is not null)
             {
                 bool hasAshPresentation = !_debugOverlayEnabled &&
-                    presentation.CompanionFieldsBuffer is not null &&
-                    presentation.AtmosphericFieldsBuffer is not null &&
+                    presentation.MaterialFieldsBuffer is not null &&
+                    presentation.TransportFieldsBuffer is not null &&
                     presentation.GridWidth > 0 &&
                     presentation.GridHeight > 0 &&
                     presentation.GridDepth > 0;
@@ -393,7 +398,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         }
     }
 
-    private void BindCompanionAshPresentation(TimberbornGpuFieldRendererPresentation presentation)
+    private void BindAshPresentation(TimberbornGpuFieldRendererPresentation presentation)
     {
         if (_material is null)
         {
@@ -401,12 +406,12 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         }
 
         bool useCompanionAsh = !_debugOverlayEnabled &&
-            presentation.CompanionFieldsBuffer is not null &&
+            presentation.MaterialFieldsBuffer is not null &&
             presentation.GridWidth > 0 &&
             presentation.GridHeight > 0 &&
             presentation.GridDepth > 0;
         bool useAtmosphericAsh = !_debugOverlayEnabled &&
-            presentation.AtmosphericFieldsBuffer is not null &&
+            presentation.TransportFieldsBuffer is not null &&
             presentation.GridWidth > 0 &&
             presentation.GridHeight > 0 &&
             presentation.GridDepth > 0;
@@ -421,7 +426,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             return;
         }
 
-        switch (presentation.CompanionFieldsBuffer)
+        switch (presentation.MaterialFieldsBuffer)
         {
             case ComputeBuffer computeBuffer:
                 _material.SetBuffer(CompanionFieldsPropertyId, computeBuffer);
@@ -431,7 +436,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
                 break;
         }
 
-        switch (presentation.AtmosphericFieldsBuffer)
+        switch (presentation.TransportFieldsBuffer)
         {
             case ComputeBuffer computeBuffer:
                 _material.SetBuffer(AtmosphericFieldsPropertyId, computeBuffer);
@@ -617,8 +622,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
 
     private static IEnumerable<AshFieldCellQuad> SelectAshFieldQuads(TimberbornGpuFieldRendererPresentation presentation)
     {
-        if (presentation.CompanionFieldsBuffer is null ||
-            presentation.AtmosphericFieldsBuffer is null ||
+        if (presentation.MaterialFieldsBuffer is null ||
+            presentation.TransportFieldsBuffer is null ||
             presentation.GridWidth <= 0 ||
             presentation.GridHeight <= 0 ||
             presentation.GridDepth <= 0)
