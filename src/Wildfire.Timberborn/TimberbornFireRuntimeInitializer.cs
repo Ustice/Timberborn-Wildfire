@@ -176,7 +176,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                 new TimberbornPowerInfrastructureFireTargetApi(grid, _blockService));
             _runtime.AttachWaterInfrastructureFireTargetApi(
                 new TimberbornWaterInfrastructureFireTargetApi(grid, _blockService));
-            _runtime.Initialize(grid, sources, importResult.CompanionFields, importResult.Summary, _simulatorFactory);
+            _runtime.Initialize(grid, sources, importResult.MaterialFields, importResult.Summary, _simulatorFactory);
             _initialized = true;
             _logSink.Info(
                 $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");

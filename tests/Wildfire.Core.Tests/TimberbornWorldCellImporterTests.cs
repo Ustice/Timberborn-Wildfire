@@ -23,7 +23,7 @@ public sealed class TimberbornWorldCellImporterTests
     }
 
     [Fact]
-    public void ImporterComposesProvidersAndBuildsCompanionFields()
+    public void ImporterComposesProvidersAndBuildsMaterialFields()
     {
         FireGrid grid = new(4, 2, 1);
         TimberbornTerrainAdapter terrainAdapter = new();
@@ -38,7 +38,7 @@ public sealed class TimberbornWorldCellImporterTests
                     ]),
                 new TimberbornStaticCellSourceProvider(
                     "trees",
-                    [resourceAdapter.CreateTreeSource(1, 0, 0, companionTargetId: 77u)]),
+                    [resourceAdapter.CreateTreeSource(1, 0, 0, materialTargetId: 77u)]),
                 new TimberbornStaticCellSourceProvider(
                     "vegetation",
                     [resourceAdapter.CreateVegetationSource(2, 0, 0)]),
@@ -64,14 +64,14 @@ public sealed class TimberbornWorldCellImporterTests
         Assert.Contains("resolved_tree_cells=1", result.Summary.StatusToken);
         Assert.Contains("safe_unavailable=1", result.Summary.StatusToken);
 
-        WildfireCompanionField treeCompanion = result.CompanionFields[grid.ToIndex(1, 0, 0)];
-        Assert.Equal(77u, treeCompanion.TargetId);
-        Assert.Equal(WildfireMaterialClass.Tree, treeCompanion.State.MaterialClass);
-        Assert.Equal(12, treeCompanion.State.BurnCapacity);
+        WildfireMaterialField treeMaterial = result.MaterialFields[grid.ToIndex(1, 0, 0)];
+        Assert.Equal(77u, treeMaterial.TargetId);
+        Assert.Equal(WildfireMaterialClass.Tree, treeMaterial.State.MaterialClass);
+        Assert.Equal(12, treeMaterial.State.BurnCapacity);
     }
 
     [Fact]
-    public void MapperBuildsFailClosedUnknownCompanionFields()
+    public void MapperBuildsFailClosedUnknownMaterialFields()
     {
         FireGrid grid = new(2, 1, 1);
         TimberbornCellSource unknownSource = new(
@@ -80,11 +80,11 @@ public sealed class TimberbornWorldCellImporterTests
             CompanionTargetId: 123u);
         TimberbornFireCellMapper mapper = new();
 
-        WildfireCompanionField[] companionFields = mapper.CreateCompanionFields(grid, [unknownSource]);
+        WildfireMaterialField[] materialFields = mapper.CreateMaterialFields(grid, [unknownSource]);
 
-        Assert.Equal(123u, companionFields[0].TargetId);
-        Assert.Equal(WildfireMaterialClass.Unknown, companionFields[0].State.MaterialClass);
-        Assert.Equal(WildfireContaminationBehavior.FailClosed, companionFields[0].State.ContaminationBehavior);
-        Assert.Equal(WildfireCompanionField.Empty, companionFields[1]);
+        Assert.Equal(123u, materialFields[0].TargetId);
+        Assert.Equal(WildfireMaterialClass.Unknown, materialFields[0].State.MaterialClass);
+        Assert.Equal(WildfireContaminationBehavior.FailClosed, materialFields[0].State.ContaminationBehavior);
+        Assert.Equal(WildfireMaterialField.Empty, materialFields[1]);
     }
 }

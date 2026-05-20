@@ -63,3 +63,8 @@ Rename the ash-related field concepts after the simulator-authoritative behavior
 ## Notes
 
 - This ticket exists because the doc says the current names hide intent, but behavior should move first.
+- Worker pass kept shader and snapshot compatibility spellings intact while renaming internal C# concepts:
+  `WildfireTransportFieldState`, `WildfireMaterialFieldState`, transport/material buffer properties, material import helpers, and ash presentation tuning names.
+- Compatibility aliases remain for old C# boundary names where adjacent adapters or persisted/status surfaces may still reference them. Shader property and compute buffer names such as `CurrentAtmosphericFields`, `NextAtmosphericFields`, `CompanionFields`, `_AtmosphericFields`, `_CompanionFields`, and `VisualAsh*` were intentionally preserved.
+- Snapshot JSON keys remain `initialAtmosphericFields`, `finalAtmosphericFields`, `companionFields`, and `finalCompanionFields`; the loader/serializer continues to use those keys while internal material wording is used around the buffer creation path.
+- Verification run in the TWF-161 worktree: `git diff --check` passed; `dotnet restore Wildfire.slnx` was needed once because the fresh worktree lacked `project.assets.json`; `dotnet test Wildfire.slnx --no-restore --verbosity minimal` passed 448 tests; `bun install` was needed once because the fresh worktree lacked `node_modules`; `bun run typecheck` passed.

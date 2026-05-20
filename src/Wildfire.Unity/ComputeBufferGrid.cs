@@ -9,9 +9,12 @@ public sealed class ComputeBufferGrid : IDisposable
     public const int DeltaStrideBytes = sizeof(uint) * 4;
     public const int GenerationStrideBytes = sizeof(uint);
     public const int VisualFieldStrideBytes = FireVisualField.StrideBytes;
-    public const int AtmosphericFieldStrideBytes = sizeof(uint);
-    public const int CompanionTargetIdStrideBytes = sizeof(uint);
-    public const int CompanionFieldStrideBytes = sizeof(uint);
+    public const int TransportFieldStrideBytes = sizeof(uint);
+    public const int MaterialTargetIdStrideBytes = sizeof(uint);
+    public const int MaterialFieldStrideBytes = sizeof(uint);
+    public const int AtmosphericFieldStrideBytes = TransportFieldStrideBytes;
+    public const int CompanionTargetIdStrideBytes = MaterialTargetIdStrideBytes;
+    public const int CompanionFieldStrideBytes = MaterialFieldStrideBytes;
 
     private readonly List<IComputeBufferHandle> _ownedBuffers;
     private bool _disposed;
@@ -20,23 +23,23 @@ public sealed class ComputeBufferGrid : IDisposable
         ComputeGridDimensions dimensions,
         ReadOnlySpan<ushort> initialCells,
         IComputeBufferAllocator allocator)
-        : this(dimensions, initialCells, ReadOnlySpan<WildfireCompanionField>.Empty, allocator)
+        : this(dimensions, initialCells, ReadOnlySpan<WildfireMaterialField>.Empty, allocator)
     {
     }
 
     public ComputeBufferGrid(
         ComputeGridDimensions dimensions,
         ReadOnlySpan<ushort> initialCells,
-        ReadOnlySpan<WildfireCompanionField> initialCompanionFields,
+        ReadOnlySpan<WildfireMaterialField> initialMaterialFields,
         IComputeBufferAllocator allocator)
     {
         ArgumentNullException.ThrowIfNull(allocator);
         Dimensions = dimensions;
 
         ComputeGridValidation.RequireCellCount(dimensions, initialCells.Length, nameof(initialCells));
-        if (!initialCompanionFields.IsEmpty)
+        if (!initialMaterialFields.IsEmpty)
         {
-            ComputeGridValidation.RequireCellCount(dimensions, initialCompanionFields.Length, nameof(initialCompanionFields));
+            ComputeGridValidation.RequireCellCount(dimensions, initialMaterialFields.Length, nameof(initialMaterialFields));
         }
 
         List<IComputeBufferHandle> ownedBuffers = [];
@@ -49,21 +52,21 @@ public sealed class ComputeBufferGrid : IDisposable
             IAppendComputeBufferHandle deltas = AllocateAppendTracked(allocator, ownedBuffers, "wildfire.deltas", dimensions.CellCount, DeltaStrideBytes);
             IComputeBufferHandle generations = AllocateTracked(allocator, ownedBuffers, "wildfire.generations", dimensions.CellCount, GenerationStrideBytes);
             IComputeBufferHandle visualFields = AllocateTracked(allocator, ownedBuffers, "wildfire.visual_fields", dimensions.CellCount, VisualFieldStrideBytes);
-            IComputeBufferHandle currentAtmosphericFields = AllocateTracked(allocator, ownedBuffers, "wildfire.current_atmospheric_fields", dimensions.CellCount, AtmosphericFieldStrideBytes);
-            IComputeBufferHandle nextAtmosphericFields = AllocateTracked(allocator, ownedBuffers, "wildfire.next_atmospheric_fields", dimensions.CellCount, AtmosphericFieldStrideBytes);
-            IComputeBufferHandle companionTargetIds = AllocateTracked(allocator, ownedBuffers, "wildfire.companion_target_ids", dimensions.CellCount, CompanionTargetIdStrideBytes);
-            IComputeBufferHandle companionFields = AllocateTracked(allocator, ownedBuffers, "wildfire.companion_fields", dimensions.CellCount, CompanionFieldStrideBytes);
+            IComputeBufferHandle currentTransportFields = AllocateTracked(allocator, ownedBuffers, "wildfire.current_transport_fields", dimensions.CellCount, TransportFieldStrideBytes);
+            IComputeBufferHandle nextTransportFields = AllocateTracked(allocator, ownedBuffers, "wildfire.next_transport_fields", dimensions.CellCount, TransportFieldStrideBytes);
+            IComputeBufferHandle materialTargetIds = AllocateTracked(allocator, ownedBuffers, "wildfire.material_target_ids", dimensions.CellCount, MaterialTargetIdStrideBytes);
+            IComputeBufferHandle materialFields = AllocateTracked(allocator, ownedBuffers, "wildfire.material_fields", dimensions.CellCount, MaterialFieldStrideBytes);
 
             uint[] packedCells = initialCells.ToArray().Select(static cell => (uint)cell).ToArray();
-            WildfireCompanionField[] companionValues = initialCompanionFields.IsEmpty
-                ? Enumerable.Repeat(WildfireCompanionField.Empty, dimensions.CellCount).ToArray()
-                : initialCompanionFields.ToArray();
+            WildfireMaterialField[] materialValues = initialMaterialFields.IsEmpty
+                ? Enumerable.Repeat(WildfireMaterialField.Empty, dimensions.CellCount).ToArray()
+                : initialMaterialFields.ToArray();
             currentCells.Upload(packedCells);
             nextCells.Upload(packedCells);
-            currentAtmosphericFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
-            nextAtmosphericFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
-            companionTargetIds.Upload(companionValues.Select(static field => field.TargetId).ToArray());
-            companionFields.Upload(companionValues.Select(static field => field.State.Pack()).ToArray());
+            currentTransportFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
+            nextTransportFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
+            materialTargetIds.Upload(materialValues.Select(static field => field.TargetId).ToArray());
+            materialFields.Upload(materialValues.Select(static field => field.State.Pack()).ToArray());
 
             CurrentCells = currentCells;
             NextCells = nextCells;
@@ -71,10 +74,10 @@ public sealed class ComputeBufferGrid : IDisposable
             Deltas = deltas;
             Generations = generations;
             VisualFields = visualFields;
-            CurrentAtmosphericFields = currentAtmosphericFields;
-            NextAtmosphericFields = nextAtmosphericFields;
-            CompanionTargetIds = companionTargetIds;
-            CompanionFields = companionFields;
+            CurrentTransportFields = currentTransportFields;
+            NextTransportFields = nextTransportFields;
+            MaterialTargetIds = materialTargetIds;
+            MaterialFields = materialFields;
             _ownedBuffers = ownedBuffers;
         }
         catch
@@ -106,13 +109,21 @@ public sealed class ComputeBufferGrid : IDisposable
 
     public IComputeBufferHandle VisualFields { get; }
 
-    public IComputeBufferHandle CurrentAtmosphericFields { get; private set; }
+    public IComputeBufferHandle CurrentTransportFields { get; private set; }
 
-    public IComputeBufferHandle NextAtmosphericFields { get; private set; }
+    public IComputeBufferHandle NextTransportFields { get; private set; }
 
-    public IComputeBufferHandle CompanionTargetIds { get; }
+    public IComputeBufferHandle MaterialTargetIds { get; }
 
-    public IComputeBufferHandle CompanionFields { get; }
+    public IComputeBufferHandle MaterialFields { get; }
+
+    public IComputeBufferHandle CurrentAtmosphericFields => CurrentTransportFields;
+
+    public IComputeBufferHandle NextAtmosphericFields => NextTransportFields;
+
+    public IComputeBufferHandle CompanionTargetIds => MaterialTargetIds;
+
+    public IComputeBufferHandle CompanionFields => MaterialFields;
 
     public static ComputeBufferGrid FromCells(
         int width,
@@ -129,20 +140,20 @@ public sealed class ComputeBufferGrid : IDisposable
         int height,
         int depth,
         ReadOnlySpan<ushort> initialCells,
-        ReadOnlySpan<WildfireCompanionField> initialCompanionFields,
+        ReadOnlySpan<WildfireMaterialField> initialMaterialFields,
         IComputeBufferAllocator allocator)
     {
         return new ComputeBufferGrid(
             new ComputeGridDimensions(width, height, depth),
             initialCells,
-            initialCompanionFields,
+            initialMaterialFields,
             allocator);
     }
 
     public void SwapCellBuffers()
     {
         (CurrentCells, NextCells) = (NextCells, CurrentCells);
-        (CurrentAtmosphericFields, NextAtmosphericFields) = (NextAtmosphericFields, CurrentAtmosphericFields);
+        (CurrentTransportFields, NextTransportFields) = (NextTransportFields, CurrentTransportFields);
     }
 
     public void Dispose()

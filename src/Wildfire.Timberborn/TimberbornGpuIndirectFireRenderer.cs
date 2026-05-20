@@ -129,7 +129,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         }
 
         // The atmospheric buffer swaps each simulation tick; re-bind before the smoothing dispatch.
-        ComputeBuffer atmosphericBuffer = _simulator.CurrentAtmosphericFieldsBuffer;
+        ComputeBuffer atmosphericBuffer = _simulator.CurrentTransportFieldsBuffer;
         _smoothingShader!.SetBuffer(_smoothingKernel, "_AtmosphericFields", atmosphericBuffer);
         _smoothingShader.SetFloat("_DeltaTime", Time.deltaTime);
 

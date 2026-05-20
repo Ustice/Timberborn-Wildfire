@@ -58,12 +58,12 @@ Unity has compute-facing scaffolds, and Timberborn has adapter-facing names so c
 
 Initial fixture-style `ushort` packed cells are uploaded to current and next cell buffers as `uint` values. The packed cell payload remains in the lower 16 bits, leaving the upper bits available for future GPU-side bookkeeping without changing the core `PackedCell` contract.
 
-The grid also allocates companion field buffers beside packed cells:
+The grid also allocates material field buffers beside packed cells:
 
-- `wildfire.companion_target_ids` stores one stable target id per cell for imported world ownership.
-- `wildfire.companion_fields` stores one packed 32-bit companion state per cell: material class, burn capacity, burn history, ash strength, ash quality, and contamination behavior.
+- `wildfire.material_target_ids` stores one stable target id per cell for imported world ownership.
+- `wildfire.material_fields` stores one packed 32-bit material state per cell: material class, burn capacity, burn history, ash strength, ash quality, and contamination behavior.
 
-Default initialization uploads empty companion state for every cell. Real importers replace that default with material and target data, while shader and renderer follow-up tickets decide which companion fields are consumed on GPU.
+Default initialization uploads empty material state for every cell. Real importers replace that default with material and target data, while shader and renderer follow-up tickets decide which material fields are consumed on GPU. Shader property names may still use `CompanionFields` while asset bundles and harness fixtures keep their compatibility spellings.
 
 `FireSimParameters` is the runtime tuning contract for the compute path. It lives in `Wildfire.Core`, is carried through `FireSimComputeDispatch`, is bound by the Timberborn compute simulator before each kernel dispatch, and has default values that preserve the accepted release-tuning behavior. The object covers visual field weights, ignition, spread, water suppression, burn pressure, fuel burn-down, deterministic burn-roll seed, and heat-loss cooling behavior. CPU mirrors such as `FireVisualField` consume the same contract so deterministic tests can prove a non-default preset changes field output before live Timberborn validation.
 
@@ -90,7 +90,7 @@ Timberborn systems should use this layer to translate game state, then register 
 
 `Wildfire.Core` owns the versioned material field contract used by both live Timberborn import and offline `.timber` snapshot export. The current v1 schema lives in code as `WildfireMaterialFieldSchema` and as the shared fixture `src/Wildfire.Core/MaterialFieldSchema.v1.json`.
 
-The schema classifies observed map inputs into material classes before they become packed simulation cells or companion fields:
+The schema classifies observed map inputs into material classes before they become packed simulation cells or material fields:
 
 - Empty.
 - Terrain.

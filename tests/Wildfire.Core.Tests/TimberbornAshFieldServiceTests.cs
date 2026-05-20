@@ -6,17 +6,17 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornAshFieldServiceTests
 {
     [Fact]
-    public void SyncFromAtmosphericFieldsBuildsSimulatorBackedReadModel()
+    public void SyncFromTransportFieldsBuildsSimulatorBackedReadModel()
     {
         RecordingAshGrowthAdapter growthAdapter = new();
         TimberbornAshFieldService service = new(growthAdapter);
 
-        TimberbornAshFieldSummary summary = service.SyncFromAtmosphericFields(
+        TimberbornAshFieldSummary summary = service.SyncFromTransportFields(
             9,
             [
-                new WildfireAtmosphericFieldState(0, 0, 0, Ash: 2, AshContamination: 0, Source: false).Pack(),
-                new WildfireAtmosphericFieldState(0, 0, 0, Ash: 3, AshContamination: 6, Source: false).Pack(),
-                WildfireAtmosphericFieldState.Empty.Pack(),
+                new WildfireTransportFieldState(0, 0, 0, Ash: 2, AshContamination: 0, Source: false).Pack(),
+                new WildfireTransportFieldState(0, 0, 0, Ash: 3, AshContamination: 6, Source: false).Pack(),
+                WildfireTransportFieldState.Empty.Pack(),
             ]);
 
         Assert.Equal(1, summary.FertileAshCellCount);
@@ -375,7 +375,7 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void SyncFromAtmosphericFieldsReplacesReadModelWithSimulatorSnapshot()
+    public void SyncFromTransportFieldsReplacesReadModelWithSimulatorSnapshot()
     {
         TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
 
@@ -412,7 +412,7 @@ public sealed class TimberbornAshFieldServiceTests
                     .Where(candidate => candidate.CellIndex == index)
                     .DefaultIfEmpty((index, (byte)0, (byte)0))
                     .Single();
-                return new WildfireAtmosphericFieldState(
+                return new WildfireTransportFieldState(
                     Steam: 0,
                     Smoke: 0,
                     SmokeContamination: 0,
@@ -421,7 +421,7 @@ public sealed class TimberbornAshFieldServiceTests
                     Source: false).Pack();
             })
             .ToArray();
-        return service.SyncFromAtmosphericFields(tick, atmosphericFields, dayNumber);
+        return service.SyncFromTransportFields(tick, atmosphericFields, dayNumber);
     }
 
     private static TimberbornBurnDamageService CreateService(params TimberbornBurnDamageDescriptor[] descriptors)

@@ -51,7 +51,7 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         IReadOnlyList<string> channels)
         : this(
             visualFieldsBuffer,
-            atmosphericFieldsBuffer: null,
+            transportFieldsBuffer: null,
             width,
             height,
             depth,
@@ -63,7 +63,7 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
 
     public TimberbornGpuVisualFieldSurfaceBinding(
         object visualFieldsBuffer,
-        object? atmosphericFieldsBuffer,
+        object? transportFieldsBuffer,
         int width,
         int height,
         int depth,
@@ -72,8 +72,8 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         IReadOnlyList<string> channels)
         : this(
             visualFieldsBuffer,
-            atmosphericFieldsBuffer,
-            companionFieldsBuffer: null,
+            transportFieldsBuffer,
+            materialFieldsBuffer: null,
             width,
             height,
             depth,
@@ -85,8 +85,8 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
 
     public TimberbornGpuVisualFieldSurfaceBinding(
         object visualFieldsBuffer,
-        object? atmosphericFieldsBuffer,
-        object? companionFieldsBuffer,
+        object? transportFieldsBuffer,
+        object? materialFieldsBuffer,
         int width,
         int height,
         int depth,
@@ -119,8 +119,8 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         }
 
         VisualFieldsBuffer = visualFieldsBuffer;
-        AtmosphericFieldsBuffer = atmosphericFieldsBuffer;
-        CompanionFieldsBuffer = companionFieldsBuffer;
+        TransportFieldsBuffer = transportFieldsBuffer;
+        MaterialFieldsBuffer = materialFieldsBuffer;
         Width = width;
         Height = height;
         Depth = depth;
@@ -131,9 +131,13 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
 
     public object VisualFieldsBuffer { get; }
 
-    public object? AtmosphericFieldsBuffer { get; }
+    public object? TransportFieldsBuffer { get; }
 
-    public object? CompanionFieldsBuffer { get; }
+    public object? MaterialFieldsBuffer { get; }
+
+    public object? AtmosphericFieldsBuffer => TransportFieldsBuffer;
+
+    public object? CompanionFieldsBuffer => MaterialFieldsBuffer;
 
     public int Width { get; }
 
@@ -159,12 +163,12 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
         return false;
     }
 
-    public TimberbornGpuVisualFieldSurfaceBinding WithAtmosphericFieldsBuffer(object? atmosphericFieldsBuffer)
+    public TimberbornGpuVisualFieldSurfaceBinding WithTransportFieldsBuffer(object? transportFieldsBuffer)
     {
         return new TimberbornGpuVisualFieldSurfaceBinding(
             VisualFieldsBuffer,
-            atmosphericFieldsBuffer,
-            CompanionFieldsBuffer,
+            transportFieldsBuffer,
+            MaterialFieldsBuffer,
             Width,
             Height,
             Depth,
@@ -173,12 +177,12 @@ public sealed record TimberbornGpuVisualFieldSurfaceBinding
             Channels);
     }
 
-    public TimberbornGpuVisualFieldSurfaceBinding WithCompanionFieldsBuffer(object? companionFieldsBuffer)
+    public TimberbornGpuVisualFieldSurfaceBinding WithMaterialFieldsBuffer(object? materialFieldsBuffer)
     {
         return new TimberbornGpuVisualFieldSurfaceBinding(
             VisualFieldsBuffer,
-            AtmosphericFieldsBuffer,
-            companionFieldsBuffer,
+            TransportFieldsBuffer,
+            materialFieldsBuffer,
             Width,
             Height,
             Depth,
@@ -468,20 +472,30 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         }
     }
 
-    public void UpdateAtmosphericFieldsBuffer(object? atmosphericFieldsBuffer)
+    public void UpdateTransportFieldsBuffer(object? transportFieldsBuffer)
     {
         if (_isBound)
         {
-            _surface.Bind(_binding.WithAtmosphericFieldsBuffer(atmosphericFieldsBuffer));
+            _surface.Bind(_binding.WithTransportFieldsBuffer(transportFieldsBuffer));
         }
+    }
+
+    public void UpdateMaterialFieldsBuffer(object? materialFieldsBuffer)
+    {
+        if (_isBound)
+        {
+            _surface.Bind(_binding.WithMaterialFieldsBuffer(materialFieldsBuffer));
+        }
+    }
+
+    public void UpdateAtmosphericFieldsBuffer(object? atmosphericFieldsBuffer)
+    {
+        UpdateTransportFieldsBuffer(atmosphericFieldsBuffer);
     }
 
     public void UpdateCompanionFieldsBuffer(object? companionFieldsBuffer)
     {
-        if (_isBound)
-        {
-            _surface.Bind(_binding.WithCompanionFieldsBuffer(companionFieldsBuffer));
-        }
+        UpdateMaterialFieldsBuffer(companionFieldsBuffer);
     }
 
     public void Unbind()
@@ -517,7 +531,7 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
                 "The Timberborn GPU visual-field surface is not backed by a Unity ComputeBuffer.");
         }
 
-        ComputeBuffer? atmosphericBuffer = binding.AtmosphericFieldsBuffer as ComputeBuffer;
+        ComputeBuffer? atmosphericBuffer = binding.TransportFieldsBuffer as ComputeBuffer;
 
         return cellIndices
             .Select(cellIndex => ReadSample(computeBuffer, atmosphericBuffer, cellIndex, tick))
@@ -532,7 +546,7 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
     {
         Vector4[] sample = new Vector4[1];
         computeBuffer.GetData(sample, 0, cellIndex, 1);
-        WildfireAtmosphericFieldState atmospheric = ReadAtmospheric(atmosphericBuffer, cellIndex);
+        WildfireTransportFieldState atmospheric = ReadAtmospheric(atmosphericBuffer, cellIndex);
 
         return new TimberbornGpuVisualFieldSample(
             cellIndex,
@@ -548,16 +562,16 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
             Source: atmospheric.Source);
     }
 
-    private static WildfireAtmosphericFieldState ReadAtmospheric(ComputeBuffer? atmosphericBuffer, int cellIndex)
+    private static WildfireTransportFieldState ReadAtmospheric(ComputeBuffer? atmosphericBuffer, int cellIndex)
     {
         if (atmosphericBuffer is null)
         {
-            return WildfireAtmosphericFieldState.Empty;
+            return WildfireTransportFieldState.Empty;
         }
 
         uint[] sample = new uint[1];
         atmosphericBuffer.GetData(sample, 0, cellIndex, 1);
-        return WildfireAtmosphericFieldState.Unpack(sample[0]);
+        return WildfireTransportFieldState.Unpack(sample[0]);
     }
 }
 

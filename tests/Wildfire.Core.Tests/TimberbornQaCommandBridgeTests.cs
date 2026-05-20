@@ -799,7 +799,7 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
 
         TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus();
 
@@ -827,7 +827,7 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
 
         TimberbornQaDeltaStimulusResult result =
             fireSystem.QueueQaDeltaStimulus(TimberbornQaFieldTargetSelectors.TaintedAsh);
@@ -1514,8 +1514,8 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(1, 1, 0, companionTargetId: 11u),
-            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(1, 1, 0, materialTargetId: 11u),
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
 
         TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaSelectedTreeDeltaStimulus(
             new RecordingSelectedTreeTargetProvider(38));
@@ -1543,7 +1543,7 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
 
         fireSystem.QueueQaSelectedTreeDeltaStimulus(new RecordingSelectedTreeTargetProvider(38));
 
@@ -1570,7 +1570,7 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
         Assert.True(fireSystem.TryUpdateParameters(FireSimParameters.Default with
         {
             FireCellStepIntervalTicks = 6u,
@@ -1660,7 +1660,7 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
 
         TimberbornQaWaterSuppressionStimulusResult result =
             fireSystem.QueueWaterSuppressionQaStimulus();
@@ -1884,7 +1884,7 @@ public sealed class TimberbornQaCommandBridgeTests
         simulator.TickResults.Enqueue(new GpuFireStepResult([new CellDelta(0, burningCell, wetCell)], Tick: 1));
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
-            new TimberbornResourceAdapter().CreateTreeSource(0, 0, 0, companionTargetId: 77u));
+            new TimberbornResourceAdapter().CreateTreeSource(0, 0, 0, materialTargetId: 77u));
         TimberbornFixedCadenceFireDispatcher dispatcher = new(
             fireSystem,
             TimberbornFireCadence.FromSeconds(1),
@@ -2642,7 +2642,7 @@ public sealed class TimberbornQaCommandBridgeTests
             flammability: 3,
             TimberbornResourceKind.Vegetation,
             WildfireMaterialClass.Tree,
-            companionTargetId: (uint)fuel);
+            materialTargetId: (uint)fuel);
     }
 
     private static TimberbornBurnDamageTargetState CreateBurnDamageState(
@@ -2697,7 +2697,7 @@ public sealed class TimberbornQaCommandBridgeTests
         public IGpuFireSimulator Create(
             FireGrid grid,
             ReadOnlySpan<ushort> initialCells,
-            ReadOnlySpan<WildfireCompanionField> companionFields)
+            ReadOnlySpan<WildfireMaterialField> companionFields)
         {
             Assert.Equal(simulator.Width, grid.Width);
             Assert.Equal(simulator.Height, grid.Height);

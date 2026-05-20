@@ -77,16 +77,16 @@ public sealed class ShaderSnapshotHarnessTests
     }
 
     [Fact]
-    public void FixtureLoaderReadsOptionalWindAtmosphericAndCompanionFields()
+    public void FixtureLoaderReadsOptionalWindAtmosphericAndMaterialFields()
     {
-        uint atmospheric = new WildfireAtmosphericFieldState(
+        uint atmospheric = new WildfireTransportFieldState(
             Steam: 1,
             Smoke: 2,
             SmokeContamination: 3,
             Ash: 4,
             AshContamination: 5,
             Source: true).Pack();
-        uint companion = new WildfireCompanionFieldState(
+        uint material = new WildfireMaterialFieldState(
             WildfireMaterialClass.Badwater,
             BurnCapacity: 0,
             BurnHistory: 0,
@@ -101,7 +101,7 @@ public sealed class ShaderSnapshotHarnessTests
             SelectedLayer: new ShaderSnapshotLayer(0, 0, 2),
             InitialCells: [0x1001, 0x1002],
             InitialAtmosphericFields: [atmospheric, 0u],
-            CompanionFields: [companion, 0u],
+            CompanionFields: [material, 0u],
             Wind: new FireSimWind(1f, 0f, 0.75f));
 
         ShaderSnapshotFixture loaded = ShaderSnapshotFixtureLoader.Load(ShaderSnapshotJson.SerializeFixture(source));
@@ -113,8 +113,8 @@ public sealed class ShaderSnapshotHarnessTests
         RecordingComputeBufferAllocator allocator = new();
         using ComputeBufferGrid grid = loaded.CreateBufferGrid(allocator);
 
-        Assert.Equal([atmospheric, 0u], allocator.CurrentAtmosphericFields.UploadedValues);
-        Assert.Equal([companion, 0u], allocator.CompanionFields.UploadedValues);
+        Assert.Equal([atmospheric, 0u], allocator.CurrentTransportFields.UploadedValues);
+        Assert.Equal([material, 0u], allocator.MaterialFields.UploadedValues);
     }
 
     [Fact]
@@ -256,9 +256,9 @@ public sealed class ShaderSnapshotHarnessTests
     {
         public RecordingComputeBufferHandle CurrentCells { get; private set; } = null!;
 
-        public RecordingComputeBufferHandle CurrentAtmosphericFields { get; private set; } = null!;
+        public RecordingComputeBufferHandle CurrentTransportFields { get; private set; } = null!;
 
-        public RecordingComputeBufferHandle CompanionFields { get; private set; } = null!;
+        public RecordingComputeBufferHandle MaterialFields { get; private set; } = null!;
 
         public IComputeBufferHandle Allocate(string name, int count, int strideBytes)
         {
@@ -267,13 +267,13 @@ public sealed class ShaderSnapshotHarnessTests
             {
                 CurrentCells = handle;
             }
-            else if (name == "wildfire.current_atmospheric_fields")
+            else if (name == "wildfire.current_transport_fields")
             {
-                CurrentAtmosphericFields = handle;
+                CurrentTransportFields = handle;
             }
-            else if (name == "wildfire.companion_fields")
+            else if (name == "wildfire.material_fields")
             {
-                CompanionFields = handle;
+                MaterialFields = handle;
             }
 
             return handle;

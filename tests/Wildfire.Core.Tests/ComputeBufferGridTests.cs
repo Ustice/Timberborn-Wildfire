@@ -65,10 +65,10 @@ public sealed class ComputeBufferGridTests
                 "wildfire.deltas",
                 "wildfire.generations",
                 "wildfire.visual_fields",
-                "wildfire.current_atmospheric_fields",
-                "wildfire.next_atmospheric_fields",
-                "wildfire.companion_target_ids",
-                "wildfire.companion_fields",
+                "wildfire.current_transport_fields",
+                "wildfire.next_transport_fields",
+                "wildfire.material_target_ids",
+                "wildfire.material_fields",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
         Assert.All(allocator.Handles, static handle => Assert.Equal(2, handle.Count));
@@ -79,35 +79,35 @@ public sealed class ComputeBufferGridTests
         Assert.True(((RecordingComputeBufferHandle)grid.Deltas).IsAppend);
         Assert.Equal(ComputeBufferGrid.GenerationStrideBytes, grid.Generations.StrideBytes);
         Assert.Equal(ComputeBufferGrid.VisualFieldStrideBytes, grid.VisualFields.StrideBytes);
-        Assert.Equal(ComputeBufferGrid.AtmosphericFieldStrideBytes, grid.CurrentAtmosphericFields.StrideBytes);
-        Assert.Equal(ComputeBufferGrid.AtmosphericFieldStrideBytes, grid.NextAtmosphericFields.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.TransportFieldStrideBytes, grid.CurrentTransportFields.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.TransportFieldStrideBytes, grid.NextTransportFields.StrideBytes);
         Assert.Equal(ComputeBufferGrid.CompanionTargetIdStrideBytes, grid.CompanionTargetIds.StrideBytes);
-        Assert.Equal(ComputeBufferGrid.CompanionFieldStrideBytes, grid.CompanionFields.StrideBytes);
+        Assert.Equal(ComputeBufferGrid.MaterialFieldStrideBytes, grid.MaterialFields.StrideBytes);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.CurrentCells).UploadedValues);
         Assert.Equal(cells.Select(static cell => (uint)cell).ToArray(), ((RecordingComputeBufferHandle)grid.NextCells).UploadedValues);
-        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CurrentAtmosphericFields).UploadedValues);
-        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.NextAtmosphericFields).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CurrentTransportFields).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.NextTransportFields).UploadedValues);
         Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CompanionTargetIds).UploadedValues);
-        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues);
+        Assert.Equal([0u, 0u], ((RecordingComputeBufferHandle)grid.MaterialFields).UploadedValues);
     }
 
     [Fact]
-    public void GridUploadsCompanionFieldsAsUInts()
+    public void GridUploadsMaterialFieldsAsUInts()
     {
         ushort[] cells =
         [
             PackedCell.Pack(12, 0, 2, 0, 1, 1),
             PackedCell.Pack(0, 0, 0, 3, 0, 7),
         ];
-        WildfireCompanionField[] companionFields =
+        WildfireMaterialField[] materialFields =
         [
             new(
                 TargetId: 42,
-                WildfireCompanionFieldState.FromMaterialProfile(
+                WildfireMaterialFieldState.FromMaterialProfile(
                     WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Tree))),
             new(
                 TargetId: 0,
-                WildfireCompanionFieldState.FromMaterialProfile(
+                WildfireMaterialFieldState.FromMaterialProfile(
                     WildfireMaterialFieldSchema.Default.Lookup(WildfireMaterialClass.Badwater))),
         ];
         RecordingComputeBufferAllocator allocator = new();
@@ -117,19 +117,19 @@ public sealed class ComputeBufferGridTests
             height: 1,
             depth: 1,
             cells,
-            companionFields,
+            materialFields,
             allocator);
 
         Assert.Equal([42u, 0u], ((RecordingComputeBufferHandle)grid.CompanionTargetIds).UploadedValues);
         Assert.Equal(
-            companionFields.Select(static field => field.State.Pack()).ToArray(),
-            ((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues);
-        Assert.Equal(WildfireMaterialClass.Tree, WildfireCompanionFieldState.Unpack(((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues[0]).MaterialClass);
-        Assert.Equal(WildfireContaminationBehavior.TaintedSource, WildfireCompanionFieldState.Unpack(((RecordingComputeBufferHandle)grid.CompanionFields).UploadedValues[1]).ContaminationBehavior);
+            materialFields.Select(static field => field.State.Pack()).ToArray(),
+            ((RecordingComputeBufferHandle)grid.MaterialFields).UploadedValues);
+        Assert.Equal(WildfireMaterialClass.Tree, WildfireMaterialFieldState.Unpack(((RecordingComputeBufferHandle)grid.MaterialFields).UploadedValues[0]).MaterialClass);
+        Assert.Equal(WildfireContaminationBehavior.TaintedSource, WildfireMaterialFieldState.Unpack(((RecordingComputeBufferHandle)grid.MaterialFields).UploadedValues[1]).ContaminationBehavior);
     }
 
     [Fact]
-    public void GridRejectsCompanionFieldCountMismatch()
+    public void GridRejectsMaterialFieldCountMismatch()
     {
         RecordingComputeBufferAllocator allocator = new();
 
@@ -139,7 +139,7 @@ public sealed class ComputeBufferGridTests
                 height: 2,
                 depth: 1,
                 [1, 2, 3, 4],
-                [WildfireCompanionField.Empty],
+                [WildfireMaterialField.Empty],
                 allocator));
 
         Assert.Contains("Expected 4, got 1", exception.Message);
@@ -200,10 +200,10 @@ public sealed class ComputeBufferGridTests
                 "wildfire.deltas",
                 "wildfire.generations",
                 "wildfire.visual_fields",
-                "wildfire.current_atmospheric_fields",
-                "wildfire.next_atmospheric_fields",
-                "wildfire.companion_target_ids",
-                "wildfire.companion_fields",
+                "wildfire.current_transport_fields",
+                "wildfire.next_transport_fields",
+                "wildfire.material_target_ids",
+                "wildfire.material_fields",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
         Assert.All(allocator.Handles, static handle => Assert.Equal(1, handle.DisposeCalls));

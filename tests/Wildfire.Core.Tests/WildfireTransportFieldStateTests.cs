@@ -2,12 +2,12 @@ using Wildfire.Core;
 
 namespace Wildfire.Core.Tests;
 
-public sealed class WildfireAtmosphericFieldStateTests
+public sealed class WildfireTransportFieldStateTests
 {
     [Fact]
     public void PackUsesAgreedAtmosphericBitLayout()
     {
-        WildfireAtmosphericFieldState state = new(
+        WildfireTransportFieldState state = new(
             Steam: 5,
             Smoke: 6,
             SmokeContamination: 3,
@@ -23,13 +23,13 @@ public sealed class WildfireAtmosphericFieldStateTests
         Assert.Equal(3u, (packed >> 9) & 0x7u);
         Assert.Equal(7u, (packed >> 12) & 0x7u);
         Assert.Equal(1u, (packed >> 15) & 0x1u);
-        Assert.Equal(state, WildfireAtmosphericFieldState.Unpack(packed));
+        Assert.Equal(state, WildfireTransportFieldState.Unpack(packed));
     }
 
     [Fact]
     public void PackClampsAshAmountToResourceScale()
     {
-        WildfireAtmosphericFieldState state = new(
+        WildfireTransportFieldState state = new(
             Steam: 0,
             Smoke: 0,
             SmokeContamination: 0,
@@ -37,7 +37,7 @@ public sealed class WildfireAtmosphericFieldStateTests
             AshContamination: 7,
             Source: false);
 
-        WildfireAtmosphericFieldState unpacked = WildfireAtmosphericFieldState.Unpack(state.Pack());
+        WildfireTransportFieldState unpacked = WildfireTransportFieldState.Unpack(state.Pack());
 
         Assert.Equal(3, unpacked.Ash);
         Assert.Equal(7, unpacked.AshContamination);
@@ -46,7 +46,7 @@ public sealed class WildfireAtmosphericFieldStateTests
     [Fact]
     public void PackClearsContaminationWhenCarrierAmountIsZero()
     {
-        WildfireAtmosphericFieldState state = new(
+        WildfireTransportFieldState state = new(
             Steam: 0,
             Smoke: 0,
             SmokeContamination: 7,
@@ -54,7 +54,7 @@ public sealed class WildfireAtmosphericFieldStateTests
             AshContamination: 7,
             Source: false);
 
-        WildfireAtmosphericFieldState unpacked = WildfireAtmosphericFieldState.Unpack(state.Pack());
+        WildfireTransportFieldState unpacked = WildfireTransportFieldState.Unpack(state.Pack());
 
         Assert.Equal(0, unpacked.SmokeContamination);
         Assert.Equal(0, unpacked.AshContamination);

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Wildfire.Core;
 
 namespace Wildfire.Unity;
@@ -22,29 +23,29 @@ public sealed record ShaderSnapshotFixture(
 
     public uint[] EffectiveInitialAtmosphericFields => InitialAtmosphericFields ?? [];
 
-    public uint[] EffectiveCompanionFields => CompanionFields ?? [];
+    public uint[] EffectiveMaterialFields => CompanionFields ?? [];
 
     public FireSimWind EffectiveWind => Wind ?? FireSimWind.None;
 
     public ComputeBufferGrid CreateBufferGrid(IComputeBufferAllocator allocator)
     {
-        ComputeBufferGrid grid = CompanionFields is { Length: > 0 } companionFields
+        ComputeBufferGrid grid = CompanionFields is { Length: > 0 } materialFields
             ? ComputeBufferGrid.FromCells(
                 Grid.Width,
                 Grid.Height,
                 Grid.Depth,
                 InitialCells,
-                companionFields
-                    .Select(static companion => new WildfireCompanionField(
+                materialFields
+                    .Select(static material => new WildfireMaterialField(
                         TargetId: 0,
-                        WildfireCompanionFieldState.Unpack(companion)))
+                        WildfireMaterialFieldState.Unpack(material)))
                     .ToArray(),
                 allocator)
             : ComputeBufferGrid.FromCells(Grid.Width, Grid.Height, Grid.Depth, InitialCells, allocator);
 
         if (InitialAtmosphericFields is { Length: > 0 } atmosphericFields)
         {
-            grid.CurrentAtmosphericFields.Upload(atmosphericFields);
+            grid.CurrentTransportFields.Upload(atmosphericFields);
         }
 
         return grid;
@@ -165,7 +166,7 @@ public static class ShaderSnapshotFixtureLoader
             "initialAtmosphericFields",
             dimensions,
             sourceName);
-        uint[]? companionFields = ReadOptionalUInt32CellArray(
+        uint[]? materialFields = ReadOptionalUInt32CellArray(
             root,
             "companionFields",
             dimensions,
@@ -180,7 +181,7 @@ public static class ShaderSnapshotFixtureLoader
             layer,
             cells,
             atmosphericFields,
-            companionFields,
+            materialFields,
             wind);
     }
 
@@ -362,7 +363,7 @@ public static class ShaderSnapshotJson
             "finalAtmosphericFields",
             dimensions,
             sourceName);
-        uint[]? finalCompanionFields = ReadOptionalUInt32CellArray(
+        uint[]? finalMaterialFields = ReadOptionalUInt32CellArray(
             root,
             "finalCompanionFields",
             dimensions,
@@ -376,7 +377,7 @@ public static class ShaderSnapshotJson
             finalPackedCells,
             ticks,
             finalAtmosphericFields,
-            finalCompanionFields,
+            finalMaterialFields,
             visual);
     }
 
@@ -395,7 +396,7 @@ public static class ShaderSnapshotJson
                 ShaderSnapshotFixture.PackedCellIndexOrder,
                 fixture.InitialCells),
             InitialAtmosphericFields: fixture.InitialAtmosphericFields,
-            CompanionFields: fixture.CompanionFields,
+            MaterialFields: fixture.CompanionFields,
             Wind: fixture.Wind is { } wind
                 ? new ShaderSnapshotWind(wind.DirectionX, wind.DirectionY, wind.Strength)
                 : null);
@@ -517,6 +518,7 @@ public static class ShaderSnapshotJson
         int TickCount,
         ushort[] FinalPackedCells,
         uint[]? FinalAtmosphericFields,
+        [property: JsonPropertyName("finalCompanionFields")]
         uint[]? FinalCompanionFields,
         int[] PerTickDeltaCounts,
         ShaderSnapshotTick[] PerTickDeltas,
@@ -532,7 +534,8 @@ public static class ShaderSnapshotJson
         ShaderSnapshotLayer SelectedLayer,
         ShaderSnapshotPackedCellValues PackedCellValues,
         uint[]? InitialAtmosphericFields,
-        uint[]? CompanionFields,
+        [property: JsonPropertyName("companionFields")]
+        uint[]? MaterialFields,
         ShaderSnapshotWind? Wind);
 
     private sealed record ShaderSnapshotPackedCellValues(string ValueType, string IndexOrder, ushort[] Values);
@@ -555,7 +558,7 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
         AddHeaderDifferences(expected, actual, differences, maxDifferences);
         AddFinalCellDifferences(expected, actual, differences, maxDifferences);
         AddFinalAtmosphericFieldDifferences(expected, actual, differences, maxDifferences);
-        AddFinalCompanionFieldDifferences(expected, actual, differences, maxDifferences);
+        AddFinalMaterialFieldDifferences(expected, actual, differences, maxDifferences);
         AddTickDifferences(expected, actual, differences, maxDifferences);
         AddVisualDifferences(expected, actual, differences, maxDifferences);
 
@@ -631,7 +634,7 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
             .ForEach(differences.Add);
     }
 
-    private static void AddFinalCompanionFieldDifferences(
+    private static void AddFinalMaterialFieldDifferences(
         ShaderSnapshotCapture expected,
         ShaderSnapshotCapture actual,
         List<string> differences,
