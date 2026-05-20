@@ -57,6 +57,8 @@ public sealed class TimberbornFireSystem : IDisposable
     private int _burnDurationSustainedHeatTicksPendingDispatch;
     private TimberbornQaDeltaStimulusSustainedHeatState? _qaDeltaStimulusSustainedHeatState;
     private FireSimParameters _fireSimParameters = FireSimParameters.Default;
+    private TimberbornContaminationFireConsequenceSummary _contaminationFireSummary =
+        TimberbornContaminationFireConsequenceSummary.Empty;
     private TimberbornQaBurnDurationProofState _burnDurationProofState =
         TimberbornQaBurnDurationProofState.Placeholder;
 
@@ -169,6 +171,8 @@ public sealed class TimberbornFireSystem : IDisposable
     public TimberbornQaDeltaStimulusSustainedHeatState? QaDeltaStimulusSustainedHeatState =>
         _qaDeltaStimulusSustainedHeatState;
 
+    public TimberbornContaminationFireConsequenceSummary ContaminationFireSummary => _contaminationFireSummary;
+
     public bool TryUpdateParameters(FireSimParameters parameters)
     {
         if (_fireSimulator is not ITimberbornConfigurableFireSimParameters configurable)
@@ -202,12 +206,17 @@ public sealed class TimberbornFireSystem : IDisposable
             throw new InvalidOperationException("Timberborn fire system was constructed with an existing simulator and cannot initialize another one.");
         }
 
-        ushort[] initialCells = _cellMapper.CreateInitialCells(grid, sources);
+        TimberbornCellSource[] sourceValues = sources.ToArray();
+        ushort[] initialCells = _cellMapper.CreateInitialCells(grid, sourceValues);
         WildfireMaterialField[] materialFieldValues = materialFields.ToArray();
         DisposeSimulator();
         _fireSimulator = _simulatorFactory.Create(grid, initialCells, materialFieldValues);
         _grid = grid;
         _importedTargets = CreateImportedTargets(grid, initialCells, materialFieldValues);
+        _contaminationFireSummary = TimberbornContaminationFireConsequenceTelemetry.Summarize(
+            grid,
+            sourceValues,
+            _importedTargets);
         _registeredChangeCountSinceLastDispatch = 0;
         ClearQaIgnitionPeg();
         ClearQaBurnDamageSpendProbe();
@@ -219,6 +228,10 @@ public sealed class TimberbornFireSystem : IDisposable
         _deltaConsumer.Reset();
         _logSink.Info(
             $"wildfire_timberborn_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
+        if (!Equals(_contaminationFireSummary, TimberbornContaminationFireConsequenceSummary.Empty))
+        {
+            _logSink.Info(_contaminationFireSummary.ToLogToken());
+        }
     }
 
     public void InitializeFromPersistentFireSimState(
@@ -624,8 +637,7 @@ public sealed class TimberbornFireSystem : IDisposable
         _ = RequireGrid();
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
         TimberbornImportedFieldTarget target = FindImportedTarget(
-            candidate => IsBurnableImportedTarget(candidate) &&
-                TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector) &&
+            candidate => IsWaterSuppressionTarget(candidate, normalizedSelector) &&
                 PackedCell.Water(candidate.InitialCell) < QaWaterSuppressionWater,
             $"No imported burnable field target without maximum water was found for QA water suppression selector '{normalizedSelector}'.");
         RegisterChange(
@@ -642,7 +654,16 @@ public sealed class TimberbornFireSystem : IDisposable
             target.CompanionTargetId,
             target.InitialCell,
             QaWaterSuppressionWater,
-            QueuedWaterChangeCount: 1);
+            QueuedWaterChangeCount: 1,
+            TargetSoilContamination: target.SoilContamination,
+            IsAffectedCellContaminated: target.SoilContamination > 0,
+            IsContaminatedSuppressionInput: target.MaterialClass == WildfireMaterialClass.Badwater,
+            IsBadwaterSuppressionInput: target.MaterialClass == WildfireMaterialClass.Badwater,
+            WaterSuppressionInputSafeUnavailableCount: target.SoilContamination > 0 &&
+                target.MaterialClass != WildfireMaterialClass.Badwater
+                    ? 1
+                    : 0,
+            NativeDecontaminationAttemptCount: 0);
     }
 
     public TimberbornQaBurnDurationStimulusResult QueueBurnDurationQaStimulus(string target)
@@ -1584,6 +1605,18 @@ public sealed class TimberbornFireSystem : IDisposable
                 WildfireMaterialClass.Crop or
                 WildfireMaterialClass.Building or
                 WildfireMaterialClass.Storage;
+    }
+
+    private static bool IsWaterSuppressionTarget(TimberbornImportedFieldTarget target, string normalizedSelector)
+    {
+        if (!IsBurnableImportedTarget(target) ||
+            !TimberbornQaFieldTargetSelectors.Matches(target.MaterialClass, normalizedSelector))
+        {
+            return false;
+        }
+
+        return normalizedSelector != TimberbornQaFieldTargetSelectors.ContaminatedTree ||
+            target.SoilContamination > 0;
     }
 
     private void UpdateBurnDurationProof(uint tick, IReadOnlyList<CellDelta> deltas)

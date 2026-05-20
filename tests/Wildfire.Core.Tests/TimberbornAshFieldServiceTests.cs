@@ -287,7 +287,39 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.False(ashFieldService.TryGetEntry(0, out _));
         Assert.Equal(1, summary.AshFieldSourceEventCount);
         Assert.Equal(1, summary.AshFieldTaintedAshCellCount);
+        Assert.Equal(0, summary.AshFieldContaminatedBurnSourceCellCount);
+        Assert.Equal(1, summary.AshFieldContaminatedAffectedCellCount);
         Assert.Empty(growthAdapter.Requests);
+    }
+
+    [Fact]
+    public void DeltaConsumerReportsContaminatedBurnSourcesAsTaintedAsh()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornBurnDamageService burnDamageService = CreateService(
+            new TimberbornBurnDamageDescriptor(
+                "Building.BadwaterPump",
+                TimberbornBurnDamageTargetKind.Structure,
+                TimberbornBurnMaterialKind.Constructed));
+        burnDamageService.RegisterTargets(
+            grid,
+            [Registration("building-badwater-pump-1", "Building.BadwaterPump", [new TimberbornCellCoordinates(0, 0, 0)])]);
+        TimberbornAshFieldService ashFieldService = new(new RecordingAshGrowthAdapter());
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(
+                burnDamageSink: burnDamageService,
+                ashFieldSink: new TimberbornAshFieldSink(burnDamageService, ashFieldService)));
+
+        TimberbornFireDeltaConsumerSummary summary =
+            consumer.Consume(42, [Delta(0, oldFuel: 5, newFuel: 0)]);
+
+        Assert.Equal(1, summary.AshFieldSourceEventCount);
+        Assert.Equal(1, summary.AshFieldTaintedAshCellCount);
+        Assert.Equal(1, summary.AshFieldContaminatedBurnSourceCellCount);
+        Assert.Equal(0, summary.AshFieldContaminatedAffectedCellCount);
+        Assert.Contains("ash_field_contaminated_burn_sources=1", summary.ToLogToken());
+        Assert.Contains("ash_field_contaminated_affected_cells=0", summary.ToLogToken());
     }
 
     [Fact]

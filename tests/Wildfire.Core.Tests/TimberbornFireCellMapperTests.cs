@@ -224,6 +224,80 @@ public sealed class TimberbornFireCellMapperTests
     }
 
     [Fact]
+    public void BadwaterSourceActsWaterLikeWithoutBecomingSafeWater()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornFireCellMapper mapper = new();
+        TimberbornWaterAdapter waterAdapter = new();
+
+        TimberbornCellSource badwater = waterAdapter.CreateSource(
+            0,
+            0,
+            0,
+            water: 3,
+            isContaminated: true,
+            isBadwater: true);
+        TimberbornMappedCell mappedCell = Assert.Single(mapper.CreateMappedCells(grid, [badwater]));
+        WildfireMaterialField material = Assert.Single(mapper.CreateMaterialFields(grid, [badwater]));
+
+        Assert.Equal(3, PackedCell.Water(mappedCell.PackedCell));
+        Assert.Equal(WildfireMaterialClass.Badwater, material.State.MaterialClass);
+        Assert.Equal(WildfireContaminationBehavior.TaintedSource, material.State.ContaminationBehavior);
+    }
+
+    [Fact]
+    public void ContaminationTelemetryCountsBadwaterInputsWithoutNativeDecontamination()
+    {
+        FireGrid grid = new(2, 1, 1);
+        TimberbornTerrainAdapter terrainAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+        TimberbornWaterAdapter waterAdapter = new();
+        TimberbornCellSource[] sources =
+        [
+            terrainAdapter.CreateSource(0, 0, 0, isSolid: true, soilContamination: 7),
+            resourceAdapter.CreateTreeSource(0, 0, 0, materialTargetId: 1u),
+            waterAdapter.CreateSource(1, 0, 0, water: 3, isContaminated: true, isBadwater: true),
+        ];
+        TimberbornImportedFieldTarget[] importedTargets =
+        [
+            new(
+                CellIndex: 0,
+                X: 0,
+                Y: 0,
+                Z: 0,
+                MaterialClass: WildfireMaterialClass.Tree,
+                CompanionTargetId: 1u,
+                InitialCell: PackedCell.Pack(fuel: 12, heat: 0, flammability: 2, water: 0, terrain: 1, burningLevel: 0),
+                SoilContamination: 7),
+            new(
+                CellIndex: 1,
+                X: 1,
+                Y: 0,
+                Z: 0,
+                MaterialClass: WildfireMaterialClass.Badwater,
+                CompanionTargetId: 0u,
+                InitialCell: PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 3, terrain: 0, burningLevel: 0),
+                SoilContamination: 0),
+        ];
+
+        TimberbornContaminationFireConsequenceSummary summary =
+            TimberbornContaminationFireConsequenceTelemetry.Summarize(grid, sources, importedTargets);
+
+        Assert.Equal(1, summary.ContaminatedAffectedMapCellCount);
+        Assert.Equal(1, summary.BadwaterWaterLikeMapCellCount);
+        Assert.Equal(1, summary.ContaminatedWaterLikeMapCellCount);
+        Assert.Equal(0, summary.BadwaterSuppressionInputCellCount);
+        Assert.Equal(0, summary.ContaminatedWaterSuppressionInputCellCount);
+        Assert.Equal(1, summary.WaterSuppressionInputSafeUnavailableCount);
+        Assert.Equal(0, summary.NativeDecontaminationAttemptCount);
+        Assert.Equal(1, summary.SkippedUnsafeContaminationApiCount);
+        Assert.Contains("badwater_water_like_map_cells=1", summary.ToLogToken());
+        Assert.Contains("badwater_suppression_inputs=0", summary.ToLogToken());
+        Assert.Contains("water_suppression_input_safe_unavailable=1", summary.ToLogToken());
+        Assert.Contains("native_decontamination_attempts=0", summary.ToLogToken());
+    }
+
+    [Fact]
     public void CreateMappedCellsMapsMultiCellVerticalFootprints()
     {
         FireGrid grid = new(3, 3, 3);

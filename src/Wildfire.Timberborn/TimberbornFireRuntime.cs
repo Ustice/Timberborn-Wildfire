@@ -684,6 +684,12 @@ public sealed class TimberbornFireRuntime :
             $"z={result.Z} " +
             $"target_material={result.MaterialClass} " +
             $"companion_target_id={result.CompanionTargetId} " +
+            $"target_soil_contamination={result.TargetSoilContamination} " +
+            $"affected_cell_contaminated={result.IsAffectedCellContaminated.ToString().ToLowerInvariant()} " +
+            $"contaminated_suppression_input={result.IsContaminatedSuppressionInput.ToString().ToLowerInvariant()} " +
+            $"badwater_suppression_input={result.IsBadwaterSuppressionInput.ToString().ToLowerInvariant()} " +
+            $"water_suppression_input_safe_unavailable={result.WaterSuppressionInputSafeUnavailableCount} " +
+            $"native_decontamination_attempts={result.NativeDecontaminationAttemptCount} " +
             $"initial_cell={result.InitialCell} " +
             $"set_water={result.SetWater} " +
             $"queued_water_changes={result.QueuedWaterChangeCount}");
@@ -783,6 +789,8 @@ public sealed class TimberbornFireRuntime :
         }
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
+        TimberbornContaminationFireConsequenceSummary contaminationFireSummary =
+            fireSystem.ContaminationFireSummary;
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
@@ -973,10 +981,23 @@ public sealed class TimberbornFireRuntime :
             AshFieldFertileCells: ashFieldSummary.FertileAshCellCount,
             AshFieldSpentCells: ashFieldSummary.SpentAshCellCount,
             AshFieldTaintedCells: ashFieldSummary.TaintedAshCellCount,
+            AshFieldContaminatedBurnSources: ashFieldSummary.ContaminatedBurnSourceCellCount,
+            AshFieldContaminatedAffectedCells: ashFieldSummary.ContaminatedAffectedCellCount,
             AshFieldGrowthCandidateCells: ashFieldSummary.GrowthCandidateCellCount,
             AshFieldGrowthAppliedGrowables: ashFieldSummary.GrowthAppliedGrowableCount,
             AshFieldGrowthSkippedTaintedCells: ashFieldSummary.GrowthSkippedTaintedCellCount,
             AshFieldGrowthSkippedUnsafeApis: ashFieldSummary.GrowthSkippedUnsafeApiCount,
+            ContaminationFireContaminatedBurnSources: ashFieldSummary.ContaminatedBurnSourceCellCount,
+            ContaminationFireContaminatedAffectedCells: ashFieldSummary.ContaminatedAffectedCellCount,
+            ContaminationFireContaminatedAffectedMapCells: contaminationFireSummary.ContaminatedAffectedMapCellCount,
+            ContaminationFireBadwaterWaterLikeMapCells: contaminationFireSummary.BadwaterWaterLikeMapCellCount,
+            ContaminationFireContaminatedWaterLikeMapCells: contaminationFireSummary.ContaminatedWaterLikeMapCellCount,
+            ContaminationFireBadwaterSuppressionInputs: contaminationFireSummary.BadwaterSuppressionInputCellCount,
+            ContaminationFireContaminatedWaterSuppressionInputs: contaminationFireSummary.ContaminatedWaterSuppressionInputCellCount,
+            ContaminationFireWaterSuppressionInputSafeUnavailable: contaminationFireSummary.WaterSuppressionInputSafeUnavailableCount,
+            ContaminationFireToxicSmokeCells: beaverExposure.ToxicExposureCells,
+            ContaminationFireNativeDecontaminationAttempts: contaminationFireSummary.NativeDecontaminationAttemptCount,
+            ContaminationFireSkippedUnsafeContaminationApis: contaminationFireSummary.SkippedUnsafeContaminationApiCount,
             TaintedAshPoisonCandidateCells: taintedAshSummary.CandidateCellCount,
             TaintedAshPoisonAppliedCells: taintedAshSummary.AppliedCellCount,
             TaintedAshPoisonSkippedNoSafeApi: taintedAshSummary.SkippedNoSafeApiCount,

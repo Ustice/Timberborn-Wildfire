@@ -503,6 +503,12 @@ public sealed class TimberbornQaCommandBridge
             $"target_z={stimulusResult.Z}_" +
             $"target_material={stimulusResult.MaterialClass}_" +
             $"companion_target_id={stimulusResult.CompanionTargetId}_" +
+            $"target_soil_contamination={stimulusResult.TargetSoilContamination}_" +
+            $"affected_cell_contaminated={stimulusResult.IsAffectedCellContaminated.ToString().ToLowerInvariant()}_" +
+            $"contaminated_suppression_input={stimulusResult.IsContaminatedSuppressionInput.ToString().ToLowerInvariant()}_" +
+            $"badwater_suppression_input={stimulusResult.IsBadwaterSuppressionInput.ToString().ToLowerInvariant()}_" +
+            $"water_suppression_input_safe_unavailable={stimulusResult.WaterSuppressionInputSafeUnavailableCount}_" +
+            $"native_decontamination_attempts={stimulusResult.NativeDecontaminationAttemptCount}_" +
             $"initial_cell={stimulusResult.InitialCell}_" +
             $"set_water={stimulusResult.SetWater}_" +
             $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}");
@@ -777,7 +783,13 @@ public sealed record TimberbornQaWaterSuppressionStimulusResult(
     uint CompanionTargetId,
     ushort InitialCell,
     byte SetWater,
-    int QueuedWaterChangeCount);
+    int QueuedWaterChangeCount,
+    byte TargetSoilContamination = 0,
+    bool IsAffectedCellContaminated = false,
+    bool IsContaminatedSuppressionInput = false,
+    bool IsBadwaterSuppressionInput = false,
+    int WaterSuppressionInputSafeUnavailableCount = 0,
+    int NativeDecontaminationAttemptCount = 0);
 
 public interface ITimberbornQaBurnDurationStimulus
 {
@@ -1304,10 +1316,23 @@ public sealed record TimberbornQaCommandState(
     int? AshFieldFertileCells = null,
     int? AshFieldSpentCells = null,
     int? AshFieldTaintedCells = null,
+    int? AshFieldContaminatedBurnSources = null,
+    int? AshFieldContaminatedAffectedCells = null,
     int? AshFieldGrowthCandidateCells = null,
     int? AshFieldGrowthAppliedGrowables = null,
     int? AshFieldGrowthSkippedTaintedCells = null,
     int? AshFieldGrowthSkippedUnsafeApis = null,
+    int? ContaminationFireContaminatedBurnSources = null,
+    int? ContaminationFireContaminatedAffectedCells = null,
+    int? ContaminationFireContaminatedAffectedMapCells = null,
+    int? ContaminationFireBadwaterWaterLikeMapCells = null,
+    int? ContaminationFireContaminatedWaterLikeMapCells = null,
+    int? ContaminationFireBadwaterSuppressionInputs = null,
+    int? ContaminationFireContaminatedWaterSuppressionInputs = null,
+    int? ContaminationFireWaterSuppressionInputSafeUnavailable = null,
+    int? ContaminationFireToxicSmokeCells = null,
+    int? ContaminationFireNativeDecontaminationAttempts = null,
+    int? ContaminationFireSkippedUnsafeContaminationApis = null,
     int? TaintedAshPoisonCandidateCells = null,
     int? TaintedAshPoisonAppliedCells = null,
     int? TaintedAshPoisonSkippedNoSafeApi = null,
@@ -1612,10 +1637,23 @@ public sealed record TimberbornQaCommandResult(
         $"ash_field_fertile_cells={FormatNumber(State.AshFieldFertileCells)} " +
         $"ash_field_spent_cells={FormatNumber(State.AshFieldSpentCells)} " +
         $"ash_field_tainted_cells={FormatNumber(State.AshFieldTaintedCells)} " +
+        $"ash_field_contaminated_burn_sources={FormatNumber(State.AshFieldContaminatedBurnSources)} " +
+        $"ash_field_contaminated_affected_cells={FormatNumber(State.AshFieldContaminatedAffectedCells)} " +
         $"ash_field_growth_candidate_cells={FormatNumber(State.AshFieldGrowthCandidateCells)} " +
         $"ash_field_growth_applied_growables={FormatNumber(State.AshFieldGrowthAppliedGrowables)} " +
         $"ash_field_growth_skipped_tainted_cells={FormatNumber(State.AshFieldGrowthSkippedTaintedCells)} " +
         $"ash_field_growth_skipped_unsafe_apis={FormatNumber(State.AshFieldGrowthSkippedUnsafeApis)} " +
+        $"contamination_fire_contaminated_burn_sources={FormatNumber(State.ContaminationFireContaminatedBurnSources)} " +
+        $"contamination_fire_contaminated_affected_cells={FormatNumber(State.ContaminationFireContaminatedAffectedCells)} " +
+        $"contamination_fire_contaminated_affected_map_cells={FormatNumber(State.ContaminationFireContaminatedAffectedMapCells)} " +
+        $"contamination_fire_badwater_water_like_map_cells={FormatNumber(State.ContaminationFireBadwaterWaterLikeMapCells)} " +
+        $"contamination_fire_contaminated_water_like_map_cells={FormatNumber(State.ContaminationFireContaminatedWaterLikeMapCells)} " +
+        $"contamination_fire_badwater_suppression_inputs={FormatNumber(State.ContaminationFireBadwaterSuppressionInputs)} " +
+        $"contamination_fire_contaminated_water_suppression_inputs={FormatNumber(State.ContaminationFireContaminatedWaterSuppressionInputs)} " +
+        $"contamination_fire_water_suppression_input_safe_unavailable={FormatNumber(State.ContaminationFireWaterSuppressionInputSafeUnavailable)} " +
+        $"contamination_fire_toxic_smoke_cells={FormatNumber(State.ContaminationFireToxicSmokeCells)} " +
+        $"contamination_fire_native_decontamination_attempts={FormatNumber(State.ContaminationFireNativeDecontaminationAttempts)} " +
+        $"contamination_fire_skipped_unsafe_contamination_apis={FormatNumber(State.ContaminationFireSkippedUnsafeContaminationApis)} " +
         $"tainted_ash_poison_candidate_cells={FormatNumber(State.TaintedAshPoisonCandidateCells)} " +
         $"tainted_ash_poison_applied_cells={FormatNumber(State.TaintedAshPoisonAppliedCells)} " +
         $"tainted_ash_poison_skipped_no_safe_api={FormatNumber(State.TaintedAshPoisonSkippedNoSafeApi)} " +
