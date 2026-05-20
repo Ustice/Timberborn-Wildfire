@@ -2172,12 +2172,22 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorFireHeatDecisionsApplied: 57,
             BeaverFieldBehaviorNoOpDecisionsApplied: 58,
             BeaverFieldBehaviorDecisionsSkippedCooldown: 59,
-            BeaverFieldBehaviorSkippedNoSafeApi: 60,
-            BeaverFieldBehaviorFailedDecisions: 61,
-            BeaverFieldBehaviorRecoveryActions: 62,
-            BeaverFieldBehaviorPersistenceSaves: 63,
-            BeaverFieldBehaviorPersistenceLoads: 64,
-            BeaverFieldBehaviorLastDecisionTick: 65,
+            BeaverFieldBehaviorDecisionsSkippedBatch: 60,
+            BeaverFieldBehaviorSkippedNoSafeApi: 61,
+            BeaverFieldBehaviorFailedDecisions: 62,
+            BeaverFieldBehaviorRecoveryActions: 63,
+            BeaverFieldBehaviorSmokeExposedSamples: 64,
+            BeaverFieldBehaviorSmokeExposureAccumulatedSamples: 65,
+            BeaverFieldBehaviorSmokeCoughingEntered: 66,
+            BeaverFieldBehaviorSmokeCoughingRecovered: 67,
+            BeaverFieldBehaviorSmokeRecoveryDecays: 68,
+            BeaverFieldBehaviorSmokeChokingCandidates: 69,
+            BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 70,
+            BeaverFieldBehaviorSmokeDeathCandidates: 71,
+            BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: 72,
+            BeaverFieldBehaviorPersistenceSaves: 73,
+            BeaverFieldBehaviorPersistenceLoads: 74,
+            BeaverFieldBehaviorLastDecisionTick: 75,
             BurnDurationProofTarget: "medium",
             BurnDurationProofTargetIndex: 42,
             BurnDurationProofTargetX: 5,
@@ -2323,12 +2333,22 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_fire_heat_decisions_applied=57", result.ResultToken);
         Assert.Contains("beaver_field_behavior_noop_decisions_applied=58", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_cooldown=59", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_skipped_no_safe_api=60", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_failed_decisions=61", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_recovery_actions=62", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_persistence_saves=63", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_persistence_loads=64", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_last_decision_tick=65", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_decisions_skipped_batch=60", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_skipped_no_safe_api=61", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_failed_decisions=62", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_recovery_actions=63", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_exposed_samples=64", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_exposure_accumulated_samples=65", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_coughing_entered=66", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_coughing_recovered=67", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_recovery_decays=68", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_candidates=69", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_skipped_unsafe_api=70", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_death_candidates=71", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_death_skipped_unsafe_api=72", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_saves=73", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_loads=74", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_last_decision_tick=75", result.ResultToken);
         Assert.Contains("burn_duration_proof_target=medium", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_index=42", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_x=5", result.ResultToken);
