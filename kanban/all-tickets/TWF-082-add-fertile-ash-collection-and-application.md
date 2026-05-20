@@ -42,6 +42,7 @@ Controlled burns should produce a useful farming resource, but the resource must
 - Application must not consume goods on contaminated, invalid, unreachable, or unsafe target cells.
 - Preserve native hauling and storage semantics. The end-to-end proof should use real storage or a precise safe-unavailable blocker, not adapter-side teleporting that bypasses Timberborn inventory behavior.
 - Preserve save/reload behavior for ash amount, ash contamination, pending crop/forestry fertilize designations, and stored `FertileAsh` goods where Timberborn exposes safe APIs.
+- Leave tainted-ash collection blocking and contaminated-cell proof to `TWF-166`; this ticket should close on the confirmed clean-ash collection/application route.
 - Respect the settled day-scale decay rule from the ash model: uncontaminated ash loses `1` amount per in-game day, and contaminated ash loses `1` amount every two in-game days. Do not use per-tick decay for collection eligibility or QA timing.
 
 ## Dependencies
@@ -73,13 +74,13 @@ Controlled burns should produce a useful farming resource, but the resource must
 - Run `dotnet test Wildfire.slnx --no-restore`.
 - Run `bun run typecheck`.
 - Run `dotnet build Wildfire.slnx`.
-- Deterministic tests must prove collectable-cell selection from simulator ash, contaminated ash exclusion, no-delete-on-failure, successful harvest depletion by one unit, storage/inventory accounting where safely available, crop application, forestry application, and save/reload state.
+- Deterministic tests must prove collectable-cell selection from simulator ash, no-delete-on-failure, successful harvest depletion by one unit, storage/inventory accounting where safely available, crop application, forestry application, and save/reload state. Contaminated ash exclusion is split to `TWF-166`.
 - If compute shader or simulator ash mutation behavior changes, run the Unity shader harness documented in `docs/TEST_PLAN.md`.
 - Live QA must use the user-accepted `Fuel` route: load `Fuel with beavers` or the current `Fuel` save, let ash appear after the first unpause tick, inspect Gatherer Flags during work hours, set `FertileAsh` as the Gatherer Flag priority, and prove a worker collects ash from a real ash cell.
 - Passing live QA must include copied `Player.log`, a `status` or `qa-readiness` result with nonzero simulator ash before collection, nonzero `fertile_ash_collection_candidate_cells`, nonzero collected `FertileAsh`, at least one depleted ash cell, and rendered ash reduction at the harvested location.
 - Passing live QA must prove warehouse/native-hauling behavior by storing `FertileAsh` in a real storage building, or record the exact Timberborn inventory API blocker.
 - Passing live QA must prove crop or forestry application consumes stored `FertileAsh` and adds one uncontaminated simulator ash unit to the target cell, or record the exact safe-unavailable blocker.
-- Passing live QA must prove contaminated ash is skipped and does not produce `FertileAsh`.
+- Passing live QA for contaminated ash skipping is split to `TWF-166`.
 - Passing live QA must include save/reload evidence after ash exists and after at least one collection or application mutation.
 
 ## Notes
@@ -89,3 +90,4 @@ Controlled burns should produce a useful farming resource, but the resource must
 - `docs/ash-simulation-model.md` is the source of truth for ash ownership: ash lives in simulator transport state, renderers read it, and Timberborn adapters request bounded mutations.
 - `TWF-160` owns the plumbing that makes status, persistence, harvest, and application read/write simulator-owned ash. If `TWF-160` absorbs implementation work from this ticket, keep `TWF-082` as the visible gameplay and live QA acceptance gate.
 - The smallest useful unblock is no longer "make beavers stop gathering berries." The unblock is "make Gatherer Flags find real simulator ash targets and decrement that same field when collection succeeds."
+- 2026-05-20 Jason confirmation: accepted the clean fertile-ash collection/application route for `TWF-082`. Tainted ash has not been tested and is split into `TWF-166`, so this ticket is no longer blocked by contaminated-ash skip evidence.

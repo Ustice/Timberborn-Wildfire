@@ -38,8 +38,8 @@ Turn the current ready and verify work into accepted evidence: smoke readability
 ## QA Gates
 
 - Smoke readability gate: high-resolution recording and screenshot evidence must show smoke as distinct from active flame in normal gameplay, with status/log proof and no presentation failures.
-- Persistent ash gate: live evidence must show fertile and tainted ash creation or precise safe-unavailable states, growth telemetry, tainted-soil telemetry, save/reload survival, and `status` or `qa-readiness` counters.
-- Fertile ash gate: live evidence must show Gatherer Post collection, `FertileAsh` inventory mutation, designation application, tainted-cell blocking, save/reload of designations, and toolbar usability or exact API blockers.
+- Persistent ash gate: live evidence must show clean ash creation, growth telemetry or safe-unavailable growth telemetry, save/reload survival, and `status` or `qa-readiness` counters. Tainted ash is split to `TWF-166`.
+- Fertile ash gate: live evidence must show Gatherer Post collection, `FertileAsh` inventory mutation, designation application, save/reload of designations, and toolbar usability or exact API blockers. Tainted-cell blocking is split to `TWF-166`.
 - Beaver harness gate: live evidence must show the harness observes accepted exposure telemetry and applies or skips bounded no-op behavior without critical exceptions.
 - Any failed required QA gate must pass in a later run before the ticket can move to `05-integration/`.
 - Any failed required review must return to `03-in-progress/`, move back through `04-verify/`, and pass a fresh review before the ticket can move to `05-integration/`.
@@ -73,5 +73,5 @@ Turn the current ready and verify work into accepted evidence: smoke readability
 
 - Created after commit `49f339c2`, which reconciled the board with off-sprint ash and fertile-ash implementation work.
 - This sprint intentionally mixes two implementation lanes with two QA verification lanes because Jason asked to include all four next-lane choices. Keep write scopes serialized where needed.
-- Closed on 2026-05-19 as mixed done/blocked. `TWF-067` passed review, live smoke readability QA, integration, `git diff --check`, targeted renderer tests, and full `dotnet test`; it moved to `06-done`. `TWF-073` passed review, live beaver-harness QA, integration, focused tests, and full `dotnet test`; it moved to `06-done`. `TWF-078` stayed blocked after a partial live pass because nonzero-ash save/reload proof was not captured before ash decay. `TWF-082` stayed blocked because the canonical full fertile-ash warehouse/native-hauling, application, tainted-cell, and save/reload gate remains unproven.
-- Next unblock is `TWF-078`: create or use a QA-controlled immediate pause/save path after ash creation, or otherwise hold ash long enough to save with `ash_entries>0`, reload, and prove restored ash counters. Then rerun `TWF-082` on the user-specified `Fuel (1)` warehouse route.
+- Closed on 2026-05-19 as clean-scope done after Jason confirmed `TWF-078` and `TWF-082`. `TWF-067` passed review, live smoke readability QA, integration, `git diff --check`, targeted renderer tests, and full `dotnet test`; it moved to `06-done`. `TWF-073` passed review, live beaver-harness QA, integration, focused tests, and full `dotnet test`; it moved to `06-done`. `TWF-078` and `TWF-082` moved to `06-done` on Jason's manual confirmation of clean ash persistence and fertile-ash collection/application.
+- Tainted ash was not tested during Sprint 11 and is split to `TWF-166`: prove contaminated-source tainted ash, no `FertileAsh` collection from tainted ash, no clean growth bonus, and distinguishable status or presentation evidence.

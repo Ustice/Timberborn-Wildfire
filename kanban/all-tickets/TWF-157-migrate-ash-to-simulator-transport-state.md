@@ -67,3 +67,4 @@ Make simulator transport state the authoritative source for ash amount and ash c
 ## Notes
 
 - This ticket is the first implementation slice from [docs/ash-simulation-model.md](../../docs/ash-simulation-model.md).
+- 2026-05-20 reconciliation: Jason confirmed this has been tested. Current implementation stores ash amount and contamination in simulator `AtmosphericFields` via `WildfireAtmosphericFieldState`, keeps ash out of `PackedCell`, and leaves companion ash strength as classification/source context rather than the live dynamic ash authority. Moved to `06-done`.

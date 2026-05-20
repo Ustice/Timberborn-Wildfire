@@ -4,26 +4,32 @@
 
 Turn the release gameplay loop into an integrated, explainable, and QA-proven experience: fires can start from believable rare sources, burn consequences affect buildings, plants, beavers, ash, and contamination, players can understand what happened, and the aftermath persists through save/reload.
 
+## Accepted Prerequisites
+
+- `TWF-067`: smoke readability is accepted.
+- `TWF-073`: the shared beaver behavior harness is accepted.
+- `TWF-078` and `TWF-082`: clean ash and fertile ash collection/application are accepted.
+- `TWF-157` through `TWF-160`: simulator-owned ash authority, queued ash mutations, ash presentation, and ash persistence/status/harvest sync are accepted.
+- `TWF-164`: tainted ash decay is accepted; ash/water interaction remains split to `TWF-167`.
+
 ## Included Tickets
 
-- `TWF-067`: smoke readability is the remaining visual dependency before ash, steam, beaver exposure, and release media can be judged clearly.
-- `TWF-073`: shared beaver behavior harness must land before smoke, toxic smoke, and fire/heat behavior variants.
-- `TWF-078`: simulator-backed ash read-model evidence remains the foundation for clean ash, tainted ash, growth, collection, and persistence.
-- `TWF-082`: fertile ash collection/application must prove Gatherer Post collection, inventory mutation, toolbar usability, ash depletion, and tainted-cell blocking.
-- `TWF-157`: migrate ash to simulator-owned transport state so later ash collection, washout, and presentation do not extend the transitional adapter state.
-- `TWF-158`: add queued simulator ash mutations so gatherer collection, fertile ash application, washout, and decay can request changes without directly mutating simulator buffers.
-- `TWF-159`: drive ash presentation from simulator state, including visible distinction between fertile and tainted ash and receding ash levels.
-- `TWF-160`: sync ash persistence, status, and harvest with simulator-owned state.
+- `TWF-166`: validate tainted ash live behavior after clean ash and fertile ash are accepted.
 - `TWF-079`: complete contamination-aware fire consequences, including tainted ash, toxic smoke classification, badwater/contaminated-water suppression semantics, and no-decontamination proof.
-- `TWF-164`: add tainted ash decay and water washout, with slight water tainting or safe-unavailable telemetry.
-- `TWF-068`: tune visible ash effect after simulator-owned ash presentation is available.
+- `TWF-167`: define ash/water interaction, including washout and water-taint safe-unavailable telemetry if needed.
+- `TWF-161`: rename ash field concepts after the simulator-owned behavior migration is proven.
+- `TWF-162`: align clean steam transport with the field model.
+- `TWF-070`: tune visible steam effects after steam transport authority is settled.
 - `TWF-163`: create release-quality icons for consequence alerts, fertile ash, tainted ash, and fertilize crop/tree tools using the collected Timberborn asset sheets.
+- `TWF-168`: add a structure-on-fire alert class with Timberborn-style icon references from the combined asset sheets.
 - `TWF-085`: implement normal smoke beaver behavior through the shared harness.
 - `TWF-086`: implement toxic smoke behavior after contamination classifications are available.
 - `TWF-087`: implement fire and heat beaver behavior through the shared harness.
+- `TWF-169`: fix fully burned trees not showing as stumps or burned-leftover visuals.
 - `TWF-074`: validate beaver field behavior recordings after the behavior variants have evidence.
 - `TWF-080`: aggregate player feedback for fire, building damage, plant/resource loss, beaver danger, fertile ash, and tainted ash.
 - `TWF-081`: validate save/reload persistence for burn damage, ash, fertile ash, tainted ash washout, inventory, designations, and beaver state.
+- `TWF-170`: fix ash fields not showing before the game unpauses.
 - `TWF-165`: add rare deterministic drought-aware ignition from fire-using buildings and dry dead vegetation, while keeping ordinary non-fire buildings ineligible.
 - `TWF-156`: create the `256x256` release QA scenario/map proving local fires, clean ash, tainted ash, beaver exposure, rare ignition, and big-map responsiveness.
 
@@ -38,15 +44,17 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 
 ## Dependency Order
 
-1. Close the Sprint 11 evidence gates first: `TWF-067`, `TWF-073`, `TWF-078`, and `TWF-082`. Do not build more ash or beaver behavior on unverified transitional state.
-2. Move ash authority next: `TWF-157`, then `TWF-158`, then `TWF-160`, with `TWF-159` starting only when simulator-owned ash state is readable for presentation.
-3. Complete contamination and tainted aftermath: `TWF-079` before `TWF-164`; `TWF-164` before `TWF-081` final persistence validation.
-4. Tune and bind presentation: `TWF-068` after `TWF-159`; `TWF-163` after `TWF-082` has confirmed the fertile ash UI/good surfaces and after `TWF-080` has settled alert classes enough for icon binding.
-5. Implement beaver behavior in ladder order: `TWF-085`, `TWF-087`, then `TWF-086` after `TWF-079`; validate all variants through `TWF-074`.
-6. Add player explanation after consequence sources exist: `TWF-080` should consume final counters and icon assets rather than inventing temporary categories.
-7. Add rare ignition after tuning context exists: `TWF-165` should use conservative defaults, deterministic tests, and a forced high-rate QA preset.
-8. Build the release proof surface: `TWF-156` should provide a `256x256` scenario once the required lanes are stable enough to prove there.
-9. Run final persistence validation through `TWF-081` only after ash, contamination, collection, beaver state, and rare ignition have their current implementation shape.
+1. Treat the accepted prerequisites above as closed and do not redispatch them.
+2. Validate the split tainted-ash surface through `TWF-166` before dependent contaminated-ash claims integrate.
+3. Complete contamination and tainted aftermath: `TWF-079` before `TWF-086`; `TWF-167` before final persistence validation if ash/water state changes.
+4. Clean up ash/steam naming and authority: `TWF-161`, `TWF-162`, then `TWF-070`.
+5. Fix release-readiness bugs close to their owning lanes: `TWF-170` can run after the simulator ash presentation work; `TWF-169` can run after tree consequences.
+6. Implement beaver behavior in ladder order: `TWF-085`, `TWF-087`, then `TWF-086` after `TWF-079`; validate all variants through `TWF-074`.
+7. Add player explanation after consequence sources exist: `TWF-080` should consume final counters and icon assets rather than inventing temporary categories. `TWF-168` is the specific structure-on-fire alert class inside that feedback lane.
+8. Tune and bind presentation: `TWF-163` after the fertile ash UI/good surfaces are stable and after `TWF-080`/`TWF-168` have settled alert classes enough for icon binding.
+9. Add rare ignition after tuning context exists: `TWF-165` should use conservative defaults, deterministic tests, and a forced high-rate QA preset.
+10. Build the release proof surface: `TWF-156` should provide a `256x256` scenario once the required lanes are stable enough to prove there.
+11. Run final persistence validation through `TWF-081` only after ash, contamination, collection, beaver state, and rare ignition have their current implementation shape.
 
 ## Assignment Packets
 
@@ -65,13 +73,16 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 
 ## QA Gates
 
-- Sprint 11 carry-forward gate: smoke readability, beaver harness, simulator-backed ash, and fertile ash collection/application must pass or be explicitly blocked before dependent sprint work integrates.
+- Prerequisite gate: smoke readability, beaver harness, simulator-backed clean ash, simulator-owned ash authority, tainted ash decay, and clean fertile-ash collection/application are accepted; do not reopen them unless new regressions are filed as separate bugs.
 - Ash authority gate: simulator-owned ash state must support creation, mutation, harvest, persistence, status, and presentation without a second authoritative ash store.
 - Fertile ash collection gate: Gatherer Posts collect only uncontaminated ash, create `FertileAsh`, remove one ash unit per good, and visibly recede the local ash level.
-- Tainted ash gate: contaminated sources produce tainted ash, tainted ash is visually distinct, tainted ash fades or washes away, and water tainting succeeds or reports safe-unavailable telemetry.
+- Tainted ash gate: contaminated sources produce tainted ash, tainted ash is visually distinct or status-distinct, tainted ash does not produce `FertileAsh`, and tainted ash does not grant the clean growth bonus. Decay is accepted in `TWF-164`; water interaction remains `TWF-167`.
 - Beaver consequence gate: smoke, toxic smoke, and fire/heat behavior variants must show reversible lower-risk behavior or precise safe-unavailable API evidence before severe states are accepted.
 - Rare ignition gate: forced high-rate QA proves the path, default release settings remain rare, only eligible fire-using buildings and dry dead vegetation ignite, and ordinary non-fire buildings do not.
 - Feedback gate: alerts/status aggregate consequences without per-cell spam and use the release icon set where the native UI surface permits.
+- Structure alert gate: burning structures produce a bounded, distinguishable alert or precise native-surface blocker evidence, with no per-cell alert spam.
+- Tree aftermath gate: trees that burn all fuel show a stump or accepted burned-leftover visual state, or report precise safe-unavailable telemetry without claiming success.
+- Paused ash gate: existing ash is visible from loaded-save readiness before unpause and remains stable after unpause without duplicate ash state.
 - `256x256` gate: a local fire inside a `256x256` world remains command-responsive, visually inspectable, and does not require map-wide burn acceptance.
 - Persistence gate: save/reload preserves or safely degrades burn damage, ash state, ash depletion, tainted ash washout, `FertileAsh` inventory, fertilize designations, and any beaver behavior state.
 - Any failed required QA gate must pass in a later run before the ticket can move to `05-integration/`.
@@ -81,8 +92,8 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 
 - Risk: this sprint is large enough to hide failures behind apparent progress.
 - Mitigation: coordinate as waves. Do not start rare ignition, final feedback, or persistence validation until their source lanes are implemented or explicitly blocked.
-- Risk: ash migration can invalidate off-sprint fertile ash work.
-- Mitigation: keep `TWF-082` evidence as the behavior target, but route final collection/application through `TWF-157` through `TWF-160`.
+- Risk: ash/water behavior could accidentally imply decontamination.
+- Mitigation: keep water-contact behavior isolated in `TWF-167` and preserve the no-decontamination rule from `TWF-079`.
 - Risk: generated or edited icons may look off-style even if technically bound.
 - Mitigation: compare against the full collected asset sheets and inspect screenshots in their real UI context, not isolated PNGs.
 - Risk: rare ignition can feel unfair if it appears causeless.

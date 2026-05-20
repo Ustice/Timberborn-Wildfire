@@ -431,7 +431,10 @@ public sealed class TimberbornQaCommandBridge
             $"target_z={stimulusResult.Z}_" +
             $"initial_cell={stimulusResult.InitialCell}_" +
             $"set_heat={stimulusResult.SetHeat}_" +
+            $"set_ash={FormatNumber(stimulusResult.SetAsh)}_" +
+            $"set_ash_contamination={FormatNumber(stimulusResult.SetAshContamination)}_" +
             $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}_" +
+            $"queued_ash_changes={FormatNumber(stimulusResult.QueuedAshChangeCount)}_" +
             $"burn_damage_target_key={FormatToken(stimulusResult.BurnDamageTargetKey)}_" +
             $"burn_damage_spec_id={FormatToken(stimulusResult.BurnDamageSpecId)}_" +
             $"burn_damage_target_kind={FormatToken(stimulusResult.BurnDamageTargetKind?.ToString())}_" +
@@ -707,6 +710,9 @@ public sealed record TimberbornQaDeltaStimulusResult(
     ushort InitialCell,
     byte SetHeat,
     int QueuedHeatChangeCount,
+    byte? SetAsh = null,
+    byte? SetAshContamination = null,
+    int? QueuedAshChangeCount = null,
     string? BurnDamageTargetKey = null,
     string? BurnDamageSpecId = null,
     TimberbornBurnDamageTargetKind? BurnDamageTargetKind = null,
@@ -931,6 +937,7 @@ public static class TimberbornQaFieldTargetSelectors
     public const string Default = "burnable";
     public const string Tree = "tree";
     public const string ContaminatedTree = "contaminated-tree";
+    public const string TaintedAsh = "tainted-ash";
     public const string SelectedTree = "selected-tree";
     public const string CenterTree = "center-tree";
     public const string BeaverExposure = "beaver-exposure";
@@ -952,6 +959,7 @@ public static class TimberbornQaFieldTargetSelectors
         Default,
         Tree,
         ContaminatedTree,
+        TaintedAsh,
         SelectedTree,
         CenterTree,
         BeaverExposure,
@@ -991,6 +999,9 @@ public static class TimberbornQaFieldTargetSelectors
             Default => true,
             Tree => materialClass == WildfireMaterialClass.Tree,
             ContaminatedTree => materialClass == WildfireMaterialClass.Tree,
+            TaintedAsh => materialClass is WildfireMaterialClass.Tree or
+                WildfireMaterialClass.Vegetation or
+                WildfireMaterialClass.Crop,
             SelectedTree => materialClass == WildfireMaterialClass.Tree,
             CenterTree => materialClass == WildfireMaterialClass.Tree,
             BeaverExposure => false,

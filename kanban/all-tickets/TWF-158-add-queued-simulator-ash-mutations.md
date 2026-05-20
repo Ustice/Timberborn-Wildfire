@@ -61,3 +61,4 @@ The ash model requires Timberborn actions to queue simulator changes for the nex
 ## Notes
 
 - This ticket is the bridge between simulator ash authority and Timberborn gameplay actions.
+- 2026-05-20 reconciliation: Jason confirmed this has been tested. Current implementation exposes bounded `AddAsh`, `RemoveAsh`, `SetAsh`, and `SetAshContamination` changes through `FireSimChange`, uploads them through the Unity/Timberborn compute paths, clamps ash amount and contamination, and routes fertile ash application and collection removals through queued simulator changes. Moved to `06-done`.

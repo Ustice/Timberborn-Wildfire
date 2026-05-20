@@ -510,6 +510,43 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void ExecuteQaDeltaStimulusReportsTaintedAshStimulusFields()
+    {
+        RecordingDeltaStimulus deltaStimulus = new(
+            new TimberbornQaDeltaStimulusResult(
+                TimberbornQaFieldTargetSelectors.TaintedAsh,
+                91,
+                3,
+                4,
+                2,
+                WildfireMaterialClass.Tree,
+                77u,
+                498,
+                SetHeat: 0,
+                QueuedHeatChangeCount: 0,
+                SetAsh: 3,
+                SetAshContamination: 7,
+                QueuedAshChangeCount: 1,
+                TargetSource: "qa_tainted_ash_field"));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: true)),
+            deltaStimulus,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus tainted-ash");
+
+        Assert.True(result.Success);
+        Assert.Equal([TimberbornQaFieldTargetSelectors.TaintedAsh], deltaStimulus.TargetSelectors);
+        Assert.Contains("target_selector=tainted-ash", result.Message);
+        Assert.Contains("set_heat=0", result.Message);
+        Assert.Contains("set_ash=3", result.Message);
+        Assert.Contains("set_ash_contamination=7", result.Message);
+        Assert.Contains("queued_heat_changes=0", result.Message);
+        Assert.Contains("queued_ash_changes=1", result.Message);
+        Assert.Contains("target_source=qa_tainted_ash_field", result.Message);
+    }
+
+    [Fact]
     public void ExecuteQaBuildingBurnoutStimulusQueuesBoundStimulusAndReportsTargetFields()
     {
         TimberbornQaCommandState state = new(
@@ -601,6 +638,8 @@ public sealed class TimberbornQaCommandBridgeTests
 
     [Theory]
     [InlineData("qa-delta-stimulus tree", "tree")]
+    [InlineData("qa-delta-stimulus contaminated-tree", "contaminated-tree")]
+    [InlineData("qa-delta-stimulus tainted-ash", "tainted-ash")]
     [InlineData("qa-delta-stimulus selected-tree", "selected-tree")]
     [InlineData("qa-delta-stimulus beaver-exposure", "beaver-exposure")]
     [InlineData("qa-delta-stimulus infrastructure", "infrastructure")]
@@ -779,6 +818,42 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Null(change.SetFlammability);
         Assert.Null(change.SetBurningLevel);
         Assert.Null(change.SetTerrain);
+        Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusTaintedAshQueuesSimulatorAshContaminationOnly()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, companionTargetId: 77u));
+
+        TimberbornQaDeltaStimulusResult result =
+            fireSystem.QueueQaDeltaStimulus(TimberbornQaFieldTargetSelectors.TaintedAsh);
+
+        Assert.Equal(TimberbornQaFieldTargetSelectors.TaintedAsh, result.TargetSelector);
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Tree, result.MaterialClass);
+        Assert.Equal("qa_tainted_ash_field", result.TargetSource);
+        Assert.Equal(0, result.SetHeat);
+        Assert.Equal(0, result.QueuedHeatChangeCount);
+        Assert.Equal((byte)3, result.SetAsh);
+        Assert.Equal((byte)7, result.SetAshContamination);
+        Assert.Equal(1, result.QueuedAshChangeCount);
+        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(38, change.CellIndex);
+        Assert.Null(change.SetCell);
+        Assert.Null(change.AddHeat);
+        Assert.Null(change.AddFuel);
+        Assert.Null(change.SetWater);
+        Assert.Null(change.SetFuel);
+        Assert.Null(change.SetHeat);
+        Assert.Null(change.SetFlammability);
+        Assert.Null(change.SetBurningLevel);
+        Assert.Null(change.SetTerrain);
+        Assert.Equal((byte)3, change.SetAsh);
+        Assert.Equal((byte)7, change.SetAshContamination);
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 

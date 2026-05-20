@@ -67,3 +67,4 @@ Update Timberborn persistence, status, collection, and fertility consumers so th
 ## Notes
 
 - This ticket supersedes the old split-authority wording in `TWF-078` and `TWF-082`, but it should not erase the evidence those tickets gathered.
+- 2026-05-20 reconciliation: Jason confirmed this has been tested. Current implementation persists simulator atmospheric ash state, syncs the Timberborn ash read model from `AtmosphericFields`, reports ash and fertile collection counters through status/QA readiness, maps clean harvested ash to `FertileAsh`, and routes collection/application depletion back to simulator ash changes. Moved to `06-done`.

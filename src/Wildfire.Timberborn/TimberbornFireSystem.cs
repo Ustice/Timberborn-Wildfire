@@ -39,6 +39,8 @@ public sealed class TimberbornFireSystem : IDisposable
         burningLevel: 0);
     private const byte QaSpentFuel = 0;
     private const byte QaWaterSuppressionWater = 3;
+    private const byte QaTaintedAshAmount = 3;
+    private const byte QaTaintedAshContamination = 7;
 
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
@@ -491,6 +493,11 @@ public sealed class TimberbornFireSystem : IDisposable
                 BurnDamageSpendFuel: target.SpendFuel);
         }
 
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.TaintedAsh)
+        {
+            return QueueTaintedAshDeltaStimulus(normalizedSelector);
+        }
+
         TimberbornImportedFieldTarget ignitionTarget = normalizedSelector switch
         {
             TimberbornQaFieldTargetSelectors.CenterTree => FindImportedTarget(
@@ -524,6 +531,37 @@ public sealed class TimberbornFireSystem : IDisposable
             ignitionTarget.InitialCell,
             QaIgnitionHeat,
             QueuedHeatChangeCount: queuedHeatChangeCount);
+    }
+
+    private TimberbornQaDeltaStimulusResult QueueTaintedAshDeltaStimulus(string normalizedSelector)
+    {
+        TimberbornImportedFieldTarget target = FindImportedTarget(
+            candidate => IsBurnableImportedTarget(candidate) &&
+                TimberbornQaFieldTargetSelectors.Matches(candidate.MaterialClass, normalizedSelector),
+            OrderByDescendingSoilContamination(),
+            $"No imported burnable field target was found for QA tainted ash selector '{normalizedSelector}'.");
+        RegisterChange(
+            new FireSimChange(
+                CellIndex: target.CellIndex,
+                SetAsh: QaTaintedAshAmount,
+                SetAshContamination: QaTaintedAshContamination),
+            "qa_tainted_ash_stimulus");
+
+        return new TimberbornQaDeltaStimulusResult(
+            normalizedSelector,
+            target.CellIndex,
+            target.X,
+            target.Y,
+            target.Z,
+            target.MaterialClass,
+            target.CompanionTargetId,
+            target.InitialCell,
+            SetHeat: 0,
+            QueuedHeatChangeCount: 0,
+            SetAsh: QaTaintedAshAmount,
+            SetAshContamination: QaTaintedAshContamination,
+            QueuedAshChangeCount: 1,
+            TargetSource: "qa_tainted_ash_field");
     }
 
     public TimberbornQaDeltaStimulusResult QueueQaSelectedTreeDeltaStimulus(

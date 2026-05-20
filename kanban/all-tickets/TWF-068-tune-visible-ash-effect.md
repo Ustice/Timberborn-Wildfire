@@ -62,3 +62,4 @@ Ash needs its own tuning pass because the right presentation differs from active
 - If simulator ash is not yet available, keep this ticket blocked or explicitly scoped to tuning existing presentation without expanding the old projection model.
 - `TWF-159` owns removing renderer projection and reading simulator ash state; this ticket owns visual polish once that source is available.
 - `TWF-163` owns inventory, toolbar, and alert icon assets; this ticket owns in-world ash presentation.
+- 2026-05-20 Jason confirmation: accepted the visible ash effect after simulator-state ash presentation was confirmed. Ash/water interaction remains separate in `TWF-167`; icon polish remains separate in `TWF-163`. Moved to `06-done`.

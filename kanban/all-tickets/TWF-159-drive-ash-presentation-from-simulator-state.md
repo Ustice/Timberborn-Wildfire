@@ -62,3 +62,4 @@ The ash model treats falling and settled ash as presentation states. Renderers s
 ## Notes
 
 - This ticket should not add new simulator ash rules; it consumes `TWF-157`.
+- 2026-05-20 Jason confirmation: accepted simulator-state ash presentation. Current renderer path binds `AtmosphericFields` into the ash overlay and no longer depends on renderer-owned ash projection as the gameplay authority. Moved to `06-done`.

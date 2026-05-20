@@ -52,10 +52,10 @@ Detailed sprint boundaries live in [../kanban/sprint-planning.md](../kanban/spri
 
 The current ash authority direction lives in [ash-simulation-model.md](ash-simulation-model.md). The implementation should move as one coordinated ash-model wave, but the durable work items are split so the board can track the different proof gates:
 
-- [ ] `TWF-157`: migrate ash amount and contamination to simulator transport state.
-- [ ] `TWF-158`: add queued simulator ash mutations for Timberborn actions.
-- [ ] `TWF-159`: drive ash presentation from simulator state without renderer projection.
-- [ ] `TWF-160`: sync ash persistence, status, harvest, and fertile application with simulator state.
+- [x] `TWF-157`: migrate ash amount and contamination to simulator transport state.
+- [x] `TWF-158`: add queued simulator ash mutations for Timberborn actions.
+- [x] `TWF-159`: drive ash presentation from simulator state without renderer projection.
+- [x] `TWF-160`: sync ash persistence, status, harvest, and fertile application with simulator state.
 - [ ] `TWF-161`: rename ash field concepts after the behavior migration is proven.
 
 ### Completed Gameplay Foundation
@@ -137,7 +137,7 @@ Follow-on gates:
 
 - Sprint 8: live QA recovery and blocked evidence triage.
 - Sprint 9: real field replacement and real-field proof closed as mixed done/blocked. `Fuel` is accepted as the stable `50x50` Sprint 9 surface, but `TWF-144` and `TWF-148` are blocked on making normal gameplay visuals plainly visible.
-- Sprint 11: visual, beaver, and ash verification closed as mixed done/blocked. `TWF-067` smoke readability and `TWF-073` beaver behavior harness are done; `TWF-078` and `TWF-082` are blocked on nonzero-ash persistence and full fertile-ash collection/application proof. See [../kanban/sprints/sprint-11-visual-beaver-ash-verification.md](../kanban/sprints/sprint-11-visual-beaver-ash-verification.md).
+- Sprint 11: visual, beaver, and clean-ash verification is closed. `TWF-067`, `TWF-073`, `TWF-078`, and `TWF-082` are done after Jason confirmed the clean ash and fertile ash routes; the split tainted-ash live gate is now accepted in `TWF-166`. See [../kanban/sprints/sprint-11-visual-beaver-ash-verification.md](../kanban/sprints/sprint-11-visual-beaver-ash-verification.md).
 - Later: visual consequences and aftermath from real fields should continue from [world-consequence-first-pass.md](world-consequence-first-pass.md) once `TWF-144`/`TWF-148` are unblocked.
-- Sprint 12: release gameplay readiness. Included tickets cover simulator-owned ash, contaminated ash, tainted ash washout, beaver consequences, rare ignition, aggregated feedback, release icons, persistence, and `256x256` QA; see [../kanban/sprints/sprint-12-release-gameplay-readiness.md](../kanban/sprints/sprint-12-release-gameplay-readiness.md).
+- Sprint 12: release gameplay readiness. `TWF-166` is done for live tainted-ash proof; remaining included tickets cover the broader contamination contract, ash/water interaction, beaver consequences, structure-on-fire alerts, burned-tree stump visuals, paused-load ash visibility, rare ignition, aggregated feedback, release icons, persistence, and `256x256` QA; see [../kanban/sprints/sprint-12-release-gameplay-readiness.md](../kanban/sprints/sprint-12-release-gameplay-readiness.md).
 - Later: release packaging and Steam Workshop after the gameplay loop, screenshots, and QA gates are stable.
