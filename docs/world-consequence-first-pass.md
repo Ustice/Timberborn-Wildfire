@@ -138,7 +138,7 @@ Required proof:
 
 ### Ash Deposition And Soil Effects
 
-Smoke and toxic smoke should deposit ash onto the surface below the affected cell as they diffuse. The ash field is gameplay aftermath, not just the temporary GPU visual ash channel.
+Smoke and toxic smoke should deposit ash into simulator transport state as they diffuse. The ash field is gameplay aftermath, not just the temporary GPU visual ash channel.
 
 Ash should visually work like soil moisture and soil contamination: a texture or field-weighted overlay over the ground with deterministic progressive noise so transitions look natural. Prefer built-in Timberborn field, shader, material, and texture systems before custom meshes or per-cell objects. The implementation should imitate native map-driven blending even if direct access to the native soil overlay system is unavailable.
 
@@ -226,7 +226,7 @@ Do:
 
 Do not:
 
-- Deposit persistent ash.
+- Deposit simulator-backed ash.
 - Apply beaver coughing behavior.
 - Create contamination state.
 
@@ -235,23 +235,23 @@ Done when:
 - Deterministic tests prove smoke stays distinct from fire.
 - Live QA captures smoke as a readable field or plume with status/log evidence.
 
-#### `TWF-068`: Persistent Ash Overlay
+#### `TWF-068`: Simulator-Backed Ash Overlay
 
 Purpose:
 
-- Re-scope this ticket from temporary visual ash tuning into visible persistent ash overlay work that reads `TWF-078` ash-field state.
+- Re-scope this ticket from temporary visual ash tuning into visible ash overlay work that reads simulator ash state through the Timberborn read model.
 
 Start from:
 
 - `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs`.
 - `src/Wildfire.Timberborn/TimberbornGpuFieldRenderer.cs`.
-- `docs/ARCHITECTURE.md` section "Ash Field Service".
+- `docs/ARCHITECTURE.md` section "Ash Adapter Services".
 - Existing renderer tests such as `tests/Wildfire.Core.Tests/TimberbornGpuFieldRendererTests.cs`.
 
 Do:
 
-- Consume a Timberborn-side ash-field service contract from `TWF-078`; if that service does not exist yet, stop and update or create the foundation ticket before rendering work continues.
-- Read ash entries by cell, strength, quality, last updated tick/day, and decay state.
+- Consume simulator ash readback through the Timberborn ash read model.
+- Read ash by cell, amount, contamination/quality, last updated tick/day, and decay state.
 - Render ash as a terrain-hugging overlay or native-like field, not per-cell objects.
 - Use deterministic coordinate noise to feather the edge.
 - Keep the GPU visual ash channel as temporary/debug input only.
@@ -264,7 +264,7 @@ Do not:
 
 Done when:
 
-- Tests cover ash-field input consumption, quality-to-render weight mapping, decay visibility, noise determinism, and renderer input generation.
+- Tests cover simulator ash input consumption, quality-to-render weight mapping, decay visibility, noise determinism, and renderer input generation.
 - Live QA captures a visible ash overlay or precise native-overlay blocker evidence.
 
 #### `TWF-069`: Fire Behavior With Recordings
@@ -328,15 +328,15 @@ Done when:
 - Tests prove steam selection remains distinct from fire and smoke.
 - Live QA captures high-resolution steam evidence with status/log proof.
 
-#### `TWF-078`: Persistent Ash Field Service
+#### `TWF-078`: Simulator-Backed Ash Read Model
 
 Purpose:
 
-- Own gameplay ash storage, quality, decay, persistence, and first growth-bonus hooks separately from the temporary GPU visual ash channel.
+- Verify gameplay ash quality, decay, persistence, and first growth-bonus hooks from simulator-owned ash transport state, separately from the temporary GPU visual ash channel.
 
 Start from:
 
-- `docs/ARCHITECTURE.md` section "Ash Field Service".
+- `docs/ARCHITECTURE.md` section "Ash Adapter Services".
 - `src/Wildfire.Timberborn/TimberbornResourceFuelCatalog.cs`.
 - Burn consequence outputs from `TWF-076`, `TWF-077`, and `TWF-084`.
 
@@ -347,22 +347,23 @@ Inputs:
 
 Do:
 
-- Store sparse ash entries by cell with strength, quality, source, decay, and persistence version.
-- Represent quality as `none`, `fertile`, `spent`, or `tainted`.
-- Create fertile ash only from accepted clean burn aftermath.
-- Create tainted ash from contaminated sources or contaminated affected cells.
+- Read simulator ash entries by cell with amount, contamination/quality, source metadata where available, decay, and persistence version.
+- Represent adapter-facing quality as `none`, `fertile`, `spent`, or `tainted` only as a derived view.
+- Treat uncontaminated simulator ash as fertile ash.
+- Treat contaminated simulator ash as tainted ash.
 - Expose status counters for ash cells by quality, new cells, decayed cells, persistence saves, and persistence loads.
 
 Do not:
 
 - Store ash in `PackedCell`.
+- Seed ash read-model entries from burn consequence source events.
 - Render the overlay directly if that is owned by `TWF-068`.
 - Implement ash collection or manual application.
 - Mutate native contamination unless the contaminated-ash ticket proves that path safe.
 
 Done when:
 
-- Tests cover creation, quality classification, source handling, decay, sparse persistence, and safe no-op behavior when source or contamination data is unavailable.
+- Tests cover simulator readback, quality classification, source handling, decay mutation requests, sparse persistence, and safe no-op behavior when source or contamination data is unavailable.
 - Live QA proves field state for fertile and tainted ash, or records exact safe-unavailable blockers.
 
 #### New Ticket: Scorch Heat History
@@ -605,13 +606,13 @@ Purpose:
 
 Start from:
 
-- The ash field service from `TWF-068` or its foundation ticket.
+- The simulator-owned ash transport field and the Timberborn ash read-model adapter.
 - Timberborn plant/growable API research notes or a fresh adapter survey.
 - `src/Wildfire.Timberborn/TimberbornResourceFuelCatalog.cs` for clean residue classification.
 
 Do:
 
-- Read fertile ash strength from the ash field service.
+- Read fertile ash strength from simulator ash readback through the Timberborn adapter.
 - Clamp the growth multiplier to `1.10`.
 - Apply only to plants or crops whose native growth API is proven safe.
 - Decay or remove the bonus when ash expires.
@@ -636,7 +637,7 @@ Purpose:
 
 Start from:
 
-- The ash field service.
+- The simulator-owned ash transport field and the Timberborn ash read-model adapter.
 - The contamination adapter from `TWF-079`.
 - Soil/contamination API research from the worker.
 
@@ -662,7 +663,7 @@ Done when:
 
 Purpose:
 
-- Later feature. This is not required for the first persistent ash or growth-multiplier pass.
+- Later feature. This is not required for the first simulator-backed ash or growth-multiplier pass.
 
 Do:
 
@@ -1002,7 +1003,7 @@ Do:
 Do not:
 
 - Apply structure burned phases.
-- Deposit ash directly except through the ash field service.
+- Deposit ash directly except by queuing a bounded simulator ash mutation.
 - Fake inventory loss without a safe API.
 
 Done when:
@@ -1013,12 +1014,12 @@ Done when:
 Summary of existing ticket changes:
 
 - `TWF-066`, `TWF-067`, and `TWF-070` remain live visual tuning lanes for fire, smoke, and steam particles or fields.
-- `TWF-068` should be re-scoped away from temporary visual ash only and should render persistent ash from `TWF-078`.
+- `TWF-068` should be re-scoped away from temporary visual ash only and should render simulator-backed ash through the Timberborn read model.
 - `TWF-069` remains fire-behavior acceptance with recordings, not visual polish or world consequences.
 - `TWF-075` is still the shared burn-damage foundation.
 - `TWF-076` needs the crop rule tightened from yield-loss-plus-optional visual marking to death on burn, burned dead texture, and destruction at full fuel depletion.
 - `TWF-077` should own structure closure, proportional material destruction, construction-threshold burned phases, repair gating, and burned texture application.
-- `TWF-078` owns persistent ash field storage, quality, decay, and persistence.
+- `TWF-078` is the historical ash proof; simulator transport state owns ash amount, quality, decay, and persistence.
 - `TWF-079` owns contamination-aware classification and should feed contaminated ash, toxic smoke, and no-decontamination invariants.
 - `TWF-080` owns aggregated player feedback after source consequence lanes exist.
 - `TWF-081` owns save/reload validation for durable consequence state.

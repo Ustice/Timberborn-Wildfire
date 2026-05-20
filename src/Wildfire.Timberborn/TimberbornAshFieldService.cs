@@ -30,9 +30,11 @@ public readonly record struct TimberbornAshFieldEntry(
     TimberbornAshSourceKind SourceKind,
     uint CreatedTick,
     uint UpdatedTick,
-    int PersistenceVersion)
+    int PersistenceVersion,
+    int CreatedDayNumber = 0,
+    int UpdatedDayNumber = 0)
 {
-    public const int CurrentPersistenceVersion = 1;
+    public const int CurrentPersistenceVersion = 2;
 
     public bool GrantsGrowth => Quality == WildfireAshQuality.Fertile && Strength > 0;
 
@@ -152,11 +154,13 @@ public readonly record struct TimberbornAshFieldSummary(
 
 public sealed class TimberbornAshFieldService
 {
-    public const int MaxStrength = 100;
-    public const int DefaultDecayPerTick = 1;
+    public const int MaxStrength = 3;
+    public const int FertileAshDecayDays = 15;
+    public const int TaintedAshDecayDays = 30;
     public const string FertileAshGoodId = "FertileAsh";
 
     private readonly Dictionary<int, TimberbornAshFieldEntry> _entries = new();
+    private readonly Dictionary<int, int> _lastDecayDayByCell = new();
     private readonly ITimberbornAshGrowthAdapter _growthAdapter;
     private readonly ITimberbornFireLogSink _logSink;
     private int _persistenceSaveCount;
@@ -183,60 +187,41 @@ public sealed class TimberbornAshFieldService
     public void Clear()
     {
         _entries.Clear();
+        _lastDecayDayByCell.Clear();
         LastSummary = TimberbornAshFieldSummary.Empty;
     }
 
-    public TimberbornAshFieldSummary ApplySources(
+    public TimberbornAshFieldSummary Advance(uint tick, int dayNumber = 0)
+    {
+        return ApplyDayDecay(tick, dayNumber);
+    }
+
+    public TimberbornAshFieldSummary ApplyDayDecay(
         uint tick,
-        IReadOnlyList<TimberbornAshSourceEvent> sourceEvents)
+        int dayNumber,
+        Action<TimberbornAshFieldCollectionRemoval>? onDecayedCell = null)
     {
-        if (sourceEvents is null)
-        {
-            throw new ArgumentNullException(nameof(sourceEvents));
-        }
-
-        int newAshCells = 0;
-        foreach (TimberbornAshSourceEvent sourceEvent in sourceEvents)
-        {
-            if (sourceEvent.CellIndex < 0 || sourceEvent.Strength <= 0)
+        TimberbornAshFieldCollectionRemoval[] removals = CalculateDayDecayRemovals(dayNumber)
+            .ToArray();
+        removals
+            .ToList()
+            .ForEach(removal =>
             {
-                continue;
-            }
+                if (_entries.TryGetValue(removal.CellIndex, out TimberbornAshFieldEntry entry))
+                {
+                    _lastDecayDayByCell[removal.CellIndex] = NextDecayDay(entry, dayNumber, removal.StrengthRemoved);
+                }
 
-            WildfireAshQuality quality = ClassifyQuality(sourceEvent);
-            if (quality == WildfireAshQuality.None)
-            {
-                continue;
-            }
-
-            int strength = Math.Clamp(sourceEvent.Strength, 1, MaxStrength);
-            if (_entries.TryGetValue(sourceEvent.CellIndex, out TimberbornAshFieldEntry existing))
-            {
-                _entries[sourceEvent.CellIndex] = Merge(existing, sourceEvent, quality, strength, tick);
-            }
-            else
-            {
-                _entries[sourceEvent.CellIndex] = new TimberbornAshFieldEntry(
-                    sourceEvent.CellIndex,
-                    quality,
-                    strength,
-                    sourceEvent.SourceKind,
-                    CreatedTick: tick,
-                    UpdatedTick: tick,
-                    TimberbornAshFieldEntry.CurrentPersistenceVersion);
-                newAshCells++;
-            }
-        }
-
-        return UpdateAndApplyGrowth(tick, sourceEvents.Count, newAshCells);
+                onDecayedCell?.Invoke(removal);
+            });
+        return UpdateAndApplyGrowth(
+            tick,
+            sourceEventCount: 0,
+            newAshCells: 0,
+            decayedAshCells: removals.Length);
     }
 
-    public TimberbornAshFieldSummary Advance(uint tick)
-    {
-        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: 0);
-    }
-
-    public TimberbornAshFieldCollectionRemoval RemoveCollectedFertileStrength(
+    public TimberbornAshFieldCollectionRemoval CalculateCollectedFertileStrengthRemoval(
         int cellIndex,
         int strengthToRemove)
     {
@@ -248,15 +233,10 @@ public sealed class TimberbornAshFieldService
         }
 
         int removedStrength = Math.Min(entry.Strength, strengthToRemove);
-        int remainingStrength = entry.Strength - removedStrength;
-        if (remainingStrength <= 0)
-        {
-            _entries.Remove(cellIndex);
-            return new TimberbornAshFieldCollectionRemoval(cellIndex, removedStrength, RemovedEntry: true);
-        }
-
-        _entries[cellIndex] = entry with { Strength = remainingStrength };
-        return new TimberbornAshFieldCollectionRemoval(cellIndex, removedStrength, RemovedEntry: false);
+        return new TimberbornAshFieldCollectionRemoval(
+            cellIndex,
+            removedStrength,
+            RemovedEntry: removedStrength >= entry.Strength);
     }
 
     public TimberbornAshFieldSnapshot SaveSnapshot()
@@ -269,7 +249,10 @@ public sealed class TimberbornAshFieldService
                 .ToArray());
     }
 
-    public TimberbornAshFieldSummary RestoreSnapshot(uint tick, TimberbornAshFieldSnapshot snapshot)
+    public TimberbornAshFieldSummary RestoreSnapshot(
+        uint tick,
+        TimberbornAshFieldSnapshot snapshot,
+        int dayNumber = 0)
     {
         if (snapshot is null)
         {
@@ -278,27 +261,37 @@ public sealed class TimberbornAshFieldService
 
         _entries.Clear();
         snapshot.Entries
-            .Where(static entry => entry.PersistenceVersion == TimberbornAshFieldEntry.CurrentPersistenceVersion)
+            .Where(static entry => entry.PersistenceVersion > 0 &&
+                entry.PersistenceVersion <= TimberbornAshFieldEntry.CurrentPersistenceVersion)
             .Where(static entry => entry.CellIndex >= 0 && entry.Quality != WildfireAshQuality.None && entry.Strength > 0)
             .ToList()
             .ForEach(entry => _entries[entry.CellIndex] = entry with
             {
                 Strength = Math.Clamp(entry.Strength, 1, MaxStrength),
                 UpdatedTick = tick,
+                UpdatedDayNumber = entry.UpdatedDayNumber == 0 ? dayNumber : entry.UpdatedDayNumber,
             });
+        _lastDecayDayByCell.Clear();
+        _entries.Values
+            .ToList()
+            .ForEach(entry => _lastDecayDayByCell[entry.CellIndex] = entry.UpdatedDayNumber);
         _persistenceLoadCount++;
-        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: 0);
+        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: 0, decayedAshCells: 0);
     }
 
     public TimberbornAshFieldSummary SyncFromAtmosphericFields(
         uint tick,
-        IReadOnlyList<uint> atmosphericFields)
+        IReadOnlyList<uint> atmosphericFields,
+        int dayNumber = 0)
     {
         if (atmosphericFields is null)
         {
             throw new ArgumentNullException(nameof(atmosphericFields));
         }
 
+        Dictionary<int, TimberbornAshFieldEntry> existingEntries = _entries.ToDictionary(
+            static pair => pair.Key,
+            static pair => pair.Value);
         _entries.Clear();
         atmosphericFields
             .Select(static (packed, index) => (State: WildfireAtmosphericFieldState.Unpack(packed), CellIndex: index))
@@ -309,22 +302,38 @@ public sealed class TimberbornAshFieldService
                 WildfireAshQuality quality = item.State.AshContamination > 0
                     ? WildfireAshQuality.Tainted
                     : WildfireAshQuality.Fertile;
+                bool hadExisting = existingEntries.TryGetValue(item.CellIndex, out TimberbornAshFieldEntry existing);
+                int updatedDayNumber = _lastDecayDayByCell.TryGetValue(item.CellIndex, out int lastDecayDay)
+                    ? lastDecayDay
+                    : hadExisting
+                        ? existing.UpdatedDayNumber
+                        : dayNumber;
                 _entries[item.CellIndex] = new TimberbornAshFieldEntry(
                     item.CellIndex,
                     quality,
                     item.State.Ash * TimberbornFertileAshCollectionService.StrengthPerGood,
                     TimberbornAshSourceKind.Unknown,
-                    CreatedTick: tick,
+                    CreatedTick: hadExisting ? existing.CreatedTick : tick,
                     UpdatedTick: tick,
-                    TimberbornAshFieldEntry.CurrentPersistenceVersion);
+                    TimberbornAshFieldEntry.CurrentPersistenceVersion,
+                    CreatedDayNumber: hadExisting ? existing.CreatedDayNumber : dayNumber,
+                    UpdatedDayNumber: updatedDayNumber);
             });
+        _lastDecayDayByCell.Keys
+            .Where(cellIndex => !_entries.ContainsKey(cellIndex))
+            .ToArray()
+            .ToList()
+            .ForEach(cellIndex => _lastDecayDayByCell.Remove(cellIndex));
 
-        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: _entries.Count);
+        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: _entries.Count, decayedAshCells: 0);
     }
 
-    private TimberbornAshFieldSummary UpdateAndApplyGrowth(uint tick, int sourceEventCount, int newAshCells)
+    private TimberbornAshFieldSummary UpdateAndApplyGrowth(
+        uint tick,
+        int sourceEventCount,
+        int newAshCells,
+        int decayedAshCells)
     {
-        int decayedAshCells = DecayEntries(tick);
         TimberbornAshGrowthBonusRequest[] growthRequests = _entries.Values
             .Where(static entry => entry.GrantsGrowth)
             .Select(static entry => new TimberbornAshGrowthBonusRequest(
@@ -366,75 +375,46 @@ public sealed class TimberbornAshFieldService
         return LastSummary;
     }
 
-    private int DecayEntries(uint tick)
+    private IEnumerable<TimberbornAshFieldCollectionRemoval> CalculateDayDecayRemovals(int dayNumber)
     {
-        int removed = 0;
-        _entries.Values
-            .Where(entry => tick > entry.UpdatedTick)
-            .Select(entry => DecayEntry(entry, tick))
-            .ToList()
-            .ForEach(entry =>
-            {
-                if (entry.Strength <= 0)
-                {
-                    _entries.Remove(entry.CellIndex);
-                    removed++;
-                }
-                else
-                {
-                    _entries[entry.CellIndex] = entry;
-                }
-            });
-
-        return removed;
+        return _entries.Values
+            .Select(entry => DecayEntryByDay(entry, dayNumber))
+            .Where(static removal => removal.HasValue)
+            .Select(static removal => removal!.Value)
+            .ToList();
     }
 
-    private static TimberbornAshFieldEntry DecayEntry(TimberbornAshFieldEntry entry, uint tick)
+    private static TimberbornAshFieldCollectionRemoval? DecayEntryByDay(
+        TimberbornAshFieldEntry entry,
+        int dayNumber)
     {
-        uint elapsed = tick - entry.UpdatedTick;
-        int decayedStrength = entry.Strength - (int)Math.Min(int.MaxValue, elapsed * DefaultDecayPerTick);
-        return entry with
+        if (entry.Quality == WildfireAshQuality.None || entry.Strength <= 0)
         {
-            Strength = decayedStrength,
-            UpdatedTick = tick,
-        };
-    }
-
-    private static TimberbornAshFieldEntry Merge(
-        TimberbornAshFieldEntry existing,
-        TimberbornAshSourceEvent sourceEvent,
-        WildfireAshQuality quality,
-        int strength,
-        uint tick)
-    {
-        WildfireAshQuality mergedQuality = MergeQuality(existing.Quality, quality);
-        return existing with
-        {
-            Quality = mergedQuality,
-            Strength = Math.Clamp(existing.Strength + strength, 1, MaxStrength),
-            SourceKind = sourceEvent.SourceKind,
-            UpdatedTick = tick,
-        };
-    }
-
-    private static WildfireAshQuality MergeQuality(WildfireAshQuality existing, WildfireAshQuality incoming)
-    {
-        if (existing == WildfireAshQuality.Tainted || incoming == WildfireAshQuality.Tainted)
-        {
-            return WildfireAshQuality.Tainted;
+            return null;
         }
 
-        if (existing == WildfireAshQuality.Fertile || incoming == WildfireAshQuality.Fertile)
-        {
-            return WildfireAshQuality.Fertile;
-        }
-
-        return existing == WildfireAshQuality.Spent || incoming == WildfireAshQuality.Spent
-            ? WildfireAshQuality.Spent
-            : WildfireAshQuality.None;
+        int intervalDays = entry.Quality == WildfireAshQuality.Tainted
+            ? TaintedAshDecayDays
+            : FertileAshDecayDays;
+        int elapsedDays = Math.Max(0, dayNumber - entry.UpdatedDayNumber);
+        int strengthToRemove = Math.Min(entry.Strength, elapsedDays / intervalDays);
+        return strengthToRemove <= 0
+            ? null
+            : new TimberbornAshFieldCollectionRemoval(
+                entry.CellIndex,
+                strengthToRemove,
+                RemovedEntry: strengthToRemove >= entry.Strength);
     }
 
-    private static WildfireAshQuality ClassifyQuality(TimberbornAshSourceEvent sourceEvent)
+    private static int NextDecayDay(TimberbornAshFieldEntry entry, int dayNumber, int strengthRemoved)
+    {
+        int intervalDays = entry.Quality == WildfireAshQuality.Tainted
+            ? TaintedAshDecayDays
+            : FertileAshDecayDays;
+        return Math.Min(dayNumber, entry.UpdatedDayNumber + (strengthRemoved * intervalDays));
+    }
+
+    internal static WildfireAshQuality ClassifyQuality(TimberbornAshSourceEvent sourceEvent)
     {
         if (sourceEvent.IsSourceContaminated || sourceEvent.IsAffectedCellContaminated)
         {
@@ -510,7 +490,6 @@ public sealed class NullTimberbornAshFieldSink : ITimberbornAshFieldSink
 public sealed class TimberbornAshFieldSink : ITimberbornAshFieldSink
 {
     private readonly ITimberbornBurnDamageTargetStateProvider _targetStateProvider;
-    private readonly TimberbornAshFieldService _ashFieldService;
     private readonly TimberbornResourceFuelCatalog _resourceFuelCatalog;
     private readonly Func<int, bool> _affectedCellContaminationProvider;
 
@@ -521,7 +500,7 @@ public sealed class TimberbornAshFieldSink : ITimberbornAshFieldSink
         Func<int, bool>? affectedCellContaminationProvider = null)
     {
         _targetStateProvider = targetStateProvider ?? throw new ArgumentNullException(nameof(targetStateProvider));
-        _ashFieldService = ashFieldService ?? throw new ArgumentNullException(nameof(ashFieldService));
+        _ = ashFieldService ?? throw new ArgumentNullException(nameof(ashFieldService));
         _resourceFuelCatalog = resourceFuelCatalog ?? TimberbornResourceFuelCatalog.Default;
         _affectedCellContaminationProvider = affectedCellContaminationProvider ?? (_ => false);
     }
@@ -542,7 +521,33 @@ public sealed class TimberbornAshFieldSink : ITimberbornAshFieldSink
             .Select(static sourceEvent => sourceEvent!.Value)
             .ToArray();
 
-        return _ashFieldService.ApplySources(tick, sourceEvents);
+        return SummarizeSourceEvents(tick, sourceEvents);
+    }
+
+    private static TimberbornAshFieldSummary SummarizeSourceEvents(
+        uint tick,
+        IReadOnlyList<TimberbornAshSourceEvent> sourceEvents)
+    {
+        TimberbornAshSourceEvent[] ashEvents = sourceEvents
+            .Where(static sourceEvent => sourceEvent.CellIndex >= 0 && sourceEvent.Strength > 0)
+            .ToArray();
+        int fertileCells = ashEvents
+            .Count(static sourceEvent => TimberbornAshFieldService.ClassifyQuality(sourceEvent) == WildfireAshQuality.Fertile);
+        int spentCells = ashEvents
+            .Count(static sourceEvent => TimberbornAshFieldService.ClassifyQuality(sourceEvent) == WildfireAshQuality.Spent);
+        int taintedCells = ashEvents
+            .Count(static sourceEvent => TimberbornAshFieldService.ClassifyQuality(sourceEvent) == WildfireAshQuality.Tainted);
+
+        return TimberbornAshFieldSummary.Empty with
+        {
+            Tick = tick,
+            SourceEventCount = ashEvents.Length,
+            FertileAshCellCount = fertileCells,
+            SpentAshCellCount = spentCells,
+            TaintedAshCellCount = taintedCells,
+            GrowthCandidateCellCount = fertileCells,
+            GrowthSkippedTaintedCellCount = taintedCells,
+        };
     }
 
     private TimberbornAshSourceEvent? CreateSourceEvent(uint tick, TimberbornFireCellDeltaDecision decision)

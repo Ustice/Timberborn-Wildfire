@@ -161,7 +161,7 @@ The design says exact visual constants should be tuned from shader snapshots and
   - Capture live visual evidence from a loaded Timberborn save: PASS. QA captured loaded-save screenshots and a live screenshot during an active pooled-effect counter window, backed by command outputs and `Player.log`.
   - Keep packed-cell storage unchanged unless explicitly changed: PASS. The committed files do not add packed-cell storage fields; visual derivation reads existing `PackedCell` fuel/heat/terrain state only.
   - Document accepted constants, commands, artifact paths, and interpretation in `docs/TEST_PLAN.md`: PASS.
-  - Ash-storage decision explicit: PASS. `docs/TEST_PLAN.md` and this ticket both state ash is a temporary heat/fuel approximation because `PackedCell` has no burn-history field, and persistent ash needs a future storage/design decision.
+  - Ash-storage decision explicit: PASS for this historical visual-output lane. `docs/TEST_PLAN.md` and this ticket both state that the older shader snapshot ash was a temporary heat/fuel approximation because `PackedCell` has no burn-history field. Gameplay ash now belongs to simulator transport state, not `PackedCell` and not a Timberborn-owned store.
 
 - Cleanup:
   - Timberborn was quit after QA.

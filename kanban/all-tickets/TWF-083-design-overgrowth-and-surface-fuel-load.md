@@ -49,4 +49,5 @@ The design notes that underbrush, grass, and overgrowth could become a future ha
 ## Notes
 
 - This is deferred future work.
+- 2026-05-19 release scope correction: the broad overgrowth system remains deferred, but `TWF-165` promotes a focused release slice for rare deterministic ignition from fire-using buildings and dry dead vegetation during drought.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Ash And Fertility".

@@ -169,6 +169,8 @@ Responsibilities:
 - Treat uncontaminated ash as fertile for gameplay purposes and contaminated ash as hazardous.
 - Queue `FertileAsh` application and ash-removal actions for the next simulator cycle.
 - Prevent contaminated ash from producing a fertility bonus unless a future decontamination mechanic explicitly allows it.
+- Fade tainted ash over time and wash it away through water-contact mutations only through simulator-owned ash state.
+- Treat water tainting from washed tainted ash as a bounded Timberborn adapter mutation with safe-unavailable telemetry when no safe API exists.
 - Preserve simulator ash state across save/load.
 - Expose collection hooks so beavers can gather uncontaminated ash as `FertileAsh` and place it in fields.
 
@@ -192,7 +194,7 @@ Burn progression:
 
 The service should cancel or interrupt unsafe work, increase path costs or avoidance where Timberborn supports it, and aggregate danger telemetry for player feedback. It should reuse native injury, sleep, contamination, treatment, and death APIs only after live tests prove the paths safe.
 
-Release scope is telemetry, avoidance/work interruption, coughing, singed, and burned behavior when API-safe. Choking, death, native badwater contamination coupling, ash collection, and faction response are later gates unless a ticket proves the API path and recoverability.
+Release scope is telemetry, avoidance/work interruption, coughing, singed, burned behavior when API-safe, and fertile ash collection when the gatherer/inventory path is proven. Choking, death, native badwater contamination coupling, and faction response are later gates unless a ticket proves the API path and recoverability.
 
 ### Active Suppression Services
 
@@ -216,7 +218,20 @@ Timberborn consequence services should apply these rules:
 - Contaminated water or badwater can suppress fire but does not become clean water.
 - Contaminated soil remains contaminated after fire.
 - Ash on contaminated soil is tainted rather than fertile.
+- Tainted ash can fade or wash away, but washing it should slightly taint water when a safe water-contamination mutation path exists.
 - Contaminated beaver exposure can combine respiratory or burn progressions with native badwater contamination if the API path is proven safe.
+
+### Rare Ignition Inputs
+
+Rare spontaneous ignition is adapter input, not a second fire rule in Timberborn. Timberborn-facing services can classify fire-using buildings, dead vegetation, and drought-dry vegetation as ignition candidates, then pass deterministic candidate data into the simulator or queued change path. Ordinary non-fire buildings must not become spontaneous ignition candidates.
+
+Responsibilities:
+
+- Use deterministic hash-based rolls keyed by cell, tick, seed, and drought or material state.
+- Keep default ignition probability rare and settings-tunable.
+- Increase risk only for eligible fire-using buildings or dry dead vegetation.
+- Reduce or suppress risk for wet, irrigated, or water-suppressed cells.
+- Report candidate, roll, ignition, and skipped-ineligible counters for player feedback and QA.
 
 ### Player Feedback Aggregation
 

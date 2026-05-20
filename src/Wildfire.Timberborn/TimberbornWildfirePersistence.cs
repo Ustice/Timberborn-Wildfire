@@ -26,6 +26,7 @@ public sealed record TimberbornWildfirePersistenceSnapshot(
     int PersistenceVersion,
     TimberbornFireSimPersistenceSnapshot? FireSim,
     TimberbornAshFieldSnapshot AshField,
+    TimberbornBeaverFieldBehaviorSnapshot BeaverBehavior,
     TimberbornConsequencePersistenceSnapshot Consequences)
 {
     public const int CurrentPersistenceVersion = 1;
@@ -36,6 +37,7 @@ public sealed record TimberbornWildfirePersistenceSnapshot(
         new TimberbornAshFieldSnapshot(
             TimberbornAshFieldEntry.CurrentPersistenceVersion,
             Array.Empty<TimberbornAshFieldEntry>()),
+        TimberbornBeaverFieldBehaviorSnapshot.Empty,
         new TimberbornConsequencePersistenceSnapshot(Array.Empty<TimberbornBurnDamagePersistenceEntry>()));
 }
 
@@ -52,6 +54,7 @@ public static class TimberbornWildfirePersistenceCodec
     private const string HeaderRecord = "WF";
     private const string FireSimRecord = "FIRE";
     private const string AshRecord = "ASH";
+    private const string BeaverBehaviorRecord = "BEAVER";
     private const string BurnDamageRecord = "BURN";
 
     public static string Encode(TimberbornWildfirePersistenceSnapshot snapshot)
@@ -91,6 +94,21 @@ public static class TimberbornWildfirePersistenceCodec
                 ((int)entry.SourceKind).ToString(CultureInfo.InvariantCulture),
                 entry.CreatedTick.ToString(CultureInfo.InvariantCulture),
                 entry.UpdatedTick.ToString(CultureInfo.InvariantCulture),
+                entry.PersistenceVersion.ToString(CultureInfo.InvariantCulture),
+                entry.CreatedDayNumber.ToString(CultureInfo.InvariantCulture),
+                entry.UpdatedDayNumber.ToString(CultureInfo.InvariantCulture))));
+
+        snapshot.BeaverBehavior.Entries
+            .OrderBy(static entry => entry.BeaverId, StringComparer.Ordinal)
+            .ToList()
+            .ForEach(entry => lines.Add(string.Join(
+                Separator,
+                BeaverBehaviorRecord,
+                EncodeString(entry.BeaverId),
+                ((int)entry.LastVariant).ToString(CultureInfo.InvariantCulture),
+                entry.LastDecisionTick.ToString(CultureInfo.InvariantCulture),
+                entry.ConsecutiveExposedSamples.ToString(CultureInfo.InvariantCulture),
+                entry.IsExposed ? "1" : "0",
                 entry.PersistenceVersion.ToString(CultureInfo.InvariantCulture))));
 
         snapshot.Consequences.BurnDamageStates
@@ -132,6 +150,7 @@ public static class TimberbornWildfirePersistenceCodec
 
         TimberbornFireSimPersistenceSnapshot? fireSim = null;
         List<TimberbornAshFieldEntry> ashEntries = new();
+        List<TimberbornBeaverFieldBehaviorStateEntry> beaverBehaviorEntries = new();
         List<TimberbornBurnDamagePersistenceEntry> burnDamageEntries = new();
 
         lines.Skip(1)
@@ -152,6 +171,9 @@ public static class TimberbornWildfirePersistenceCodec
                     case AshRecord when parts.Length >= 8:
                         ashEntries.Add(DecodeAshEntry(parts));
                         break;
+                    case BeaverBehaviorRecord when parts.Length >= 7:
+                        beaverBehaviorEntries.Add(DecodeBeaverBehaviorEntry(parts));
+                        break;
                     case BurnDamageRecord when parts.Length >= 4:
                         burnDamageEntries.Add(new TimberbornBurnDamagePersistenceEntry(
                             DecodeString(parts[1]),
@@ -167,6 +189,9 @@ public static class TimberbornWildfirePersistenceCodec
             new TimberbornAshFieldSnapshot(
                 TimberbornAshFieldEntry.CurrentPersistenceVersion,
                 ashEntries),
+            new TimberbornBeaverFieldBehaviorSnapshot(
+                TimberbornBeaverFieldBehaviorSnapshot.CurrentPersistenceVersion,
+                beaverBehaviorEntries),
             new TimberbornConsequencePersistenceSnapshot(burnDamageEntries));
     }
 
@@ -224,6 +249,7 @@ public static class TimberbornWildfirePersistenceCodec
 
     private static TimberbornAshFieldEntry DecodeAshEntry(IReadOnlyList<string> parts)
     {
+        int persistenceVersion = ParseInt(parts[7]);
         return new TimberbornAshFieldEntry(
             ParseInt(parts[1]),
             (WildfireAshQuality)ParseInt(parts[2]),
@@ -231,7 +257,20 @@ public static class TimberbornWildfirePersistenceCodec
             (TimberbornAshSourceKind)ParseInt(parts[4]),
             ParseUInt(parts[5]),
             ParseUInt(parts[6]),
-            ParseInt(parts[7]));
+            persistenceVersion,
+            CreatedDayNumber: parts.Count >= 10 ? ParseInt(parts[8]) : 0,
+            UpdatedDayNumber: parts.Count >= 10 ? ParseInt(parts[9]) : 0);
+    }
+
+    private static TimberbornBeaverFieldBehaviorStateEntry DecodeBeaverBehaviorEntry(IReadOnlyList<string> parts)
+    {
+        return new TimberbornBeaverFieldBehaviorStateEntry(
+            ParseInt(parts[6]),
+            DecodeString(parts[1]),
+            (TimberbornBeaverFieldBehaviorVariant)ParseInt(parts[2]),
+            ParseUInt(parts[3]),
+            ParseInt(parts[4]),
+            ParseInt(parts[5]) != 0);
     }
 
     private static string[] SplitLine(string line)

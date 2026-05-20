@@ -29,9 +29,11 @@ Ash needs its own tuning pass because the right presentation differs from active
 
 ## Requirements
 
-- Keep visual ash behavior aligned with `docs/DESIGN.md` sections 17 and 20: no persistent ash storage in `PackedCell`, no renderer-owned ash creation, and no confusion with gameplay ash/fertility.
+- Keep visual ash behavior aligned with `docs/DESIGN.md` sections 17 and 20: no ash storage in `PackedCell`, no renderer-owned ash creation, and no confusion with simulator-backed gameplay ash/fertility.
 - Coordinate with `TWF-159`, which changes the ash presentation source of truth.
 - Tune visual-field or presentation parameters only where needed for visible aftermath readability.
+- Visually distinguish uncontaminated/fertile ash from contaminated/tainted ash.
+- Show ash receding when simulator ash level decreases through collection, decay, or washout.
 - Prefer Timberborn-native smoke/ash-like prefabs and material conventions before custom art.
 - Capture high-resolution recordings and screenshots showing the accepted ash or aftermath behavior.
 - Update `docs/DESIGN.md` only if the ash contract changes.
@@ -59,3 +61,4 @@ Ash needs its own tuning pass because the right presentation differs from active
 
 - If simulator ash is not yet available, keep this ticket blocked or explicitly scoped to tuning existing presentation without expanding the old projection model.
 - `TWF-159` owns removing renderer projection and reading simulator ash state; this ticket owns visual polish once that source is available.
+- `TWF-163` owns inventory, toolbar, and alert icon assets; this ticket owns in-world ash presentation.

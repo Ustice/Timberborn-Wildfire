@@ -25,15 +25,18 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const int MaxTonguesPerCell  = 5;
     private const int VertsPerTongue     = 36;  // 4 pyramid faces × 9 verts (bottom quad + top tri)
     private const int VertsPerCloud      = 6;
-    private const int SmokePuffsPerCell  = 6;
+    private const int SmokePuffsPerCell  = 8;
     private const int SteamPuffsPerCell  = 3;
+    private const float SmokeRadius = 1.38f;
+    private const float SmokeHeightOffset = 3.55f;
+    private const float SmokeMaxOpacity = 0.74f;
 
     // Asymmetric smoothing rates (exponential lerp per second).
     // Fast ramp-up for immediate ignition feedback; slow ramp-down for particle-lifetime feel.
     private const float FireUpSpeed   = 4.0f;
     private const float FireDownSpeed = 2.0f;
-    private const float SmokeUpSpeed  = 3.0f;
-    private const float SmokeDownSpeed = 1.0f;
+    private const float SmokeUpSpeed  = 2.8f;
+    private const float SmokeDownSpeed = 0.72f;
     private const float SteamUpSpeed  = 1.45f;
     private const float SteamDownSpeed = 3.75f;
 
@@ -100,6 +103,14 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
                 "wildfire_timberborn_gpu_indirect_renderer_initialized " +
                 $"cell_count={_grid.CellCount} " +
                 $"width={_grid.Width} height={_grid.Height} depth={_grid.Depth}");
+            _logSink.Info(
+                "wildfire_timberborn_gpu_indirect_renderer_smoke_tuning " +
+                $"puffs_per_cell={SmokePuffsPerCell} " +
+                $"radius={SmokeRadius:F2} " +
+                $"height_offset={SmokeHeightOffset:F2} " +
+                $"max_opacity={SmokeMaxOpacity:F2} " +
+                $"up_speed={SmokeUpSpeed:F2} " +
+                $"down_speed={SmokeDownSpeed:F2}");
         }
         catch (Exception exception)
         {
@@ -263,11 +274,11 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeMaterial = new Material(cloudShader) { name = "wildfire_smoke" };
         _smokeMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _smokeMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
-        _smokeMaterial.SetColor("_BaseColor",   new Color(0.27f, 0.28f, 0.27f));
+        _smokeMaterial.SetColor("_BaseColor",   new Color(0.34f, 0.35f, 0.34f));
         _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
-        _smokeMaterial.SetFloat("_Radius",        1.14f);
-        _smokeMaterial.SetFloat("_HeightOffset",  3.24f);
-        _smokeMaterial.SetFloat("_MaxOpacity",    0.62f);
+        _smokeMaterial.SetFloat("_Radius",        SmokeRadius);
+        _smokeMaterial.SetFloat("_HeightOffset",  SmokeHeightOffset);
+        _smokeMaterial.SetFloat("_MaxOpacity",    SmokeMaxOpacity);
         _smokeMaterial.SetFloat("_IsSteam",       0f);
         _smokeMaterial.SetFloat("_PuffsPerCell",  (float)SmokePuffsPerCell);
 

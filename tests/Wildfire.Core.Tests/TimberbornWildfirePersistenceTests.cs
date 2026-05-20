@@ -33,6 +33,17 @@ public sealed class TimberbornWildfirePersistenceTests
                         UpdatedTick: 42,
                         TimberbornAshFieldEntry.CurrentPersistenceVersion),
                 ]),
+            new TimberbornBeaverFieldBehaviorSnapshot(
+                TimberbornBeaverFieldBehaviorSnapshot.CurrentPersistenceVersion,
+                [
+                    new TimberbornBeaverFieldBehaviorStateEntry(
+                        TimberbornBeaverFieldBehaviorStateEntry.CurrentPersistenceVersion,
+                        "beaver:1",
+                        TimberbornBeaverFieldBehaviorVariant.FireHeat,
+                        LastDecisionTick: 40,
+                        ConsecutiveExposedSamples: 2,
+                        IsExposed: true),
+                ]),
             new TimberbornConsequencePersistenceSnapshot(
                 [
                     new TimberbornBurnDamagePersistenceEntry("tree:pine:1", DamageTaken: 12, LastDamagedTick: 42),
@@ -48,6 +59,10 @@ public sealed class TimberbornWildfirePersistenceTests
         TimberbornAshFieldEntry ashEntry = Assert.Single(roundTrip.AshField.Entries);
         Assert.Equal(WildfireAshQuality.Fertile, ashEntry.Quality);
         Assert.Equal(80, ashEntry.Strength);
+        TimberbornBeaverFieldBehaviorStateEntry behaviorEntry = Assert.Single(roundTrip.BeaverBehavior.Entries);
+        Assert.Equal("beaver:1", behaviorEntry.BeaverId);
+        Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, behaviorEntry.LastVariant);
+        Assert.True(behaviorEntry.IsExposed);
         TimberbornBurnDamagePersistenceEntry burnEntry = Assert.Single(roundTrip.Consequences.BurnDamageStates);
         Assert.Equal("tree:pine:1", burnEntry.TargetKey);
         Assert.Equal(12, burnEntry.DamageTaken);

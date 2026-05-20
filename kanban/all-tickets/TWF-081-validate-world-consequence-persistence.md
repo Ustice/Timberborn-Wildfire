@@ -13,6 +13,8 @@ dependencies:
   - TWF-084
   - TWF-115
   - TWF-073
+  - TWF-082
+  - TWF-164
 write_scope:
   - src/Wildfire.Timberborn/**
   - tests/Wildfire.Core.Tests/**
@@ -36,8 +38,10 @@ The world consequence design introduces durable state beyond transient simulator
 - Validate save/reload after crop burn consequences.
 - Validate save/reload after tree burn consequences.
 - Validate save/reload after structure burn damage and construction rollback.
-- Validate save/reload after persistent ash fields exist.
+- Validate save/reload after simulator-backed ash fields exist.
 - Validate save/reload after contamination-aware tainted aftermath exists, if available.
+- Validate save/reload after fertile ash collection depletes simulator ash and mutates `FertileAsh` inventory.
+- Validate save/reload after tainted ash decay or water washout, including no resurrection of washed ash.
 - Validate save/reload after stored-goods loss exists, including no duplicate or resurrected inventory.
 - Validate save/reload of beaver field behavior harness state if any non-transient beaver status is implemented.
 - Confirm disabled or removed mod behavior remains recoverable or document a clear limitation.
@@ -50,6 +54,8 @@ The world consequence design introduces durable state beyond transient simulator
 - `TWF-047` proves the baseline save/reload, disable, and re-enable lifecycle.
 - `TWF-076`, `TWF-077`, `TWF-078`, `TWF-079`, `TWF-084`, and `TWF-115` create the durable world consequence states this ticket validates.
 - `TWF-073` provides beaver behavior persistence hooks when variant tickets create non-transient state.
+- `TWF-082` adds fertile ash collection/application state.
+- `TWF-164` adds tainted ash decay and water washout state.
 
 ## Role
 

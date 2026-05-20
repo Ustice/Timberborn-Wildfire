@@ -2,13 +2,13 @@
 
 ## Goal
 
-Turn the current ready and verify work into accepted evidence: smoke readability, the beaver behavior harness, persistent ash live QA, and fertile-ash collection/application live QA.
+Turn the current ready and verify work into accepted evidence: smoke readability, the beaver behavior harness, simulator-backed ash live QA, and fertile-ash collection/application live QA.
 
 ## Included Tickets
 
 - `TWF-067`: tune visible smoke effect now that the procedural Fire baseline is accepted.
 - `TWF-073`: add the beaver field behavior harness from accepted beaver exposure telemetry.
-- `TWF-078`: verify the off-sprint persistent ash field service implementation with live Timberborn evidence.
+- `TWF-078`: verify the off-sprint simulator-backed ash read model with live Timberborn evidence.
 - `TWF-082`: verify the off-sprint fertile ash collection/application implementation with live Timberborn evidence after `TWF-078`.
 
 ## Out Of Scope
@@ -73,3 +73,5 @@ Turn the current ready and verify work into accepted evidence: smoke readability
 
 - Created after commit `49f339c2`, which reconciled the board with off-sprint ash and fertile-ash implementation work.
 - This sprint intentionally mixes two implementation lanes with two QA verification lanes because Jason asked to include all four next-lane choices. Keep write scopes serialized where needed.
+- Closed on 2026-05-19 as mixed done/blocked. `TWF-067` passed review, live smoke readability QA, integration, `git diff --check`, targeted renderer tests, and full `dotnet test`; it moved to `06-done`. `TWF-073` passed review, live beaver-harness QA, integration, focused tests, and full `dotnet test`; it moved to `06-done`. `TWF-078` stayed blocked after a partial live pass because nonzero-ash save/reload proof was not captured before ash decay. `TWF-082` stayed blocked because the canonical full fertile-ash warehouse/native-hauling, application, tainted-cell, and save/reload gate remains unproven.
+- Next unblock is `TWF-078`: create or use a QA-controlled immediate pause/save path after ash creation, or otherwise hold ash long enough to save with `ash_entries>0`, reload, and prove restored ash counters. Then rerun `TWF-082` on the user-specified `Fuel (1)` warehouse route.

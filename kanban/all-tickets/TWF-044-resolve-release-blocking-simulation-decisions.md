@@ -68,7 +68,7 @@ The design currently keeps several questions open: tick cadence, diagonal spread
 
 - `docs/ARCHITECTURE.md` was not changed because these decisions confirm the existing ownership boundaries: core contracts and packed data stay host-agnostic, Unity/compute owns fire rules, and Timberborn remains an adapter.
 - Deferred follow-up notes:
-  - Diagonal spread, wind, persistent ash storage, biome/weather heat loss, and active-frontier dispatch remain future mechanics/optimizations, not release blockers.
+  - Diagonal spread, wind, simulator-backed ash gameplay, biome/weather heat loss, and active-frontier dispatch remain future mechanics/optimizations, not release blockers.
   - `TWF-051` still owns the final active-frontier release-scope decision after `TWF-046` supplies coherent live-loop evidence.
 
 - Confidence: high for the initial-release recommendation because it matches current source, tests, live evidence notes, and ticket dependencies. Medium for whether cadence should remain player-configurable later; that belongs to `TWF-048`, not this doc-only decision ticket.

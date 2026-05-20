@@ -1,0 +1,8 @@
+{
+  "TemplateCollectionSpec": {
+    "CollectionId": "Common",
+    "Blueprints#append": [
+      "NaturalResources/FertileAshField/FertileAshField.blueprint"
+    ]
+  }
+}

@@ -1,5 +1,7 @@
 using Bindito.Core;
 using Timberborn.BottomBarSystem;
+using Timberborn.Gathering;
+using Timberborn.TemplateInstantiation;
 
 namespace Wildfire.Timberborn;
 
@@ -30,6 +32,8 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornFertilizeTreesToolButton>().AsSingleton();
         MultiBind<BottomBarModule>().ToProvider<FertilizeCropsToolBottomBarModuleProvider>().AsSingleton();
         MultiBind<BottomBarModule>().ToProvider<FertilizeTreesToolBottomBarModuleProvider>().AsSingleton();
+        Bind<TimberbornFertileAshFieldWorkplaceBehavior>().AsTransient();
+        MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
     }
 
@@ -80,6 +84,16 @@ public sealed class WildfireConfigurator : Configurator
         {
             BottomBarModule.Builder builder = new();
             builder.AddLeftSectionElement(_button, 53);
+            return builder.Build();
+        }
+    }
+
+    private sealed class FertileAshFieldGatheringTemplateModuleProvider : IProvider<TemplateModule>
+    {
+        public TemplateModule Get()
+        {
+            TemplateModule.Builder builder = new();
+            builder.AddDecorator<GathererFlag, TimberbornFertileAshFieldWorkplaceBehavior>();
             return builder.Build();
         }
     }

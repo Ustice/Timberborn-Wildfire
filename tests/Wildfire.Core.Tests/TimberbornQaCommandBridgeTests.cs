@@ -1,5 +1,6 @@
 using Wildfire.Core;
 using Wildfire.Timberborn;
+using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
 
@@ -782,7 +783,7 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueQaDeltaStimulusBeaverExposureQueuesSustainedHeatAtSampledCandidateCell()
+    public void QueueQaDeltaStimulusBeaverExposureQueuesFullFieldStateAtSampledCandidateCell()
     {
         RecordingFireSimulator simulator = new(width: 5, height: 5, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(simulator);
@@ -817,8 +818,11 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(12, result.SustainedHeatRemainingCycleCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(beaverCellIndex, change.CellIndex);
-        Assert.Null(change.SetCell);
-        Assert.Equal((byte)15, change.SetHeat);
+        ushort queuedCell = change.SetCell ?? throw new InvalidOperationException("Expected a queued full field state.");
+        Assert.Equal((ushort)result.SustainedHeatSetCell!.Value, queuedCell);
+        Assert.Null(change.SetHeat);
+        FireVisualSample visualSample = FireVisualField.FromPackedCell(queuedCell);
+        Assert.True(visualSample.Smoke >= TimberbornBeaverFieldExposureTelemetry.RespiratorySmokeThreshold);
     }
 
     [Fact]
@@ -2032,14 +2036,20 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldExposureSkippedNoPositionApi: 51,
             BeaverFieldExposureSkippedBoundedSampling: 52,
             BeaverFieldExposureUnavailableReason: "none",
-            BeaverHazardAvoidanceEnabled: true,
-            BeaverHazardAvoidanceObservedHazardCells: 53,
-            BeaverHazardAvoidanceRestrictedCells: 54,
-            BeaverHazardAvoidanceAppliedRestrictions: 55,
-            BeaverHazardAvoidanceReleasedRestrictions: 56,
-            BeaverHazardAvoidanceSkippedNoSafeApi: 57,
-            BeaverHazardAvoidanceFailedRestrictions: 58,
-            BeaverHazardAvoidanceLastUpdatedTick: 59,
+            BeaverFieldBehaviorDispatcherEnabled: true,
+            BeaverFieldBehaviorTrackedBeavers: 53,
+            BeaverFieldBehaviorDecisionsEvaluated: 54,
+            BeaverFieldBehaviorSmokeDecisionsApplied: 55,
+            BeaverFieldBehaviorToxicSmokeDecisionsApplied: 56,
+            BeaverFieldBehaviorFireHeatDecisionsApplied: 57,
+            BeaverFieldBehaviorNoOpDecisionsApplied: 58,
+            BeaverFieldBehaviorDecisionsSkippedCooldown: 59,
+            BeaverFieldBehaviorSkippedNoSafeApi: 60,
+            BeaverFieldBehaviorFailedDecisions: 61,
+            BeaverFieldBehaviorRecoveryActions: 62,
+            BeaverFieldBehaviorPersistenceSaves: 63,
+            BeaverFieldBehaviorPersistenceLoads: 64,
+            BeaverFieldBehaviorLastDecisionTick: 65,
             BurnDurationProofTarget: "medium",
             BurnDurationProofTargetIndex: 42,
             BurnDurationProofTargetX: 5,
@@ -2164,14 +2174,20 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_exposure_skipped_no_position_api=51", result.ResultToken);
         Assert.Contains("beaver_field_exposure_skipped_bounded_sampling=52", result.ResultToken);
         Assert.Contains("beaver_field_exposure_unavailable_reason=none", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_enabled=true", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_observed_hazard_cells=53", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_restricted_cells=54", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_applied_restrictions=55", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_released_restrictions=56", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_skipped_no_safe_api=57", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_failed_restrictions=58", result.ResultToken);
-        Assert.Contains("beaver_hazard_avoidance_updated_tick=59", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_dispatcher_enabled=true", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_tracked_beavers=53", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_decisions_evaluated=54", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_decisions_applied=55", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_decisions_applied=56", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_decisions_applied=57", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_noop_decisions_applied=58", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_decisions_skipped_cooldown=59", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_skipped_no_safe_api=60", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_failed_decisions=61", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_recovery_actions=62", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_saves=63", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_loads=64", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_last_decision_tick=65", result.ResultToken);
         Assert.Contains("burn_duration_proof_target=medium", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_index=42", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_x=5", result.ResultToken);

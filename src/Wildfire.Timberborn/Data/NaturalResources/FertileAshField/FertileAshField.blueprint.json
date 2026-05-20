@@ -1,0 +1,29 @@
+{
+  "TemplateSpec": {
+    "TemplateName": "FertileAshField",
+    "BackwardCompatibleTemplateNames": [],
+    "RequiredFeatureToggle": "",
+    "DisablingFeatureToggle": ""
+  },
+  "NaturalResourceSpec": {
+    "Order": 99
+  },
+  "GatherableSpec": {
+    "YieldGrowthTimeInDays": 0.0,
+    "Yielder": {
+      "YielderComponentName": "Gatherable",
+      "Yield": {
+        "Id": "FertileAsh",
+        "Amount": 1
+      },
+      "RemovalTimeInHours": 0.1,
+      "ResourceGroup": "Gatherable"
+    }
+  },
+  "LabeledEntitySpec": {
+    "DisplayNameLocKey": "NaturalResource.FertileAshField.DisplayName",
+    "DescriptionLocKey": "",
+    "FlavorDescriptionLocKey": "",
+    "Icon": "Sprites/Goods/DirtIcon"
+  }
+}

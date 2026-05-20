@@ -2,11 +2,12 @@ using Timberborn.SingletonSystem;
 using Timberborn.QuickNotificationSystem;
 using Timberborn.BlockSystem;
 using Timberborn.EntitySystem;
-using Timberborn.Navigation;
+using Timberborn.Goods;
 using Timberborn.SelectionSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.TerrainSystem;
 using Timberborn.SoilContaminationSystem;
+using Timberborn.TimeSystem;
 using Timberborn.WorldPersistence;
 using UnityEngine;
 using Wildfire.Core;
@@ -25,13 +26,16 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaBurnDurationStimulus,
     ITimberbornQaFireSimParameterPresetSelector
 {
+    public const string FertileAshFieldGatherableTemplateName = "FertileAshField";
+
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly EntityRegistry _entityRegistry;
     private readonly TimberbornFireDebugVisualStateSink _debugVisualSink;
     private readonly TimberbornGpuFieldRendererSink _gpuFieldRenderer;
     private readonly TimberbornPlayerFireAlertSink _playerFireAlerts;
     private readonly TimberbornPlayerFireAlertCameraFocus _playerFireAlertCameraFocus;
     private readonly TimberbornBeaverFieldExposureTelemetry _beaverFieldExposureTelemetry;
-    private readonly TimberbornBeaverHazardAvoidanceSink _beaverHazardAvoidance;
+    private readonly TimberbornBeaverFieldBehaviorDispatcher _beaverFieldBehaviorDispatcher;
     private readonly TimberbornSelectedTreeTargetProvider _selectedTreeTargetProvider;
     private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
     private readonly TimberbornAshFieldService _ashFieldService;
@@ -39,6 +43,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornFertileAshCollectionService _fertileAshCollectionService;
     private readonly ISingletonLoader _singletonLoader;
     private readonly ISoilContaminationService _soilContaminationService;
+    private readonly IDayNightCycle _dayNightCycle;
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private readonly ITimberbornWindProvider _windProvider;
@@ -68,6 +73,7 @@ public sealed class TimberbornFireRuntime :
     private long _gameUpdateId;
     private bool _isLoaded;
     private TimberbornWildfirePersistenceSnapshot? _pendingPersistenceSnapshot;
+    private readonly Dictionary<int, uint> _fertileAshHarvestWalkFailures = new();
 
     public TimberbornFireRuntime(
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
@@ -78,11 +84,11 @@ public sealed class TimberbornFireRuntime :
         WildfireReleaseSettings releaseSettings,
         TimberbornFireSimParameterPresetState fireSimParameterPresetState,
         ITimberbornWindProvider windProvider,
-        INavMeshObjectFactory navMeshObjectFactory,
         MapSize mapSize,
         ITerrainService terrainService,
         IBlockService blockService,
         ISoilContaminationService soilContaminationService,
+        IDayNightCycle dayNightCycle,
         ISingletonLoader singletonLoader)
     {
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
@@ -90,8 +96,10 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(fireSimParameterPresetState));
         _windProvider = windProvider ?? throw new ArgumentNullException(nameof(windProvider));
         _singletonLoader = singletonLoader ?? throw new ArgumentNullException(nameof(singletonLoader));
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
         _soilContaminationService = soilContaminationService ??
             throw new ArgumentNullException(nameof(soilContaminationService));
+        _dayNightCycle = dayNightCycle ?? throw new ArgumentNullException(nameof(dayNightCycle));
         _playerFireAlertCameraFocus = playerFireAlertCameraFocus ??
             throw new ArgumentNullException(nameof(playerFireAlertCameraFocus));
         _logSink = new UnityTimberbornFireLogSink();
@@ -104,12 +112,11 @@ public sealed class TimberbornFireRuntime :
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
             _logSink);
         _beaverFieldExposureTelemetry = new TimberbornBeaverFieldExposureTelemetry(
-            new TimberbornEntityRegistryBeaverPositionProvider(entityRegistry),
+            new TimberbornEntityRegistryBeaverPositionProvider(_entityRegistry),
             visualFieldSurface,
             _logSink);
-        _beaverHazardAvoidance = new TimberbornBeaverHazardAvoidanceSink(
-            visualFieldSurface,
-            new TimberbornNavMeshBeaverHazardBlocker(navMeshObjectFactory, _logSink),
+        _beaverFieldBehaviorDispatcher = new TimberbornBeaverFieldBehaviorDispatcher(
+            TimberbornNoOpBeaverFieldBehaviorActuator.Instance,
             _logSink);
         _ashFieldService = new TimberbornAshFieldService(
             new TimberbornGrowableAshGrowthAdapter(
@@ -121,7 +128,7 @@ public sealed class TimberbornFireRuntime :
             new TimberbornSoilContaminationAshPoisoningAdapter(_soilContaminationService, CurrentGrid, _logSink),
             _logSink);
         _fertileAshCollectionService = new TimberbornFertileAshCollectionService(
-            new TimberbornGathererPostFertileAshCollectionAdapter(entityRegistry, CurrentGrid, _logSink),
+            new TimberbornGathererPostFertileAshCollectionAdapter(_entityRegistry, CurrentGrid, _logSink),
             _logSink);
         EntitySelectionService selectionService =
             entitySelectionService ?? throw new ArgumentNullException(nameof(entitySelectionService));
@@ -154,7 +161,7 @@ public sealed class TimberbornFireRuntime :
         _gpuFieldRenderer.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.Clear();
-        _beaverHazardAvoidance.Clear();
+        _beaverFieldBehaviorDispatcher.Clear();
         _ashFieldService.Clear();
         _taintedAshSoilPoisoningService.Clear();
         _fertileAshCollectionService.Clear();
@@ -188,15 +195,15 @@ public sealed class TimberbornFireRuntime :
             $"version={snapshot.PersistenceVersion} " +
             $"firesim_saved={(snapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
             $"ash_entries={snapshot.AshField.Entries.Count} " +
+            $"beaver_behavior_entries={snapshot.BeaverBehavior.Entries.Count} " +
             $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
     }
 
     public void UpdateSingleton()
     {
-        _gpuIndirectRenderer?.OnUpdate();
-
         if (_dispatcher is null)
         {
+            _gpuIndirectRenderer?.OnUpdate();
             return;
         }
 
@@ -211,6 +218,7 @@ public sealed class TimberbornFireRuntime :
                 uint tick = result.Step?.Tick ?? _fireSystem?.LastTick ?? 0;
                 SyncAshReadModelFromSimulator(tick);
                 TryApplyAshWorldEffects(tick);
+                TryDispatchBeaverFieldBehavior(tick);
                 _logSink.Info(
                     $"wildfire_timberborn_runtime_dispatched game_update_id={_gameUpdateId} tick={result.Step?.Tick} delta_count={result.Step?.Deltas.Count}");
             }
@@ -219,6 +227,29 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Warning(
                 $"wildfire_timberborn_runtime_dispatch_failed game_update_id={_gameUpdateId} message=\"{exception.Message}\"");
+        }
+
+        _gpuIndirectRenderer?.OnUpdate();
+    }
+
+    private void TryDispatchBeaverFieldBehavior(uint tick)
+    {
+        if (_fireSystem is not { IsInitialized: true } fireSystem)
+        {
+            return;
+        }
+
+        try
+        {
+            TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.Sample(
+                new FireGrid(fireSystem.Width!.Value, fireSystem.Height!.Value, fireSystem.Depth!.Value),
+                tick);
+            _beaverFieldBehaviorDispatcher.Dispatch(beaverExposure, tick);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_beaver_field_behavior_dispatch_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
         }
     }
 
@@ -243,6 +274,16 @@ public sealed class TimberbornFireRuntime :
             _logSink.Warning(
                 $"wildfire_timberborn_fertile_ash_apply_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
         }
+
+        try
+        {
+            _ashFieldService.ApplyDayDecay(tick, CurrentDayNumber(), QueueDecayedAshRemoval);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_ash_decay_failed tick={tick} day={CurrentDayNumber()} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+        }
     }
 
     private void SyncAshReadModelFromSimulator(uint tick)
@@ -253,7 +294,7 @@ public sealed class TimberbornFireRuntime :
             return;
         }
 
-        _ashFieldService.SyncFromAtmosphericFields(tick, atmosphericFields);
+        _ashFieldService.SyncFromAtmosphericFields(tick, atmosphericFields, CurrentDayNumber());
     }
 
     public void AttachSimulator(IGpuFireSimulator fireSimulator, TimberbornFireCadence? cadence = null)
@@ -331,6 +372,113 @@ public sealed class TimberbornFireRuntime :
         }
 
         RequireFireSystem().RegisterHeat(cellIndex, heat);
+    }
+
+    public bool TryFindFertileAshFieldHarvestTarget(
+        Vector3Int gathererCenter,
+        int liftingCapacity,
+        out TimberbornFertileAshFieldHarvestTarget target)
+    {
+        target = default;
+        FireGrid? grid = CurrentGrid();
+        if (!grid.HasValue)
+        {
+            return false;
+        }
+
+        int goodsToCollect = Math.Max(1, Math.Min(liftingCapacity, 1));
+        uint tick = _fireSystem?.LastTick ?? 0;
+        (int X, int Y, int Z) gridCenter = ToFireGridCoordinates(gathererCenter);
+        TimberbornAshFieldEntry? entry = _ashFieldService.Entries.Values
+            .Where(static candidate => candidate.Quality == WildfireAshQuality.Fertile && candidate.Strength > 0)
+            .Where(candidate => IsFertileAshHarvestTargetEligible(candidate.CellIndex, tick))
+            .Select(candidate => new
+            {
+                Entry = candidate,
+                Coordinates = grid.Value.FromIndex(candidate.CellIndex),
+            })
+            .Where(candidate => TimberbornBoundedCellRange.IsWithinRange(
+                gridCenter.X,
+                gridCenter.Y,
+                gridCenter.Z,
+                candidate.Coordinates.X,
+                candidate.Coordinates.Y,
+                candidate.Coordinates.Z,
+                grid.Value,
+                TimberbornGathererPostFertileAshCollectionAdapter.MaxCollectionRangeCells))
+            .OrderBy(candidate => TimberbornBoundedCellRange.DistanceSquared(
+                gridCenter.X,
+                gridCenter.Y,
+                gridCenter.Z,
+                candidate.Coordinates.X,
+                candidate.Coordinates.Y,
+                candidate.Coordinates.Z))
+            .ThenBy(candidate => candidate.Entry.CellIndex)
+            .Select(candidate => (TimberbornAshFieldEntry?)candidate.Entry)
+            .FirstOrDefault();
+
+        if (!entry.HasValue)
+        {
+            return false;
+        }
+
+        (int X, int Y, int Z) coordinates = grid.Value.FromIndex(entry.Value.CellIndex);
+        int goodsAmount = Math.Min(goodsToCollect, entry.Value.Strength);
+        target = new TimberbornFertileAshFieldHarvestTarget(
+            entry.Value.CellIndex,
+            StrengthToRemove: TimberbornFertileAshCollectionService.StrengthPerGood * goodsAmount,
+            new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, goodsAmount),
+            new Vector3Int(coordinates.X, coordinates.Y, coordinates.Z),
+            new Vector3(coordinates.X + 0.5f, coordinates.Z, coordinates.Y + 0.5f),
+            TimberbornFertileAshFieldHarvestSource.SimulatorAshField);
+        return true;
+    }
+
+    public void RecordFertileAshFieldHarvestWalkFailure(int cellIndex)
+    {
+        _fertileAshHarvestWalkFailures[cellIndex] = _fireSystem?.LastTick ?? 0;
+    }
+
+    private bool IsFertileAshHarvestTargetEligible(int cellIndex, uint tick)
+    {
+        if (!_fertileAshHarvestWalkFailures.TryGetValue(cellIndex, out uint failedTick))
+        {
+            return true;
+        }
+
+        if (tick <= failedTick + 60)
+        {
+            return false;
+        }
+
+        _fertileAshHarvestWalkFailures.Remove(cellIndex);
+        return true;
+    }
+
+    public bool TryCompleteFertileAshFieldHarvest(
+        TimberbornFertileAshFieldHarvestTarget target,
+        out TimberbornAshFieldCollectionRemoval removal)
+    {
+        removal = _ashFieldService.CalculateCollectedFertileStrengthRemoval(target.CellIndex, target.StrengthToRemove);
+        if (removal.StrengthRemoved <= 0)
+        {
+            return false;
+        }
+
+        QueueCollectedAshRemoval(new TimberbornFertileAshCollectedCell(
+            target.CellIndex,
+            removal.StrengthRemoved,
+            target.GoodAmount.Amount));
+        _fertileAshCollectionService.RecordWorkerHarvest(
+            _fireSystem?.LastTick ?? 0,
+            removal,
+            target.GoodAmount.Amount);
+        return true;
+    }
+
+    private static (int X, int Y, int Z) ToFireGridCoordinates(Vector3Int timberbornCoordinates)
+    {
+        return (timberbornCoordinates.x, timberbornCoordinates.y, timberbornCoordinates.z);
     }
 
     public void RegisterChange(FireSimChange change)
@@ -637,11 +785,9 @@ public sealed class TimberbornFireRuntime :
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
-        TimberbornBeaverHazardAvoidanceCounters beaverHazardAvoidanceCounters = _beaverHazardAvoidance.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
-        TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.Sample(
-            new FireGrid(fireSystem.Width!.Value, fireSystem.Height!.Value, fireSystem.Depth!.Value),
-            fireSystem.LastTick);
+        TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.LastSnapshot;
+        TimberbornBeaverFieldBehaviorCounters beaverFieldBehaviorCounters = _beaverFieldBehaviorDispatcher.Counters;
         TimberbornBurnDamageRegistrationSummary burnDamageRegistrationSummary =
             _burnDamageService?.LastRegistrationSummary ?? TimberbornBurnDamageRegistrationSummary.Empty;
         TimberbornCropBurnTargetRegistrationSummary cropBurnSummary =
@@ -876,14 +1022,20 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldExposureSkippedNoPositionApi: beaverExposure.SkippedNoPositionApi,
             BeaverFieldExposureSkippedBoundedSampling: beaverExposure.SkippedBoundedSampling,
             BeaverFieldExposureUnavailableReason: beaverExposure.UnavailableReason,
-            BeaverHazardAvoidanceEnabled: beaverHazardAvoidanceCounters.AvoidanceEnabled,
-            BeaverHazardAvoidanceObservedHazardCells: beaverHazardAvoidanceCounters.ObservedHazardCellCount,
-            BeaverHazardAvoidanceRestrictedCells: beaverHazardAvoidanceCounters.RestrictedCellCount,
-            BeaverHazardAvoidanceAppliedRestrictions: beaverHazardAvoidanceCounters.AppliedRestrictionCount,
-            BeaverHazardAvoidanceReleasedRestrictions: beaverHazardAvoidanceCounters.ReleasedRestrictionCount,
-            BeaverHazardAvoidanceSkippedNoSafeApi: beaverHazardAvoidanceCounters.SkippedNoSafeApiCount,
-            BeaverHazardAvoidanceFailedRestrictions: beaverHazardAvoidanceCounters.FailedRestrictionCount,
-            BeaverHazardAvoidanceLastUpdatedTick: beaverHazardAvoidanceCounters.LastUpdatedTick,
+            BeaverFieldBehaviorDispatcherEnabled: beaverFieldBehaviorCounters.DispatcherEnabled,
+            BeaverFieldBehaviorTrackedBeavers: beaverFieldBehaviorCounters.TrackedBeaverCount,
+            BeaverFieldBehaviorDecisionsEvaluated: beaverFieldBehaviorCounters.DecisionsEvaluated,
+            BeaverFieldBehaviorSmokeDecisionsApplied: beaverFieldBehaviorCounters.SmokeDecisionsApplied,
+            BeaverFieldBehaviorToxicSmokeDecisionsApplied: beaverFieldBehaviorCounters.ToxicSmokeDecisionsApplied,
+            BeaverFieldBehaviorFireHeatDecisionsApplied: beaverFieldBehaviorCounters.FireHeatDecisionsApplied,
+            BeaverFieldBehaviorNoOpDecisionsApplied: beaverFieldBehaviorCounters.NoOpDecisionsApplied,
+            BeaverFieldBehaviorDecisionsSkippedCooldown: beaverFieldBehaviorCounters.DecisionsSkippedCooldown,
+            BeaverFieldBehaviorSkippedNoSafeApi: beaverFieldBehaviorCounters.SkippedNoSafeApi,
+            BeaverFieldBehaviorFailedDecisions: beaverFieldBehaviorCounters.FailedDecisions,
+            BeaverFieldBehaviorRecoveryActions: beaverFieldBehaviorCounters.RecoveryActions,
+            BeaverFieldBehaviorPersistenceSaves: beaverFieldBehaviorCounters.PersistenceSaveCount,
+            BeaverFieldBehaviorPersistenceLoads: beaverFieldBehaviorCounters.PersistenceLoadCount,
+            BeaverFieldBehaviorLastDecisionTick: beaverFieldBehaviorCounters.LastDecisionTick,
             BurnDurationProofTarget: burnDurationProof.Target,
             BurnDurationProofTargetIndex: burnDurationProof.CellIndex,
             BurnDurationProofTargetX: burnDurationProof.X,
@@ -1036,6 +1188,21 @@ public sealed class TimberbornFireRuntime :
             "fertile_ash_collection");
     }
 
+    private void QueueDecayedAshRemoval(TimberbornAshFieldCollectionRemoval removal)
+    {
+        byte ashAmount = StrengthToAshUnits(removal.StrengthRemoved);
+        if (ashAmount == 0)
+        {
+            return;
+        }
+
+        _fireSystem?.RegisterChange(
+            new FireSimChange(
+                CellIndex: removal.CellIndex,
+                RemoveAsh: ashAmount),
+            "ash_day_decay");
+    }
+
     private static byte StrengthToAshUnits(int strength)
     {
         if (strength <= 0)
@@ -1048,6 +1215,11 @@ public sealed class TimberbornFireRuntime :
                 TimberbornFertileAshCollectionService.StrengthPerGood,
             1,
             3));
+    }
+
+    private int CurrentDayNumber()
+    {
+        return Math.Max(0, _dayNightCycle.DayNumber);
     }
 
     public bool IsCellTaintedAsh(int cellIndex)
@@ -1170,6 +1342,7 @@ public sealed class TimberbornFireRuntime :
             TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion,
             _fireSystem?.CapturePersistentFireSimState(),
             _ashFieldService.SaveSnapshot(),
+            _beaverFieldBehaviorDispatcher.CaptureState(),
             TimberbornWildfirePersistenceCodec.CaptureConsequences(_burnDamageService));
     }
 
@@ -1187,6 +1360,7 @@ public sealed class TimberbornFireRuntime :
                     $"version={_pendingPersistenceSnapshot.PersistenceVersion} " +
                     $"firesim_saved={(_pendingPersistenceSnapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
                     $"ash_entries={_pendingPersistenceSnapshot.AshField.Entries.Count} " +
+                    $"beaver_behavior_entries={_pendingPersistenceSnapshot.BeaverBehavior.Entries.Count} " +
                     $"consequence_burn_damage_entries={_pendingPersistenceSnapshot.Consequences.BurnDamageStates.Count}");
                 return;
             }
@@ -1214,15 +1388,17 @@ public sealed class TimberbornFireRuntime :
         if (snapshot.FireSim?.AtmosphericFields is { Count: > 0 } atmosphericFields &&
             atmosphericFields.Any(static packed => WildfireAtmosphericFieldState.Unpack(packed).Ash > 0))
         {
-            _ashFieldService.SyncFromAtmosphericFields(snapshot.FireSim.Tick, atmosphericFields);
+            _ashFieldService.SyncFromAtmosphericFields(snapshot.FireSim.Tick, atmosphericFields, CurrentDayNumber());
         }
         else
         {
-            _ashFieldService.RestoreSnapshot(snapshot.FireSim?.Tick ?? 0, snapshot.AshField);
+            _ashFieldService.RestoreSnapshot(snapshot.FireSim?.Tick ?? 0, snapshot.AshField, CurrentDayNumber());
         }
+        _beaverFieldBehaviorDispatcher.RestoreState(snapshot.BeaverBehavior);
         _logSink.Info(
             "wildfire_timberborn_persistence_runtime_state_restored " +
             $"ash_entries={snapshot.AshField.Entries.Count} " +
+            $"beaver_behavior_entries={snapshot.BeaverBehavior.Entries.Count} " +
             $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
     }
 
@@ -1231,8 +1407,7 @@ public sealed class TimberbornFireRuntime :
         return new TimberbornFireDeltaConsumerSinks(
             debugVisualSink: _debugVisualSink,
             visualEffectSink: new TimberbornCompositeFireVisualEffectSink(
-                _gpuFieldRenderer,
-                _beaverHazardAvoidance),
+                _gpuFieldRenderer),
             alertSink: _playerFireAlerts,
             buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
                 ? null
@@ -1373,4 +1548,5 @@ public sealed class TimberbornFireRuntime :
         _compatibilityProbesRan = true;
         TimberbornCompatibilityProbeLogger.Log(_compatibilityReport, _logSink);
     }
+
 }

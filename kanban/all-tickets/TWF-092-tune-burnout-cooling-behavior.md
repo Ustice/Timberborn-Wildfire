@@ -31,7 +31,7 @@ After fire burns out, heat should remain long enough to support smoke, danger, a
 - Keep heat loss material-driven unless a new design decision changes it.
 - Compare cooling in single ignition, line of fuel, and building cluster scenarios.
 - Tune heat decay and burnout behavior only with deterministic shader evidence and live recordings.
-- Keep persistent ash/fertility out of this ticket.
+- Keep simulator-backed ash and fertility out of this ticket.
 - Keep beaver debuff implementation out of this ticket.
 - Document accepted evidence in `docs/TEST_PLAN.md`.
 
@@ -60,11 +60,11 @@ After fire burns out, heat should remain long enough to support smoke, danger, a
 ## Implementation Notes
 
 - Tune heat decay and burnout timing from deterministic scenarios first, then require live recording evidence for player readability.
-- Keep persistent ash, fertility, and beaver exposure effects out of this ticket.
+- Keep simulator-backed ash, fertility, and beaver exposure effects out of this ticket.
 
 ## Notes
 
-- Visual ash tuning belongs to `TWF-068`; persistent ash belongs to `TWF-078`.
+- Visual ash tuning belongs to `TWF-068`; simulator-backed ash belongs to `TWF-078`.
 - 2026-05-03: Sprint 6 coordinator moved this ticket to `03-in-progress` in `~/repos/wildfire-TWF-092` on branch `codex/TWF-092-burnout-cooling`, based on reviewed `TWF-091` commit `83af04b10a05ef192bd9461ca0b90ae35fff5abd` stacked on reviewed `TWF-090`/`TWF-089`/`TWF-088`.
 - 2026-05-03: Integration remains blocked until upstream Sprint 6 live gates pass and this ticket has its own live burnout/cooling recording plus command/status/log artifact proof. If review fails, it must return through `03-in-progress` for fixes and then pass fresh review before any integration move.
 - 2026-05-03 worker result: deterministic evidence complete in commit `36e27d87e01ce786507db925debf954452204198`. The worker accepted current burnout/cooling constants unchanged and made no production shader or Timberborn adapter behavior changes.

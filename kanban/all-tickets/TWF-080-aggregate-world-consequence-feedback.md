@@ -18,6 +18,7 @@ dependencies:
 write_scope:
   - src/Wildfire.Timberborn/**
   - tests/Wildfire.Core.Tests/**
+  - docs/reference/assets/**
   - docs/reference/timberborn-ui.md
   - docs/TEST_PLAN.md
   - kanban/all-tickets/TWF-080-aggregate-world-consequence-feedback.md
@@ -38,6 +39,7 @@ The design says player feedback should distinguish active fire, building damage,
 - Aggregate consequence events per dispatch, time window, or affected region.
 - Distinguish at least active fire, building damage or closure, plant/crop/resource loss, beaver danger or death, and fertile or tainted ash aftermath when available.
 - Use Timberborn-native alert, status, or quick notification patterns where possible.
+- Use release-quality Wildfire icons from `TWF-163` when a native alert/status surface supports custom icon binding.
 - Avoid per-entity spam for common burn aftermath.
 - Expose QA/status counters for aggregated event classes, notifications sent, skipped notifications, and presentation failures.
 - Add deterministic tests for aggregation, throttling, class selection, and presentation-failure isolation.
@@ -48,7 +50,7 @@ The design says player feedback should distinguish active fire, building damage,
 
 - `TWF-076` implements crop burn consequences.
 - `TWF-077` implements structure burn damage rollback.
-- `TWF-078` implements persistent ash fields.
+- `TWF-078` verifies the simulator-backed ash read model.
 - `TWF-079` implements contamination-aware fire consequences.
 - `TWF-084` implements tree burn consequences.
 - `TWF-115` implements stored-goods loss.
@@ -64,6 +66,7 @@ The design says player feedback should distinguish active fire, building damage,
 
 - Aggregate by event class and time window before presenting anything to the player.
 - The first implementation should prefer a small number of Timberborn-native alert/status patterns over custom UI.
+- When using image generation or editing for alert icons, point the asset pass at `docs/reference/assets/menu-icons/composite.png` and nearby Timberborn alert/status/icon references rather than generic icon prompts.
 - Include stored-goods loss from `TWF-115`, but collapse common item losses into summaries such as "stored goods burned" instead of listing every stack.
 - Beaver death, building closure, explosive hazard, and tainted ash should be higher-priority classes than ordinary plant loss.
 - Expected counters include source events received, events coalesced, notifications sent by class, notifications suppressed by throttle, presentation failures, and log-only fallbacks.
@@ -79,5 +82,6 @@ The design says player feedback should distinguish active fire, building damage,
 ## Notes
 
 - `TWF-042` provided the first fire alert. This ticket broadens feedback after richer consequence lanes exist.
+- `TWF-163` owns the release icon assets for the alert classes this ticket aggregates.
 - 2026-05-17 coordinator/code reconciliation: ash and fertile-ash telemetry now exist in `status`/`qa-readiness`, but this ticket is still open because those counters are not yet aggregated into bounded player-facing consequence feedback.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Player Feedback".

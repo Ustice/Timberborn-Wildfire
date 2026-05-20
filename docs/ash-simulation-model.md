@@ -12,6 +12,20 @@ The simulator should own ash creation, movement, contamination, washing, decay, 
 
 Ash is intended to become a good, resource, and hazard. The storage and naming model should be strong enough to serve that final role without depending on a later conceptual rewrite.
 
+## Current Lifecycle
+
+Ash lifecycle is simulator-owned end to end:
+
+1. Ash is created in the simulator transport field by burned material, smoke fallout, or a queued external ash mutation.
+2. Ash amount and contamination travel together in the transport field.
+3. Renderers read the transport field and present the current ash level; they do not project or store ash.
+4. Timberborn gameplay adapters read a derived snapshot of the simulator field.
+5. Beaver harvest, fertile-ash application, decay, and washout queue bounded simulator ash mutations.
+6. The next simulator dispatch applies those mutations and emits the updated field.
+7. Persistence, status, QA, and save/reload evidence report simulator ash state, not an adapter-owned ash store.
+
+`TimberbornAshFieldService` is only a Timberborn-side read model over simulator ash readback. Its entries are derived from `AtmosphericFields`/`TransportFields`, and code must not seed them from burn source events or treat them as an independent ash ledger.
+
 ## Current Mismatch
 
 The current code has several ash-like authorities:
@@ -19,7 +33,7 @@ The current code has several ash-like authorities:
 - `AtmosphericFields` carries packed steam, smoke, smoke contamination, ash, and ash contamination.
 - `CompanionFields` carries material metadata plus packed ash strength and ash quality bits.
 - `UpdateCompanionAsh` projects atmospheric ash down to landing surfaces and mutates companion ash bits.
-- `TimberbornAshFieldService` stores persistent gameplay ash separately.
+- Older `TimberbornAshFieldService` wording and tests treated service entries as persistent gameplay ash storage.
 - The ash overlay can read atmospheric ash for immediate ground projection.
 
 This is confusing because names and responsibilities do not match the desired model. It also makes it easy for visuals, gameplay, and persistence to disagree.
@@ -45,6 +59,8 @@ Fertile ash is not a separate simulated ash kind. In simulator state, fertile as
 Ash amount is resource amount. The agreed ash amount scale is 0-3, matching the four visual ash levels. Beavers can harvest 0-3 units from a cell. `1 FertileAsh` good equals 1 uncontaminated ash unit harvested from the field.
 
 Ash contamination uses a 0-7 scale. Contamination strength affects hazard strength, soil poisoning, beaver exposure, visual tint, and cloud mixing.
+
+Tainted ash is not permanent by default. It should fade over time, and water contact can wash it away. Washed tainted ash should slightly taint the affected water through a bounded adapter mutation when a safe Timberborn API exists; otherwise the washout should still be visible in ash state and report safe-unavailable water-taint telemetry.
 
 Timberborn can affect ash through adapter services, but those services must queue bounded ash changes for the next simulator cycle. They must not directly mutate simulator buffers or maintain a competing ash state.
 
@@ -85,12 +101,16 @@ Source attribution is not required: when ash changes, its contamination changes 
 
 When ash mixes, contamination uses maxing rather than dilution for the first implementation. This is deterministic, hazard-conservative, and easier to reason about than weighted contamination blending.
 
+When water removes ash, ash amount decreases and presentation should recede from the cell. Fertile ash washout should not create water contamination. Tainted ash washout may move a small bounded contamination amount into water, but it must not cleanse soil or affected entities.
+
 ## Visual Transition Model
 
 Ash presentation should read simulator state and render transitions from that state.
 
 - If the previous update had no ash in a cell with a floor and the current update has ash, render ash drifting down like snow and landing.
 - If the previous update had ash and the current update still has ash, render it as settled.
+- If ash level decreases through collection, decay, or washout, render ash receding rather than popping off abruptly.
+- Render tainted ash with a contamination-tinted presentation distinct from uncontaminated ash.
 - Renderers should use interpolation, lerp, and smoothstep for presentation only. They should not invent ash, project ash, or author simulation state.
 
 The falling presentation is not stored as simulation state. It is inferred from an ash delta or previous/current presentation inputs. The next simulator state has the ash on the ground.
@@ -109,6 +129,7 @@ Prefer the smallest memory-respecting architecture that removes the split author
 - Remove projection from both `UpdateCompanionAsh` and the ash overlay.
 - Drive ash visuals from simulated ash values with lerp and smoothstep, just as smoke and fire visuals do.
 - Add a queued ash-change service for Timberborn adapters, parallel to existing queued fire-cell changes.
+- Do not reintroduce `ApplySources`-style adapter seeding. Burn consequences may report ash-source telemetry, but simulator transport state decides whether ash exists.
 
 ## Non-Goals
 

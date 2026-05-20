@@ -401,7 +401,8 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
     int TaintedAftermathCells,
     int SkippedNoPositionApi,
     int SkippedBoundedSampling,
-    string UnavailableReason)
+    string UnavailableReason,
+    IReadOnlyList<TimberbornBeaverFieldExposureClassification> Classifications)
 {
     public static TimberbornBeaverFieldExposureSnapshot Unavailable(
         string reason,
@@ -419,7 +420,8 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
             TaintedAftermathCells: 0,
             SkippedNoPositionApi: 1,
             SkippedBoundedSampling: 0,
-            UnavailableReason: string.IsNullOrWhiteSpace(reason) ? "unavailable" : reason);
+            UnavailableReason: string.IsNullOrWhiteSpace(reason) ? "unavailable" : reason,
+            Classifications: Array.Empty<TimberbornBeaverFieldExposureClassification>());
     }
 
     public static TimberbornBeaverFieldExposureSnapshot FromClassifications(
@@ -440,7 +442,8 @@ public sealed record TimberbornBeaverFieldExposureSnapshot(
             TaintedAftermathCells: classifications.Sum(static classification => classification.TaintedAftermathCells),
             SkippedNoPositionApi: skippedNoPositionApi,
             SkippedBoundedSampling: skippedBoundedSampling,
-            UnavailableReason: "none");
+            UnavailableReason: "none",
+            Classifications: classifications.ToArray());
     }
 }
 

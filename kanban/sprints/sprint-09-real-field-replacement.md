@@ -33,7 +33,7 @@ The implementation must therefore replace fake inputs and proof-only controls wi
 ## Existing Tickets Used As Downstream Work
 
 - `TWF-076`, `TWF-084`, `TWF-077`, `TWF-115`, `TWF-127`, `TWF-128`, and `TWF-129` remain the scoped implementation tickets for crops, trees, structures, stored goods, and infrastructure behavior.
-- `TWF-078`, `TWF-079`, and `TWF-081` remain the scoped tickets for persistent ash, contamination-aware aftermath, and persistence validation.
+- `TWF-078`, `TWF-079`, and `TWF-081` remain the scoped tickets for simulator-backed ash, contamination-aware aftermath, and persistence validation.
 - `docs/world-consequence-first-pass.md` now carries the junior-ready work packets for Sprint 10 visual consequences and aftermath.
 - `TWF-156` creates the reusable `256x256` Sprint 10 map used to prove local-fire behavior on a max-size world.
 - `TWF-089` through `TWF-092` remain the behavior tuning slices, but they should be revalidated through the new parameter buffer and generated scenario evidence.

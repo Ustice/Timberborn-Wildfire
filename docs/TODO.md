@@ -46,7 +46,7 @@
 
 ## Current Sprint Plan
 
-Detailed sprint boundaries live in [../kanban/sprint-planning.md](../kanban/sprint-planning.md). Sprint 5 closeout lives in [../kanban/sprints/sprint-05.md](../kanban/sprints/sprint-05.md), and the active Sprint 6 charter lives in [../kanban/sprints/sprint-06.md](../kanban/sprints/sprint-06.md).
+Detailed sprint boundaries live in [../kanban/sprint-planning.md](../kanban/sprint-planning.md). Current sprint closeout and follow-on planning live under [../kanban/sprints/](../kanban/sprints/).
 
 ### Ash Simulator Model Follow-Up
 
@@ -137,6 +137,7 @@ Follow-on gates:
 
 - Sprint 8: live QA recovery and blocked evidence triage.
 - Sprint 9: real field replacement and real-field proof closed as mixed done/blocked. `Fuel` is accepted as the stable `50x50` Sprint 9 surface, but `TWF-144` and `TWF-148` are blocked on making normal gameplay visuals plainly visible.
-- Sprint 11: visual, beaver, and ash verification. Included tickets are `TWF-067`, `TWF-073`, `TWF-078`, and `TWF-082`; see [../kanban/sprints/sprint-11-visual-beaver-ash-verification.md](../kanban/sprints/sprint-11-visual-beaver-ash-verification.md).
+- Sprint 11: visual, beaver, and ash verification closed as mixed done/blocked. `TWF-067` smoke readability and `TWF-073` beaver behavior harness are done; `TWF-078` and `TWF-082` are blocked on nonzero-ash persistence and full fertile-ash collection/application proof. See [../kanban/sprints/sprint-11-visual-beaver-ash-verification.md](../kanban/sprints/sprint-11-visual-beaver-ash-verification.md).
 - Later: visual consequences and aftermath from real fields should continue from [world-consequence-first-pass.md](world-consequence-first-pass.md) once `TWF-144`/`TWF-148` are unblocked.
-- Sprint 12: release packaging and Steam Workshop.
+- Sprint 12: release gameplay readiness. Included tickets cover simulator-owned ash, contaminated ash, tainted ash washout, beaver consequences, rare ignition, aggregated feedback, release icons, persistence, and `256x256` QA; see [../kanban/sprints/sprint-12-release-gameplay-readiness.md](../kanban/sprints/sprint-12-release-gameplay-readiness.md).
+- Later: release packaging and Steam Workshop after the gameplay loop, screenshots, and QA gates are stable.

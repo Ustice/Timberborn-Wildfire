@@ -191,6 +191,7 @@ Do not use runtime-global random state during simulation steps. Use hash-based r
 - Cell index.
 - Tick.
 - Seed.
+- Adapter-provided environmental state, such as drought risk, when a release mechanic explicitly needs it.
 
 The same hash algorithm must be available to shader code and scenario-fixture tooling so seeded scenarios remain reproducible.
 
@@ -626,7 +627,9 @@ Both tools should share one designation and application backend. Dragging over s
 
 The toolbar tools should expose enough status to explain the job loop: crop designations, forestry designations, pending cells, applied cells, consumed goods, skipped cells with no goods, skipped cells with no eligible growable, contaminated-ash-blocked cells, and safe-API failures. This is player-designated field work, not a second fire simulation rule and not a separate growth multiplier outside simulator ash state.
 
-Underbrush, grass, and overgrowth are future fuel-load mechanics. A later design can model overgrown trees or irrigated fields as fast-burning surface fuel while mature trees burn more slowly. That should stay separate from the first ash-field implementation.
+Gatherer collection should remove one simulator ash unit for each successfully produced `FertileAsh` good. The visual result should look like ash receding from that location as the simulator ash level drops.
+
+Underbrush, grass, and overgrowth are broader future fuel-load mechanics. A focused release slice may still map dead bushes, dead trees, or drought-dry vegetation into higher ignition risk through adapter-provided fuel and flammability inputs. That release slice must stay deterministic, rare, and legible to the player.
 
 ### Contamination Interaction
 
@@ -635,6 +638,8 @@ Fire never reduces contamination.
 Contaminated burnable material can burn, but it should produce toxic smoke and tainted ash instead of fertile ash. Contaminated plants, crops, and trees lose their resources and die like normal plants, but their aftermath should not create a growth bonus while contamination remains. Contaminated buildings and contaminated stored goods can contribute tainted residue or exposure when burned.
 
 Contaminated soil remains contaminated after fire. Ash deposited on contaminated soil should be `tainted`, not `fertile`, unless a later explicit decontamination mechanic changes that.
+
+Tainted ash should fade over time or wash away when water reaches it. Washing tainted ash slightly taints the affected water when Timberborn exposes a safe mutation path; otherwise Wildfire should report safe-unavailable water-taint telemetry instead of silently deleting the contamination. Clean water washing fertile ash can remove ash, but it must not create tainted water.
 
 Water suppresses fire and can create steam. Badwater or contaminated water should also suppress fire, but heating it does not create toxic or contaminated steam. Fire should not turn badwater into safe water, and any toxic exposure should come from contaminated smoke or tainted aftermath rather than a steam contamination lane.
 
@@ -649,6 +654,14 @@ Player feedback should aggregate consequences instead of spamming one alert per 
 - Plant, crop, or resource loss.
 - Beaver danger, injury, incapacitation, or death.
 - Fertile ash or tainted ash aftermath when that becomes gameplay-relevant.
+
+Release icons for these classes should follow Timberborn-native icon style and be generated or edited from collected reference sheets rather than invented from generic art direction.
+
+### Rare Ignition Sources
+
+Spontaneous ignition is release scope only when it is rare, deterministic, and understandable. Fire-using or heat-producing buildings can be eligible. Buildings that do not use fire or heat should not spontaneously burn. Dead bushes, dead trees, and drought-dry vegetation can spark, but still rarely.
+
+Drought should enter through Timberborn adapter observations that affect fuel, flammability, ignition eligibility, or heat loss. The simulator core should still receive explicit material inputs and deterministic random seeds; Timberborn must not own hidden fire-spread rules.
 
 ### Active Fire Response
 

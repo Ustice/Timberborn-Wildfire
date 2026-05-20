@@ -29,13 +29,13 @@ We should not block on generated-scenario technicalities if the Timberborn map e
 
 - Create or select a `256x256` map or save.
 - Include at least one local forest-fire test area that is large enough to show spread but not intended to burn the whole map.
-- Include connected fuel, sparse fuel, water suppression, badwater or contaminated lane if practical, crop or harvestable lane, tree lane, structure pad, storage pad, and camera path/checkpoints where practical.
+- Include connected fuel, sparse fuel, water suppression, badwater or contaminated lane, clean ash lane, tainted ash lane, crop or harvestable lane, tree lane, dead bush/dead tree drought-ignition lane, structure pad, fire-using building pad, non-fire building control pad, storage pad, and camera path/checkpoints where practical.
 - Keep firebreaks or spacing so one local test does not immediately invalidate every other test area.
 - Use Timberborn map editor and dev tools where they are safer than save mutation.
 - Preserve the exact map/save path, copied artifact or checksum, setup notes, ignition target, and camera checkpoint notes.
 - Confirm the selected map reports `256x256` dimensions from archive metadata or live status.
 - Confirm the map loads in Timberborn with Wildfire enabled and can reach command-responsive `status` or `qa-readiness`.
-- Record the intended Sprint 10 consumers: scorch, burned textures, ash overlay, crop/tree/structure consequences, and big-map performance smoke checks.
+- Record the intended Sprint 10 consumers: scorch, burned textures, ash overlay, crop/tree/structure consequences, fertile ash collection, tainted ash washout, beaver exposure, rare ignition, aggregated feedback, and big-map performance smoke checks.
 
 ## Dependencies
 
@@ -51,6 +51,9 @@ We should not block on generated-scenario technicalities if the Timberborn map e
 - This ticket can be completed with a hand-authored `.timber` map/save and notes; it does not require extending the TypeScript scenario generator.
 - Prefer a stable map-editor/dev-tools workflow over direct JSON mutation unless the edit is small, structured, and easy to verify.
 - The acceptance fire should be local: a small forest or cluster inside a `256x256` world. Do not require a whole-map burn.
+- Include one clear release loop where fire produces clean ash, Gatherer Posts collect `FertileAsh`, the ash visually recedes, and status proves inventory mutation.
+- Include one clear release loop where contaminated ash is visually distinct, fades or washes away, and any water-taint path is proven or safely reported unavailable.
+- Include one rare-ignition proof lane with a forced high-test-rate setting, plus default/release-rate notes proving spontaneous ignition remains rare.
 - If an existing `256x256` save already fits, document why it is suitable instead of creating a new map.
 - `50x50` saves such as Diorama and Fuel are useful smoke tests but do not satisfy this ticket.
 

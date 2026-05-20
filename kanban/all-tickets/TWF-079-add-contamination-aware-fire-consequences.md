@@ -65,7 +65,7 @@ The design decision is explicit: fire never reduces contamination. Contaminated 
 
 ## Notes
 
-- 2026-05-17 coordinator/code reconciliation: part of this ticket has landed through the off-sprint ash implementation. `TimberbornAshFieldService` now classifies contaminated sources or affected cells as `tainted`, `TimberbornTaintedAshSoilPoisoningService` reports tainted-soil poisoning attempts, and status/QA tokens expose tainted ash counters. Remaining scope still includes broader contamination-aware fire interactions: badwater/contaminated-water suppression semantics, toxic smoke classification for beaver telemetry, and live proof that native contamination is not reduced.
+- 2026-05-17 coordinator/code reconciliation: part of this ticket landed through the off-sprint ash implementation. Simulator ash contamination now flows into the Timberborn ash read model as `tainted`, `TimberbornTaintedAshSoilPoisoningService` reports tainted-soil poisoning attempts, and status/QA tokens expose tainted ash counters. Remaining scope still includes broader contamination-aware fire interactions: badwater/contaminated-water suppression semantics, toxic smoke classification for beaver telemetry, and live proof that native contamination is not reduced.
 - 2026-05-19 design correction: there is no toxic or contaminated steam in Wildfire. Keep contamination work on contaminated smoke, tainted ash, badwater suppression semantics, and no-decontamination proof.
 - Do not add any implicit high-heat cleanup or sterilization behavior.
 - Toxic smoke beaver behavior belongs to `TWF-086`.

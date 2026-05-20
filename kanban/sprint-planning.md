@@ -42,10 +42,26 @@ Include:
 
 - `TWF-067`: smoke readability implementation.
 - `TWF-073`: beaver field behavior harness implementation.
-- `TWF-078`: persistent ash field service live verification.
+- `TWF-078`: simulator-backed ash read-model live verification.
 - `TWF-082`: fertile ash collection/application live verification.
 
 Why: the board was reconciled after off-sprint ash/fertility implementation. `TWF-078` and `TWF-082` should be verified before more ash or contamination work starts, while `TWF-067` and `TWF-073` are the current dependency-ready implementation lanes. Release packaging remains later work.
+
+### Follow-On Sprint: Release Gameplay Readiness
+
+The follow-on release gameplay charter is [sprint-12-release-gameplay-readiness.md](sprints/sprint-12-release-gameplay-readiness.md).
+
+Include:
+
+- `TWF-157` through `TWF-160`: simulator-owned ash authority, queued ash mutations, ash presentation, and persistence/harvest sync.
+- `TWF-079`, `TWF-164`, and `TWF-068`: contamination-aware aftermath, tainted ash decay/washout, and visible ash differentiation.
+- `TWF-163`: release icons for alert classes, fertile ash, tainted ash, and fertilize crop/tree tools.
+- `TWF-085` through `TWF-087`, then `TWF-074`: beaver consequence variants and recording validation.
+- `TWF-080` and `TWF-081`: aggregated player feedback and persistence validation.
+- `TWF-165`: rare deterministic drought-aware ignition from eligible sources only.
+- `TWF-156`: `256x256` release QA scenario/map.
+
+Why: release packaging should wait until the gameplay loop is legible and validated. This sprint turns ash, contamination, beaver consequences, rare ignition, icons, feedback, and save/reload proof into the release candidate behavior surface.
 
 ### Sprint 5: Safety Rails And Test Surfaces
 
@@ -100,7 +116,7 @@ Goal: make aftermath durable and meaningful.
 
 Include:
 
-- `TWF-078`: persistent ash field service.
+- `TWF-078`: simulator-backed ash read model.
 - `TWF-079`: contamination-aware fire consequences.
 - `TWF-081`: world consequence persistence validation.
 
@@ -136,7 +152,7 @@ Include:
 
 Why: this work is API-risky and player-visible. Keep the ladder explicit: telemetry, harness, lower-risk states, severe states, recordings, then aggregated feedback.
 
-### Sprint 11: Release Packaging
+### Later Sprint: Release Packaging
 
 Goal: turn the proven gameplay into a distributable mod.
 
