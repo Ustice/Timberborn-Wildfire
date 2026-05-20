@@ -717,6 +717,19 @@ uint SmokeMovedOutAmount(uint3 sourceCoordinate)
     return SmokeMoveRollPasses(sourceIndex, sourceSmoke, SmokeMoveWeightTotal(sourceCoordinate)) ? 1u : 0u;
 }
 
+uint SteamMoveAmount(uint3 sourceCoordinate, uint3 targetCoordinate)
+{
+    uint sourceSteam = DecayBy(AtmosphericSteam(NeighborAtmospheric(sourceCoordinate)), 2u);
+    return SmokeSourceChoosesTarget(sourceCoordinate, targetCoordinate, sourceSteam) ? 1u : 0u;
+}
+
+uint SteamMovedOutAmount(uint3 sourceCoordinate)
+{
+    uint sourceSteam = DecayBy(AtmosphericSteam(NeighborAtmospheric(sourceCoordinate)), 2u);
+    uint sourceIndex = ToIndex(sourceCoordinate);
+    return SmokeMoveRollPasses(sourceIndex, sourceSteam, SmokeMoveWeightTotal(sourceCoordinate)) ? 1u : 0u;
+}
+
 void AddSmokeContribution(inout uint smokeTotal, inout uint contaminationWeightedTotal, uint smokeContribution, uint contamination)
 {
     if (smokeContribution == 0u)
@@ -741,6 +754,11 @@ void AddMovedSmokeContribution(
         contaminationWeightedTotal,
         smokeContribution,
         AtmosphericSmokeContamination(atmospheric));
+}
+
+void AddMovedSteamContribution(inout uint steam, uint3 sourceCoordinate, uint3 targetCoordinate)
+{
+    steam += SteamMoveAmount(sourceCoordinate, targetCoordinate);
 }
 
 uint DilutedSmokeContamination(uint smokeTotal, uint contaminationWeightedTotal)
@@ -792,6 +810,8 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint ashContaminationSource = ashQuality == 3u ? 7u : sourceContamination;
 
     uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);
+    uint movedOutSteam = SteamMovedOutAmount(coordinate);
+    steam = steam > movedOutSteam ? steam - movedOutSteam : 0u;
     uint smokeTotal = 0u;
     uint smokeContaminationWeightedTotal = 0u;
     uint retainedSmoke = DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
@@ -824,6 +844,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     {
         uint below = NeighborAtmospheric(uint3(coordinate.x, coordinate.y, coordinate.z - 1u));
         steam = max(steam, DecayBy(AtmosphericSteam(below), 1u));
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x, coordinate.y, coordinate.z - 1u),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -833,6 +857,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.x > 0u)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x - 1u, coordinate.y, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -842,6 +870,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.x + 1u < Width)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x + 1u, coordinate.y, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -851,6 +883,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.y > 0u)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x, coordinate.y - 1u, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -860,6 +896,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.y + 1u < Height)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x, coordinate.y + 1u, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -869,6 +909,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.x > 0u && coordinate.y > 0u)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x - 1u, coordinate.y - 1u, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -878,6 +922,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.x + 1u < Width && coordinate.y > 0u)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x + 1u, coordinate.y - 1u, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -887,6 +935,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.x > 0u && coordinate.y + 1u < Height)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x - 1u, coordinate.y + 1u, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,
@@ -896,6 +948,10 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
 
     if (coordinate.x + 1u < Width && coordinate.y + 1u < Height)
     {
+        AddMovedSteamContribution(
+            steam,
+            uint3(coordinate.x + 1u, coordinate.y + 1u, coordinate.z),
+            coordinate);
         AddMovedSmokeContribution(
             smokeTotal,
             smokeContaminationWeightedTotal,

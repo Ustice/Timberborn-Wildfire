@@ -129,6 +129,25 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void FireSimTransportsCleanSteamWithoutContaminationLane()
+    {
+        string source = ReadUnitySource("FireSim.compute");
+
+        Assert.Contains("uint SteamSourceFromMoistureAndHeat(uint cell)", source, StringComparison.Ordinal);
+        Assert.Contains("uint SteamMoveAmount(uint3 sourceCoordinate, uint3 targetCoordinate)", source, StringComparison.Ordinal);
+        Assert.Contains("uint sourceSteam = DecayBy(AtmosphericSteam(NeighborAtmospheric(sourceCoordinate)), 2u);", source, StringComparison.Ordinal);
+        Assert.Contains("uint SteamMovedOutAmount(uint3 sourceCoordinate)", source, StringComparison.Ordinal);
+        Assert.Contains("steam = steam > movedOutSteam ? steam - movedOutSteam : 0u;", source, StringComparison.Ordinal);
+        Assert.Contains("void AddMovedSteamContribution(inout uint steam, uint3 sourceCoordinate, uint3 targetCoordinate)", source, StringComparison.Ordinal);
+        Assert.Contains("steam += SteamMoveAmount(sourceCoordinate, targetCoordinate);", source, StringComparison.Ordinal);
+        Assert.Contains("AddMovedSteamContribution(", source, StringComparison.Ordinal);
+        Assert.Contains("Steam: atmospheric.Steam / 7f", ReadTimberbornSource("TimberbornGpuVisualFieldSurface.cs"), StringComparison.Ordinal);
+        Assert.DoesNotContain("SteamContamination", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ToxicSteam", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("contaminated steam", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void SmokeAndSteamRenderersUseReleasePuffTuning()
     {
         string cloudShader = ReadUnitySource("WildfireCloud.shader");

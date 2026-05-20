@@ -63,3 +63,12 @@ Steam already lives in the packed transport field and is rendered by the GPU vis
 
 - Source-of-truth note: [docs/steam-simulation-model.md](../../docs/steam-simulation-model.md).
 - `TWF-070` owns final visual tuning after this behavior contract is in place.
+
+## Worker Notes
+
+- Added clean steam movement in `FireSim.compute` through simulator-owned atmospheric transport helpers. Steam now reuses the smoke destination-selection path, but keeps faster steam decay and no contamination lane.
+- Preserved steam source creation from wet hot simulator cells through `SteamSourceFromMoistureAndHeat`.
+- Preserved Timberborn/readback behavior where visual inspection reads `atmospheric.Steam` from the transport field instead of inferring steam from water deltas.
+- Added deterministic/source-guard tests plus opt-in Unity shader harness coverage for clean steam source creation and downwind transport.
+- Verification passed: `git diff --check`; `dotnet test Wildfire.slnx --no-restore`; `bun run typecheck` after `bun install`; `WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 dotnet test Wildfire.slnx --no-restore --filter UnityShaderExecutionHarnessTests`.
+- Review repair: changed incoming moved steam from `max` to additive accumulation with the existing packed-field cap, and added a Unity harness convergence regression where two moved-out clean steam sources both contribute to the same target.
