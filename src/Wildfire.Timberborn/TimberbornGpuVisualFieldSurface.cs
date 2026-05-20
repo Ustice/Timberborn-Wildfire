@@ -394,19 +394,21 @@ public sealed class NullTimberbornGpuVisualFieldSurface : ITimberbornGpuVisualFi
 public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
 {
     private readonly ITimberbornGpuVisualFieldSurface _surface;
-    private readonly TimberbornGpuVisualFieldSurfaceBinding _binding;
+    private TimberbornGpuVisualFieldSurfaceBinding _binding;
     private bool _isBound;
 
     public TimberbornGpuVisualFieldSurfaceBindingLifecycle(
         ITimberbornGpuVisualFieldSurface surface,
         object visualFieldsBuffer,
         object? atmosphericFieldsBuffer,
+        object? companionFieldsBuffer,
         FireGrid grid,
         int strideBytes)
         : this(
             surface,
             visualFieldsBuffer,
             atmosphericFieldsBuffer,
+            companionFieldsBuffer,
             grid.Width,
             grid.Height,
             grid.Depth,
@@ -419,6 +421,7 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         ITimberbornGpuVisualFieldSurface surface,
         object visualFieldsBuffer,
         object? atmosphericFieldsBuffer,
+        object? companionFieldsBuffer,
         int width,
         int height,
         int depth,
@@ -429,6 +432,7 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         _binding = new TimberbornGpuVisualFieldSurfaceBinding(
             visualFieldsBuffer,
             atmosphericFieldsBuffer,
+            companionFieldsBuffer,
             width,
             height,
             depth,
@@ -442,7 +446,7 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         object visualFieldsBuffer,
         FireGrid grid,
         int strideBytes)
-        : this(surface, visualFieldsBuffer, atmosphericFieldsBuffer: null, grid, strideBytes)
+        : this(surface, visualFieldsBuffer, atmosphericFieldsBuffer: null, companionFieldsBuffer: null, grid, strideBytes)
     {
     }
 
@@ -454,7 +458,16 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
         int depth,
         int cellCount,
         int strideBytes)
-        : this(surface, visualFieldsBuffer, atmosphericFieldsBuffer: null, width, height, depth, cellCount, strideBytes)
+        : this(
+            surface,
+            visualFieldsBuffer,
+            atmosphericFieldsBuffer: null,
+            companionFieldsBuffer: null,
+            width,
+            height,
+            depth,
+            cellCount,
+            strideBytes)
     {
     }
 
@@ -476,7 +489,8 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
     {
         if (_isBound)
         {
-            _surface.Bind(_binding.WithTransportFieldsBuffer(transportFieldsBuffer));
+            _binding = _binding.WithTransportFieldsBuffer(transportFieldsBuffer);
+            _surface.Bind(_binding);
         }
     }
 
@@ -484,7 +498,8 @@ public sealed class TimberbornGpuVisualFieldSurfaceBindingLifecycle
     {
         if (_isBound)
         {
-            _surface.Bind(_binding.WithMaterialFieldsBuffer(materialFieldsBuffer));
+            _binding = _binding.WithMaterialFieldsBuffer(materialFieldsBuffer);
+            _surface.Bind(_binding);
         }
     }
 

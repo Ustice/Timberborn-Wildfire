@@ -71,6 +71,50 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void CompleteVisualEffectDispatchCanRenderRestoredAshBeforeSimulationTick()
+    {
+        object visualFieldsBuffer = new();
+        object materialFieldsBuffer = new();
+        object transportFieldsBuffer = new();
+        TimberbornGpuVisualFieldSurface surface = new(new RecordingFireLogSink());
+        surface.Bind(new TimberbornGpuVisualFieldSurfaceBinding(
+            visualFieldsBuffer,
+            transportFieldsBuffer,
+            materialFieldsBuffer,
+            width: 4,
+            height: 3,
+            depth: 2,
+            cellCount: 24,
+            strideBytes: 16,
+            channels: TimberbornGpuVisualFieldChannels.All));
+        surface.MarkUpdated(37);
+        RecordingGpuFieldRendererPresenter presenter = new();
+        TimberbornGpuFieldRendererSink renderer = new(
+            surface,
+            new RecordingFireLogSink(),
+            TimberbornGpuFieldRendererOptions.Default,
+            presenter);
+
+        renderer.CompleteVisualEffectDispatch(37);
+
+        Assert.Equal(1, presenter.RenderPresentationCallCount);
+        Assert.Same(materialFieldsBuffer, presenter.LastPresentation.MaterialFieldsBuffer);
+        Assert.Same(transportFieldsBuffer, presenter.LastPresentation.TransportFieldsBuffer);
+        Assert.Equal(4, presenter.LastPresentation.GridWidth);
+        Assert.Equal(3, presenter.LastPresentation.GridHeight);
+        Assert.Equal(2, presenter.LastPresentation.GridDepth);
+    }
+
+    [Fact]
+    public void RuntimeInitializesGpuFieldRendererPresentationAfterPersistenceRestore()
+    {
+        string runtimeSource = ReadTimberbornSource("TimberbornFireRuntime.cs");
+
+        Assert.Contains("RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FireSimKeepsDynamicAshOutOfCompanionFields()
     {
         string source = ReadUnitySource("FireSim.compute");
@@ -239,6 +283,10 @@ public sealed class TimberbornGpuFieldRendererTests
             RendererEnabled: true,
             MaterialReady: true);
 
+        public int RenderPresentationCallCount { get; private set; }
+
+        public TimberbornGpuFieldRendererPresentation LastPresentation { get; private set; }
+
         public TimberbornGpuFieldRendererPresentationResult RenderRegions(
             IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
         {
@@ -248,6 +296,8 @@ public sealed class TimberbornGpuFieldRendererTests
         public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
             TimberbornGpuFieldRendererPresentation presentation)
         {
+            RenderPresentationCallCount++;
+            LastPresentation = presentation;
             return TimberbornGpuFieldRendererPresentationResult.Applied;
         }
 
