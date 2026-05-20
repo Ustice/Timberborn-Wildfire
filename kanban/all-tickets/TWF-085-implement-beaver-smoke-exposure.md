@@ -68,3 +68,6 @@ Normal smoke should mostly punish staying near a smoky field over time. It needs
 - Toxic smoke behavior belongs to `TWF-086`.
 - Fire and heat behavior belongs to `TWF-087`.
 - Relevant design reference: `docs/DESIGN.md` section 20, "Beaver Field Effects".
+- Reviewed implementation is parked on `~/repos/wildfire-TWF-085-beaver-smoke` / `codex/TWF-085-beaver-smoke` commit `4bdff943`. It adds normal-smoke accumulation, bounded batch/cooldown accounting, reversible coughing safe-no-op state, recovery decay, and skipped-unsafe candidate telemetry for choking/death.
+- Coordinator review reran targeted behavior and command-token tests on 2026-05-20: `dotnet test Wildfire.slnx --no-restore --verbosity minimal --filter "FullyQualifiedName~TimberbornBeaverFieldBehaviorTests|FullyQualifiedName~TimberbornQaCommandBridgeTests"` passed `106/106`. Worker also reported full `dotnet test` `455/455`, `dotnet build`, and `git diff --check`.
+- Live QA is blocked: `bun scripts/invoke-timberborn-command.ts status --wait=5` wrote the command inbox but timed out waiting for `command-outbox.txt`, and the process list showed Steam without a loaded Timberborn process. No coughing/smoke behavior is accepted until the same live gate passes.
