@@ -222,9 +222,9 @@ public sealed class UnityShaderExecutionHarnessTests
     {
         int width = 7;
         int height = 5;
-        ushort[] cells = CreateTerrainCells(width, height);
+        ushort[] cells = CreateAirCells(width, height);
         uint[] atmosphericFields = new uint[cells.Length];
-        atmosphericFields[ToIndex(3, 2, width)] = new WildfireTransportFieldState(
+        atmosphericFields[ToIndex(0, 1, width)] = new WildfireTransportFieldState(
             Steam: 5,
             Smoke: 5,
             SmokeContamination: 0,
@@ -245,14 +245,90 @@ public sealed class UnityShaderExecutionHarnessTests
             return;
         }
 
-        WildfireTransportFieldState downwind = AtmosphereAt(capture, 4, 2);
-        WildfireTransportFieldState crosswind = AtmosphereAt(capture, 3, 3);
-        WildfireTransportFieldState upwind = AtmosphereAt(capture, 2, 2);
+        WildfireTransportFieldState source = AtmosphereAt(capture, 0, 1);
+        WildfireTransportFieldState downwind = AtmosphereAt(capture, 1, 1);
+        WildfireTransportFieldState crosswind = AtmosphereAt(capture, 0, 2);
 
         Assert.True(downwind.Smoke > crosswind.Smoke, $"Expected downwind smoke {downwind.Smoke} to exceed crosswind {crosswind.Smoke}.");
-        Assert.True(crosswind.Smoke > upwind.Smoke, $"Expected crosswind smoke {crosswind.Smoke} to exceed upwind {upwind.Smoke}.");
-        Assert.True(downwind.Steam < downwind.Smoke, $"Expected steam {downwind.Steam} to decay faster than smoke {downwind.Smoke}.");
-        Assert.True(downwind.Ash > downwind.Smoke, $"Expected ash {downwind.Ash} to persist longer than smoke {downwind.Smoke}.");
+        Assert.True(downwind.Steam > 0, $"Expected clean steam to move downwind, got {downwind.Steam}.");
+        Assert.True(source.Steam < source.Smoke, $"Expected source steam {source.Steam} to decay faster than smoke {source.Smoke}.");
+        Assert.True(source.Ash > source.Smoke, $"Expected ash {source.Ash} to persist longer than smoke {source.Smoke}.");
+    }
+
+    [Fact]
+    public void UnityHarnessSteamComesFromWetHotSimulatorStateWhenEnabled()
+    {
+        int width = 3;
+        int height = 3;
+        ushort[] cells = CreateTerrainCells(width, height);
+        cells[ToIndex(1, 1, width)] = PackedCell.Pack(
+            fuel: 0,
+            heat: 15,
+            flammability: 0,
+            water: 3,
+            terrain: 1,
+            burningLevel: 0);
+        ShaderSnapshotFixture fixture = CreateFixture(
+            "field-model-clean-steam-source",
+            width,
+            height,
+            cells,
+            wind: FireSimWind.None);
+
+        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
+        if (capture is null)
+        {
+            return;
+        }
+
+        WildfireTransportFieldState wetHotCell = AtmosphereAt(capture, 1, 1);
+
+        Assert.True(wetHotCell.Steam > 0, $"Expected wet hot simulator state to create steam, got {wetHotCell.Steam}.");
+        Assert.Equal(0, wetHotCell.SmokeContamination);
+    }
+
+    [Fact]
+    public void UnityHarnessConvergingSteamTransportAccumulatesWhenEnabled()
+    {
+        int width = 7;
+        int height = 9;
+        ushort[] cells = CreateAirCells(width, height);
+        uint[] atmosphericFields = new uint[cells.Length];
+        atmosphericFields[ToIndex(2, 6, width)] = new WildfireTransportFieldState(
+            Steam: 7,
+            Smoke: 0,
+            SmokeContamination: 0,
+            Ash: 0,
+            AshContamination: 0,
+            Source: false).Pack();
+        atmosphericFields[ToIndex(4, 6, width)] = new WildfireTransportFieldState(
+            Steam: 7,
+            Smoke: 0,
+            SmokeContamination: 0,
+            Ash: 0,
+            AshContamination: 0,
+            Source: false).Pack();
+        ShaderSnapshotFixture fixture = CreateFixture(
+            "field-model-clean-steam-convergence",
+            width,
+            height,
+            cells,
+            initialAtmosphericFields: atmosphericFields,
+            wind: FireSimWind.None);
+
+        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
+        if (capture is null)
+        {
+            return;
+        }
+
+        WildfireTransportFieldState leftSource = AtmosphereAt(capture, 2, 6);
+        WildfireTransportFieldState rightSource = AtmosphereAt(capture, 4, 6);
+        WildfireTransportFieldState convergenceTarget = AtmosphereAt(capture, 3, 7);
+
+        Assert.Equal(4, leftSource.Steam);
+        Assert.Equal(4, rightSource.Steam);
+        Assert.Equal(2, convergenceTarget.Steam);
     }
 
     [Fact]
@@ -564,6 +640,14 @@ public sealed class UnityShaderExecutionHarnessTests
     {
         return Enumerable.Repeat(
                 PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0),
+                width * height)
+            .ToArray();
+    }
+
+    private static ushort[] CreateAirCells(int width, int height)
+    {
+        return Enumerable.Repeat(
+                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 0, burningLevel: 0),
                 width * height)
             .ToArray();
     }
