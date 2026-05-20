@@ -46,7 +46,10 @@ public readonly record struct TimberbornBuildingCell(
 
 public readonly record struct TimberbornResourceCell(byte Fuel, byte Flammability, TimberbornResourceKind Kind);
 
-public readonly record struct TimberbornWaterCell(byte Water);
+public readonly record struct TimberbornWaterCell(
+    byte Water,
+    bool IsContaminated = false,
+    bool IsBadwater = false);
 
 public enum TimberbornBuildingMaterialKind
 {
@@ -397,12 +400,18 @@ public sealed class TimberbornResourceAdapter
 
 public sealed class TimberbornWaterAdapter
 {
-    public TimberbornCellSource CreateSource(int x, int y, int z, byte water)
+    public TimberbornCellSource CreateSource(
+        int x,
+        int y,
+        int z,
+        byte water,
+        bool isContaminated = false,
+        bool isBadwater = false)
     {
         return new TimberbornCellSource(
             new TimberbornCellCoordinates(x, y, z),
-            Water: new TimberbornWaterCell(water),
-            MaterialClass: WildfireMaterialClass.Water);
+            Water: new TimberbornWaterCell(water, isContaminated, isBadwater),
+            MaterialClass: isBadwater ? WildfireMaterialClass.Badwater : WildfireMaterialClass.Water);
     }
 }
 

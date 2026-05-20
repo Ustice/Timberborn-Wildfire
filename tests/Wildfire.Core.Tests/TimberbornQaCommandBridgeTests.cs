@@ -603,7 +603,23 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaCount: 0);
         RecordingStateProvider stateProvider = new(state);
         RecordingWaterSuppressionStimulus waterSuppressionStimulus = new(
-            new TimberbornQaWaterSuppressionStimulusResult(TimberbornQaFieldTargetSelectors.Default, 91, 3, 4, 2, WildfireMaterialClass.Tree, 77u, 498, 3, 1));
+            new TimberbornQaWaterSuppressionStimulusResult(
+                TimberbornQaFieldTargetSelectors.Default,
+                91,
+                3,
+                4,
+                2,
+                WildfireMaterialClass.Tree,
+                77u,
+                498,
+                3,
+                1,
+                TargetSoilContamination: 6,
+                IsAffectedCellContaminated: true,
+                IsContaminatedSuppressionInput: false,
+                IsBadwaterSuppressionInput: false,
+                WaterSuppressionInputSafeUnavailableCount: 1,
+                NativeDecontaminationAttemptCount: 0));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
@@ -627,6 +643,12 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("target_z=2", result.Message);
         Assert.Contains("target_material=Tree", result.Message);
         Assert.Contains("companion_target_id=77", result.Message);
+        Assert.Contains("target_soil_contamination=6", result.Message);
+        Assert.Contains("affected_cell_contaminated=true", result.Message);
+        Assert.Contains("contaminated_suppression_input=false", result.Message);
+        Assert.Contains("badwater_suppression_input=false", result.Message);
+        Assert.Contains("water_suppression_input_safe_unavailable=1", result.Message);
+        Assert.Contains("native_decontamination_attempts=0", result.Message);
         Assert.Contains("initial_cell=498", result.Message);
         Assert.Contains("set_water=3", result.Message);
         Assert.Contains("queued_water_changes=1", result.Message);
@@ -650,6 +672,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [InlineData("qa-delta-stimulus power-infrastructure", "power-infrastructure")]
     [InlineData("qa-delta-stimulus water-infrastructure", "water-infrastructure")]
     [InlineData("qa-water-suppression-stimulus storage", "storage")]
+    [InlineData("qa-water-suppression-stimulus contaminated-tree", "contaminated-tree")]
     public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)
     {
         TimberbornQaCommandState state = new(
@@ -1683,6 +1706,36 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
+    [Fact]
+    public void QueueWaterSuppressionQaStimulusTargetsContaminatedTreeWithoutDecontamination()
+    {
+        RecordingFireSimulator simulator = new(width: 2, height: 1, depth: 1);
+        TimberbornTerrainAdapter terrainAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            terrainAdapter.CreateSource(0, 0, 0, isSolid: true),
+            resourceAdapter.CreateTreeSource(0, 0, 0, companionTargetId: 1u),
+            terrainAdapter.CreateSource(1, 0, 0, isSolid: true, soilContamination: 7),
+            resourceAdapter.CreateTreeSource(1, 0, 0, companionTargetId: 2u));
+
+        TimberbornQaWaterSuppressionStimulusResult result =
+            fireSystem.QueueWaterSuppressionQaStimulus(TimberbornQaFieldTargetSelectors.ContaminatedTree);
+
+        Assert.Equal(1, result.CellIndex);
+        Assert.Equal((byte)7, result.TargetSoilContamination);
+        Assert.True(result.IsAffectedCellContaminated);
+        Assert.False(result.IsContaminatedSuppressionInput);
+        Assert.False(result.IsBadwaterSuppressionInput);
+        Assert.Equal(1, result.WaterSuppressionInputSafeUnavailableCount);
+        Assert.Equal(0, result.NativeDecontaminationAttemptCount);
+        Assert.Equal(1, fireSystem.ContaminationFireSummary.ContaminatedAffectedMapCellCount);
+        Assert.Equal(0, fireSystem.ContaminationFireSummary.ContaminatedWaterSuppressionInputCellCount);
+        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(1, change.CellIndex);
+        Assert.Equal((byte)3, change.SetWater);
+    }
+
     [Theory]
     [InlineData("low", 37, 1, 3, 1, 4)]
     [InlineData("medium", 38, 2, 3, 1, 9)]
@@ -2180,10 +2233,23 @@ public sealed class TimberbornQaCommandBridgeTests
             AshFieldFertileCells: 2,
             AshFieldSpentCells: 1,
             AshFieldTaintedCells: 1,
+            AshFieldContaminatedBurnSources: 4,
+            AshFieldContaminatedAffectedCells: 5,
             AshFieldGrowthCandidateCells: 2,
             AshFieldGrowthAppliedGrowables: 1,
             AshFieldGrowthSkippedTaintedCells: 1,
             AshFieldGrowthSkippedUnsafeApis: 0,
+            ContaminationFireContaminatedBurnSources: 6,
+            ContaminationFireContaminatedAffectedCells: 7,
+            ContaminationFireContaminatedAffectedMapCells: 8,
+            ContaminationFireBadwaterWaterLikeMapCells: 9,
+            ContaminationFireContaminatedWaterLikeMapCells: 10,
+            ContaminationFireBadwaterSuppressionInputs: 0,
+            ContaminationFireContaminatedWaterSuppressionInputs: 0,
+            ContaminationFireWaterSuppressionInputSafeUnavailable: 11,
+            ContaminationFireToxicSmokeCells: 48,
+            ContaminationFireNativeDecontaminationAttempts: 0,
+            ContaminationFireSkippedUnsafeContaminationApis: 11,
             TaintedAshPoisonCandidateCells: 1,
             TaintedAshPoisonAppliedCells: 1,
             TaintedAshPoisonSkippedNoSafeApi: 0,
@@ -2305,10 +2371,23 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("ash_field_fertile_cells=2", result.ResultToken);
         Assert.Contains("ash_field_spent_cells=1", result.ResultToken);
         Assert.Contains("ash_field_tainted_cells=1", result.ResultToken);
+        Assert.Contains("ash_field_contaminated_burn_sources=4", result.ResultToken);
+        Assert.Contains("ash_field_contaminated_affected_cells=5", result.ResultToken);
         Assert.Contains("ash_field_growth_candidate_cells=2", result.ResultToken);
         Assert.Contains("ash_field_growth_applied_growables=1", result.ResultToken);
         Assert.Contains("ash_field_growth_skipped_tainted_cells=1", result.ResultToken);
         Assert.Contains("ash_field_growth_skipped_unsafe_apis=0", result.ResultToken);
+        Assert.Contains("contamination_fire_contaminated_burn_sources=6", result.ResultToken);
+        Assert.Contains("contamination_fire_contaminated_affected_cells=7", result.ResultToken);
+        Assert.Contains("contamination_fire_contaminated_affected_map_cells=8", result.ResultToken);
+        Assert.Contains("contamination_fire_badwater_water_like_map_cells=9", result.ResultToken);
+        Assert.Contains("contamination_fire_contaminated_water_like_map_cells=10", result.ResultToken);
+        Assert.Contains("contamination_fire_badwater_suppression_inputs=0", result.ResultToken);
+        Assert.Contains("contamination_fire_contaminated_water_suppression_inputs=0", result.ResultToken);
+        Assert.Contains("contamination_fire_water_suppression_input_safe_unavailable=11", result.ResultToken);
+        Assert.Contains("contamination_fire_toxic_smoke_cells=48", result.ResultToken);
+        Assert.Contains("contamination_fire_native_decontamination_attempts=0", result.ResultToken);
+        Assert.Contains("contamination_fire_skipped_unsafe_contamination_apis=11", result.ResultToken);
         Assert.Contains("tainted_ash_poison_candidate_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_applied_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_skipped_no_safe_api=0", result.ResultToken);

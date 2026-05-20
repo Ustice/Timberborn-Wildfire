@@ -103,6 +103,8 @@ public readonly record struct TimberbornAshFieldCollectionRemoval(
 public readonly record struct TimberbornAshFieldSummary(
     uint Tick,
     int SourceEventCount,
+    int ContaminatedBurnSourceCellCount,
+    int ContaminatedAffectedCellCount,
     int NewAshCellCount,
     int FertileAshCellCount,
     int SpentAshCellCount,
@@ -119,6 +121,8 @@ public readonly record struct TimberbornAshFieldSummary(
     public static readonly TimberbornAshFieldSummary Empty = new(
         Tick: 0,
         SourceEventCount: 0,
+        ContaminatedBurnSourceCellCount: 0,
+        ContaminatedAffectedCellCount: 0,
         NewAshCellCount: 0,
         FertileAshCellCount: 0,
         SpentAshCellCount: 0,
@@ -137,6 +141,8 @@ public readonly record struct TimberbornAshFieldSummary(
         return "wildfire_timberborn_ash_field_updated " +
             $"tick={Tick} " +
             $"ash_source_events={SourceEventCount} " +
+            $"ash_contaminated_burn_sources={ContaminatedBurnSourceCellCount} " +
+            $"ash_contaminated_affected_cells={ContaminatedAffectedCellCount} " +
             $"new_ash_cells={NewAshCellCount} " +
             $"fertile_ash_cells={FertileAshCellCount} " +
             $"spent_ash_cells={SpentAshCellCount} " +
@@ -348,6 +354,8 @@ public sealed class TimberbornAshFieldService
         LastSummary = new TimberbornAshFieldSummary(
             Tick: tick,
             SourceEventCount: sourceEventCount,
+            ContaminatedBurnSourceCellCount: 0,
+            ContaminatedAffectedCellCount: 0,
             NewAshCellCount: newAshCells,
             FertileAshCellCount: _entries.Values.Count(static entry => entry.Quality == WildfireAshQuality.Fertile),
             SpentAshCellCount: _entries.Values.Count(static entry => entry.Quality == WildfireAshQuality.Spent),
@@ -542,6 +550,8 @@ public sealed class TimberbornAshFieldSink : ITimberbornAshFieldSink
         {
             Tick = tick,
             SourceEventCount = ashEvents.Length,
+            ContaminatedBurnSourceCellCount = ashEvents.Count(static sourceEvent => sourceEvent.IsSourceContaminated),
+            ContaminatedAffectedCellCount = ashEvents.Count(static sourceEvent => sourceEvent.IsAffectedCellContaminated),
             FertileAshCellCount = fertileCells,
             SpentAshCellCount = spentCells,
             TaintedAshCellCount = taintedCells,

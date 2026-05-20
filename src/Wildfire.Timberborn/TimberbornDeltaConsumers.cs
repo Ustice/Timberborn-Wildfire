@@ -649,6 +649,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int WaterInfrastructureRepairEligibleTargetCount,
     int WaterInfrastructureTotalDamageApplied,
     int AshFieldSourceEventCount,
+    int AshFieldContaminatedBurnSourceCellCount,
+    int AshFieldContaminatedAffectedCellCount,
     int AshFieldNewAshCellCount,
     int AshFieldFertileAshCellCount,
     int AshFieldSpentAshCellCount,
@@ -789,6 +791,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         WaterInfrastructureRepairEligibleTargetCount: 0,
         WaterInfrastructureTotalDamageApplied: 0,
         AshFieldSourceEventCount: 0,
+        AshFieldContaminatedBurnSourceCellCount: 0,
+        AshFieldContaminatedAffectedCellCount: 0,
         AshFieldNewAshCellCount: 0,
         AshFieldFertileAshCellCount: 0,
         AshFieldSpentAshCellCount: 0,
@@ -952,6 +956,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             waterInfrastructureSummary.RepairEligibleTargetCount,
             waterInfrastructureSummary.TotalDamageApplied,
             ashFieldSummary.SourceEventCount,
+            ashFieldSummary.ContaminatedBurnSourceCellCount,
+            ashFieldSummary.ContaminatedAffectedCellCount,
             ashFieldSummary.NewAshCellCount,
             ashFieldSummary.FertileAshCellCount,
             ashFieldSummary.SpentAshCellCount,
@@ -1095,6 +1101,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"water_infrastructure_repair_eligible_targets={WaterInfrastructureRepairEligibleTargetCount} " +
             $"water_infrastructure_total_damage_applied={WaterInfrastructureTotalDamageApplied} " +
             $"ash_field_source_events={AshFieldSourceEventCount} " +
+            $"ash_field_contaminated_burn_sources={AshFieldContaminatedBurnSourceCellCount} " +
+            $"ash_field_contaminated_affected_cells={AshFieldContaminatedAffectedCellCount} " +
             $"ash_field_new_cells={AshFieldNewAshCellCount} " +
             $"ash_field_fertile_cells={AshFieldFertileAshCellCount} " +
             $"ash_field_spent_cells={AshFieldSpentAshCellCount} " +

@@ -366,10 +366,13 @@ public sealed class TimberbornWaterSourceCellSourceProvider : ITimberbornWorldCe
             .Where(static source => TimberbornEntityComponentCells.IsBadwaterSourceName(source.Name))
             .SelectMany(TimberbornEntityComponentCells.OccupiedCoordinates)
             .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
-            .Select(coordinates => new TimberbornCellSource(
-                new TimberbornCellCoordinates(coordinates.x, coordinates.y, coordinates.z),
-                Water: new TimberbornWaterCell(3),
-                MaterialClass: WildfireMaterialClass.Badwater))
+            .Select(coordinates => _waterAdapter.CreateSource(
+                coordinates.x,
+                coordinates.y,
+                coordinates.z,
+                water: 3,
+                isContaminated: true,
+                isBadwater: true))
             .ToArray();
 
         return new TimberbornWorldCellImportProviderResult("water_sources", waterSources.Concat(badwaterSources).ToArray());

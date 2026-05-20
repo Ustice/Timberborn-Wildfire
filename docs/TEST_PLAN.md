@@ -139,11 +139,14 @@ Required deterministic evidence:
 
 Ash is simulator-owned transport state and must stay out of `PackedCell`. Timberborn ash services consume simulator ash deltas or readback and queue bounded ash mutations; they must not own a competing ash source of truth.
 
+`TWF-079` keeps the broad contamination contract separate from tainted-ash live proof. Fire, heat, and suppression must never reduce native Timberborn contamination. Badwater and contaminated water-like cells import as packed water-band inputs while remaining visibly unsafe in telemetry. They must not be reported as actual suppression inputs unless a fire/suppression event proves that cell supplied the suppression; otherwise status must expose safe-unavailable telemetry instead of over-claiming. Toxic-smoke readiness is exposed through contaminated-smoke and toxic exposure classifications for `TWF-086`; this ticket does not add toxic or contaminated steam.
+
 Required deterministic coverage:
 
 - Clean organic burn aftermath creates uncontaminated ash and only uncontaminated ash requests growth.
 - Fertile ash growth remains bounded to a `10%` maximum multiplier and reports applied, unsupported, unsafe, and tainted-skip counters.
 - Contaminated burn sources or affected contaminated soil create contaminated ash and never request growth.
+- Badwater and contaminated water-like sources map to water-like cells without creating a native decontamination attempt, and actual suppression-input counters remain separate from water-like map-presence counters.
 - Tainted ash soil poisoning reports candidate, applied, and safe-unavailable mutation counters without reducing native contamination.
 - Clean ash decay removes `1` simulator ash unit per in-game day; contaminated ash decay removes `1` simulator ash unit every two in-game days.
 - Tainted ash fades over time or washes away when water reaches it; washed tainted ash slightly taints water when a safe API exists, or reports safe-unavailable telemetry.
@@ -154,11 +157,14 @@ Status and `qa-readiness` should expose simulator-owned ash state and adapter ef
 
 - `ash_field_entries`, `ash_field_fertile_cells`, `ash_field_spent_cells`, and `ash_field_tainted_cells`.
 - `ash_field_growth_candidate_cells`, `ash_field_growth_applied_growables`, `ash_field_growth_skipped_tainted_cells`, and `ash_field_growth_skipped_unsafe_apis`.
+- `ash_field_contaminated_burn_sources`, `ash_field_contaminated_affected_cells`, `contamination_fire_contaminated_burn_sources`, `contamination_fire_contaminated_affected_cells`, `contamination_fire_contaminated_affected_map_cells`, `contamination_fire_badwater_water_like_map_cells`, `contamination_fire_contaminated_water_like_map_cells`, `contamination_fire_badwater_suppression_inputs`, `contamination_fire_contaminated_water_suppression_inputs`, `contamination_fire_water_suppression_input_safe_unavailable`, `contamination_fire_toxic_smoke_cells`, `contamination_fire_native_decontamination_attempts`, and `contamination_fire_skipped_unsafe_contamination_apis`.
 - `tainted_ash_poison_candidate_cells`, `tainted_ash_poison_applied_cells`, and `tainted_ash_poison_skipped_no_safe_api`.
 - Tainted ash decay or washout counters, including tainted cells faded, tainted cells washed, fertile ash washed, water-taint attempts, water-taint successes, and skipped unsafe water-taint APIs.
 - `fertile_ash_gatherer_posts`, `fertile_ash_collection_candidate_cells`, `fertile_ash_collection_reachable_cells`, `fertile_ash_collected_goods`, `fertile_ash_collection_depleted_cells`, `fertile_ash_collection_skipped_tainted_or_spent_cells`, and `fertile_ash_collection_skipped_inventory_api`.
 
 Live QA should burn one clean organic target and one contaminated or contaminated-soil target. Prefer `qa-delta-stimulus contaminated-tree` when the loaded map contains a contaminated tree. If the map cannot reliably provide that source, use `qa-delta-stimulus tainted-ash` as the narrow QA-only affected-cell route; it queues simulator ash plus ash contamination and must not mutate native soil or badwater contamination. Passing evidence must include a copied `Player.log`, a `status` or `qa-readiness` result with nonzero fertile and tainted ash counters, growth or safe-unavailable growth telemetry, tainted soil-poisoning applied or safe-unavailable telemetry, and Gatherer Post collection of `FertileAsh` or an explicit inventory API blocker. Save/reload QA should confirm ash entries survive through Wildfire persistence before collection depletes them.
+
+For `TWF-079` live QA, use `qa-water-suppression-stimulus contaminated-tree` after confirming the loaded map has at least one contaminated tree target. Capture the command result, one or more dispatch ticks, and `status` or `qa-readiness` fields showing `target_soil_contamination`, `affected_cell_contaminated=true`, `contaminated_suppression_input=false` unless a real contaminated-water suppressor is proven, `water_suppression_input_safe_unavailable` when the suppressor is only QA-injected water, `native_decontamination_attempts=0`, distinct contaminated source and affected-cell counters, and the existing beaver exposure toxic-smoke fields. If no contaminated-tree target exists, report the command failure as a map/setup blocker and keep `qa-delta-stimulus contaminated-tree`/`qa-delta-stimulus tainted-ash` limited to tainted-ash evidence rather than treating it as badwater suppression proof.
 
 Fertile ash application adds two player-facing toolbar paths: crop fertilizing and forestry fertilizing. Deterministic and live QA should prove that designations consume `1` `FertileAsh` good, queue `1` uncontaminated ash unit into simulator ash state, persist crop and forestry designations across save/reload, skip contaminated cells without consuming goods, and report no-inventory or safe-API failures clearly.
 
