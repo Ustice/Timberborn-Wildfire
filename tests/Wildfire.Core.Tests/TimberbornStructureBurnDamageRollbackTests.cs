@@ -321,6 +321,84 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(2, targetApi.Requests.Count(static request => request.ShouldApplyRollbackVisual));
     }
 
+    [Theory]
+    [InlineData("DistrictCenter")]
+    [InlineData("DistrictCenter.Folktails(Clone)")]
+    [InlineData("DistrictCenter.IronTeeth(Clone)")]
+    public void TargetApiTreatsDistrictCentersAsUnsafeForUnfinishedRollback(string specId)
+    {
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenter(specId));
+    }
+
+    [Theory]
+    [InlineData("DistrictCrossing.Folktails(Clone)")]
+    [InlineData("LumberMill.Folktails(Clone)")]
+    public void TargetApiDoesNotTreatOtherBuildingsAsDistrictCenters(string specId)
+    {
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenter(specId));
+    }
+
+    [Fact]
+    public void SinkStillAllowsNonDistrictStructuresToUseUnfinishedRollback()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [],
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: true));
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: new TimberbornBurnDamageTestStateProvider(
+                [
+                    TimberbornBurnDamageTestStateProvider.State(
+                        "structure-1",
+                        "Building.LumberMill",
+                        TimberbornBurnDamageTargetKind.Structure,
+                        damageCapacity: 100,
+                        damageTaken: 10,
+                        ownedCellIndices: [4]),
+                ],
+                [
+                    TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                        "structure-1",
+                        "Building.LumberMill",
+                        sourceCellIndex: 4,
+                        damageApplied: 10,
+                        damageTaken: 10,
+                        damageCapacity: 100,
+                        tick: 8),
+                ]));
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            8,
+            [Decision(4, oldFuel: 10, newFuel: 0, heat: 10)]);
+
+        Assert.Equal(1, summary.UnfinishedStageCount);
+        Assert.True(Assert.Single(targetApi.Requests).ShouldApplyRollbackVisual);
+    }
+
+    [Fact]
+    public void TargetApiStopsRemovingConstructionMaterialsOnceRepairEligible()
+    {
+        TimberbornStructureBurnDamageApplyRequest burningRequest = new(
+            DamageApplied: 10,
+            DamageTaken: 10,
+            DamageCapacity: 100,
+            RollbackStage: TimberbornStructureBurnRollbackStage.Unfinished,
+            ShouldClose: false,
+            RepairBlocked: true,
+            RepairEligible: false,
+            ShouldApplyRollbackVisual: true);
+        TimberbornStructureBurnDamageApplyRequest repairRequest = burningRequest with
+        {
+            RepairBlocked = false,
+            RepairEligible = true,
+        };
+
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.ShouldRemoveConstructionMaterials(burningRequest));
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.ShouldRemoveConstructionMaterials(repairRequest));
+    }
+
     [Fact]
     public void SinkReportsSafeLimitationWhenVisualRollbackIsUnavailable()
     {
@@ -331,7 +409,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
 
         TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
-            8,
+            9,
             [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]);
 
         Assert.Equal(1, summary.SkippedNoSafeApiCount);
@@ -351,7 +429,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
                 structureBurnDamageRollbackSink: new TimberbornStructureBurnDamageRollbackSink(targetApi)));
 
         TimberbornFireDeltaConsumerSummary summary = consumer.Consume(
-            9,
+            10,
             [new CellDelta(4, Cell(fuel: 8, heat: 10), Cell(fuel: 5, heat: 10))]);
 
         Assert.Equal(1, summary.StructureBurnDamageRollbackConsideredDeltaCount);

@@ -435,7 +435,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             }
 
             ConstructionSite? constructionSite = TryGetConstructionSite(blockObject, coordinates);
-            removedConstructionMaterialCount = RemoveConstructionMaterials(constructionSite, target);
+            removedConstructionMaterialCount = ShouldRemoveConstructionMaterials(request)
+                ? RemoveConstructionMaterials(constructionSite, target)
+                : 0;
             resetConstructionProgress = target.CanRepairAfterDanger &&
                 request.RepairBlocked &&
                 TrySetConstructionProgress(constructionSite, buildTimeProgressInHours: 0f);
@@ -493,12 +495,20 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     {
         try
         {
-            return blockObject.IsFinished && !HasFinishedStateReentryListener(blockObject);
+            return blockObject.IsFinished &&
+                !IsDistrictCenter(blockObject.Name) &&
+                !HasFinishedStateReentryListener(blockObject);
         }
         catch
         {
             return false;
         }
+    }
+
+    public static bool IsDistrictCenter(string specId)
+    {
+        return specId.StartsWith("DistrictCenter.", StringComparison.Ordinal) ||
+            string.Equals(specId, "DistrictCenter", StringComparison.Ordinal);
     }
 
     private static bool HasFinishedStateReentryListener(BlockObject blockObject)
@@ -631,6 +641,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         {
             return false;
         }
+    }
+
+    public static bool ShouldRemoveConstructionMaterials(TimberbornStructureBurnDamageApplyRequest request)
+    {
+        return request.ShouldApplyRollbackVisual && request.RepairBlocked;
     }
 
     private int ApplyBurnedTextures(BlockObject blockObject, string textureLabel)
