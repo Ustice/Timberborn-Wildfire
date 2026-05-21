@@ -480,7 +480,11 @@ public static class TimberbornCompatibilityProbeCatalog
 
         if (!string.IsNullOrWhiteSpace(readError))
         {
-            return CreateUnavailableResult(name, isRequired, feature, $"read_error:{readError}");
+            return TimberbornCompatibilityProbeResult.Passed(
+                name,
+                isRequired,
+                feature,
+                $"asset_bundle_exists_header_unreadable:path={path}:read_error={readError}:limitation=asset_and_kernel_validation_deferred_to_unity_loader");
         }
 
         if (!sizeBytes.HasValue || sizeBytes <= 0)

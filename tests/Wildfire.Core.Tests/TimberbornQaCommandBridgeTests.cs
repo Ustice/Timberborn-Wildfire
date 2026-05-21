@@ -881,12 +881,18 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueQaDeltaStimulusBeaverExposureQueuesFullFieldStateAtSampledCandidateCell()
+    public void QueueQaDeltaStimulusBeaverExposureQueuesFullFieldStateAtSampledCandidateCells()
     {
         RecordingFireSimulator simulator = new(width: 5, height: 5, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(simulator);
         FireGrid grid = new(simulator.Width, simulator.Height, simulator.Depth);
         int beaverCellIndex = grid.ToIndex(2, 3, 1);
+        int[] candidateCellIndices =
+        [
+            grid.ToIndex(1, 2, 1),
+            beaverCellIndex,
+            grid.ToIndex(3, 4, 1),
+        ];
 
         TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
             TimberbornQaFieldTargetSelectors.BeaverExposure,
@@ -899,9 +905,10 @@ public sealed class TimberbornQaCommandBridgeTests
                 x: 2,
                 y: 3,
                 z: 1,
-                candidateCellCount: 9,
+                candidateCellCount: candidateCellIndices.Length,
                 sampledBeaverCount: 1,
-                skippedBoundedSamplingCount: 0));
+                skippedBoundedSamplingCount: 0,
+                cellIndices: candidateCellIndices));
 
         Assert.Equal(TimberbornQaFieldTargetSelectors.BeaverExposure, result.TargetSelector);
         Assert.Equal(beaverCellIndex, result.CellIndex);
@@ -910,17 +917,21 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(1, result.Z);
         Assert.Equal("beaver_candidate_cell", result.TargetSource);
         Assert.Equal("beaver-1", result.BeaverExposureTargetBeaverId);
-        Assert.Equal(9, result.BeaverExposureTargetCandidateCells);
+        Assert.Equal(candidateCellIndices.Length, result.BeaverExposureTargetCandidateCells);
         Assert.Equal(1, result.BeaverExposureTargetSampledBeavers);
+        Assert.Equal(PackedCell.Heat((ushort)result.SustainedHeatSetCell!.Value), result.SetHeat);
         Assert.Equal(12, result.SustainedHeatRequestedCycleCount);
         Assert.Equal(12, result.SustainedHeatRemainingCycleCount);
-        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
-        Assert.Equal(beaverCellIndex, change.CellIndex);
+        Assert.Equal(candidateCellIndices.Length, simulator.RegisteredChanges.Count);
+        Assert.Equal(candidateCellIndices, simulator.RegisteredChanges.Select(static change => change.CellIndex).ToArray());
+        FireSimChange change = simulator.RegisteredChanges[1];
         ushort queuedCell = change.SetCell ?? throw new InvalidOperationException("Expected a queued full field state.");
-        Assert.Equal((ushort)result.SustainedHeatSetCell!.Value, queuedCell);
-        Assert.Null(change.SetHeat);
+        Assert.Equal((ushort)result.SustainedHeatSetCell.Value, queuedCell);
+        Assert.All(simulator.RegisteredChanges, registeredChange => Assert.Null(registeredChange.SetHeat));
         FireVisualSample visualSample = FireVisualField.FromPackedCell(queuedCell);
         Assert.True(visualSample.Smoke >= TimberbornBeaverFieldExposureTelemetry.RespiratorySmokeThreshold);
+        Assert.True(visualSample.Smoke < TimberbornBeaverFieldExposureTelemetry.ToxicSmokeThreshold);
+        Assert.True(visualSample.Fire < TimberbornBeaverFieldExposureTelemetry.BurnFireThreshold);
     }
 
     [Fact]
@@ -2152,6 +2163,10 @@ public sealed class TimberbornQaCommandBridgeTests
             VisualFieldSurfaceBound: true,
             VisualFieldSurfaceCellCount: 24,
             VisualFieldSurfaceLastUpdatedTick: 25,
+            SmokeHeightSourceSmokeCellCount: 76,
+            SmokeHeightNonSourceSmokeCellCount: 77,
+            SmokeHeightNonSourceGroundContactSmokeCellCount: 78,
+            SmokeHeightMaxNonSourceSmokeDistanceFromSource: 79,
             BeaverFieldExposureAvailable: true,
             BeaverFieldExposureSampledBeavers: 43,
             BeaverFieldExposureExposedBeavers: 44,
@@ -2313,6 +2328,10 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
         Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
         Assert.Contains("visual_field_surface_updated_tick=25", result.ResultToken);
+        Assert.Contains("smoke_height_source_smoke_cells=76", result.ResultToken);
+        Assert.Contains("smoke_height_non_source_smoke_cells=77", result.ResultToken);
+        Assert.Contains("smoke_height_non_source_ground_contact_smoke_cells=78", result.ResultToken);
+        Assert.Contains("smoke_height_max_non_source_smoke_distance_from_source=79", result.ResultToken);
         Assert.Contains("beaver_field_exposure_available=true", result.ResultToken);
         Assert.Contains("beaver_field_exposure_sampled_beavers=43", result.ResultToken);
         Assert.Contains("beaver_field_exposure_exposed_beavers=44", result.ResultToken);

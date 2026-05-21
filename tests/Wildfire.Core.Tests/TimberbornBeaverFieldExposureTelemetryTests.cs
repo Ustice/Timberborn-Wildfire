@@ -281,6 +281,11 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
                 .ToArray();
         }
 
+        public TimberbornSmokeHeightTelemetry SnapshotSmokeHeight()
+        {
+            return TimberbornSmokeHeightTelemetry.Empty;
+        }
+
         public void Unbind()
         {
         }

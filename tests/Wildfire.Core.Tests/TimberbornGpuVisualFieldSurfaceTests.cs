@@ -33,7 +33,32 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
     public void SurfaceStoresBindingMetadataAndUpdateTick()
     {
         RecordingFireLogSink logSink = new();
-        TimberbornGpuVisualFieldSurface surface = new(logSink);
+        TimberbornSmokeHeightTelemetry telemetry = new(
+            Tick: 17,
+            SmokeCellCount: 12,
+            GroundContactSmokeCellCount: 4,
+            AbsoluteGroundSmokeCellCount: 1,
+            NearBottomSmokeCellCount: 3,
+            LowestSmokeZ: 1,
+            HighestSmokeZ: 4,
+            PeakSmoke: 6,
+            SmokeCellCountAtLowestZ: 2,
+            ContaminatedSmokeCellCount: 5,
+            SourceSmokeCellCount: 3,
+            NonSourceSmokeCellCount: 9,
+            NonSourceGroundContactSmokeCellCount: 2,
+            MaxNonSourceSmokeDistanceFromSource: 6);
+        TimberbornGpuVisualFieldSurface surface = new(
+            logSink,
+            new RecordingVisualFieldDataReader(
+                cellIndex => new TimberbornGpuVisualFieldSample(
+                    cellIndex,
+                    Tick: 17,
+                    Fire: 0f,
+                    Smoke: 0f,
+                    Ash: 0f,
+                    Visibility: 0f),
+                telemetry));
         object visualFieldsBuffer = new();
 
         surface.Bind(new TimberbornGpuVisualFieldSurfaceBinding(
@@ -54,6 +79,8 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
         Assert.Equal(16, surface.State.StrideBytes);
         Assert.Equal(TimberbornGpuVisualFieldChannels.All, surface.State.Channels);
         Assert.Equal(17u, surface.State.LastUpdatedTick);
+        Assert.Equal(telemetry, surface.State.SmokeHeightTelemetry);
+        Assert.Equal(telemetry, surface.SnapshotSmokeHeight());
         Assert.True(surface.TryGetBinding(out TimberbornGpuVisualFieldSurfaceBinding binding));
         Assert.Same(visualFieldsBuffer, binding.VisualFieldsBuffer);
         Assert.Contains(
@@ -61,6 +88,9 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
             logSink.InfoMessages);
         Assert.Contains(
             "wildfire_timberborn_gpu_visual_field_surface_updated tick=17 cell_count=24 channels=fire,smoke,ash,visibility",
+            logSink.InfoMessages);
+        Assert.Contains(
+            "wildfire_timberborn_smoke_height_sampled tick=17 smoke_cells=12 ground_contact_smoke_cells=4 absolute_ground_smoke_cells=1 near_bottom_smoke_cells=3 lowest_smoke_z=1 highest_smoke_z=4 peak_smoke=6 smoke_cells_at_lowest_z=2 contaminated_smoke_cells=5 source_smoke_cells=3 non_source_smoke_cells=9 non_source_ground_contact_smoke_cells=2 max_non_source_smoke_distance_from_source=6",
             logSink.InfoMessages);
     }
 
@@ -297,7 +327,20 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
             TickCount: 9,
             VisualFieldSurfaceBound: true,
             VisualFieldSurfaceCellCount: 24,
-            VisualFieldSurfaceLastUpdatedTick: 9);
+            VisualFieldSurfaceLastUpdatedTick: 9,
+            SmokeHeightSmokeCellCount: 12,
+            SmokeHeightGroundContactSmokeCellCount: 4,
+            SmokeHeightAbsoluteGroundSmokeCellCount: 1,
+            SmokeHeightNearBottomSmokeCellCount: 3,
+            SmokeHeightLowestSmokeZ: 1,
+            SmokeHeightHighestSmokeZ: 4,
+            SmokeHeightPeakSmoke: 6,
+            SmokeHeightSmokeCellCountAtLowestZ: 2,
+            SmokeHeightContaminatedSmokeCellCount: 5,
+            SmokeHeightSourceSmokeCellCount: 3,
+            SmokeHeightNonSourceSmokeCellCount: 9,
+            SmokeHeightNonSourceGroundContactSmokeCellCount: 2,
+            SmokeHeightMaxNonSourceSmokeDistanceFromSource: 6);
         TimberbornQaCommandBridge bridge = new(
             new RecordingStateProvider(state),
             new RecordingQaLogSink());
@@ -307,6 +350,19 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
         Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
         Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
         Assert.Contains("visual_field_surface_updated_tick=9", result.ResultToken);
+        Assert.Contains("smoke_height_smoke_cells=12", result.ResultToken);
+        Assert.Contains("smoke_height_ground_contact_smoke_cells=4", result.ResultToken);
+        Assert.Contains("smoke_height_absolute_ground_smoke_cells=1", result.ResultToken);
+        Assert.Contains("smoke_height_near_bottom_smoke_cells=3", result.ResultToken);
+        Assert.Contains("smoke_height_lowest_smoke_z=1", result.ResultToken);
+        Assert.Contains("smoke_height_highest_smoke_z=4", result.ResultToken);
+        Assert.Contains("smoke_height_peak_smoke=6", result.ResultToken);
+        Assert.Contains("smoke_height_smoke_cells_at_lowest_z=2", result.ResultToken);
+        Assert.Contains("smoke_height_contaminated_smoke_cells=5", result.ResultToken);
+        Assert.Contains("smoke_height_source_smoke_cells=3", result.ResultToken);
+        Assert.Contains("smoke_height_non_source_smoke_cells=9", result.ResultToken);
+        Assert.Contains("smoke_height_non_source_ground_contact_smoke_cells=2", result.ResultToken);
+        Assert.Contains("smoke_height_max_non_source_smoke_distance_from_source=6", result.ResultToken);
     }
 
     private sealed class RecordingVisualFieldSimulator(TimberbornGpuVisualFieldSurfaceState surfaceState) :
@@ -362,7 +418,8 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
     }
 
     private sealed class RecordingVisualFieldDataReader(
-        Func<int, TimberbornGpuVisualFieldSample> sampleFactory) : ITimberbornGpuVisualFieldDataReader
+        Func<int, TimberbornGpuVisualFieldSample> sampleFactory,
+        TimberbornSmokeHeightTelemetry? smokeHeightTelemetry = null) : ITimberbornGpuVisualFieldDataReader
     {
         public TimberbornGpuVisualFieldSurfaceBinding? LastBinding { get; private set; }
 
@@ -379,6 +436,13 @@ public sealed class TimberbornGpuVisualFieldSurfaceTests
             LastCellIndices = cellIndices.ToArray();
             LastTick = tick;
             return cellIndices.Select(sampleFactory).ToArray();
+        }
+
+        public TimberbornSmokeHeightTelemetry ReadSmokeHeightTelemetry(
+            TimberbornGpuVisualFieldSurfaceBinding binding,
+            uint? tick)
+        {
+            return smokeHeightTelemetry ?? (TimberbornSmokeHeightTelemetry.Empty with { Tick = tick });
         }
     }
 

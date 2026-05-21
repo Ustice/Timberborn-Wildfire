@@ -792,6 +792,8 @@ public sealed class TimberbornFireRuntime :
         TimberbornContaminationFireConsequenceSummary contaminationFireSummary =
             fireSystem.ContaminationFireSummary;
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
+        TimberbornSmokeHeightTelemetry smokeHeightTelemetry =
+            visualFieldSurfaceState.SmokeHeightTelemetry ?? TimberbornSmokeHeightTelemetry.Empty;
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
@@ -1020,6 +1022,19 @@ public sealed class TimberbornFireRuntime :
             VisualFieldSurfaceBound: visualFieldSurfaceState.IsBound,
             VisualFieldSurfaceCellCount: visualFieldSurfaceState.CellCount,
             VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick,
+            SmokeHeightSmokeCellCount: smokeHeightTelemetry.SmokeCellCount,
+            SmokeHeightGroundContactSmokeCellCount: smokeHeightTelemetry.GroundContactSmokeCellCount,
+            SmokeHeightAbsoluteGroundSmokeCellCount: smokeHeightTelemetry.AbsoluteGroundSmokeCellCount,
+            SmokeHeightNearBottomSmokeCellCount: smokeHeightTelemetry.NearBottomSmokeCellCount,
+            SmokeHeightLowestSmokeZ: smokeHeightTelemetry.LowestSmokeZ,
+            SmokeHeightHighestSmokeZ: smokeHeightTelemetry.HighestSmokeZ,
+            SmokeHeightPeakSmoke: smokeHeightTelemetry.PeakSmoke,
+            SmokeHeightSmokeCellCountAtLowestZ: smokeHeightTelemetry.SmokeCellCountAtLowestZ,
+            SmokeHeightContaminatedSmokeCellCount: smokeHeightTelemetry.ContaminatedSmokeCellCount,
+            SmokeHeightSourceSmokeCellCount: smokeHeightTelemetry.SourceSmokeCellCount,
+            SmokeHeightNonSourceSmokeCellCount: smokeHeightTelemetry.NonSourceSmokeCellCount,
+            SmokeHeightNonSourceGroundContactSmokeCellCount: smokeHeightTelemetry.NonSourceGroundContactSmokeCellCount,
+            SmokeHeightMaxNonSourceSmokeDistanceFromSource: smokeHeightTelemetry.MaxNonSourceSmokeDistanceFromSource,
             GpuFieldRendererEnabled: gpuFieldRendererCounters.RendererEnabled,
             GpuFieldRendererMaterialReady: gpuFieldRendererCounters.MaterialReady,
             GpuFieldRendererSurfaceBound: gpuFieldRendererCounters.VisualFieldSurfaceBound,

@@ -15,6 +15,8 @@ public interface ITimberbornGpuVisualFieldSurface
 
     IReadOnlyList<TimberbornGpuVisualFieldSample> InspectCells(IReadOnlyList<int> cellIndices);
 
+    TimberbornSmokeHeightTelemetry SnapshotSmokeHeight();
+
     void Unbind();
 }
 
@@ -221,9 +223,43 @@ public sealed record TimberbornGpuVisualFieldSurfaceState(
     int? CellCount = null,
     int? StrideBytes = null,
     IReadOnlyList<string>? Channels = null,
-    uint? LastUpdatedTick = null)
+    uint? LastUpdatedTick = null,
+    TimberbornSmokeHeightTelemetry? SmokeHeightTelemetry = null)
 {
     public static readonly TimberbornGpuVisualFieldSurfaceState Unbound = new(IsBound: false);
+}
+
+public sealed record TimberbornSmokeHeightTelemetry(
+    uint? Tick,
+    int SmokeCellCount,
+    int GroundContactSmokeCellCount,
+    int AbsoluteGroundSmokeCellCount,
+    int NearBottomSmokeCellCount,
+    int LowestSmokeZ,
+    int HighestSmokeZ,
+    int PeakSmoke,
+    int SmokeCellCountAtLowestZ,
+    int ContaminatedSmokeCellCount,
+    int SourceSmokeCellCount = 0,
+    int NonSourceSmokeCellCount = 0,
+    int NonSourceGroundContactSmokeCellCount = 0,
+    int MaxNonSourceSmokeDistanceFromSource = -1)
+{
+    public static readonly TimberbornSmokeHeightTelemetry Empty = new(
+        Tick: null,
+        SmokeCellCount: 0,
+        GroundContactSmokeCellCount: 0,
+        AbsoluteGroundSmokeCellCount: 0,
+        NearBottomSmokeCellCount: 0,
+        LowestSmokeZ: -1,
+        HighestSmokeZ: -1,
+        PeakSmoke: 0,
+        SmokeCellCountAtLowestZ: 0,
+        ContaminatedSmokeCellCount: 0,
+        SourceSmokeCellCount: 0,
+        NonSourceSmokeCellCount: 0,
+        NonSourceGroundContactSmokeCellCount: 0,
+        MaxNonSourceSmokeDistanceFromSource: -1);
 }
 
 public class TimberbornGpuVisualFieldSurface : ITimberbornGpuVisualFieldSurface
@@ -273,7 +309,8 @@ public class TimberbornGpuVisualFieldSurface : ITimberbornGpuVisualFieldSurface
             CellCount: binding.CellCount,
             StrideBytes: binding.StrideBytes,
             Channels: binding.Channels,
-            LastUpdatedTick: null);
+            LastUpdatedTick: null,
+            SmokeHeightTelemetry: State.SmokeHeightTelemetry);
         _logSink.Info(
             "wildfire_timberborn_gpu_visual_field_surface_bound " +
             $"width={binding.Width} " +
@@ -291,12 +328,33 @@ public class TimberbornGpuVisualFieldSurface : ITimberbornGpuVisualFieldSurface
             return;
         }
 
-        State = State with { LastUpdatedTick = tick };
+        TimberbornSmokeHeightTelemetry smokeHeightTelemetry = _dataReader.ReadSmokeHeightTelemetry(_binding, tick);
+        State = State with
+        {
+            LastUpdatedTick = tick,
+            SmokeHeightTelemetry = smokeHeightTelemetry,
+        };
         _logSink.Info(
             "wildfire_timberborn_gpu_visual_field_surface_updated " +
             $"tick={tick} " +
             $"cell_count={_binding.CellCount} " +
             $"channels={string.Join(",", _binding.Channels)}");
+        _logSink.Info(
+            "wildfire_timberborn_smoke_height_sampled " +
+            $"tick={tick} " +
+            $"smoke_cells={smokeHeightTelemetry.SmokeCellCount} " +
+            $"ground_contact_smoke_cells={smokeHeightTelemetry.GroundContactSmokeCellCount} " +
+            $"absolute_ground_smoke_cells={smokeHeightTelemetry.AbsoluteGroundSmokeCellCount} " +
+            $"near_bottom_smoke_cells={smokeHeightTelemetry.NearBottomSmokeCellCount} " +
+            $"lowest_smoke_z={smokeHeightTelemetry.LowestSmokeZ} " +
+            $"highest_smoke_z={smokeHeightTelemetry.HighestSmokeZ} " +
+            $"peak_smoke={smokeHeightTelemetry.PeakSmoke} " +
+            $"smoke_cells_at_lowest_z={smokeHeightTelemetry.SmokeCellCountAtLowestZ} " +
+            $"contaminated_smoke_cells={smokeHeightTelemetry.ContaminatedSmokeCellCount} " +
+            $"source_smoke_cells={smokeHeightTelemetry.SourceSmokeCellCount} " +
+            $"non_source_smoke_cells={smokeHeightTelemetry.NonSourceSmokeCellCount} " +
+            $"non_source_ground_contact_smoke_cells={smokeHeightTelemetry.NonSourceGroundContactSmokeCellCount} " +
+            $"max_non_source_smoke_distance_from_source={smokeHeightTelemetry.MaxNonSourceSmokeDistanceFromSource}");
     }
 
     public IReadOnlyList<TimberbornGpuVisualFieldSample> InspectCells(IReadOnlyList<int> cellIndices)
@@ -334,6 +392,11 @@ public class TimberbornGpuVisualFieldSurface : ITimberbornGpuVisualFieldSurface
         }
 
         return _dataReader.ReadSamples(_binding, requestedCellIndices, State.LastUpdatedTick);
+    }
+
+    public TimberbornSmokeHeightTelemetry SnapshotSmokeHeight()
+    {
+        return State.SmokeHeightTelemetry ?? TimberbornSmokeHeightTelemetry.Empty;
     }
 
     public void Unbind()
@@ -384,6 +447,11 @@ public sealed class NullTimberbornGpuVisualFieldSurface : ITimberbornGpuVisualFi
     public IReadOnlyList<TimberbornGpuVisualFieldSample> InspectCells(IReadOnlyList<int> cellIndices)
     {
         return Array.Empty<TimberbornGpuVisualFieldSample>();
+    }
+
+    public TimberbornSmokeHeightTelemetry SnapshotSmokeHeight()
+    {
+        return TimberbornSmokeHeightTelemetry.Empty;
     }
 
     public void Unbind()
@@ -531,6 +599,10 @@ public interface ITimberbornGpuVisualFieldDataReader
         TimberbornGpuVisualFieldSurfaceBinding binding,
         IReadOnlyList<int> cellIndices,
         uint? tick);
+
+    TimberbornSmokeHeightTelemetry ReadSmokeHeightTelemetry(
+        TimberbornGpuVisualFieldSurfaceBinding binding,
+        uint? tick);
 }
 
 public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGpuVisualFieldDataReader
@@ -551,6 +623,21 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
         return cellIndices
             .Select(cellIndex => ReadSample(computeBuffer, atmosphericBuffer, cellIndex, tick))
             .ToArray();
+    }
+
+    public TimberbornSmokeHeightTelemetry ReadSmokeHeightTelemetry(
+        TimberbornGpuVisualFieldSurfaceBinding binding,
+        uint? tick)
+    {
+        if (binding.TransportFieldsBuffer is not ComputeBuffer atmosphericBuffer)
+        {
+            return TimberbornSmokeHeightTelemetry.Empty with { Tick = tick };
+        }
+
+        uint[] atmosphericFields = new uint[binding.CellCount];
+        atmosphericBuffer.GetData(atmosphericFields);
+        uint[]? materialFields = ReadMaterialFields(binding);
+        return SummarizeSmokeHeight(binding, atmosphericFields, materialFields, tick);
     }
 
     private static TimberbornGpuVisualFieldSample ReadSample(
@@ -588,6 +675,141 @@ public sealed class TimberbornComputeBufferVisualFieldDataReader : ITimberbornGp
         atmosphericBuffer.GetData(sample, 0, cellIndex, 1);
         return WildfireTransportFieldState.Unpack(sample[0]);
     }
+
+    private static uint[]? ReadMaterialFields(TimberbornGpuVisualFieldSurfaceBinding binding)
+    {
+        if (binding.MaterialFieldsBuffer is not ComputeBuffer materialBuffer)
+        {
+            return null;
+        }
+
+        uint[] materialFields = new uint[binding.CellCount];
+        materialBuffer.GetData(materialFields);
+        return materialFields;
+    }
+
+    private static TimberbornSmokeHeightTelemetry SummarizeSmokeHeight(
+        TimberbornGpuVisualFieldSurfaceBinding binding,
+        IReadOnlyList<uint> atmosphericFields,
+        IReadOnlyList<uint>? materialFields,
+        uint? tick)
+    {
+        int layerSize = binding.Width * binding.Height;
+        int smokeCells = 0;
+        int groundContactSmokeCells = 0;
+        int absoluteGroundSmokeCells = 0;
+        int nearBottomSmokeCells = 0;
+        int lowestSmokeZ = int.MaxValue;
+        int highestSmokeZ = -1;
+        int peakSmoke = 0;
+        int smokeCellsAtLowestZ = 0;
+        int contaminatedSmokeCells = 0;
+        List<int> sourceSmokeIndices = new();
+        List<int> nonSourceSmokeIndices = new();
+        int nonSourceGroundContactSmokeCells = 0;
+
+        Enumerable.Range(0, atmosphericFields.Count)
+            .Select(index => (Index: index, Atmospheric: WildfireTransportFieldState.Unpack(atmosphericFields[index])))
+            .Where(static sample => sample.Atmospheric.Smoke > 0)
+            .ToList()
+            .ForEach(sample =>
+            {
+                int z = sample.Index / layerSize;
+                int smoke = sample.Atmospheric.Smoke;
+                smokeCells++;
+                absoluteGroundSmokeCells += z == 0 ? 1 : 0;
+                nearBottomSmokeCells += z <= 2 ? 1 : 0;
+                contaminatedSmokeCells += sample.Atmospheric.SmokeContamination > 0 ? 1 : 0;
+                groundContactSmokeCells += IsGroundContactSmoke(sample.Index, z, layerSize, materialFields) ? 1 : 0;
+                if (sample.Atmospheric.Source)
+                {
+                    sourceSmokeIndices.Add(sample.Index);
+                }
+                else
+                {
+                    nonSourceSmokeIndices.Add(sample.Index);
+                    nonSourceGroundContactSmokeCells += IsGroundContactSmoke(sample.Index, z, layerSize, materialFields) ? 1 : 0;
+                }
+
+                peakSmoke = Math.Max(peakSmoke, smoke);
+                highestSmokeZ = Math.Max(highestSmokeZ, z);
+                if (z < lowestSmokeZ)
+                {
+                    lowestSmokeZ = z;
+                    smokeCellsAtLowestZ = 1;
+                }
+                else if (z == lowestSmokeZ)
+                {
+                    smokeCellsAtLowestZ++;
+                }
+            });
+
+        return new TimberbornSmokeHeightTelemetry(
+            tick,
+            smokeCells,
+            groundContactSmokeCells,
+            absoluteGroundSmokeCells,
+            nearBottomSmokeCells,
+            lowestSmokeZ == int.MaxValue ? -1 : lowestSmokeZ,
+            highestSmokeZ,
+            peakSmoke,
+            smokeCellsAtLowestZ,
+            contaminatedSmokeCells,
+            sourceSmokeIndices.Count,
+            nonSourceSmokeIndices.Count,
+            nonSourceGroundContactSmokeCells,
+            MaxSmokeDistance(nonSourceSmokeIndices, sourceSmokeIndices, binding.Width, binding.Height));
+    }
+
+    private static int MaxSmokeDistance(
+        IReadOnlyList<int> nonSourceSmokeIndices,
+        IReadOnlyList<int> sourceSmokeIndices,
+        int width,
+        int height)
+    {
+        if (nonSourceSmokeIndices.Count == 0 || sourceSmokeIndices.Count == 0)
+        {
+            return -1;
+        }
+
+        int layerSize = width * height;
+        (int X, int Y, int Z)[] sources = sourceSmokeIndices
+            .Select(index => ToCoordinate(index, width, layerSize))
+            .ToArray();
+        return nonSourceSmokeIndices
+            .Select(index =>
+            {
+                (int x, int y, int z) = ToCoordinate(index, width, layerSize);
+                return sources
+                    .Select(source => Math.Abs(x - source.X) + Math.Abs(y - source.Y) + Math.Abs(z - source.Z))
+                    .Min();
+            })
+            .Max();
+    }
+
+    private static (int X, int Y, int Z) ToCoordinate(int index, int width, int layerSize)
+    {
+        int z = index / layerSize;
+        int layerIndex = index - (z * layerSize);
+        return (layerIndex % width, layerIndex / width, z);
+    }
+
+    private static bool IsGroundContactSmoke(int index, int z, int layerSize, IReadOnlyList<uint>? materialFields)
+    {
+        if (materialFields is null)
+        {
+            return z == 0;
+        }
+
+        return IsNonEmptyMaterial(materialFields[index]) ||
+            z == 0 ||
+            IsNonEmptyMaterial(materialFields[index - layerSize]);
+    }
+
+    private static bool IsNonEmptyMaterial(uint packedMaterial)
+    {
+        return WildfireMaterialFieldState.Unpack(packedMaterial).MaterialClass != WildfireMaterialClass.Empty;
+    }
 }
 
 public sealed class NullTimberbornGpuVisualFieldDataReader : ITimberbornGpuVisualFieldDataReader
@@ -615,5 +837,12 @@ public sealed class NullTimberbornGpuVisualFieldDataReader : ITimberbornGpuVisua
                 Source: false,
                 Visibility: 0f))
             .ToArray();
+    }
+
+    public TimberbornSmokeHeightTelemetry ReadSmokeHeightTelemetry(
+        TimberbornGpuVisualFieldSurfaceBinding binding,
+        uint? tick)
+    {
+        return TimberbornSmokeHeightTelemetry.Empty with { Tick = tick };
     }
 }

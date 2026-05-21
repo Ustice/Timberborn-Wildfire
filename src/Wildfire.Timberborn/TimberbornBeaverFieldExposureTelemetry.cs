@@ -124,7 +124,8 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             targetZ,
             targetCandidate.CellIndices.Count,
             sampledCandidates.Length,
-            skippedBoundedSampling);
+            skippedBoundedSampling,
+            targetCandidate.CellIndices);
     }
 
     public static IReadOnlyList<int> CandidateCellIndices(FireGrid grid, int x, int y, int z)
@@ -330,6 +331,7 @@ public sealed record TimberbornBeaverFieldExposureQaTarget(
     int? X,
     int? Y,
     int? Z,
+    IReadOnlyList<int> CellIndices,
     int CandidateCellCount,
     int SampledBeaverCount,
     int SkippedNoPositionApiCount,
@@ -346,7 +348,8 @@ public sealed record TimberbornBeaverFieldExposureQaTarget(
         int z,
         int candidateCellCount,
         int sampledBeaverCount,
-        int skippedBoundedSamplingCount)
+        int skippedBoundedSamplingCount,
+        IReadOnlyList<int>? cellIndices = null)
     {
         return new TimberbornBeaverFieldExposureQaTarget(
             true,
@@ -359,6 +362,7 @@ public sealed record TimberbornBeaverFieldExposureQaTarget(
             x,
             y,
             z,
+            cellIndices ?? new[] { cellIndex },
             candidateCellCount,
             sampledBeaverCount,
             SkippedNoPositionApiCount: 0,
@@ -382,6 +386,7 @@ public sealed record TimberbornBeaverFieldExposureQaTarget(
             X: null,
             Y: null,
             Z: null,
+            CellIndices: Array.Empty<int>(),
             CandidateCellCount: 0,
             sampledBeaverCount,
             skippedNoPositionApiCount,
