@@ -393,24 +393,29 @@ float SmokeWindBias(float directionX, float directionY)
 
     float strength = EffectiveWindStrength();
     float alignment = (directionX * WindDirectionX) + (directionY * WindDirectionY);
-    float directionalBias = lerp(0.08f, 3.5f, saturate((alignment + 1.0f) * 0.5f));
+    float directionalBias = lerp(0.03f, 5.0f, saturate((alignment + 1.0f) * 0.5f));
     return lerp(1.0f, directionalBias, strength);
 }
 
 float SmokeDirectionWeight(float directionX, float directionY, bool diagonal, bool upward, bool downward)
 {
+    float strength = EffectiveWindStrength();
     float windBias = SmokeWindBias(directionX, directionY);
     bool hasHorizontalDrift = abs(directionX) + abs(directionY) > 0.01f;
     if (upward)
     {
-        float baseWeight = hasHorizontalDrift ? (diagonal ? 0.95f : 1.15f) : 0.28f;
-        return max(0.03f, baseWeight * windBias);
+        float baseWeight = hasHorizontalDrift
+            ? lerp(0.15f, 1.15f, strength)
+            : lerp(0.05f, 0.28f, strength);
+        return max(0.02f, baseWeight * windBias);
     }
 
     if (downward)
     {
-        float baseWeight = hasHorizontalDrift ? (diagonal ? 0.46f : 0.62f) : 0.18f;
-        return max(0.02f, baseWeight * windBias);
+        float baseWeight = hasHorizontalDrift
+            ? lerp(0.62f, 0.12f, strength)
+            : lerp(0.18f, 0.04f, strength);
+        return max(0.01f, baseWeight * windBias);
     }
 
     float baseWeight = diagonal ? 0.55f : 1.0f;
@@ -433,6 +438,48 @@ float SmokeMoveWeight(uint3 sourceCoordinate, uint3 targetCoordinate)
     bool diagonal = adx == 1u && ady == 1u;
     float length = diagonal ? 1.4142135f : 1.0f;
     return SmokeDirectionWeight((float)dx / length, (float)dy / length, diagonal, dz > 0, dz < 0);
+}
+
+float SmokeDiffusionWeight(uint3 sourceCoordinate, uint3 targetCoordinate)
+{
+    int dx = (int)targetCoordinate.x - (int)sourceCoordinate.x;
+    int dy = (int)targetCoordinate.y - (int)sourceCoordinate.y;
+    int dz = (int)targetCoordinate.z - (int)sourceCoordinate.z;
+    uint adx = (uint)abs(dx);
+    uint ady = (uint)abs(dy);
+    uint adz = (uint)abs(dz);
+    if (adx > 1u || ady > 1u || adz > 1u || (adx == 0u && ady == 0u && adz == 0u))
+    {
+        return 0.0f;
+    }
+
+    bool diagonal = adx == 1u && ady == 1u;
+    bool hasHorizontalDrift = adx > 0u || ady > 0u;
+    float baseWeight = diagonal ? 0.08f : 0.14f;
+    if (adz > 0u)
+    {
+        float strength = EffectiveWindStrength();
+        if (dz > 0)
+        {
+            baseWeight = hasHorizontalDrift ? lerp(0.01f, 0.10f, strength) : lerp(0.01f, 0.15f, strength);
+        }
+        else
+        {
+            baseWeight = hasHorizontalDrift ? lerp(0.20f, 0.01f, strength) : lerp(0.35f, 0.01f, strength);
+        }
+    }
+
+    if (!hasHorizontalDrift)
+    {
+        return baseWeight;
+    }
+
+    float length = diagonal ? 1.4142135f : 1.0f;
+    float directionX = (float)dx / length;
+    float directionY = (float)dy / length;
+    float alignment = (directionX * WindDirectionX) + (directionY * WindDirectionY);
+    float windBias = lerp(0.72f, 1.36f, saturate((alignment + 1.0f) * 0.5f));
+    return baseWeight * lerp(1.0f, windBias, EffectiveWindStrength());
 }
 
 bool SameCoordinate(uint3 left, uint3 right)
@@ -531,17 +578,7 @@ bool SmokeMoveRollPasses(uint sourceIndex, uint sourceSmoke, float totalWeight)
 uint SmokeMoveTravelAmount(uint sourceSmoke, uint3 sourceCoordinate, uint3 targetCoordinate)
 {
     uint movedSmoke = max(1u, (sourceSmoke + 1u) / 2u);
-    int dx = (int)targetCoordinate.x - (int)sourceCoordinate.x;
-    int dy = (int)targetCoordinate.y - (int)sourceCoordinate.y;
-    int dz = (int)targetCoordinate.z - (int)sourceCoordinate.z;
-    uint planarSteps = ((uint)abs(dx)) + ((uint)abs(dy));
-    uint travelDecay = 1u;
-    if (planarSteps > 1u || (planarSteps > 0u && dz != 0))
-    {
-        travelDecay += 1u;
-    }
-
-    return DecayBy(movedSmoke, travelDecay);
+    return movedSmoke;
 }
 
 float AtmosphericWindAdvectionProbability(uint sourceAmount, float directionX, float directionY, int verticalOffset)
@@ -573,7 +610,7 @@ float SmokeWindAdvectionProbability(uint sourceSmoke, float directionX, float di
 uint AtmosphericWindAdvectionTravelAmount(uint sourceAmount, uint distance)
 {
     uint movedAmount = max(1u, (sourceAmount + 1u) / 2u);
-    return distance >= 3u ? DecayBy(movedAmount, 1u) : movedAmount;
+    return movedAmount;
 }
 
 uint SmokeWindAdvectionTravelAmount(uint sourceSmoke, uint distance)
@@ -660,14 +697,38 @@ bool SmokeSourceChoosesTarget(uint3 sourceCoordinate, uint3 targetCoordinate, ui
 
 uint SmokeMoveAmount(uint3 sourceCoordinate, uint3 targetCoordinate)
 {
-    uint sourceSmoke = DecayBy(AtmosphericSmoke(NeighborAtmospheric(sourceCoordinate)), 1u);
+    uint sourceAtmospheric = NeighborAtmospheric(sourceCoordinate);
+    uint sourceSmoke = DecayBy(AtmosphericSmoke(sourceAtmospheric), 2u);
     if (sourceSmoke == 0u || !IsSmokeMoveTargetOpen(targetCoordinate))
     {
         return 0u;
     }
 
-    uint movedSmoke = SmokeMoveTravelAmount(sourceSmoke, sourceCoordinate, targetCoordinate);
-    return SmokeSourceChoosesTarget(sourceCoordinate, targetCoordinate, sourceSmoke) ? movedSmoke : 0u;
+    uint targetAtmospheric = NeighborAtmospheric(targetCoordinate);
+    uint targetSmoke = AtmosphericSmoke(targetAtmospheric);
+    float smokePressure = sourceSmoke > targetSmoke ? (float)(sourceSmoke - targetSmoke) : 0.0f;
+    uint sourceContamination = AtmosphericSmokeContamination(sourceAtmospheric);
+    uint targetContamination = AtmosphericSmokeContamination(targetAtmospheric);
+    float contaminationMixing = sourceContamination > targetContamination
+        ? (float)(sourceContamination - targetContamination) * 0.8f
+        : 0.0f;
+    float pressure = max(smokePressure, contaminationMixing);
+
+    // Dense smoke has gravitational weight that drives downward flow at low wind
+    int dzTarget = (int)targetCoordinate.z - (int)sourceCoordinate.z;
+    if (dzTarget < 0)
+    {
+        float gravity = (float)sourceSmoke * lerp(0.5f, 0.0f, EffectiveWindStrength());
+        pressure = max(pressure, gravity);
+    }
+
+    if (pressure <= 0.0f)
+    {
+        return 0u;
+    }
+
+    float contribution = pressure * SmokeDiffusionWeight(sourceCoordinate, targetCoordinate);
+    return min(7u, (uint)round(contribution));
 }
 
 uint SmokeWindMovedOutContribution(
@@ -824,7 +885,7 @@ void AddWindAdvectedSmokeContribution(
     }
 
     uint atmospheric = NeighborAtmospheric(sourceCoordinate);
-    uint sourceSmoke = DecayBy(AtmosphericSmoke(atmospheric), 1u);
+    uint sourceSmoke = DecayBy(AtmosphericSmoke(atmospheric), 2u);
     uint sourceIndex = ToIndex(sourceCoordinate);
     uint smokeContribution = AtmosphericWindAdvectionRollPasses(sourceIndex, sourceSmoke, directionX, directionY, -sourceOffset.z, salt)
         ? SmokeWindAdvectionTravelAmount(sourceSmoke, distance)
@@ -1002,8 +1063,8 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint smokeTotal = 0u;
     uint smokeContaminationWeightedTotal = 0u;
     uint smokeSource = hotFuel ? min(5u, 1u + (Heat(newCell) / 3u)) : 0u;
-    uint retainedSmoke = smokeSource > 0u ? AtmosphericSmoke(oldAtmospheric) : DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
-    uint movedOutSmoke = SmokeMovedOutAmount(coordinate);
+    uint retainedSmoke = DecayBy(AtmosphericSmoke(oldAtmospheric), 1u);
+    uint movedOutSmoke = SmokeMovedOutAmount(coordinate) / 2u;
     retainedSmoke = retainedSmoke > movedOutSmoke ? retainedSmoke - movedOutSmoke : 0u;
     AddSmokeContribution(
         smokeTotal,

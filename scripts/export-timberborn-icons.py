@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import UnityPy
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 
 GAME_DATA_PATH = Path(
@@ -46,6 +46,58 @@ EXPLICIT_MENU_ICON_NAMES = (
     "TreeToolGroupIcon",
 )
 
+STATUS_ICON_NAMES = (
+    "ApiStopped",
+    "AutomationLoop",
+    "BadwaterContamination",
+    "BuildingBlockedByContamination",
+    "BuildingNeedsWater",
+    "ChippedTeeth",
+    "ContaminatedNaturalResource",
+    "CultivationHalted",
+    "Death",
+    "Demolish",
+    "DemolitionBlocked",
+    "DirectionalBlocking",
+    "DryingNaturalResource",
+    "Empty",
+    "EntranceBlocked",
+    "Exhaustion",
+    "FloodedBuilding",
+    "GateConflict",
+    "GenericError",
+    "Hunger",
+    "Incubation",
+    "Injury",
+    "LackOfNutrients",
+    "LackOfResources",
+    "NewFactionUnlocked",
+    "NoControlSignal",
+    "NoPower",
+    "NoStartingLocation",
+    "NoStorage",
+    "NoUnemployed",
+    "NonCompatibleVersion",
+    "NotEnoughScience",
+    "NotEnoughWater",
+    "NothingToDo",
+    "OutOfEnergy",
+    "OutOfFuel",
+    "OutOfHaulersRange",
+    "Pause",
+    "PausedByAutomation",
+    "Stranded",
+    "Thirst",
+    "TooMuchWater",
+    "UnconnectedBuilding",
+    "UnreachableObject",
+    "UnspecifiedGood",
+    "UnspecifiedRecipe",
+    "UnstableCoreCountdown",
+    "WaterSourceCountdown",
+    "WellbeingHighscore",
+)
+
 
 @dataclass(frozen=True)
 class IconEntry:
@@ -56,7 +108,7 @@ class IconEntry:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Export Timberborn menu and goods sprites plus transparent contact sheets."
+        description="Export Timberborn menu, goods, and status sprites plus contact sheets."
     )
     parser.add_argument("--game-data", type=Path, default=GAME_DATA_PATH)
     parser.add_argument("--out-root", type=Path, default=OUTPUT_ROOT)
@@ -198,6 +250,48 @@ def create_composite(exported: list[dict[str, str]], out_dir: Path, filename: st
     composite.save(out_dir / filename)
 
 
+def create_labeled_contact_sheet(exported: list[dict[str, str]], out_dir: Path, filename: str) -> None:
+    if not exported:
+        return
+
+    images = [(item, Image.open(out_dir / item["path"]).convert("RGBA")) for item in exported]
+    tile_size = 168
+    icon_size = 96
+    label_height = 46
+    padding = 14
+    columns = min(7, max(1, math.ceil(math.sqrt(len(images) * 1.35))))
+    rows = math.ceil(len(images) / columns)
+    sheet = Image.new("RGBA", (columns * tile_size, rows * (tile_size + label_height)), (26, 33, 36, 255))
+    draw = ImageDraw.Draw(sheet)
+    font = ImageFont.load_default()
+
+    for index, (item, image) in enumerate(images):
+        column = index % columns
+        row = index // columns
+        x0 = column * tile_size
+        y0 = row * (tile_size + label_height)
+        thumbnail = image.copy()
+        thumbnail.thumbnail((icon_size, icon_size), Image.Resampling.LANCZOS)
+        x = x0 + (tile_size - thumbnail.width) // 2
+        y = y0 + padding + (icon_size - thumbnail.height) // 2
+        sheet.alpha_composite(thumbnail, (x, y))
+
+        label = item["spriteName"]
+        words = re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)|\d+", label)
+        label_lines = [" ".join(words[:2]), " ".join(words[2:])] if len(words) > 2 else [" ".join(words)]
+        for line_index, line in enumerate(label_lines):
+            if not line:
+                continue
+
+            text_bbox = draw.textbbox((0, 0), line, font=font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_x = x0 + (tile_size - text_width) // 2
+            text_y = y0 + icon_size + padding + 6 + line_index * 15
+            draw.text((text_x, text_y), line, fill=(230, 222, 198, 255), font=font)
+
+    sheet.save(out_dir / filename)
+
+
 def with_explicit_menu_entries(entries: list[IconEntry]) -> list[IconEntry]:
     explicit = [
         IconEntry(
@@ -208,6 +302,17 @@ def with_explicit_menu_entries(entries: list[IconEntry]) -> list[IconEntry]:
         for sprite_name in EXPLICIT_MENU_ICON_NAMES
     ]
     return sorted(entries + explicit, key=lambda entry: (entry.sprite_name.lower(), entry.source))
+
+
+def collect_status_entries() -> list[IconEntry]:
+    return [
+        IconEntry(
+            key=f"status:{sprite_name}",
+            sprite_name=sprite_name,
+            source="timberborn-status-sprite",
+        )
+        for sprite_name in STATUS_ICON_NAMES
+    ]
 
 
 def main() -> None:
@@ -224,22 +329,31 @@ def main() -> None:
     out_root = args.out_root
     menu_out = out_root / "menu-icons"
     goods_out = out_root / "goods-icons"
+    status_out = out_root / "status-icons"
 
     menu_entries = with_explicit_menu_entries(collect_blueprint_entries(blueprints_root, MENU_BLUEPRINT_FOLDERS))
     goods_entries = collect_blueprint_entries(blueprints_root, (GOODS_BLUEPRINT_FOLDER,))
+    status_entries = collect_status_entries()
 
     menu_exported = export_icons(menu_entries, sprites, menu_out)
     goods_exported = export_icons(goods_entries, sprites, goods_out)
+    status_exported = export_icons(status_entries, sprites, status_out)
 
     write_index(menu_exported, menu_out)
     write_index(goods_exported, goods_out)
+    write_index(status_exported, status_out)
     create_composite(menu_exported, menu_out, "composite.png")
     create_composite(goods_exported, goods_out, "composite.png")
+    create_composite(status_exported, status_out, "composite.png")
+    create_labeled_contact_sheet(status_exported, status_out, "contact-sheet.png")
 
     print(f"Exported {len(menu_exported)} menu icons to {menu_out}")
     print(f"Exported {len(goods_exported)} goods icons to {goods_out}")
+    print(f"Exported {len(status_exported)} status icons to {status_out}")
     print(f"Wrote {menu_out / 'composite.png'}")
     print(f"Wrote {goods_out / 'composite.png'}")
+    print(f"Wrote {status_out / 'composite.png'}")
+    print(f"Wrote {status_out / 'contact-sheet.png'}")
 
 
 if __name__ == "__main__":

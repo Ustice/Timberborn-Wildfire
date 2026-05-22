@@ -37,8 +37,8 @@ public readonly record struct FireSimParameters(
         FireWaterIgnitionPenalty: 2u,
         FireBurnHeatBase: 5u,
         FireFuelHeatWeight: 5u,
-        FireFuelBurnDownPressureNumerator: 3u,
-        FireFuelBurnDownPressureDenominator: 4u,
+        FireFuelBurnDownPressureNumerator: 1u,
+        FireFuelBurnDownPressureDenominator: 2u,
         FireFuelBurnDownRollSeed: 0x9E3779B9u,
         FireCellStepIntervalTicks: 1u);
 

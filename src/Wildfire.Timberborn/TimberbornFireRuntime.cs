@@ -4,6 +4,7 @@ using Timberborn.BlockSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Goods;
 using Timberborn.SelectionSystem;
+using Timberborn.MapIndexSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.TerrainSystem;
 using Timberborn.SoilContaminationSystem;
@@ -88,6 +89,7 @@ public sealed class TimberbornFireRuntime :
         ITerrainService terrainService,
         IBlockService blockService,
         ISoilContaminationService soilContaminationService,
+        MapIndexService mapIndexService,
         IDayNightCycle dayNightCycle,
         ISingletonLoader singletonLoader)
     {
@@ -116,7 +118,8 @@ public sealed class TimberbornFireRuntime :
             visualFieldSurface,
             _logSink);
         _beaverFieldBehaviorDispatcher = new TimberbornBeaverFieldBehaviorDispatcher(
-            TimberbornNoOpBeaverFieldBehaviorActuator.Instance,
+            new TimberbornWorkerSpeedBeaverFieldBehaviorActuator(
+                new TimberbornEntityRegistryBeaverWorkerSpeedAdapter(_entityRegistry)),
             _logSink);
         _ashFieldService = new TimberbornAshFieldService(
             new TimberbornGrowableAshGrowthAdapter(
@@ -125,7 +128,11 @@ public sealed class TimberbornFireRuntime :
                 _logSink),
             _logSink);
         _taintedAshSoilPoisoningService = new TimberbornTaintedAshSoilPoisoningService(
-            new TimberbornSoilContaminationAshPoisoningAdapter(_soilContaminationService, CurrentGrid, _logSink),
+            new TimberbornSoilContaminationAshPoisoningAdapter(
+                _soilContaminationService,
+                CurrentGrid,
+                mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService)),
+                _logSink),
             _logSink);
         _fertileAshCollectionService = new TimberbornFertileAshCollectionService(
             new TimberbornGathererPostFertileAshCollectionAdapter(_entityRegistry, CurrentGrid, _logSink),
@@ -1075,8 +1082,14 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldBehaviorSmokeExposureAccumulatedSamples: beaverFieldBehaviorCounters.SmokeExposureAccumulatedSamples,
             BeaverFieldBehaviorSmokeCoughingEntered: beaverFieldBehaviorCounters.SmokeCoughingEntered,
             BeaverFieldBehaviorSmokeCoughingRecovered: beaverFieldBehaviorCounters.SmokeCoughingRecovered,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsApplied: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsApplied,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsRecovered,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedNoSafeApi: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsSkippedNoSafeApi,
             BeaverFieldBehaviorSmokeRecoveryDecays: beaverFieldBehaviorCounters.SmokeRecoveryDecays,
             BeaverFieldBehaviorSmokeChokingCandidates: beaverFieldBehaviorCounters.SmokeChokingCandidates,
+            BeaverFieldBehaviorSmokeChokingSlowdownsApplied: beaverFieldBehaviorCounters.SmokeChokingSlowdownsApplied,
+            BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeChokingSlowdownsRecovered,
+            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedNoSafeApi: beaverFieldBehaviorCounters.SmokeChokingSlowdownsSkippedNoSafeApi,
             BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeChokingSkippedUnsafeApi,
             BeaverFieldBehaviorSmokeDeathCandidates: beaverFieldBehaviorCounters.SmokeDeathCandidates,
             BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeDeathSkippedUnsafeApi,

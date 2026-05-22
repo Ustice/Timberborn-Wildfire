@@ -17,6 +17,10 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SettingsSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.StatusSystem">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.StatusSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.BlueprintSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BlueprintSystem.dll</HintPath>
       <Private>false</Private>

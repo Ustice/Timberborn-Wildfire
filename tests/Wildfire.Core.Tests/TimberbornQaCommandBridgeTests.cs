@@ -2195,14 +2195,20 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorSmokeExposureAccumulatedSamples: 65,
             BeaverFieldBehaviorSmokeCoughingEntered: 66,
             BeaverFieldBehaviorSmokeCoughingRecovered: 67,
-            BeaverFieldBehaviorSmokeRecoveryDecays: 68,
-            BeaverFieldBehaviorSmokeChokingCandidates: 69,
-            BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 70,
-            BeaverFieldBehaviorSmokeDeathCandidates: 71,
-            BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: 72,
-            BeaverFieldBehaviorPersistenceSaves: 73,
-            BeaverFieldBehaviorPersistenceLoads: 74,
-            BeaverFieldBehaviorLastDecisionTick: 75,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsApplied: 68,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered: 69,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedNoSafeApi: 70,
+            BeaverFieldBehaviorSmokeRecoveryDecays: 71,
+            BeaverFieldBehaviorSmokeChokingCandidates: 72,
+            BeaverFieldBehaviorSmokeChokingSlowdownsApplied: 73,
+            BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: 74,
+            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedNoSafeApi: 75,
+            BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 76,
+            BeaverFieldBehaviorSmokeDeathCandidates: 77,
+            BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: 78,
+            BeaverFieldBehaviorPersistenceSaves: 79,
+            BeaverFieldBehaviorPersistenceLoads: 80,
+            BeaverFieldBehaviorLastDecisionTick: 81,
             BurnDurationProofTarget: "medium",
             BurnDurationProofTargetIndex: 42,
             BurnDurationProofTargetX: 5,
@@ -2360,14 +2366,20 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_smoke_exposure_accumulated_samples=65", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_coughing_entered=66", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_coughing_recovered=67", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_recovery_decays=68", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_candidates=69", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_skipped_unsafe_api=70", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_death_candidates=71", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_death_skipped_unsafe_api=72", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_persistence_saves=73", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_persistence_loads=74", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_last_decision_tick=75", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_applied=68", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_recovered=69", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_skipped_no_safe_api=70", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_recovery_decays=71", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_candidates=72", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_applied=73", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_recovered=74", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_skipped_no_safe_api=75", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_skipped_unsafe_api=76", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_death_candidates=77", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_death_skipped_unsafe_api=78", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_saves=79", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_loads=80", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_last_decision_tick=81", result.ResultToken);
         Assert.Contains("burn_duration_proof_target=medium", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_index=42", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_x=5", result.ResultToken);

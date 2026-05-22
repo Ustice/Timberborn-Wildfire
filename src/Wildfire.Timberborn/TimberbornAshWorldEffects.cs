@@ -9,6 +9,7 @@ using Timberborn.EntitySystem;
 using Timberborn.Gathering;
 using Timberborn.Goods;
 using Timberborn.InventorySystem;
+using Timberborn.MapIndexSystem;
 using Timberborn.Navigation;
 using Timberborn.SimpleOutputBuildings;
 using Timberborn.TemplateSystem;
@@ -94,6 +95,52 @@ public interface ITimberbornTaintedAshSoilPoisoningAdapter
         IReadOnlyList<TimberbornTaintedAshSoilPoisoningCandidate> candidates);
 }
 
+public interface ITimberbornSoilContaminationPoisoningApi
+{
+    bool IsAvailable { get; }
+
+    float Contamination(int mapCellIndex);
+
+    void UpdateContamination(int x, int y, int z, float contamination);
+}
+
+internal sealed class TimberbornSoilContaminationPoisoningApi : ITimberbornSoilContaminationPoisoningApi
+{
+    private readonly ISoilContaminationService _soilContaminationService;
+    private readonly MethodInfo? _updateMethod;
+
+    public TimberbornSoilContaminationPoisoningApi(ISoilContaminationService soilContaminationService)
+    {
+        _soilContaminationService = soilContaminationService ??
+            throw new ArgumentNullException(nameof(soilContaminationService));
+        _updateMethod = _soilContaminationService
+            .GetType()
+            .GetMethod(
+                "UpdateContamination",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                new[] { typeof(Vector3Int), typeof(float) },
+                modifiers: null);
+    }
+
+    public bool IsAvailable => _updateMethod is not null;
+
+    public float Contamination(int mapCellIndex)
+    {
+        return _soilContaminationService.Contamination(mapCellIndex);
+    }
+
+    public void UpdateContamination(int x, int y, int z, float contamination)
+    {
+        if (_updateMethod is null)
+        {
+            throw new InvalidOperationException("The soil contamination update API is unavailable.");
+        }
+
+        _updateMethod.Invoke(_soilContaminationService, new object[] { new Vector3Int(x, y, z), contamination });
+    }
+}
+
 public sealed class UnavailableTimberbornTaintedAshSoilPoisoningAdapter : ITimberbornTaintedAshSoilPoisoningAdapter
 {
     public static readonly UnavailableTimberbornTaintedAshSoilPoisoningAdapter Instance = new();
@@ -169,18 +216,34 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
 {
     private const float MaxMapContamination = 0.9f;
 
-    private readonly ISoilContaminationService _soilContaminationService;
+    private readonly ITimberbornSoilContaminationPoisoningApi _poisoningApi;
     private readonly Func<FireGrid?> _gridProvider;
+    private readonly Func<int, int, int> _cellToIndex;
     private readonly ITimberbornFireLogSink _logSink;
 
-    public TimberbornSoilContaminationAshPoisoningAdapter(
+    internal TimberbornSoilContaminationAshPoisoningAdapter(
         ISoilContaminationService soilContaminationService,
         Func<FireGrid?> gridProvider,
+        MapIndexService mapIndexService,
+        ITimberbornFireLogSink? logSink = null)
+        : this(
+            new TimberbornSoilContaminationPoisoningApi(soilContaminationService),
+            gridProvider,
+            (x, y) => (mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService)))
+                .CellToIndex(new Vector2Int(x, y)),
+            logSink)
+    {
+    }
+
+    public TimberbornSoilContaminationAshPoisoningAdapter(
+        ITimberbornSoilContaminationPoisoningApi poisoningApi,
+        Func<FireGrid?> gridProvider,
+        Func<int, int, int> cellToIndex,
         ITimberbornFireLogSink? logSink = null)
     {
-        _soilContaminationService = soilContaminationService ??
-            throw new ArgumentNullException(nameof(soilContaminationService));
+        _poisoningApi = poisoningApi ?? throw new ArgumentNullException(nameof(poisoningApi));
         _gridProvider = gridProvider ?? throw new ArgumentNullException(nameof(gridProvider));
+        _cellToIndex = cellToIndex ?? throw new ArgumentNullException(nameof(cellToIndex));
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
     }
 
@@ -194,15 +257,7 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
         }
 
         FireGrid? grid = _gridProvider();
-        MethodInfo? updateMethod = _soilContaminationService
-            .GetType()
-            .GetMethod(
-                "UpdateContamination",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                binder: null,
-                new[] { typeof(Vector3Int), typeof(float) },
-                modifiers: null);
-        if (!grid.HasValue || updateMethod is null)
+        if (!grid.HasValue || !_poisoningApi.IsAvailable)
         {
             return new TimberbornTaintedAshSoilPoisoningSummary(
                 CandidateCellCount: candidates.Count,
@@ -217,9 +272,10 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
             try
             {
                 (int x, int y, int z) = grid.Value.FromIndex(candidate.CellIndex);
-                float current = _soilContaminationService.Contamination(candidate.CellIndex);
+                int mapCellIndex = _cellToIndex(x, y);
+                float current = _poisoningApi.Contamination(mapCellIndex);
                 float target = Math.Max(current, MaxMapContamination);
-                updateMethod.Invoke(_soilContaminationService, new object[] { new Vector3Int(x, y, z), target });
+                _poisoningApi.UpdateContamination(x, y, z, target);
                 applied++;
             }
             catch (Exception exception)
