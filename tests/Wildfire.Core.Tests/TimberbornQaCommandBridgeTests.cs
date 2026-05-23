@@ -112,6 +112,79 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void AshCellCommandReturnsReadOnlySimulatorCellState()
+    {
+        TimberbornQaCommandState state = new(IsSimulatorIntegrated: true, TickCount: 12);
+        RecordingAshCellProbe ashCellProbe = new(new TimberbornQaAshCellProbeResult(
+            CellIndex: 42,
+            IsValid: true,
+            X: 2,
+            Y: 3,
+            Z: 1,
+            PackedTransport: new WildfireTransportFieldState(
+                Steam: 0,
+                Smoke: 0,
+                SmokeContamination: 0,
+                Ash: 1,
+                AshContamination: 0,
+                Source: false).Pack(),
+            Steam: 0,
+            Smoke: 0,
+            SmokeContamination: 0,
+            Ash: 1,
+            AshContamination: 0,
+            Source: false,
+            ReadModelPresent: true,
+            ReadModelStrength: 1,
+            ReadModelQuality: WildfireAshQuality.Fertile.ToString()));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(state),
+            ashCellProbe,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-ash-cell 42");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-ash-cell", result.Command);
+        Assert.Equal(["help", "qa-ash-cell", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal([42], ashCellProbe.CellIndices);
+        Assert.Contains("ash_cell_cell_index=42", result.Message);
+        Assert.Contains("ash=1", result.Message);
+        Assert.Contains("read_model_present=true", result.Message);
+    }
+
+    [Fact]
+    public void AshCellCommandRejectsMissingCellIndexWithoutMutatingSimulator()
+    {
+        RecordingAshCellProbe ashCellProbe = new(new TimberbornQaAshCellProbeResult(
+            CellIndex: 0,
+            IsValid: false,
+            X: null,
+            Y: null,
+            Z: null,
+            PackedTransport: null,
+            Steam: null,
+            Smoke: null,
+            SmokeContamination: null,
+            Ash: null,
+            AshContamination: null,
+            Source: false,
+            ReadModelPresent: false,
+            ReadModelStrength: null,
+            ReadModelQuality: null));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true)),
+            ashCellProbe,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-ash-cell");
+
+        Assert.False(result.Success);
+        Assert.Empty(ashCellProbe.CellIndices);
+        Assert.Contains("requires one non-negative cell index", result.Message);
+    }
+
+    [Fact]
     public void LiveStimulusBindingExpandsAllowlistAndHelpMessage()
     {
         TimberbornQaCommandBridge bridge = new(
@@ -1214,6 +1287,106 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void QueueQaDeltaStimulusBuildingProbeSpendsEnoughFuelForConstructionRollback()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(simulator);
+        TimberbornBurnDamageTargetState state = CreateBurnDamageState(
+            "structure:owned",
+            "GathererFlag.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 12,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 0,
+            ownedCellIndices: [38]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            TimberbornQaFieldTargetSelectors.Building,
+            new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [state.TargetKey] = state,
+            });
+
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Building, result.MaterialClass);
+        Assert.Equal("structure:owned", result.BurnDamageTargetKey);
+        Assert.Equal("GathererFlag.Folktails(Clone)", result.BurnDamageSpecId);
+        Assert.Equal(30, result.BurnDamageRemainingCapacity);
+        Assert.Equal((byte)12, result.BurnDamageProbeFuel);
+        Assert.Equal((byte)9, result.BurnDamageSpendFuel);
+        Assert.Equal(3, result.BurnDamageProbeFuel - result.BurnDamageSpendFuel);
+        Assert.Equal(2, result.QueuedHeatChangeCount);
+
+        fireSystem.Tick();
+        fireSystem.Tick();
+
+        FireSimChange spendChange = Assert.Single(simulator.RegisteredChanges.Skip(1));
+        Assert.Equal(38, spendChange.CellIndex);
+        Assert.Equal((byte)9, spendChange.SetFuel);
+        Assert.Equal((byte)15, spendChange.SetHeat);
+        Assert.Equal((byte)2, spendChange.SetFlammability);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusBuildingProbeSelectsStructureWithAcceptanceCapacity()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(simulator);
+        TimberbornBurnDamageTargetState almostSpentState = CreateBurnDamageState(
+            "structure:aaa-almost-spent",
+            "WindTurbine.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 5,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 28,
+            ownedCellIndices: [38]);
+        TimberbornBurnDamageTargetState lowCapacityState = CreateBurnDamageState(
+            "structure:bbb-low-capacity",
+            "GathererFlag.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 6,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 27,
+            ownedCellIndices: [39]);
+        TimberbornBurnDamageTargetState highCapacityState = CreateBurnDamageState(
+            "structure:zzz-high-capacity",
+            "LumberMill.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 8,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 22,
+            ownedCellIndices: [40]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            TimberbornQaFieldTargetSelectors.Building,
+            new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [almostSpentState.TargetKey] = almostSpentState,
+                [lowCapacityState.TargetKey] = lowCapacityState,
+                [highCapacityState.TargetKey] = highCapacityState,
+            });
+
+        Assert.Equal(40, result.CellIndex);
+        Assert.Equal("structure:zzz-high-capacity", result.BurnDamageTargetKey);
+        Assert.Equal("LumberMill.Folktails(Clone)", result.BurnDamageSpecId);
+        Assert.Equal(8, result.BurnDamageRemainingCapacity);
+        Assert.Equal((byte)8, result.BurnDamageProbeFuel);
+        Assert.Equal((byte)5, result.BurnDamageSpendFuel);
+        Assert.Equal(3, result.BurnDamageProbeFuel - result.BurnDamageSpendFuel);
+
+        fireSystem.Tick();
+        fireSystem.Tick();
+
+        FireSimChange spendChange = Assert.Single(simulator.RegisteredChanges.Skip(1));
+        Assert.Equal(40, spendChange.CellIndex);
+        Assert.Equal((byte)5, spendChange.SetFuel);
+    }
+
+    [Fact]
     public void QueueQaDeltaStimulusInfrastructureStagesBurnDamageFuelSpendOnTwf075OwnedCell()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
@@ -2149,8 +2322,41 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerBuildingBurnoutConsideredDeltaCount: 20,
             LastDeltaConsumerBuildingBurnoutMatchedCellCount: 21,
             LastDeltaConsumerBuildingBurnoutAppliedConsequenceCount: 22,
+            LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount: 82,
+            LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount: 83,
+            LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount: 84,
+            LastDeltaConsumerStructureBurnDamageRollbackZeroBurnableCapacityTargetCount: 85,
+            LastDeltaConsumerStructureBurnDamageRollbackMaterialValueLost: 86,
+            LastDeltaConsumerStructureBurnDamageRollbackClosedStructureCount: 87,
+            LastDeltaConsumerStructureBurnDamageRollbackRepairBlockedCount: 88,
+            LastDeltaConsumerStructureBurnDamageRollbackRepairEligibleCount: 89,
+            LastDeltaConsumerStructureBurnDamageRollbackScorchedStageCount: 90,
+            LastDeltaConsumerStructureBurnDamageRollbackPartialConstructionStageCount: 91,
+            LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount: 92,
+            LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount: 93,
+            LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount: 94,
+            LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount: 95,
+            LastDeltaConsumerStructureBurnDamageRollbackSkippedNoSafeApiCount: 96,
+            LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied: 97,
+            LastDeltaConsumerBurnDamageConsideredCellCount: 98,
+            LastDeltaConsumerBurnDamageDamageCandidateCellCount: 99,
+            LastDeltaConsumerBurnDamageResolvedTargetCellCount: 100,
+            LastDeltaConsumerBurnDamageUnresolvedCellCount: 101,
+            LastDeltaConsumerBurnDamageDuplicateCellSuppressedCount: 102,
+            LastDeltaConsumerBurnDamageAppliedTargetCount: 103,
+            LastDeltaConsumerBurnDamageTotalDamageApplied: 104,
+            LastDeltaConsumerBurnDamagePersistenceWriteCount: 105,
             LastPositiveBuildingBurnoutAppliedTick: 40,
             LastPositiveBuildingBurnoutAppliedCount: 41,
+            LastPositiveBurnDamageAppliedTick: 106,
+            LastPositiveBurnDamageAppliedTargetCount: 107,
+            LastPositiveBurnDamageTotalDamageApplied: 108,
+            LastPositiveStructureBurnDamageRollbackTick: 109,
+            LastPositiveStructureBurnDamageRollbackUnfinishedStageCount: 110,
+            LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount: 111,
+            LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount: 112,
+            LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount: 113,
+            LastPositiveStructureBurnDamageRollbackTotalDamageApplied: 114,
             LastDeltaConsumerAlertCount: 23,
             LastPlayerFireAlertTick: 34,
             LastPlayerFireAlertStartedFireCount: 35,
@@ -2320,8 +2526,41 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_building_burnout_considered_deltas=20", result.ResultToken);
         Assert.Contains("last_delta_consumer_building_burnout_matched_cells=21", result.ResultToken);
         Assert.Contains("last_delta_consumer_building_burnout_applied_consequences=22", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_considered_deltas=82", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_matched_structure_cells=83", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_duplicate_structure_targets_suppressed=84", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_zero_burnable_capacity_targets=85", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_material_value_lost=86", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_closed_structures=87", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_repair_blocked=88", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_repair_eligible=89", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_stage_scorched=90", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_stage_partial_construction=91", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_stage_unfinished=92", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_visual_applied=93", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_construction_phase_entered=94", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_skipped_native_construction_api=95", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_skipped_no_safe_api=96", result.ResultToken);
+        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_total_damage_applied=97", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_considered_cells=98", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_candidate_cells=99", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_resolved_target_cells=100", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_unresolved_cells=101", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_duplicate_cells_suppressed=102", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_applied_targets=103", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_total_damage_applied=104", result.ResultToken);
+        Assert.Contains("last_delta_consumer_burn_damage_persistence_writes=105", result.ResultToken);
         Assert.Contains("last_positive_building_burnout_applied_tick=40", result.ResultToken);
         Assert.Contains("last_positive_building_burnout_applied_count=41", result.ResultToken);
+        Assert.Contains("last_positive_burn_damage_applied_tick=106", result.ResultToken);
+        Assert.Contains("last_positive_burn_damage_applied_targets=107", result.ResultToken);
+        Assert.Contains("last_positive_burn_damage_total_damage_applied=108", result.ResultToken);
+        Assert.Contains("last_positive_structure_burn_damage_rollback_tick=109", result.ResultToken);
+        Assert.Contains("last_positive_structure_burn_damage_rollback_stage_unfinished=110", result.ResultToken);
+        Assert.Contains("last_positive_structure_burn_damage_rollback_construction_phase_entered=111", result.ResultToken);
+        Assert.Contains("last_positive_structure_burn_damage_rollback_skipped_native_construction_api=112", result.ResultToken);
+        Assert.Contains("last_positive_structure_burn_damage_rollback_skipped_no_safe_api=113", result.ResultToken);
+        Assert.Contains("last_positive_structure_burn_damage_rollback_total_damage_applied=114", result.ResultToken);
         Assert.Contains("last_delta_consumer_alerts=23", result.ResultToken);
         Assert.Contains("last_player_fire_alert_tick=34", result.ResultToken);
         Assert.Contains("last_player_fire_alert_started_fires=35", result.ResultToken);
@@ -2553,6 +2792,17 @@ public sealed class TimberbornQaCommandBridgeTests
         }
 
         public List<string> TargetSelectors { get; } = [];
+    }
+
+    private sealed class RecordingAshCellProbe(TimberbornQaAshCellProbeResult result) : ITimberbornQaAshCellProbe
+    {
+        public List<int> CellIndices { get; } = [];
+
+        public TimberbornQaAshCellProbeResult InspectAshCell(int cellIndex)
+        {
+            CellIndices.Add(cellIndex);
+            return result;
+        }
     }
 
     private sealed class RecordingBuildingBurnoutStimulus(TimberbornQaBuildingBurnoutStimulusResult result)

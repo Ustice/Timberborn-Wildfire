@@ -111,7 +111,36 @@ public sealed class TimberbornGpuFieldRendererTests
         string runtimeSource = ReadTimberbornSource("TimberbornFireRuntime.cs");
 
         Assert.Contains("RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("_gpuIndirectRenderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
         Assert.Contains("_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PersistenceRestoreRepopulatesVisualFieldsBeforeSimulationTick()
+    {
+        string simulatorSource = ReadTimberbornSource("TimberbornComputeFireSimulator.cs");
+
+        Assert.Contains("_visualFields.SetData(CreateRestoredVisualFields(cells, transportFields, _parameters));", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("private static Vector4[] CreateRestoredVisualFields(", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("float smoke = atmospheric.Smoke / 7f;", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("float ash = atmospheric.Ash / 7f;", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("return new Vector4(fire, smoke, ash, visibility);", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("_visualFieldBindingLifecycle?.MarkUpdated(_tick);", simulatorSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IndirectRendererSeedsSmoothedFieldsFromRestoredBuffers()
+    {
+        string indirectRenderer = ReadTimberbornSource("TimberbornGpuIndirectFireRenderer.cs");
+
+        Assert.Contains("public void SeedSmoothedFieldsFromRestoredBuffers(uint tick)", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_simulator.VisualFieldsBuffer.GetData(visualFields);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_simulator.CurrentAtmosphericFieldsBuffer.GetData(atmosphericFields);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("WildfireTransportFieldState atmospheric = WildfireTransportFieldState.Unpack(atmosphericFields[index]);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("atmospheric.SmokeContamination / 7f", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("atmospheric.Steam / 7f", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smoothedFieldsBuffer!.SetData(smoothedFields);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_gpu_indirect_renderer_seeded", indirectRenderer, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -121,6 +150,7 @@ public sealed class TimberbornGpuFieldRendererTests
 
         Assert.Contains("bool IsEntityMaterial(uint companion)", source, StringComparison.Ordinal);
         Assert.Contains("bool IsAshLandingSurface(uint companion, uint3 coordinate)", source, StringComparison.Ordinal);
+        Assert.Contains("bool IsAshLandingSurfaceForCell(uint cell, uint companion, uint3 coordinate)", source, StringComparison.Ordinal);
         Assert.Contains("materialClass == 2u ||", source, StringComparison.Ordinal);
         Assert.Contains("materialClass == 3u ||", source, StringComparison.Ordinal);
         Assert.Contains("materialClass == 4u ||", source, StringComparison.Ordinal);
@@ -129,9 +159,24 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("materialClass == 7u;", source, StringComparison.Ordinal);
         Assert.Contains("if (CompanionMaterialClass(companion) == 1u)", source, StringComparison.Ordinal);
         Assert.Contains("return CompanionMaterialClass(belowCompanion) != CompanionMaterialClass(companion);", source, StringComparison.Ordinal);
+        Assert.Contains("return Terrain(cell) == 1u || IsAshLandingSurface(companion, coordinate);", source, StringComparison.Ordinal);
         Assert.Contains("CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);", source, StringComparison.Ordinal);
         Assert.DoesNotContain("CompanionFields[index] = companion;", source, StringComparison.Ordinal);
         Assert.DoesNotContain("uint companion = UpdateCompanionAsh(CompanionFields[index], id, oldCell, newCell, atmospheric);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FireSimFallsNewAshSourcesOffUnsupportedCells()
+    {
+        string source = ReadUnitySource("FireSim.compute");
+
+        Assert.Contains("uint AshSourceAmount(uint oldCell, uint newCell, uint oldAtmospheric)", source, StringComparison.Ordinal);
+        Assert.Contains("uint localAshSource = AshSourceAmount(oldCell, newCell, oldAtmospheric);", source, StringComparison.Ordinal);
+        Assert.Contains("uint aboveAshSource = AshSourceAmount(aboveOldCell, aboveNewCell, aboveAtmospheric);", source, StringComparison.Ordinal);
+        Assert.Contains("if (!IsAshLandingSurfaceForCell(aboveNewCell, aboveCompanion, aboveCoordinate))", source, StringComparison.Ordinal);
+        Assert.Contains("uint fallingAsh = max(AtmosphericAsh(aboveAtmospheric), aboveAshSource);", source, StringComparison.Ordinal);
+        Assert.Contains("ash = max(ash, isAshLandingSurface ? localAshSource : 0u);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ash = max(ash, ashSource);", source, StringComparison.Ordinal);
     }
 
     [Fact]

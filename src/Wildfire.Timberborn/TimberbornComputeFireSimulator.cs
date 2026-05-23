@@ -708,9 +708,12 @@ public sealed class TimberbornComputeFireSimulator :
         uint[] cells = snapshot.Cells.Select(static cell => (uint)cell).ToArray();
         _readCells.SetData(cells);
         _writeCells.SetData(cells);
+        uint[] transportFields = snapshot.TransportFields.Count == Grid.CellCount
+            ? snapshot.TransportFields.ToArray()
+            : Enumerable.Repeat(0u, Grid.CellCount).ToArray();
+        _visualFields.SetData(CreateRestoredVisualFields(cells, transportFields, _parameters));
         if (snapshot.TransportFields.Count == Grid.CellCount)
         {
-            uint[] transportFields = snapshot.TransportFields.ToArray();
             _readTransportFields.SetData(transportFields);
             _writeTransportFields.SetData(transportFields);
             _visualFieldBindingLifecycle?.UpdateTransportFieldsBuffer(_readTransportFields);
@@ -724,6 +727,55 @@ public sealed class TimberbornComputeFireSimulator :
             $"tick={_tick} " +
             $"cell_count={Grid.CellCount} " +
             $"atmospheric_fields={snapshot.TransportFields.Count}");
+    }
+
+    private static Vector4[] CreateRestoredVisualFields(
+        IReadOnlyList<uint> cells,
+        IReadOnlyList<uint> transportFields,
+        FireSimParameters parameters)
+    {
+        return Enumerable.Range(0, cells.Count)
+            .Select(index => CreateRestoredVisualField(
+                checked((ushort)(cells[index] & 0xFFFFu)),
+                index < transportFields.Count
+                    ? WildfireTransportFieldState.Unpack(transportFields[index])
+                    : WildfireTransportFieldState.Empty,
+                parameters))
+            .ToArray();
+    }
+
+    private static Vector4 CreateRestoredVisualField(
+        ushort cell,
+        WildfireTransportFieldState atmospheric,
+        FireSimParameters parameters)
+    {
+        float fuel = PackedCell.Fuel(cell) / 15f;
+        float heat = PackedCell.Heat(cell) / 15f;
+        bool terrain = PackedCell.Terrain(cell) == 1;
+        bool burning = PackedCell.BurningLevel(cell) > 0;
+        bool ashCandidate = terrain && PackedCell.Fuel(cell) <= 2 && PackedCell.Heat(cell) > 0;
+
+        float fire = burning
+            ? Saturate(parameters.VisualFireBaseIntensity + (heat * parameters.VisualFireHeatWeight))
+            : 0f;
+        float smoke = atmospheric.Smoke / 7f;
+        float ash = atmospheric.Ash / 7f;
+        float cellAsh = ashCandidate
+            ? Saturate(parameters.AshPresentationBaseIntensity + ((1f - fuel) * parameters.AshPresentationFuelWeight) + (heat * parameters.AshPresentationHeatWeight))
+            : 0f;
+        float cellVisibility = MathF.Max(
+            heat * parameters.VisualVisibilityHeatWeight,
+            MathF.Max(fire, cellAsh * parameters.AshPresentationVisibilityWeight));
+        float visibility = MathF.Max(
+            cellVisibility,
+            MathF.Max(smoke * parameters.VisualVisibilitySmokeWeight, ash * parameters.AshPresentationVisibilityWeight));
+
+        return new Vector4(fire, smoke, ash, visibility);
+    }
+
+    private static float Saturate(float value)
+    {
+        return Math.Clamp(value, 0f, 1f);
     }
 
     public void RegisterChange(FireSimChange change)

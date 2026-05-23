@@ -6,6 +6,7 @@ using Timberborn.GoodStackSystem;
 using Timberborn.Goods;
 using Timberborn.InventorySystem;
 using Timberborn.Persistence;
+using Timberborn.SimpleOutputBuildings;
 using Timberborn.SingletonSystem;
 using Timberborn.WorldPersistence;
 using UnityEngine;
@@ -183,13 +184,19 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
                 continue;
             }
 
-            if (_fireRuntime.IsCellTaintedAsh(cellIndex))
+            if (!_fireRuntime.TryResolveFertileAshApplicationCell(cellIndex, out int applicationCellIndex))
+            {
+                skipped++;
+                continue;
+            }
+
+            if (_fireRuntime.IsCellTaintedAsh(applicationCellIndex))
             {
                 taintedBlocked++;
                 continue;
             }
 
-            (int cx, int cy, int cz) = grid.FromIndex(cellIndex);
+            (int cx, int cy, int cz) = grid.FromIndex(applicationCellIndex);
             InventoryTarget? source = FindNearbyInventoryWithFertileAsh(inventories, cx, cy, cz);
             if (source is null)
             {
@@ -200,7 +207,7 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
             try
             {
                 source.Value.Inventory.Take(new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1));
-                _fireRuntime.ApplyPlayerFertileAshDesignation(cellIndex, StrengthPerGood);
+                _fireRuntime.ApplyPlayerFertileAshDesignation(applicationCellIndex, StrengthPerGood);
                 applied++;
                 consumed++;
             }
@@ -226,14 +233,25 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
 
     private static InventoryTarget? CreateInventoryTarget(EntityComponent entity)
     {
-        if (!entity.TryGetComponent(out GoodStack goodStack))
+        Inventory? inventory = null;
+        int stableId = 0;
+        if (entity.TryGetComponent(out GoodStack goodStack))
+        {
+            inventory = goodStack.Inventory;
+            stableId = RuntimeHelpers.GetHashCode(goodStack);
+        }
+        else if (entity.TryGetComponent(out SimpleOutputInventory simpleOutputInventory))
+        {
+            inventory = simpleOutputInventory.Inventory;
+            stableId = RuntimeHelpers.GetHashCode(simpleOutputInventory);
+        }
+
+        if (inventory is null)
         {
             return null;
         }
 
-        bool hasFertileAsh = goodStack.Inventory.Stock
-            .Any(ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0);
-        if (!hasFertileAsh)
+        if (!HasUnreservedFertileAsh(inventory))
         {
             return null;
         }
@@ -257,9 +275,9 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
             .First();
 
         return new InventoryTarget(
-            RuntimeHelpers.GetHashCode(goodStack),
+            stableId,
             center,
-            goodStack.Inventory);
+            inventory);
     }
 
     private static InventoryTarget? CreateInventoryTargetSafely(EntityComponent entity)
@@ -293,7 +311,8 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
                     ApplicationRangeCells * ApplicationRangeCells;
             })
             .Where(inv => inv.Inventory.Stock
-                .Any(ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0))
+                .Any(static ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0) &&
+                HasUnreservedFertileAsh(inv.Inventory))
             .OrderBy(inv =>
             {
                 int dx = inv.Center.x - cx;
@@ -303,6 +322,11 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
             })
             .Select(static inv => (InventoryTarget?)inv)
             .FirstOrDefault();
+    }
+
+    private static bool HasUnreservedFertileAsh(Inventory inventory)
+    {
+        return inventory.HasUnreservedStock(new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1));
     }
 
     private static string SerializeDesignations(HashSet<int> designations)

@@ -18,6 +18,7 @@ public sealed class TimberbornQaCommandBridge
     public const string QaBurnDurationStimulusCommand = "qa-burn-duration-stimulus";
     public const string QaFirePresetCommand = "qa-fire-preset";
     public const string QaSoilMoistureRangeCommand = "qa-soil-moisture-range";
+    public const string QaAshCellCommand = "qa-ash-cell";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
@@ -26,6 +27,7 @@ public sealed class TimberbornQaCommandBridge
     private readonly ITimberbornQaBurnDurationStimulus _burnDurationStimulus;
     private readonly ITimberbornQaFireSimParameterPresetSelector _fireSimParameterPresetSelector;
     private readonly ITimberbornQaSoilMoistureMapProbe _soilMoistureMapProbe;
+    private readonly ITimberbornQaAshCellProbe _ashCellProbe;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -165,13 +167,31 @@ public sealed class TimberbornQaCommandBridge
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
+        ITimberbornQaAshCellProbe ashCellProbe,
+        ITimberbornQaCommandLogSink logSink)
+        : this(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            logSink,
+            ashCellProbe)
+    {
+    }
+
+    public TimberbornQaCommandBridge(
+        ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaBurnDurationStimulus burnDurationStimulus,
         ITimberbornQaFireSimParameterPresetSelector fireSimParameterPresetSelector,
         ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        ITimberbornQaAshCellProbe? ashCellProbe = null)
     {
         if (stateProvider is null)
         {
@@ -220,6 +240,7 @@ public sealed class TimberbornQaCommandBridge
         _burnDurationStimulus = burnDurationStimulus;
         _fireSimParameterPresetSelector = fireSimParameterPresetSelector;
         _soilMoistureMapProbe = soilMoistureMapProbe;
+        _ashCellProbe = ashCellProbe ?? NullTimberbornQaAshCellProbe.Instance;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -256,6 +277,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(soilMoistureMapProbe, NullTimberbornQaSoilMoistureMapProbe.Instance))
         {
             commands[QaSoilMoistureRangeCommand] = ExecuteQaSoilMoistureRange;
+        }
+
+        if (!ReferenceEquals(_ashCellProbe, NullTimberbornQaAshCellProbe.Instance))
+        {
+            commands[QaAshCellCommand] = () => ExecuteQaAshCell(null);
         }
 
         _commands = commands;
@@ -328,7 +354,9 @@ public sealed class TimberbornQaCommandBridge
                             ? ExecuteQaDeltaStimulus(commandText)
                             : StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand)
                                 ? ExecuteQaWaterSuppressionStimulus(commandText)
-                                : handler();
+                                : StringComparer.OrdinalIgnoreCase.Equals(command, QaAshCellCommand)
+                                    ? ExecuteQaAshCell(commandText)
+                                    : handler();
             _logSink.Info(result.ResultToken);
             return result;
         }
@@ -409,6 +437,43 @@ public sealed class TimberbornQaCommandBridge
             $"avg={FormatFloat(range.Average)}_" +
             $"min_x={range.MinX}_min_y={range.MinY}_min_z={range.MinZ}_" +
             $"max_x={range.MaxX}_max_y={range.MaxY}_max_z={range.MaxZ}");
+    }
+
+    private TimberbornQaCommandResult ExecuteQaAshCell(string? commandText)
+    {
+        int? cellIndex = ParseCellIndex(commandText);
+        TimberbornQaCommandState state = _stateProvider.GetState();
+        if (!cellIndex.HasValue)
+        {
+            return TimberbornQaCommandResult.CreateFailure(
+                QaAshCellCommand,
+                "Command 'qa-ash-cell' requires one non-negative cell index.",
+                state,
+                KnownCommands);
+        }
+
+        TimberbornQaAshCellProbeResult cell = _ashCellProbe.InspectAshCell(cellIndex.Value);
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaAshCellCommand,
+            state,
+            KnownCommands,
+            "ash_cell_" +
+            $"cell_index={cell.CellIndex}_" +
+            $"valid={cell.IsValid.ToString().ToLowerInvariant()}_" +
+            $"x={FormatNumber(cell.X)}_" +
+            $"y={FormatNumber(cell.Y)}_" +
+            $"z={FormatNumber(cell.Z)}_" +
+            $"packed_transport={FormatNumber(cell.PackedTransport)}_" +
+            $"steam={FormatNumber(cell.Steam)}_" +
+            $"smoke={FormatNumber(cell.Smoke)}_" +
+            $"smoke_contamination={FormatNumber(cell.SmokeContamination)}_" +
+            $"ash={FormatNumber(cell.Ash)}_" +
+            $"ash_contamination={FormatNumber(cell.AshContamination)}_" +
+            $"source={cell.Source.ToString().ToLowerInvariant()}_" +
+            $"read_model_present={cell.ReadModelPresent.ToString().ToLowerInvariant()}_" +
+            $"read_model_strength={FormatNumber(cell.ReadModelStrength)}_" +
+            $"read_model_quality={FormatToken(cell.ReadModelQuality)}");
     }
 
     private TimberbornQaCommandResult ExecuteQaDeltaStimulus(string? commandText)
@@ -663,6 +728,22 @@ public sealed class TimberbornQaCommandBridge
             : null;
     }
 
+    private static int? ParseCellIndex(string? commandText)
+    {
+        string[] tokens = (commandText ?? string.Empty)
+            .Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length != 2)
+        {
+            return null;
+        }
+
+        return int.TryParse(tokens[1], out int cellIndex) && cellIndex >= 0
+            ? cellIndex
+            : null;
+    }
+
     private static bool IsSimulatorChangeCommand(string command)
     {
         return StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) ||
@@ -693,11 +774,67 @@ public sealed class TimberbornQaCommandBridge
     {
         return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
     }
+
+    private static string FormatNumber(uint? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
 }
 
 public interface ITimberbornQaCommandStateProvider
 {
     TimberbornQaCommandState GetState();
+}
+
+public interface ITimberbornQaAshCellProbe
+{
+    TimberbornQaAshCellProbeResult InspectAshCell(int cellIndex);
+}
+
+public sealed record TimberbornQaAshCellProbeResult(
+    int CellIndex,
+    bool IsValid,
+    int? X,
+    int? Y,
+    int? Z,
+    uint? PackedTransport,
+    byte? Steam,
+    byte? Smoke,
+    byte? SmokeContamination,
+    byte? Ash,
+    byte? AshContamination,
+    bool Source,
+    bool ReadModelPresent,
+    int? ReadModelStrength,
+    string? ReadModelQuality);
+
+public sealed class NullTimberbornQaAshCellProbe : ITimberbornQaAshCellProbe
+{
+    public static readonly NullTimberbornQaAshCellProbe Instance = new();
+
+    private NullTimberbornQaAshCellProbe()
+    {
+    }
+
+    public TimberbornQaAshCellProbeResult InspectAshCell(int cellIndex)
+    {
+        return new TimberbornQaAshCellProbeResult(
+            cellIndex,
+            IsValid: false,
+            X: null,
+            Y: null,
+            Z: null,
+            PackedTransport: null,
+            Steam: null,
+            Smoke: null,
+            SmokeContamination: null,
+            Ash: null,
+            AshContamination: null,
+            Source: false,
+            ReadModelPresent: false,
+            ReadModelStrength: null,
+            ReadModelQuality: null);
+    }
 }
 
 public interface ITimberbornQaDeltaStimulus
@@ -1239,10 +1376,29 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerStructureBurnDamageRollbackPartialConstructionStageCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount = null,
+    int? LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount = null,
+    int? LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackSkippedNoSafeApiCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied = null,
+    int? LastDeltaConsumerBurnDamageConsideredCellCount = null,
+    int? LastDeltaConsumerBurnDamageDamageCandidateCellCount = null,
+    int? LastDeltaConsumerBurnDamageResolvedTargetCellCount = null,
+    int? LastDeltaConsumerBurnDamageUnresolvedCellCount = null,
+    int? LastDeltaConsumerBurnDamageDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerBurnDamageAppliedTargetCount = null,
+    int? LastDeltaConsumerBurnDamageTotalDamageApplied = null,
+    int? LastDeltaConsumerBurnDamagePersistenceWriteCount = null,
     uint? LastPositiveBuildingBurnoutAppliedTick = null,
     int? LastPositiveBuildingBurnoutAppliedCount = null,
+    uint? LastPositiveBurnDamageAppliedTick = null,
+    int? LastPositiveBurnDamageAppliedTargetCount = null,
+    int? LastPositiveBurnDamageTotalDamageApplied = null,
+    uint? LastPositiveStructureBurnDamageRollbackTick = null,
+    int? LastPositiveStructureBurnDamageRollbackUnfinishedStageCount = null,
+    int? LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount = null,
+    int? LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount = null,
+    int? LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount = null,
+    int? LastPositiveStructureBurnDamageRollbackTotalDamageApplied = null,
     int? LastDeltaConsumerStoredGoodBurnConsideredDeltaCount = null,
     int? LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount = null,
     int? LastDeltaConsumerStoredGoodBurnDuplicateStorageTargetSuppressedCount = null,
@@ -1589,10 +1745,29 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_structure_burn_damage_rollback_stage_partial_construction={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackPartialConstructionStageCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_stage_unfinished={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_visual_applied={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount)} " +
+        $"last_delta_consumer_structure_burn_damage_rollback_construction_phase_entered={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount)} " +
+        $"last_delta_consumer_structure_burn_damage_rollback_skipped_native_construction_api={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_skipped_no_safe_api={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackSkippedNoSafeApiCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_total_damage_applied={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied)} " +
+        $"last_delta_consumer_burn_damage_considered_cells={FormatNumber(State.LastDeltaConsumerBurnDamageConsideredCellCount)} " +
+        $"last_delta_consumer_burn_damage_candidate_cells={FormatNumber(State.LastDeltaConsumerBurnDamageDamageCandidateCellCount)} " +
+        $"last_delta_consumer_burn_damage_resolved_target_cells={FormatNumber(State.LastDeltaConsumerBurnDamageResolvedTargetCellCount)} " +
+        $"last_delta_consumer_burn_damage_unresolved_cells={FormatNumber(State.LastDeltaConsumerBurnDamageUnresolvedCellCount)} " +
+        $"last_delta_consumer_burn_damage_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerBurnDamageDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_burn_damage_applied_targets={FormatNumber(State.LastDeltaConsumerBurnDamageAppliedTargetCount)} " +
+        $"last_delta_consumer_burn_damage_total_damage_applied={FormatNumber(State.LastDeltaConsumerBurnDamageTotalDamageApplied)} " +
+        $"last_delta_consumer_burn_damage_persistence_writes={FormatNumber(State.LastDeltaConsumerBurnDamagePersistenceWriteCount)} " +
         $"last_positive_building_burnout_applied_tick={FormatNumber(State.LastPositiveBuildingBurnoutAppliedTick)} " +
         $"last_positive_building_burnout_applied_count={FormatNumber(State.LastPositiveBuildingBurnoutAppliedCount)} " +
+        $"last_positive_burn_damage_applied_tick={FormatNumber(State.LastPositiveBurnDamageAppliedTick)} " +
+        $"last_positive_burn_damage_applied_targets={FormatNumber(State.LastPositiveBurnDamageAppliedTargetCount)} " +
+        $"last_positive_burn_damage_total_damage_applied={FormatNumber(State.LastPositiveBurnDamageTotalDamageApplied)} " +
+        $"last_positive_structure_burn_damage_rollback_tick={FormatNumber(State.LastPositiveStructureBurnDamageRollbackTick)} " +
+        $"last_positive_structure_burn_damage_rollback_stage_unfinished={FormatNumber(State.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount)} " +
+        $"last_positive_structure_burn_damage_rollback_construction_phase_entered={FormatNumber(State.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount)} " +
+        $"last_positive_structure_burn_damage_rollback_skipped_native_construction_api={FormatNumber(State.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount)} " +
+        $"last_positive_structure_burn_damage_rollback_skipped_no_safe_api={FormatNumber(State.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount)} " +
+        $"last_positive_structure_burn_damage_rollback_total_damage_applied={FormatNumber(State.LastPositiveStructureBurnDamageRollbackTotalDamageApplied)} " +
         $"last_delta_consumer_stored_good_burn_considered_deltas={FormatNumber(State.LastDeltaConsumerStoredGoodBurnConsideredDeltaCount)} " +
         $"last_delta_consumer_stored_good_burn_matched_storage_cells={FormatNumber(State.LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount)} " +
         $"last_delta_consumer_stored_good_burn_duplicate_storage_targets_suppressed={FormatNumber(State.LastDeltaConsumerStoredGoodBurnDuplicateStorageTargetSuppressedCount)} " +

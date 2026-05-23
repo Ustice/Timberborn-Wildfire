@@ -69,6 +69,8 @@ public readonly record struct TimberbornStructureBurnDamageApplyRequest(
 public readonly record struct TimberbornStructureBurnDamageApplyResult(
     bool Closed,
     bool VisualRollbackApplied,
+    bool ConstructionPhaseEntered,
+    bool SkippedNativeConstructionApi,
     bool SkippedNoSafeApi,
     bool RepairEligible);
 
@@ -85,6 +87,8 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
     int PartialConstructionStageCount,
     int UnfinishedStageCount,
     int VisualRollbackAppliedCount,
+    int ConstructionPhaseEnteredCount,
+    int SkippedNativeConstructionApiCount,
     int SkippedNoSafeApiCount,
     int TotalDamageApplied)
 {
@@ -101,6 +105,8 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
         PartialConstructionStageCount: 0,
         UnfinishedStageCount: 0,
         VisualRollbackAppliedCount: 0,
+        ConstructionPhaseEnteredCount: 0,
+        SkippedNativeConstructionApiCount: 0,
         SkippedNoSafeApiCount: 0,
         TotalDamageApplied: 0);
 
@@ -120,6 +126,8 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
             $"rollback_stage_partial_construction={PartialConstructionStageCount} " +
             $"rollback_stage_unfinished={UnfinishedStageCount} " +
             $"visual_rollback_applied={VisualRollbackAppliedCount} " +
+            $"construction_phase_entered={ConstructionPhaseEnteredCount} " +
+            $"skipped_native_construction_api={SkippedNativeConstructionApiCount} " +
             $"skipped_no_safe_api={SkippedNoSafeApiCount} " +
             $"total_damage_applied={TotalDamageApplied}";
     }
@@ -144,7 +152,7 @@ public interface ITimberbornStructureBurnDamageRollbackTargetApi
 
 public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStructureBurnDamageRollbackSink
 {
-    private const int UnfinishedDamageThresholdPercent = 10;
+    internal const int UnfinishedDamageThresholdPercent = 10;
 
     private readonly ITimberbornStructureBurnDamageRollbackTargetApi _targetApi;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;
@@ -201,6 +209,8 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             PartialConstructionStageCount: outcomes.Count(static outcome => outcome.Request.RollbackStage == TimberbornStructureBurnRollbackStage.PartialConstruction),
             UnfinishedStageCount: outcomes.Count(static outcome => outcome.Request.RollbackStage == TimberbornStructureBurnRollbackStage.Unfinished),
             VisualRollbackAppliedCount: outcomes.Count(static outcome => outcome.ApplyResult.VisualRollbackApplied),
+            ConstructionPhaseEnteredCount: outcomes.Count(static outcome => outcome.ApplyResult.ConstructionPhaseEntered),
+            SkippedNativeConstructionApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNativeConstructionApi),
             SkippedNoSafeApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNoSafeApi),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.Request.DamageApplied));
         if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
@@ -235,7 +245,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
                 IsZeroBurnableCapacity: true,
                 MaterialValueLost: 0,
                 TimberbornStructureBurnDamageApplyRequestDefaults.None,
-                new TimberbornStructureBurnDamageApplyResult(false, false, false, false));
+                new TimberbornStructureBurnDamageApplyResult(false, false, false, false, false, false));
         }
 
         StructureDamageState localState = _statesByStableId.GetValueOrDefault(target.StableId, new StructureDamageState(0));
@@ -269,7 +279,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             request.RepairBlocked ||
             request.RepairEligible
                 ? _targetApi.ApplyState(target, request)
-                : new TimberbornStructureBurnDamageApplyResult(false, false, false, repairEligible);
+                : new TimberbornStructureBurnDamageApplyResult(false, false, false, false, false, repairEligible);
 
         return new StructureApplyOutcome(
             IsZeroBurnableCapacity: false,
@@ -285,12 +295,22 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             return TimberbornStructureBurnRollbackStage.None;
         }
 
-        if (damageTaken * 100 >= damageCapacity * UnfinishedDamageThresholdPercent)
+        if (damageTaken >= MinimumUnfinishedDamage(damageCapacity))
         {
             return TimberbornStructureBurnRollbackStage.Unfinished;
         }
 
         return TimberbornStructureBurnRollbackStage.Scorched;
+    }
+
+    internal static int MinimumUnfinishedDamage(int damageCapacity)
+    {
+        if (damageCapacity <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Max(1, (int)(((long)damageCapacity * UnfinishedDamageThresholdPercent + 99) / 100));
     }
 
     private ResolvedTarget ResolveTarget(TimberbornStructureBurnDamageConsequence consequence)
@@ -428,8 +448,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         if (blockObject is not null && request.ShouldApplyRollbackVisual)
         {
-            if (request.RollbackStage is TimberbornStructureBurnRollbackStage.PartialConstruction or
-                TimberbornStructureBurnRollbackStage.Unfinished)
+            if (RequestsNativeConstructionPhase(request))
             {
                 enteredUnfinishedState = target.CanRepairAfterDanger && TryEnterUnfinishedState(blockObject);
             }
@@ -447,14 +466,26 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         }
 
         bool visualRollbackApplied = enteredUnfinishedState || removedConstructionMaterialCount > 0 || hasBurnedTextures;
-        bool skippedNoSafeApi = (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
+        bool skippedNativeConstructionApi = RequestsNativeConstructionPhase(request) && !enteredUnfinishedState;
+        bool skippedNoSafeApi = skippedNativeConstructionApi ||
+            (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
             (request.RepairEligible && !accessRestored);
 
         return new TimberbornStructureBurnDamageApplyResult(
             Closed: false,
             VisualRollbackApplied: visualRollbackApplied,
+            ConstructionPhaseEntered: enteredUnfinishedState,
+            SkippedNativeConstructionApi: skippedNativeConstructionApi,
             SkippedNoSafeApi: skippedNoSafeApi,
             RepairEligible: request.RepairEligible);
+    }
+
+    public static bool RequestsNativeConstructionPhase(TimberbornStructureBurnDamageApplyRequest request)
+    {
+        return request.ShouldApplyRollbackVisual &&
+            request.RollbackStage is (
+                TimberbornStructureBurnRollbackStage.PartialConstruction or
+                TimberbornStructureBurnRollbackStage.Unfinished);
     }
 
     private static Accessible[] GetBlockableAccessibles(BlockObject blockObject)

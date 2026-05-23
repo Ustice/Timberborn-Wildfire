@@ -32,7 +32,8 @@ public readonly record struct TimberbornAshFieldEntry(
     uint UpdatedTick,
     int PersistenceVersion,
     int CreatedDayNumber = 0,
-    int UpdatedDayNumber = 0)
+    int UpdatedDayNumber = 0,
+    bool IsActiveSource = false)
 {
     public const int CurrentPersistenceVersion = 2;
 
@@ -233,7 +234,8 @@ public sealed class TimberbornAshFieldService
     {
         if (strengthToRemove <= 0 ||
             !_entries.TryGetValue(cellIndex, out TimberbornAshFieldEntry entry) ||
-            entry.Quality != WildfireAshQuality.Fertile)
+            entry.Quality != WildfireAshQuality.Fertile ||
+            entry.IsActiveSource)
         {
             return new TimberbornAshFieldCollectionRemoval(cellIndex, 0, RemovedEntry: false);
         }
@@ -323,7 +325,8 @@ public sealed class TimberbornAshFieldService
                     UpdatedTick: tick,
                     TimberbornAshFieldEntry.CurrentPersistenceVersion,
                     CreatedDayNumber: hadExisting ? existing.CreatedDayNumber : dayNumber,
-                    UpdatedDayNumber: updatedDayNumber);
+                    UpdatedDayNumber: updatedDayNumber,
+                    IsActiveSource: item.State.Source);
             });
         _lastDecayDayByCell.Keys
             .Where(cellIndex => !_entries.ContainsKey(cellIndex))

@@ -307,6 +307,11 @@ bool IsAshLandingSurface(uint companion, uint3 coordinate)
     return CompanionMaterialClass(belowCompanion) != CompanionMaterialClass(companion);
 }
 
+bool IsAshLandingSurfaceForCell(uint cell, uint companion, uint3 coordinate)
+{
+    return Terrain(cell) == 1u || IsAshLandingSurface(companion, coordinate);
+}
+
 bool IsAshLandingSurfaceAt(uint3 coordinate)
 {
     if (coordinate.x >= Width || coordinate.y >= Height || coordinate.z >= Depth)
@@ -350,6 +355,24 @@ uint SourceContamination(uint companion)
     uint contaminationBehavior = CompanionContaminationBehavior(companion);
     uint ashQuality = CompanionAshQuality(companion);
     return (contaminationBehavior == 2u || contaminationBehavior == 4u || ashQuality == 3u) ? 7u : 0u;
+}
+
+uint AshSourceAmount(uint oldCell, uint newCell, uint oldAtmospheric)
+{
+    uint fuelDrop = Fuel(oldCell) > Fuel(newCell) ? Fuel(oldCell) - Fuel(newCell) : 0u;
+    return min(3u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
+}
+
+uint AshSourceContamination(uint companion)
+{
+    uint contaminationBehavior = CompanionContaminationBehavior(companion);
+    uint sourceContamination = SourceContamination(companion);
+    if (sourceContamination == 0u && contaminationBehavior == 1u)
+    {
+        sourceContamination = CompanionSoilContamination(companion);
+    }
+
+    return CompanionAshQuality(companion) == 3u ? 7u : sourceContamination;
 }
 
 uint FalloutAshLevel(uint atmospheric)
@@ -1019,6 +1042,8 @@ uint DilutedSmokeContamination(uint smokeTotal, uint contaminationWeightedTotal)
     return min(7u, (contaminationWeightedTotal + (smokeTotal / 2u)) / smokeTotal);
 }
 
+uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric);
+
 uint WindWeightedNeighborHeat(uint neighborHeat, float directionX, float directionY)
 {
     float strength = EffectiveWindStrength();
@@ -1046,16 +1071,15 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint oldAtmospheric = CurrentAtmosphericFields[index] & 0xFFFFu;
     uint companion = CompanionFields[index];
     bool hotFuel = Terrain(newCell) == 1u && Fuel(newCell) > 0u && Heat(newCell) > 0u;
-    uint fuelDrop = Fuel(oldCell) > Fuel(newCell) ? Fuel(oldCell) - Fuel(newCell) : 0u;
     uint contaminationBehavior = CompanionContaminationBehavior(companion);
-    uint ashQuality = CompanionAshQuality(companion);
     uint sourceContamination = SourceContamination(companion);
     if (sourceContamination == 0u && contaminationBehavior == 1u)
     {
         sourceContamination = CompanionSoilContamination(companion);
     }
 
-    uint ashContaminationSource = ashQuality == 3u ? 7u : sourceContamination;
+    uint localAshSource = AshSourceAmount(oldCell, newCell, oldAtmospheric);
+    uint ashContaminationSource = AshSourceContamination(companion);
 
     uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);
     uint movedOutSteam = SteamMovedOutAmount(coordinate);
@@ -1071,21 +1095,29 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
         smokeContaminationWeightedTotal,
         retainedSmoke,
         AtmosphericSmokeContamination(oldAtmospheric));
-    bool isAshLandingSurface = Terrain(newCell) == 1u || IsAshLandingSurface(companion, coordinate);
+    bool isAshLandingSurface = IsAshLandingSurfaceForCell(newCell, companion, coordinate);
     uint ash = isAshLandingSurface ? AtmosphericAsh(oldAtmospheric) : 0u;
     uint ashContamination = ash == 0u ? 0u : AtmosphericAshContamination(oldAtmospheric);
+    uint fallingAshSource = 0u;
 
     if (coordinate.z + 1u < Depth)
     {
         uint3 aboveCoordinate = uint3(coordinate.x, coordinate.y, coordinate.z + 1u);
         uint aboveIndex = ToIndex(aboveCoordinate);
         uint aboveCompanion = CompanionFields[aboveIndex];
-        if (!IsAshLandingSurface(aboveCompanion, aboveCoordinate))
+        uint aboveOldCell = CurrentCells[aboveIndex] & 0xFFFFu;
+        uint aboveAtmospheric = CurrentAtmosphericFields[aboveIndex] & 0xFFFFu;
+        uint aboveNewCell = StepCell(aboveIndex, aboveCoordinate, aboveOldCell, aboveAtmospheric);
+        if (!IsAshLandingSurfaceForCell(aboveNewCell, aboveCompanion, aboveCoordinate))
         {
-            uint aboveAtmospheric = CurrentAtmosphericFields[aboveIndex] & 0xFFFFu;
-            uint fallingAsh = AtmosphericAsh(aboveAtmospheric);
+            uint aboveAshSource = AshSourceAmount(aboveOldCell, aboveNewCell, aboveAtmospheric);
+            uint fallingAsh = max(AtmosphericAsh(aboveAtmospheric), aboveAshSource);
+            uint fallingAshContamination = max(
+                AtmosphericAsh(aboveAtmospheric) == 0u ? 0u : AtmosphericAshContamination(aboveAtmospheric),
+                aboveAshSource == 0u ? 0u : AshSourceContamination(aboveCompanion));
             ash = max(ash, fallingAsh);
-            ashContamination = max(ashContamination, fallingAsh == 0u ? 0u : AtmosphericAshContamination(aboveAtmospheric));
+            ashContamination = max(ashContamination, fallingAsh == 0u ? 0u : fallingAshContamination);
+            fallingAshSource = max(fallingAshSource, aboveAshSource);
         }
 
         AddMovedSmokeContribution(
@@ -1313,15 +1345,14 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     AddWindAdvectedSteamContributions(steam, coordinate);
 
     uint steamSource = SteamSourceFromMoistureAndHeat(newCell);
-    uint ashSource = min(3u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
 
     steam = max(steam, steamSource);
     AddSmokeContribution(smokeTotal, smokeContaminationWeightedTotal, smokeSource, sourceContamination);
     uint smoke = min(7u, smokeTotal);
     uint smokeContamination = DilutedSmokeContamination(smokeTotal, smokeContaminationWeightedTotal);
-    ash = max(ash, ashSource);
-    ashContamination = max(ashContamination, ashSource == 0u ? 0u : ashContaminationSource);
-    if (isAshLandingSurface && Water(newCell) > 0u && ash > 0u)
+    ash = max(ash, isAshLandingSurface ? localAshSource : 0u);
+    ashContamination = max(ashContamination, !isAshLandingSurface || localAshSource == 0u ? 0u : ashContaminationSource);
+    if (isAshLandingSurface && Water(newCell) > 0u && ash > 0u && (Tick & 63u) == 0u)
     {
         ash -= 1u;
         if (ash == 0u)
@@ -1330,7 +1361,7 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
         }
     }
 
-    bool source = steamSource > 0u || smokeSource > 0u || ashSource > 0u;
+    bool source = steamSource > 0u || smokeSource > 0u || (isAshLandingSurface && localAshSource > 0u) || fallingAshSource > 0u;
     return PackAtmospheric(min(7u, steam), min(7u, smoke), min(7u, smokeContamination), min(7u, ash), min(7u, ashContamination), source);
 }
 

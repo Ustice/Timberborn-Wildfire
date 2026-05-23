@@ -69,6 +69,33 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
+    public void ActiveAshSourceIsNotCollectableUntilItSettles()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        service.SyncFromTransportFields(
+            12,
+            [
+                new WildfireTransportFieldState(
+                    Steam: 0,
+                    Smoke: 4,
+                    SmokeContamination: 0,
+                    Ash: 3,
+                    AshContamination: 0,
+                    Source: true).Pack(),
+            ]);
+        TimberbornFertileAshCollectionService collection = new(new RecordingFertileAshCollectionAdapter([]));
+
+        TimberbornAshFieldCollectionRemoval removal = service.CalculateCollectedFertileStrengthRemoval(
+            0,
+            TimberbornFertileAshCollectionService.StrengthPerGood);
+        TimberbornFertileAshCollectionSummary summary = collection.Apply(13, service);
+
+        Assert.Equal(0, removal.StrengthRemoved);
+        Assert.Equal(0, summary.CandidateCellCount);
+        Assert.Equal(0, summary.CollectedGoodCount);
+    }
+
+    [Fact]
     public void GrowthMultiplierClampsAtTenPercent()
     {
         RecordingAshGrowthAdapter growthAdapter = new();

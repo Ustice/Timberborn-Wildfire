@@ -25,7 +25,8 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaBuildingBurnoutStimulus,
     ITimberbornQaWaterSuppressionStimulus,
     ITimberbornQaBurnDurationStimulus,
-    ITimberbornQaFireSimParameterPresetSelector
+    ITimberbornQaFireSimParameterPresetSelector,
+    ITimberbornQaAshCellProbe
 {
     public const string FertileAshFieldGatherableTemplateName = "FertileAshField";
 
@@ -363,6 +364,11 @@ public sealed class TimberbornFireRuntime :
         {
             _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink, _windProvider);
             _gpuIndirectRenderer.Initialize();
+            if (_pendingPersistenceSnapshot?.FireSim is not null)
+            {
+                _gpuIndirectRenderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);
+            }
+
             _gpuIndirectRenderer.OnUpdate();
         }
 
@@ -913,10 +919,29 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerStructureBurnDamageRollbackPartialConstructionStageCount: deltaConsumerSummary.StructureBurnDamageRollbackPartialConstructionStageCount,
             LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount: deltaConsumerSummary.StructureBurnDamageRollbackUnfinishedStageCount,
             LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount: deltaConsumerSummary.StructureBurnDamageRollbackVisualRollbackAppliedCount,
+            LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount: deltaConsumerSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount,
+            LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount: deltaConsumerSummary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount,
             LastDeltaConsumerStructureBurnDamageRollbackSkippedNoSafeApiCount: deltaConsumerSummary.StructureBurnDamageRollbackSkippedNoSafeApiCount,
             LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied: deltaConsumerSummary.StructureBurnDamageRollbackTotalDamageApplied,
+            LastDeltaConsumerBurnDamageConsideredCellCount: deltaConsumerSummary.BurnDamageConsideredCellCount,
+            LastDeltaConsumerBurnDamageDamageCandidateCellCount: deltaConsumerSummary.BurnDamageDamageCandidateCellCount,
+            LastDeltaConsumerBurnDamageResolvedTargetCellCount: deltaConsumerSummary.BurnDamageResolvedTargetCellCount,
+            LastDeltaConsumerBurnDamageUnresolvedCellCount: deltaConsumerSummary.BurnDamageUnresolvedCellCount,
+            LastDeltaConsumerBurnDamageDuplicateCellSuppressedCount: deltaConsumerSummary.BurnDamageDuplicateCellSuppressedCount,
+            LastDeltaConsumerBurnDamageAppliedTargetCount: deltaConsumerSummary.BurnDamageAppliedTargetCount,
+            LastDeltaConsumerBurnDamageTotalDamageApplied: deltaConsumerSummary.BurnDamageTotalDamageApplied,
+            LastDeltaConsumerBurnDamagePersistenceWriteCount: deltaConsumerSummary.BurnDamagePersistenceWriteCount,
             LastPositiveBuildingBurnoutAppliedTick: fireSystem.LastPositiveBuildingBurnoutAppliedTick,
             LastPositiveBuildingBurnoutAppliedCount: fireSystem.LastPositiveBuildingBurnoutAppliedCount,
+            LastPositiveBurnDamageAppliedTick: fireSystem.LastPositiveBurnDamageAppliedTick,
+            LastPositiveBurnDamageAppliedTargetCount: fireSystem.LastPositiveBurnDamageAppliedTargetCount,
+            LastPositiveBurnDamageTotalDamageApplied: fireSystem.LastPositiveBurnDamageTotalDamageApplied,
+            LastPositiveStructureBurnDamageRollbackTick: fireSystem.LastPositiveStructureBurnDamageRollbackTick,
+            LastPositiveStructureBurnDamageRollbackUnfinishedStageCount: fireSystem.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount,
+            LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount: fireSystem.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount,
+            LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount: fireSystem.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount,
+            LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount: fireSystem.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount,
+            LastPositiveStructureBurnDamageRollbackTotalDamageApplied: fireSystem.LastPositiveStructureBurnDamageRollbackTotalDamageApplied,
             LastDeltaConsumerStoredGoodBurnConsideredDeltaCount: deltaConsumerSummary.StoredGoodBurnConsideredDeltaCount,
             LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount: deltaConsumerSummary.StoredGoodBurnMatchedStorageCellCount,
             LastDeltaConsumerStoredGoodBurnDuplicateStorageTargetSuppressedCount: deltaConsumerSummary.StoredGoodBurnDuplicateStorageTargetSuppressedCount,
@@ -1149,6 +1174,72 @@ public sealed class TimberbornFireRuntime :
             WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
     }
 
+    public TimberbornQaAshCellProbeResult InspectAshCell(int cellIndex)
+    {
+        if (_fireSystem is not { IsInitialized: true } fireSystem ||
+            fireSystem.Width is null ||
+            fireSystem.Height is null ||
+            fireSystem.Depth is null)
+        {
+            return InvalidAshCellProbeResult(cellIndex);
+        }
+
+        FireGrid grid = new(fireSystem.Width.Value, fireSystem.Height.Value, fireSystem.Depth.Value);
+        if (cellIndex < 0 || cellIndex >= grid.CellCount)
+        {
+            return InvalidAshCellProbeResult(cellIndex);
+        }
+
+        TimberbornFireSimPersistenceSnapshot? snapshot = fireSystem.CapturePersistentFireSimState();
+        if (snapshot?.TransportFields is not { Count: > 0 } transportFields ||
+            cellIndex >= transportFields.Count)
+        {
+            return InvalidAshCellProbeResult(cellIndex);
+        }
+
+        uint packedTransport = transportFields[cellIndex];
+        WildfireTransportFieldState transport = WildfireTransportFieldState.Unpack(packedTransport);
+        (int x, int y, int z) = grid.FromIndex(cellIndex);
+        bool hasEntry = _ashFieldService.TryGetEntry(cellIndex, out TimberbornAshFieldEntry entry);
+
+        return new TimberbornQaAshCellProbeResult(
+            cellIndex,
+            IsValid: true,
+            X: x,
+            Y: y,
+            Z: z,
+            PackedTransport: packedTransport,
+            Steam: transport.Steam,
+            Smoke: transport.Smoke,
+            SmokeContamination: transport.SmokeContamination,
+            Ash: transport.Ash,
+            AshContamination: transport.AshContamination,
+            Source: transport.Source,
+            ReadModelPresent: hasEntry,
+            ReadModelStrength: hasEntry ? entry.Strength : null,
+            ReadModelQuality: hasEntry ? entry.Quality.ToString() : null);
+    }
+
+    private static TimberbornQaAshCellProbeResult InvalidAshCellProbeResult(int cellIndex)
+    {
+        return new TimberbornQaAshCellProbeResult(
+            cellIndex,
+            IsValid: false,
+            X: null,
+            Y: null,
+            Z: null,
+            PackedTransport: null,
+            Steam: null,
+            Smoke: null,
+            SmokeContamination: null,
+            Ash: null,
+            AshContamination: null,
+            Source: false,
+            ReadModelPresent: false,
+            ReadModelStrength: null,
+            ReadModelQuality: null);
+    }
+
     public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
     {
         _buildingBurnoutConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
@@ -1230,6 +1321,48 @@ public sealed class TimberbornFireRuntime :
                 AddAsh: ashAmount,
                 SetAshContamination: 0),
             "fertile_ash_application");
+        _logSink.Info(
+            "wildfire_timberborn_fertile_ash_application_queued " +
+            $"cell_index={cellIndex} " +
+            $"ash_amount={ashAmount}");
+        return true;
+    }
+
+    public bool TryResolveFertileAshApplicationCell(int cellIndex, out int applicationCellIndex)
+    {
+        applicationCellIndex = cellIndex;
+        if (_fireSystem is not { IsInitialized: true } fireSystem ||
+            fireSystem.Width is null ||
+            fireSystem.Height is null ||
+            fireSystem.Depth is null)
+        {
+            return false;
+        }
+
+        FireGrid grid = new(fireSystem.Width.Value, fireSystem.Height.Value, fireSystem.Depth.Value);
+        if (cellIndex < 0 || cellIndex >= grid.CellCount)
+        {
+            return false;
+        }
+
+        TimberbornFireSimPersistenceSnapshot? snapshot = fireSystem.CapturePersistentFireSimState();
+        if (snapshot?.Cells is not { Count: > 0 } cells || cells.Count != grid.CellCount)
+        {
+            return false;
+        }
+
+        (int x, int y, int z) = grid.FromIndex(cellIndex);
+        int? landingCellIndex = Enumerable.Range(0, z + 1)
+            .Select(offset => grid.ToIndex(x, y, z - offset))
+            .Where(candidate => PackedCell.Terrain(cells[candidate]) == 1)
+            .Select(static candidate => (int?)candidate)
+            .FirstOrDefault();
+        if (landingCellIndex is null)
+        {
+            return false;
+        }
+
+        applicationCellIndex = landingCellIndex.Value;
         return true;
     }
 

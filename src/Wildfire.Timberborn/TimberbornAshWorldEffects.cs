@@ -423,7 +423,9 @@ public sealed class TimberbornFertileAshCollectionService
         int skippedTaintedOrSpent = ashFieldService.Entries.Values
             .Count(static entry => entry.Quality is WildfireAshQuality.Spent or WildfireAshQuality.Tainted);
         TimberbornFertileAshCollectionCandidate[] candidates = ashFieldService.Entries.Values
-            .Where(static entry => entry.Quality == WildfireAshQuality.Fertile && entry.Strength > 0)
+            .Where(static entry => entry.Quality == WildfireAshQuality.Fertile &&
+                entry.Strength > 0 &&
+                !entry.IsActiveSource)
             .Select(static entry => new TimberbornFertileAshCollectionCandidate(entry.CellIndex, entry.Strength))
             .ToArray();
         TimberbornFertileAshCollectionAdapterResult adapterResult = _adapter.Collect(tick, candidates);

@@ -30,6 +30,24 @@ public sealed class TimberbornFireDeltaConsumer
 
     public int LastPositiveBuildingBurnoutAppliedCount { get; private set; }
 
+    public uint LastPositiveBurnDamageAppliedTick { get; private set; }
+
+    public int LastPositiveBurnDamageAppliedTargetCount { get; private set; }
+
+    public int LastPositiveBurnDamageTotalDamageApplied { get; private set; }
+
+    public uint LastPositiveStructureBurnDamageRollbackTick { get; private set; }
+
+    public int LastPositiveStructureBurnDamageRollbackUnfinishedStageCount { get; private set; }
+
+    public int LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount { get; private set; }
+
+    public int LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount { get; private set; }
+
+    public int LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount { get; private set; }
+
+    public int LastPositiveStructureBurnDamageRollbackTotalDamageApplied { get; private set; }
+
     public IReadOnlyDictionary<int, TimberbornFireDebugVisualCellState> DebugVisualCells => _debugVisualCells;
 
     public void Reset()
@@ -40,6 +58,15 @@ public sealed class TimberbornFireDeltaConsumer
         LastPositiveWaterChangedCount = 0;
         LastPositiveBuildingBurnoutAppliedTick = 0;
         LastPositiveBuildingBurnoutAppliedCount = 0;
+        LastPositiveBurnDamageAppliedTick = 0;
+        LastPositiveBurnDamageAppliedTargetCount = 0;
+        LastPositiveBurnDamageTotalDamageApplied = 0;
+        LastPositiveStructureBurnDamageRollbackTick = 0;
+        LastPositiveStructureBurnDamageRollbackUnfinishedStageCount = 0;
+        LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount = 0;
+        LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount = 0;
+        LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount = 0;
+        LastPositiveStructureBurnDamageRollbackTotalDamageApplied = 0;
     }
 
     public TimberbornFireDeltaConsumerSummary Consume(uint tick, ReadOnlySpan<CellDelta> deltas)
@@ -136,9 +163,83 @@ public sealed class TimberbornFireDeltaConsumer
             LastPositiveBuildingBurnoutAppliedTick = tick;
             LastPositiveBuildingBurnoutAppliedCount = LastSummary.BuildingBurnoutAppliedConsequenceCount;
         }
+        if (LastSummary.BurnDamageAppliedTargetCount > 0 || LastSummary.BurnDamageTotalDamageApplied > 0)
+        {
+            LastPositiveBurnDamageAppliedTick = tick;
+            LastPositiveBurnDamageAppliedTargetCount = LastSummary.BurnDamageAppliedTargetCount;
+            LastPositiveBurnDamageTotalDamageApplied = LastSummary.BurnDamageTotalDamageApplied;
+        }
+        if (ShouldUpdateLastPositiveStructureBurnDamageRollbackEvidence(LastSummary))
+        {
+            LastPositiveStructureBurnDamageRollbackTick = tick;
+            LastPositiveStructureBurnDamageRollbackUnfinishedStageCount =
+                LastSummary.StructureBurnDamageRollbackUnfinishedStageCount;
+            LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount =
+                LastSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount;
+            LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount =
+                LastSummary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount;
+            LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount =
+                LastSummary.StructureBurnDamageRollbackSkippedNoSafeApiCount;
+            LastPositiveStructureBurnDamageRollbackTotalDamageApplied =
+                LastSummary.StructureBurnDamageRollbackTotalDamageApplied;
+        }
 
         _logSink.Info(LastSummary.ToLogToken());
         return LastSummary;
+    }
+
+    private bool ShouldUpdateLastPositiveStructureBurnDamageRollbackEvidence(
+        TimberbornFireDeltaConsumerSummary summary)
+    {
+        int incomingRank = StructureBurnDamageRollbackEvidenceRank(summary);
+        if (incomingRank <= 0)
+        {
+            return false;
+        }
+
+        return incomingRank >= LastPositiveStructureBurnDamageRollbackEvidenceRank();
+    }
+
+    private int LastPositiveStructureBurnDamageRollbackEvidenceRank()
+    {
+        if (LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount > 0)
+        {
+            return 4;
+        }
+
+        if (LastPositiveStructureBurnDamageRollbackTotalDamageApplied > 0)
+        {
+            return 3;
+        }
+
+        if (LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount > 0 ||
+            LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount > 0)
+        {
+            return 2;
+        }
+
+        return LastPositiveStructureBurnDamageRollbackUnfinishedStageCount > 0 ? 1 : 0;
+    }
+
+    private static int StructureBurnDamageRollbackEvidenceRank(TimberbornFireDeltaConsumerSummary summary)
+    {
+        if (summary.StructureBurnDamageRollbackConstructionPhaseEnteredCount > 0)
+        {
+            return 4;
+        }
+
+        if (summary.StructureBurnDamageRollbackTotalDamageApplied > 0)
+        {
+            return 3;
+        }
+
+        if (summary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount > 0 ||
+            summary.StructureBurnDamageRollbackSkippedNoSafeApiCount > 0)
+        {
+            return 2;
+        }
+
+        return summary.StructureBurnDamageRollbackUnfinishedStageCount > 0 ? 1 : 0;
     }
 
     private void ConsumeAlerts(uint tick, IReadOnlyList<TimberbornFireAlertEvent> alertEvents)
@@ -552,13 +653,18 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int StructureBurnDamageRollbackPartialConstructionStageCount,
     int StructureBurnDamageRollbackUnfinishedStageCount,
     int StructureBurnDamageRollbackVisualRollbackAppliedCount,
+    int StructureBurnDamageRollbackConstructionPhaseEnteredCount,
+    int StructureBurnDamageRollbackSkippedNativeConstructionApiCount,
     int StructureBurnDamageRollbackSkippedNoSafeApiCount,
     int StructureBurnDamageRollbackTotalDamageApplied,
     int BurnDamageConsideredCellCount,
+    int BurnDamageDamageCandidateCellCount,
     int BurnDamageResolvedTargetCellCount,
+    int BurnDamageUnresolvedCellCount,
     int BurnDamageDuplicateCellSuppressedCount,
     int BurnDamageAppliedTargetCount,
     int BurnDamageTotalDamageApplied,
+    int BurnDamagePersistenceWriteCount,
     int CropBurnConsideredTargetCount,
     int CropBurnBurnableTargetCount,
     int CropBurnYieldLost,
@@ -694,13 +800,18 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         StructureBurnDamageRollbackPartialConstructionStageCount: 0,
         StructureBurnDamageRollbackUnfinishedStageCount: 0,
         StructureBurnDamageRollbackVisualRollbackAppliedCount: 0,
+        StructureBurnDamageRollbackConstructionPhaseEnteredCount: 0,
+        StructureBurnDamageRollbackSkippedNativeConstructionApiCount: 0,
         StructureBurnDamageRollbackSkippedNoSafeApiCount: 0,
         StructureBurnDamageRollbackTotalDamageApplied: 0,
         BurnDamageConsideredCellCount: 0,
+        BurnDamageDamageCandidateCellCount: 0,
         BurnDamageResolvedTargetCellCount: 0,
+        BurnDamageUnresolvedCellCount: 0,
         BurnDamageDuplicateCellSuppressedCount: 0,
         BurnDamageAppliedTargetCount: 0,
         BurnDamageTotalDamageApplied: 0,
+        BurnDamagePersistenceWriteCount: 0,
         CropBurnConsideredTargetCount: 0,
         CropBurnBurnableTargetCount: 0,
         CropBurnYieldLost: 0,
@@ -859,13 +970,18 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             structureBurnDamageRollbackSummary.PartialConstructionStageCount,
             structureBurnDamageRollbackSummary.UnfinishedStageCount,
             structureBurnDamageRollbackSummary.VisualRollbackAppliedCount,
+            structureBurnDamageRollbackSummary.ConstructionPhaseEnteredCount,
+            structureBurnDamageRollbackSummary.SkippedNativeConstructionApiCount,
             structureBurnDamageRollbackSummary.SkippedNoSafeApiCount,
             structureBurnDamageRollbackSummary.TotalDamageApplied,
             burnDamageSummary.ConsideredCellCount,
+            burnDamageSummary.DamageCandidateCellCount,
             burnDamageSummary.ResolvedTargetCellCount,
+            burnDamageSummary.UnresolvedCellCount,
             burnDamageSummary.DuplicateCellSuppressedCount,
             burnDamageSummary.DamageAppliedTargetCount,
             burnDamageSummary.TotalDamageApplied,
+            burnDamageSummary.PersistenceWriteCount,
             cropBurnSummary.ConsideredCropTargetCount,
             cropBurnSummary.BurnableCropTargetCount,
             cropBurnSummary.YieldLost,
@@ -1004,13 +1120,18 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"structure_burn_damage_rollback_stage_partial_construction={StructureBurnDamageRollbackPartialConstructionStageCount} " +
             $"structure_burn_damage_rollback_stage_unfinished={StructureBurnDamageRollbackUnfinishedStageCount} " +
             $"structure_burn_damage_rollback_visual_applied={StructureBurnDamageRollbackVisualRollbackAppliedCount} " +
+            $"structure_burn_damage_rollback_construction_phase_entered={StructureBurnDamageRollbackConstructionPhaseEnteredCount} " +
+            $"structure_burn_damage_rollback_skipped_native_construction_api={StructureBurnDamageRollbackSkippedNativeConstructionApiCount} " +
             $"structure_burn_damage_rollback_skipped_no_safe_api={StructureBurnDamageRollbackSkippedNoSafeApiCount} " +
             $"structure_burn_damage_rollback_total_damage_applied={StructureBurnDamageRollbackTotalDamageApplied} " +
             $"burn_damage_considered_cells={BurnDamageConsideredCellCount} " +
+            $"burn_damage_candidate_cells={BurnDamageDamageCandidateCellCount} " +
             $"burn_damage_resolved_target_cells={BurnDamageResolvedTargetCellCount} " +
+            $"burn_damage_unresolved_cells={BurnDamageUnresolvedCellCount} " +
             $"burn_damage_duplicate_cells_suppressed={BurnDamageDuplicateCellSuppressedCount} " +
             $"burn_damage_applied_targets={BurnDamageAppliedTargetCount} " +
             $"burn_damage_total_damage_applied={BurnDamageTotalDamageApplied} " +
+            $"burn_damage_persistence_writes={BurnDamagePersistenceWriteCount} " +
             $"crop_burn_considered_targets={CropBurnConsideredTargetCount} " +
             $"crop_burn_burnable_targets={CropBurnBurnableTargetCount} " +
             $"crop_burn_yield_lost={CropBurnYieldLost} " +

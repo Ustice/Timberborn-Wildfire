@@ -20,6 +20,7 @@ const inboxFileName = "command-inbox.txt";
 const outboxFileName = "command-outbox.txt";
 const knownCommands = [
   "help",
+  "qa-ash-cell",
   "qa-building-burnout-stimulus",
   "qa-burn-duration-stimulus",
   "qa-delta-stimulus",
@@ -36,6 +37,7 @@ const usage = `Usage:
 Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
+  qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-delta-stimulus [burnable|tree|contaminated-tree|vegetation|crop|storage|building]
                             Queue heat on an imported burnable field target.
   qa-building-burnout-stimulus

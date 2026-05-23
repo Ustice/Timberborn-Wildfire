@@ -30,6 +30,8 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 - `TWF-080`: aggregate player feedback for fire, building damage, plant/resource loss, beaver danger, fertile ash, and tainted ash.
 - `TWF-081`: validate save/reload persistence for burn damage, ash, fertile ash, tainted ash washout, inventory, designations, and beaver state.
 - `TWF-170`: fix ash fields not showing before the game unpauses.
+- `TWF-172`: fix the released regression where burned buildings should return to a construction or repair phase.
+- `TWF-173`: fix the released regression where Wildfire effects do not load or become visible until after unpause.
 - `TWF-165`: add rare deterministic drought-aware ignition from fire-using buildings and dry dead vegetation, while keeping ordinary non-fire buildings ineligible.
 - `TWF-156`: create the `256x256` release QA scenario/map proving local fires, clean ash, tainted ash, beaver exposure, rare ignition, and big-map responsiveness.
 
@@ -48,7 +50,7 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 2. Validate the split tainted-ash surface through `TWF-166` before dependent contaminated-ash claims integrate.
 3. Complete contamination and tainted aftermath: `TWF-079` before `TWF-086`; `TWF-167` before final persistence validation if ash/water state changes.
 4. Clean up ash/steam naming and authority: `TWF-161`, `TWF-162`, then `TWF-070`.
-5. Fix release-readiness bugs close to their owning lanes: `TWF-170` can run after the simulator ash presentation work; `TWF-169` can run after tree consequences.
+5. Fix release-readiness bugs close to their owning lanes: `TWF-170` can run after the simulator ash presentation work; `TWF-169` can run after tree consequences; `TWF-172` can run after structure rollback; `TWF-173` can run after the paused-load ash fix and renderer/effect bindings.
 6. Implement beaver behavior in ladder order: `TWF-085`, `TWF-087`, then `TWF-086` after `TWF-079`; validate all variants through `TWF-074`.
 7. Add player explanation after consequence sources exist: `TWF-080` should consume final counters and icon assets rather than inventing temporary categories. `TWF-168` is the specific structure-on-fire alert class inside that feedback lane.
 8. Tune and bind presentation: `TWF-163` after the fertile ash UI/good surfaces are stable and after `TWF-080`/`TWF-168` have settled alert classes enough for icon binding.
@@ -83,6 +85,8 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 - Structure alert gate: burning structures produce a bounded, distinguishable alert or precise native-surface blocker evidence, with no per-cell alert spam.
 - Tree aftermath gate: trees that burn all fuel show a stump or accepted burned-leftover visual state, or report precise safe-unavailable telemetry without claiming success.
 - Paused ash gate: existing ash is visible from loaded-save readiness before unpause and remains stable after unpause without duplicate ash state.
+- Building rollback regression gate: a real burned building returns to a construction or repair phase after fire damage, or the ticket records precise native-surface blocker telemetry without claiming rollback success.
+- Paused effects regression gate: existing Wildfire effects are visible from loaded-save readiness before unpause and remain stable after unpause without duplicated effects, alerts, ash mutations, or simulation advancement.
 - `256x256` gate: a local fire inside a `256x256` world remains command-responsive, visually inspectable, and does not require map-wide burn acceptance.
 - Persistence gate: save/reload preserves or safely degrades burn damage, ash state, ash depletion, tainted ash washout, `FertileAsh` inventory, fertilize designations, and any beaver behavior state.
 - Any failed required QA gate must pass in a later run before the ticket can move to `05-integration/`.
@@ -102,6 +106,8 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 - Mitigation: accept a normal local-fire proof in a max-size world; keep whole-map burn stress out of scope.
 - Risk: Timberborn command responsiveness may regress during long live QA.
 - Mitigation: start `caffeinate -disu` for live runs and verify `qa-readiness --require-advanced-tick` before collecting evidence.
+- Risk: the paused-load ash fix may look like it covers all effects while pooled native effects or field-renderer material binding still wait for an unpaused tick.
+- Mitigation: keep `TWF-173` broader than ash and require whole-scene paused screenshot/status proof before accepting the regression as fixed.
 
 ## Evidence Manifest
 

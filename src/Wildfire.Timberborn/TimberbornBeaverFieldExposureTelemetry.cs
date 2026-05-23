@@ -16,17 +16,20 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
     private readonly ITimberbornBeaverPositionProvider _positionProvider;
     private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly bool _logPerBeaverSamples;
     private TimberbornBeaverFieldExposureSnapshot _lastSnapshot =
         TimberbornBeaverFieldExposureSnapshot.Unavailable("not_sampled");
 
     public TimberbornBeaverFieldExposureTelemetry(
         ITimberbornBeaverPositionProvider positionProvider,
         ITimberbornGpuVisualFieldSurface visualFieldSurface,
-        ITimberbornFireLogSink logSink)
+        ITimberbornFireLogSink logSink,
+        bool logPerBeaverSamples = false)
     {
         _positionProvider = positionProvider ?? throw new ArgumentNullException(nameof(positionProvider));
         _visualFieldSurface = visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface));
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
+        _logPerBeaverSamples = logPerBeaverSamples;
     }
 
     public TimberbornBeaverFieldExposureSnapshot LastSnapshot => _lastSnapshot;
@@ -239,6 +242,11 @@ public sealed class TimberbornBeaverFieldExposureTelemetry
             $"tainted_aftermath_cells={snapshot.TaintedAftermathCells} " +
             $"skipped_no_position_api={snapshot.SkippedNoPositionApi} " +
             $"skipped_bounded_sampling={snapshot.SkippedBoundedSampling}");
+        if (!_logPerBeaverSamples)
+        {
+            return;
+        }
+
         snapshot.Classifications
             .ToList()
             .ForEach(classification => _logSink.Info(

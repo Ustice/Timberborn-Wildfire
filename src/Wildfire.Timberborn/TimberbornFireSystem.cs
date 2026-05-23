@@ -49,6 +49,7 @@ public sealed class TimberbornFireSystem : IDisposable
     private const byte QaWaterSuppressionWater = 3;
     private const byte QaTaintedAshAmount = 3;
     private const byte QaTaintedAshContamination = 7;
+    private const int QaStructureBurnDamageAcceptanceDamage = 3;
 
     private readonly TimberbornFireCellMapper _cellMapper;
     private readonly ITimberbornFireSimulatorFactory? _simulatorFactory;
@@ -169,6 +170,30 @@ public sealed class TimberbornFireSystem : IDisposable
     public uint LastPositiveBuildingBurnoutAppliedTick => _deltaConsumer.LastPositiveBuildingBurnoutAppliedTick;
 
     public int LastPositiveBuildingBurnoutAppliedCount => _deltaConsumer.LastPositiveBuildingBurnoutAppliedCount;
+
+    public uint LastPositiveBurnDamageAppliedTick => _deltaConsumer.LastPositiveBurnDamageAppliedTick;
+
+    public int LastPositiveBurnDamageAppliedTargetCount => _deltaConsumer.LastPositiveBurnDamageAppliedTargetCount;
+
+    public int LastPositiveBurnDamageTotalDamageApplied => _deltaConsumer.LastPositiveBurnDamageTotalDamageApplied;
+
+    public uint LastPositiveStructureBurnDamageRollbackTick =>
+        _deltaConsumer.LastPositiveStructureBurnDamageRollbackTick;
+
+    public int LastPositiveStructureBurnDamageRollbackUnfinishedStageCount =>
+        _deltaConsumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount;
+
+    public int LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount =>
+        _deltaConsumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount;
+
+    public int LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount =>
+        _deltaConsumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount;
+
+    public int LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount =>
+        _deltaConsumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount;
+
+    public int LastPositiveStructureBurnDamageRollbackTotalDamageApplied =>
+        _deltaConsumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied;
 
     public TimberbornGpuVisualFieldSurfaceState VisualFieldSurfaceState =>
         (_fireSimulator as ITimberbornGpuVisualFieldStateProvider)?.VisualFieldSurfaceState ??
@@ -1267,9 +1292,10 @@ public sealed class TimberbornFireSystem : IDisposable
         TimberbornBurnDamageTargetState[] candidateStates = burnDamageTargets.Values
             .Where(state => MatchesBurnDamageProbeTargetKind(state.TargetKind, selector))
             .Where(state => MatchesBurnDamageProbeSelector(selector, state))
-            .Where(state => state.RemainingCapacity > 0 || AllowsZeroCapacityBurnDamageProbe(selector, state))
+            .Where(state => HasEnoughRemainingCapacityForBurnDamageProbe(selector, state))
             .Where(static state => state.OwnedCellIndices.Count > 0)
-            .OrderBy(static state => state.TargetKey.StableId, StringComparer.Ordinal)
+            .OrderByDescending(state => BurnDamageProbeRemainingCapacitySortKey(selector, state))
+            .ThenBy(static state => state.TargetKey.StableId, StringComparer.Ordinal)
             .ThenBy(static state => state.SpecId, StringComparer.Ordinal)
             .ToArray();
         TimberbornQaBurnDamageProbeTarget? target = candidateStates
@@ -1359,8 +1385,9 @@ public sealed class TimberbornFireSystem : IDisposable
             .Select(static target => (TimberbornImportedFieldTarget?)target)
             .FirstOrDefault() ??
             CreateSyntheticBurnDamageFieldTarget(grid, state, cellIndex);
-        byte probeFuel = (byte)Math.Clamp(Math.Max(1, (int)state.FuelValue), 1, 15);
-        byte spendFuel = (byte)Math.Max(0, probeFuel - 1);
+        int spendUnits = BurnDamageProbeSpendUnits(state);
+        byte probeFuel = (byte)Math.Clamp(Math.Max(Math.Max(1, (int)state.FuelValue), spendUnits), 1, 15);
+        byte spendFuel = (byte)Math.Max(0, probeFuel - spendUnits);
         byte probeFlammability = (byte)Math.Clamp(Math.Max(1, (int)state.Flammability), 1, 3);
 
         return new TimberbornQaBurnDamageProbeTarget(
@@ -1369,6 +1396,23 @@ public sealed class TimberbornFireSystem : IDisposable
             probeFuel,
             spendFuel,
             probeFlammability);
+    }
+
+    private static int BurnDamageProbeSpendUnits(TimberbornBurnDamageTargetState state)
+    {
+        int remainingCapacity = Math.Max(0, state.RemainingCapacity);
+        if (remainingCapacity <= 0)
+        {
+            return 1;
+        }
+
+        int requestedSpend = state.TargetKind == TimberbornBurnDamageTargetKind.Structure
+            ? Math.Max(
+                QaStructureBurnDamageAcceptanceDamage,
+                TimberbornStructureBurnDamageRollbackSink.MinimumUnfinishedDamage(state.DamageCapacity) - state.DamageTaken)
+            : 1;
+
+        return Math.Clamp(requestedSpend, 1, Math.Min(15, remainingCapacity));
     }
 
     private static TimberbornImportedFieldTarget CreateSyntheticBurnDamageFieldTarget(
@@ -1434,6 +1478,29 @@ public sealed class TimberbornFireSystem : IDisposable
                 stableId.StartsWith("water_infrastructure:", StringComparison.Ordinal),
             _ => true,
         };
+    }
+
+    private static bool HasEnoughRemainingCapacityForBurnDamageProbe(
+        string selector,
+        TimberbornBurnDamageTargetState state)
+    {
+        if (TimberbornQaFieldTargetSelectors.Normalize(selector) == TimberbornQaFieldTargetSelectors.Building &&
+            state.TargetKind == TimberbornBurnDamageTargetKind.Structure)
+        {
+            return state.RemainingCapacity >= QaStructureBurnDamageAcceptanceDamage;
+        }
+
+        return state.RemainingCapacity > 0 || AllowsZeroCapacityBurnDamageProbe(selector, state);
+    }
+
+    private static int BurnDamageProbeRemainingCapacitySortKey(
+        string selector,
+        TimberbornBurnDamageTargetState state)
+    {
+        return TimberbornQaFieldTargetSelectors.Normalize(selector) == TimberbornQaFieldTargetSelectors.Building &&
+            state.TargetKind == TimberbornBurnDamageTargetKind.Structure
+            ? state.RemainingCapacity
+            : 0;
     }
 
     private static bool AllowsZeroCapacityBurnDamageProbe(

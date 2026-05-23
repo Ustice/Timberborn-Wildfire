@@ -321,6 +321,52 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(2, targetApi.Requests.Count(static request => request.ShouldApplyRollbackVisual));
     }
 
+    [Fact]
+    public void SinkRevertsSmallWoodenBuildingToUnfinishedAtConstructionRollbackThreshold()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources:
+            [
+                new TimberbornBurnDamageResourceStack("Log", 2),
+                new TimberbornBurnDamageResourceStack("Plank", 2),
+            ],
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: true));
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: new TimberbornBurnDamageTestStateProvider(
+                [
+                    TimberbornBurnDamageTestStateProvider.State(
+                        "structure-1",
+                        "GathererFlag.Folktails(Clone)",
+                        TimberbornBurnDamageTargetKind.Structure,
+                        damageCapacity: 30,
+                        damageTaken: 3,
+                        ownedCellIndices: [4]),
+                ],
+                [
+                    TimberbornBurnDamageTestStateProvider.AppliedEvent(
+                        "structure-1",
+                        "GathererFlag.Folktails(Clone)",
+                        sourceCellIndex: 4,
+                        damageApplied: 3,
+                        damageTaken: 3,
+                        damageCapacity: 30,
+                        tick: 8),
+                ]));
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            8,
+            [Decision(4, oldFuel: 12, newFuel: 9, heat: 10)]);
+
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
+        Assert.Equal(1, summary.UnfinishedStageCount);
+        Assert.Equal(1, summary.ConstructionPhaseEnteredCount);
+        Assert.Equal(0, summary.ScorchedStageCount);
+    }
+
     [Theory]
     [InlineData("DistrictCenter")]
     [InlineData("DistrictCenter.Folktails(Clone)")]
@@ -400,6 +446,29 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void SinkReportsNativeConstructionSkipWhenBurnedVisualMasksUnfinishedFailure()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: false));
+        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            9,
+            [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]);
+
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request));
+        Assert.Equal(1, summary.UnfinishedStageCount);
+        Assert.Equal(1, summary.VisualRollbackAppliedCount);
+        Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
+        Assert.Equal(1, summary.SkippedNativeConstructionApiCount);
+        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+    }
+
+    [Fact]
     public void SinkReportsSafeLimitationWhenVisualRollbackIsUnavailable()
     {
         RecordingStructureTargetApi targetApi = new(Target(
@@ -415,6 +484,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(1, summary.SkippedNoSafeApiCount);
         Assert.Equal(0, summary.ClosedStructureCount);
         Assert.Equal(0, summary.VisualRollbackAppliedCount);
+        Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
     }
 
     [Fact]
@@ -485,12 +555,19 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             TimberbornStructureBurnDamageApplyRequest request)
         {
             Requests.Add(request);
+            bool requestsNativeConstructionPhase =
+                TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request);
+            bool constructionPhaseEntered = damageTarget.CanRepairAfterDanger && requestsNativeConstructionPhase;
+            bool visualRollbackApplied = damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual;
             return new TimberbornStructureBurnDamageApplyResult(
                 Closed: damageTarget.CanClose && request.ShouldClose,
-                VisualRollbackApplied: damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual,
+                VisualRollbackApplied: visualRollbackApplied,
+                ConstructionPhaseEntered: constructionPhaseEntered,
+                SkippedNativeConstructionApi: requestsNativeConstructionPhase && !constructionPhaseEntered,
                 SkippedNoSafeApi:
                     (!damageTarget.CanClose && request.ShouldClose) ||
-                    (!damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual),
+                    (!damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual) ||
+                    (requestsNativeConstructionPhase && !constructionPhaseEntered),
                 RepairEligible: request.RepairEligible);
         }
     }

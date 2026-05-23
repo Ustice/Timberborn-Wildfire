@@ -256,6 +256,139 @@ public sealed class TimberbornFireDeltaConsumerTests
     }
 
     [Fact]
+    public void ConsumeRetainsLastPositiveBurnDamageEvidenceAfterZeroAppliedDispatch()
+    {
+        ScriptedBurnDamageSink burnDamageSink = new(
+            [
+                new TimberbornBurnDamageApplySummary(
+                    Tick: 0,
+                    ConsideredCellCount: 1,
+                    DamageCandidateCellCount: 1,
+                    ResolvedTargetCellCount: 1,
+                    UnresolvedCellCount: 0,
+                    DuplicateCellSuppressedCount: 0,
+                    DamageAppliedTargetCount: 1,
+                    TotalDamageApplied: 3,
+                    PersistenceWriteCount: 1),
+                TimberbornBurnDamageApplySummary.Empty,
+            ]);
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(burnDamageSink: burnDamageSink));
+
+        consumer.Consume(51, [new CellDelta(6, Cell(fuel: 12, heat: 15), Cell(fuel: 9, heat: 15))]);
+        TimberbornFireDeltaConsumerSummary zeroAppliedSummary =
+            consumer.Consume(52, [new CellDelta(7, Cell(fuel: 4, heat: 1), Cell(fuel: 3, heat: 1))]);
+
+        Assert.Equal(0, zeroAppliedSummary.BurnDamageAppliedTargetCount);
+        Assert.Equal(51u, consumer.LastPositiveBurnDamageAppliedTick);
+        Assert.Equal(1, consumer.LastPositiveBurnDamageAppliedTargetCount);
+        Assert.Equal(3, consumer.LastPositiveBurnDamageTotalDamageApplied);
+    }
+
+    [Fact]
+    public void ConsumeRetainsConstructionPhaseStructureEvidenceAfterLaterSkippedNoDamageDispatch()
+    {
+        ScriptedStructureBurnDamageRollbackSink structureRollbackSink = new(
+            [
+                new TimberbornStructureBurnDamageRollbackSummary(
+                    ConsideredDeltaCount: 1,
+                    MatchedStructureCellCount: 1,
+                    DuplicateStructureTargetSuppressedCount: 0,
+                    ZeroBurnableCapacityTargetCount: 0,
+                    MaterialValueLost: 3,
+                    ClosedStructureCount: 0,
+                    RepairBlockedCount: 1,
+                    RepairEligibleCount: 0,
+                    ScorchedStageCount: 0,
+                    PartialConstructionStageCount: 0,
+                    UnfinishedStageCount: 1,
+                    VisualRollbackAppliedCount: 1,
+                    ConstructionPhaseEnteredCount: 1,
+                    SkippedNativeConstructionApiCount: 0,
+                    SkippedNoSafeApiCount: 0,
+                    TotalDamageApplied: 3),
+                new TimberbornStructureBurnDamageRollbackSummary(
+                    ConsideredDeltaCount: 1,
+                    MatchedStructureCellCount: 1,
+                    DuplicateStructureTargetSuppressedCount: 0,
+                    ZeroBurnableCapacityTargetCount: 0,
+                    MaterialValueLost: 0,
+                    ClosedStructureCount: 0,
+                    RepairBlockedCount: 0,
+                    RepairEligibleCount: 0,
+                    ScorchedStageCount: 0,
+                    PartialConstructionStageCount: 0,
+                    UnfinishedStageCount: 1,
+                    VisualRollbackAppliedCount: 1,
+                    ConstructionPhaseEnteredCount: 0,
+                    SkippedNativeConstructionApiCount: 1,
+                    SkippedNoSafeApiCount: 1,
+                    TotalDamageApplied: 0),
+            ]);
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(structureBurnDamageRollbackSink: structureRollbackSink));
+
+        TimberbornFireDeltaConsumerSummary appliedSummary =
+            consumer.Consume(61, [new CellDelta(6, Cell(fuel: 12, heat: 15), Cell(fuel: 9, heat: 15))]);
+        TimberbornFireDeltaConsumerSummary zeroAppliedSummary =
+            consumer.Consume(62, [new CellDelta(7, Cell(fuel: 4, heat: 1), Cell(fuel: 3, heat: 1))]);
+
+        Assert.Equal(1, appliedSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount);
+        Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackMatchedStructureCellCount);
+        Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackUnfinishedStageCount);
+        Assert.Equal(0, zeroAppliedSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount);
+        Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount);
+        Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackSkippedNoSafeApiCount);
+        Assert.Equal(61u, consumer.LastPositiveStructureBurnDamageRollbackTick);
+        Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount);
+        Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount);
+        Assert.Equal(3, consumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied);
+    }
+
+    [Fact]
+    public void ConsumeRetainsSkippedStructureEvidenceWhenNoConstructionSuccessExists()
+    {
+        ScriptedStructureBurnDamageRollbackSink structureRollbackSink = new(
+            [
+                new TimberbornStructureBurnDamageRollbackSummary(
+                    ConsideredDeltaCount: 1,
+                    MatchedStructureCellCount: 1,
+                    DuplicateStructureTargetSuppressedCount: 0,
+                    ZeroBurnableCapacityTargetCount: 0,
+                    MaterialValueLost: 0,
+                    ClosedStructureCount: 0,
+                    RepairBlockedCount: 1,
+                    RepairEligibleCount: 0,
+                    ScorchedStageCount: 0,
+                    PartialConstructionStageCount: 0,
+                    UnfinishedStageCount: 1,
+                    VisualRollbackAppliedCount: 1,
+                    ConstructionPhaseEnteredCount: 0,
+                    SkippedNativeConstructionApiCount: 1,
+                    SkippedNoSafeApiCount: 1,
+                    TotalDamageApplied: 0),
+                TimberbornStructureBurnDamageRollbackSummary.Empty,
+            ]);
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(structureBurnDamageRollbackSink: structureRollbackSink));
+
+        consumer.Consume(71, [new CellDelta(6, Cell(fuel: 12, heat: 15), Cell(fuel: 9, heat: 15))]);
+        consumer.Consume(72, [new CellDelta(7, Cell(fuel: 4, heat: 1), Cell(fuel: 3, heat: 1))]);
+
+        Assert.Equal(71u, consumer.LastPositiveStructureBurnDamageRollbackTick);
+        Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount);
+        Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount);
+        Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied);
+    }
+
+    [Fact]
     public void ConsumeUpdatesOnlyLatestOverlayStatesForRoutedChangedCells()
     {
         RecordingFireDeltaSinks recordingSinks = new();
@@ -302,6 +435,15 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(TimberbornFireDeltaConsumerSummary.Empty, consumer.LastSummary);
         Assert.Equal(0u, consumer.LastPositiveWaterChangedTick);
         Assert.Equal(0, consumer.LastPositiveWaterChangedCount);
+        Assert.Equal(0u, consumer.LastPositiveBurnDamageAppliedTick);
+        Assert.Equal(0, consumer.LastPositiveBurnDamageAppliedTargetCount);
+        Assert.Equal(0, consumer.LastPositiveBurnDamageTotalDamageApplied);
+        Assert.Equal(0u, consumer.LastPositiveStructureBurnDamageRollbackTick);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount);
+        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied);
     }
 
     private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int burningLevel = 0)
@@ -380,6 +522,41 @@ public sealed class TimberbornFireDeltaConsumerTests
         {
             Consequences.Add(consequence);
             return apply(consequence);
+        }
+    }
+
+    private sealed class ScriptedBurnDamageSink(IReadOnlyList<TimberbornBurnDamageApplySummary> summaries)
+        : ITimberbornBurnDamageSink
+    {
+        private int _index;
+
+        public TimberbornBurnDamageApplySummary ApplyDamage(
+            uint tick,
+            IReadOnlyList<TimberbornFireCellDeltaDecision> decisions)
+        {
+            TimberbornBurnDamageApplySummary summary = _index < summaries.Count
+                ? summaries[_index]
+                : TimberbornBurnDamageApplySummary.Empty;
+            _index++;
+            return summary with { Tick = tick };
+        }
+    }
+
+    private sealed class ScriptedStructureBurnDamageRollbackSink(
+        IReadOnlyList<TimberbornStructureBurnDamageRollbackSummary> summaries)
+        : ITimberbornStructureBurnDamageRollbackSink
+    {
+        private int _index;
+
+        public TimberbornStructureBurnDamageRollbackSummary ApplyConsequences(
+            uint tick,
+            IReadOnlyList<TimberbornFireCellDeltaDecision> decisions)
+        {
+            TimberbornStructureBurnDamageRollbackSummary summary = _index < summaries.Count
+                ? summaries[_index]
+                : TimberbornStructureBurnDamageRollbackSummary.Empty;
+            _index++;
+            return summary;
         }
     }
 }

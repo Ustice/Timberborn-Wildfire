@@ -1,0 +1,1 @@
+../../all-tickets/TWF-173-fix-wildfire-effects-hidden-until-unpause.md

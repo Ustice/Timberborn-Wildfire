@@ -166,6 +166,37 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
             _steamMaterial!, _gridBounds, MeshTopology.Triangles, _steamArgsBuffer!);
     }
 
+    public void SeedSmoothedFieldsFromRestoredBuffers(uint tick)
+    {
+        if (!_initialized)
+        {
+            return;
+        }
+
+        Vector4[] visualFields = new Vector4[_grid.CellCount];
+        uint[] atmosphericFields = new uint[_grid.CellCount];
+        _simulator.VisualFieldsBuffer.GetData(visualFields);
+        _simulator.CurrentAtmosphericFieldsBuffer.GetData(atmosphericFields);
+
+        Vector4[] smoothedFields = visualFields
+            .Select((visualField, index) =>
+            {
+                WildfireTransportFieldState atmospheric = WildfireTransportFieldState.Unpack(atmosphericFields[index]);
+                return new Vector4(
+                    visualField.x,
+                    visualField.y,
+                    atmospheric.SmokeContamination / 7f,
+                    atmospheric.Steam / 7f);
+            })
+            .ToArray();
+
+        _smoothedFieldsBuffer!.SetData(smoothedFields);
+        _logSink.Info(
+            "wildfire_timberborn_gpu_indirect_renderer_seeded " +
+            $"tick={tick} " +
+            $"cell_count={_grid.CellCount}");
+    }
+
     public void Dispose()
     {
         if (_disposed)

@@ -157,11 +157,36 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
             message.StartsWith(
                 "wildfire_timberborn_beaver_field_exposure_sampled ",
                 StringComparison.Ordinal));
+        Assert.Contains("steam_cells=0", aggregateLog);
+        Assert.DoesNotContain(logSink.InfoMessages, static message =>
+            message.StartsWith(
+                "wildfire_timberborn_beaver_field_exposure_beaver_sampled ",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SampleCanLogPerBeaverExposureDetailsForQaProfiling()
+    {
+        FireGrid grid = new(3, 3, 1);
+        RecordingVisualFieldSurface surface = new(
+            isBound: true,
+            samplesByCell: new Dictionary<int, TimberbornGpuVisualFieldSample>
+            {
+                [grid.ToIndex(1, 1, 0)] = Sample(grid.ToIndex(1, 1, 0), fire: 0.2f, smoke: 0.3f, ash: 0.0f),
+            });
+        RecordingFireLogSink logSink = new();
+        TimberbornBeaverFieldExposureTelemetry telemetry = new(
+            new StaticPositionProvider([new TimberbornBeaverPositionSample("beaver-1", 1, 1, 0)]),
+            surface,
+            logSink,
+            logPerBeaverSamples: true);
+
+        telemetry.Sample(grid, tick: 11);
+
         string beaverLog = logSink.InfoMessages.Single(static message =>
             message.StartsWith(
                 "wildfire_timberborn_beaver_field_exposure_beaver_sampled ",
                 StringComparison.Ordinal));
-        Assert.Contains("steam_cells=0", aggregateLog);
         Assert.Contains("beaver_id=beaver-1", beaverLog);
         Assert.Contains("max_smoke=0.3", beaverLog);
     }
