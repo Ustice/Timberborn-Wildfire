@@ -388,7 +388,7 @@ const placedSections = renderedSections.reduce<{
     const y = canvas.margin + 72 + yOffset;
     const nextColumnHeight = yOffset + section.height;
     return {
-      columnHeights: state.columnHeights.toSpliced(columnIndex, 1, nextColumnHeight),
+      columnHeights: state.columnHeights.map((height, index) => (index === columnIndex ? nextColumnHeight : height)),
       sections: [...state.sections, { ...section, x, y }],
     };
   },
