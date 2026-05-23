@@ -20,7 +20,7 @@ Repository: <https://github.com/Ustice/Timberborn-Wildfire/issues>
 4. Keep work inside the issue write scope unless Jason or the coordinator explicitly expands it.
 5. Report progress, evidence, blockers, and final results as GitHub issue comments.
 6. Update status labels instead of moving file-board symlinks.
-7. Leave historical `kanban/all-tickets/` files untouched unless the task explicitly asks for migration cleanup or archaeology.
+7. Leave historical file-kanban material on `archive/file-kanban-2026-05-23` untouched unless the task explicitly asks for migration cleanup or archaeology.
 
 ## Status Changes
 
@@ -42,7 +42,8 @@ gh issue edit 40 --repo Ustice/Timberborn-Wildfire --remove-label status:ready -
 
 ## Historical File Board
 
-- `kanban/all-tickets/` preserves migrated ticket bodies and evidence history.
-- `kanban/by-status/` preserves final migrated board state.
+- `archive/file-kanban-2026-05-23:kanban/all-tickets/` preserves migrated ticket bodies and evidence history.
+- `archive/file-kanban-2026-05-23:kanban/by-status/` preserves final migrated board state.
+- `archive/file-kanban-2026-05-23:kanban/sprints/` preserves historical sprint charters.
+- `archive/file-kanban-2026-05-23:kanban/evidence-manifests/` preserves historical evidence manifests.
 - `kanban/github-issue-migration.md` maps `TWF-*` ids to GitHub issue numbers.
-- `bun run kanban:audit` can still check historical board integrity, but it is not the active backlog gate for new work.

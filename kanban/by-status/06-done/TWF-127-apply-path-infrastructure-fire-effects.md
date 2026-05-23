@@ -1,1 +1,0 @@
-../../all-tickets/TWF-127-apply-path-infrastructure-fire-effects.md

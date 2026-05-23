@@ -1,1 +1,0 @@
-../../all-tickets/TWF-123-design-emberpelt-tail-stamping-fire-response.md

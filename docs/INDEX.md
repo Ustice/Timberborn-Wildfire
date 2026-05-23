@@ -19,8 +19,8 @@ Use this page as the startup map for humans and agents.
 - [timberborn-debug-panels.md](timberborn-debug-panels.md) owns the focused Timberborn debug/developer panel reference for QA.
 - [TODO.md](TODO.md) owns milestone-level status, not per-agent scratch work.
 - [../kanban/github-issue-migration.md](../kanban/github-issue-migration.md) maps migrated file-board tickets to GitHub issues.
-- [../kanban/process.md](../kanban/process.md) owns the historical file-board sprint startup, delegation, verification, and integration flow.
-- [../kanban/README.md](../kanban/README.md) owns the historical ticket-board state machine.
+- [../kanban/github-issue-workflow.md](../kanban/github-issue-workflow.md) owns the active issue-backed workflow.
+- [../kanban/README.md](../kanban/README.md) explains how to search the archived file-kanban branch.
 
 ## Role Instructions
 
@@ -32,10 +32,10 @@ Use this page as the startup map for humans and agents.
 
 ## Local Codex Skills
 
-- [../.codex/skills/kanban/SKILL.md](../.codex/skills/kanban/SKILL.md) starts or resumes the file-board sprint.
-- [../.codex/skills/delegate/SKILL.md](../.codex/skills/delegate/SKILL.md) guides assigned ticket agents.
+- [../.codex/skills/kanban/SKILL.md](../.codex/skills/kanban/SKILL.md) coordinates GitHub issue work.
+- [../.codex/skills/delegate/SKILL.md](../.codex/skills/delegate/SKILL.md) guides assigned issue agents.
 - [../.codex/skills/timberborn-qa-utility/SKILL.md](../.codex/skills/timberborn-qa-utility/SKILL.md) guides Timberborn QA utility scripts and guarded UI automation.
 
 ## Historical Material
 
-Closed sprint notes and obsolete planning should move to [archive/](archive/) instead of staying in active docs.
+Historical file-kanban tickets, status symlinks, sprint charters, and evidence manifests live on branch `archive/file-kanban-2026-05-23`.

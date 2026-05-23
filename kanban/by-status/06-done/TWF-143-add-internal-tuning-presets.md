@@ -1,1 +1,0 @@
-../../all-tickets/TWF-143-add-internal-tuning-presets.md

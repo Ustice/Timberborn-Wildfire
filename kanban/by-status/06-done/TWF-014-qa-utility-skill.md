@@ -1,1 +1,0 @@
-../../all-tickets/TWF-014-qa-utility-skill.md

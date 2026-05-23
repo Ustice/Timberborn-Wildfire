@@ -1,1 +1,0 @@
-../../all-tickets/TWF-114-define-resource-fuel-flammability-catalog.md

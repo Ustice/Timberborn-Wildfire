@@ -1,1 +1,0 @@
-../../all-tickets/TWF-145-replace-fixed-qa-stimuli.md

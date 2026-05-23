@@ -1,1 +1,0 @@
-../../all-tickets/TWF-137-define-shared-material-field-schema.md

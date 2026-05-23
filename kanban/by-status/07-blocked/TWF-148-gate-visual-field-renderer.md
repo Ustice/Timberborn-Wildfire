@@ -1,1 +1,0 @@
-../../all-tickets/TWF-148-gate-visual-field-renderer.md

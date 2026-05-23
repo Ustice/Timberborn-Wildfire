@@ -1,1 +1,0 @@
-../../all-tickets/TWF-006-shader-snapshot-harness.md

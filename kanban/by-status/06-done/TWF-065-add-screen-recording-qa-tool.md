@@ -1,1 +1,0 @@
-../../all-tickets/TWF-065-add-screen-recording-qa-tool.md

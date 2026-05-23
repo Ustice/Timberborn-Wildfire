@@ -1,1 +1,0 @@
-../../all-tickets/TWF-142-add-runtime-fire-sim-parameters.md

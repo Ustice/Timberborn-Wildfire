@@ -1,1 +1,0 @@
-../../all-tickets/TWF-087-implement-beaver-fire-heat-exposure.md

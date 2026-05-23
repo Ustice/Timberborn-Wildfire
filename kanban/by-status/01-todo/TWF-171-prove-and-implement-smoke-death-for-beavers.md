@@ -1,1 +1,0 @@
-../../all-tickets/TWF-171-prove-and-implement-smoke-death-for-beavers.md

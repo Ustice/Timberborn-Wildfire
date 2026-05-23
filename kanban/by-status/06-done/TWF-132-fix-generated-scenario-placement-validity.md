@@ -1,1 +1,0 @@
-../../all-tickets/TWF-132-fix-generated-scenario-placement-validity.md

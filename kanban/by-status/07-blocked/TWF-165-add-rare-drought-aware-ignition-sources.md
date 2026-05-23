@@ -1,1 +1,0 @@
-../../all-tickets/TWF-165-add-rare-drought-aware-ignition-sources.md

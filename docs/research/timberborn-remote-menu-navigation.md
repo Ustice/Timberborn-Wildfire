@@ -22,7 +22,7 @@ Confidence: medium-high for "not possible with current surfaces"; medium for the
 - `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs` rejects unknown commands and returns a logged failure instead of dynamic execution.
 - `src/Wildfire.Timberborn/TimberbornQaCommandFileBridge.cs` polls `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt`, forwards the text to the bridge, and writes `command-outbox.txt`.
 - `scripts/invoke-timberborn-command.ts` also allowlists only `status` and `help` before writing the inbox.
-- `kanban/all-tickets/TWF-019-bind-qa-command-bridge-to-timberborn.md` records live proof that `status` returned through the file bridge from Timberborn.
+- Historical ticket `TWF-019` on branch `archive/file-kanban-2026-05-23` records live proof that `status` returned through the file bridge from Timberborn.
 
 This proves remote QA command execution exists, but not menu navigation.
 
@@ -31,7 +31,7 @@ This proves remote QA command execution exists, but not menu navigation.
 - `docs/timberborn-menu-coordinate-guide.md` documents in-game Escape, load, mods, startup mods, exit confirmation, standalone main menu, and main-menu load coordinates.
 - The guide explicitly states coordinates are valid only for the documented display state and records screen-click verification with `cliclick`.
 - `docs/TEST_PLAN.md` requires UI automation to take coordinate targets from the guide, verify the target app and screen, and fail loudly rather than click unknown states.
-- `kanban/all-tickets/TWF-015-load-latest-save-utility.md` is still framed as a coordinate-driven Bun utility, not a remote command bridge or in-game save/load command.
+- Historical ticket `TWF-015` on branch `archive/file-kanban-2026-05-23` is still framed as a coordinate-driven Bun utility, not a remote command bridge or in-game save/load command.
 
 This is the current supported path for menu traversal: guarded screen interaction.
 
@@ -64,7 +64,7 @@ The key menu buttons inspected in `MainMenuPanel.uxml`, `LoadGameBox.uxml`, and 
 
 - `docs/timberborn-bottom-menu-guide.md` records live evidence that `Shift-Alt-Z` toggled developer mode and `Shift-Alt-X` opened debug panels.
 - The official Timberborn wiki developer-mode page also lists Alt + Shift + Z for developer mode and Alt + Shift + X for debug mode: <https://timberborn.wiki.gg/wiki/Developer_Mode>.
-- `kanban/all-tickets/TWF-027-document-timberborn-debug-panels.md` records visible debug panels such as Automation, Performance, Cursor, Mesh metrics, Sound system, Mechanical system, Navigation, Terrain columns, Parallel singletons, Time scale, Clock, Water rendering, Water columns, and Weather.
+- Historical ticket `TWF-027` on branch `archive/file-kanban-2026-05-23` records visible debug panels such as Automation, Performance, Cursor, Mesh metrics, Sound system, Mechanical system, Navigation, Terrain columns, Parallel singletons, Time scale, Clock, Water rendering, Water columns, and Weather.
 
 These surfaces are useful for QA observation and some dev-only mutations. They are not evidence of a remote menu-navigation API.
 
@@ -143,10 +143,6 @@ After that lands, research or implement a separate `load-latest-save` bridge com
 - `docs/reference/timberborn-ui.md`
 - `docs/reference/modding-guide.md`
 - `docs/reference/blueprint-reference.md`
-- `kanban/all-tickets/TWF-012-in-game-command-bridge.md`
-- `kanban/all-tickets/TWF-015-load-latest-save-utility.md`
-- `kanban/all-tickets/TWF-017-live-qa-startup-log-harness.md`
-- `kanban/all-tickets/TWF-019-bind-qa-command-bridge-to-timberborn.md`
-- `kanban/all-tickets/TWF-027-document-timberborn-debug-panels.md`
+- Historical `TWF-012`, `TWF-015`, `TWF-017`, `TWF-019`, and `TWF-027` tickets on branch `archive/file-kanban-2026-05-23`
 - Timberborn local modding assets under `~/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/StreamingAssets/Modding/`
 - Official Timberborn wiki developer-mode page: <https://timberborn.wiki.gg/wiki/Developer_Mode>

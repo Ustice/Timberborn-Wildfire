@@ -1,1 +1,0 @@
-../../all-tickets/TWF-168-add-structure-on-fire-alert.md

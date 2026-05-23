@@ -1,1 +1,0 @@
-../../all-tickets/TWF-076-apply-crop-burn-consequences.md

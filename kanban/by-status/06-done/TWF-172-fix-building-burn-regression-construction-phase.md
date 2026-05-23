@@ -1,1 +1,0 @@
-../../all-tickets/TWF-172-fix-building-burn-regression-construction-phase.md

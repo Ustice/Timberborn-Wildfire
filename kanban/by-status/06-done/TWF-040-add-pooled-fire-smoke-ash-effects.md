@@ -1,1 +1,0 @@
-../../all-tickets/TWF-040-add-pooled-fire-smoke-ash-effects.md

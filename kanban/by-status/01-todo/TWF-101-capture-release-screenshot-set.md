@@ -1,1 +1,0 @@
-../../all-tickets/TWF-101-capture-release-screenshot-set.md

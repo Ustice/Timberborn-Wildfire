@@ -1,1 +1,0 @@
-../../all-tickets/TWF-039-bind-gpu-visual-field-to-timberborn-surface.md

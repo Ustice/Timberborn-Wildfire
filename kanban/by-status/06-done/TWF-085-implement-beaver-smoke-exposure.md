@@ -1,1 +1,0 @@
-../../all-tickets/TWF-085-implement-beaver-smoke-exposure.md

@@ -1,1 +1,0 @@
-../../all-tickets/TWF-029-add-qa-readiness-command.md

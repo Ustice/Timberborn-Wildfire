@@ -1,1 +1,0 @@
-../../all-tickets/TWF-061-add-license-attribution-pass.md

@@ -1,1 +1,0 @@
-../../all-tickets/TWF-002-full-grid-fire-compute-shader.md

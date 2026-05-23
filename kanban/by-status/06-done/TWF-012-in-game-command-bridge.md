@@ -1,1 +1,0 @@
-../../all-tickets/TWF-012-in-game-command-bridge.md

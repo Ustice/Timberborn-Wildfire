@@ -1,1 +1,0 @@
-../../all-tickets/TWF-092-tune-burnout-cooling-behavior.md

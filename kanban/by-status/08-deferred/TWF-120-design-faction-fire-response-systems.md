@@ -1,1 +1,0 @@
-../../all-tickets/TWF-120-design-faction-fire-response-systems.md

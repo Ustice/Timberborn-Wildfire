@@ -1,1 +1,0 @@
-../../all-tickets/TWF-074-validate-beaver-field-behavior-recordings.md

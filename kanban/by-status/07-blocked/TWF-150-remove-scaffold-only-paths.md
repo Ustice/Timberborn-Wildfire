@@ -1,1 +1,0 @@
-../../all-tickets/TWF-150-remove-scaffold-only-paths.md

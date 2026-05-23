@@ -1,1 +1,0 @@
-../../all-tickets/TWF-020-title-screen-coordinate-pass.md

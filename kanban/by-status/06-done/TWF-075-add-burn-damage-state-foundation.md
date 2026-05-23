@@ -1,1 +1,0 @@
-../../all-tickets/TWF-075-add-burn-damage-state-foundation.md

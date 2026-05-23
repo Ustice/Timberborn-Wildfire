@@ -1,1 +1,0 @@
-../../all-tickets/TWF-129-apply-water-infrastructure-fire-effects.md

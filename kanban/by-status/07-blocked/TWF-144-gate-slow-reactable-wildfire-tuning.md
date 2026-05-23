@@ -1,1 +1,0 @@
-../../all-tickets/TWF-144-gate-slow-reactable-wildfire-tuning.md

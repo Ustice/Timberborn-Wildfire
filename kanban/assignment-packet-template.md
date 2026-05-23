@@ -7,7 +7,7 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Role:
 - Issue:
 - GitHub issue URL:
-- Historical ticket path, if migrated: `~/repos/wildfire/kanban/all-tickets/TWF-000-example.md`
+- Historical ticket reference, if migrated: `archive/file-kanban-2026-05-23:kanban/all-tickets/TWF-000-example.md`
 - Worktree path:
 - Branch:
 - Role instructions:

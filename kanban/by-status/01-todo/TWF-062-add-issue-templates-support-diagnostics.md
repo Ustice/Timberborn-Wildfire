@@ -1,1 +1,0 @@
-../../all-tickets/TWF-062-add-issue-templates-support-diagnostics.md

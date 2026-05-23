@@ -1,1 +1,0 @@
-../../all-tickets/TWF-066-tune-visible-fire-effect.md

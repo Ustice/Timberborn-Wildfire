@@ -4,7 +4,6 @@
     "blueprints:generate": "bun scripts/generate-wildfire-fuel-blueprints.ts",
     "qa:cleanup-media": "bun scripts/cleanup-wildfire-qa-media.ts",
     "qa:cleanup-media:install": "bun scripts/install-wildfire-qa-cleanup-launchd.ts",
-    "kanban:audit": "bun scripts/audit-kanban.ts",
     "workshop:package": "bun scripts/package-steam-workshop.ts",
     "workshop:publish": "bun scripts/publish-steam-workshop.ts",
     "typecheck": "tsc --noEmit"

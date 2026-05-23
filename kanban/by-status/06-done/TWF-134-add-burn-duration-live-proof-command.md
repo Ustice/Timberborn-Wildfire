@@ -1,1 +1,0 @@
-../../all-tickets/TWF-134-add-burn-duration-live-proof-command.md

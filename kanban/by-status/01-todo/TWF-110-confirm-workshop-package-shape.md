@@ -1,1 +1,0 @@
-../../all-tickets/TWF-110-confirm-workshop-package-shape.md

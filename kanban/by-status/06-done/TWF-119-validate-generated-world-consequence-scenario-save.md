@@ -1,1 +1,0 @@
-../../all-tickets/TWF-119-validate-generated-world-consequence-scenario-save.md

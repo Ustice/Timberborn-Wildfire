@@ -1,1 +1,0 @@
-../../all-tickets/TWF-152-implement-native-dynamite-fire-triggering.md

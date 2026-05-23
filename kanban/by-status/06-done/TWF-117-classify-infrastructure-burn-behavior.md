@@ -1,1 +1,0 @@
-../../all-tickets/TWF-117-classify-infrastructure-burn-behavior.md

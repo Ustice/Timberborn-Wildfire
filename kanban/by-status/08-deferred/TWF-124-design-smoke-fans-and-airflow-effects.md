@@ -1,1 +1,0 @@
-../../all-tickets/TWF-124-design-smoke-fans-and-airflow-effects.md

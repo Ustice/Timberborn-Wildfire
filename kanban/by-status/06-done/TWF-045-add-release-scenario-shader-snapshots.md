@@ -1,1 +1,0 @@
-../../all-tickets/TWF-045-add-release-scenario-shader-snapshots.md

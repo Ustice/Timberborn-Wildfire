@@ -1,1 +1,0 @@
-../../all-tickets/TWF-169-fix-burned-trees-not-showing-stumps.md

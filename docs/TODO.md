@@ -44,9 +44,9 @@
 - [ ] Tune visual output.
 - [x] Add runtime diagnostics.
 
-## Current Sprint Plan
+## Current Backlog Plan
 
-Detailed sprint boundaries live in [../kanban/sprint-planning.md](../kanban/sprint-planning.md). Current sprint closeout and follow-on planning live under [../kanban/sprints/](../kanban/sprints/).
+GitHub Issues now own active backlog work. Historical sprint boundaries and closeout charters live on branch `archive/file-kanban-2026-05-23`.
 
 ### Ash Simulator Model Follow-Up
 
@@ -137,7 +137,7 @@ Follow-on gates:
 
 - Sprint 8: live QA recovery and blocked evidence triage.
 - Sprint 9: real field replacement and real-field proof closed as mixed done/blocked. `Fuel` is accepted as the stable `50x50` Sprint 9 surface, but `TWF-144` and `TWF-148` are blocked on making normal gameplay visuals plainly visible.
-- Sprint 11: visual, beaver, and clean-ash verification is closed. `TWF-067`, `TWF-073`, `TWF-078`, and `TWF-082` are done after Jason confirmed the clean ash and fertile ash routes; the split tainted-ash live gate is now accepted in `TWF-166`. See [../kanban/sprints/sprint-11-visual-beaver-ash-verification.md](../kanban/sprints/sprint-11-visual-beaver-ash-verification.md).
+- Sprint 11: visual, beaver, and clean-ash verification is closed. `TWF-067`, `TWF-073`, `TWF-078`, and `TWF-082` are done after Jason confirmed the clean ash and fertile ash routes; the split tainted-ash live gate is now accepted in `TWF-166`. Historical charter is on branch `archive/file-kanban-2026-05-23`.
 - Later: visual consequences and aftermath from real fields should continue from [world-consequence-first-pass.md](world-consequence-first-pass.md) once `TWF-144`/`TWF-148` are unblocked.
-- Sprint 12: release gameplay readiness. `TWF-166`, `TWF-161`, `TWF-162`, `TWF-170`, `TWF-079`, and `TWF-085` are done. `TWF-070` is unblocked from live visual readability after Jason accepted the 2026-05-20 steam rerun as subtle but visible; it needs fresh review before integration because the repair changed renderer constants after the prior deterministic review. `TWF-163` and `TWF-169` still need command-responsive live Timberborn reruns or screenshots. Remaining included tickets cover ash/water interaction, fire-heat beaver consequences, structure-on-fire alerts, rare ignition, aggregated feedback, release icons, persistence, smoke-death proof, and `256x256` QA; see [../kanban/sprints/sprint-12-release-gameplay-readiness.md](../kanban/sprints/sprint-12-release-gameplay-readiness.md).
+- Sprint 12: release gameplay readiness. `TWF-166`, `TWF-161`, `TWF-162`, `TWF-170`, `TWF-079`, and `TWF-085` are done. `TWF-070` is unblocked from live visual readability after Jason accepted the 2026-05-20 steam rerun as subtle but visible; it needs fresh review before integration because the repair changed renderer constants after the prior deterministic review. `TWF-163` and `TWF-169` still need command-responsive live Timberborn reruns or screenshots. Remaining included tickets cover ash/water interaction, fire-heat beaver consequences, structure-on-fire alerts, rare ignition, aggregated feedback, release icons, persistence, smoke-death proof, and `256x256` QA. Continue from GitHub Issues.
 - Later: release packaging and Steam Workshop after the gameplay loop, screenshots, and QA gates are stable.

@@ -1,1 +1,0 @@
-../../all-tickets/TWF-121-design-ironteeth-fire-wardens.md

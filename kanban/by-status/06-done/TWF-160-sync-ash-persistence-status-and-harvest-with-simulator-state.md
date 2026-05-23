@@ -1,1 +1,0 @@
-../../all-tickets/TWF-160-sync-ash-persistence-status-and-harvest-with-simulator-state.md

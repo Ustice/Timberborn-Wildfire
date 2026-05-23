@@ -1,11 +1,11 @@
 # Evidence Manifest Template
 
-Use this next to runtime artifacts, screenshots, logs, generated saves, or QA outputs. Link this manifest from the relevant ticket instead of pasting long evidence into ticket prose.
+Use this next to runtime artifacts, screenshots, logs, generated saves, or QA outputs. Link this manifest from the relevant GitHub issue instead of pasting long evidence into issue comments.
 
-## Ticket
+## Issue
 
-- Ticket:
-- Sprint:
+- Issue:
+- Related `TWF-*` id:
 - Agent:
 - Date:
 

@@ -1,1 +1,0 @@
-../../all-tickets/TWF-032-prove-live-nonzero-gpu-deltas.md

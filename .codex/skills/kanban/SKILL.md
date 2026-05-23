@@ -7,7 +7,7 @@ description: Coordinate Wildfire GitHub Issues in ~/repos/wildfire, including mi
 
 ## Migration Note
 
-The Wildfire file kanban board was migrated to GitHub Issues on 2026-05-23. Use GitHub Issues as the active backlog. Use the file-board paths only for historical evidence, migration reconciliation, or explicit file-board cleanup.
+The Wildfire file kanban board was migrated to GitHub Issues on 2026-05-23. Use GitHub Issues as the active backlog. Use branch `archive/file-kanban-2026-05-23` only for historical evidence, migration reconciliation, or explicit file-board cleanup.
 
 ## Workflow
 

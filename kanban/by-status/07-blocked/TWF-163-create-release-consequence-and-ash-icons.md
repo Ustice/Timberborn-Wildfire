@@ -1,1 +1,0 @@
-../../all-tickets/TWF-163-create-release-consequence-and-ash-icons.md

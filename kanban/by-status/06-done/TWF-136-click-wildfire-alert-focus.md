@@ -1,1 +1,0 @@
-../../all-tickets/TWF-136-click-wildfire-alert-focus.md

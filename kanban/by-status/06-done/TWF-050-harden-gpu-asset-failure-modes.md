@@ -1,1 +1,0 @@
-../../all-tickets/TWF-050-harden-gpu-asset-failure-modes.md

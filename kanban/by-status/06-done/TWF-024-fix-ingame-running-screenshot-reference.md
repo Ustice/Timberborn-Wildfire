@@ -1,1 +1,0 @@
-../../all-tickets/TWF-024-fix-ingame-running-screenshot-reference.md
