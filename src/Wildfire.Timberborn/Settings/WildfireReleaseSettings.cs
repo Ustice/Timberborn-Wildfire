@@ -2,7 +2,7 @@ using System.Globalization;
 using Timberborn.SettingsSystem;
 using Timberborn.SingletonSystem;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Settings;
 
 public sealed class WildfireReleaseSettings
 {

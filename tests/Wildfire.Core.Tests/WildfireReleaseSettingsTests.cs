@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 using Timberborn.SettingsSystem;
-using Wildfire.Timberborn;
 
 namespace Wildfire.Core.Tests;
 

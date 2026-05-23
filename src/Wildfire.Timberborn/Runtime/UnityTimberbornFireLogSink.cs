@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 public sealed class UnityTimberbornFireLogSink : ITimberbornFireLogSink
 {

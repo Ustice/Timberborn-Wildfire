@@ -4,7 +4,7 @@ using Timberborn.EntitySystem;
 using Timberborn.StatusSystem;
 using Timberborn.WorkSystem;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Beavers;
 
 public sealed class TimberbornBeaverFieldBehaviorOptions
 {

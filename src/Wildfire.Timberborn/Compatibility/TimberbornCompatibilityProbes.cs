@@ -6,7 +6,7 @@ using Timberborn.QuickNotificationSystem;
 using Timberborn.TerrainSystem;
 using UnityEngine;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Compatibility;
 
 public enum TimberbornCompatibilityProbeStatus
 {

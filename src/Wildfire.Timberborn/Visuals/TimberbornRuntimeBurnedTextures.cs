@@ -11,7 +11,7 @@ using Timberborn.NaturalResourcesMoisture;
 using Timberborn.Yielding;
 using UnityEngine;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Visuals;
 
 public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBurnConsequenceApi
 {

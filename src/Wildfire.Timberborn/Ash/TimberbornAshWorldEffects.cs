@@ -20,7 +20,7 @@ using Timberborn.SoilContaminationSystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Ash;
 
 public static class TimberbornBoundedCellRange
 {

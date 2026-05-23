@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Mapping;
 
 public readonly record struct TimberbornResourceFuelProfile(
     string ResourceId,

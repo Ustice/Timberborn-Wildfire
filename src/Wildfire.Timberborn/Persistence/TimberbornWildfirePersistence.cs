@@ -4,7 +4,7 @@ using Timberborn.Persistence;
 using Timberborn.WorldPersistence;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Persistence;
 
 public sealed record TimberbornFireSimPersistenceSnapshot(
     int Width,

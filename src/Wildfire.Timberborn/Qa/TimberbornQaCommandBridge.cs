@@ -5,7 +5,7 @@ using Timberborn.TerrainSystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Qa;
 
 public sealed class TimberbornQaCommandBridge
 {

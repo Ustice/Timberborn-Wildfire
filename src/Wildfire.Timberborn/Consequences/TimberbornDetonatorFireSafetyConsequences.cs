@@ -5,7 +5,7 @@ using Timberborn.Explosions;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Consequences;
 
 public readonly record struct TimberbornDetonatorFireSafetyConsequence(
     int CellIndex,

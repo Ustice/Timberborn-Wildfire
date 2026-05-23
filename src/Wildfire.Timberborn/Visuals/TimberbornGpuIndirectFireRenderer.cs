@@ -2,7 +2,7 @@ using System.IO;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Visuals;
 
 // Renders fire, smoke, and steam directly from the GPU simulation buffers via
 // Graphics.DrawProceduralIndirect — no CPU readback, no mesh rebuilds per frame.

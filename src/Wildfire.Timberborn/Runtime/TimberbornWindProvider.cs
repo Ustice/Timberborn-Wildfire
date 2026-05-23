@@ -2,7 +2,7 @@ using Timberborn.WindSystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 public interface ITimberbornWindProvider
 {

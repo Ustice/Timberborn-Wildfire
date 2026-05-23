@@ -10,7 +10,7 @@ using Timberborn.ToolSystemUI;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Tools;
 
 public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInputProcessor, ILoadableSingleton
 {

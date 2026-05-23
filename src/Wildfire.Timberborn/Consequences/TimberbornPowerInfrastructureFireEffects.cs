@@ -3,7 +3,7 @@ using Timberborn.BlockSystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Consequences;
 
 public readonly record struct TimberbornPowerInfrastructureFireConsequence(
     int CellIndex,

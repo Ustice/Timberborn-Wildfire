@@ -1,5 +1,4 @@
 using Wildfire.Core;
-using Wildfire.Timberborn;
 
 namespace Wildfire.Core.Tests;
 

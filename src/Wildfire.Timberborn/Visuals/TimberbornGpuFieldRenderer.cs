@@ -2,7 +2,7 @@ using System.IO;
 using System.Reflection;
 using UnityEngine;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Visuals;
 
 public sealed class TimberbornGpuFieldRendererOptions
 {

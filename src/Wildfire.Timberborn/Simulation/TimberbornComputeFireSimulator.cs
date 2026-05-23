@@ -4,7 +4,7 @@ using System.Text;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Simulation;
 
 public sealed class TimberbornComputeFireSimulatorFactory : ITimberbornFireSimulatorFactory, IDisposable
 {

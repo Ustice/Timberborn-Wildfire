@@ -12,7 +12,7 @@ using Timberborn.TerrainSystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpdatableSingleton
 {

@@ -3,7 +3,7 @@ using Timberborn.BottomBarSystem;
 using Timberborn.Gathering;
 using Timberborn.TemplateInstantiation;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 [Context("Game")]
 public sealed class WildfireConfigurator : Configurator

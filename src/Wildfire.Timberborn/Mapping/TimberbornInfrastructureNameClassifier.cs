@@ -1,4 +1,4 @@
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Mapping;
 
 public static class TimberbornInfrastructureNameClassifier
 {

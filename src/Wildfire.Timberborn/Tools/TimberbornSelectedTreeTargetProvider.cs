@@ -2,7 +2,7 @@ using Timberborn.SelectionSystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Tools;
 
 public sealed class TimberbornSelectedTreeTargetProvider : ITimberbornQaSelectedTreeTargetProvider
 {

@@ -6,7 +6,7 @@ using Timberborn.Stockpiles;
 using Timberborn.Yielding;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Consequences;
 
 public sealed record TimberbornLiveBurnDamageTargets(
     TimberbornBurnDamageDescriptorCatalog DescriptorCatalog,

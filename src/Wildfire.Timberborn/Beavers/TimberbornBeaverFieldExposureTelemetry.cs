@@ -3,7 +3,7 @@ using Timberborn.EntitySystem;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Beavers;
 
 public sealed class TimberbornBeaverFieldExposureTelemetry
 {

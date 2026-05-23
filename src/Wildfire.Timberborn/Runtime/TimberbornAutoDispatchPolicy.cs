@@ -1,4 +1,4 @@
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 public static class TimberbornAutoDispatchPolicy
 {

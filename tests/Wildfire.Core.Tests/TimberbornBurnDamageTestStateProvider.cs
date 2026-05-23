@@ -1,5 +1,3 @@
-using Wildfire.Timberborn;
-
 namespace Wildfire.Core.Tests;
 
 internal sealed class TimberbornBurnDamageTestStateProvider : ITimberbornBurnDamageTargetStateProvider

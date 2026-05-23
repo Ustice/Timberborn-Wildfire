@@ -6,7 +6,7 @@ using Timberborn.SingletonSystem;
 using Timberborn.SoilMoistureSystem;
 using Timberborn.TerrainSystem;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Qa;
 
 public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloadableSingleton, IUpdatableSingleton
 {

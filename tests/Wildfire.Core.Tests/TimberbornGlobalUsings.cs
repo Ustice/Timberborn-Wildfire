@@ -1,0 +1,13 @@
+global using Wildfire.Timberborn.Alerts;
+global using Wildfire.Timberborn.Ash;
+global using Wildfire.Timberborn.Beavers;
+global using Wildfire.Timberborn.Compatibility;
+global using Wildfire.Timberborn.Consequences;
+global using Wildfire.Timberborn.Mapping;
+global using Wildfire.Timberborn.Persistence;
+global using Wildfire.Timberborn.Qa;
+global using Wildfire.Timberborn.Runtime;
+global using Wildfire.Timberborn.Settings;
+global using Wildfire.Timberborn.Simulation;
+global using Wildfire.Timberborn.Tools;
+global using Wildfire.Timberborn.Visuals;

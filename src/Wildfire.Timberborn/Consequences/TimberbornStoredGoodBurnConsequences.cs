@@ -6,7 +6,7 @@ using Timberborn.Stockpiles;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Consequences;
 
 public readonly record struct TimberbornStoredGoodBurnConsequence(
     int CellIndex,

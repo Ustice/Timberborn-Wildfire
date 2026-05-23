@@ -10,7 +10,7 @@ using UnityEngine;
 using Wildfire.Core;
 using System.Reflection;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Consequences;
 
 public sealed record TimberbornLiveCropBurnDamageTargets(
     TimberbornBurnDamageDescriptorCatalog DescriptorCatalog,

@@ -1,6 +1,6 @@
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Ash;
 
 public enum TimberbornAshSourceKind
 {

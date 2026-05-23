@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 public sealed record TimberbornQaDeltaStimulusSustainedHeatState(
     int CellIndex,

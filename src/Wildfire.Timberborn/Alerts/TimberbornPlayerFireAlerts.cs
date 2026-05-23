@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Alerts;
 
 public sealed class TimberbornPlayerFireAlertSink : ITimberbornFireAlertDispatchSink
 {

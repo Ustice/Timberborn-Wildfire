@@ -13,7 +13,7 @@ using Timberborn.WorldPersistence;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Runtime;
 
 public sealed class TimberbornFireRuntime :
     ILoadableSingleton,

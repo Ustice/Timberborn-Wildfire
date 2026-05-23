@@ -4,7 +4,7 @@ using Timberborn.ToolSystem;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Tools;
 
 public sealed class TimberbornFertilizeCropsToolButton : IBottomBarElementsProvider
 {

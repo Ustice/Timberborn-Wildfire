@@ -1,6 +1,6 @@
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Mapping;
 
 public readonly record struct TimberbornCellCoordinates(int X, int Y, int Z);
 

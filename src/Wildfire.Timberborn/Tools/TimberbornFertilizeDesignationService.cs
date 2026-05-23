@@ -12,7 +12,7 @@ using Timberborn.WorldPersistence;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Tools;
 
 public readonly record struct TimberbornFertilizeDesignationSummary(
     int CropDesignationCount,

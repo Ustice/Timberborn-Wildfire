@@ -7,7 +7,7 @@ using Timberborn.Navigation;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Consequences;
 
 public enum TimberbornStructureBurnRollbackStage
 {

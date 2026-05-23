@@ -4,7 +4,7 @@ using Timberborn.Growing;
 using UnityEngine;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Ash;
 
 public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAdapter
 {

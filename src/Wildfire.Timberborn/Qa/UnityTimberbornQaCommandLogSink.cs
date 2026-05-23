@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Wildfire.Timberborn;
+namespace Wildfire.Timberborn.Qa;
 
 public sealed class UnityTimberbornQaCommandLogSink : ITimberbornQaCommandLogSink
 {
