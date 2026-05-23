@@ -6,10 +6,12 @@ import { spawnSync } from "node:child_process";
 type Options = {
   dryRun: boolean;
   skipPreview: boolean;
+  publishedFileId: string;
   user?: string;
   vdfPath: string;
   sourceImagePath: string;
   previewImagePath: string;
+  contentFolderPath: string;
 };
 
 const root = resolve(import.meta.dir, "..");
@@ -18,7 +20,11 @@ const usage = `Usage: bun scripts/publish-steam-workshop.ts [options]
 
 Options:
   --user <account>       Steam account name. Defaults to STEAM_USER.
+  --published-file-id <id>
+                         Workshop item id. Default: STEAM_WORKSHOP_PUBLISHED_FILE_ID or 3730392791.
   --vdf <path>           Workshop item VDF. Default: release/workshop/wildfire-workshop-item.vdf
+  --content-folder <path>
+                         Workshop content folder. Default: release/workshop/content.
   --source <path>        Tracked cover source image. Default: docs/assets/workshop/wildfire-workshop-cover-source.png
   --preview <path>       Generated preview image. Default: release/workshop/wildfire-workshop-cover.jpg
   --skip-preview         Do not regenerate the preview image.
@@ -31,8 +37,10 @@ function parseArgs(argv: string[]): Options {
   const options: Options = {
     dryRun: false,
     skipPreview: false,
+    publishedFileId: process.env.STEAM_WORKSHOP_PUBLISHED_FILE_ID ?? "3730392791",
     user: process.env.STEAM_USER,
     vdfPath: "release/workshop/wildfire-workshop-item.vdf",
+    contentFolderPath: "release/workshop/content",
     sourceImagePath: "docs/assets/workshop/wildfire-workshop-cover-source.png",
     previewImagePath: "release/workshop/wildfire-workshop-cover.jpg",
   };
@@ -63,8 +71,14 @@ function parseArgs(argv: string[]): Options {
       case "--user":
         options.user = readValue(arg);
         return true;
+      case "--published-file-id":
+        options.publishedFileId = readValue(arg);
+        return true;
       case "--vdf":
         options.vdfPath = readValue(arg);
+        return true;
+      case "--content-folder":
+        options.contentFolderPath = readValue(arg);
         return true;
       case "--source":
         options.sourceImagePath = readValue(arg);
@@ -125,11 +139,11 @@ function parseVdfValue(vdf: string, key: string): string | undefined {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const vdfPath = absolutePath(options.vdfPath);
+  const contentFolderPath = absolutePath(options.contentFolderPath);
   const sourceImagePath = absolutePath(options.sourceImagePath);
   const previewImagePath = absolutePath(options.previewImagePath);
   const steamUser = options.user;
 
-  requireFile(vdfPath, "Workshop VDF");
   requireFile(sourceImagePath, "Cover source image");
 
   if (!options.skipPreview) {
@@ -163,7 +177,9 @@ async function main(): Promise<void> {
     );
   }
 
-  const vdf = await readFile(vdfPath, "utf8");
+  const vdf = existsSync(vdfPath)
+    ? await readFile(vdfPath, "utf8")
+    : createDefaultVdf(options.publishedFileId, contentFolderPath, previewImagePath);
   const contentFolder = parseVdfValue(vdf, "contentfolder");
   const publishedFileId = parseVdfValue(vdf, "publishedfileid");
 
@@ -204,3 +220,18 @@ main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });
+
+function createDefaultVdf(publishedFileId: string, contentFolder: string, previewFile: string): string {
+  return `"workshopitem"
+{
+\t"appid"\t\t"1062090"
+\t"publishedfileid"\t\t"${publishedFileId}"
+\t"contentfolder"\t\t"${contentFolder}"
+\t"previewfile"\t\t"${previewFile}"
+\t"visibility"\t\t"0"
+\t"title"\t\t"[ModContest1] Wildfire"
+\t"description"\t\t"Wildfire brings fire to Timberborn as a living world system, not just a visual effect. Fires can spread through forests and settlements, leave burned terrain behind, generate smoke and steam, and begin tying into consequences for the colony around them."
+\t"changenote"\t\t"Automated Workshop update from the steam branch."
+}
+`;
+}
