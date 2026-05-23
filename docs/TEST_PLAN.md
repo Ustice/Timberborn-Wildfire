@@ -179,7 +179,7 @@ Automated coverage for downstream implementation tickets must prove:
 - Exposure samples come from real field values or deterministic field fixtures, not hard-coded beaver triggers.
 - Field classes remain distinguishable in telemetry: fire, heat, smoke, toxic smoke, clean steam, ash, and wet suppression.
 - Respiratory progression moves through coughing, choking, and death-candidate counters without applying unsafe irreversible native effects by default.
-- Burn progression moves through singed, burned, and death-candidate counters without applying unsafe native effects by default.
+- Burn progression moves through singed, burned, and death-candidate counters without applying unsafe native effects by default. Use `WildfireBurnedStatus` for beaver burn injury once the status path is safe; reserve `WildfireBurningStatus` for structures that are actively on fire.
 - Work interruption and avoidance are reported separately from injury or incapacitation.
 - Hysteresis prevents a beaver from flickering between exposed and recovered states across adjacent ticks.
 - Safe no-op counters identify missing pathing, status, incapacitation, contamination, and death APIs.

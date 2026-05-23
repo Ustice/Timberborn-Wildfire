@@ -136,16 +136,20 @@ Fire, burning, scorch, or heat damage. Pair with a building or beaver subject to
 
 ### Coughing
 
-Use gold ring, tan inner background, dark foreground, with optional exclamation. This means impaired beaver, still able to act.
+Use `WildfireCoughingStatus`. It uses a gold ring, tan inner background, dark foreground, with optional exclamation. This means impaired beaver, still able to act.
 
 ### Choking
 
-Use red ring, dark inner background, tan foreground, with exclamation. This means the beaver cannot function or self-rescue.
+Use `WildfireChokingStatus`. It uses a red ring, dark inner background, tan foreground, with exclamation. This means the beaver cannot function or self-rescue.
 
 ### Burned
 
-Use gold ring, tan inner background, dark foreground, with optional exclamation. This means fire injury consequence while the beaver may still function.
+Use `WildfireBurnedStatus` for beaver fire or heat injury. It uses a gold ring, tan inner background, dark foreground, with optional exclamation. This means the beaver is burned but may still function unless a later safe injury API proves work prevention.
 
 ### Burning
 
-Use red ring, dark inner background, tan foreground, with exclamation. This means the building is on fire and inoperable.
+Use `WildfireBurningStatus` for structures, not beavers. It uses a red ring, dark inner background, tan foreground, with exclamation. This means the building is actively on fire and inoperable.
+
+### Dead
+
+Use Timberborn's native death status language unless `TWF-171` proves a Wildfire-specific death surface is required. Death is a terminal beaver state and should not reuse choking, burned, or burning icons.
