@@ -436,6 +436,43 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
+    public void FuelDepletedTreeDoesNotClaimLeftoverVisualWhenNativeRefreshIsUnavailable()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornBurnDamageService burnDamageService = CreateService(
+            TreeDescriptor("Tree.Pine", "Log", amount: 10));
+        burnDamageService.RegisterTargets(
+            grid,
+            [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
+        RecordingTreeBurnConsequenceApi treeApi = new(static consequence =>
+            consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover
+                ? new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true)
+                : new TimberbornTreeBurnConsequenceResult(Applied: true, SafeApiUnavailable: false));
+        TimberbornTreeBurnConsequenceSink treeSink = new(burnDamageService, treeApi);
+        TimberbornFireCellDeltaDecision burnStep = Decision(0, oldFuel: 15, newFuel: 3);
+        TimberbornFireCellDeltaDecision spentFuel = Decision(0, oldFuel: 3, newFuel: 0);
+
+        burnDamageService.ApplyDamage(33, [burnStep]);
+        TimberbornTreeBurnConsequenceSummary partialSummary = treeSink.ApplyConsequences(33, [burnStep]);
+        burnDamageService.ApplyDamage(42, [spentFuel]);
+        TimberbornTreeBurnConsequenceSummary fullSummary = treeSink.ApplyConsequences(42, [spentFuel]);
+
+        Assert.Contains(
+            treeApi.Consequences,
+            static consequence => consequence.Tick == 33 &&
+                consequence.Kind == TimberbornTreeBurnConsequenceKind.KillTree);
+        Assert.Contains(
+            treeApi.Consequences,
+            static consequence => consequence.Tick == 42 &&
+                consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover);
+        Assert.Equal(1, partialSummary.KilledTreeCount);
+        Assert.Equal(1, partialSummary.VisualStateUpdateCount);
+        Assert.Equal(0, fullSummary.KilledTreeCount);
+        Assert.Equal(0, fullSummary.VisualStateUpdateCount);
+        Assert.Equal(1, fullSummary.SkippedUnsafeApiCount);
+    }
+
+    [Fact]
     public void DeltaConsumerAndQaStatusExposeTreeBurnTelemetry()
     {
         FireGrid grid = new(1, 1, 1);

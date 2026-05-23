@@ -6,6 +6,7 @@ using Timberborn.Gathering;
 using Timberborn.GoodStackSystem;
 using Timberborn.Goods;
 using Timberborn.NaturalResourcesLifecycle;
+using Timberborn.NaturalResourcesModelSystem;
 using Timberborn.NaturalResourcesMoisture;
 using Timberborn.Yielding;
 using UnityEngine;
@@ -189,11 +190,25 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
         }
         string textureLabel = TextureLabel(consequence, blockObject);
-        ApplyBurnedTextures(blockObject, textureLabel);
+        bool modelRefreshed = TryRefreshNaturalResourceModel(blockObject, consequence, out string modelRefreshReason);
+        bool leftoverModelActive = IsInLeftoverState(cuttable);
+        int updatedMaterialCount = modelRefreshed && leftoverModelActive
+            ? ApplyBurnedTextures(blockObject, textureLabel)
+            : 0;
+        if (!modelRefreshed || !leftoverModelActive)
+        {
+            string reason = modelRefreshed
+                ? "leftover_model_inactive_after_refresh"
+                : modelRefreshReason;
+            _logSink.Warning(
+                "wildfire_timberborn_tree_burned_leftover_skipped " +
+                $"reason={TimberbornQaCommandBridge.FormatToken(reason)} " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
+                $"leftover_model_active={leftoverModelActive.ToString().ToLowerInvariant()}");
+            return new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true);
+        }
 
-        cuttable.ShowLeftoverModel();
-
-        int updatedMaterialCount = ApplyBurnedTextures(blockObject, textureLabel);
         if (updatedMaterialCount == 0)
         {
             updatedMaterialCount = ApplyCharredTintToActive(blockObject);
@@ -210,7 +225,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             "wildfire_timberborn_tree_burned_leftover_applied " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
-            $"materials={updatedMaterialCount}");
+            $"materials={updatedMaterialCount} model_refreshed=true leftover_model_active=true");
         return new TimberbornTreeBurnConsequenceResult(Applied: true, SafeApiUnavailable: false);
     }
 
@@ -273,6 +288,38 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             // ignore reflection failures
         }
 
+        return false;
+    }
+
+    private bool TryRefreshNaturalResourceModel(
+        BlockObject blockObject,
+        TimberbornTreeBurnConsequence consequence,
+        out string reason)
+    {
+        object? naturalResourceModel = blockObject.TryGetComponent(out NaturalResourceModel typedNaturalResourceModel)
+            ? typedNaturalResourceModel
+            : blockObject.Transform
+                .GetComponentsInChildren<Component>(includeInactive: true)
+                .FirstOrDefault(static component =>
+                    component is not null &&
+                    component.GetType().FullName == "Timberborn.NaturalResourcesModelSystem.NaturalResourceModel");
+        if (naturalResourceModel is null)
+        {
+            reason = "natural_resource_model_missing";
+            return false;
+        }
+
+        if (TryInvokeNoArgumentMethod(naturalResourceModel, "ShowCurrentModel"))
+        {
+            reason = "refreshed";
+            return true;
+        }
+
+        _logSink.Warning(
+            "wildfire_timberborn_tree_burned_leftover_refresh_failed " +
+            $"reason=show_current_model_unavailable stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+            $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)}");
+        reason = "show_current_model_unavailable";
         return false;
     }
 
