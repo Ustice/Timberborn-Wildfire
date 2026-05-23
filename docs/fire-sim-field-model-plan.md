@@ -1,6 +1,6 @@
-# FireSim Field Model One-Session Plan
+# FireSim Field Model Plan
 
-This plan is for one focused implementation session. Do not turn it into kanban tickets or a sprint plan unless Jason asks for that later.
+This document records the durable design and validation shape for the FireSim field-model work. Active assignment, ownership, and current status belong in GitHub Issues.
 
 The goal is to replace the current threshold-based wind weighting in `FireSim.compute` with a small, readable field model:
 
@@ -19,7 +19,7 @@ The goal is to replace the current threshold-based wind weighting in `FireSim.co
 - Keep Timberborn as an adapter. Do not put fire rules in Timberborn systems.
 - Use no more than five tuning levers for this work.
 
-## Worktree Setup
+## Suggested Worktree Setup
 
 1. From the main checkout, confirm the starting point:
 
@@ -282,6 +282,43 @@ The session is done when:
 - The shader still uses packed atmospheric fields and does not add new full-size simulation buffers.
 - There are no more than five tuning levers.
 - The validation commands above pass, or failures are documented with the exact blocker and next command.
+
+## Live Validation History
+
+### 2026-05-10 Field-Model Attempt
+
+Deterministic, build, and deploy gates completed for the field-model tuning pass, but live in-game validation did not complete.
+
+Evidence gathered:
+
+- `bun scripts/deploy-timberborn-mod.ts --apply --clean --lock-timeout 60` completed successfully and released `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`.
+- Deploy reported `timberborn_running=false` before replacing `~/Documents/Timberborn/Mods/Wildfire`.
+- Timberborn launched from `~/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app`.
+- The current `~/Library/Logs/Mechanistry/Timberborn/Player.log` only reached Steam connection startup lines and did not show current Wildfire mod load, command bridge, save load, or fire dispatch evidence.
+- Computer Use could not attach to the Timberborn window.
+- A `status` command written to `~/Library/Application Support/com.mechanistry.timberborn/WildfireQA/command-inbox.txt` was not consumed after three seconds, and `command-outbox.txt` remained stale.
+- The launched Timberborn process was closed after the failed validation attempt.
+
+Live blocker:
+
+- The game process started, but the session could not reach an interactive window or a current QA command bridge. There was no current-save proof for slower fire, reduced hitches, or burgundy contaminated smoke.
+
+Next exact live validation commands:
+
+```bash
+bun scripts/deploy-timberborn-mod.ts --apply --clean --lock-timeout 60
+open "$HOME/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app"
+tail -f "$HOME/Library/Logs/Mechanistry/Timberborn/Player.log"
+```
+
+After a save is loaded and `wildfire_command_bridge_ready` appears, run:
+
+```bash
+printf 'qa-readiness\n' > "$HOME/Library/Application Support/com.mechanistry.timberborn/WildfireQA/command-inbox.txt"
+cat "$HOME/Library/Application Support/com.mechanistry.timberborn/WildfireQA/command-outbox.txt"
+```
+
+Then ignite a local source in-game and confirm the log/status evidence includes current `wildfire_timberborn_gpu_dispatch_kernel_completed ... elapsed_ms=...`, `wildfire_timberborn_gpu_readback_completed ... elapsed_ms=...`, non-explosive tick deltas, and visible clean versus burgundy contaminated smoke.
 
 ## Stop Conditions
 

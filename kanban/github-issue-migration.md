@@ -9,7 +9,8 @@ GitHub repository: <https://github.com/Ustice/Timberborn-Wildfire/issues>
 - Migrated open-family tickets: 57.
 - Done tickets remain historical on branch `archive/file-kanban-2026-05-23` and were not re-created as GitHub issues.
 - Each migrated issue includes the original ticket body, dependencies, write scope, QA flag, role, and canonical file path.
-- Labels preserve old file-board state: `status:todo`, `status:ready`, `status:blocked`, `status:deferred`, plus `source:kanban`.
+- Labels preserved old file-board state at migration time: `status:todo`, `status:ready`, `status:blocked`, `status:deferred`, plus `source:kanban`.
+- Status labels below are migration snapshots. Refresh live status from GitHub Issues before assigning or reporting work.
 - Post-migration reconciliation moved `TWF-167` and `TWF-174` to ready, and `TWF-156` and `TWF-165` to blocked.
 
 ## Issue Map

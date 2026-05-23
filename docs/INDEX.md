@@ -10,8 +10,7 @@ Use this page as the startup map for humans and agents.
 - [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
 - [ash-simulation-model.md](ash-simulation-model.md) owns the current ash authority, naming, and buffer-responsibility direction.
 - [steam-simulation-model.md](steam-simulation-model.md) owns the current steam authority, clean-field semantics, and smoke-like transport direction.
-- [fire-sim-field-model-plan.md](fire-sim-field-model-plan.md) owns the one-session worktree plan for the anisotropic heat, atmosphere, and contamination shader model.
-- [fire-sim-field-model-live-validation.md](fire-sim-field-model-live-validation.md) records live validation attempts and exact blockers for the field-model branch.
+- [fire-sim-field-model-plan.md](fire-sim-field-model-plan.md) owns the anisotropic heat, atmosphere, contamination field-model plan and its live-validation blocker notes.
 - [world-consequence-first-pass.md](world-consequence-first-pass.md) owns the current first-pass plan for stored-item consequences, generated scenario saves, and faction fire-response ideas.
 - [HANDOFF.md](HANDOFF.md) owns current status, blockers, and next exact action.
 - [TEST_PLAN.md](TEST_PLAN.md) owns validation strategy and evidence expectations.
@@ -39,3 +38,5 @@ Use this page as the startup map for humans and agents.
 ## Historical Material
 
 Historical file-kanban tickets, status symlinks, sprint charters, and evidence manifests live on branch `archive/file-kanban-2026-05-23`.
+
+Session-only prompt and checklist docs should not be added to this index. Put active assignment state in GitHub Issues and keep durable rationale in the design/reference docs above.
