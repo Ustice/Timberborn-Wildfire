@@ -355,6 +355,31 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
+    public void TaintedAshSoilPoisoningReadsContaminationWithNativeMapIndex()
+    {
+        FireGrid grid = new(50, 50, 23);
+        int simulatorCellIndex = grid.ToIndex(12, 13, 4);
+        int nativeMapIndex = 13 * 50 + 12;
+        RecordingSoilContaminationPoisoningApi soilContamination = new(nativeMapIndex, currentContamination: 0.2f);
+        TimberbornSoilContaminationAshPoisoningAdapter adapter = new(
+            soilContamination,
+            () => grid,
+            (x, y) => y * 50 + x,
+            new RecordingFireLogSink());
+
+        TimberbornTaintedAshSoilPoisoningSummary summary = adapter.ApplyPoisoning(
+            62,
+            [new TimberbornTaintedAshSoilPoisoningCandidate(simulatorCellIndex, Strength: 3)]);
+
+        Assert.Equal(1, summary.CandidateCellCount);
+        Assert.Equal(1, summary.AppliedCellCount);
+        Assert.Equal(0, summary.SkippedNoSafeApiCount);
+        Assert.Equal([nativeMapIndex], soilContamination.ContaminationIndices);
+        Assert.Equal([(12, 13, 4)], soilContamination.UpdatedCoordinates);
+        Assert.Equal([0.9f], soilContamination.UpdatedContamination);
+    }
+
+    [Fact]
     public void FertileAshCollectionDepletesOnlyCollectedFertileCells()
     {
         TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
@@ -517,6 +542,37 @@ public sealed class TimberbornAshFieldServiceTests
                 CollectedGoodCount: collectedCells.Sum(static cell => cell.GoodAmount),
                 SkippedInventoryApiCount: 0,
                 CollectedCells: collectedCells);
+        }
+    }
+
+    private sealed class RecordingSoilContaminationPoisoningApi(
+        int expectedContaminationIndex,
+        float currentContamination)
+        : ITimberbornSoilContaminationPoisoningApi
+    {
+        public bool IsAvailable => true;
+
+        public List<int> ContaminationIndices { get; } = [];
+
+        public List<(int X, int Y, int Z)> UpdatedCoordinates { get; } = [];
+
+        public List<float> UpdatedContamination { get; } = [];
+
+        public float Contamination(int mapCellIndex)
+        {
+            ContaminationIndices.Add(mapCellIndex);
+            if (mapCellIndex != expectedContaminationIndex)
+            {
+                throw new IndexOutOfRangeException();
+            }
+
+            return currentContamination;
+        }
+
+        public void UpdateContamination(int x, int y, int z, float contamination)
+        {
+            UpdatedCoordinates.Add((x, y, z));
+            UpdatedContamination.Add(contamination);
         }
     }
 

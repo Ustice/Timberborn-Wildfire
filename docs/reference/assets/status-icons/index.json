@@ -1,0 +1,345 @@
+[
+  {
+    "spriteName": "ApiStopped",
+    "source": "timberborn-status-sprite",
+    "path": "ApiStopped.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "AutomationLoop",
+    "source": "timberborn-status-sprite",
+    "path": "AutomationLoop.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "BadwaterContamination",
+    "source": "timberborn-status-sprite",
+    "path": "BadwaterContamination.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "BuildingBlockedByContamination",
+    "source": "timberborn-status-sprite",
+    "path": "BuildingBlockedByContamination.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "BuildingNeedsWater",
+    "source": "timberborn-status-sprite",
+    "path": "BuildingNeedsWater.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "ChippedTeeth",
+    "source": "timberborn-status-sprite",
+    "path": "ChippedTeeth.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "ContaminatedNaturalResource",
+    "source": "timberborn-status-sprite",
+    "path": "ContaminatedNaturalResource.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "CultivationHalted",
+    "source": "timberborn-status-sprite",
+    "path": "CultivationHalted.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Death",
+    "source": "timberborn-status-sprite",
+    "path": "Death.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Demolish",
+    "source": "timberborn-status-sprite",
+    "path": "Demolish.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "DemolitionBlocked",
+    "source": "timberborn-status-sprite",
+    "path": "DemolitionBlocked.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "DirectionalBlocking",
+    "source": "timberborn-status-sprite",
+    "path": "DirectionalBlocking.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "DryingNaturalResource",
+    "source": "timberborn-status-sprite",
+    "path": "DryingNaturalResource.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Empty",
+    "source": "timberborn-status-sprite",
+    "path": "Empty.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "EntranceBlocked",
+    "source": "timberborn-status-sprite",
+    "path": "EntranceBlocked.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Exhaustion",
+    "source": "timberborn-status-sprite",
+    "path": "Exhaustion.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "FloodedBuilding",
+    "source": "timberborn-status-sprite",
+    "path": "FloodedBuilding.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "GateConflict",
+    "source": "timberborn-status-sprite",
+    "path": "GateConflict.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "GenericError",
+    "source": "timberborn-status-sprite",
+    "path": "GenericError.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Hunger",
+    "source": "timberborn-status-sprite",
+    "path": "Hunger.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Incubation",
+    "source": "timberborn-status-sprite",
+    "path": "Incubation.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Injury",
+    "source": "timberborn-status-sprite",
+    "path": "Injury.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "LackOfNutrients",
+    "source": "timberborn-status-sprite",
+    "path": "LackOfNutrients.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "LackOfResources",
+    "source": "timberborn-status-sprite",
+    "path": "LackOfResources.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NewFactionUnlocked",
+    "source": "timberborn-status-sprite",
+    "path": "NewFactionUnlocked.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NoControlSignal",
+    "source": "timberborn-status-sprite",
+    "path": "NoControlSignal.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NonCompatibleVersion",
+    "source": "timberborn-status-sprite",
+    "path": "NonCompatibleVersion.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NoPower",
+    "source": "timberborn-status-sprite",
+    "path": "NoPower.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NoStartingLocation",
+    "source": "timberborn-status-sprite",
+    "path": "NoStartingLocation.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NoStorage",
+    "source": "timberborn-status-sprite",
+    "path": "NoStorage.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NotEnoughScience",
+    "source": "timberborn-status-sprite",
+    "path": "NotEnoughScience.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NotEnoughWater",
+    "source": "timberborn-status-sprite",
+    "path": "NotEnoughWater.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NothingToDo",
+    "source": "timberborn-status-sprite",
+    "path": "NothingToDo.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "NoUnemployed",
+    "source": "timberborn-status-sprite",
+    "path": "NoUnemployed.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "OutOfEnergy",
+    "source": "timberborn-status-sprite",
+    "path": "OutOfEnergy.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "OutOfFuel",
+    "source": "timberborn-status-sprite",
+    "path": "OutOfFuel.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "OutOfHaulersRange",
+    "source": "timberborn-status-sprite",
+    "path": "OutOfHaulersRange.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Pause",
+    "source": "timberborn-status-sprite",
+    "path": "Pause.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "PausedByAutomation",
+    "source": "timberborn-status-sprite",
+    "path": "PausedByAutomation.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Stranded",
+    "source": "timberborn-status-sprite",
+    "path": "Stranded.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "Thirst",
+    "source": "timberborn-status-sprite",
+    "path": "Thirst.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "TooMuchWater",
+    "source": "timberborn-status-sprite",
+    "path": "TooMuchWater.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "UnconnectedBuilding",
+    "source": "timberborn-status-sprite",
+    "path": "UnconnectedBuilding.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "UnreachableObject",
+    "source": "timberborn-status-sprite",
+    "path": "UnreachableObject.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "UnspecifiedGood",
+    "source": "timberborn-status-sprite",
+    "path": "UnspecifiedGood.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "UnspecifiedRecipe",
+    "source": "timberborn-status-sprite",
+    "path": "UnspecifiedRecipe.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "UnstableCoreCountdown",
+    "source": "timberborn-status-sprite",
+    "path": "UnstableCoreCountdown.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "WaterSourceCountdown",
+    "source": "timberborn-status-sprite",
+    "path": "WaterSourceCountdown.png",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "spriteName": "WellbeingHighscore",
+    "source": "timberborn-status-sprite",
+    "path": "WellbeingHighscore.png",
+    "width": 512,
+    "height": 512
+  }
+]

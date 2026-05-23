@@ -109,6 +109,7 @@ public static class TimberbornWildfirePersistenceCodec
                 BeaverBehaviorRecord,
                 EncodeString(entry.BeaverId),
                 ((int)entry.LastVariant).ToString(CultureInfo.InvariantCulture),
+                ((int)entry.LastAction).ToString(CultureInfo.InvariantCulture),
                 entry.LastDecisionTick.ToString(CultureInfo.InvariantCulture),
                 entry.ConsecutiveExposedSamples.ToString(CultureInfo.InvariantCulture),
                 entry.IsExposed ? "1" : "0",
@@ -267,13 +268,17 @@ public static class TimberbornWildfirePersistenceCodec
 
     private static TimberbornBeaverFieldBehaviorStateEntry DecodeBeaverBehaviorEntry(IReadOnlyList<string> parts)
     {
+        bool hasLastAction = parts.Count >= 8;
         return new TimberbornBeaverFieldBehaviorStateEntry(
-            ParseInt(parts[6]),
+            ParseInt(hasLastAction ? parts[7] : parts[6]),
             DecodeString(parts[1]),
             (TimberbornBeaverFieldBehaviorVariant)ParseInt(parts[2]),
-            ParseUInt(parts[3]),
-            ParseInt(parts[4]),
-            ParseInt(parts[5]) != 0);
+            hasLastAction
+                ? (TimberbornBeaverFieldBehaviorAction)ParseInt(parts[3])
+                : TimberbornBeaverFieldBehaviorAction.SafeNoOp,
+            ParseUInt(hasLastAction ? parts[4] : parts[3]),
+            ParseInt(hasLastAction ? parts[5] : parts[4]),
+            ParseInt(hasLastAction ? parts[6] : parts[5]) != 0);
     }
 
     private static string[] SplitLine(string line)

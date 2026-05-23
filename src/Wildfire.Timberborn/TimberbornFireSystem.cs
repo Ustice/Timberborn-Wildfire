@@ -14,7 +14,8 @@ public sealed record TimberbornQaDeltaStimulusSustainedHeatState(
     int CompletedCycleCount = 0,
     int? QueuedCycleNumber = null,
     uint? LastCompletedTick = null,
-    bool QueueFullFieldState = false)
+    bool QueueFullFieldState = false,
+    IReadOnlyList<int>? CellIndices = null)
 {
     public int RemainingCycleCount => Math.Max(0, RequestedCycleCount - CompletedCycleCount);
 
@@ -34,6 +35,13 @@ public sealed class TimberbornFireSystem : IDisposable
         fuel: QaIgnitionFuel,
         heat: QaIgnitionHeat,
         flammability: QaIgnitionFlammability,
+        water: QaIgnitionWater,
+        terrain: QaIgnitionTerrain,
+        burningLevel: 0);
+    private static readonly ushort QaBeaverSmokeExposureStimulusCell = PackedCell.Pack(
+        fuel: QaIgnitionFuel,
+        heat: QaIgnitionHeat,
+        flammability: 0,
         water: QaIgnitionWater,
         terrain: QaIgnitionTerrain,
         burningLevel: 0);
@@ -767,10 +775,11 @@ public sealed class TimberbornFireSystem : IDisposable
             x,
             y,
             z,
-            QaDeltaStimulusCell,
+            QaBeaverSmokeExposureStimulusCell,
             "beaver_candidate_cell",
             QaDeltaStimulusSustainedHeatCycleCount,
-            QueueFullFieldState: true);
+            QueueFullFieldState: true,
+            CellIndices: target.CellIndices);
         QueueNextSustainedQaDeltaStimulusCycle();
 
         return new TimberbornQaDeltaStimulusResult(
@@ -785,7 +794,7 @@ public sealed class TimberbornFireSystem : IDisposable
             QaIgnitionHeat,
             QueuedHeatChangeCount: _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber.HasValue ? 1 : 0,
             TargetSource: "beaver_candidate_cell",
-            SustainedHeatSetCell: QaDeltaStimulusCell,
+            SustainedHeatSetCell: QaBeaverSmokeExposureStimulusCell,
             SustainedHeatRequestedCycleCount: QaDeltaStimulusSustainedHeatCycleCount,
             SustainedHeatCompletedCycleCount: _qaDeltaStimulusSustainedHeatState.CompletedCycleCount,
             SustainedHeatRemainingCycleCount: _qaDeltaStimulusSustainedHeatState.RemainingCycleCount,
@@ -1185,12 +1194,18 @@ public sealed class TimberbornFireSystem : IDisposable
         }
 
         int cycleNumber = state.CompletedCycleCount + 1;
-        RegisterChange(
-            state.QueueFullFieldState
-                ? new FireSimChange(CellIndex: state.CellIndex, SetCell: state.SetCell)
-                : new FireSimChange(CellIndex: state.CellIndex, SetHeat: QaIgnitionHeat),
-            "qa_delta_stimulus_sustained_heat",
-            shouldLog: false);
+        IReadOnlyList<int> cellIndices = state.CellIndices is { Count: > 0 }
+            ? state.CellIndices
+            : new[] { state.CellIndex };
+        cellIndices
+            .Select(cellIndex => state.QueueFullFieldState
+                ? new FireSimChange(CellIndex: cellIndex, SetCell: state.SetCell)
+                : new FireSimChange(CellIndex: cellIndex, SetHeat: QaIgnitionHeat))
+            .ToList()
+            .ForEach(change => RegisterChange(
+                change,
+                "qa_delta_stimulus_sustained_heat",
+                shouldLog: false));
         _qaDeltaStimulusSustainedHeatState = state with
         {
             QueuedCycleNumber = cycleNumber,
@@ -1201,9 +1216,10 @@ public sealed class TimberbornFireSystem : IDisposable
             $"x={state.X} " +
             $"y={state.Y} " +
             $"z={state.Z} " +
-            $"set_heat={QaIgnitionHeat} " +
+            $"set_heat={(state.QueueFullFieldState ? PackedCell.Heat(state.SetCell) : QaIgnitionHeat)} " +
             $"set_cell={state.SetCell} " +
             $"queue_full_field_state={state.QueueFullFieldState.ToString().ToLowerInvariant()} " +
+            $"queued_cells={cellIndices.Count} " +
             $"target_source={TimberbornQaCommandBridge.FormatToken(state.TargetSource)} " +
             $"cycle={cycleNumber} " +
             $"requested_cycles={state.RequestedCycleCount} " +

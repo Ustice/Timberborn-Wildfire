@@ -256,6 +256,53 @@ public sealed class UnityShaderExecutionHarnessTests
     }
 
     [Fact]
+    public void UnityHarnessSmokeCanFallFromUpperLayerWhenEnabled()
+    {
+        int width = 3;
+        int height = 3;
+        int depth = 3;
+        ushort[] cells = Enumerable.Repeat(
+                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 0, burningLevel: 0),
+                width * height * depth)
+            .ToArray();
+        uint[] atmosphericFields = Enumerable.Range(0, cells.Length)
+            .Select(index =>
+            {
+                int z = index / (width * height);
+                return z == 2
+                    ? new WildfireTransportFieldState(
+                        Steam: 0,
+                        Smoke: 7,
+                        SmokeContamination: 0,
+                        Ash: 0,
+                        AshContamination: 0,
+                        Source: false).Pack()
+                    : 0u;
+            })
+            .ToArray();
+        ShaderSnapshotFixture fixture = CreateFixture(
+            "field-model-smoke-falls-from-upper-layer",
+            width,
+            height,
+            cells,
+            depth: depth,
+            initialAtmosphericFields: atmosphericFields,
+            wind: FireSimWind.None);
+
+        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
+        if (capture is null)
+        {
+            return;
+        }
+
+        WildfireTransportFieldState middleLayer = AtmosphereAt(capture, 1, 1, 1);
+        WildfireTransportFieldState upperLayer = AtmosphereAt(capture, 1, 1, 2);
+
+        Assert.True(middleLayer.Smoke > 0, $"Expected smoke to fall into the middle layer, got {middleLayer.Smoke}.");
+        Assert.True(upperLayer.Smoke < 7, $"Expected upper layer smoke to move or decay, got {upperLayer.Smoke}.");
+    }
+
+    [Fact]
     public void UnityHarnessSteamComesFromWetHotSimulatorStateWhenEnabled()
     {
         int width = 3;
@@ -661,6 +708,12 @@ public sealed class UnityShaderExecutionHarnessTests
     {
         Assert.NotNull(capture.FinalAtmosphericFields);
         return WildfireTransportFieldState.Unpack(capture.FinalAtmosphericFields[ToIndex(x, y, capture.Grid.Width)]);
+    }
+
+    private static WildfireTransportFieldState AtmosphereAt(ShaderSnapshotCapture capture, int x, int y, int z)
+    {
+        Assert.NotNull(capture.FinalAtmosphericFields);
+        return WildfireTransportFieldState.Unpack(capture.FinalAtmosphericFields[ToIndex(x, y, z, capture.Grid.Width, capture.Grid.Height)]);
     }
 
     private static WildfireMaterialFieldState CompanionAt(ShaderSnapshotCapture capture, int x, int y, int z)

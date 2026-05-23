@@ -1,3 +1,9 @@
+using System.Reflection;
+using Timberborn.Beavers;
+using Timberborn.EntitySystem;
+using Timberborn.StatusSystem;
+using Timberborn.WorkSystem;
+
 namespace Wildfire.Timberborn;
 
 public sealed class TimberbornBeaverFieldBehaviorOptions
@@ -6,7 +12,11 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
 
     public TimberbornBeaverFieldBehaviorOptions(
         uint DecisionCooldownTicks = 3,
-        int MaxDecisionsPerDispatch = 64)
+        int MaxDecisionsPerDispatch = 64,
+        int SmokeCoughingThresholdSamples = 3,
+        int SmokeChokingCandidateThresholdSamples = 8,
+        int SmokeDeathCandidateThresholdSamples = 16,
+        int SmokeRecoveryDecaySamples = 1)
     {
         if (DecisionCooldownTicks == 0)
         {
@@ -24,13 +34,57 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
                 "The maximum beaver behavior decision count must be positive.");
         }
 
+        if (SmokeCoughingThresholdSamples <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(SmokeCoughingThresholdSamples),
+                SmokeCoughingThresholdSamples,
+                "The smoke coughing threshold must be positive.");
+        }
+
+        if (SmokeChokingCandidateThresholdSamples < SmokeCoughingThresholdSamples)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(SmokeChokingCandidateThresholdSamples),
+                SmokeChokingCandidateThresholdSamples,
+                "The smoke choking candidate threshold must not be below the coughing threshold.");
+        }
+
+        if (SmokeDeathCandidateThresholdSamples < SmokeChokingCandidateThresholdSamples)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(SmokeDeathCandidateThresholdSamples),
+                SmokeDeathCandidateThresholdSamples,
+                "The smoke death candidate threshold must not be below the choking candidate threshold.");
+        }
+
+        if (SmokeRecoveryDecaySamples <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(SmokeRecoveryDecaySamples),
+                SmokeRecoveryDecaySamples,
+                "The smoke recovery decay must be positive.");
+        }
+
         this.DecisionCooldownTicks = DecisionCooldownTicks;
         this.MaxDecisionsPerDispatch = MaxDecisionsPerDispatch;
+        this.SmokeCoughingThresholdSamples = SmokeCoughingThresholdSamples;
+        this.SmokeChokingCandidateThresholdSamples = SmokeChokingCandidateThresholdSamples;
+        this.SmokeDeathCandidateThresholdSamples = SmokeDeathCandidateThresholdSamples;
+        this.SmokeRecoveryDecaySamples = SmokeRecoveryDecaySamples;
     }
 
     public uint DecisionCooldownTicks { get; }
 
     public int MaxDecisionsPerDispatch { get; }
+
+    public int SmokeCoughingThresholdSamples { get; }
+
+    public int SmokeChokingCandidateThresholdSamples { get; }
+
+    public int SmokeDeathCandidateThresholdSamples { get; }
+
+    public int SmokeRecoveryDecaySamples { get; }
 }
 
 public enum TimberbornBeaverFieldBehaviorVariant
@@ -43,6 +97,9 @@ public enum TimberbornBeaverFieldBehaviorVariant
 public enum TimberbornBeaverFieldBehaviorAction
 {
     SafeNoOp = 1,
+    CoughingSafeNoOp = 2,
+    CoughingWorkSlowdown = 3,
+    ChokingWorkSlowdown = 4,
 }
 
 public enum TimberbornBeaverFieldBehaviorActuatorStatus
@@ -112,6 +169,336 @@ public sealed class TimberbornNoOpBeaverFieldBehaviorActuator : ITimberbornBeave
     }
 }
 
+public interface ITimberbornBeaverWorkerSpeedAdapter
+{
+    TimberbornBeaverWorkerSpeedResult ApplySmokeReaction(
+        string beaverId,
+        TimberbornBeaverFieldBehaviorAction action,
+        float multiplier);
+
+    TimberbornBeaverWorkerSpeedResult RecoverSmokeReaction(string beaverId);
+
+    void Clear();
+}
+
+public readonly record struct TimberbornBeaverWorkerSpeedResult(
+    TimberbornBeaverFieldBehaviorActuatorStatus Status,
+    string Reason)
+{
+    public static readonly TimberbornBeaverWorkerSpeedResult Applied = new(
+        TimberbornBeaverFieldBehaviorActuatorStatus.Applied,
+        "applied");
+
+    public static TimberbornBeaverWorkerSpeedResult Skipped(string reason)
+    {
+        return new TimberbornBeaverWorkerSpeedResult(
+            TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi,
+            string.IsNullOrWhiteSpace(reason) ? "no_safe_api" : reason);
+    }
+
+    public static TimberbornBeaverWorkerSpeedResult Failed(string reason)
+    {
+        return new TimberbornBeaverWorkerSpeedResult(
+            TimberbornBeaverFieldBehaviorActuatorStatus.Failed,
+            string.IsNullOrWhiteSpace(reason) ? "failed" : reason);
+    }
+}
+
+public sealed class TimberbornWorkerSpeedBeaverFieldBehaviorActuator : ITimberbornBeaverFieldBehaviorActuator
+{
+    public const float CoughingWorkingSpeedMultiplier = 0.5f;
+    public const float ChokingWorkingSpeedMultiplier = 0.25f;
+
+    private readonly ITimberbornBeaverWorkerSpeedAdapter _workerSpeedAdapter;
+
+    public TimberbornWorkerSpeedBeaverFieldBehaviorActuator(ITimberbornBeaverWorkerSpeedAdapter workerSpeedAdapter)
+    {
+        _workerSpeedAdapter = workerSpeedAdapter ?? throw new ArgumentNullException(nameof(workerSpeedAdapter));
+    }
+
+    public TimberbornBeaverFieldBehaviorActuatorResult Apply(TimberbornBeaverFieldBehaviorDecision decision)
+    {
+        return IsSmokeReactionAction(decision.Action)
+            ? ToActuatorResult(_workerSpeedAdapter.ApplySmokeReaction(
+                decision.BeaverId,
+                decision.Action,
+                SmokeReactionWorkingSpeedMultiplier(decision.Action)))
+            : TimberbornBeaverFieldBehaviorActuatorResult.Applied;
+    }
+
+    public TimberbornBeaverFieldBehaviorActuatorResult Recover(
+        TimberbornBeaverFieldBehaviorStateEntry entry,
+        uint? tick)
+    {
+        return IsSmokeReactionAction(entry.LastAction)
+            ? ToActuatorResult(_workerSpeedAdapter.RecoverSmokeReaction(entry.BeaverId))
+            : TimberbornBeaverFieldBehaviorActuatorResult.Applied;
+    }
+
+    public void Clear()
+    {
+        _workerSpeedAdapter.Clear();
+    }
+
+    private static TimberbornBeaverFieldBehaviorActuatorResult ToActuatorResult(
+        TimberbornBeaverWorkerSpeedResult result)
+    {
+        return new TimberbornBeaverFieldBehaviorActuatorResult(result.Status, result.Reason);
+    }
+
+    private static float SmokeReactionWorkingSpeedMultiplier(TimberbornBeaverFieldBehaviorAction action)
+    {
+        return action == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown
+            ? ChokingWorkingSpeedMultiplier
+            : CoughingWorkingSpeedMultiplier;
+    }
+
+    private static bool IsSmokeReactionAction(TimberbornBeaverFieldBehaviorAction action)
+    {
+        return action is TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown or
+            TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown;
+    }
+}
+
+public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbornBeaverWorkerSpeedAdapter
+{
+    private const float RestoreTolerance = 0.001f;
+    private static readonly PropertyInfo? WorkerSpeedMultiplierProperty =
+        typeof(Worker).GetProperty(
+            nameof(Worker.WorkingSpeedMultiplier),
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    private readonly EntityRegistry _entityRegistry;
+    private readonly Dictionary<string, float> _originalWorkingSpeedMultiplierByBeaverId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TimberbornBeaverSmokeStatusToggles> _statusTogglesByBeaverId =
+        new(StringComparer.Ordinal);
+
+    public TimberbornEntityRegistryBeaverWorkerSpeedAdapter(EntityRegistry entityRegistry)
+    {
+        _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+    }
+
+    public TimberbornBeaverWorkerSpeedResult ApplySmokeReaction(
+        string beaverId,
+        TimberbornBeaverFieldBehaviorAction action,
+        float multiplier)
+    {
+        if (TryGetEntity(beaverId, out EntityComponent? entity, out string unavailableReason) &&
+            entity is not null)
+        {
+            TryApplyStatus(entity, beaverId, action);
+            TryApplyWorkingSpeed(entity, beaverId, multiplier);
+            return TimberbornBeaverWorkerSpeedResult.Applied;
+        }
+
+        return TimberbornBeaverWorkerSpeedResult.Skipped(unavailableReason);
+    }
+
+    public TimberbornBeaverWorkerSpeedResult RecoverSmokeReaction(string beaverId)
+    {
+        if (!TryGetEntity(beaverId, out EntityComponent? entity, out string unavailableReason) ||
+            entity is null)
+        {
+            _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
+            DeactivateStatus(beaverId);
+            return TimberbornBeaverWorkerSpeedResult.Skipped(unavailableReason);
+        }
+
+        DeactivateStatus(beaverId);
+        if (!entity.TryGetComponent(out Worker worker))
+        {
+            _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
+            return TimberbornBeaverWorkerSpeedResult.Applied;
+        }
+
+        float originalMultiplier = _originalWorkingSpeedMultiplierByBeaverId.TryGetValue(
+            beaverId,
+            out float storedMultiplier)
+            ? storedMultiplier
+            : 1f;
+        float slowedMultiplier = originalMultiplier * TimberbornWorkerSpeedBeaverFieldBehaviorActuator
+            .CoughingWorkingSpeedMultiplier;
+        if (worker.WorkingSpeedMultiplier <= slowedMultiplier + RestoreTolerance)
+        {
+            bool restored = TrySetWorkingSpeedMultiplier(worker, originalMultiplier);
+            _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
+            return restored
+                ? TimberbornBeaverWorkerSpeedResult.Applied
+                : TimberbornBeaverWorkerSpeedResult.Skipped("worker_speed_setter_unavailable");
+        }
+
+        _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
+        return TimberbornBeaverWorkerSpeedResult.Applied;
+    }
+
+    public void Clear()
+    {
+        _originalWorkingSpeedMultiplierByBeaverId.Clear();
+        _statusTogglesByBeaverId.Values
+            .ToList()
+            .ForEach(static toggles => toggles.DeactivateAll());
+        _statusTogglesByBeaverId.Clear();
+    }
+
+    private bool TryGetEntity(string beaverId, out EntityComponent? entity, out string unavailableReason)
+    {
+        entity = null;
+        unavailableReason = "none";
+        if (!Guid.TryParse(beaverId, out Guid entityId))
+        {
+            unavailableReason = "invalid_beaver_id";
+            return false;
+        }
+
+        try
+        {
+            entity = _entityRegistry.GetEntity(entityId);
+            if (!entity.TryGetComponent(out Beaver _))
+            {
+                unavailableReason = "entity_not_beaver";
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception exception)
+        {
+            unavailableReason = "worker_api_exception:" + exception.GetType().Name;
+            return false;
+        }
+    }
+
+    private void TryApplyWorkingSpeed(EntityComponent entity, string beaverId, float multiplier)
+    {
+        if (!entity.TryGetComponent(out Worker worker))
+        {
+            return;
+        }
+
+        float originalMultiplier = _originalWorkingSpeedMultiplierByBeaverId.TryGetValue(
+            beaverId,
+            out float storedMultiplier)
+            ? storedMultiplier
+            : worker.WorkingSpeedMultiplier;
+        _originalWorkingSpeedMultiplierByBeaverId.TryAdd(beaverId, originalMultiplier);
+        TrySetWorkingSpeedMultiplier(
+            worker,
+            Math.Min(worker.WorkingSpeedMultiplier, originalMultiplier * multiplier));
+    }
+
+    private static bool TrySetWorkingSpeedMultiplier(Worker worker, float multiplier)
+    {
+        try
+        {
+            MethodInfo? setter = WorkerSpeedMultiplierProperty?.GetSetMethod(nonPublic: true);
+            if (setter is null)
+            {
+                return false;
+            }
+
+            setter.Invoke(worker, new object[] { multiplier });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void TryApplyStatus(
+        EntityComponent entity,
+        string beaverId,
+        TimberbornBeaverFieldBehaviorAction action)
+    {
+        if (!entity.TryGetComponent(out StatusSubject statusSubject))
+        {
+            return;
+        }
+
+        try
+        {
+            TimberbornBeaverSmokeStatusToggles toggles = GetOrCreateStatusToggles(beaverId, statusSubject);
+            toggles.Apply(action);
+        }
+        catch
+        {
+            _statusTogglesByBeaverId.Remove(beaverId);
+        }
+    }
+
+    private TimberbornBeaverSmokeStatusToggles GetOrCreateStatusToggles(
+        string beaverId,
+        StatusSubject statusSubject)
+    {
+        if (_statusTogglesByBeaverId.TryGetValue(beaverId, out TimberbornBeaverSmokeStatusToggles toggles))
+        {
+            return toggles;
+        }
+
+        TimberbornBeaverSmokeStatusToggles createdToggles = TimberbornBeaverSmokeStatusToggles.Create(statusSubject);
+        _statusTogglesByBeaverId[beaverId] = createdToggles;
+        return createdToggles;
+    }
+
+    private void DeactivateStatus(string beaverId)
+    {
+        if (!_statusTogglesByBeaverId.TryGetValue(beaverId, out TimberbornBeaverSmokeStatusToggles toggles))
+        {
+            return;
+        }
+
+        toggles.DeactivateAll();
+    }
+
+    private sealed class TimberbornBeaverSmokeStatusToggles
+    {
+        private const string CoughingStatusIcon = "WildfireCoughingStatus";
+        private const string ChokingStatusIcon = "WildfireChokingStatus";
+
+        private readonly StatusToggle _coughingStatus;
+        private readonly StatusToggle _chokingStatus;
+
+        private TimberbornBeaverSmokeStatusToggles(StatusToggle coughingStatus, StatusToggle chokingStatus)
+        {
+            _coughingStatus = coughingStatus;
+            _chokingStatus = chokingStatus;
+        }
+
+        public static TimberbornBeaverSmokeStatusToggles Create(StatusSubject statusSubject)
+        {
+            StatusToggle coughingStatus = StatusToggle.CreateNormalStatusWithFloatingIcon(
+                CoughingStatusIcon,
+                "Coughing from smoke",
+                delayInHours: 0f);
+            StatusToggle chokingStatus = StatusToggle.CreatePriorityStatusWithFloatingIcon(
+                ChokingStatusIcon,
+                "Choking on smoke",
+                delayInHours: 0f);
+            statusSubject.RegisterStatus(coughingStatus);
+            statusSubject.RegisterStatus(chokingStatus);
+            return new TimberbornBeaverSmokeStatusToggles(coughingStatus, chokingStatus);
+        }
+
+        public void Apply(TimberbornBeaverFieldBehaviorAction action)
+        {
+            if (action == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown)
+            {
+                _coughingStatus.Deactivate();
+                _chokingStatus.Activate();
+                return;
+            }
+
+            _chokingStatus.Deactivate();
+            _coughingStatus.Activate();
+        }
+
+        public void DeactivateAll()
+        {
+            _coughingStatus.Deactivate();
+            _chokingStatus.Deactivate();
+        }
+    }
+}
+
 public readonly record struct TimberbornBeaverFieldBehaviorCounters(
     bool DispatcherEnabled,
     int TrackedBeaverCount,
@@ -121,9 +508,25 @@ public readonly record struct TimberbornBeaverFieldBehaviorCounters(
     int FireHeatDecisionsApplied,
     int NoOpDecisionsApplied,
     int DecisionsSkippedCooldown,
+    int DecisionsSkippedBatch,
     int SkippedNoSafeApi,
     int FailedDecisions,
     int RecoveryActions,
+    int SmokeExposedSamples,
+    int SmokeExposureAccumulatedSamples,
+    int SmokeCoughingEntered,
+    int SmokeCoughingRecovered,
+    int SmokeCoughingSlowdownsApplied,
+    int SmokeCoughingSlowdownsRecovered,
+    int SmokeCoughingSlowdownsSkippedNoSafeApi,
+    int SmokeRecoveryDecays,
+    int SmokeChokingCandidates,
+    int SmokeChokingSlowdownsApplied,
+    int SmokeChokingSlowdownsRecovered,
+    int SmokeChokingSlowdownsSkippedNoSafeApi,
+    int SmokeChokingSkippedUnsafeApi,
+    int SmokeDeathCandidates,
+    int SmokeDeathSkippedUnsafeApi,
     int PersistenceSaveCount,
     int PersistenceLoadCount,
     uint? LastDecisionTick);
@@ -143,6 +546,7 @@ public sealed record TimberbornBeaverFieldBehaviorStateEntry(
     int PersistenceVersion,
     string BeaverId,
     TimberbornBeaverFieldBehaviorVariant LastVariant,
+    TimberbornBeaverFieldBehaviorAction LastAction,
     uint LastDecisionTick,
     int ConsecutiveExposedSamples,
     bool IsExposed)
@@ -162,9 +566,25 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private int _fireHeatDecisionsApplied;
     private int _noOpDecisionsApplied;
     private int _decisionsSkippedCooldown;
+    private int _decisionsSkippedBatch;
     private int _skippedNoSafeApi;
     private int _failedDecisions;
     private int _recoveryActions;
+    private int _smokeExposedSamples;
+    private int _smokeExposureAccumulatedSamples;
+    private int _smokeCoughingEntered;
+    private int _smokeCoughingRecovered;
+    private int _smokeCoughingSlowdownsApplied;
+    private int _smokeCoughingSlowdownsRecovered;
+    private int _smokeCoughingSlowdownsSkippedNoSafeApi;
+    private int _smokeRecoveryDecays;
+    private int _smokeChokingCandidates;
+    private int _smokeChokingSlowdownsApplied;
+    private int _smokeChokingSlowdownsRecovered;
+    private int _smokeChokingSlowdownsSkippedNoSafeApi;
+    private int _smokeChokingSkippedUnsafeApi;
+    private int _smokeDeathCandidates;
+    private int _smokeDeathSkippedUnsafeApi;
     private int _persistenceSaveCount;
     private int _persistenceLoadCount;
     private uint? _lastDecisionTick;
@@ -190,9 +610,25 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         FireHeatDecisionsApplied: _fireHeatDecisionsApplied,
         NoOpDecisionsApplied: _noOpDecisionsApplied,
         DecisionsSkippedCooldown: _decisionsSkippedCooldown,
+        DecisionsSkippedBatch: _decisionsSkippedBatch,
         SkippedNoSafeApi: _skippedNoSafeApi,
         FailedDecisions: _failedDecisions,
         RecoveryActions: _recoveryActions,
+        SmokeExposedSamples: _smokeExposedSamples,
+        SmokeExposureAccumulatedSamples: _smokeExposureAccumulatedSamples,
+        SmokeCoughingEntered: _smokeCoughingEntered,
+        SmokeCoughingRecovered: _smokeCoughingRecovered,
+        SmokeCoughingSlowdownsApplied: _smokeCoughingSlowdownsApplied,
+        SmokeCoughingSlowdownsRecovered: _smokeCoughingSlowdownsRecovered,
+        SmokeCoughingSlowdownsSkippedNoSafeApi: _smokeCoughingSlowdownsSkippedNoSafeApi,
+        SmokeRecoveryDecays: _smokeRecoveryDecays,
+        SmokeChokingCandidates: _smokeChokingCandidates,
+        SmokeChokingSlowdownsApplied: _smokeChokingSlowdownsApplied,
+        SmokeChokingSlowdownsRecovered: _smokeChokingSlowdownsRecovered,
+        SmokeChokingSlowdownsSkippedNoSafeApi: _smokeChokingSlowdownsSkippedNoSafeApi,
+        SmokeChokingSkippedUnsafeApi: _smokeChokingSkippedUnsafeApi,
+        SmokeDeathCandidates: _smokeDeathCandidates,
+        SmokeDeathSkippedUnsafeApi: _smokeDeathSkippedUnsafeApi,
         PersistenceSaveCount: _persistenceSaveCount,
         PersistenceLoadCount: _persistenceLoadCount,
         LastDecisionTick: _lastDecisionTick);
@@ -221,14 +657,21 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             .ToHashSet(StringComparer.Ordinal);
 
         _statesByBeaverId.Values
-            .Where(entry => entry.IsExposed && sampledBeaverIds.Contains(entry.BeaverId) && !exposedBeaverIds.Contains(entry.BeaverId))
+            .Where(entry =>
+                sampledBeaverIds.Contains(entry.BeaverId) &&
+                !exposedBeaverIds.Contains(entry.BeaverId) &&
+                (entry.IsExposed || entry.ConsecutiveExposedSamples > 0))
             .ToArray()
             .ToList()
             .ForEach(entry => Recover(entry, tick));
 
-        classifications
+        TimberbornBeaverFieldExposureClassification[] exposedClassifications = classifications
             .Where(static classification => classification.HasExposure)
             .OrderBy(static classification => classification.BeaverId, StringComparer.Ordinal)
+            .ToArray();
+        _decisionsSkippedBatch += Math.Max(0, exposedClassifications.Length - Options.MaxDecisionsPerDispatch);
+
+        exposedClassifications
             .Take(Options.MaxDecisionsPerDispatch)
             .Select(classification => CreateDecision(classification, tick))
             .ToList()
@@ -276,9 +719,25 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _fireHeatDecisionsApplied = 0;
         _noOpDecisionsApplied = 0;
         _decisionsSkippedCooldown = 0;
+        _decisionsSkippedBatch = 0;
         _skippedNoSafeApi = 0;
         _failedDecisions = 0;
         _recoveryActions = 0;
+        _smokeExposedSamples = 0;
+        _smokeExposureAccumulatedSamples = 0;
+        _smokeCoughingEntered = 0;
+        _smokeCoughingRecovered = 0;
+        _smokeCoughingSlowdownsApplied = 0;
+        _smokeCoughingSlowdownsRecovered = 0;
+        _smokeCoughingSlowdownsSkippedNoSafeApi = 0;
+        _smokeRecoveryDecays = 0;
+        _smokeChokingCandidates = 0;
+        _smokeChokingSlowdownsApplied = 0;
+        _smokeChokingSlowdownsRecovered = 0;
+        _smokeChokingSlowdownsSkippedNoSafeApi = 0;
+        _smokeChokingSkippedUnsafeApi = 0;
+        _smokeDeathCandidates = 0;
+        _smokeDeathSkippedUnsafeApi = 0;
         _lastDecisionTick = null;
         _actuator.Clear();
     }
@@ -286,16 +745,28 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private void ApplyDecision(TimberbornBeaverFieldBehaviorDecision decision, uint? tick)
     {
         _decisionsEvaluated++;
+        _smokeExposedSamples += HasSmokeReactionExposure(decision) ? 1 : 0;
         if (IsCoolingDown(decision.BeaverId, tick))
         {
             _decisionsSkippedCooldown++;
             return;
         }
 
-        TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Apply(decision);
+        int previousExposedSamples = _statesByBeaverId.TryGetValue(
+            decision.BeaverId,
+            out TimberbornBeaverFieldBehaviorStateEntry previous)
+            ? previous.ConsecutiveExposedSamples
+            : 0;
+        TimberbornBeaverFieldBehaviorDecision progressedDecision = decision with
+        {
+            Action = SelectAction(decision, previousExposedSamples + 1),
+        };
+
+        TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Apply(progressedDecision);
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi)
         {
             _skippedNoSafeApi++;
+            CountSmokeSlowdownSkip(progressedDecision);
             return;
         }
 
@@ -305,20 +776,18 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             return;
         }
 
-        int exposedSamples = _statesByBeaverId.TryGetValue(
-            decision.BeaverId,
-            out TimberbornBeaverFieldBehaviorStateEntry previous)
-            ? previous.ConsecutiveExposedSamples + 1
-            : 1;
+        int exposedSamples = previousExposedSamples + 1;
         _statesByBeaverId[decision.BeaverId] = new TimberbornBeaverFieldBehaviorStateEntry(
             TimberbornBeaverFieldBehaviorStateEntry.CurrentPersistenceVersion,
-            decision.BeaverId,
-            decision.Variant,
+            progressedDecision.BeaverId,
+            progressedDecision.Variant,
+            progressedDecision.Action,
             tick ?? 0,
             exposedSamples,
             IsExposed: true);
         _lastDecisionTick = tick;
-        CountAppliedVariant(decision);
+        CountAppliedVariant(progressedDecision);
+        CountSmokeProgression(progressedDecision, previousExposedSamples, exposedSamples);
     }
 
     private bool IsCoolingDown(string beaverId, uint? tick)
@@ -335,6 +804,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi)
         {
             _skippedNoSafeApi++;
+            CountSmokeSlowdownSkip(entry);
             return;
         }
 
@@ -347,17 +817,142 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _statesByBeaverId[entry.BeaverId] = entry with
         {
             IsExposed = false,
-            ConsecutiveExposedSamples = 0,
+            ConsecutiveExposedSamples = RecoveryExposedSamples(entry),
         };
         _recoveryActions++;
+        CountSmokeRecovery(entry, _statesByBeaverId[entry.BeaverId].ConsecutiveExposedSamples);
     }
 
     private void CountAppliedVariant(TimberbornBeaverFieldBehaviorDecision decision)
     {
-        _noOpDecisionsApplied += decision.Action == TimberbornBeaverFieldBehaviorAction.SafeNoOp ? 1 : 0;
+        _noOpDecisionsApplied += IsNoOpAction(decision.Action) ? 1 : 0;
         _smokeDecisionsApplied += decision.Variant == TimberbornBeaverFieldBehaviorVariant.Smoke ? 1 : 0;
         _toxicSmokeDecisionsApplied += decision.Variant == TimberbornBeaverFieldBehaviorVariant.ToxicSmoke ? 1 : 0;
         _fireHeatDecisionsApplied += decision.Variant == TimberbornBeaverFieldBehaviorVariant.FireHeat ? 1 : 0;
+    }
+
+    private void CountSmokeProgression(
+        TimberbornBeaverFieldBehaviorDecision decision,
+        int previousExposedSamples,
+        int exposedSamples)
+    {
+        if (!HasSmokeReactionExposure(decision))
+        {
+            return;
+        }
+
+        _smokeExposureAccumulatedSamples++;
+        _smokeCoughingEntered += !IsSmokeCoughing(previousExposedSamples) && IsSmokeCoughing(exposedSamples) ? 1 : 0;
+        _smokeCoughingSlowdownsApplied += decision.Action == TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown
+            ? 1
+            : 0;
+        _smokeChokingSlowdownsApplied += decision.Action == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown
+            ? 1
+            : 0;
+        bool chokingCandidateEntered = previousExposedSamples < Options.SmokeChokingCandidateThresholdSamples &&
+            exposedSamples >= Options.SmokeChokingCandidateThresholdSamples;
+        bool deathCandidateEntered = previousExposedSamples < Options.SmokeDeathCandidateThresholdSamples &&
+            exposedSamples >= Options.SmokeDeathCandidateThresholdSamples;
+        _smokeChokingCandidates += chokingCandidateEntered ? 1 : 0;
+        _smokeDeathCandidates += deathCandidateEntered ? 1 : 0;
+        _smokeDeathSkippedUnsafeApi += deathCandidateEntered ? 1 : 0;
+        _skippedNoSafeApi += deathCandidateEntered
+            ? 1
+            : 0;
+    }
+
+    private void CountSmokeRecovery(TimberbornBeaverFieldBehaviorStateEntry entry, int recoveredExposedSamples)
+    {
+        if (!IsSmokeReactionVariant(entry.LastVariant))
+        {
+            return;
+        }
+
+        _smokeRecoveryDecays += recoveredExposedSamples < entry.ConsecutiveExposedSamples ? 1 : 0;
+        _smokeCoughingSlowdownsRecovered += entry.LastAction == TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown
+            ? 1
+            : 0;
+        _smokeChokingSlowdownsRecovered += entry.LastAction == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown
+            ? 1
+            : 0;
+        _smokeCoughingRecovered +=
+            IsSmokeCoughing(entry.ConsecutiveExposedSamples) && !IsSmokeCoughing(recoveredExposedSamples)
+                ? 1
+                : 0;
+    }
+
+    private int RecoveryExposedSamples(TimberbornBeaverFieldBehaviorStateEntry entry)
+    {
+        return IsSmokeReactionVariant(entry.LastVariant)
+            ? Math.Max(0, entry.ConsecutiveExposedSamples - Options.SmokeRecoveryDecaySamples)
+            : 0;
+    }
+
+    private TimberbornBeaverFieldBehaviorAction SelectAction(
+        TimberbornBeaverFieldBehaviorDecision decision,
+        int exposedSamples)
+    {
+        if (!HasSmokeReactionExposure(decision))
+        {
+            return TimberbornBeaverFieldBehaviorAction.SafeNoOp;
+        }
+
+        if (exposedSamples >= Options.SmokeChokingCandidateThresholdSamples)
+        {
+            return TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown;
+        }
+
+        return IsSmokeCoughing(exposedSamples)
+            ? TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown
+            : TimberbornBeaverFieldBehaviorAction.SafeNoOp;
+    }
+
+    private void CountSmokeSlowdownSkip(TimberbornBeaverFieldBehaviorDecision decision)
+    {
+        _smokeCoughingSlowdownsSkippedNoSafeApi +=
+            decision.Action == TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown ? 1 : 0;
+        _smokeChokingSlowdownsSkippedNoSafeApi +=
+            decision.Action == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown ? 1 : 0;
+    }
+
+    private void CountSmokeSlowdownSkip(TimberbornBeaverFieldBehaviorStateEntry entry)
+    {
+        _smokeCoughingSlowdownsSkippedNoSafeApi +=
+            entry.LastAction == TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown ? 1 : 0;
+        _smokeChokingSlowdownsSkippedNoSafeApi +=
+            entry.LastAction == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown ? 1 : 0;
+    }
+
+    private bool IsSmokeCoughing(int exposedSamples)
+    {
+        return exposedSamples >= Options.SmokeCoughingThresholdSamples;
+    }
+
+    private static bool IsSmokeReactionVariant(TimberbornBeaverFieldBehaviorVariant variant)
+    {
+        return variant is TimberbornBeaverFieldBehaviorVariant.Smoke or
+            TimberbornBeaverFieldBehaviorVariant.ToxicSmoke;
+    }
+
+    private static bool HasSmokeReactionExposure(TimberbornBeaverFieldBehaviorDecision decision)
+    {
+        return IsSmokeReactionVariant(decision.Variant) ||
+            decision.RespiratoryExposureCells > 0 ||
+            decision.ContaminatedSmokeCells > 0 ||
+            decision.ToxicExposureCells > 0 ||
+            decision.SteamCells > 0;
+    }
+
+    private static bool IsNoOpAction(TimberbornBeaverFieldBehaviorAction action)
+    {
+        return action is TimberbornBeaverFieldBehaviorAction.SafeNoOp or
+            TimberbornBeaverFieldBehaviorAction.CoughingSafeNoOp;
+    }
+
+    private static bool IsSmokeReactionAction(TimberbornBeaverFieldBehaviorAction action)
+    {
+        return action is TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown or
+            TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown;
     }
 
     private static TimberbornBeaverFieldBehaviorDecision CreateDecision(
@@ -411,9 +1006,25 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             $"fire_heat_decisions_applied={counters.FireHeatDecisionsApplied} " +
             $"noop_decisions_applied={counters.NoOpDecisionsApplied} " +
             $"decisions_skipped_cooldown={counters.DecisionsSkippedCooldown} " +
+            $"decisions_skipped_batch={counters.DecisionsSkippedBatch} " +
             $"skipped_no_safe_api={counters.SkippedNoSafeApi} " +
             $"failed_decisions={counters.FailedDecisions} " +
             $"recovery_actions={counters.RecoveryActions} " +
+            $"smoke_exposed_samples={counters.SmokeExposedSamples} " +
+            $"smoke_exposure_accumulated_samples={counters.SmokeExposureAccumulatedSamples} " +
+            $"smoke_coughing_entered={counters.SmokeCoughingEntered} " +
+            $"smoke_coughing_recovered={counters.SmokeCoughingRecovered} " +
+            $"smoke_coughing_slowdowns_applied={counters.SmokeCoughingSlowdownsApplied} " +
+            $"smoke_coughing_slowdowns_recovered={counters.SmokeCoughingSlowdownsRecovered} " +
+            $"smoke_coughing_slowdowns_skipped_no_safe_api={counters.SmokeCoughingSlowdownsSkippedNoSafeApi} " +
+            $"smoke_recovery_decays={counters.SmokeRecoveryDecays} " +
+            $"smoke_choking_candidates={counters.SmokeChokingCandidates} " +
+            $"smoke_choking_slowdowns_applied={counters.SmokeChokingSlowdownsApplied} " +
+            $"smoke_choking_slowdowns_recovered={counters.SmokeChokingSlowdownsRecovered} " +
+            $"smoke_choking_slowdowns_skipped_no_safe_api={counters.SmokeChokingSlowdownsSkippedNoSafeApi} " +
+            $"smoke_choking_skipped_unsafe_api={counters.SmokeChokingSkippedUnsafeApi} " +
+            $"smoke_death_candidates={counters.SmokeDeathCandidates} " +
+            $"smoke_death_skipped_unsafe_api={counters.SmokeDeathSkippedUnsafeApi} " +
             $"persistence_saves={counters.PersistenceSaveCount} " +
             $"persistence_loads={counters.PersistenceLoadCount}");
     }

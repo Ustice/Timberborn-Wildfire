@@ -265,6 +265,24 @@ public sealed class TimberbornCompatibilityProbeTests
         Assert.Contains("asset_and_kernel_validation_deferred_to_TWF-050", validResult.Message);
     }
 
+    [Fact]
+    public void UnityAssetBundleProbeDefersExistingHeaderReadErrorsToUnityLoader()
+    {
+        TimberbornCompatibilityProbeResult result = TimberbornCompatibilityProbeCatalog.ProbeUnityAssetBundleFile(
+            "compute_shader_bundle",
+            isRequired: true,
+            "compute",
+            "/tmp/wildfire_compute_mac",
+            exists: true,
+            sizeBytes: null,
+            header: null,
+            readError: "Win32 IO returned ERROR_NOT_SUPPORTED");
+
+        Assert.Equal(TimberbornCompatibilityProbeStatus.Passed, result.Status);
+        Assert.Contains("asset_bundle_exists_header_unreadable", result.Message);
+        Assert.Contains("asset_and_kernel_validation_deferred_to_unity_loader", result.Message);
+    }
+
     private sealed class RecordingFireLogSink : ITimberbornFireLogSink
     {
         public List<string> InfoMessages { get; } = new();

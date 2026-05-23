@@ -4,6 +4,7 @@ using Timberborn.BlockSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Goods;
 using Timberborn.SelectionSystem;
+using Timberborn.MapIndexSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.TerrainSystem;
 using Timberborn.SoilContaminationSystem;
@@ -88,6 +89,7 @@ public sealed class TimberbornFireRuntime :
         ITerrainService terrainService,
         IBlockService blockService,
         ISoilContaminationService soilContaminationService,
+        MapIndexService mapIndexService,
         IDayNightCycle dayNightCycle,
         ISingletonLoader singletonLoader)
     {
@@ -116,7 +118,8 @@ public sealed class TimberbornFireRuntime :
             visualFieldSurface,
             _logSink);
         _beaverFieldBehaviorDispatcher = new TimberbornBeaverFieldBehaviorDispatcher(
-            TimberbornNoOpBeaverFieldBehaviorActuator.Instance,
+            new TimberbornWorkerSpeedBeaverFieldBehaviorActuator(
+                new TimberbornEntityRegistryBeaverWorkerSpeedAdapter(_entityRegistry)),
             _logSink);
         _ashFieldService = new TimberbornAshFieldService(
             new TimberbornGrowableAshGrowthAdapter(
@@ -125,7 +128,11 @@ public sealed class TimberbornFireRuntime :
                 _logSink),
             _logSink);
         _taintedAshSoilPoisoningService = new TimberbornTaintedAshSoilPoisoningService(
-            new TimberbornSoilContaminationAshPoisoningAdapter(_soilContaminationService, CurrentGrid, _logSink),
+            new TimberbornSoilContaminationAshPoisoningAdapter(
+                _soilContaminationService,
+                CurrentGrid,
+                mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService)),
+                _logSink),
             _logSink);
         _fertileAshCollectionService = new TimberbornFertileAshCollectionService(
             new TimberbornGathererPostFertileAshCollectionAdapter(_entityRegistry, CurrentGrid, _logSink),
@@ -792,6 +799,8 @@ public sealed class TimberbornFireRuntime :
         TimberbornContaminationFireConsequenceSummary contaminationFireSummary =
             fireSystem.ContaminationFireSummary;
         TimberbornGpuVisualFieldSurfaceState visualFieldSurfaceState = fireSystem.VisualFieldSurfaceState;
+        TimberbornSmokeHeightTelemetry smokeHeightTelemetry =
+            visualFieldSurfaceState.SmokeHeightTelemetry ?? TimberbornSmokeHeightTelemetry.Empty;
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
         TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
@@ -1020,6 +1029,19 @@ public sealed class TimberbornFireRuntime :
             VisualFieldSurfaceBound: visualFieldSurfaceState.IsBound,
             VisualFieldSurfaceCellCount: visualFieldSurfaceState.CellCount,
             VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick,
+            SmokeHeightSmokeCellCount: smokeHeightTelemetry.SmokeCellCount,
+            SmokeHeightGroundContactSmokeCellCount: smokeHeightTelemetry.GroundContactSmokeCellCount,
+            SmokeHeightAbsoluteGroundSmokeCellCount: smokeHeightTelemetry.AbsoluteGroundSmokeCellCount,
+            SmokeHeightNearBottomSmokeCellCount: smokeHeightTelemetry.NearBottomSmokeCellCount,
+            SmokeHeightLowestSmokeZ: smokeHeightTelemetry.LowestSmokeZ,
+            SmokeHeightHighestSmokeZ: smokeHeightTelemetry.HighestSmokeZ,
+            SmokeHeightPeakSmoke: smokeHeightTelemetry.PeakSmoke,
+            SmokeHeightSmokeCellCountAtLowestZ: smokeHeightTelemetry.SmokeCellCountAtLowestZ,
+            SmokeHeightContaminatedSmokeCellCount: smokeHeightTelemetry.ContaminatedSmokeCellCount,
+            SmokeHeightSourceSmokeCellCount: smokeHeightTelemetry.SourceSmokeCellCount,
+            SmokeHeightNonSourceSmokeCellCount: smokeHeightTelemetry.NonSourceSmokeCellCount,
+            SmokeHeightNonSourceGroundContactSmokeCellCount: smokeHeightTelemetry.NonSourceGroundContactSmokeCellCount,
+            SmokeHeightMaxNonSourceSmokeDistanceFromSource: smokeHeightTelemetry.MaxNonSourceSmokeDistanceFromSource,
             GpuFieldRendererEnabled: gpuFieldRendererCounters.RendererEnabled,
             GpuFieldRendererMaterialReady: gpuFieldRendererCounters.MaterialReady,
             GpuFieldRendererSurfaceBound: gpuFieldRendererCounters.VisualFieldSurfaceBound,
@@ -1052,9 +1074,25 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldBehaviorFireHeatDecisionsApplied: beaverFieldBehaviorCounters.FireHeatDecisionsApplied,
             BeaverFieldBehaviorNoOpDecisionsApplied: beaverFieldBehaviorCounters.NoOpDecisionsApplied,
             BeaverFieldBehaviorDecisionsSkippedCooldown: beaverFieldBehaviorCounters.DecisionsSkippedCooldown,
+            BeaverFieldBehaviorDecisionsSkippedBatch: beaverFieldBehaviorCounters.DecisionsSkippedBatch,
             BeaverFieldBehaviorSkippedNoSafeApi: beaverFieldBehaviorCounters.SkippedNoSafeApi,
             BeaverFieldBehaviorFailedDecisions: beaverFieldBehaviorCounters.FailedDecisions,
             BeaverFieldBehaviorRecoveryActions: beaverFieldBehaviorCounters.RecoveryActions,
+            BeaverFieldBehaviorSmokeExposedSamples: beaverFieldBehaviorCounters.SmokeExposedSamples,
+            BeaverFieldBehaviorSmokeExposureAccumulatedSamples: beaverFieldBehaviorCounters.SmokeExposureAccumulatedSamples,
+            BeaverFieldBehaviorSmokeCoughingEntered: beaverFieldBehaviorCounters.SmokeCoughingEntered,
+            BeaverFieldBehaviorSmokeCoughingRecovered: beaverFieldBehaviorCounters.SmokeCoughingRecovered,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsApplied: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsApplied,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsRecovered,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedNoSafeApi: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsSkippedNoSafeApi,
+            BeaverFieldBehaviorSmokeRecoveryDecays: beaverFieldBehaviorCounters.SmokeRecoveryDecays,
+            BeaverFieldBehaviorSmokeChokingCandidates: beaverFieldBehaviorCounters.SmokeChokingCandidates,
+            BeaverFieldBehaviorSmokeChokingSlowdownsApplied: beaverFieldBehaviorCounters.SmokeChokingSlowdownsApplied,
+            BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeChokingSlowdownsRecovered,
+            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedNoSafeApi: beaverFieldBehaviorCounters.SmokeChokingSlowdownsSkippedNoSafeApi,
+            BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeChokingSkippedUnsafeApi,
+            BeaverFieldBehaviorSmokeDeathCandidates: beaverFieldBehaviorCounters.SmokeDeathCandidates,
+            BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeDeathSkippedUnsafeApi,
             BeaverFieldBehaviorPersistenceSaves: beaverFieldBehaviorCounters.PersistenceSaveCount,
             BeaverFieldBehaviorPersistenceLoads: beaverFieldBehaviorCounters.PersistenceLoadCount,
             BeaverFieldBehaviorLastDecisionTick: beaverFieldBehaviorCounters.LastDecisionTick,

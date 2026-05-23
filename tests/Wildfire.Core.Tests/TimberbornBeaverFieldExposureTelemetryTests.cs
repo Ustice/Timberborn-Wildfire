@@ -6,6 +6,36 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornBeaverFieldExposureTelemetryTests
 {
     [Fact]
+    public void BeaverWorldPositionMapsUnityVerticalToFireGridZ()
+    {
+        FireGrid grid = new(50, 50, 23);
+
+        TimberbornBeaverFireGridCoordinates? coordinates =
+            TimberbornEntityRegistryBeaverPositionProvider.WorldToFireGridCoordinates(
+                worldX: 22.9f,
+                worldY: 4.1f,
+                worldZ: 21.8f,
+                grid);
+
+        Assert.Equal(new TimberbornBeaverFireGridCoordinates(22, 21, 4), coordinates);
+    }
+
+    [Fact]
+    public void BeaverWorldPositionOutsideFireGridReturnsNull()
+    {
+        FireGrid grid = new(50, 50, 23);
+
+        TimberbornBeaverFireGridCoordinates? coordinates =
+            TimberbornEntityRegistryBeaverPositionProvider.WorldToFireGridCoordinates(
+                worldX: 22.9f,
+                worldY: 30.1f,
+                worldZ: 21.8f,
+                grid);
+
+        Assert.Null(coordinates);
+    }
+
+    [Fact]
     public void ClassifyCountsRespiratoryBurnToxicAndAftermathExposureSeparately()
     {
         FireGrid grid = new(3, 3, 1);
@@ -123,7 +153,17 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
         Assert.Equal(1, snapshot.BurnExposureCells);
         Assert.Equal(1, snapshot.TaintedAftermathCells);
         Assert.Equal(9, surface.LastInspectedCellIndices.Count);
-        Assert.Contains("steam_cells=0", logSink.InfoMessages.Single());
+        string aggregateLog = logSink.InfoMessages.Single(static message =>
+            message.StartsWith(
+                "wildfire_timberborn_beaver_field_exposure_sampled ",
+                StringComparison.Ordinal));
+        string beaverLog = logSink.InfoMessages.Single(static message =>
+            message.StartsWith(
+                "wildfire_timberborn_beaver_field_exposure_beaver_sampled ",
+                StringComparison.Ordinal));
+        Assert.Contains("steam_cells=0", aggregateLog);
+        Assert.Contains("beaver_id=beaver-1", beaverLog);
+        Assert.Contains("max_smoke=0.3", beaverLog);
     }
 
     [Fact]
@@ -193,8 +233,12 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
         Assert.Equal(28, snapshot.SampledBeavers);
         Assert.Equal(1, snapshot.SkippedBoundedSampling);
         Assert.Equal(0, snapshot.ExposedBeavers);
-        Assert.Contains("sampled_beavers=28", logSink.InfoMessages.Single());
-        Assert.Contains("skipped_bounded_sampling=1", logSink.InfoMessages.Single());
+        string aggregateLog = logSink.InfoMessages.Single(static message =>
+            message.StartsWith(
+                "wildfire_timberborn_beaver_field_exposure_sampled ",
+                StringComparison.Ordinal));
+        Assert.Contains("sampled_beavers=28", aggregateLog);
+        Assert.Contains("skipped_bounded_sampling=1", aggregateLog);
     }
 
     private static TimberbornGpuVisualFieldSample Sample(
@@ -279,6 +323,11 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
                 .Where(_samplesByCell.ContainsKey)
                 .Select(cellIndex => _samplesByCell[cellIndex])
                 .ToArray();
+        }
+
+        public TimberbornSmokeHeightTelemetry SnapshotSmokeHeight()
+        {
+            return TimberbornSmokeHeightTelemetry.Empty;
         }
 
         public void Unbind()

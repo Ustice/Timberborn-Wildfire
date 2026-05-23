@@ -23,7 +23,9 @@ public sealed class TimberbornWindProvider : ITimberbornWindProvider
         get
         {
             Vector2 direction = _windService.WindDirection;
-            return new FireSimWind(direction.x, direction.y, _windService.WindStrength).Normalized();
+            // Timberborn applies WindDirection.y as negative world Z for wind particles.
+            // FireSimWind.DirectionY is Timberborn/grid north, which maps to positive world Z.
+            return new FireSimWind(direction.x, -direction.y, _windService.WindStrength).Normalized();
         }
     }
 }
