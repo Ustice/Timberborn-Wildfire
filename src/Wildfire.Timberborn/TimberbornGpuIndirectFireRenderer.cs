@@ -26,10 +26,17 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const int VertsPerTongue     = 36;  // 4 pyramid faces × 9 verts (bottom quad + top tri)
     private const int VertsPerCloud      = 6;
     private const int SmokePuffsPerCell  = 8;
-    private const int SteamPuffsPerCell  = 3;
+    private const int SteamPuffsPerCell  = 8;
     private const float SmokeRadius = 1.38f;
     private const float SmokeHeightOffset = 3.55f;
     private const float SmokeMaxOpacity = 0.74f;
+    private const float SteamColorRed = 0.92f;
+    private const float SteamColorGreen = 0.98f;
+    private const float SteamColorBlue = 1.0f;
+    private const float SteamRadius = 1.18f;
+    private const float SteamHeightOffset = 0.08f;
+    private const float SteamMaxHeight = 2.85f;
+    private const float SteamMaxOpacity = 0.72f;
 
     // Asymmetric smoothing rates (exponential lerp per second).
     // Fast ramp-up for immediate ignition feedback; slow ramp-down for particle-lifetime feel.
@@ -37,8 +44,8 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private const float FireDownSpeed = 2.0f;
     private const float SmokeUpSpeed  = 2.8f;
     private const float SmokeDownSpeed = 0.72f;
-    private const float SteamUpSpeed  = 1.45f;
-    private const float SteamDownSpeed = 3.75f;
+    private const float SteamUpSpeed  = 3.10f;
+    private const float SteamDownSpeed = 0.70f;
 
     private readonly TimberbornComputeFireSimulator _simulator;
     private readonly FireGrid _grid;
@@ -111,6 +118,17 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
                 $"max_opacity={SmokeMaxOpacity:F2} " +
                 $"up_speed={SmokeUpSpeed:F2} " +
                 $"down_speed={SmokeDownSpeed:F2}");
+            _logSink.Info(
+                "wildfire_timberborn_gpu_indirect_renderer_steam_tuning " +
+                "field_source=atmospheric_fields clean=true contaminated=false " +
+                $"puffs_per_cell={SteamPuffsPerCell} " +
+                $"base_color={SteamColorRed:F2},{SteamColorGreen:F2},{SteamColorBlue:F2} " +
+                $"radius={SteamRadius:F2} " +
+                $"height_offset={SteamHeightOffset:F2} " +
+                $"max_height={SteamMaxHeight:F2} " +
+                $"max_opacity={SteamMaxOpacity:F2} " +
+                $"up_speed={SteamUpSpeed:F2} " +
+                $"down_speed={SteamDownSpeed:F2}");
         }
         catch (Exception exception)
         {
@@ -285,11 +303,13 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _steamMaterial = new Material(cloudShader) { name = "wildfire_steam" };
         _steamMaterial.SetBuffer("_SmoothedFields",     _smoothedFieldsBuffer!);
         _steamMaterial.SetBuffer("_CellWorldPositions", _cellPositionsBuffer!);
-        _steamMaterial.SetColor("_BaseColor",   new Color(0.92f, 0.94f, 0.96f));
-        _steamMaterial.SetFloat("_Radius",        0.66f);
-        _steamMaterial.SetFloat("_HeightOffset",  0.1f);  // steam starts near ground
-        _steamMaterial.SetFloat("_MaxSteamHeight", 1.45f);
-        _steamMaterial.SetFloat("_MaxOpacity",    0.36f);
+        _steamMaterial.SetColor(
+            "_BaseColor",
+            new Color(SteamColorRed, SteamColorGreen, SteamColorBlue));
+        _steamMaterial.SetFloat("_Radius",        SteamRadius);
+        _steamMaterial.SetFloat("_HeightOffset",  SteamHeightOffset);  // steam starts near ground
+        _steamMaterial.SetFloat("_MaxSteamHeight", SteamMaxHeight);
+        _steamMaterial.SetFloat("_MaxOpacity",    SteamMaxOpacity);
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
     }
