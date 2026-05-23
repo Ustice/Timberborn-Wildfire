@@ -154,6 +154,13 @@
     "height": 74
   },
   {
+    "spriteName": "ContaminatedAshIcon",
+    "source": "Wildfire/Data/Sprites/Goods/ContaminatedAshIcon.png",
+    "path": "ContaminatedAshIcon.png",
+    "width": 78,
+    "height": 63
+  },
+  {
     "spriteName": "CornIcon",
     "source": "Goods/Good.Corn.blueprint.json",
     "path": "CornIcon.png",
@@ -229,6 +236,13 @@
     "path": "FermentedSoybeanIcon.png",
     "width": 75,
     "height": 73
+  },
+  {
+    "spriteName": "FertileAshIcon",
+    "source": "Goods/Good.FertileAsh.blueprint.json",
+    "path": "FertileAshIcon.png",
+    "width": 78,
+    "height": 63
   },
   {
     "spriteName": "FireworksIcon",

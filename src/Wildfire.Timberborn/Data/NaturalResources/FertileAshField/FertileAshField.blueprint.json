@@ -24,6 +24,6 @@
     "DisplayNameLocKey": "NaturalResource.FertileAshField.DisplayName",
     "DescriptionLocKey": "",
     "FlavorDescriptionLocKey": "",
-    "Icon": "Sprites/Goods/DirtIcon"
+    "Icon": "Sprites/Goods/FertileAshIcon"
   }
 }

@@ -168,7 +168,7 @@ For `TWF-079` live QA, use `qa-water-suppression-stimulus contaminated-tree` aft
 
 Fertile ash application adds two player-facing toolbar paths: crop fertilizing and forestry fertilizing. Deterministic and live QA should prove that designations consume `1` `FertileAsh` good, queue `1` uncontaminated ash unit into simulator ash state, persist crop and forestry designations across save/reload, skip contaminated cells without consuming goods, and report no-inventory or safe-API failures clearly.
 
-Icon QA for ash and consequence feedback should compare generated or edited Wildfire assets against `docs/reference/assets/menu-icons/composite.png` and `docs/reference/assets/goods-icons/composite.png`. Fertile ash should keep the dirt/ash base with a sprout, tainted ash should use the same base with a contamination subicon in the top-right, and fertilize crop/tree toolbar icons should read as Timberborn area tools.
+Icon QA for ash and consequence feedback should compare generated or edited Wildfire assets against `docs/reference/assets/menu-icons/composite.png` and `docs/reference/assets/goods-icons/composite.png`. Fertile ash should keep the dirt/ash base with a monochrome sprout, contaminated or tainted ash should use the same base with a native monochrome contamination cue, and fertilize crop/tree toolbar icons should read as Timberborn area tools. Current goods-icon references include `docs/reference/assets/goods-icons/FertileAshIcon.png` and `docs/reference/assets/goods-icons/ContaminatedAshIcon.png`.
 
 ## Beaver Field Effects
 

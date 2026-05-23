@@ -17,7 +17,7 @@
     "Weight": 1,
     "GoodGroupId": "Materials",
     "GoodOrder": 8060,
-    "Icon": "Sprites/Goods/DirtIcon",
+    "Icon": "Sprites/Goods/FertileAshIcon",
     "ForceImport": true,
     "DisplayNameLocKey": "Good.FertileAsh.DisplayName",
     "PluralDisplayNameLocKey": "Good.FertileAsh.PluralDisplayName"
