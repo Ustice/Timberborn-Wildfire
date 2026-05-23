@@ -4,6 +4,7 @@ Use this page as the startup map for humans and agents.
 
 ## Active Source Of Truth
 
+- [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues) owns the active backlog after the 2026-05-23 file-board migration.
 - [DESIGN.md](DESIGN.md) owns the simulation and gameplay design.
 - [RELEASE_DESIGN.md](RELEASE_DESIGN.md) summarizes the release-facing behavior compared with `main`.
 - [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
@@ -17,8 +18,9 @@ Use this page as the startup map for humans and agents.
 - [reference/timberborn-ui.md](reference/timberborn-ui.md) owns Timberborn UI design-system notes for adapter-facing UI.
 - [timberborn-debug-panels.md](timberborn-debug-panels.md) owns the focused Timberborn debug/developer panel reference for QA.
 - [TODO.md](TODO.md) owns milestone-level status, not per-agent scratch work.
-- [../kanban/process.md](../kanban/process.md) owns sprint startup, delegation, verification, and integration flow.
-- [../kanban/README.md](../kanban/README.md) owns the ticket-board state machine.
+- [../kanban/github-issue-migration.md](../kanban/github-issue-migration.md) maps migrated file-board tickets to GitHub issues.
+- [../kanban/process.md](../kanban/process.md) owns the historical file-board sprint startup, delegation, verification, and integration flow.
+- [../kanban/README.md](../kanban/README.md) owns the historical ticket-board state machine.
 
 ## Role Instructions
 

@@ -37,7 +37,7 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 
 ## Out Of Scope
 
-- `TWF-052` through `TWF-063`: release packaging, CI/CD, README, changelog, licensing, support templates, and Steam Workshop distribution wait until this gameplay-readiness sprint produces stable behavior and screenshots.
+- `TWF-053` through `TWF-063`: release packaging, CD, README, changelog, licensing, support templates, and Steam Workshop distribution wait until this gameplay-readiness sprint produces stable behavior and screenshots. `TWF-052` baseline GitHub CI is already accepted.
 - `TWF-100` through `TWF-113`: workshop media, platform validation, package shape, and private workshop install testing wait until the gameplay loop and UI assets are stable.
 - `TWF-083`: broad overgrowth and surface-fuel systems remain deferred. This sprint only promotes the narrow rare-ignition release slice in `TWF-165`.
 - `TWF-120` through `TWF-125`: faction fire-response systems, smoke fans, and constructible berms remain future design unless Jason explicitly promotes them.
@@ -131,3 +131,4 @@ Turn the release gameplay loop into an integrated, explainable, and QA-proven ex
 - Created on 2026-05-19 after Jason promoted release readiness around beaver consequences, contaminated ash, ash visuals, fertile ash collection, rare ignition, drought-dry vegetation, and `256x256` QA.
 - The main missing item called out during chartering is suppression/player response. It remains out of scope for this sprint unless Jason promotes a faction response or manual suppression slice; current release scope should still make fire consequences understandable and recoverable without shipping a full firefighting system.
 - Packaging should not start until this sprint has stable player-facing behavior, screenshots, and clear release gates.
+- Closed for GitHub issue migration on 2026-05-23. Accepted work remains in `06-done`; unresolved work was preserved as GitHub issues with `source:kanban` and status labels. See [../github-issue-migration.md](../github-issue-migration.md).

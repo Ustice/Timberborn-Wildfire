@@ -69,3 +69,4 @@ Release fires need believable ignition sources beyond QA commands. The player sh
 ## Notes
 
 - This promotes a focused part of the broader `TWF-083` fuel-load idea into release scope. General overgrowth and surface fuel remain deferred unless separately promoted.
+- 2026-05-23 coordinator: moved to `07-blocked` during GitHub issue migration because `TWF-069` remains blocked by the water/structure/burnout tuning gates. Migrated to GitHub as <https://github.com/Ustice/Timberborn-Wildfire/issues/35>.

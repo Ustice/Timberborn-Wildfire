@@ -69,3 +69,4 @@ We should not block on generated-scenario technicalities if the Timberborn map e
 
 - This belongs in Sprint 10, not as the first required ticket and not as a Sprint 9 blocker.
 - The first performance question is local-fire cost on a max-size map, not worst-case map-wide burn cost.
+- 2026-05-23 coordinator: moved to `07-blocked` during GitHub issue migration because dependency `TWF-149` remains blocked. Migrated to GitHub as <https://github.com/Ustice/Timberborn-Wildfire/issues/34>.

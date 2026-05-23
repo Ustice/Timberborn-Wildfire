@@ -101,4 +101,4 @@ When documenting the utility:
 - Update the assigned ticket with commands, output summary, evidence paths, and unresolved blockers.
 - Link any new coordinate evidence back to `docs/timberborn-menu-coordinate-guide.md`.
 - Update `docs/TEST_PLAN.md` or a more specific doc when the utility changes durable QA workflow.
-- Recommend the next board move, but do not move board status symlinks unless explicitly assigned.
+- Recommend the next GitHub issue status-label change, but do not change labels unless explicitly assigned.

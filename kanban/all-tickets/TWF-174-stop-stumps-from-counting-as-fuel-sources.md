@@ -36,6 +36,12 @@ Stumps should blacken as burn aftermath, but they should not import as simulator
 - Worker.
 - Follow [worker.md](../roles/worker.md).
 
+## Implementation Notes
+
+- Start from the Timberborn resource/tree import path and identify the native state or model distinction between a standing fuel source and a stump.
+- Keep the stump classification adapter-local; do not add stump-specific rules to `Wildfire.Core`.
+- Preserve burned aftermath visuals. The target behavior is "stump can blacken", not "stump disappears" or "tree aftermath stops rendering".
+
 ## Verification
 
 - Run `git diff --check`.
@@ -46,3 +52,4 @@ Stumps should blacken as burn aftermath, but they should not import as simulator
 ## Notes
 
 - Reported live on 2026-05-23: "Stumps should not count as a fuel source. They should just blacken."
+- 2026-05-23 coordinator: moved to `02-ready` during GitHub issue migration because the bug is concrete and dependency-free. Migrated to GitHub as <https://github.com/Ustice/Timberborn-Wildfire/issues/39>.

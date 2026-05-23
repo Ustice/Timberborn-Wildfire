@@ -1,6 +1,8 @@
 # Wildfire Sprint Planning
 
-Use this document to choose sprint boundaries before starting a coordination run. `kanban/by-status` remains the live board, and individual ticket files remain the assignment contract. This document is only the planning map.
+Historical note: the file kanban board was migrated to GitHub Issues on 2026-05-23. Use GitHub Issues as the active backlog for new work; keep this document as the historical sprint-boundary map unless explicitly reconciling old file-board state.
+
+Use this document to understand historical sprint boundaries. `kanban/by-status` remains the historical board, and individual ticket files remain the archived assignment contracts. This document is only the planning map.
 
 ## Current Planning Principle
 
@@ -12,17 +14,17 @@ Required QA is a hard integration gate. If a ticket fails QA, it must pass that 
 
 Required review is also a hard integration gate. If a ticket fails review, it must return to `03-in-progress/` for fixes, move back through `04-verify/`, and pass a fresh review before it can move to `05-integration/`.
 
-## Shared Board Directory Protocol
+## Historical Board Directory Protocol
 
-All agents should work from the same canonical board directory:
+Before the migration, agents worked from the same canonical board directory:
 
 - Main checkout board: `~/repos/wildfire/kanban/by-status`.
 - Canonical tickets: `~/repos/wildfire/kanban/all-tickets`.
 - Sprint plan: `~/repos/wildfire/kanban/sprint-planning.md`.
 
-Workers may use ticket-specific worktrees for implementation, but those worktrees are implementation sandboxes, not board authorities. The coordinator owns board status moves and canonical ticket-note updates in the main checkout unless a ticket explicitly assigns board-maintenance work.
+Workers used ticket-specific worktrees for implementation, but those worktrees were implementation sandboxes, not board authorities. GitHub Issues now own active status and notes.
 
-Sub-agents should read the canonical ticket from the main checkout at assignment time, then report notes, evidence, blockers, and recommended moves back to the coordinator. The coordinator transcribes accepted notes into the canonical ticket and moves status symlinks in the main checkout.
+Sub-agents should now read the assigned GitHub issue, then report notes, evidence, blockers, and recommended status-label changes back to the coordinator.
 
 This avoids three common failure modes:
 
@@ -30,7 +32,7 @@ This avoids three common failure modes:
 - A status symlink in a worktree disagrees with the main board.
 - Coordinators spend time reconciling ticket prose instead of integrating code and evidence.
 
-If a sub-agent must edit a ticket file directly, the coordinator should say so explicitly and include `kanban/all-tickets/...` in the write scope. Those edits should happen in the main checkout whenever possible.
+If a sub-agent must edit a historical ticket file directly, the coordinator should say so explicitly and include `kanban/all-tickets/...` in the write scope. Those edits should happen in the main checkout whenever possible.
 
 ## Recommended Sprint Split
 
@@ -179,7 +181,7 @@ Keep these deferred until the release path is stable or Jason explicitly pulls t
 At sprint start, the coordinator should:
 
 - Read this file after `kanban/README.md` and before moving tickets to `02-ready`.
-- Reconcile this plan against the current `kanban/by-status` board.
+- Reconcile this plan against GitHub Issues when using it for planning.
 - Choose the smallest sprint slice that can be integrated and verified in dependency order.
-- Treat this document as guidance, not an override of live board state or Jason's current instruction.
-- Keep all board moves and canonical ticket updates in the main checkout.
+- Treat this document as guidance, not an override of GitHub Issues or Jason's current instruction.
+- Keep all status changes in GitHub issue labels.

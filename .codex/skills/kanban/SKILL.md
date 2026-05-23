@@ -1,42 +1,43 @@
 ---
 name: kanban
-description: Start or resume a multi-agent sprint in ~/repos/wildfire. Use when the user asks to coordinate, continue, run, manage, or close a sprint or ticket-board workflow.
+description: Coordinate Wildfire GitHub Issues in ~/repos/wildfire, including migrated kanban-ticket cleanup and multi-agent issue workflow.
 ---
 
-# Coordinate Sprint
+# Coordinate GitHub Issues
+
+## Migration Note
+
+The Wildfire file kanban board was migrated to GitHub Issues on 2026-05-23. Use GitHub Issues as the active backlog. Use the file-board paths only for historical evidence, migration reconciliation, or explicit file-board cleanup.
 
 ## Workflow
 
 Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 
 1. Start in `~/repos/wildfire`.
-2. Read `AGENTS.md`, `docs/INDEX.md`, `docs/HANDOFF.md`, `kanban/README.md`, `kanban/sprint-planning.md`, `kanban/process.md`, and `kanban/roles/coordinator.md` if you haven't already.
-3. Read active status symlinks under `kanban/by-status/` and canonical ticket files under `kanban/all-tickets/`.
-4. Keep board moves and canonical ticket-note updates in the main checkout unless a board-maintenance ticket explicitly says otherwise.
-5. Create or update the active sprint charter from `kanban/sprints/TEMPLATE.md`.
-6. Run `bun run kanban:audit` during startup and closeout.
-7. Use `kanban/assignment-packet-template.md` when dispatching sub-agents.
-8. When resuming an existing sprint, start by delegating a Tech-Lead for a current-state pass.
-9. Treat `kanban/by-status` as the source of truth for sprint state.
-10. Follow `kanban/process.md` for startup, run loop, verification, integration, and sprint close.
-11. Link sub-agents to the relevant role doc.
-12. Use rolling dispatch when dependencies and write scopes allow it.
+2. Read `AGENTS.md`, `docs/INDEX.md`, `docs/HANDOFF.md`, `kanban/github-issue-workflow.md`, `kanban/github-issue-migration.md`, and `kanban/roles/coordinator.md` if you haven't already.
+3. Inspect GitHub Issues with `gh issue list --repo Ustice/Timberborn-Wildfire`.
+4. Treat GitHub issue labels as the active status backing.
+5. Use `kanban/github-issue-migration.md` only to map historical `TWF-*` ids to issue numbers.
+6. Use `kanban/assignment-packet-template.md` when dispatching sub-agents.
+7. When resuming a broad issue sweep, start by delegating a Tech-Lead or Reviewer for a current-state pass.
+8. Link sub-agents to the relevant role doc.
+9. Use rolling dispatch when dependencies and write scopes allow it.
 
 ## Guardrails
 
 - Do not end the coordination turn until the sprint is closed or the user explicitly tells you to stop.
 - Do not make code, content, script, runtime behavior, or test changes directly as the coordinator.
-- Delegate implementation, QA, review, and research through tickets.
-- A ticket that fails required QA must pass that QA gate in a later run before it can move to integration.
+- Delegate implementation, QA, review, and research through GitHub issues.
+- An issue that fails required QA must pass that QA gate in a later run before it can be closed.
 - Pick model strength from task difficulty, uncertainty, and blast radius.
-- Require sub-agents to update their assigned tickets with notes, evidence, blockers, and results.
-- Keep board moves serialized in one checkout.
+- Require sub-agents to update their assigned GitHub issues with notes, evidence, blockers, and results.
+- Keep GitHub issue status-label changes serialized.
 - Keep and manage the instructions documents for the various roles.
 
 ## Closeout
 
-Before final response, verify the board state is current, required checks are recorded, blockers are explicit, and sprint-close docs are updated when project status changed.
+Before final response, verify GitHub issue state is current, required checks are recorded, blockers are explicit, and status docs are updated when project status changed.
 
 ## To-Do
 
-Keep your codex todo items updated with the current sprint state and next steps. Add an item to not end your turn until the sprint is closed or the user explicitly tells you to stop.
+Keep your codex todo items updated with the current issue state and next steps. Add an item to not end your turn until the issue sweep is closed or the user explicitly tells you to stop.

@@ -17,4 +17,5 @@ When visually reviewing screenshots or captures, check the whole scene for anyth
 - Keep the simulation core host-agnostic.
 - Timberborn is an adapter and must not own fire rules or mutate the grid directly.
 - Prefer deterministic tests and CLI scenarios before live Timberborn validation.
-- Use `kanban/by-status` as the durable sprint source of truth.
+- Use GitHub Issues as the durable backlog source of truth.
+- Treat `kanban/by-status` as the migrated historical board unless a task explicitly asks for file-board archaeology.

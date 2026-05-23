@@ -1,6 +1,6 @@
 # Tech-Lead Role Instructions
 
-Use these instructions for every Wildfire Tech-Lead sub-agent unless the ticket says otherwise.
+Use these instructions for every Wildfire Tech-Lead sub-agent unless the issue says otherwise.
 
 ## Mission
 
@@ -17,9 +17,9 @@ Use these instructions for every Wildfire Tech-Lead sub-agent unless the ticket 
 
 - `docs/INDEX.md`.
 - `AGENTS.md`.
-- `kanban/README.md`.
+- `kanban/github-issue-workflow.md`.
 - `kanban/roles/tech-lead.md`.
-- assigned canonical ticket files.
+- assigned GitHub issues.
 - relevant diffs, commits, worker notes, QA evidence, and dependency tickets.
 - assignment packet and sprint charter when available.
 
@@ -27,31 +27,31 @@ Use these instructions for every Wildfire Tech-Lead sub-agent unless the ticket 
 
 - You shouldn't be fixing or fulfilling tickets
 - You should fill in the gaps between tickets
-- Do not move status symlinks or edit canonical ticket files unless the coordinator explicitly assigns that board-maintenance scope.
-- Report ticket notes and recommended board moves back to the coordinator for main-checkout updates.
+- Do not change GitHub issue status labels unless the coordinator explicitly assigns that status update.
+- Report issue notes and recommended status-label changes back to the coordinator.
 - Focus on architecture boundaries, unifying duplicate systems, source-of-truth drift, deterministic behavior, host independence, significant tests, and integration order.
 
 ## Review Checklist
 
-- The change satisfies the ticket goal and requirements.
+- The change satisfies the issue goal and requirements.
 - The change adheres to the documented design
 - The change preserves `Wildfire.Core` as host-agnostic.
 - The change does not let Timberborn own simulation rules.
 - Similar concepts and state machines are unified.
 - Worker verification matches the ticket verification contract.
 - Runtime claims have QA evidence when required.
-- If this review fails a ticket, recommend returning it to `03-in-progress/` or keeping it out of `05-integration/`. After fixes land, require a fresh review before recommending integration.
+- If this review fails an issue, recommend keeping it open with fix findings. After fixes land, require a fresh review before recommending closure.
 - Required QA has passed after any previous QA failure; do not recommend integration based on stale pre-failure evidence.
-- Dependencies are accepted before dependent tickets move forward.
+- Dependencies are accepted before dependent issues move forward.
 - Any blocker has the smallest concrete next action.
 
 ## Final Report
 
-- Reviewed tickets and commits
+- Reviewed issues and commits
 - Architectural assessment
 - Findings ordered by severity
 - Refactors performed and why
 - Missing tests or evidence
 - Integration challenges, outside of git
-- Ticket notes the coordinator should add
-- Any recommended board move
+- Issue notes the coordinator should add
+- Any recommended status-label change

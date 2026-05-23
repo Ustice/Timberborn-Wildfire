@@ -1,12 +1,14 @@
 # Wildfire Ticket Board
 
-This directory is the permanent file-based board for Wildfire work.
+> Historical note: open-family tickets were migrated to GitHub Issues on 2026-05-23. Use <https://github.com/Ustice/Timberborn-Wildfire/issues> as the active backlog. This file board remains useful for historical ticket evidence and migration archaeology. See [github-issue-migration.md](github-issue-migration.md).
 
-Canonical ticket files live in `all-tickets/`. Status directories live under `by-status/` and contain symlinks to those canonical files.
+This directory is the historical file-based board for Wildfire work.
 
-Move status symlinks instead of moving the ticket files.
+Canonical historical ticket files live in `all-tickets/`. Status directories live under `by-status/` and contain symlinks to those canonical files.
 
-Use [process.md](process.md) to start or resume a multi-agent coordination run. Use [sprint-planning.md](sprint-planning.md) to choose sprint boundaries before moving tickets into `02-ready/`. Use [sprints/TEMPLATE.md](sprints/TEMPLATE.md) for sprint charters and [assignment-packet-template.md](assignment-packet-template.md) for sub-agent dispatch.
+Do not move status symlinks for new work. Update GitHub issue status labels instead.
+
+Use [github-issue-workflow.md](github-issue-workflow.md) for active work. Use [process.md](process.md), [sprint-planning.md](sprint-planning.md), and [sprints/](sprints/) only when reconstructing historical board state.
 
 Role instructions live under [roles/](roles/): Coordinator, Worker, QA, Reviewer, Tech-Lead, and Researcher.
 
@@ -33,9 +35,9 @@ Role instructions live under [roles/](roles/): Coordinator, Worker, QA, Reviewer
 
 ## Ticket Format
 
-Use one Markdown file per ticket in `all-tickets/`. Keep canonical filenames stable. Start from [all-tickets/TEMPLATE.md](all-tickets/TEMPLATE.md).
+Historical tickets use one Markdown file per ticket in `all-tickets/`. Keep canonical filenames stable unless pruning the historical board.
 
-Status is intentionally not stored in ticket frontmatter. The status symlink is the source of truth.
+Status was intentionally not stored in ticket frontmatter. The status symlink records final migrated board state; GitHub labels are active status now.
 
 ```markdown
 ---
@@ -69,24 +71,23 @@ State the outcome.
 - Capture unknowns, decisions, and evidence links.
 ```
 
-## Coordinator Rules
+## Historical Coordinator Rules
 
-- Use this board as the source of truth for active ticket state.
+- Use GitHub Issues as the source of truth for active issue state.
 - Read [roles/coordinator.md](roles/coordinator.md) before starting or resuming a sprint.
-- Read [sprint-planning.md](sprint-planning.md) before selecting the sprint slice.
-- Create or update a sprint charter from [sprints/TEMPLATE.md](sprints/TEMPLATE.md) before moving tickets into `02-ready/`.
-- Run `bun run kanban:audit` during startup and closeout.
-- Do not end the coordination turn until the sprint is closed or the user explicitly tells you to stop.
+- Read [github-issue-workflow.md](github-issue-workflow.md) before selecting work.
+- Use [github-issue-migration.md](github-issue-migration.md) to map historical `TWF-*` ids.
+- Do not end the coordination turn until the issue sweep is closed or the user explicitly tells you to stop.
 - Do not make code, content, script, runtime behavior, or test changes directly as the coordinator.
-- Assign one ticket per sub-agent with role instructions, explicit write scope, dependencies, and verification.
+- Assign one issue per sub-agent with role instructions, explicit write scope, dependencies, and verification.
 - Use [assignment-packet-template.md](assignment-packet-template.md) when dispatching sub-agents.
 - Do not overlap worker write scopes unless unavoidable.
-- Require sub-agents to update assigned tickets with notes, evidence, blockers, and results.
-- Keep canonical ticket-note updates and status symlink moves in the main checkout unless a board-maintenance ticket explicitly says otherwise.
+- Require sub-agents to update assigned issues with notes, evidence, blockers, and results.
+- Keep GitHub issue status-label changes serialized.
 - Review diffs before integration.
 - Use [roles/reviewer.md](roles/reviewer.md) for ticket gate reviews and [roles/tech-lead.md](roles/tech-lead.md) for broader architecture or integration-order review.
-- If review fails, move the ticket back to `03-in-progress/` for fixes or otherwise keep it out of `05-integration/`. After fixes land, the ticket must return to `04-verify/` and pass review again before integration.
-- Never move a ticket that failed required QA into `05-integration/` until the same required QA gate has passed with evidence.
+- If review fails, keep the issue open and require a fresh passing review after fixes.
+- Never close an issue that failed required QA until the same required QA gate has passed with evidence.
 - Integrate accepted work in dependency order.
 - Remove worktrees after their work is merged into the mainline.
 - Keep status docs as milestone or sprint-close surfaces, not per-agent scratchpads.
@@ -99,10 +100,10 @@ Run:
 bun run kanban:audit
 ```
 
-The audit is read-only. It reports dependency-ready tickets, blocked tickets, likely write-scope overlaps, missing ticket hygiene, broken symlinks, missing dependency files, and unexpected `kanban/` changes in sibling worktrees. Use `bun run kanban:audit -- --strict` when critical findings should fail the command.
+The audit is read-only and historical. It reports dependency-ready tickets, blocked tickets, likely write-scope overlaps, missing ticket hygiene, broken symlinks, missing dependency files, and unexpected `kanban/` changes in sibling worktrees. Use it only when maintaining the historical board.
 
 ## Blocked And Deferred Work
 
-- Move blocked tickets to `07-blocked/` with what was tried, missing evidence, and the smallest concrete unblock action.
-- Move user-decision tickets to `09-awaiting-review/` when Jason needs to read and decide.
-- Move deferred tickets to `08-deferred/` when the work is valid but should wait for a future milestone.
+- Label blocked issues with `status:blocked` and comment with what was tried, missing evidence, and the smallest concrete unblock action.
+- Use issue comments when Jason needs to read and decide.
+- Label deferred issues with `status:deferred` when the work is valid but should wait for a future milestone.

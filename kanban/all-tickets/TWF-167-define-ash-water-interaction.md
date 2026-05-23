@@ -69,3 +69,4 @@ Tainted ash decay works and is tracked by `TWF-164`. Water contact is a separate
 ## Notes
 
 - 2026-05-20 created after Jason clarified that tainted ash decay works and the remaining work should split out the ash/water interaction.
+- 2026-05-23 coordinator: moved to `02-ready` during GitHub issue migration because dependencies `TWF-079` and `TWF-164` are accepted. Migrated to GitHub as <https://github.com/Ustice/Timberborn-Wildfire/issues/36>.

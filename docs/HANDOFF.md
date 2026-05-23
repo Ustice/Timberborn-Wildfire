@@ -3,6 +3,7 @@
 ## Current State
 
 - Wildfire repository scaffolded in `~/repos/wildfire`.
+- The open-family file kanban backlog was migrated to GitHub Issues on 2026-05-23. Use <https://github.com/Ustice/Timberborn-Wildfire/issues> as the active backlog; use `kanban/github-issue-migration.md` to map historical `TWF-*` tickets to issue numbers.
 - Core packed-cell, grid, GPU simulator contract, delta, listener, and change-registration types exist.
 - CLI scenario preview exists with named seeded scenarios, seed/dimension/layer options, and packed-cell-derived rendering.
 - Unity now has compute-buffer, shader-dispatch, change-upload, compact-delta, visual-field, and snapshot-harness scaffolds; it should remain the GPU adapter.
@@ -18,12 +19,16 @@
 - Timberborn gameplay-surface Sprint 2 is complete: material mapping has deterministic terrain/resource/building/water bands, the debug overlay updates from compact deltas, pausable buildings can be paused from fuel-depleted building deltas, and the QA water-suppression command proves a queued `SetWater=3` change through live GPU dispatch.
 - The first coherent live Timberborn gameplay loop is QA-proven: guarded loaded-save attach, fixed fire stimulus, non-zero spread and visual updates, native quick-warning communication, compact-delta gameplay consequences, water-suppression resolution, delayed stability, copied `Player.log`, screenshots, and clear final QA lock state are preserved under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-046-live-20260502T232641Z/`.
 - The old alternate C# execution path and its snapshot tests were removed; future simulation work should target the GPU simulator path only.
-- Prometheus sprint lessons are incorporated as docs, role instructions, local skills, and a file-based ticket board, not as copied Prometheus runtime code.
+- Prometheus sprint lessons are incorporated as docs, role instructions, local skills, and the migrated GitHub issue workflow, not as copied Prometheus runtime code.
 
 ## Current Ticket State
 
-- The compute-first ticket set exists as `TWF-000` through `TWF-063`.
-- `kanban/by-status` is the sprint source of truth.
+- GitHub Issues now owns the active backlog. The file board remains historical evidence and migration reference.
+- The migration created 57 GitHub issues for non-done tickets, labeled with `source:kanban` and their migrated status.
+- Post-migration ready issues are `TWF-087` [#40](https://github.com/Ustice/Timberborn-Wildfire/issues/40), `TWF-167` [#36](https://github.com/Ustice/Timberborn-Wildfire/issues/36), and `TWF-174` [#39](https://github.com/Ustice/Timberborn-Wildfire/issues/39).
+- Post-migration blocked issues include `TWF-090`, `TWF-091`, `TWF-092`, `TWF-144`, `TWF-148`, `TWF-149`, `TWF-150`, `TWF-156`, `TWF-163`, `TWF-165`, and `TWF-169`.
+- The compute-first ticket set exists as `TWF-000` through `TWF-063` in historical file-board form.
+- `kanban/by-status` was the sprint source of truth before the 2026-05-23 GitHub issue migration.
 - `TWF-000` through `TWF-008` are done and integrated on `main`.
 - `TWF-009` is done and integrated on `main` in commit `aa9a260`; live status and `Player.log` evidence prove the Timberborn delta-consumer hook path is wired and reporting.
 - `TWF-010` is done: runtime diagnostics now cover GPU lifecycle, queued changes, dispatch/readback timing, listener counts, and Timberborn adapter startup/shutdown without per-cell mapped-change spam.
@@ -61,8 +66,8 @@
 - `TWF-042` is done and integrated on `main` in commit `fde36e6`: compact-delta alert decisions now feed one bounded Timberborn quick-warning player alert, QA telemetry reports alert counters, and live QA proof under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-042-live-rerun-20260502T222801Z` shows `Wildfire alert: 1 new fire. Max heat 15.` with matching status counters.
 - `TWF-043` through `TWF-046` are done for Sprint 4: game-feel tuning, release simulation decisions, exact release shader snapshots, and coherent live-loop QA are integrated with evidence.
 - `TWF-046` live proof is under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-046-live-20260502T232641Z/`: the run proved loaded-save readiness, fixed fire stimulus, spread, visual/presentation state, alert/status communication, compact-delta gameplay consequences, water-suppression resolution, and delayed runtime stability with no new strict failure-scan hits.
-- Sprint planning now lives in `kanban/sprint-planning.md`. Sprint 5 closeout lives in `kanban/sprints/sprint-05.md`, and the active Sprint 6 charter lives in `kanban/sprints/sprint-06.md`.
-- The board-audit command is `bun run kanban:audit`; it reports dependency-ready tickets, blockers, write-scope overlaps, ticket hygiene gaps, broken symlinks, missing dependencies, and unexpected `kanban/` edits in sibling worktrees.
+- Historical sprint planning lives in `kanban/sprint-planning.md`; active backlog work now starts from GitHub Issues.
+- The historical board-audit command is `bun run kanban:audit`; it remains useful for migration archaeology but is not the active backlog gate.
 - Sprint 5 is closed as "Safety Rails And Test Surfaces." `TWF-047`, `TWF-049`, `TWF-065`, `TWF-093`, `TWF-094`, `TWF-095`, `TWF-096`, `TWF-114`, `TWF-118`, and `TWF-126` are done.
 - `TWF-093` passed enabled-save reload QA on 2026-05-03. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-093-enabled-save-reload-20260503T040447Z` proves pre-save fire activity, save slot `Wildfire testing (7)`, reload with Wildfire still enabled, recovered command/status output, post-reload stimulus with visuals/alerts, and a `0`-line critical scan.
 - `TWF-094` passed disabled-mod recovery QA on 2026-05-03. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-094-disabled-mod-recovery-20260503T041547Z` proves the player-facing Mods dialog disable path, Timberborn's missing-mod warning for `Wildfire testing (7)`, recoverable gameplay load with Wildfire disabled, expected command-bridge timeout while the mod is absent, and no disabled-load critical scan hits.
@@ -112,6 +117,7 @@
 
 ## Next Exact Action
 
+- Start the next work item from GitHub Issues, not the file kanban board. The first ready candidates are `TWF-087` [#40](https://github.com/Ustice/Timberborn-Wildfire/issues/40), `TWF-167` [#36](https://github.com/Ustice/Timberborn-Wildfire/issues/36), and `TWF-174` [#39](https://github.com/Ustice/Timberborn-Wildfire/issues/39).
 - Sprint 12 has started. `TWF-166` is accepted and integrated in the main checkout after review plus live QA; the artificial `qa-delta-stimulus tainted-ash` fallback exists only as a downstream tainted-ash behavior route, while the accepted gate used the natural `contaminated-tree` route.
 - `TWF-161` is accepted and integrated in the main checkout after review plus deterministic verification. The rename keeps shader, asset-bundle, persistence, and snapshot compatibility names stable while moving internal C# concepts toward transport/material fields and ash presentation wording.
 - `TWF-162` is accepted and integrated in the main checkout after review plus deterministic and opt-in Unity shader harness verification. Steam remains clean simulator-owned transport state; incoming moved steam now accumulates and caps through the packed transport field, with a convergence regression proving two sources do not erase one another.
