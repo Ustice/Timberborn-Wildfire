@@ -22,6 +22,7 @@ type DeployOptions = {
   help: boolean;
   lockTimeoutSeconds: number;
   modsDir: string;
+  planOnly: boolean;
   remove: boolean;
   skipAssetBundle: boolean;
   skipBuild: boolean;
@@ -120,6 +121,7 @@ const usage = `Usage:
 
 Options:
   --dry-run                 Print the build/deploy plan without writing the mod folder. Default.
+  --plan-only               Print a hosted-CI-safe plan without building, validating artifacts, or writing files.
   --apply                   Write the deployed mod folder. Refuses while Timberborn is open unless --allow-open-game is set.
   --skip-build              Reuse existing build output instead of running dotnet build.
   --skip-asset-bundle       Reuse existing FireSim and diagnostic AssetBundles instead of running Unity batchmode.
@@ -138,6 +140,7 @@ Examples:
   bun scripts/deploy-timberborn-mod.ts
   bun scripts/deploy-timberborn-mod.ts --apply
   bun scripts/deploy-timberborn-mod.ts --dry-run --remove
+  bun scripts/deploy-timberborn-mod.ts --plan-only
 `;
 
 const parseArgs = (args: string[]): DeployOptions => {
@@ -150,6 +153,7 @@ const parseArgs = (args: string[]): DeployOptions => {
     help: false,
     lockTimeoutSeconds: 0,
     modsDir: defaultModsDir,
+    planOnly: false,
     remove: false,
     skipAssetBundle: false,
     skipBuild: false,
@@ -188,6 +192,14 @@ const parseArgs = (args: string[]): DeployOptions => {
       options.modsDir = resolve(requireValue(args, ++index, arg));
     } else if (arg.startsWith("--mods-dir=")) {
       options.modsDir = resolve(arg.slice("--mods-dir=".length));
+    } else if (arg === "--plan-only") {
+      if (!options.dryRun) {
+        fail("--plan-only cannot be combined with --apply.");
+      }
+      options.dryRun = true;
+      options.planOnly = true;
+      options.skipAssetBundle = true;
+      options.skipBuild = true;
     } else if (arg === "--remove") {
       options.remove = true;
     } else if (arg === "--skip-asset-bundle") {
@@ -209,6 +221,10 @@ const parseArgs = (args: string[]): DeployOptions => {
 
   if (!options.targetFramework.trim()) {
     fail("Target framework must not be empty.");
+  }
+
+  if (options.planOnly && !options.dryRun) {
+    fail("--plan-only cannot be combined with --apply.");
   }
 
   return options;
@@ -574,7 +590,9 @@ const main = (): void => {
 
     if (!options.remove) {
       runUnityAssetBundleBuild(options);
-      validateAssetBundleOutputs();
+      if (!options.planOnly) {
+        validateAssetBundleOutputs();
+      }
     }
 
     const plan = createCopyPlan(options);
@@ -585,7 +603,9 @@ const main = (): void => {
       return;
     }
 
-    validateSources(plan);
+    if (!options.planOnly) {
+      validateSources(plan);
+    }
 
     if (options.clean) {
       removeTarget(targetDir, options.dryRun);

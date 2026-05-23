@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hosted-checks:
+    name: Hosted checks
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Install Bun dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check TypeScript
+        run: bun run typecheck
+
+      - name: Check generated blueprints
+        run: bun run blueprints:check
+
+      - name: Test host-agnostic .NET core
+        run: bun scripts/run-hosted-dotnet-tests.ts
+
+      # Full solution `dotnet test`, Timberborn adapter builds, Unity AssetBundle
+      # generation, Steam packaging/publishing, and live Timberborn QA remain
+      # local or QA-only because hosted runners do not have Timberborn managed
+      # DLLs, Steam, Unity licensing, or GUI access. The step above creates a
+      # temporary xUnit project that references only Wildfire.Core, so it runs
+      # real hosted-safe .NET tests without hiding the adapter boundary.
+      - name: Check hosted-safe deploy plan
+        run: >
+          bun scripts/deploy-timberborn-mod.ts
+          --plan-only
+          --configuration Release
+          --mods-dir "$RUNNER_TEMP/wildfire-mods"
