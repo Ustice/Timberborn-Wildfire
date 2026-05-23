@@ -756,7 +756,7 @@ The accepted proof point is the `Player.log` token `wildfire_timberborn_gpu_fiel
 
 ## Release Settings Framework
 
-Wildfire release settings are owned by `src/Wildfire.Timberborn/WildfireReleaseSettings.cs`. The settings owner is Timberborn-facing and adapter-local: it reads player preferences from Timberborn settings, never from save data, and does not introduce Timberborn dependencies into `Wildfire.Core`.
+Wildfire release settings are owned by `src/Wildfire.Timberborn/Settings/WildfireReleaseSettings.cs`. The settings owner is Timberborn-facing and adapter-local: it reads player preferences from Timberborn settings, never from save data, and does not introduce Timberborn dependencies into `Wildfire.Core`.
 
 The stable key shape is:
 

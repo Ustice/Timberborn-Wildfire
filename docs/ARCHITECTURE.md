@@ -37,9 +37,9 @@ Host map/events
   -> overlays, effects, damage, ash fields, beaver exposure, alerts
 ```
 
-## First Implementation State
+## Current Implementation Map
 
-The repository currently has a core scaffold with:
+The repository currently has a core simulation contract with:
 
 - `PackedCell`
 - `FireGrid`
@@ -50,7 +50,7 @@ The repository currently has a core scaffold with:
 - `FireSimChange`
 - `IFireSimListener`
 
-Unity has compute-facing scaffolds, and Timberborn has adapter-facing names so compute and host integration can grow without moving the core boundary.
+Unity owns the compute-facing execution path, and Timberborn owns adapter-facing runtime integration. For concept-to-file navigation, use [source-map.md](source-map.md).
 
 ## Unity Compute Buffer Scaffold
 

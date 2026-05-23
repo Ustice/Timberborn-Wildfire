@@ -6,6 +6,7 @@ Use this page as the startup map for humans and agents.
 
 - [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues) owns the active backlog after the 2026-05-23 file-board migration.
 - [DESIGN.md](DESIGN.md) owns the simulation and gameplay design.
+- [source-map.md](source-map.md) maps concepts to code surfaces, tests, commands, and validation docs.
 - [RELEASE_DESIGN.md](RELEASE_DESIGN.md) summarizes the release-facing behavior compared with `main`.
 - [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
 - [ash-simulation-model.md](ash-simulation-model.md) owns the current ash authority, naming, and buffer-responsibility direction.

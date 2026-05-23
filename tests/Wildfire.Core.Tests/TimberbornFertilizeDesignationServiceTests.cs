@@ -72,7 +72,11 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     private static string ReadTimberbornSource(string fileName)
     {
         string root = FindRepoRoot();
-        return File.ReadAllText(Path.Combine(root, "src", "Wildfire.Timberborn", fileName));
+        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
+        string path = Directory
+            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
+            .First();
+        return File.ReadAllText(path);
     }
 
     private static string ReadUnitySource(string fileName)

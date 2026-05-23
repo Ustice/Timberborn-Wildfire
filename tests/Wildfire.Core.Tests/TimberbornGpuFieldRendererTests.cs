@@ -353,11 +353,9 @@ public sealed class TimberbornGpuFieldRendererTests
     private static string ReadTimberbornSource(string fileName)
     {
         string path = SelfAndParents(new DirectoryInfo(AppContext.BaseDirectory))
-            .Select(directory => Path.Combine(
-                directory.FullName,
-                "src",
-                "Wildfire.Timberborn",
-                fileName))
+            .Select(directory => Path.Combine(directory.FullName, "src", "Wildfire.Timberborn"))
+            .Where(Directory.Exists)
+            .SelectMany(directory => Directory.EnumerateFiles(directory, fileName, SearchOption.AllDirectories))
             .First(File.Exists);
 
         return File.ReadAllText(path);

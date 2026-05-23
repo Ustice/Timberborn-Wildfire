@@ -41,16 +41,16 @@ Do not start by calling reflection or mutating live Timberborn entities. First b
 
 Useful starting points:
 
-- Burn damage state: `src/Wildfire.Timberborn/TimberbornBurnDamageState.cs`.
-- Structure rollback: `src/Wildfire.Timberborn/TimberbornStructureBurnDamageRollback.cs`.
-- Stored goods: `src/Wildfire.Timberborn/TimberbornStoredGoodBurnConsequences.cs`.
-- Resource fuel and residue: `src/Wildfire.Timberborn/TimberbornResourceFuelCatalog.cs`.
-- Visual field sampling: `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs`.
-- Procedural effects and presentation counters: `src/Wildfire.Timberborn/TimberbornPooledFireSmokeAshEffects.cs`.
-- Field renderer: `src/Wildfire.Timberborn/TimberbornGpuFieldRenderer.cs`.
-- Beaver exposure telemetry: `src/Wildfire.Timberborn/TimberbornBeaverFieldExposureTelemetry.cs`.
-- QA command/status surface: `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs`.
-- Soil moisture read probes: `src/Wildfire.Timberborn/TimberbornQaCommandFileBridge.cs`.
+- Burn damage state: `src/Wildfire.Timberborn/Consequences/TimberbornBurnDamageState.cs`.
+- Structure rollback: `src/Wildfire.Timberborn/Consequences/TimberbornStructureBurnDamageRollback.cs`.
+- Stored goods: `src/Wildfire.Timberborn/Consequences/TimberbornStoredGoodBurnConsequences.cs`.
+- Resource fuel and residue: `src/Wildfire.Timberborn/Mapping/TimberbornResourceFuelCatalog.cs`.
+- Visual field sampling: `src/Wildfire.Timberborn/Visuals/TimberbornGpuVisualFieldSurface.cs`.
+- Procedural effects and presentation counters: `src/Wildfire.Timberborn/Visuals/TimberbornGpuFieldRenderer.cs`.
+- Field renderer: `src/Wildfire.Timberborn/Visuals/TimberbornGpuFieldRenderer.cs`.
+- Beaver exposure telemetry: `src/Wildfire.Timberborn/Beavers/TimberbornBeaverFieldExposureTelemetry.cs`.
+- QA command/status surface: `src/Wildfire.Timberborn/Qa/TimberbornQaCommandBridge.cs`.
+- Soil moisture read probes: `src/Wildfire.Timberborn/Qa/TimberbornQaCommandFileBridge.cs`.
 
 Use the existing test naming pattern. A new service should normally get a focused `*Tests.cs` file beside the existing Timberborn adapter tests, plus one QA command/status regression if new counters are exposed.
 
@@ -186,8 +186,8 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornPooledFireSmokeAshEffects.cs`.
-- `tests/Wildfire.Core.Tests/TimberbornPooledFireSmokeAshEffectTests.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuFieldRenderer.cs`.
+- `tests/Wildfire.Core.Tests/TimberbornGpuFieldRendererTests.cs`.
 
 Do:
 
@@ -214,9 +214,9 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornPooledFireSmokeAshEffects.cs`.
-- `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs`.
-- `tests/Wildfire.Core.Tests/TimberbornPooledFireSmokeAshEffectTests.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuFieldRenderer.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuVisualFieldSurface.cs`.
+- `tests/Wildfire.Core.Tests/TimberbornGpuFieldRendererTests.cs`.
 
 Do:
 
@@ -243,8 +243,8 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs`.
-- `src/Wildfire.Timberborn/TimberbornGpuFieldRenderer.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuVisualFieldSurface.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuFieldRenderer.cs`.
 - `docs/ARCHITECTURE.md` section "Ash Adapter Services".
 - Existing renderer tests such as `tests/Wildfire.Core.Tests/TimberbornGpuFieldRendererTests.cs`.
 
@@ -306,9 +306,9 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornPooledFireSmokeAshEffects.cs`.
-- `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs`.
-- `tests/Wildfire.Core.Tests/TimberbornPooledFireSmokeAshEffectTests.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuFieldRenderer.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuVisualFieldSurface.cs`.
+- `tests/Wildfire.Core.Tests/TimberbornGpuFieldRendererTests.cs`.
 
 Do:
 
@@ -337,7 +337,7 @@ Purpose:
 Start from:
 
 - `docs/ARCHITECTURE.md` section "Ash Adapter Services".
-- `src/Wildfire.Timberborn/TimberbornResourceFuelCatalog.cs`.
+- `src/Wildfire.Timberborn/Mapping/TimberbornResourceFuelCatalog.cs`.
 - Burn consequence outputs from `TWF-076`, `TWF-077`, and `TWF-084`.
 
 Inputs:
@@ -374,8 +374,8 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs` for field sampling patterns.
-- `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs` for status exposure.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuVisualFieldSurface.cs` for field sampling patterns.
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandBridge.cs` for status exposure.
 - Existing burn-damage tests for snapshot style.
 
 Inputs:
@@ -443,7 +443,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornBurnDamageState.cs`.
+- `src/Wildfire.Timberborn/Consequences/TimberbornBurnDamageState.cs`.
 - `tests/Wildfire.Core.Tests/TimberbornBurnDamageStateTests.cs`.
 
 Do:
@@ -467,7 +467,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornBurnDamageState.cs`.
+- `src/Wildfire.Timberborn/Consequences/TimberbornBurnDamageState.cs`.
 - Any current crop/harvestable burn consequence classes in `src/Wildfire.Timberborn/**`.
 - `tests/Wildfire.Core.Tests/TimberbornCropBurnConsequenceTests.cs` if present in the branch or worktree.
 
@@ -504,9 +504,9 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornStructureBurnDamageRollback.cs`.
+- `src/Wildfire.Timberborn/Consequences/TimberbornStructureBurnDamageRollback.cs`.
 - `tests/Wildfire.Core.Tests/TimberbornStructureBurnDamageRollbackTests.cs`.
-- `src/Wildfire.Timberborn/TimberbornBuildingBurnoutConsequences.cs`.
+- `src/Wildfire.Timberborn/Consequences/TimberbornBuildingBurnoutConsequences.cs`.
 
 Inputs:
 
@@ -574,9 +574,9 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornResourceFuelCatalog.cs`.
-- `src/Wildfire.Timberborn/TimberbornGpuVisualFieldSurface.cs`.
-- `src/Wildfire.Timberborn/TimberbornBeaverFieldExposureTelemetry.cs`.
+- `src/Wildfire.Timberborn/Mapping/TimberbornResourceFuelCatalog.cs`.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuVisualFieldSurface.cs`.
+- `src/Wildfire.Timberborn/Beavers/TimberbornBeaverFieldExposureTelemetry.cs`.
 - `docs/ARCHITECTURE.md` section "Contamination Interaction".
 
 Do:
@@ -608,7 +608,7 @@ Start from:
 
 - The simulator-owned ash transport field and the Timberborn ash read-model adapter.
 - Timberborn plant/growable API research notes or a fresh adapter survey.
-- `src/Wildfire.Timberborn/TimberbornResourceFuelCatalog.cs` for clean residue classification.
+- `src/Wildfire.Timberborn/Mapping/TimberbornResourceFuelCatalog.cs` for clean residue classification.
 
 Do:
 
@@ -681,7 +681,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs` for status counters.
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandBridge.cs` for status counters.
 - Existing alert work from `TWF-042`.
 - `docs/reference/timberborn-ui.md` for native UI patterns.
 
@@ -748,7 +748,7 @@ Purpose:
 Start from:
 
 - Current tree burn consequence code in `src/Wildfire.Timberborn/**`.
-- `src/Wildfire.Timberborn/TimberbornSelectedTreeTargetProvider.cs`.
+- `src/Wildfire.Timberborn/Tools/TimberbornSelectedTreeTargetProvider.cs`.
 - `tests/Wildfire.Core.Tests/TimberbornTreeBurnConsequenceTests.cs` if present in the branch or worktree.
 
 Inputs:
@@ -783,7 +783,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornQaCommandFileBridge.cs`.
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandFileBridge.cs`.
 - Timberborn DLL inspection for soil moisture services.
 - `docs/reference/modding-guide.md` notes about valid soil moisture queries.
 
@@ -870,7 +870,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornBeaverFieldExposureTelemetry.cs`.
+- `src/Wildfire.Timberborn/Beavers/TimberbornBeaverFieldExposureTelemetry.cs`.
 - `tests/Wildfire.Core.Tests/TimberbornBeaverFieldExposureTelemetryTests.cs`.
 - `docs/DESIGN.md` section "Beaver Field Effects".
 
@@ -900,7 +900,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornBeaverFieldExposureTelemetry.cs`.
+- `src/Wildfire.Timberborn/Beavers/TimberbornBeaverFieldExposureTelemetry.cs`.
 - The `TWF-073` behavior harness.
 - `tests/Wildfire.Core.Tests/TimberbornBeaverFieldExposureTelemetryTests.cs`.
 
@@ -930,7 +930,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornBeaverFieldExposureTelemetry.cs`.
+- `src/Wildfire.Timberborn/Beavers/TimberbornBeaverFieldExposureTelemetry.cs`.
 - `TWF-079` contamination-aware classifications.
 - The `TWF-073` behavior harness.
 
@@ -960,7 +960,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornBeaverFieldExposureTelemetry.cs`.
+- `src/Wildfire.Timberborn/Beavers/TimberbornBeaverFieldExposureTelemetry.cs`.
 - The `TWF-073` behavior harness.
 - Fire/heat field classifications from the visual or exposure telemetry surface.
 
@@ -991,7 +991,7 @@ Purpose:
 
 Start from:
 
-- `src/Wildfire.Timberborn/TimberbornStoredGoodBurnConsequences.cs`.
+- `src/Wildfire.Timberborn/Consequences/TimberbornStoredGoodBurnConsequences.cs`.
 - `tests/Wildfire.Core.Tests/TimberbornStoredGoodBurnConsequenceTests.cs`.
 
 Do:

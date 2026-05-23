@@ -18,9 +18,9 @@ Confidence: medium-high for "not possible with current surfaces"; medium for the
 
 ### Wildfire Command Bridge
 
-- `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs` defines only `status` and `help`.
-- `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs` rejects unknown commands and returns a logged failure instead of dynamic execution.
-- `src/Wildfire.Timberborn/TimberbornQaCommandFileBridge.cs` polls `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt`, forwards the text to the bridge, and writes `command-outbox.txt`.
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandBridge.cs` defines only `status` and `help`.
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandBridge.cs` rejects unknown commands and returns a logged failure instead of dynamic execution.
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandFileBridge.cs` polls `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/command-inbox.txt`, forwards the text to the bridge, and writes `command-outbox.txt`.
 - `scripts/invoke-timberborn-command.ts` also allowlists only `status` and `help` before writing the inbox.
 - Historical ticket `TWF-019` on branch `archive/file-kanban-2026-05-23` records live proof that `status` returned through the file bridge from Timberborn.
 
@@ -132,10 +132,10 @@ After that lands, research or implement a separate `load-latest-save` bridge com
 
 ## Checked Sources
 
-- `src/Wildfire.Timberborn/TimberbornQaCommandBridge.cs`
-- `src/Wildfire.Timberborn/TimberbornQaCommandFileBridge.cs`
-- `src/Wildfire.Timberborn/WildfireConfigurator.cs`
-- `src/Wildfire.Timberborn/TimberbornFireRuntime.cs`
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandBridge.cs`
+- `src/Wildfire.Timberborn/Qa/TimberbornQaCommandFileBridge.cs`
+- `src/Wildfire.Timberborn/Runtime/WildfireConfigurator.cs`
+- `src/Wildfire.Timberborn/Runtime/TimberbornFireRuntime.cs`
 - `scripts/invoke-timberborn-command.ts`
 - `docs/timberborn-menu-coordinate-guide.md`
 - `docs/timberborn-bottom-menu-guide.md`

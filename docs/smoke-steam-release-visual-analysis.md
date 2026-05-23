@@ -10,7 +10,7 @@ Jason's current read is accurate: the new smoke and steam path looks like a grid
 
 The current GPU indirect renderer draws smoke and steam from the simulator buffers through `TimberbornGpuIndirectFireRenderer`:
 
-- `src/Wildfire.Timberborn/TimberbornGpuIndirectFireRenderer.cs` draws one smoke billboard instance per grid cell and three steam billboard instances per grid cell.
+- `src/Wildfire.Timberborn/Visuals/TimberbornGpuIndirectFireRenderer.cs` draws one smoke billboard instance per grid cell and three steam billboard instances per grid cell.
 - `src/Wildfire.Unity/WildfireSmoothing.compute` temporally smooths fire, smoke, smoke contamination, and steam into `_SmoothedFields`.
 - `src/Wildfire.Unity/WildfireCloud.shader` renders each smoke or steam instance as a camera-facing circular billboard with a sphere-like falloff.
 
