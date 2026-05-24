@@ -1,13 +1,16 @@
 # Workshop Release Assets
 
-Keep `release/` as local Steam Workshop staging output. The durable cover artwork source lives at:
+Keep `release/` as local Steam Workshop staging output. The durable Workshop thumbnail source and final upload preview live at:
 
-- `docs/assets/workshop/wildfire-workshop-cover-source.png`
+- Source: `release/workshop/wildfire-workshop-thumbnail.png`
+- Final upload preview: `release/workshop/wildfire-workshop-thumbnail.jpg`
+- Generated background source: `release/workshop/wildfire-workshop-thumbnail-source.png`
+- Provenance notes: `release/workshop/thumbnail-provenance.md`
 
-Before publishing, regenerate the ignored Workshop preview image:
+Before publishing, regenerate the compressed Workshop preview image from the tracked source:
 
 ```bash
-magick docs/assets/workshop/wildfire-workshop-cover-source.png -resize 1920x1080^ -gravity center -extent 1920x1080 -strip -quality 82 release/workshop/wildfire-workshop-cover.jpg
+magick release/workshop/wildfire-workshop-thumbnail.png -resize 1920x1080^ -gravity center -extent 1920x1080 -strip -quality 82 release/workshop/wildfire-workshop-thumbnail.jpg
 ```
 
 The reusable publish command is:
@@ -16,4 +19,6 @@ The reusable publish command is:
 bun run workshop:publish -- --user <steam-account>
 ```
 
-The generated `release/workshop/wildfire-workshop-cover.jpg` is referenced by the generated local VDF and should not be committed unless the release directory policy changes. Steam rejects preview files at or above 1 MB, so the publish script generates a compressed JPG from the tracked PNG source.
+The generated `release/workshop/wildfire-workshop-thumbnail.jpg` is referenced by the generated local VDF and is the file Steam receives as the preview. Steam rejects preview files at or above 1 MB, so the publish script generates a compressed JPG from the tracked PNG source and must not use the larger PNG as the upload preview.
+
+Do not publish from `docs/assets/workshop/wildfire-workshop-cover-source.png`; that older cover source includes a fleeing beaver and is not the approved honest Workshop thumbnail.

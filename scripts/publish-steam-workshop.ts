@@ -25,8 +25,8 @@ Options:
   --vdf <path>           Workshop item VDF. Default: release/workshop/wildfire-workshop-item.vdf
   --content-folder <path>
                          Workshop content folder. Default: release/workshop/content.
-  --source <path>        Tracked cover source image. Default: docs/assets/workshop/wildfire-workshop-cover-source.png
-  --preview <path>       Generated preview image. Default: release/workshop/wildfire-workshop-cover.jpg
+  --source <path>        Tracked thumbnail source image. Default: release/workshop/wildfire-workshop-thumbnail.png
+  --preview <path>       Generated preview image. Default: release/workshop/wildfire-workshop-thumbnail.jpg
   --skip-preview         Do not regenerate the preview image.
   --dry-run              Validate and print the SteamCMD command without publishing.
   --help                 Show this help.
@@ -41,8 +41,8 @@ function parseArgs(argv: string[]): Options {
     user: process.env.STEAM_USER,
     vdfPath: "release/workshop/wildfire-workshop-item.vdf",
     contentFolderPath: "release/workshop/content",
-    sourceImagePath: "docs/assets/workshop/wildfire-workshop-cover-source.png",
-    previewImagePath: "release/workshop/wildfire-workshop-cover.jpg",
+    sourceImagePath: "release/workshop/wildfire-workshop-thumbnail.png",
+    previewImagePath: "release/workshop/wildfire-workshop-thumbnail.jpg",
   };
 
   argv.reduce((skipNext, arg, index) => {
