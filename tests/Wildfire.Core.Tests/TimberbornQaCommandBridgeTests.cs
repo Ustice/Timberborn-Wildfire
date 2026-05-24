@@ -2412,8 +2412,17 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: 74,
             BeaverFieldBehaviorSmokeChokingSlowdownsSkippedNoSafeApi: 75,
             BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 76,
+            BeaverFieldBehaviorSmokeChokingIncapacitationCandidates: 108,
+            BeaverFieldBehaviorSmokeChokingIncapacitationAttempts: 109,
+            BeaverFieldBehaviorSmokeChokingIncapacitationsApplied: 110,
+            BeaverFieldBehaviorSmokeChokingIncapacitationsRecovered: 111,
+            BeaverFieldBehaviorSmokeChokingIncapacitationSkippedUnsafeApi: 112,
+            BeaverFieldBehaviorSmokeChokingIncapacitationFailures: 113,
             BeaverFieldBehaviorSmokeDeathCandidates: 77,
+            BeaverFieldBehaviorSmokeDeathAttempts: 114,
+            BeaverFieldBehaviorSmokeDeathsApplied: 115,
             BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: 78,
+            BeaverFieldBehaviorSmokeDeathFailures: 116,
             BeaverFieldBehaviorToxicSmokeExposedBeavers: 79,
             BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples: 80,
             BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts: 81,
@@ -2646,8 +2655,17 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_recovered=74", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_skipped_no_safe_api=75", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_skipped_unsafe_api=76", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_candidates=108", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_attempts=109", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitations_applied=110", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitations_recovered=111", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_skipped_unsafe_api=112", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_failures=113", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_candidates=77", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_death_attempts=114", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_deaths_applied=115", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_skipped_unsafe_api=78", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_smoke_death_failures=116", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_exposed_beavers=79", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_exposure_accumulated_samples=80", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_attempts=81", result.ResultToken);

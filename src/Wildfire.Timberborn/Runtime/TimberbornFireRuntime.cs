@@ -1133,8 +1133,23 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeChokingSlowdownsRecovered,
             BeaverFieldBehaviorSmokeChokingSlowdownsSkippedNoSafeApi: beaverFieldBehaviorCounters.SmokeChokingSlowdownsSkippedNoSafeApi,
             BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeChokingSkippedUnsafeApi,
+            BeaverFieldBehaviorSmokeChokingIncapacitationCandidates:
+                beaverFieldBehaviorCounters.SmokeChokingIncapacitationCandidates,
+            BeaverFieldBehaviorSmokeChokingIncapacitationAttempts:
+                beaverFieldBehaviorCounters.SmokeChokingIncapacitationAttempts,
+            BeaverFieldBehaviorSmokeChokingIncapacitationsApplied:
+                beaverFieldBehaviorCounters.SmokeChokingIncapacitationsApplied,
+            BeaverFieldBehaviorSmokeChokingIncapacitationsRecovered:
+                beaverFieldBehaviorCounters.SmokeChokingIncapacitationsRecovered,
+            BeaverFieldBehaviorSmokeChokingIncapacitationSkippedUnsafeApi:
+                beaverFieldBehaviorCounters.SmokeChokingIncapacitationSkippedUnsafeApi,
+            BeaverFieldBehaviorSmokeChokingIncapacitationFailures:
+                beaverFieldBehaviorCounters.SmokeChokingIncapacitationFailures,
             BeaverFieldBehaviorSmokeDeathCandidates: beaverFieldBehaviorCounters.SmokeDeathCandidates,
+            BeaverFieldBehaviorSmokeDeathAttempts: beaverFieldBehaviorCounters.SmokeDeathAttempts,
+            BeaverFieldBehaviorSmokeDeathsApplied: beaverFieldBehaviorCounters.SmokeDeathsApplied,
             BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeDeathSkippedUnsafeApi,
+            BeaverFieldBehaviorSmokeDeathFailures: beaverFieldBehaviorCounters.SmokeDeathFailures,
             BeaverFieldBehaviorToxicSmokeExposedBeavers: beaverFieldBehaviorCounters.ToxicSmokeExposedBeavers,
             BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples:
                 beaverFieldBehaviorCounters.ToxicSmokeExposureAccumulatedSamples,
