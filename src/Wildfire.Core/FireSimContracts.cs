@@ -38,4 +38,6 @@ public readonly record struct FireSimChange(
     byte? SetHeat = null,
     byte? SetFlammability = null,
     byte? SetBurningLevel = null,
-    byte? SetTerrain = null);
+    byte? SetTerrain = null,
+    byte? SetSmoke = null,
+    byte? SetSmokeContamination = null);

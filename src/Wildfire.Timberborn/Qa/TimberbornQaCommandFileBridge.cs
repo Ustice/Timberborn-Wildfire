@@ -46,6 +46,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
                 soilMoistureService,
                 mapIndexService),
             new UnityTimberbornQaCommandLogSink(),
+            fireRuntime,
             fireRuntime);
     }
 

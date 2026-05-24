@@ -15,7 +15,9 @@ public sealed record TimberbornQaDeltaStimulusSustainedHeatState(
     int? QueuedCycleNumber = null,
     uint? LastCompletedTick = null,
     bool QueueFullFieldState = false,
-    IReadOnlyList<int>? CellIndices = null)
+    IReadOnlyList<int>? CellIndices = null,
+    byte? SetSmoke = null,
+    byte? SetSmokeContamination = null)
 {
     public int RemainingCycleCount => Math.Max(0, RequestedCycleCount - CompletedCycleCount);
 
@@ -45,6 +47,8 @@ public sealed class TimberbornFireSystem : IDisposable
         water: QaIgnitionWater,
         terrain: QaIgnitionTerrain,
         burningLevel: 0);
+    private const byte QaBeaverToxicSmokeExposureSmoke = 5;
+    private const byte QaBeaverToxicSmokeExposureContamination = 7;
     private const byte QaSpentFuel = 0;
     private const byte QaWaterSuppressionWater = 3;
     private const byte QaTaintedAshAmount = 3;
@@ -205,6 +209,8 @@ public sealed class TimberbornFireSystem : IDisposable
         _qaDeltaStimulusSustainedHeatState;
 
     public TimberbornContaminationFireConsequenceSummary ContaminationFireSummary => _contaminationFireSummary;
+
+    public IReadOnlyList<TimberbornImportedFieldTarget> ImportedTargets => _importedTargets;
 
     public int LastPersistentRestoreNoLiveFuelCellsCleared { get; private set; }
 
@@ -500,9 +506,10 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         FireGrid grid = RequireGrid();
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
-        if (normalizedSelector == TimberbornQaFieldTargetSelectors.BeaverExposure)
+        if (normalizedSelector is TimberbornQaFieldTargetSelectors.BeaverExposure or
+            TimberbornQaFieldTargetSelectors.ToxicBeaverExposure)
         {
-            return RegisterSustainedBeaverExposureDeltaStimulus(grid, beaverExposureTarget);
+            return RegisterSustainedBeaverExposureDeltaStimulus(grid, normalizedSelector, beaverExposureTarget);
         }
 
         if (normalizedSelector is TimberbornQaFieldTargetSelectors.Crop or TimberbornQaFieldTargetSelectors.Bush &&
@@ -763,6 +770,48 @@ public sealed class TimberbornFireSystem : IDisposable
             NativeDecontaminationAttemptCount: 0);
     }
 
+    public TimberbornQaAshWaterStimulusResult QueueAshWaterQaStimulus(string target)
+    {
+        _ = RequireGrid();
+        string normalizedTarget = TimberbornQaAshWaterStimulusTargets.Normalize(target);
+        TimberbornImportedFieldTarget selectedTarget = FindImportedTarget(
+            candidate => IsBurnableImportedTarget(candidate) &&
+                PackedCell.Water(candidate.InitialCell) < QaWaterSuppressionWater,
+            normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted
+                ? OrderByDescendingSoilContamination()
+                : static targets => targets.OrderBy(static target => target.CellIndex),
+            $"No imported burnable field target without maximum water was found for QA ash-water target '{normalizedTarget}'.");
+        byte ashContamination = normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted
+            ? QaTaintedAshContamination
+            : (byte)0;
+
+        RegisterChange(
+            new FireSimChange(
+                CellIndex: selectedTarget.CellIndex,
+                SetAsh: QaTaintedAshAmount,
+                SetAshContamination: ashContamination,
+                SetWater: QaWaterSuppressionWater),
+            "qa_ash_water_stimulus");
+
+        return new TimberbornQaAshWaterStimulusResult(
+            normalizedTarget,
+            normalizedTarget,
+            selectedTarget.CellIndex,
+            selectedTarget.X,
+            selectedTarget.Y,
+            selectedTarget.Z,
+            selectedTarget.MaterialClass,
+            selectedTarget.CompanionTargetId,
+            selectedTarget.InitialCell,
+            QaTaintedAshAmount,
+            ashContamination,
+            QaWaterSuppressionWater,
+            QueuedAshChangeCount: 1,
+            QueuedWaterChangeCount: 1,
+            ExpectedWaterTaintAttemptCount: normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted ? 1 : 0,
+            ExpectedSafeUnavailableWaterTaint: normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted);
+    }
+
     public TimberbornQaBurnDurationStimulusResult QueueBurnDurationQaStimulus(string target)
     {
         FireGrid grid = RequireGrid();
@@ -846,6 +895,7 @@ public sealed class TimberbornFireSystem : IDisposable
 
     private TimberbornQaDeltaStimulusResult RegisterSustainedBeaverExposureDeltaStimulus(
         FireGrid grid,
+        string normalizedSelector,
         TimberbornBeaverFieldExposureQaTarget? target)
     {
         if (target is not { IsAvailable: true, CellIndex: int cellIndex, X: int x, Y: int y, Z: int z })
@@ -859,20 +909,26 @@ public sealed class TimberbornFireSystem : IDisposable
             .Where(imported => imported.CellIndex == cellIndex)
             .Select(imported => (TimberbornImportedFieldTarget?)imported)
             .FirstOrDefault();
+        bool queueToxicSmoke = normalizedSelector == TimberbornQaFieldTargetSelectors.ToxicBeaverExposure;
         _qaDeltaStimulusSustainedHeatState = new TimberbornQaDeltaStimulusSustainedHeatState(
             cellIndex,
             x,
             y,
             z,
             QaBeaverSmokeExposureStimulusCell,
-            "beaver_candidate_cell",
+            queueToxicSmoke ? "beaver_candidate_toxic_smoke_cell" : "beaver_candidate_cell",
             QaDeltaStimulusSustainedHeatCycleCount,
             QueueFullFieldState: true,
-            CellIndices: target.CellIndices);
+            CellIndices: target.CellIndices,
+            SetSmoke: queueToxicSmoke ? QaBeaverToxicSmokeExposureSmoke : null,
+            SetSmokeContamination: queueToxicSmoke ? QaBeaverToxicSmokeExposureContamination : null);
         QueueNextSustainedQaDeltaStimulusCycle();
+        int queuedCellCount = _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber.HasValue
+            ? target.CellIndices.Count
+            : 0;
 
         return new TimberbornQaDeltaStimulusResult(
-            TimberbornQaFieldTargetSelectors.BeaverExposure,
+            normalizedSelector,
             cellIndex,
             x,
             y,
@@ -881,8 +937,8 @@ public sealed class TimberbornFireSystem : IDisposable
             importedTarget?.CompanionTargetId ?? 0,
             importedTarget?.InitialCell ?? 0,
             QaIgnitionHeat,
-            QueuedHeatChangeCount: _qaDeltaStimulusSustainedHeatState.QueuedCycleNumber.HasValue ? 1 : 0,
-            TargetSource: "beaver_candidate_cell",
+            QueuedHeatChangeCount: queuedCellCount,
+            TargetSource: queueToxicSmoke ? "beaver_candidate_toxic_smoke_cell" : "beaver_candidate_cell",
             SustainedHeatSetCell: QaBeaverSmokeExposureStimulusCell,
             SustainedHeatRequestedCycleCount: QaDeltaStimulusSustainedHeatCycleCount,
             SustainedHeatCompletedCycleCount: _qaDeltaStimulusSustainedHeatState.CompletedCycleCount,
@@ -895,7 +951,10 @@ public sealed class TimberbornFireSystem : IDisposable
             BeaverExposureTargetCandidateCells: target.CandidateCellCount,
             BeaverExposureTargetSampledBeavers: target.SampledBeaverCount,
             BeaverExposureTargetSkippedNoPositionApi: target.SkippedNoPositionApiCount,
-            BeaverExposureTargetSkippedBoundedSampling: target.SkippedBoundedSamplingCount);
+            BeaverExposureTargetSkippedBoundedSampling: target.SkippedBoundedSamplingCount,
+            SetSmoke: queueToxicSmoke ? QaBeaverToxicSmokeExposureSmoke : null,
+            SetSmokeContamination: queueToxicSmoke ? QaBeaverToxicSmokeExposureContamination : null,
+            QueuedSmokeChangeCount: queueToxicSmoke ? queuedCellCount : null);
     }
 
     private static TimberbornQaDeltaStimulusTargetSelection? FindCropDeltaStimulusTarget(
@@ -1288,7 +1347,11 @@ public sealed class TimberbornFireSystem : IDisposable
             : new[] { state.CellIndex };
         cellIndices
             .Select(cellIndex => state.QueueFullFieldState
-                ? new FireSimChange(CellIndex: cellIndex, SetCell: state.SetCell)
+                ? new FireSimChange(
+                    CellIndex: cellIndex,
+                    SetCell: state.SetCell,
+                    SetSmoke: state.SetSmoke,
+                    SetSmokeContamination: state.SetSmokeContamination)
                 : new FireSimChange(CellIndex: cellIndex, SetHeat: QaIgnitionHeat))
             .ToList()
             .ForEach(change => RegisterChange(
@@ -1307,6 +1370,8 @@ public sealed class TimberbornFireSystem : IDisposable
             $"z={state.Z} " +
             $"set_heat={(state.QueueFullFieldState ? PackedCell.Heat(state.SetCell) : QaIgnitionHeat)} " +
             $"set_cell={state.SetCell} " +
+            $"set_smoke={FormatNumber(state.SetSmoke)} " +
+            $"set_smoke_contamination={FormatNumber(state.SetSmokeContamination)} " +
             $"queue_full_field_state={state.QueueFullFieldState.ToString().ToLowerInvariant()} " +
             $"queued_cells={cellIndices.Count} " +
             $"target_source={TimberbornQaCommandBridge.FormatToken(state.TargetSource)} " +
@@ -1876,6 +1941,11 @@ public sealed class TimberbornFireSystem : IDisposable
     }
 
     private static string FormatNumber(uint? value)
+    {
+        return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
+    }
+
+    private static string FormatNumber(byte? value)
     {
         return value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "placeholder";
     }

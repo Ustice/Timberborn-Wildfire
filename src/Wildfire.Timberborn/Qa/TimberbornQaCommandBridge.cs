@@ -15,6 +15,7 @@ public sealed class TimberbornQaCommandBridge
     public const string QaDeltaStimulusCommand = "qa-delta-stimulus";
     public const string QaBuildingBurnoutStimulusCommand = "qa-building-burnout-stimulus";
     public const string QaWaterSuppressionStimulusCommand = "qa-water-suppression-stimulus";
+    public const string QaAshWaterStimulusCommand = "qa-ash-water-stimulus";
     public const string QaBurnDurationStimulusCommand = "qa-burn-duration-stimulus";
     public const string QaFirePresetCommand = "qa-fire-preset";
     public const string QaSoilMoistureRangeCommand = "qa-soil-moisture-range";
@@ -24,6 +25,7 @@ public sealed class TimberbornQaCommandBridge
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
     private readonly ITimberbornQaBuildingBurnoutStimulus _buildingBurnoutStimulus;
     private readonly ITimberbornQaWaterSuppressionStimulus _waterSuppressionStimulus;
+    private readonly ITimberbornQaAshWaterStimulus _ashWaterStimulus;
     private readonly ITimberbornQaBurnDurationStimulus _burnDurationStimulus;
     private readonly ITimberbornQaFireSimParameterPresetSelector _fireSimParameterPresetSelector;
     private readonly ITimberbornQaSoilMoistureMapProbe _soilMoistureMapProbe;
@@ -191,7 +193,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaFireSimParameterPresetSelector fireSimParameterPresetSelector,
         ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
         ITimberbornQaCommandLogSink logSink,
-        ITimberbornQaAshCellProbe? ashCellProbe = null)
+        ITimberbornQaAshCellProbe? ashCellProbe = null,
+        ITimberbornQaAshWaterStimulus? ashWaterStimulus = null)
     {
         if (stateProvider is null)
         {
@@ -237,6 +240,7 @@ public sealed class TimberbornQaCommandBridge
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
         _waterSuppressionStimulus = waterSuppressionStimulus;
+        _ashWaterStimulus = ashWaterStimulus ?? NullTimberbornQaAshWaterStimulus.Instance;
         _burnDurationStimulus = burnDurationStimulus;
         _fireSimParameterPresetSelector = fireSimParameterPresetSelector;
         _soilMoistureMapProbe = soilMoistureMapProbe;
@@ -262,6 +266,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(waterSuppressionStimulus, NullTimberbornQaWaterSuppressionStimulus.Instance))
         {
             commands[QaWaterSuppressionStimulusCommand] = () => ExecuteQaWaterSuppressionStimulus(null);
+        }
+
+        if (!ReferenceEquals(_ashWaterStimulus, NullTimberbornQaAshWaterStimulus.Instance))
+        {
+            commands[QaAshWaterStimulusCommand] = () => ExecuteQaAshWaterStimulus(null);
         }
 
         if (!ReferenceEquals(burnDurationStimulus, NullTimberbornQaBurnDurationStimulus.Instance))
@@ -354,9 +363,11 @@ public sealed class TimberbornQaCommandBridge
                             ? ExecuteQaDeltaStimulus(commandText)
                             : StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand)
                                 ? ExecuteQaWaterSuppressionStimulus(commandText)
-                                : StringComparer.OrdinalIgnoreCase.Equals(command, QaAshCellCommand)
-                                    ? ExecuteQaAshCell(commandText)
-                                    : handler();
+                                : StringComparer.OrdinalIgnoreCase.Equals(command, QaAshWaterStimulusCommand)
+                                    ? ExecuteQaAshWaterStimulus(commandText)
+                                    : StringComparer.OrdinalIgnoreCase.Equals(command, QaAshCellCommand)
+                                        ? ExecuteQaAshCell(commandText)
+                                        : handler();
             _logSink.Info(result.ResultToken);
             return result;
         }
@@ -500,6 +511,9 @@ public sealed class TimberbornQaCommandBridge
             $"set_ash_contamination={FormatNumber(stimulusResult.SetAshContamination)}_" +
             $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}_" +
             $"queued_ash_changes={FormatNumber(stimulusResult.QueuedAshChangeCount)}_" +
+            $"set_smoke={FormatNumber(stimulusResult.SetSmoke)}_" +
+            $"set_smoke_contamination={FormatNumber(stimulusResult.SetSmokeContamination)}_" +
+            $"queued_smoke_changes={FormatNumber(stimulusResult.QueuedSmokeChangeCount)}_" +
             $"burn_damage_target_key={FormatToken(stimulusResult.BurnDamageTargetKey)}_" +
             $"burn_damage_spec_id={FormatToken(stimulusResult.BurnDamageSpecId)}_" +
             $"burn_damage_target_kind={FormatToken(stimulusResult.BurnDamageTargetKind?.ToString())}_" +
@@ -577,6 +591,45 @@ public sealed class TimberbornQaCommandBridge
             $"initial_cell={stimulusResult.InitialCell}_" +
             $"set_water={stimulusResult.SetWater}_" +
             $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}");
+    }
+
+    private TimberbornQaCommandResult ExecuteQaAshWaterStimulus(string? commandText)
+    {
+        string? target = ParseAshWaterStimulusTarget(commandText);
+        if (target is null)
+        {
+            return TimberbornQaCommandResult.CreateFailure(
+                QaAshWaterStimulusCommand,
+                "Command 'qa-ash-water-stimulus' requires one target: clean or tainted.",
+                _stateProvider.GetState(),
+                KnownCommands);
+        }
+
+        TimberbornQaAshWaterStimulusResult stimulusResult =
+            _ashWaterStimulus.QueueAshWaterStimulus(target);
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaAshWaterStimulusCommand,
+            state,
+            KnownCommands,
+            "queued_ash_water_stimulus_" +
+            $"target={stimulusResult.Target}_" +
+            $"ash_quality={stimulusResult.AshQuality}_" +
+            $"target_index={stimulusResult.CellIndex}_" +
+            $"target_x={stimulusResult.X}_" +
+            $"target_y={stimulusResult.Y}_" +
+            $"target_z={stimulusResult.Z}_" +
+            $"target_material={stimulusResult.MaterialClass}_" +
+            $"companion_target_id={stimulusResult.CompanionTargetId}_" +
+            $"initial_cell={stimulusResult.InitialCell}_" +
+            $"set_ash={stimulusResult.SetAsh}_" +
+            $"set_ash_contamination={stimulusResult.SetAshContamination}_" +
+            $"set_water={stimulusResult.SetWater}_" +
+            $"queued_ash_changes={stimulusResult.QueuedAshChangeCount}_" +
+            $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}_" +
+            $"expected_water_taint_attempts={stimulusResult.ExpectedWaterTaintAttemptCount}_" +
+            $"expected_safe_unavailable_water_taint={stimulusResult.ExpectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}");
     }
 
     private TimberbornQaCommandResult ExecuteQaBurnDurationStimulus(string? commandText)
@@ -670,6 +723,8 @@ public sealed class TimberbornQaCommandBridge
             fieldTargetSelector is not null &&
             fieldTargetSelector != TimberbornQaFieldTargetSelectors.BeaverExposure &&
             !TimberbornQaFieldTargetSelectors.IsDirectConsequenceTargetSelector(fieldTargetSelector) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaAshWaterStimulusCommand) &&
+            ParseAshWaterStimulusTarget(commandText) is not null ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) &&
             ParseBurnDurationTarget(commandText) is not null ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) &&
@@ -711,6 +766,21 @@ public sealed class TimberbornQaCommandBridge
         return TimberbornQaBurnDurationStimulusTargets.IsKnownTarget(target) ? target : null;
     }
 
+    private static string? ParseAshWaterStimulusTarget(string? commandText)
+    {
+        string[] tokens = (commandText ?? string.Empty)
+            .Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length != 2)
+        {
+            return null;
+        }
+
+        string target = tokens[1].Trim().ToLowerInvariant();
+        return TimberbornQaAshWaterStimulusTargets.IsKnownTarget(target) ? target : null;
+    }
+
     private static string? ParseFirePresetName(string? commandText)
     {
         string[] tokens = (commandText ?? string.Empty)
@@ -749,6 +819,7 @@ public sealed class TimberbornQaCommandBridge
         return StringComparer.OrdinalIgnoreCase.Equals(command, QaDeltaStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBuildingBurnoutStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaAshWaterStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand);
     }
@@ -881,7 +952,10 @@ public sealed record TimberbornQaDeltaStimulusResult(
     int? BeaverExposureTargetCandidateCells = null,
     int? BeaverExposureTargetSampledBeavers = null,
     int? BeaverExposureTargetSkippedNoPositionApi = null,
-    int? BeaverExposureTargetSkippedBoundedSampling = null);
+    int? BeaverExposureTargetSkippedBoundedSampling = null,
+    byte? SetSmoke = null,
+    byte? SetSmokeContamination = null,
+    int? QueuedSmokeChangeCount = null);
 
 public interface ITimberbornQaBuildingBurnoutStimulus
 {
@@ -927,6 +1001,54 @@ public sealed record TimberbornQaWaterSuppressionStimulusResult(
     bool IsBadwaterSuppressionInput = false,
     int WaterSuppressionInputSafeUnavailableCount = 0,
     int NativeDecontaminationAttemptCount = 0);
+
+public interface ITimberbornQaAshWaterStimulus
+{
+    TimberbornQaAshWaterStimulusResult QueueAshWaterStimulus(string target);
+}
+
+public sealed record TimberbornQaAshWaterStimulusResult(
+    string Target,
+    string AshQuality,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    WildfireMaterialClass MaterialClass,
+    uint CompanionTargetId,
+    ushort InitialCell,
+    byte SetAsh,
+    byte SetAshContamination,
+    byte SetWater,
+    int QueuedAshChangeCount,
+    int QueuedWaterChangeCount,
+    int ExpectedWaterTaintAttemptCount,
+    bool ExpectedSafeUnavailableWaterTaint);
+
+public static class TimberbornQaAshWaterStimulusTargets
+{
+    public const string Clean = "clean";
+    public const string Tainted = "tainted";
+
+    private static readonly HashSet<string> KnownTargets = new(StringComparer.OrdinalIgnoreCase)
+    {
+        Clean,
+        Tainted,
+    };
+
+    public static bool IsKnownTarget(string target)
+    {
+        return KnownTargets.Contains(target);
+    }
+
+    public static string Normalize(string target)
+    {
+        string normalized = target.Trim().ToLowerInvariant();
+        return IsKnownTarget(normalized)
+            ? normalized
+            : throw new ArgumentException("Ash-water QA target must be clean or tainted.", nameof(target));
+    }
+}
 
 public interface ITimberbornQaBurnDurationStimulus
 {
@@ -1090,6 +1212,7 @@ public static class TimberbornQaFieldTargetSelectors
     public const string SelectedTree = "selected-tree";
     public const string CenterTree = "center-tree";
     public const string BeaverExposure = "beaver-exposure";
+    public const string ToxicBeaverExposure = "toxic-beaver-exposure";
     public const string Vegetation = "vegetation";
     public const string Crop = "crop";
     public const string Bush = "bush";
@@ -1112,6 +1235,7 @@ public static class TimberbornQaFieldTargetSelectors
         SelectedTree,
         CenterTree,
         BeaverExposure,
+        ToxicBeaverExposure,
         Vegetation,
         Crop,
         Bush,
@@ -1154,6 +1278,7 @@ public static class TimberbornQaFieldTargetSelectors
             SelectedTree => materialClass == WildfireMaterialClass.Tree,
             CenterTree => materialClass == WildfireMaterialClass.Tree,
             BeaverExposure => false,
+            ToxicBeaverExposure => false,
             Vegetation => materialClass == WildfireMaterialClass.Vegetation,
             Crop => materialClass == WildfireMaterialClass.Crop,
             Bush => materialClass is WildfireMaterialClass.Vegetation or WildfireMaterialClass.Crop,
@@ -1239,6 +1364,21 @@ public sealed class NullTimberbornQaWaterSuppressionStimulus : ITimberbornQaWate
     {
         throw new InvalidOperationException(
             "QA water suppression stimulus is unavailable until the Timberborn fire runtime is initialized.");
+    }
+}
+
+public sealed class NullTimberbornQaAshWaterStimulus : ITimberbornQaAshWaterStimulus
+{
+    public static readonly NullTimberbornQaAshWaterStimulus Instance = new();
+
+    private NullTimberbornQaAshWaterStimulus()
+    {
+    }
+
+    public TimberbornQaAshWaterStimulusResult QueueAshWaterStimulus(string target)
+    {
+        throw new InvalidOperationException(
+            "QA ash-water stimulus is unavailable until the Timberborn fire runtime is initialized.");
     }
 }
 
@@ -1495,6 +1635,13 @@ public sealed record TimberbornQaCommandState(
     int? TaintedAshPoisonCandidateCells = null,
     int? TaintedAshPoisonAppliedCells = null,
     int? TaintedAshPoisonSkippedNoSafeApi = null,
+    int? AshWaterWashoutCandidateAshCells = null,
+    int? AshWaterWashoutCleanAshWashed = null,
+    int? AshWaterWashoutTaintedAshWashed = null,
+    int? AshWaterWashoutWaterTaintAttempts = null,
+    int? AshWaterWashoutWaterTaintSuccesses = null,
+    int? AshWaterWashoutSkippedUnsafeWaterApis = null,
+    int? AshWaterWashoutNoOpCells = null,
     int? FertileAshGathererPosts = null,
     int? FertileAshCollectionCandidateCells = null,
     int? FertileAshCollectionReachableCells = null,
@@ -1922,6 +2069,13 @@ public sealed record TimberbornQaCommandResult(
         $"tainted_ash_poison_candidate_cells={FormatNumber(State.TaintedAshPoisonCandidateCells)} " +
         $"tainted_ash_poison_applied_cells={FormatNumber(State.TaintedAshPoisonAppliedCells)} " +
         $"tainted_ash_poison_skipped_no_safe_api={FormatNumber(State.TaintedAshPoisonSkippedNoSafeApi)} " +
+        $"ash_water_washout_candidate_ash_cells={FormatNumber(State.AshWaterWashoutCandidateAshCells)} " +
+        $"ash_water_washout_clean_ash_washed={FormatNumber(State.AshWaterWashoutCleanAshWashed)} " +
+        $"ash_water_washout_tainted_ash_washed={FormatNumber(State.AshWaterWashoutTaintedAshWashed)} " +
+        $"ash_water_washout_water_taint_attempts={FormatNumber(State.AshWaterWashoutWaterTaintAttempts)} " +
+        $"ash_water_washout_water_taint_successes={FormatNumber(State.AshWaterWashoutWaterTaintSuccesses)} " +
+        $"ash_water_washout_skipped_unsafe_water_apis={FormatNumber(State.AshWaterWashoutSkippedUnsafeWaterApis)} " +
+        $"ash_water_washout_no_op_cells={FormatNumber(State.AshWaterWashoutNoOpCells)} " +
         $"fertile_ash_gatherer_posts={FormatNumber(State.FertileAshGathererPosts)} " +
         $"fertile_ash_collection_candidate_cells={FormatNumber(State.FertileAshCollectionCandidateCells)} " +
         $"fertile_ash_collection_reachable_cells={FormatNumber(State.FertileAshCollectionReachableCells)} " +

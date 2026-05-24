@@ -218,6 +218,40 @@ public sealed class UnityShaderExecutionHarnessTests
     }
 
     [Fact]
+    public void UnityHarnessWaterDoesNotWashAshWithoutExternalMutationWhenEnabled()
+    {
+        ushort[] cells =
+        [
+            PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 3, terrain: 1, burningLevel: 0),
+        ];
+        uint[] transportFields =
+        [
+            new WildfireTransportFieldState(
+                Steam: 0,
+                Smoke: 0,
+                SmokeContamination: 0,
+                Ash: 1,
+                AshContamination: 7,
+                Source: false).Pack(),
+        ];
+        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(CreateFixture(
+            "ash-water-no-inline-shader-washout",
+            width: 1,
+            height: 1,
+            cells,
+            initialAtmosphericFields: transportFields),
+            tickCount: 64);
+        if (capture is null)
+        {
+            return;
+        }
+
+        WildfireTransportFieldState finalState = AtmosphereAt(capture, 0, 0);
+        Assert.Equal(1, finalState.Ash);
+        Assert.Equal(7, finalState.AshContamination);
+    }
+
+    [Fact]
     public void UnityHarnessAtmosphericFieldsUseDirectionalTransportWhenEnabled()
     {
         int width = 7;

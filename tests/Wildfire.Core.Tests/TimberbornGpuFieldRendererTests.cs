@@ -285,6 +285,17 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void FireSimDoesNotPerformInlineWaterAshWashout()
+    {
+        string source = ReadUnitySource("FireSim.compute");
+
+        Assert.Contains("uint ApplyAshChange(uint atmospheric, FireSimChangeGpu change)", source, StringComparison.Ordinal);
+        Assert.Contains("uint removeAsh = (change.AddFields >> 10) & 0x3u;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Water(newCell) > 0u && ash > 0u && (Tick & 63u) == 0u", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ash -= 1u;", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FireSimTaintableMaterialsCanEmitContaminatedSmokeFromSoilContamination()
     {
         string source = ReadUnitySource("FireSim.compute");

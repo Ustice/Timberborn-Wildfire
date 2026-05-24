@@ -24,6 +24,7 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaDeltaStimulus,
     ITimberbornQaBuildingBurnoutStimulus,
     ITimberbornQaWaterSuppressionStimulus,
+    ITimberbornQaAshWaterStimulus,
     ITimberbornQaBurnDurationStimulus,
     ITimberbornQaFireSimParameterPresetSelector,
     ITimberbornQaAshCellProbe
@@ -42,6 +43,7 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornSelectedCropTargetProvider _selectedCropTargetProvider;
     private readonly TimberbornAshFieldService _ashFieldService;
     private readonly TimberbornTaintedAshSoilPoisoningService _taintedAshSoilPoisoningService;
+    private readonly TimberbornAshWaterWashoutService _ashWaterWashoutService;
     private readonly TimberbornFertileAshCollectionService _fertileAshCollectionService;
     private readonly ISingletonLoader _singletonLoader;
     private readonly ISoilContaminationService _soilContaminationService;
@@ -137,6 +139,9 @@ public sealed class TimberbornFireRuntime :
                 mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService)),
                 _logSink),
             _logSink);
+        _ashWaterWashoutService = new TimberbornAshWaterWashoutService(
+            UnavailableTimberbornAshWaterTaintAdapter.Instance,
+            _logSink);
         _fertileAshCollectionService = new TimberbornFertileAshCollectionService(
             new TimberbornGathererPostFertileAshCollectionAdapter(_entityRegistry, CurrentGrid, _logSink),
             _logSink);
@@ -174,6 +179,7 @@ public sealed class TimberbornFireRuntime :
         _beaverFieldBehaviorDispatcher.Clear();
         _ashFieldService.Clear();
         _taintedAshSoilPoisoningService.Clear();
+        _ashWaterWashoutService.Clear();
         _fertileAshCollectionService.Clear();
         _dispatcher = null;
         _fireSystem = null;
@@ -266,6 +272,17 @@ public sealed class TimberbornFireRuntime :
 
     private void TryApplyAshWorldEffects(uint tick)
     {
+        try
+        {
+            IReadOnlyDictionary<int, TimberbornAshWaterContact> waterContacts = CurrentAshWaterContacts();
+            _ashWaterWashoutService.Apply(tick, _ashFieldService.Entries, waterContacts, QueueWashedAshRemoval);
+        }
+        catch (Exception exception)
+        {
+            _logSink.Warning(
+                $"wildfire_timberborn_ash_water_washout_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+        }
+
         try
         {
             _taintedAshSoilPoisoningService.Apply(tick, _ashFieldService.Entries);
@@ -566,7 +583,8 @@ public sealed class TimberbornFireRuntime :
     {
         string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(targetSelector);
         TimberbornBeaverFieldExposureQaTarget? beaverExposureTarget =
-            normalizedSelector == TimberbornQaFieldTargetSelectors.BeaverExposure
+            normalizedSelector is TimberbornQaFieldTargetSelectors.BeaverExposure or
+                TimberbornQaFieldTargetSelectors.ToxicBeaverExposure
                 ? _beaverFieldExposureTelemetry.SelectQaStimulusTarget(RequireFireSystem().RequireInitializedGrid())
                 : null;
         TimberbornQaDeltaStimulusResult result = normalizedSelector == TimberbornQaFieldTargetSelectors.SelectedTree
@@ -604,6 +622,9 @@ public sealed class TimberbornFireRuntime :
             $"initial_cell={result.InitialCell} " +
             $"set_heat={result.SetHeat} " +
             $"queued_heat_changes={result.QueuedHeatChangeCount} " +
+            $"set_smoke={FormatNumber(result.SetSmoke)} " +
+            $"set_smoke_contamination={FormatNumber(result.SetSmokeContamination)} " +
+            $"queued_smoke_changes={FormatNumber(result.QueuedSmokeChangeCount)} " +
             $"burn_damage_target_key={TimberbornQaCommandBridge.FormatToken(result.BurnDamageTargetKey)} " +
             $"burn_damage_spec_id={TimberbornQaCommandBridge.FormatToken(result.BurnDamageSpecId)} " +
             $"burn_damage_target_kind={TimberbornQaCommandBridge.FormatToken(result.BurnDamageTargetKind?.ToString())} " +
@@ -716,6 +737,32 @@ public sealed class TimberbornFireRuntime :
             $"initial_cell={result.InitialCell} " +
             $"set_water={result.SetWater} " +
             $"queued_water_changes={result.QueuedWaterChangeCount}");
+
+        return result;
+    }
+
+    public TimberbornQaAshWaterStimulusResult QueueAshWaterStimulus(string target)
+    {
+        TimberbornQaAshWaterStimulusResult result =
+            RequireFireSystem().QueueAshWaterQaStimulus(target);
+        _logSink.Info(
+            "wildfire_timberborn_qa_ash_water_stimulus_queued " +
+            $"target={result.Target} " +
+            $"ash_quality={result.AshQuality} " +
+            $"cell_index={result.CellIndex} " +
+            $"x={result.X} " +
+            $"y={result.Y} " +
+            $"z={result.Z} " +
+            $"target_material={result.MaterialClass} " +
+            $"companion_target_id={result.CompanionTargetId} " +
+            $"initial_cell={result.InitialCell} " +
+            $"set_ash={result.SetAsh} " +
+            $"set_ash_contamination={result.SetAshContamination} " +
+            $"set_water={result.SetWater} " +
+            $"queued_ash_changes={result.QueuedAshChangeCount} " +
+            $"queued_water_changes={result.QueuedWaterChangeCount} " +
+            $"expected_water_taint_attempts={result.ExpectedWaterTaintAttemptCount} " +
+            $"expected_safe_unavailable_water_taint={result.ExpectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}");
 
         return result;
     }
@@ -843,6 +890,8 @@ public sealed class TimberbornFireRuntime :
         TimberbornAshFieldSummary ashFieldSummary = _ashFieldService.LastSummary;
         TimberbornTaintedAshSoilPoisoningSummary taintedAshSummary =
             _taintedAshSoilPoisoningService.LastSummary;
+        TimberbornAshWaterWashoutSummary ashWaterWashoutSummary =
+            _ashWaterWashoutService.LastSummary;
         TimberbornFertileAshCollectionSummary fertileAshCollectionSummary =
             _fertileAshCollectionService.LastSummary;
 
@@ -1053,6 +1102,13 @@ public sealed class TimberbornFireRuntime :
             TaintedAshPoisonCandidateCells: taintedAshSummary.CandidateCellCount,
             TaintedAshPoisonAppliedCells: taintedAshSummary.AppliedCellCount,
             TaintedAshPoisonSkippedNoSafeApi: taintedAshSummary.SkippedNoSafeApiCount,
+            AshWaterWashoutCandidateAshCells: ashWaterWashoutSummary.CandidateAshCellCount,
+            AshWaterWashoutCleanAshWashed: ashWaterWashoutSummary.CleanAshWashedCellCount,
+            AshWaterWashoutTaintedAshWashed: ashWaterWashoutSummary.TaintedAshWashedCellCount,
+            AshWaterWashoutWaterTaintAttempts: ashWaterWashoutSummary.WaterTaintAttemptCount,
+            AshWaterWashoutWaterTaintSuccesses: ashWaterWashoutSummary.WaterTaintSuccessCount,
+            AshWaterWashoutSkippedUnsafeWaterApis: ashWaterWashoutSummary.SkippedUnsafeWaterApiCount,
+            AshWaterWashoutNoOpCells: ashWaterWashoutSummary.NoOpCellCount,
             FertileAshGathererPosts: fertileAshCollectionSummary.GathererPostCount,
             FertileAshCollectionCandidateCells: fertileAshCollectionSummary.CandidateCellCount,
             FertileAshCollectionReachableCells: fertileAshCollectionSummary.ReachableCellCount,
@@ -1479,6 +1535,29 @@ public sealed class TimberbornFireRuntime :
                 CellIndex: removal.CellIndex,
                 RemoveAsh: ashAmount),
             "ash_day_decay");
+    }
+
+    private void QueueWashedAshRemoval(TimberbornAshWaterWashoutRemoval removal)
+    {
+        byte ashAmount = StrengthToAshUnits(removal.StrengthRemoved);
+        if (ashAmount == 0)
+        {
+            return;
+        }
+
+        _fireSystem?.RegisterChange(
+            new FireSimChange(
+                CellIndex: removal.CellIndex,
+                RemoveAsh: ashAmount),
+            "ash_water_washout");
+    }
+
+    private IReadOnlyDictionary<int, TimberbornAshWaterContact> CurrentAshWaterContacts()
+    {
+        TimberbornFireSystem? fireSystem = _fireSystem;
+        return TimberbornAshWaterContactClassifier.FromFireSimState(
+            fireSystem?.CapturePersistentFireSimState(),
+            fireSystem?.ImportedTargets ?? Array.Empty<TimberbornImportedFieldTarget>());
     }
 
     private static byte StrengthToAshUnits(int strength)

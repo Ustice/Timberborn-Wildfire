@@ -381,6 +381,177 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
+    public void AshWaterWashoutQueuesSimulatorRemovalForCleanAshWithoutWaterTaint()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        SyncAsh(
+            service,
+            60,
+            (CellIndex: 12, Ash: 2, AshContamination: 0));
+        TimberbornAshWaterWashoutService washout = new();
+        List<TimberbornAshWaterWashoutRemoval> removals = new();
+
+        TimberbornAshWaterWashoutSummary summary = washout.Apply(
+            61,
+            service.Entries,
+            new Dictionary<int, TimberbornAshWaterContact>
+            {
+                [12] = new TimberbornAshWaterContact(
+                    12,
+                    WaterLevel: 3,
+                    TimberbornAshWaterContactKind.CleanWater),
+            },
+            removals.Add);
+
+        TimberbornAshWaterWashoutRemoval removal = Assert.Single(removals);
+        Assert.Equal(12, removal.CellIndex);
+        Assert.Equal(2, removal.StrengthRemoved);
+        Assert.Equal(WildfireAshQuality.Fertile, removal.Quality);
+        Assert.Equal(1, summary.CleanAshWashedCellCount);
+        Assert.Equal(0, summary.TaintedAshWashedCellCount);
+        Assert.Equal(0, summary.WaterTaintAttemptCount);
+        Assert.Equal(0, summary.SkippedUnsafeWaterApiCount);
+    }
+
+    [Fact]
+    public void AshWaterContactClassifierSeparatesCleanWaterFromUnsafeWaterLikeCells()
+    {
+        TimberbornFireSimPersistenceSnapshot snapshot = new(
+            Width: 3,
+            Height: 1,
+            Depth: 1,
+            Tick: 64,
+            Cells:
+            [
+                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 1, terrain: 1, burningLevel: 0),
+                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 2, terrain: 1, burningLevel: 0),
+                PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0),
+            ],
+            TransportFields: []);
+        TimberbornImportedFieldTarget[] importedTargets =
+        [
+            new(
+                CellIndex: 0,
+                X: 0,
+                Y: 0,
+                Z: 0,
+                WildfireMaterialClass.Water,
+                CompanionTargetId: 1,
+                InitialCell: snapshot.Cells[0]),
+            new(
+                CellIndex: 1,
+                X: 1,
+                Y: 0,
+                Z: 0,
+                WildfireMaterialClass.Badwater,
+                CompanionTargetId: 2,
+                InitialCell: snapshot.Cells[1]),
+        ];
+
+        IReadOnlyDictionary<int, TimberbornAshWaterContact> contacts =
+            TimberbornAshWaterContactClassifier.FromFireSimState(snapshot, importedTargets);
+
+        Assert.Equal(2, contacts.Count);
+        Assert.Equal(TimberbornAshWaterContactKind.CleanWater, contacts[0].Kind);
+        Assert.Equal(1, contacts[0].WaterLevel);
+        Assert.Equal(TimberbornAshWaterContactKind.BadwaterOrContaminatedWater, contacts[1].Kind);
+        Assert.Equal(2, contacts[1].WaterLevel);
+        Assert.False(contacts.ContainsKey(2));
+    }
+
+    [Fact]
+    public void AshWaterWashoutReportsSafeUnavailableWaterTaintForTaintedAsh()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        SyncAsh(
+            service,
+            60,
+            (CellIndex: 12, Ash: 3, AshContamination: 7));
+        TimberbornAshWaterWashoutService washout = new();
+        List<TimberbornAshWaterWashoutRemoval> removals = new();
+
+        TimberbornAshWaterWashoutSummary summary = washout.Apply(
+            61,
+            service.Entries,
+            new Dictionary<int, TimberbornAshWaterContact>
+            {
+                [12] = new TimberbornAshWaterContact(
+                    12,
+                    WaterLevel: 3,
+                    TimberbornAshWaterContactKind.BadwaterOrContaminatedWater),
+            },
+            removals.Add);
+
+        TimberbornAshWaterWashoutRemoval removal = Assert.Single(removals);
+        Assert.Equal(WildfireAshQuality.Tainted, removal.Quality);
+        Assert.Equal(TimberbornAshWaterContactKind.BadwaterOrContaminatedWater, removal.WaterKind);
+        Assert.Equal(0, summary.CleanAshWashedCellCount);
+        Assert.Equal(1, summary.TaintedAshWashedCellCount);
+        Assert.Equal(1, summary.WaterTaintAttemptCount);
+        Assert.Equal(0, summary.WaterTaintSuccessCount);
+        Assert.Equal(1, summary.SkippedUnsafeWaterApiCount);
+    }
+
+    [Fact]
+    public void AshWaterWashoutPreservesNoOpCellsWithoutWaterOrWhileActiveSource()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        service.SyncFromTransportFields(
+            60,
+            [
+                new WildfireTransportFieldState(0, 0, 0, Ash: 2, AshContamination: 0, Source: false).Pack(),
+                new WildfireTransportFieldState(0, 0, 0, Ash: 2, AshContamination: 0, Source: true).Pack(),
+            ]);
+        TimberbornAshWaterWashoutService washout = new();
+        List<TimberbornAshWaterWashoutRemoval> removals = new();
+
+        TimberbornAshWaterWashoutSummary summary = washout.Apply(
+            61,
+            service.Entries,
+            new Dictionary<int, TimberbornAshWaterContact>
+            {
+                [1] = new TimberbornAshWaterContact(
+                    1,
+                    WaterLevel: 3,
+                    TimberbornAshWaterContactKind.CleanWater),
+            },
+            removals.Add);
+
+        Assert.Empty(removals);
+        Assert.Equal(2, summary.CandidateAshCellCount);
+        Assert.Equal(2, summary.NoOpCellCount);
+        Assert.Equal(0, summary.CleanAshWashedCellCount);
+    }
+
+    [Fact]
+    public void AshWaterWashoutCanReportSafeWaterTaintSuccessWithoutDeletingLocally()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        SyncAsh(
+            service,
+            60,
+            (CellIndex: 12, Ash: 1, AshContamination: 1));
+        TimberbornAshWaterWashoutService washout = new(new RecordingWaterTaintAdapter());
+
+        TimberbornAshWaterWashoutSummary summary = washout.Apply(
+            61,
+            service.Entries,
+            new Dictionary<int, TimberbornAshWaterContact>
+            {
+                [12] = new TimberbornAshWaterContact(
+                    12,
+                    WaterLevel: 3,
+                    TimberbornAshWaterContactKind.CleanWater),
+            });
+
+        Assert.True(service.TryGetEntry(12, out TimberbornAshFieldEntry entry));
+        Assert.Equal(1, entry.Strength);
+        Assert.Equal(1, summary.WaterTaintAttemptCount);
+        Assert.Equal(1, summary.WaterTaintSuccessCount);
+        Assert.Equal(0, summary.SkippedUnsafeWaterApiCount);
+    }
+
+    [Fact]
     public void TaintedAshSoilPoisoningReadsContaminationWithNativeMapIndex()
     {
         FireGrid grid = new(50, 50, 23);
@@ -568,6 +739,20 @@ public sealed class TimberbornAshFieldServiceTests
                 CollectedGoodCount: collectedCells.Sum(static cell => cell.GoodAmount),
                 SkippedInventoryApiCount: 0,
                 CollectedCells: collectedCells);
+        }
+    }
+
+    private sealed class RecordingWaterTaintAdapter : ITimberbornAshWaterTaintAdapter
+    {
+        public TimberbornAshWaterWashoutSummary ApplyWaterTaint(
+            uint tick,
+            IReadOnlyList<TimberbornAshWaterWashoutRemoval> taintedWashouts,
+            TimberbornAshWaterWashoutSummary washoutSummary)
+        {
+            return washoutSummary with
+            {
+                WaterTaintSuccessCount = washoutSummary.WaterTaintSuccessCount + taintedWashouts.Count,
+            };
         }
     }
 

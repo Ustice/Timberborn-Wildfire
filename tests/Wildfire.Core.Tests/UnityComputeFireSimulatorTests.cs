@@ -595,12 +595,21 @@ public sealed class UnityComputeFireSimulatorTests
                     AddAsh: 4,
                     RemoveAsh: 5,
                     SetAsh: 6,
-                    SetAshContamination: 9),
+                    SetAshContamination: 9,
+                    SetSmoke: 8,
+                    SetSmokeContamination: 9),
             ],
             capacity: 1);
 
-        Assert.Equal((1u << 0) | (1u << 7) | (1u << 8), encoded[1]);
-        Assert.Equal((3u << 8) | (3u << 10) | (3u << 12) | (7u << 14), encoded[2]);
+        Assert.Equal((1u << 0) | (1u << 7) | (1u << 8) | (1u << 9) | (1u << 10), encoded[1]);
+        Assert.Equal(
+            (3u << 8) |
+                (3u << 10) |
+                (3u << 12) |
+                (7u << 14) |
+                (7u << 17) |
+                (7u << 20),
+            encoded[2]);
         Assert.Equal(0x1234u, encoded[3] & 0xFFFFu);
     }
 

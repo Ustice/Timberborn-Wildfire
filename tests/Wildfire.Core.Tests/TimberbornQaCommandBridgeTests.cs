@@ -582,6 +582,60 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void ExecuteQaDeltaStimulusReportsToxicBeaverExposureTargetFields()
+    {
+        RecordingDeltaStimulus deltaStimulus = new(
+            new TimberbornQaDeltaStimulusResult(
+                "toxic-beaver-exposure",
+                91,
+                3,
+                4,
+                2,
+                WildfireMaterialClass.Unknown,
+                0u,
+                0,
+                15,
+                3,
+                TargetSource: "beaver_candidate_toxic_smoke_cell",
+                SustainedHeatSetCell: 13311,
+                SustainedHeatRequestedCycleCount: 12,
+                SustainedHeatCompletedCycleCount: 0,
+                SustainedHeatRemainingCycleCount: 12,
+                SustainedHeatQueuedCycleNumber: 1,
+                BeaverExposureTargetBeaverId: "beaver-1",
+                BeaverExposureTargetBeaverX: 3,
+                BeaverExposureTargetBeaverY: 4,
+                BeaverExposureTargetBeaverZ: 2,
+                BeaverExposureTargetCandidateCells: 3,
+                BeaverExposureTargetSampledBeavers: 27,
+                BeaverExposureTargetSkippedNoPositionApi: 0,
+                BeaverExposureTargetSkippedBoundedSampling: 0,
+                SetSmoke: 5,
+                SetSmokeContamination: 7,
+                QueuedSmokeChangeCount: 3));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: true)),
+            deltaStimulus,
+            new RecordingLogSink());
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus toxic-beaver-exposure");
+
+        Assert.True(result.Success);
+        Assert.Equal(["toxic-beaver-exposure"], deltaStimulus.TargetSelectors);
+        Assert.Contains("target_selector=toxic-beaver-exposure", result.Message);
+        Assert.Contains("target_source=beaver_candidate_toxic_smoke_cell", result.Message);
+        Assert.Contains("set_smoke=5", result.Message);
+        Assert.Contains("set_smoke_contamination=7", result.Message);
+        Assert.Contains("queued_smoke_changes=3", result.Message);
+        Assert.Contains("beaver_exposure_target_beaver_id=beaver-1", result.Message);
+        Assert.Contains("beaver_exposure_target_beaver_x=3", result.Message);
+        Assert.Contains("beaver_exposure_target_beaver_y=4", result.Message);
+        Assert.Contains("beaver_exposure_target_beaver_z=2", result.Message);
+        Assert.Contains("beaver_exposure_target_candidate_cells=3", result.Message);
+        Assert.Contains("beaver_exposure_target_sampled_beavers=27", result.Message);
+    }
+
+    [Fact]
     public void ExecuteQaDeltaStimulusReportsTaintedAshStimulusFields()
     {
         RecordingDeltaStimulus deltaStimulus = new(
@@ -731,11 +785,99 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Theory]
+    [InlineData("clean", 0, 0, false)]
+    [InlineData("tainted", 7, 1, true)]
+    public void ExecuteQaAshWaterStimulusQueuesBoundAshAndWaterOnSameTarget(
+        string target,
+        byte ashContamination,
+        int expectedWaterTaintAttempts,
+        bool expectedSafeUnavailableWaterTaint)
+    {
+        TimberbornQaCommandState state = new(
+            IsSimulatorIntegrated: true,
+            IsGameContextRuntimeLoaded: true,
+            Width: 8,
+            Height: 6,
+            Depth: 4,
+            TickCount: 12,
+            QueuedChangeCount: 1,
+            LastDeltaCount: 0,
+            AshWaterWashoutCandidateAshCells: 1,
+            AshWaterWashoutCleanAshWashed: target == "clean" ? 1 : 0,
+            AshWaterWashoutTaintedAshWashed: target == "tainted" ? 1 : 0,
+            AshWaterWashoutWaterTaintAttempts: expectedWaterTaintAttempts,
+            AshWaterWashoutWaterTaintSuccesses: 0,
+            AshWaterWashoutSkippedUnsafeWaterApis: expectedWaterTaintAttempts,
+            AshWaterWashoutNoOpCells: 0);
+        RecordingStateProvider stateProvider = new(state);
+        RecordingAshWaterStimulus ashWaterStimulus = new(
+            new TimberbornQaAshWaterStimulusResult(
+                target,
+                target,
+                91,
+                3,
+                4,
+                2,
+                WildfireMaterialClass.Tree,
+                77u,
+                498,
+                3,
+                ashContamination,
+                3,
+                QueuedAshChangeCount: 1,
+                QueuedWaterChangeCount: 1,
+                ExpectedWaterTaintAttemptCount: expectedWaterTaintAttempts,
+                ExpectedSafeUnavailableWaterTaint: expectedSafeUnavailableWaterTaint));
+        RecordingLogSink logSink = new();
+        TimberbornQaCommandBridge bridge = new(
+            stateProvider,
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            logSink,
+            ashWaterStimulus: ashWaterStimulus);
+
+        TimberbornQaCommandResult result = bridge.Execute($"qa-ash-water-stimulus {target}");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-ash-water-stimulus", result.Command);
+        Assert.Equal(["help", "qa-ash-water-stimulus", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal([target], ashWaterStimulus.Targets);
+        Assert.Equal(2, stateProvider.CallCount);
+        Assert.Contains($"target={target}", result.Message);
+        Assert.Contains($"ash_quality={target}", result.Message);
+        Assert.Contains("target_index=91", result.Message);
+        Assert.Contains("target_x=3", result.Message);
+        Assert.Contains("target_y=4", result.Message);
+        Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("target_material=Tree", result.Message);
+        Assert.Contains("companion_target_id=77", result.Message);
+        Assert.Contains("initial_cell=498", result.Message);
+        Assert.Contains("set_ash=3", result.Message);
+        Assert.Contains($"set_ash_contamination={ashContamination}", result.Message);
+        Assert.Contains("set_water=3", result.Message);
+        Assert.Contains("queued_ash_changes=1", result.Message);
+        Assert.Contains("queued_water_changes=1", result.Message);
+        Assert.Contains($"expected_water_taint_attempts={expectedWaterTaintAttempts}", result.Message);
+        Assert.Contains(
+            $"expected_safe_unavailable_water_taint={expectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}",
+            result.Message);
+        Assert.Contains($"ash_water_washout_water_taint_attempts={expectedWaterTaintAttempts}", result.ResultToken);
+        Assert.Contains($"ash_water_washout_skipped_unsafe_water_apis={expectedWaterTaintAttempts}", result.ResultToken);
+        Assert.Contains("wildfire_command_request command=qa-ash-water-stimulus", logSink.InfoMessages);
+        Assert.Contains(result.ResultToken, logSink.InfoMessages);
+    }
+
+    [Theory]
     [InlineData("qa-delta-stimulus tree", "tree")]
     [InlineData("qa-delta-stimulus contaminated-tree", "contaminated-tree")]
     [InlineData("qa-delta-stimulus tainted-ash", "tainted-ash")]
     [InlineData("qa-delta-stimulus selected-tree", "selected-tree")]
     [InlineData("qa-delta-stimulus beaver-exposure", "beaver-exposure")]
+    [InlineData("qa-delta-stimulus toxic-beaver-exposure", "toxic-beaver-exposure")]
     [InlineData("qa-delta-stimulus infrastructure", "infrastructure")]
     [InlineData("qa-delta-stimulus dynamite", "dynamite")]
     [InlineData("qa-delta-stimulus detonator", "detonator")]
@@ -1004,6 +1146,57 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.True(visualSample.Smoke >= TimberbornBeaverFieldExposureTelemetry.RespiratorySmokeThreshold);
         Assert.True(visualSample.Smoke < TimberbornBeaverFieldExposureTelemetry.ToxicSmokeThreshold);
         Assert.True(visualSample.Fire < TimberbornBeaverFieldExposureTelemetry.BurnFireThreshold);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusToxicBeaverExposureQueuesContaminatedSmokeAtSampledCandidateCells()
+    {
+        RecordingFireSimulator simulator = new(width: 5, height: 5, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(simulator);
+        FireGrid grid = new(simulator.Width, simulator.Height, simulator.Depth);
+        int beaverCellIndex = grid.ToIndex(2, 3, 1);
+        int[] candidateCellIndices =
+        [
+            grid.ToIndex(1, 2, 1),
+            beaverCellIndex,
+            grid.ToIndex(3, 4, 1),
+        ];
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            "toxic-beaver-exposure",
+            beaverExposureTarget: TimberbornBeaverFieldExposureQaTarget.Available(
+                "beaver-1",
+                beaverX: 2,
+                beaverY: 3,
+                beaverZ: 1,
+                cellIndex: beaverCellIndex,
+                x: 2,
+                y: 3,
+                z: 1,
+                candidateCellCount: candidateCellIndices.Length,
+                sampledBeaverCount: 1,
+                skippedBoundedSamplingCount: 0,
+                cellIndices: candidateCellIndices));
+
+        Assert.Equal("toxic-beaver-exposure", result.TargetSelector);
+        Assert.Equal(beaverCellIndex, result.CellIndex);
+        Assert.Equal(2, result.X);
+        Assert.Equal(3, result.Y);
+        Assert.Equal(1, result.Z);
+        Assert.Equal("beaver_candidate_toxic_smoke_cell", result.TargetSource);
+        Assert.Equal("beaver-1", result.BeaverExposureTargetBeaverId);
+        Assert.Equal(candidateCellIndices.Length, result.BeaverExposureTargetCandidateCells);
+        Assert.Equal(1, result.BeaverExposureTargetSampledBeavers);
+        Assert.Equal((byte)5, result.SetSmoke);
+        Assert.Equal((byte)7, result.SetSmokeContamination);
+        Assert.Equal(candidateCellIndices.Length, result.QueuedSmokeChangeCount);
+        Assert.Equal(candidateCellIndices.Length, simulator.RegisteredChanges.Count);
+        Assert.Equal(candidateCellIndices, simulator.RegisteredChanges.Select(static change => change.CellIndex).ToArray());
+        Assert.All(simulator.RegisteredChanges, registeredChange =>
+        {
+            Assert.Equal((byte)5, registeredChange.SetSmoke);
+            Assert.Equal((byte)7, registeredChange.SetSmokeContamination);
+        });
     }
 
     [Fact]
@@ -1889,6 +2082,53 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
+    [Theory]
+    [InlineData("clean", 0, 0, false)]
+    [InlineData("tainted", 7, 1, true)]
+    public void QueueAshWaterQaStimulusRegistersBoundAshAndWaterOnOneImportedTarget(
+        string target,
+        byte ashContamination,
+        int expectedWaterTaintAttempts,
+        bool expectedSafeUnavailableWaterTaint)
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
+
+        TimberbornQaAshWaterStimulusResult result = fireSystem.QueueAshWaterQaStimulus(target);
+
+        Assert.Equal(target, result.Target);
+        Assert.Equal(target, result.AshQuality);
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(2, result.X);
+        Assert.Equal(3, result.Y);
+        Assert.Equal(1, result.Z);
+        Assert.Equal(WildfireMaterialClass.Tree, result.MaterialClass);
+        Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Equal((byte)3, result.SetAsh);
+        Assert.Equal(ashContamination, result.SetAshContamination);
+        Assert.Equal((byte)3, result.SetWater);
+        Assert.Equal(1, result.QueuedAshChangeCount);
+        Assert.Equal(1, result.QueuedWaterChangeCount);
+        Assert.Equal(expectedWaterTaintAttempts, result.ExpectedWaterTaintAttemptCount);
+        Assert.Equal(expectedSafeUnavailableWaterTaint, result.ExpectedSafeUnavailableWaterTaint);
+        FireSimChange change = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(38, change.CellIndex);
+        Assert.Null(change.SetCell);
+        Assert.Null(change.AddHeat);
+        Assert.Null(change.AddFuel);
+        Assert.Equal((byte)3, change.SetAsh);
+        Assert.Equal(ashContamination, change.SetAshContamination);
+        Assert.Equal((byte)3, change.SetWater);
+        Assert.Null(change.SetFuel);
+        Assert.Null(change.SetHeat);
+        Assert.Null(change.SetFlammability);
+        Assert.Null(change.SetBurningLevel);
+        Assert.Null(change.SetTerrain);
+        Assert.Equal(1, fireSystem.RegisteredChangeCountSinceLastDispatch);
+    }
+
     [Fact]
     public void QueueWaterSuppressionQaStimulusTargetsContaminatedTreeWithoutDecontamination()
     {
@@ -2258,6 +2498,8 @@ public sealed class TimberbornQaCommandBridgeTests
     [InlineData("qa-building-burnout-stimulus target=1")]
     [InlineData("qa-water-suppression-stimulus unknown")]
     [InlineData("qa-water-suppression-stimulus x=1 y=2")]
+    [InlineData("qa-ash-water-stimulus unknown")]
+    [InlineData("qa-ash-water-stimulus x=1 y=2")]
     [InlineData("qa-burn-duration-stimulus x=1 y=2")]
     [InlineData("qa-burn-duration-stimulus extreme")]
     public void SimulatorChangeCommandsRejectArguments(string command)
@@ -2286,7 +2528,27 @@ public sealed class TimberbornQaCommandBridgeTests
                     64,
                     12,
                     12)),
-            new RecordingLogSink());
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            new RecordingLogSink(),
+            ashWaterStimulus: new RecordingAshWaterStimulus(
+                new TimberbornQaAshWaterStimulusResult(
+                    TimberbornQaAshWaterStimulusTargets.Clean,
+                    TimberbornQaAshWaterStimulusTargets.Clean,
+                    0,
+                    0,
+                    0,
+                    0,
+                    WildfireMaterialClass.Tree,
+                    1u,
+                    1,
+                    3,
+                    0,
+                    3,
+                    1,
+                    1,
+                    0,
+                    ExpectedSafeUnavailableWaterTaint: false)));
 
         TimberbornQaCommandResult result = bridge.Execute(command);
 
@@ -2547,6 +2809,13 @@ public sealed class TimberbornQaCommandBridgeTests
             TaintedAshPoisonCandidateCells: 1,
             TaintedAshPoisonAppliedCells: 1,
             TaintedAshPoisonSkippedNoSafeApi: 0,
+            AshWaterWashoutCandidateAshCells: 4,
+            AshWaterWashoutCleanAshWashed: 2,
+            AshWaterWashoutTaintedAshWashed: 1,
+            AshWaterWashoutWaterTaintAttempts: 1,
+            AshWaterWashoutWaterTaintSuccesses: 0,
+            AshWaterWashoutSkippedUnsafeWaterApis: 1,
+            AshWaterWashoutNoOpCells: 1,
             FertileAshGathererPosts: 2,
             FertileAshCollectionCandidateCells: 2,
             FertileAshCollectionReachableCells: 1,
@@ -2796,6 +3065,13 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("tainted_ash_poison_candidate_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_applied_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_skipped_no_safe_api=0", result.ResultToken);
+        Assert.Contains("ash_water_washout_candidate_ash_cells=4", result.ResultToken);
+        Assert.Contains("ash_water_washout_clean_ash_washed=2", result.ResultToken);
+        Assert.Contains("ash_water_washout_tainted_ash_washed=1", result.ResultToken);
+        Assert.Contains("ash_water_washout_water_taint_attempts=1", result.ResultToken);
+        Assert.Contains("ash_water_washout_water_taint_successes=0", result.ResultToken);
+        Assert.Contains("ash_water_washout_skipped_unsafe_water_apis=1", result.ResultToken);
+        Assert.Contains("ash_water_washout_no_op_cells=1", result.ResultToken);
         Assert.Contains("fertile_ash_gatherer_posts=2", result.ResultToken);
         Assert.Contains("fertile_ash_collection_candidate_cells=2", result.ResultToken);
         Assert.Contains("fertile_ash_collection_reachable_cells=1", result.ResultToken);
@@ -2945,6 +3221,18 @@ public sealed class TimberbornQaCommandBridgeTests
         }
 
         public List<string> TargetSelectors { get; } = [];
+    }
+
+    private sealed class RecordingAshWaterStimulus(TimberbornQaAshWaterStimulusResult result)
+        : ITimberbornQaAshWaterStimulus
+    {
+        public List<string> Targets { get; } = [];
+
+        public TimberbornQaAshWaterStimulusResult QueueAshWaterStimulus(string target)
+        {
+            Targets.Add(target);
+            return result;
+        }
     }
 
     private sealed class RecordingBurnDurationStimulus(TimberbornQaBurnDurationStimulusResult result)

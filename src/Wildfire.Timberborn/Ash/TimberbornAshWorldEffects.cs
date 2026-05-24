@@ -212,6 +212,217 @@ public sealed class TimberbornTaintedAshSoilPoisoningService
     }
 }
 
+public enum TimberbornAshWaterContactKind
+{
+    CleanWater,
+    BadwaterOrContaminatedWater,
+}
+
+public readonly record struct TimberbornAshWaterContact(
+    int CellIndex,
+    int WaterLevel,
+    TimberbornAshWaterContactKind Kind);
+
+public static class TimberbornAshWaterContactClassifier
+{
+    public static IReadOnlyDictionary<int, TimberbornAshWaterContact> FromFireSimState(
+        TimberbornFireSimPersistenceSnapshot? snapshot,
+        IEnumerable<TimberbornImportedFieldTarget> importedTargets)
+    {
+        if (snapshot?.Cells is not { Count: > 0 } cells)
+        {
+            return new Dictionary<int, TimberbornAshWaterContact>();
+        }
+
+        if (importedTargets is null)
+        {
+            throw new ArgumentNullException(nameof(importedTargets));
+        }
+
+        HashSet<int> unsafeWaterCells = importedTargets
+            .Where(static target => target.MaterialClass == WildfireMaterialClass.Badwater)
+            .Select(static target => target.CellIndex)
+            .ToHashSet();
+        return cells
+            .Select(static (cell, index) => (CellIndex: index, Water: PackedCell.Water(cell)))
+            .Where(static item => item.Water > 0)
+            .ToDictionary(
+                static item => item.CellIndex,
+                item => new TimberbornAshWaterContact(
+                    item.CellIndex,
+                    item.Water,
+                    unsafeWaterCells.Contains(item.CellIndex)
+                        ? TimberbornAshWaterContactKind.BadwaterOrContaminatedWater
+                        : TimberbornAshWaterContactKind.CleanWater));
+    }
+}
+
+public readonly record struct TimberbornAshWaterWashoutRemoval(
+    int CellIndex,
+    int StrengthRemoved,
+    WildfireAshQuality Quality,
+    TimberbornAshWaterContactKind WaterKind);
+
+public readonly record struct TimberbornAshWaterWashoutSummary(
+    int CandidateAshCellCount,
+    int CleanAshWashedCellCount,
+    int TaintedAshWashedCellCount,
+    int WaterTaintAttemptCount,
+    int WaterTaintSuccessCount,
+    int SkippedUnsafeWaterApiCount,
+    int NoOpCellCount)
+{
+    public static readonly TimberbornAshWaterWashoutSummary Empty = new(
+        CandidateAshCellCount: 0,
+        CleanAshWashedCellCount: 0,
+        TaintedAshWashedCellCount: 0,
+        WaterTaintAttemptCount: 0,
+        WaterTaintSuccessCount: 0,
+        SkippedUnsafeWaterApiCount: 0,
+        NoOpCellCount: 0);
+
+    public string ToLogToken(uint tick)
+    {
+        return "wildfire_timberborn_ash_water_washout_applied " +
+            $"tick={tick} " +
+            $"candidate_ash_cells={CandidateAshCellCount} " +
+            $"clean_ash_washed={CleanAshWashedCellCount} " +
+            $"tainted_ash_washed={TaintedAshWashedCellCount} " +
+            $"water_taint_attempts={WaterTaintAttemptCount} " +
+            $"water_taint_successes={WaterTaintSuccessCount} " +
+            $"skipped_unsafe_water_apis={SkippedUnsafeWaterApiCount} " +
+            $"no_op_cells={NoOpCellCount}";
+    }
+}
+
+public interface ITimberbornAshWaterTaintAdapter
+{
+    TimberbornAshWaterWashoutSummary ApplyWaterTaint(
+        uint tick,
+        IReadOnlyList<TimberbornAshWaterWashoutRemoval> taintedWashouts,
+        TimberbornAshWaterWashoutSummary washoutSummary);
+}
+
+public sealed class UnavailableTimberbornAshWaterTaintAdapter : ITimberbornAshWaterTaintAdapter
+{
+    public static readonly UnavailableTimberbornAshWaterTaintAdapter Instance = new();
+
+    private UnavailableTimberbornAshWaterTaintAdapter()
+    {
+    }
+
+    public TimberbornAshWaterWashoutSummary ApplyWaterTaint(
+        uint tick,
+        IReadOnlyList<TimberbornAshWaterWashoutRemoval> taintedWashouts,
+        TimberbornAshWaterWashoutSummary washoutSummary)
+    {
+        if (taintedWashouts is null)
+        {
+            throw new ArgumentNullException(nameof(taintedWashouts));
+        }
+
+        return washoutSummary with
+        {
+            SkippedUnsafeWaterApiCount = washoutSummary.SkippedUnsafeWaterApiCount + taintedWashouts.Count,
+        };
+    }
+}
+
+public sealed class TimberbornAshWaterWashoutService
+{
+    private readonly ITimberbornAshWaterTaintAdapter _waterTaintAdapter;
+    private readonly ITimberbornFireLogSink _logSink;
+
+    public TimberbornAshWaterWashoutService(
+        ITimberbornAshWaterTaintAdapter? waterTaintAdapter = null,
+        ITimberbornFireLogSink? logSink = null)
+    {
+        _waterTaintAdapter = waterTaintAdapter ?? UnavailableTimberbornAshWaterTaintAdapter.Instance;
+        _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
+    }
+
+    public TimberbornAshWaterWashoutSummary LastSummary { get; private set; } =
+        TimberbornAshWaterWashoutSummary.Empty;
+
+    public TimberbornAshWaterWashoutSummary Apply(
+        uint tick,
+        IReadOnlyDictionary<int, TimberbornAshFieldEntry> entries,
+        IReadOnlyDictionary<int, TimberbornAshWaterContact> waterContacts,
+        Action<TimberbornAshWaterWashoutRemoval>? onWashedCell = null)
+    {
+        if (entries is null)
+        {
+            throw new ArgumentNullException(nameof(entries));
+        }
+
+        if (waterContacts is null)
+        {
+            throw new ArgumentNullException(nameof(waterContacts));
+        }
+
+        TimberbornAshWaterWashoutRemoval[] removals = entries.Values
+            .Where(static entry => entry.Strength > 0)
+            .Select(entry => CreateRemoval(entry, waterContacts))
+            .Where(static removal => removal.HasValue)
+            .Select(static removal => removal!.Value)
+            .ToArray();
+
+        removals
+            .ToList()
+            .ForEach(removal => onWashedCell?.Invoke(removal));
+
+        int noOpCells = entries.Values
+            .Count(entry => entry.Strength > 0 &&
+                (entry.IsActiveSource || !waterContacts.ContainsKey(entry.CellIndex)));
+        TimberbornAshWaterWashoutSummary washoutSummary = new(
+            CandidateAshCellCount: entries.Values.Count(static entry => entry.Strength > 0),
+            CleanAshWashedCellCount: removals.Count(static removal => removal.Quality != WildfireAshQuality.Tainted),
+            TaintedAshWashedCellCount: removals.Count(static removal => removal.Quality == WildfireAshQuality.Tainted),
+            WaterTaintAttemptCount: removals.Count(static removal => removal.Quality == WildfireAshQuality.Tainted),
+            WaterTaintSuccessCount: 0,
+            SkippedUnsafeWaterApiCount: 0,
+            NoOpCellCount: noOpCells);
+        TimberbornAshWaterWashoutRemoval[] taintedWashouts = removals
+            .Where(static removal => removal.Quality == WildfireAshQuality.Tainted)
+            .ToArray();
+
+        LastSummary = _waterTaintAdapter.ApplyWaterTaint(tick, taintedWashouts, washoutSummary);
+        if (LastSummary.CleanAshWashedCellCount > 0 ||
+            LastSummary.TaintedAshWashedCellCount > 0 ||
+            LastSummary.WaterTaintAttemptCount > 0 ||
+            LastSummary.SkippedUnsafeWaterApiCount > 0)
+        {
+            _logSink.Info(LastSummary.ToLogToken(tick));
+        }
+
+        return LastSummary;
+    }
+
+    public void Clear()
+    {
+        LastSummary = TimberbornAshWaterWashoutSummary.Empty;
+    }
+
+    private static TimberbornAshWaterWashoutRemoval? CreateRemoval(
+        TimberbornAshFieldEntry entry,
+        IReadOnlyDictionary<int, TimberbornAshWaterContact> waterContacts)
+    {
+        if (entry.IsActiveSource ||
+            !waterContacts.TryGetValue(entry.CellIndex, out TimberbornAshWaterContact contact) ||
+            contact.WaterLevel <= 0 ||
+            entry.Quality == WildfireAshQuality.None)
+        {
+            return null;
+        }
+
+        return new TimberbornAshWaterWashoutRemoval(
+            entry.CellIndex,
+            entry.Strength,
+            entry.Quality,
+            contact.Kind);
+    }
+}
+
 public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberbornTaintedAshSoilPoisoningAdapter
 {
     private const float MaxMapContamination = 0.9f;

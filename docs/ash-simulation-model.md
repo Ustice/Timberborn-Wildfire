@@ -60,7 +60,7 @@ Ash amount is resource amount. The agreed ash amount scale is 0-3, matching the 
 
 Ash contamination uses a 0-7 scale. Contamination strength affects hazard strength, soil poisoning, beaver exposure, visual tint, and cloud mixing.
 
-Tainted ash is not permanent by default. It should fade over time, and water contact can wash it away. Washed tainted ash should slightly taint the affected water through a bounded adapter mutation when a safe Timberborn API exists; otherwise the washout should still be visible in ash state and report safe-unavailable water-taint telemetry.
+Tainted ash is not permanent by default. It should fade over time, and water contact can wash it away. Washed tainted ash should slightly taint the affected water through a bounded adapter mutation when a safe Timberborn API exists; otherwise the washout should still be visible in ash state and report safe-unavailable water-taint telemetry. Clean ash washing does not taint water, and badwater or contaminated water touching ash does not become clean.
 
 Timberborn can affect ash through adapter services, but those services must queue bounded ash changes for the next simulator cycle. They must not directly mutate simulator buffers or maintain a competing ash state.
 
@@ -101,7 +101,7 @@ Source attribution is not required: when ash changes, its contamination changes 
 
 When ash mixes, contamination uses maxing rather than dilution for the first implementation. This is deterministic, hazard-conservative, and easier to reason about than weighted contamination blending.
 
-When water removes ash, ash amount decreases and presentation should recede from the cell. Fertile ash washout should not create water contamination. Tainted ash washout may move a small bounded contamination amount into water, but it must not cleanse soil or affected entities.
+When water removes ash, ash amount decreases through a queued simulator ash mutation and presentation should recede from the cell after the simulator-owned state changes. `FireSim.compute` must not run an inline water-washout decrement during normal shader simulation, because that would bypass Timberborn-side telemetry and safe-unavailable water-taint accounting. Fertile ash washout should not create water contamination. Tainted ash washout may move a small bounded contamination amount into water, but it must not cleanse soil, water, goods, plants, buildings, beavers, or affected entities.
 
 ## Visual Transition Model
 

@@ -61,11 +61,13 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     }
 
     [Fact]
-    public void FireSimKeepsWetCellAshWashoffSparseEnoughForFertilizerReadback()
+    public void FireSimLeavesWetCellAshWashoutToAccountableExternalMutations()
     {
         string source = ReadUnitySource("FireSim.compute");
 
-        Assert.Contains("Water(newCell) > 0u && ash > 0u && (Tick & 63u) == 0u", source, StringComparison.Ordinal);
+        Assert.Contains("uint ApplyAshChange(uint atmospheric, FireSimChangeGpu change)", source, StringComparison.Ordinal);
+        Assert.Contains("uint removeAsh = (change.AddFields >> 10) & 0x3u;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Water(newCell) > 0u && ash > 0u && (Tick & 63u) == 0u", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Water(newCell) > 0u && ash > 0u)", source, StringComparison.Ordinal);
     }
 

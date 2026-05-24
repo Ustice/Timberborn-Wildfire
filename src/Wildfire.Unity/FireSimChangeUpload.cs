@@ -15,6 +15,8 @@ public static class FireSimChangeUpload
     private const uint SetTerrainMask = 1u << 6;
     private const uint SetAshMask = 1u << 7;
     private const uint SetAshContaminationMask = 1u << 8;
+    private const uint SetSmokeMask = 1u << 9;
+    private const uint SetSmokeContaminationMask = 1u << 10;
 
     public static uint[] Encode(ReadOnlySpan<FireSimChange> changes, int capacity)
     {
@@ -54,6 +56,8 @@ public static class FireSimChangeUpload
         mask |= change.SetTerrain.HasValue ? SetTerrainMask : 0u;
         mask |= change.SetAsh.HasValue ? SetAshMask : 0u;
         mask |= change.SetAshContamination.HasValue ? SetAshContaminationMask : 0u;
+        mask |= change.SetSmoke.HasValue ? SetSmokeMask : 0u;
+        mask |= change.SetSmokeContamination.HasValue ? SetSmokeContaminationMask : 0u;
         return mask;
     }
 
@@ -64,7 +68,9 @@ public static class FireSimChangeUpload
             (Clamp(change.AddAsh, 3u) << 8) |
             (Clamp(change.RemoveAsh, 3u) << 10) |
             (Clamp(change.SetAsh, 3u) << 12) |
-            (Clamp(change.SetAshContamination, 7u) << 14);
+            (Clamp(change.SetAshContamination, 7u) << 14) |
+            (Clamp(change.SetSmoke, 7u) << 17) |
+            (Clamp(change.SetSmokeContamination, 7u) << 20);
     }
 
     private static uint GetSetValues(FireSimChange change)

@@ -21,6 +21,7 @@ const outboxFileName = "command-outbox.txt";
 const knownCommands = [
   "help",
   "qa-ash-cell",
+  "qa-ash-water-stimulus",
   "qa-building-burnout-stimulus",
   "qa-burn-duration-stimulus",
   "qa-delta-stimulus",
@@ -38,7 +39,9 @@ Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
-  qa-delta-stimulus [burnable|tree|contaminated-tree|vegetation|crop|storage|building]
+  qa-ash-water-stimulus <clean|tainted>
+                            Queue simulator-owned ash plus water contact on one imported burnable field target.
+  qa-delta-stimulus [burnable|tree|contaminated-tree|beaver-exposure|toxic-beaver-exposure|vegetation|crop|storage|building]
                             Queue heat on an imported burnable field target.
   qa-building-burnout-stimulus
                             Queue heat and fuel depletion on a real pausable building target.
@@ -56,7 +59,7 @@ Options:
   --require-nonzero-delta   Fail unless the result reports numeric last_delta_count greater than 0. Use after qa-delta-stimulus.
   --require-sustained-heat-cycles <count>
                             Fail unless qa_delta_stimulus_sustained_heat_completed_cycles is at least count. Use after qa-delta-stimulus and enough unpaused dispatches.
-  --require-water-changed   Fail unless the result reports durable last_positive_water_changed_count greater than 0. Use after qa-water-suppression-stimulus.
+  --require-water-changed   Fail unless the result reports durable last_positive_water_changed_count greater than 0. Use after qa-water-suppression-stimulus or qa-ash-water-stimulus.
   --wait <seconds>          Wait for command-outbox.txt to update. Default: 5.
   --help                    Show this help.
 `;

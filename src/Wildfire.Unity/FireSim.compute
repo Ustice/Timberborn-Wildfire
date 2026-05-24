@@ -14,6 +14,8 @@
 #define CHANGE_SET_TERRAIN 64u
 #define CHANGE_SET_ASH 128u
 #define CHANGE_SET_ASH_CONTAMINATION 256u
+#define CHANGE_SET_SMOKE 512u
+#define CHANGE_SET_SMOKE_CONTAMINATION 1024u
 
 float VisualFireBaseIntensity;
 float VisualFireHeatWeight;
@@ -1352,14 +1354,6 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     uint smokeContamination = DilutedSmokeContamination(smokeTotal, smokeContaminationWeightedTotal);
     ash = max(ash, isAshLandingSurface ? localAshSource : 0u);
     ashContamination = max(ashContamination, !isAshLandingSurface || localAshSource == 0u ? 0u : ashContaminationSource);
-    if (isAshLandingSurface && Water(newCell) > 0u && ash > 0u && (Tick & 63u) == 0u)
-    {
-        ash -= 1u;
-        if (ash == 0u)
-        {
-            ashContamination = 0u;
-        }
-    }
 
     bool source = steamSource > 0u || smokeSource > 0u || (isAshLandingSurface && localAshSource > 0u) || fallingAshSource > 0u;
     return PackAtmospheric(min(7u, steam), min(7u, smoke), min(7u, smokeContamination), min(7u, ash), min(7u, ashContamination), source);
@@ -1373,6 +1367,16 @@ uint ApplyAshChange(uint atmospheric, FireSimChangeGpu change)
     uint ash = AtmosphericAsh(atmospheric);
     uint ashContamination = AtmosphericAshContamination(atmospheric);
     bool source = (atmospheric & 0x8000u) != 0u;
+
+    if ((change.SetMask & CHANGE_SET_SMOKE) != 0u)
+    {
+        smoke = (change.AddFields >> 17) & 0x7u;
+    }
+
+    if ((change.SetMask & CHANGE_SET_SMOKE_CONTAMINATION) != 0u)
+    {
+        smokeContamination = (change.AddFields >> 20) & 0x7u;
+    }
 
     if ((change.SetMask & CHANGE_SET_ASH) != 0u)
     {
