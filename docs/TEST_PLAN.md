@@ -93,6 +93,8 @@ Expected successful output includes:
 - `manifest_id=JasonKleinberg.Wildfire`.
 - `manifest_version=0.1.0.0`.
 - `release_version=0.1.0.0`.
+- `platform_support=macOS-only first release`.
+- `required_bundles=wildfire_compute_mac,wildfire_diagnostic_mac,wildfire_effects_mac,wildfire_visual_mac`.
 - `changelog_entry=CHANGELOG.md#[0.1.0.0]`.
 - `artifact_file ...` lines for `manifest.json`, `Scripts/Wildfire.Timberborn.dll`, `Scripts/Wildfire.Core.dll`, all four `ComputeShaders/wildfire_*_mac` bundles, all four matching `.manifest` files, and shipped Timberborn data folders.
 
@@ -137,6 +139,8 @@ Expected successful output includes:
 - `workshop_package_ready content=.../release/workshop/content/version-1.0`.
 - `manifest_id=JasonKleinberg.Wildfire`.
 - `manifest_version=0.1.0.0`.
+- `platform_support=macOS-only first release`.
+- `required_bundles=wildfire_compute_mac,wildfire_diagnostic_mac,wildfire_effects_mac,wildfire_visual_mac`.
 - `workshop_artifact_file ...` lines for `manifest.json`, `Scripts/Wildfire.Timberborn.dll`, `Scripts/Wildfire.Core.dll`, all four `ComputeShaders/wildfire_*_mac` bundles, all four matching `.manifest` files, and shipped Timberborn data folders including `Sprites/`.
 
 Inspect the staged Workshop payload without publishing:
@@ -200,6 +204,62 @@ Current environment blockers:
 
 - Windows validation is blocked on access to a Windows machine or VM with Steam Timberborn installed, plus Unity/package support for the Windows bundles.
 - Linux, SteamOS, and Steam Deck validation are blocked on a deliberate support decision and a real target environment with package and live-run evidence.
+
+## TWF-106 Package Layout Evidence
+
+On 2026-05-24, `codex/twf-106-platform-package-layout` validated the first-release package shape against the accepted macOS-only support target.
+
+Commands run:
+
+```bash
+bun run release:package
+find release/package/Wildfire -type f | sort
+unzip -Z1 release/package/Wildfire-0.1.0.0.zip | sort
+find release/package/Wildfire release/package/staging-mods/Wildfire -type f | rg '/ComputeShaders/.*_(win|windows|linux|steamos|steamdeck|deck|proton)(\.manifest)?$' || true
+bun run workshop:package
+find release/workshop/content/version-1.0 -type f | sort
+find release/workshop/content/version-1.0 release/workshop/staging-mods/Wildfire -type f | rg '/ComputeShaders/.*_(win|windows|linux|steamos|steamdeck|deck|proton)(\.manifest)?$' || true
+```
+
+Release package evidence:
+
+- `release_package_ready directory=.../release/package/Wildfire`.
+- `release_package_zip=.../release/package/Wildfire-0.1.0.0.zip`.
+- `manifest_id=JasonKleinberg.Wildfire`.
+- `manifest_version=0.1.0.0`.
+- `platform_support=macOS-only first release`.
+- `required_bundles=wildfire_compute_mac,wildfire_diagnostic_mac,wildfire_effects_mac,wildfire_visual_mac`.
+- `file_count=31`.
+- ZIP root is `Wildfire/`, with no `__MACOSX/` or `._` entries.
+- Unsupported platform artifact scan produced no `*_win`, `*_windows`, `*_linux`, `*_steamos`, `*_steamdeck`, `*_deck`, or `*_proton` bundles or manifests.
+
+Workshop package evidence:
+
+- `workshop_package_ready content=.../release/workshop/content/version-1.0`.
+- `manifest_id=JasonKleinberg.Wildfire`.
+- `manifest_version=0.1.0.0`.
+- `platform_support=macOS-only first release`.
+- `required_bundles=wildfire_compute_mac,wildfire_diagnostic_mac,wildfire_effects_mac,wildfire_visual_mac`.
+- `file_count=31`.
+- Workshop content root remains `release/workshop/content/`, with the Timberborn mod payload under `version-1.0/manifest.json`.
+- Unsupported platform artifact scan produced no `*_win`, `*_windows`, `*_linux`, `*_steamos`, `*_steamdeck`, `*_deck`, or `*_proton` bundles or manifests.
+
+Release package checksums:
+
+```text
+62488953ec1bb53531aa4d2e00fc6eb6232cd553c8d79a289088dac5a688f439  release/package/Wildfire-0.1.0.0.zip
+f14c41fee8adca3ffe0bbef61fb2bb5edb14c1eec72f3d145c03edc684ae69c3  release/package/Wildfire/ComputeShaders/wildfire_compute_mac
+c9768dcc91164d2040895a52a310e13f8c3a403df2db6c93ae55d5830773e3d2  release/package/Wildfire/ComputeShaders/wildfire_diagnostic_mac
+ea40c6ff48e7beac7fb8d42f22b782d32da23f9bc28435b3e48faa5f34d698ec  release/package/Wildfire/ComputeShaders/wildfire_effects_mac
+3713aeb222c649e4b74dc640ea0dbcb38fb745969735268736b95777f1f00669  release/package/Wildfire/ComputeShaders/wildfire_visual_mac
+24d90d9676824c13f9038fd21098d18d6a1da62a58ab3729010542cac9d609f9  release/package/Wildfire/ComputeShaders/wildfire_compute_mac.manifest
+a50e56af3610d4b2b8f20719b5b4c28bdcc015501eb717585a6251426a53e61e  release/package/Wildfire/ComputeShaders/wildfire_diagnostic_mac.manifest
+848dd5f94f026f22a095b5c9daca30aabe23f0fc52aad0922772926f68f4233a  release/package/Wildfire/ComputeShaders/wildfire_effects_mac.manifest
+c3c7a353efbf04eafe5443c97f0b519f69db013f02a83f08b21d8812d5c110fd  release/package/Wildfire/ComputeShaders/wildfire_visual_mac.manifest
+ee7682895aef8218d564b59ce7f0eac184f441c1fec13c33daff67780f693aec  release/package/Wildfire/manifest.json
+```
+
+Workshop package checksums matched the same bundle and manifest checksums under `release/workshop/content/version-1.0/`, proving the shared validator checks the same shippable macOS artifact set for both release ZIP and Workshop staging.
 
 ## Resource Fuel Catalog
 

@@ -20,6 +20,8 @@ export type ArtifactSummary = {
   fileCount: number;
   files: string[];
   manifest: ValidatedReleaseManifest;
+  platformSupport: string;
+  requiredBundles: string[];
   zipPath?: string;
 };
 
@@ -29,6 +31,13 @@ export const workshopVersionFolderName = "version-1.0";
 const repoRoot = resolve(import.meta.dir, "..");
 const privateComputeShaderFolderName = "ComputeShaders";
 const requiredAssemblies = ["Wildfire.Timberborn.dll", "Wildfire.Core.dll"];
+const expectedManifest: ValidatedReleaseManifest = {
+  Id: "JasonKleinberg.Wildfire",
+  MinimumGameVersion: "1.0.0.0",
+  Name: "Wildfire",
+  Version: "0.1.0.0",
+};
+const platformSupport = "macOS-only first release";
 const requiredBundles = [
   "wildfire_compute_mac",
   "wildfire_diagnostic_mac",
@@ -36,6 +45,8 @@ const requiredBundles = [
   "wildfire_visual_mac",
 ];
 const requiredBundleManifests = requiredBundles.map((name) => `${name}.manifest`);
+const unsupportedPlatformBundlePattern =
+  /(?:^|[/\\])ComputeShaders[/\\][^/\\]+_(?:win|windows|linux|steamos|steamdeck|deck|proton)(?:\.manifest)?$/u;
 const blockedRootEntries = new Set([
   ".git",
   "artifacts",
@@ -104,6 +115,10 @@ export const validateManifest = (artifactDir: string): ValidatedReleaseManifest 
     fail(`manifest.json Version must use four numeric components: ${String(manifest.Version)}`);
   }
 
+  Object.entries(expectedManifest)
+    .filter(([key, value]) => manifest[key as keyof ReleaseManifest] !== value)
+    .forEach(([key, value]) => fail(`manifest.json ${key} must be ${value} for the first release package.`));
+
   return {
     Id: manifest.Id as string,
     MinimumGameVersion: manifest.MinimumGameVersion as string,
@@ -121,6 +136,18 @@ const validateRequiredFiles = (artifactDir: string): void => {
     ...requiredBundles.map((name) => join(artifactDir, privateComputeShaderFolderName, name)),
     ...requiredBundleManifests.map((name) => join(artifactDir, privateComputeShaderFolderName, name)),
   ].forEach(requireFile);
+};
+
+const validatePlatformLayout = (files: string[]): void => {
+  const blockedPlatformArtifacts = files.filter((path) => unsupportedPlatformBundlePattern.test(path));
+  if (blockedPlatformArtifacts.length > 0) {
+    fail(
+      [
+        `Release artifact contains unsupported or unvalidated platform bundles for ${platformSupport}:`,
+        blockedPlatformArtifacts.join(", "),
+      ].join(" "),
+    );
+  }
 };
 
 const validateModData = (artifactDir: string): void => {
@@ -181,13 +208,16 @@ const validateZip = (zipPath: string, artifactName: string): void => {
   const blockedEntries = entries.filter((entry) => entry.startsWith("__MACOSX/") || entry.includes("/._"));
   const requiredZipEntries = [
     `${artifactName}/manifest.json`,
-    `${artifactName}/Scripts/Wildfire.Timberborn.dll`,
-    `${artifactName}/${privateComputeShaderFolderName}/wildfire_compute_mac`,
+    ...requiredAssemblies.map((name) => `${artifactName}/Scripts/${name}`),
+    ...requiredBundles.map((name) => `${artifactName}/${privateComputeShaderFolderName}/${name}`),
+    ...requiredBundleManifests.map((name) => `${artifactName}/${privateComputeShaderFolderName}/${name}`),
   ];
 
   if (blockedEntries.length > 0) {
     fail(`Release zip contains macOS resource-fork entries: ${blockedEntries.join(", ")}`);
   }
+
+  validatePlatformLayout(entries);
 
   requiredZipEntries
     .filter((entry) => !entries.includes(entry))
@@ -207,6 +237,7 @@ export const validateTimberbornModArtifact = (
 
   const files = walkFiles(artifactDir).map((path) => relative(artifactDir, path)).sort();
   validateExclusions(artifactDir, files.map((path) => join(artifactDir, path)));
+  validatePlatformLayout(files);
 
   if (zipPath) {
     validateZip(zipPath, artifactName);
@@ -217,6 +248,8 @@ export const validateTimberbornModArtifact = (
     fileCount: files.length,
     files,
     manifest,
+    platformSupport,
+    requiredBundles,
     zipPath,
   };
 };

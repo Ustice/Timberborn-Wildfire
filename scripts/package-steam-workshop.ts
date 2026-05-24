@@ -133,6 +133,8 @@ async function main(): Promise<void> {
   console.log(`workshop_package_ready content=${contentPath}`);
   console.log(`manifest_id=${summary.manifest.Id}`);
   console.log(`manifest_version=${summary.manifest.Version}`);
+  console.log(`platform_support=${summary.platformSupport}`);
+  console.log(`required_bundles=${summary.requiredBundles.join(",")}`);
   console.log(`file_count=${summary.fileCount}`);
   summary.files.forEach((file) => console.log(`workshop_artifact_file ${file}`));
 }

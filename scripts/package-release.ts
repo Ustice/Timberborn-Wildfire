@@ -320,6 +320,8 @@ const main = (): void => {
   log(`manifest_id=${summary.manifest.Id}`);
   log(`manifest_version=${summary.manifest.Version}`);
   log(`release_version=${summary.releaseVersion}`);
+  log(`platform_support=${summary.platformSupport}`);
+  log(`required_bundles=${summary.requiredBundles.join(",")}`);
   if (summary.releaseTag) {
     log(`release_tag=${summary.releaseTag}`);
   }
