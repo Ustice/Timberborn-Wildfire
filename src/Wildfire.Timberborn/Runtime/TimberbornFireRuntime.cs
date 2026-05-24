@@ -255,6 +255,7 @@ public sealed class TimberbornFireRuntime :
                 new FireGrid(fireSystem.Width!.Value, fireSystem.Height!.Value, fireSystem.Depth!.Value),
                 tick);
             _beaverFieldBehaviorDispatcher.Dispatch(beaverExposure, tick);
+            _playerFireAlerts.PublishBeaverBehavior(tick, _beaverFieldBehaviorDispatcher.Counters);
         }
         catch (Exception exception)
         {
@@ -1068,6 +1069,25 @@ public sealed class TimberbornFireRuntime :
             PlayerFireAlertPresentationFailureCount: alertCounters.PresentationFailureCount,
             PlayerFireAlertNotificationSent: alertCounters.LastNotificationSent,
             LastPlayerFireAlertMessage: alertCounters.LastMessage,
+            WorldConsequenceFeedbackSourceEvents: alertCounters.TotalSourceEventCount,
+            WorldConsequenceFeedbackCoalescedEvents: alertCounters.TotalCoalescedEventCount,
+            WorldConsequenceFeedbackActiveFireEvents: alertCounters.ActiveFireEventCount,
+            WorldConsequenceFeedbackBuildingDamageClosureEvents: alertCounters.BuildingDamageClosureEventCount,
+            WorldConsequenceFeedbackPlantCropResourceLossEvents: alertCounters.PlantCropResourceLossEventCount,
+            WorldConsequenceFeedbackBeaverDangerDeathEvents: alertCounters.BeaverDangerDeathEventCount,
+            WorldConsequenceFeedbackAshAftermathEvents: alertCounters.AshAftermathEventCount,
+            WorldConsequenceFeedbackNotifications: alertCounters.TotalNotificationCount,
+            WorldConsequenceFeedbackActiveFireNotifications: alertCounters.ActiveFireNotificationCount,
+            WorldConsequenceFeedbackBuildingDamageClosureNotifications: alertCounters.BuildingDamageClosureNotificationCount,
+            WorldConsequenceFeedbackPlantCropResourceLossNotifications: alertCounters.PlantCropResourceLossNotificationCount,
+            WorldConsequenceFeedbackBeaverDangerDeathNotifications: alertCounters.BeaverDangerDeathNotificationCount,
+            WorldConsequenceFeedbackAshAftermathNotifications: alertCounters.AshAftermathNotificationCount,
+            WorldConsequenceFeedbackSuppressedThrottle: alertCounters.NotificationSuppressedThrottleCount,
+            WorldConsequenceFeedbackPresentationFailures: alertCounters.PresentationFailureCount,
+            WorldConsequenceFeedbackLogOnlyFallbacks: alertCounters.LogOnlyFallbackCount,
+            WorldConsequenceFeedbackNotificationSent: alertCounters.LastNotificationSent,
+            WorldConsequenceFeedbackNotificationSuppressed: alertCounters.LastNotificationSuppressed,
+            WorldConsequenceFeedbackPrimaryClass: alertCounters.LastPrimaryClass.ToString().ToLowerInvariant(),
             VisualFieldSurfaceBound: visualFieldSurfaceState.IsBound,
             VisualFieldSurfaceCellCount: visualFieldSurfaceState.CellCount,
             VisualFieldSurfaceLastUpdatedTick: visualFieldSurfaceState.LastUpdatedTick,

@@ -2368,6 +2368,25 @@ public sealed class TimberbornQaCommandBridgeTests
             PlayerFireAlertPresentationFailureCount: 39,
             PlayerFireAlertNotificationSent: true,
             LastPlayerFireAlertMessage: "Wildfire alert",
+            WorldConsequenceFeedbackSourceEvents: 120,
+            WorldConsequenceFeedbackCoalescedEvents: 121,
+            WorldConsequenceFeedbackActiveFireEvents: 122,
+            WorldConsequenceFeedbackBuildingDamageClosureEvents: 123,
+            WorldConsequenceFeedbackPlantCropResourceLossEvents: 124,
+            WorldConsequenceFeedbackBeaverDangerDeathEvents: 125,
+            WorldConsequenceFeedbackAshAftermathEvents: 126,
+            WorldConsequenceFeedbackNotifications: 127,
+            WorldConsequenceFeedbackActiveFireNotifications: 128,
+            WorldConsequenceFeedbackBuildingDamageClosureNotifications: 129,
+            WorldConsequenceFeedbackPlantCropResourceLossNotifications: 130,
+            WorldConsequenceFeedbackBeaverDangerDeathNotifications: 131,
+            WorldConsequenceFeedbackAshAftermathNotifications: 132,
+            WorldConsequenceFeedbackSuppressedThrottle: 133,
+            WorldConsequenceFeedbackPresentationFailures: 134,
+            WorldConsequenceFeedbackLogOnlyFallbacks: 135,
+            WorldConsequenceFeedbackNotificationSent: true,
+            WorldConsequenceFeedbackNotificationSuppressed: true,
+            WorldConsequenceFeedbackPrimaryClass: "beaverdangerdeath",
             VisualFieldSurfaceBound: true,
             VisualFieldSurfaceCellCount: 24,
             VisualFieldSurfaceLastUpdatedTick: 25,
@@ -2611,6 +2630,25 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("player_fire_alert_presentation_failures=39", result.ResultToken);
         Assert.Contains("player_fire_alert_notification_sent=true", result.ResultToken);
         Assert.Contains("last_player_fire_alert_message=Wildfire_alert", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_source_events=120", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_coalesced_events=121", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_active_fire_events=122", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_building_damage_closure_events=123", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_plant_crop_resource_loss_events=124", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_beaver_danger_death_events=125", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_ash_aftermath_events=126", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_notifications=127", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_active_fire_notifications=128", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_building_damage_closure_notifications=129", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_plant_crop_resource_loss_notifications=130", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_beaver_danger_death_notifications=131", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_ash_aftermath_notifications=132", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_suppressed_throttle=133", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_presentation_failures=134", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_log_only_fallbacks=135", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_notification_sent=true", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_notification_suppressed=true", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_primary_class=beaverdangerdeath", result.ResultToken);
         Assert.Contains("visual_field_surface_bound=true", result.ResultToken);
         Assert.Contains("visual_field_surface_cells=24", result.ResultToken);
         Assert.Contains("visual_field_surface_updated_tick=25", result.ResultToken);

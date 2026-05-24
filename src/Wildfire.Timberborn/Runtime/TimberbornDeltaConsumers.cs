@@ -129,7 +129,23 @@ public sealed class TimberbornFireDeltaConsumer
             .Where(static decision => decision.ShouldEmitAlert)
             .Select(decision => TimberbornFireAlertEvent.FromDecision(tick, decision))
             .ToArray();
-        ConsumeAlerts(tick, alertEvents);
+        TimberbornWorldConsequenceFeedbackInput worldConsequenceFeedback =
+            CreateWorldConsequenceFeedback(
+                tick,
+                alertEvents,
+                buildingBurnoutSummary,
+                structureBurnDamageRollbackSummary,
+                cropBurnSummary,
+                treeBurnSummary,
+                storedGoodBurnSummary,
+                explosiveInfrastructureSummary,
+                detonatorFireSafetySummary,
+                tunnelFireSummary,
+                pathInfrastructureSummary,
+                powerInfrastructureSummary,
+                waterInfrastructureSummary,
+                ashFieldSummary);
+        ConsumeAlerts(tick, alertEvents, worldConsequenceFeedback);
 
         LastSummary = TimberbornFireDeltaConsumerSummary.FromDecisions(
             tick,
@@ -242,10 +258,15 @@ public sealed class TimberbornFireDeltaConsumer
         return summary.StructureBurnDamageRollbackUnfinishedStageCount > 0 ? 1 : 0;
     }
 
-    private void ConsumeAlerts(uint tick, IReadOnlyList<TimberbornFireAlertEvent> alertEvents)
+    private void ConsumeAlerts(
+        uint tick,
+        IReadOnlyList<TimberbornFireAlertEvent> alertEvents,
+        TimberbornWorldConsequenceFeedbackInput worldConsequenceFeedback)
     {
         ITimberbornFireAlertDispatchSink? alertDispatchSink =
             _sinks.AlertSink as ITimberbornFireAlertDispatchSink;
+        ITimberbornWorldConsequenceFeedbackSink? worldConsequenceFeedbackSink =
+            _sinks.AlertSink as ITimberbornWorldConsequenceFeedbackSink;
         bool canPublishAlerts = true;
         bool didBeginAlertDispatch = false;
 
@@ -280,6 +301,18 @@ public sealed class TimberbornFireDeltaConsumer
                 });
         }
 
+        if (canPublishAlerts && worldConsequenceFeedbackSink is not null)
+        {
+            try
+            {
+                worldConsequenceFeedbackSink.PublishConsequences(worldConsequenceFeedback);
+            }
+            catch (Exception exception)
+            {
+                LogAlertFailure(tick, null, "world_consequence", exception);
+            }
+        }
+
         if (alertDispatchSink is not null && didBeginAlertDispatch)
         {
             try
@@ -291,6 +324,99 @@ public sealed class TimberbornFireDeltaConsumer
                 LogAlertFailure(tick, null, "complete", exception);
             }
         }
+    }
+
+    private static TimberbornWorldConsequenceFeedbackInput CreateWorldConsequenceFeedback(
+        uint tick,
+        IReadOnlyList<TimberbornFireAlertEvent> alertEvents,
+        TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary,
+        TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary,
+        TimberbornCropBurnConsequenceSummary cropBurnSummary,
+        TimberbornTreeBurnConsequenceSummary treeBurnSummary,
+        TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary,
+        TimberbornExplosiveInfrastructureConsequenceSummary explosiveInfrastructureSummary,
+        TimberbornDetonatorFireSafetySummary detonatorFireSafetySummary,
+        TimberbornTunnelFireSummary tunnelFireSummary,
+        TimberbornPathInfrastructureFireSummary pathInfrastructureSummary,
+        TimberbornPowerInfrastructureFireSummary powerInfrastructureSummary,
+        TimberbornWaterInfrastructureFireSummary waterInfrastructureSummary,
+        TimberbornAshFieldSummary ashFieldSummary)
+    {
+        int? activeFireFocusCell = alertEvents.Select(static alertEvent => (int?)alertEvent.CellIndex).FirstOrDefault();
+        int buildingDamageEvents =
+            buildingBurnoutSummary.AppliedConsequenceCount +
+            structureBurnDamageRollbackSummary.ClosedStructureCount +
+            structureBurnDamageRollbackSummary.RepairBlockedCount +
+            structureBurnDamageRollbackSummary.RepairEligibleCount +
+            pathInfrastructureSummary.DamagedTargetCount +
+            pathInfrastructureSummary.BlockedTargetCount +
+            powerInfrastructureSummary.DamagedTargetCount +
+            powerInfrastructureSummary.DisabledOrDisconnectedTargetCount +
+            waterInfrastructureSummary.DamagedTargetCount +
+            explosiveInfrastructureSummary.ArmedTargetCount +
+            explosiveInfrastructureSummary.TriggeredTargetCount +
+            detonatorFireSafetySummary.DisabledTargetCount +
+            tunnelFireSummary.UnstableTargetCount +
+            tunnelFireSummary.DestructionDeferredCount;
+        int plantResourceEvents =
+            cropBurnSummary.YieldLost +
+            cropBurnSummary.KilledCropCount +
+            treeBurnSummary.YieldLost +
+            treeBurnSummary.KilledTreeCount +
+            storedGoodBurnSummary.DestroyedItemCount;
+        int ashAftermathEvents =
+            ashFieldSummary.SourceEventCount +
+            ashFieldSummary.NewAshCellCount +
+            ashFieldSummary.FertileAshCellCount +
+            ashFieldSummary.TaintedAshCellCount +
+            ashFieldSummary.DecayedAshCellCount +
+            ashFieldSummary.GrowthAppliedGrowableCount +
+            ashFieldSummary.GrowthSkippedTaintedCellCount;
+        TimberbornWorldConsequenceFeedbackEvent[] events =
+        {
+            CreateFeedbackEvent(
+                TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure,
+                tick,
+                buildingDamageEvents,
+                buildingDamageEvents,
+                activeFireFocusCell,
+                "building damage/closure"),
+            CreateFeedbackEvent(
+                TimberbornWorldConsequenceFeedbackClass.PlantCropResourceLoss,
+                tick,
+                plantResourceEvents,
+                plantResourceEvents,
+                activeFireFocusCell,
+                "plant/crop/resource loss"),
+            CreateFeedbackEvent(
+                TimberbornWorldConsequenceFeedbackClass.AshAftermath,
+                tick,
+                ashAftermathEvents,
+                ashAftermathEvents,
+                activeFireFocusCell,
+                "ash aftermath"),
+        };
+
+        return new TimberbornWorldConsequenceFeedbackInput(
+            tick,
+            events.Where(static feedbackEvent => feedbackEvent.SourceEventCount > 0).ToArray());
+    }
+
+    private static TimberbornWorldConsequenceFeedbackEvent CreateFeedbackEvent(
+        TimberbornWorldConsequenceFeedbackClass eventClass,
+        uint tick,
+        int sourceEventCount,
+        int affectedCellCount,
+        int? focusCellIndex,
+        string detail)
+    {
+        return new TimberbornWorldConsequenceFeedbackEvent(
+            eventClass,
+            tick,
+            sourceEventCount,
+            affectedCellCount,
+            focusCellIndex,
+            detail);
     }
 
     private int ConsumeVisualEffects(uint tick, IReadOnlyList<TimberbornFireVisualEffectEvent> visualEffectEvents)

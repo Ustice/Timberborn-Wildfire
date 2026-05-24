@@ -25,7 +25,11 @@ public sealed class TimberbornPlayerFireAlertTests
         Assert.Equal(3, sink.Counters.LastFocusCellIndex);
         Assert.Equal(0, sink.Counters.PresentationFailureCount);
         Assert.True(sink.Counters.LastNotificationSent);
-        Assert.Contains("wildfire_timberborn_player_fire_alert_updated", logSink.InfoMessages.Single());
+        Assert.Equal(3, sink.Counters.TotalSourceEventCount);
+        Assert.Equal(2, sink.Counters.TotalCoalescedEventCount);
+        Assert.Equal(3, sink.Counters.ActiveFireEventCount);
+        Assert.Equal(1, sink.Counters.ActiveFireNotificationCount);
+        Assert.Contains("wildfire_timberborn_world_consequence_feedback_updated", logSink.InfoMessages.Single());
     }
 
     [Fact]
@@ -63,10 +67,182 @@ public sealed class TimberbornPlayerFireAlertTests
 
         Assert.Equal(0, sink.Counters.TotalNotificationCount);
         Assert.Equal(1, sink.Counters.PresentationFailureCount);
+        Assert.Equal(1, sink.Counters.LogOnlyFallbackCount);
         Assert.False(sink.Counters.LastNotificationSent);
         Assert.Contains(
             logSink.WarningMessages,
-            message => message.Contains("wildfire_timberborn_player_fire_alert_failed tick=12"));
+            message => message.Contains("wildfire_timberborn_world_consequence_feedback_failed tick=12"));
+    }
+
+    [Fact]
+    public void AggregatesWorldConsequenceClassesIntoOneNotification()
+    {
+        RecordingPlayerNotificationSink notificationSink = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink);
+
+        sink.BeginAlertDispatch(21);
+        sink.PublishAlert(new TimberbornFireAlertEvent(5, 21, TimberbornFireAlertKind.FireStarted, Heat: 9));
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            21,
+            [
+                Event(TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure, 3, 2, 6),
+                Event(TimberbornWorldConsequenceFeedbackClass.PlantCropResourceLoss, 8, 8, 7),
+                Event(TimberbornWorldConsequenceFeedbackClass.AshAftermath, 5, 5, 8),
+            ]));
+        sink.CompleteAlertDispatch(21);
+
+        string message = Assert.Single(notificationSink.WarningMessages);
+        Assert.Contains("Wildfire consequence: building damage/closure", message);
+        Assert.Contains("active fire: 1", message);
+        Assert.Contains("building damage/closure: 3", message);
+        Assert.Contains("plant/crop/resource loss: 8", message);
+        Assert.Contains("ash aftermath: 5", message);
+        Assert.Equal([6], notificationSink.FocusCellIndices);
+        Assert.Equal(17, sink.Counters.TotalSourceEventCount);
+        Assert.Equal(16, sink.Counters.TotalCoalescedEventCount);
+        Assert.Equal(1, sink.Counters.ActiveFireEventCount);
+        Assert.Equal(3, sink.Counters.BuildingDamageClosureEventCount);
+        Assert.Equal(8, sink.Counters.PlantCropResourceLossEventCount);
+        Assert.Equal(5, sink.Counters.AshAftermathEventCount);
+        Assert.Equal(1, sink.Counters.TotalNotificationCount);
+        Assert.Equal(1, sink.Counters.BuildingDamageClosureNotificationCount);
+        Assert.Equal(TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure, sink.Counters.LastPrimaryClass);
+    }
+
+    [Fact]
+    public void ThrottlesRepeatedConsequenceNotificationsWithoutDroppingCounters()
+    {
+        RecordingPlayerNotificationSink notificationSink = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink, notificationThrottleTicks: 5);
+
+        sink.BeginAlertDispatch(30);
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            30,
+            [Event(TimberbornWorldConsequenceFeedbackClass.PlantCropResourceLoss, 3, 3, 4)]));
+        sink.CompleteAlertDispatch(30);
+        sink.BeginAlertDispatch(32);
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            32,
+            [Event(TimberbornWorldConsequenceFeedbackClass.AshAftermath, 2, 2, 5)]));
+        sink.CompleteAlertDispatch(32);
+
+        Assert.Single(notificationSink.WarningMessages);
+        Assert.Equal(5, sink.Counters.TotalSourceEventCount);
+        Assert.Equal(1, sink.Counters.TotalNotificationCount);
+        Assert.Equal(1, sink.Counters.NotificationSuppressedThrottleCount);
+        Assert.Equal(3, sink.Counters.PlantCropResourceLossEventCount);
+        Assert.Equal(2, sink.Counters.AshAftermathEventCount);
+        Assert.False(sink.Counters.LastNotificationSent);
+        Assert.True(sink.Counters.LastNotificationSuppressed);
+        Assert.Contains(
+            logSink.InfoMessages,
+            message => message.Contains("wildfire_timberborn_world_consequence_feedback_suppressed tick=32"));
+    }
+
+    [Fact]
+    public void BeaverDangerAndDeathFeedbackUsesHighestPriorityClass()
+    {
+        RecordingPlayerNotificationSink notificationSink = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink);
+
+        sink.PublishBeaverBehavior(40, BeaverCounters(tracked: 2, fireHeatDeaths: 1, smokeDeaths: 1));
+
+        string message = Assert.Single(notificationSink.WarningMessages);
+        Assert.Contains("Wildfire consequence: beaver danger/death", message);
+        Assert.Equal(2, sink.Counters.BeaverDangerDeathEventCount);
+        Assert.Equal(1, sink.Counters.BeaverDangerDeathNotificationCount);
+        Assert.Equal(TimberbornWorldConsequenceFeedbackClass.BeaverDangerDeath, sink.Counters.LastPrimaryClass);
+    }
+
+    private static TimberbornWorldConsequenceFeedbackEvent Event(
+        TimberbornWorldConsequenceFeedbackClass eventClass,
+        int sourceEvents,
+        int affectedCells,
+        int? focusCellIndex)
+    {
+        return new TimberbornWorldConsequenceFeedbackEvent(
+            eventClass,
+            Tick: 0,
+            SourceEventCount: sourceEvents,
+            AffectedCellCount: affectedCells,
+            FocusCellIndex: focusCellIndex,
+            Detail: eventClass.ToString());
+    }
+
+    private static TimberbornBeaverFieldBehaviorCounters BeaverCounters(
+        int tracked,
+        int fireHeatDeaths,
+        int smokeDeaths)
+    {
+        return new TimberbornBeaverFieldBehaviorCounters(
+            DispatcherEnabled: true,
+            TrackedBeaverCount: tracked,
+            DecisionsEvaluated: tracked,
+            SmokeDecisionsApplied: 0,
+            ToxicSmokeDecisionsApplied: 0,
+            FireHeatDecisionsApplied: 0,
+            NoOpDecisionsApplied: 0,
+            DecisionsSkippedCooldown: 0,
+            DecisionsSkippedBatch: 0,
+            SkippedNoSafeApi: 0,
+            FailedDecisions: 0,
+            RecoveryActions: 0,
+            SmokeExposedSamples: 0,
+            SmokeExposureAccumulatedSamples: 0,
+            SmokeCoughingEntered: 0,
+            SmokeCoughingRecovered: 0,
+            SmokeCoughingSlowdownsApplied: 0,
+            SmokeCoughingSlowdownsRecovered: 0,
+            SmokeCoughingSlowdownsSkippedNoSafeApi: 0,
+            SmokeRecoveryDecays: 0,
+            SmokeChokingCandidates: 0,
+            SmokeChokingSlowdownsApplied: 0,
+            SmokeChokingSlowdownsRecovered: 0,
+            SmokeChokingSlowdownsSkippedNoSafeApi: 0,
+            SmokeChokingSkippedUnsafeApi: 0,
+            SmokeChokingIncapacitationCandidates: 0,
+            SmokeChokingIncapacitationAttempts: 0,
+            SmokeChokingIncapacitationsApplied: 0,
+            SmokeChokingIncapacitationsRecovered: 0,
+            SmokeChokingIncapacitationSkippedUnsafeApi: 0,
+            SmokeChokingIncapacitationFailures: 0,
+            SmokeDeathCandidates: smokeDeaths,
+            SmokeDeathAttempts: 0,
+            SmokeDeathsApplied: 0,
+            SmokeDeathSkippedUnsafeApi: 0,
+            SmokeDeathFailures: 0,
+            ToxicSmokeExposedBeavers: 0,
+            ToxicSmokeExposureAccumulatedSamples: 0,
+            ToxicSmokeContaminationEffectAttempts: 0,
+            ToxicSmokeContaminationEffectSuccesses: 0,
+            ToxicSmokeContaminationEffectFailures: 0,
+            ToxicSmokeContaminationEffectSkippedUnsafeApi: 0,
+            ToxicSmokeChokingCandidates: 0,
+            ToxicSmokeDeathCandidates: 0,
+            ToxicSmokeRecoveryDecays: 0,
+            FireHeatExposedBeavers: 0,
+            FireHeatActiveFlameContacts: 0,
+            FireHeatAvoidanceCandidates: 0,
+            FireHeatAvoidedCells: 0,
+            FireHeatAvoidanceSkippedNoSafeApi: 0,
+            FireHeatInterruptedJobCandidates: 0,
+            FireHeatInterruptedJobs: 0,
+            FireHeatInterruptedJobsSkippedNoSafeApi: 0,
+            FireHeatSingedEntered: 0,
+            FireHeatSingedRecovered: 0,
+            FireHeatSingedSkippedNoSafeApi: 0,
+            FireHeatBurnedEntered: 0,
+            FireHeatBurnedRecovered: 0,
+            FireHeatBurnedSkippedNoSafeApi: 0,
+            FireHeatDeathCandidates: fireHeatDeaths,
+            FireHeatDeathSkippedUnsafeApi: 0,
+            FireHeatRecoveryDecays: 0,
+            PersistenceSaveCount: 0,
+            PersistenceLoadCount: 0,
+            LastDecisionTick: null);
     }
 
     private sealed class RecordingPlayerNotificationSink : ITimberbornPlayerNotificationSink
