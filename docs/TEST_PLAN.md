@@ -105,6 +105,25 @@ unzip -Z1 release/package/Wildfire-0.1.0.0.zip | sort
 
 No live Timberborn QA is required for release packaging alone. Live validation remains owned by feature-specific QA tickets and the deploy pipeline checks that launch Timberborn.
 
+### Tagged Release Workflow
+
+The GitHub Actions release workflow lives at `.github/workflows/release.yml`.
+
+Push version tags with the four-part Timberborn manifest version:
+
+```bash
+git tag v0.1.0.0
+git push origin v0.1.0.0
+```
+
+Tag names must use `v<manifest-version>`, for example `v0.1.0.0`. The workflow runs `bun run release:package -- --tag <tag>`, so `scripts/package-release.ts` validates that the tag, generated `manifest.json` version, package ZIP name, and `CHANGELOG.md` entry all agree before any release asset is attached.
+
+The same workflow can be started with `workflow_dispatch` for branch-local package evidence. Manual runs may supply an expected manifest version or expected tag for validation, but they do not attach assets to a GitHub Release because they are not running from a version tag.
+
+The workflow uploads both the packaged `release/package/Wildfire` directory or `Wildfire-*.zip` and logs under `release/logs/` as GitHub Actions artifacts. On version-tag runs only, it creates the GitHub Release if needed and uploads the `Wildfire-*.zip` package with `gh release upload` or `gh release create`.
+
+No Steam Workshop secrets are required or used by this workflow. It still needs the normal release packaging prerequisites on the runner, including Bun, .NET, and a macOS Unity executable that can build the required AssetBundles. Set the optional repository variable `WILDFIRE_UNITY_EXECUTABLE` only when the runner's Unity path differs from the script default.
+
 ## Steam Workshop Package Validation
 
 Run the Workshop staging command before handing off Steam Workshop content:
