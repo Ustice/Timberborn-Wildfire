@@ -169,7 +169,7 @@ public static class TimberbornLiveBurnDamageTargetCollector
     {
         TimberbornEntityComponentCells.TimberbornEntityComponentBlockObject<Cuttable>[] cuttableTrees =
             TimberbornEntityComponentCells.ComponentBlockObjects<Cuttable>(entityRegistry)
-                .Where(static item => TimberbornEntityComponentCells.IsTreeName(item.BlockObject.Name))
+                .Where(static item => TimberbornEntityComponentCells.IsTreeFuelSource(item.BlockObject))
                 .ToArray();
         HashSet<int> cuttableBlockHashes = cuttableTrees
             .Select(static item => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject))
@@ -185,7 +185,7 @@ public static class TimberbornLiveBurnDamageTargetCollector
                 YieldResources(item.Component.Yielder),
                 ownershipPriority: 90));
         IEnumerable<TargetBuildResult> fallbackTargets = TimberbornEntityComponentCells.BlockObjects(entityRegistry)
-            .Where(static blockObject => TimberbornEntityComponentCells.IsTreeName(blockObject.Name))
+            .Where(TimberbornEntityComponentCells.IsTreeFuelSource)
             .Where(blockObject => !cuttableBlockHashes.Contains(
                 System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)))
             .Select(blockObject => BuildResourceYieldTarget(

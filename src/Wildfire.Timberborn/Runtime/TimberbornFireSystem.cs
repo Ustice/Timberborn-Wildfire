@@ -206,6 +206,8 @@ public sealed class TimberbornFireSystem : IDisposable
 
     public TimberbornContaminationFireConsequenceSummary ContaminationFireSummary => _contaminationFireSummary;
 
+    public int LastPersistentRestoreNoLiveFuelCellsCleared { get; private set; }
+
     public bool TryUpdateParameters(FireSimParameters parameters)
     {
         if (_fireSimulator is not ITimberbornConfigurableFireSimParameters configurable)
@@ -259,6 +261,7 @@ public sealed class TimberbornFireSystem : IDisposable
         LastDeltaCount = 0;
         _burnDurationProofState = TimberbornQaBurnDurationProofState.Placeholder;
         _deltaConsumer.Reset();
+        LastPersistentRestoreNoLiveFuelCellsCleared = 0;
         _logSink.Info(
             $"wildfire_timberborn_initialized width={grid.Width} height={grid.Height} depth={grid.Depth} cell_count={grid.CellCount}");
         if (!Equals(_contaminationFireSummary, TimberbornContaminationFireConsequenceSummary.Empty))
@@ -283,12 +286,13 @@ public sealed class TimberbornFireSystem : IDisposable
             throw new ArgumentNullException(nameof(snapshot));
         }
 
+        TimberbornCellSource[] sourceValues = sources.ToArray();
         if (snapshot.Width != grid.Width ||
             snapshot.Height != grid.Height ||
             snapshot.Depth != grid.Depth ||
             snapshot.Cells.Count != grid.CellCount)
         {
-            Initialize(grid, sources, materialFields);
+            Initialize(grid, sourceValues, materialFields);
             _logSink.Warning(
                 "wildfire_timberborn_firesim_persistence_skipped " +
                 "reason=dimension_mismatch " +
@@ -297,16 +301,25 @@ public sealed class TimberbornFireSystem : IDisposable
             return;
         }
 
-        Initialize(grid, sources, materialFields);
+        Initialize(grid, sourceValues, materialFields);
         if (_fireSimulator is ITimberbornFireSimPersistenceState persistenceState)
         {
-            persistenceState.RestoreFireSimState(snapshot);
-            LastTick = snapshot.Tick;
+            TimberbornFireSimPersistenceSnapshot sanitizedSnapshot = SanitizePersistentFireSimState(
+                snapshot,
+                _cellMapper.CreateInitialCells(grid, sourceValues),
+                materialFields);
+            persistenceState.RestoreFireSimState(sanitizedSnapshot);
+            LastTick = sanitizedSnapshot.Tick;
             LastDeltaCount = 0;
+            int clearedCellCount = snapshot.Cells
+                .Zip(sanitizedSnapshot.Cells, static (saved, restored) => saved == restored)
+                .Count(static unchanged => !unchanged);
+            LastPersistentRestoreNoLiveFuelCellsCleared = clearedCellCount;
             _logSink.Info(
                 "wildfire_timberborn_firesim_persistence_restored " +
-                $"tick={snapshot.Tick} " +
-                $"cell_count={snapshot.Cells.Count}");
+                $"tick={sanitizedSnapshot.Tick} " +
+                $"cell_count={sanitizedSnapshot.Cells.Count} " +
+                $"no_live_fuel_cells_cleared={clearedCellCount}");
         }
         else
         {
@@ -314,6 +327,57 @@ public sealed class TimberbornFireSystem : IDisposable
                 "wildfire_timberborn_firesim_persistence_skipped " +
                 "reason=snapshot_api_unavailable");
         }
+    }
+
+    private static TimberbornFireSimPersistenceSnapshot SanitizePersistentFireSimState(
+        TimberbornFireSimPersistenceSnapshot snapshot,
+        IReadOnlyList<ushort> currentImportCells,
+        ReadOnlySpan<WildfireMaterialField> currentMaterialFields)
+    {
+        WildfireMaterialField[] currentMaterialFieldValues = currentMaterialFields.ToArray();
+        ushort[] sanitizedCells = snapshot.Cells
+            .Select((savedCell, index) => ShouldRestoreSavedCell(
+                savedCell,
+                currentImportCells[index],
+                currentMaterialFieldValues[index])
+                ? savedCell
+                : currentImportCells[index])
+            .ToArray();
+
+        return snapshot with { Cells = sanitizedCells };
+    }
+
+    private static bool ShouldRestoreSavedCell(
+        ushort savedCell,
+        ushort currentImportCell,
+        WildfireMaterialField currentMaterialField)
+    {
+        if (!IsLiveFuelMaterial(currentMaterialField.State.MaterialClass) ||
+            PackedCell.Fuel(currentImportCell) == 0 ||
+            PackedCell.Flammability(currentImportCell) == 0 ||
+            PackedCell.Terrain(currentImportCell) == 0)
+        {
+            return !HasActiveFireState(savedCell);
+        }
+
+        return true;
+    }
+
+    private static bool HasActiveFireState(ushort cell)
+    {
+        return PackedCell.Fuel(cell) > 0 ||
+            PackedCell.Heat(cell) > 0 ||
+            PackedCell.Flammability(cell) > 0 ||
+            PackedCell.BurningLevel(cell) > 0;
+    }
+
+    private static bool IsLiveFuelMaterial(WildfireMaterialClass materialClass)
+    {
+        return materialClass is WildfireMaterialClass.Tree or
+            WildfireMaterialClass.Vegetation or
+            WildfireMaterialClass.Crop or
+            WildfireMaterialClass.Building or
+            WildfireMaterialClass.Storage;
     }
 
     public TimberbornFireSimPersistenceSnapshot? CapturePersistentFireSimState()

@@ -63,6 +63,41 @@ public enum TimberbornResourceKind
     Vegetation,
 }
 
+public static class TimberbornNaturalResourceNameClassifier
+{
+    private static readonly string[] TreeNameTokens =
+    {
+        "Birch",
+        "Chestnut",
+        "Mangrove",
+        "Maple",
+        "Oak",
+        "Pine",
+    };
+
+    private static readonly string[] StumpNameTokens =
+    {
+        "Stump",
+        "Leftover",
+    };
+
+    public static bool IsTreeName(string name)
+    {
+        return IsPotentialTreeName(name) && !IsTreeStumpName(name);
+    }
+
+    public static bool IsTreeStumpName(string name)
+    {
+        return IsPotentialTreeName(name) &&
+            StumpNameTokens.Any(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsPotentialTreeName(string name)
+    {
+        return TreeNameTokens.Any(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+}
+
 public readonly record struct TimberbornCellSource(
     TimberbornCellCoordinates Coordinates,
     TimberbornTerrainCell? Terrain = null,

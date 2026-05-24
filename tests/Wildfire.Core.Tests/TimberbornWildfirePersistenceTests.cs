@@ -97,6 +97,110 @@ public sealed class TimberbornWildfirePersistenceTests
         Assert.Equal(0, service.States[oakKey].DamageTaken);
     }
 
+    [Fact]
+    public void FireSystemRestoreClearsPersistedFireFromCurrentNoFuelCells()
+    {
+        FireGrid grid = new(2, 1, 1);
+        RecordingPersistenceSimulator simulator = new(grid.Width, grid.Height, grid.Depth);
+        TimberbornFireSystem fireSystem = new(
+            new RecordingPersistenceSimulatorFactory(simulator),
+            new TimberbornFireCellMapper(),
+            NullTimberbornFireLogSink.Instance);
+        TimberbornTerrainAdapter terrainAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+        TimberbornCellSource[] currentSources =
+        [
+            terrainAdapter.CreateSource(0, 0, 0, isSolid: true),
+            resourceAdapter.CreateTreeSource(0, 0, 0, "Pine"),
+            terrainAdapter.CreateSource(1, 0, 0, isSolid: true),
+        ];
+        WildfireMaterialField[] materialFields = new TimberbornFireCellMapper().CreateMaterialFields(
+            grid,
+            currentSources);
+        ushort validTreeBurningCell = PackedCell.Pack(
+            fuel: 7,
+            heat: 15,
+            flammability: 3,
+            water: 0,
+            terrain: 1,
+            burningLevel: 3);
+        ushort staleStumpBurningCell = PackedCell.Pack(
+            fuel: 8,
+            heat: 15,
+            flammability: 3,
+            water: 0,
+            terrain: 1,
+            burningLevel: 2);
+        TimberbornFireSimPersistenceSnapshot snapshot = new(
+            Width: 2,
+            Height: 1,
+            Depth: 1,
+            Tick: 12,
+            Cells: [validTreeBurningCell, staleStumpBurningCell],
+            TransportFields: [4u, 5u]);
+
+        fireSystem.InitializeFromPersistentFireSimState(grid, currentSources, materialFields, snapshot);
+
+        Assert.NotNull(simulator.RestoredSnapshot);
+        Assert.Equal(12u, simulator.RestoredSnapshot.Tick);
+        Assert.Equal(validTreeBurningCell, simulator.RestoredSnapshot.Cells[0]);
+        Assert.Equal(
+            PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0),
+            simulator.RestoredSnapshot.Cells[1]);
+        Assert.Equal([4u, 5u], simulator.RestoredSnapshot.TransportFields);
+        Assert.Equal(1, fireSystem.LastPersistentRestoreNoLiveFuelCellsCleared);
+    }
+
+    [Fact]
+    public void FireSystemRestorePreservesPersistedFireOnCurrentVegetationFuelCells()
+    {
+        FireGrid grid = new(2, 1, 1);
+        RecordingPersistenceSimulator simulator = new(grid.Width, grid.Height, grid.Depth);
+        TimberbornFireSystem fireSystem = new(
+            new RecordingPersistenceSimulatorFactory(simulator),
+            new TimberbornFireCellMapper(),
+            NullTimberbornFireLogSink.Instance);
+        TimberbornTerrainAdapter terrainAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+        TimberbornCellSource[] currentSources =
+        [
+            terrainAdapter.CreateSource(0, 0, 0, isSolid: true),
+            resourceAdapter.CreateVegetationSource(0, 0, 0),
+            terrainAdapter.CreateSource(1, 0, 0, isSolid: true),
+            resourceAdapter.CreateVegetationSource(1, 0, 0),
+        ];
+        WildfireMaterialField[] materialFields = new TimberbornFireCellMapper().CreateMaterialFields(
+            grid,
+            currentSources);
+        ushort firstBurningVegetationCell = PackedCell.Pack(
+            fuel: 9,
+            heat: 15,
+            flammability: 3,
+            water: 0,
+            terrain: 1,
+            burningLevel: 2);
+        ushort secondBurningVegetationCell = PackedCell.Pack(
+            fuel: 6,
+            heat: 12,
+            flammability: 3,
+            water: 0,
+            terrain: 1,
+            burningLevel: 1);
+        TimberbornFireSimPersistenceSnapshot snapshot = new(
+            Width: 2,
+            Height: 1,
+            Depth: 1,
+            Tick: 8,
+            Cells: [firstBurningVegetationCell, secondBurningVegetationCell],
+            TransportFields: []);
+
+        fireSystem.InitializeFromPersistentFireSimState(grid, currentSources, materialFields, snapshot);
+
+        Assert.NotNull(simulator.RestoredSnapshot);
+        Assert.Equal([firstBurningVegetationCell, secondBurningVegetationCell], simulator.RestoredSnapshot.Cells);
+        Assert.Equal(0, fireSystem.LastPersistentRestoreNoLiveFuelCellsCleared);
+    }
+
     private static TimberbornBurnDamageService CreateService(params TimberbornBurnDamageDescriptor[] descriptors)
     {
         return new TimberbornBurnDamageService(
@@ -119,5 +223,71 @@ public sealed class TimberbornWildfirePersistenceTests
         IReadOnlyList<TimberbornCellCoordinates> ownedCells)
     {
         return new TimberbornBurnDamageTargetRegistration(targetKey, specId, ownedCells);
+    }
+
+    private sealed class RecordingPersistenceSimulatorFactory(RecordingPersistenceSimulator simulator) :
+        ITimberbornFireSimulatorFactory
+    {
+        public IGpuFireSimulator Create(
+            FireGrid grid,
+            ReadOnlySpan<ushort> initialCells,
+            ReadOnlySpan<WildfireMaterialField> materialFields)
+        {
+            Assert.Equal(simulator.Width, grid.Width);
+            Assert.Equal(simulator.Height, grid.Height);
+            Assert.Equal(simulator.Depth, grid.Depth);
+            return simulator;
+        }
+    }
+
+    private sealed class RecordingPersistenceSimulator(int width, int height, int depth) :
+        IGpuFireSimulator,
+        ITimberbornFireSimPersistenceState
+    {
+        public int Width { get; } = width;
+
+        public int Height { get; } = height;
+
+        public int Depth { get; } = depth;
+
+        public TimberbornFireSimPersistenceSnapshot RestoredSnapshot { get; private set; } =
+            new(width, height, depth, Tick: 0, Cells: [], TransportFields: []);
+
+        public void RegisterChange(FireSimChange change)
+        {
+        }
+
+        public GpuFireStepResult Tick()
+        {
+            return new GpuFireStepResult([], Tick: 1);
+        }
+
+        public IDisposable Subscribe(IFireSimListener listener)
+        {
+            return NullDisposable.Instance;
+        }
+
+        public TimberbornFireSimPersistenceSnapshot CaptureFireSimState()
+        {
+            return RestoredSnapshot;
+        }
+
+        public void RestoreFireSimState(TimberbornFireSimPersistenceSnapshot snapshot)
+        {
+            RestoredSnapshot = snapshot;
+        }
+    }
+
+    private sealed class NullDisposable : IDisposable
+    {
+        public static readonly NullDisposable Instance = new();
+
+        private NullDisposable()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

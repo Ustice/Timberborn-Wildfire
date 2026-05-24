@@ -1628,7 +1628,8 @@ public sealed record TimberbornQaCommandState(
     int? WorldImportResolvedInfrastructureCells = null,
     int? WorldImportResolvedWaterCells = null,
     int? WorldImportResolvedBadwaterCells = null,
-    int? WorldImportSafeUnavailableCount = null)
+    int? WorldImportSafeUnavailableCount = null,
+    int? PersistentRestoreNoLiveFuelCellsCleared = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
 
@@ -1997,6 +1998,7 @@ public sealed record TimberbornQaCommandResult(
         $"world_import_resolved_water_cells={FormatNumber(State.WorldImportResolvedWaterCells)} " +
         $"world_import_resolved_badwater_cells={FormatNumber(State.WorldImportResolvedBadwaterCells)} " +
         $"world_import_safe_unavailable={FormatNumber(State.WorldImportSafeUnavailableCount)} " +
+        $"persistent_restore_no_live_fuel_cells_cleared={FormatNumber(State.PersistentRestoreNoLiveFuelCellsCleared)} " +
         $"message={TimberbornQaCommandBridge.FormatToken(Message)}";
 
     public static TimberbornQaCommandResult CreateSuccess(

@@ -1,6 +1,7 @@
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
 using Timberborn.BaseComponentSystem;
+using Timberborn.Cutting;
 using Timberborn.EntitySystem;
 using Timberborn.MapIndexSystem;
 using Timberborn.MapStateSystem;
@@ -252,7 +253,7 @@ public sealed class TimberbornNaturalResourceCellSourceProvider : ITimberbornWor
     {
         BlockObject[] blockObjects = TimberbornEntityComponentCells.BlockObjects(_entityRegistry).ToArray();
         TimberbornCellSource[] treeSources = blockObjects
-            .Where(static resource => TimberbornEntityComponentCells.IsTreeName(resource.Name))
+            .Where(TimberbornEntityComponentCells.IsTreeFuelSource)
             .SelectMany((resource, resourceIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(resource)
                 .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
                 .Select(coordinates => _resourceAdapter.CreateTreeSource(
@@ -381,16 +382,6 @@ public sealed class TimberbornWaterSourceCellSourceProvider : ITimberbornWorldCe
 
 public static class TimberbornEntityComponentCells
 {
-    private static readonly string[] TreeNameTokens =
-    {
-        "Birch",
-        "Chestnut",
-        "Mangrove",
-        "Maple",
-        "Oak",
-        "Pine",
-    };
-
     private static readonly string[] CropNameTokens =
     {
         "Canola",
@@ -411,7 +402,17 @@ public static class TimberbornEntityComponentCells
 
     public static bool IsTreeName(string name)
     {
-        return TreeNameTokens.Any(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
+        return TimberbornNaturalResourceNameClassifier.IsTreeName(name);
+    }
+
+    public static bool IsTreeFuelSource(BlockObject blockObject)
+    {
+        return IsTreeName(blockObject.Name) && !HasActiveLeftoverModel(blockObject);
+    }
+
+    public static bool IsTreeStumpName(string name)
+    {
+        return TimberbornNaturalResourceNameClassifier.IsTreeStumpName(name);
     }
 
     public static bool IsCropName(string name)
@@ -506,6 +507,23 @@ public static class TimberbornEntityComponentCells
     private static bool TryGetComponent<T>(BaseComponent component, out T result)
     {
         return component.TryGetComponent(out result);
+    }
+
+    private static bool HasActiveLeftoverModel(BlockObject blockObject)
+    {
+        if (!blockObject.TryGetComponent(out Cuttable cuttable))
+        {
+            return false;
+        }
+
+        System.Reflection.FieldInfo? field = cuttable
+            .GetType()
+            .GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .FirstOrDefault(static field =>
+                field.Name.Contains("leftover", StringComparison.OrdinalIgnoreCase) &&
+                typeof(GameObject).IsAssignableFrom(field.FieldType));
+
+        return field?.GetValue(cuttable) is GameObject leftoverModel && leftoverModel.activeSelf;
     }
 
     public static bool IsInsideGrid(Vector3Int coordinates, FireGrid grid)

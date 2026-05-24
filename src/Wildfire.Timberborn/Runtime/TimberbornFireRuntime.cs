@@ -798,7 +798,8 @@ public sealed class TimberbornFireRuntime :
                 WorldImportResolvedInfrastructureCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Infrastructure),
                 WorldImportResolvedWaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Water),
                 WorldImportResolvedBadwaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Badwater),
-                WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
+                WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum(),
+                PersistentRestoreNoLiveFuelCellsCleared: 0);
         }
 
         TimberbornFireDeltaConsumerSummary deltaConsumerSummary = fireSystem.LastDeltaConsumerSummary;
@@ -1171,7 +1172,8 @@ public sealed class TimberbornFireRuntime :
             WorldImportResolvedInfrastructureCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Infrastructure),
             WorldImportResolvedWaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Water),
             WorldImportResolvedBadwaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Badwater),
-            WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum());
+            WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum(),
+            PersistentRestoreNoLiveFuelCellsCleared: fireSystem.LastPersistentRestoreNoLiveFuelCellsCleared);
     }
 
     public TimberbornQaAshCellProbeResult InspectAshCell(int cellIndex)

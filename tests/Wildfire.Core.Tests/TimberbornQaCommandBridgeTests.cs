@@ -2465,6 +2465,7 @@ public sealed class TimberbornQaCommandBridgeTests
             WorldImportResolvedWaterCells: 0,
             WorldImportResolvedBadwaterCells: 0,
             WorldImportSafeUnavailableCount: 3,
+            PersistentRestoreNoLiveFuelCellsCleared: 4,
             AshFieldEntries: 4,
             AshFieldFertileCells: 2,
             AshFieldSpentCells: 1,
@@ -2656,6 +2657,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("world_import_resolved_vegetation_cells=3", result.ResultToken);
         Assert.Contains("world_import_resolved_tree_cells=2", result.ResultToken);
         Assert.Contains("world_import_safe_unavailable=3", result.ResultToken);
+        Assert.Contains("persistent_restore_no_live_fuel_cells_cleared=4", result.ResultToken);
         Assert.Contains("ash_field_entries=4", result.ResultToken);
         Assert.Contains("ash_field_fertile_cells=2", result.ResultToken);
         Assert.Contains("ash_field_spent_cells=1", result.ResultToken);

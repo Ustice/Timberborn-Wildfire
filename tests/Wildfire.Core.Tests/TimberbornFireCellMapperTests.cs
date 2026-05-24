@@ -53,6 +53,44 @@ public sealed class TimberbornFireCellMapperTests
     }
 
     [Fact]
+    public void TreeStumpNamesStayOutOfBurnableTreeFuelImport()
+    {
+        FireGrid grid = new(5, 1, 1);
+        TimberbornFireCellMapper mapper = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+        string[] treeCandidates =
+        [
+            "Pine",
+            "PineMatureStump",
+            "Oak#Leftover",
+        ];
+        TimberbornCellSource[] treeSources = treeCandidates
+            .Select((name, index) => new { Name = name, Index = index })
+            .Where(candidate => TimberbornNaturalResourceNameClassifier.IsTreeName(candidate.Name))
+            .Select(candidate => resourceAdapter.CreateTreeSource(candidate.Index, 0, 0, candidate.Name))
+            .Append(resourceAdapter.CreateCropSource(3, 0, 0, "Corn"))
+            .Append(resourceAdapter.CreateVegetationSource(4, 0, 0))
+            .ToArray();
+
+        ushort[] cells = mapper.CreateInitialCells(grid, treeSources);
+        WildfireMaterialField[] materialFields = mapper.CreateMaterialFields(grid, treeSources);
+
+        Assert.True(TimberbornNaturalResourceNameClassifier.IsTreeName("Pine"));
+        Assert.True(TimberbornNaturalResourceNameClassifier.IsTreeStumpName("PineMatureStump"));
+        Assert.True(TimberbornNaturalResourceNameClassifier.IsTreeStumpName("Oak#Leftover"));
+        Assert.Equal(PackedCell.Pack(fuel: 8, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), cells[0]);
+        Assert.Equal(TimberbornFireCellMapper.EmptyCell, cells[1]);
+        Assert.Equal(TimberbornFireCellMapper.EmptyCell, cells[2]);
+        Assert.Equal(PackedCell.Pack(fuel: 2, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), cells[3]);
+        Assert.Equal(PackedCell.Pack(fuel: 10, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0), cells[4]);
+        Assert.Equal(WildfireMaterialClass.Tree, materialFields[0].State.MaterialClass);
+        Assert.Equal(WildfireMaterialClass.Empty, materialFields[1].State.MaterialClass);
+        Assert.Equal(WildfireMaterialClass.Empty, materialFields[2].State.MaterialClass);
+        Assert.Equal(WildfireMaterialClass.Crop, materialFields[3].State.MaterialClass);
+        Assert.Equal(WildfireMaterialClass.Vegetation, materialFields[4].State.MaterialClass);
+    }
+
+    [Fact]
     public void CreateMappedCellsIsDeterministicAcrossSourceOrder()
     {
         FireGrid grid = new(2, 2, 1);
