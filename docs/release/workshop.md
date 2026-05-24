@@ -19,6 +19,21 @@ The reusable publish command is:
 bun run workshop:publish -- --user <steam-account>
 ```
 
+Build the Workshop content root before publishing:
+
+```bash
+bun run workshop:package
+```
+
+The Workshop package shape is deliberate:
+
+- `release/workshop/content/` is the SteamCMD VDF `contentfolder`.
+- `release/workshop/content/version-1.0/` is the Timberborn mod payload folder.
+- `release/workshop/content/version-1.0/manifest.json` is the Timberborn mod manifest.
+- The payload must include the same required shippable files as the release package, including `Scripts/`, `ComputeShaders/`, Timberborn data folders, and `Sprites/`.
+
+Do not point the VDF `contentfolder` at `release/workshop/content/version-1.0/`, and do not upload `release/package/Wildfire-*.zip` as the Workshop item content. Steam stores the folder supplied by `contentfolder`; Timberborn then sees the versioned mod payload inside that Workshop item root.
+
 The generated `release/workshop/wildfire-workshop-thumbnail.jpg` is referenced by the generated local VDF and is the file Steam receives as the preview. Steam rejects preview files at or above 1 MB, so the publish script generates a compressed JPG from the tracked PNG source and must not use the larger PNG as the upload preview.
 
 Do not publish from `docs/assets/workshop/wildfire-workshop-cover-source.png`; that older cover source includes a fleeing beaver and is not the approved honest Workshop thumbnail.

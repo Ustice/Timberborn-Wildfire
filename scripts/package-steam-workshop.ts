@@ -1,7 +1,12 @@
-import { cpSync, existsSync, rmSync, statSync } from "node:fs";
+import { cpSync, rmSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import {
+  modFolderName,
+  validateTimberbornModArtifact,
+  workshopVersionFolderName,
+} from "./release-package-validation.ts";
 
 type Options = {
   clean: boolean;
@@ -93,16 +98,10 @@ function run(command: string, args: string[]): void {
   }
 }
 
-function requireFile(path: string, label: string): void {
-  if (!existsSync(path) || !statSync(path).isFile()) {
-    throw new Error(`${label} does not exist or is not a file: ${path}`);
-  }
-}
-
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const stagingModsPath = resolve(root, options.stagingModsPath);
-  const stagingWildfirePath = resolve(stagingModsPath, "Wildfire");
+  const stagingWildfirePath = resolve(stagingModsPath, modFolderName);
   const contentPath = resolve(root, options.contentPath);
 
   if (options.clean) {
@@ -120,21 +119,22 @@ async function main(): Promise<void> {
     stagingModsPath,
     "--lock-timeout",
     "60",
+    "--allow-open-game",
     ...options.deployArgs,
   ]);
 
-  requireFile(resolve(stagingWildfirePath, "manifest.json"), "Staged mod manifest");
-  requireFile(resolve(stagingWildfirePath, "Scripts", "Wildfire.Timberborn.dll"), "Staged Timberborn adapter");
-  requireFile(resolve(stagingWildfirePath, "ComputeShaders", "wildfire_compute_mac"), "Staged compute bundle");
+  validateTimberbornModArtifact(stagingWildfirePath, modFolderName);
 
   await mkdir(dirname(contentPath), { recursive: true });
   cpSync(stagingWildfirePath, contentPath, { recursive: true });
 
-  requireFile(resolve(contentPath, "manifest.json"), "Workshop content manifest");
-  requireFile(resolve(contentPath, "Scripts", "Wildfire.Timberborn.dll"), "Workshop Timberborn adapter");
-  requireFile(resolve(contentPath, "ComputeShaders", "wildfire_compute_mac"), "Workshop compute bundle");
+  const summary = validateTimberbornModArtifact(contentPath, workshopVersionFolderName);
 
   console.log(`workshop_package_ready content=${contentPath}`);
+  console.log(`manifest_id=${summary.manifest.Id}`);
+  console.log(`manifest_version=${summary.manifest.Version}`);
+  console.log(`file_count=${summary.fileCount}`);
+  summary.files.forEach((file) => console.log(`workshop_artifact_file ${file}`));
 }
 
 main().catch((error: unknown) => {

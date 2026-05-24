@@ -2,6 +2,10 @@ import { existsSync, statSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import {
+  validateTimberbornModArtifact,
+  workshopVersionFolderName,
+} from "./release-package-validation.ts";
 
 type Options = {
   dryRun: boolean;
@@ -188,7 +192,7 @@ async function main(): Promise<void> {
   }
 
   requireDirectory(contentFolder, "VDF contentfolder");
-  requireFile(resolve(contentFolder, "version-1.0", "manifest.json"), "Workshop mod manifest");
+  validateTimberbornModArtifact(resolve(contentFolder, workshopVersionFolderName), workshopVersionFolderName);
 
   if (!steamUser) {
     throw new Error("Missing Steam account. Pass --user <account> or set STEAM_USER.");
