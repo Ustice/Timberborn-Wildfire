@@ -1135,6 +1135,21 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeChokingSkippedUnsafeApi,
             BeaverFieldBehaviorSmokeDeathCandidates: beaverFieldBehaviorCounters.SmokeDeathCandidates,
             BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeDeathSkippedUnsafeApi,
+            BeaverFieldBehaviorToxicSmokeExposedBeavers: beaverFieldBehaviorCounters.ToxicSmokeExposedBeavers,
+            BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples:
+                beaverFieldBehaviorCounters.ToxicSmokeExposureAccumulatedSamples,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts:
+                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectAttempts,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectSuccesses:
+                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectSuccesses,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectFailures:
+                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectFailures,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectSkippedUnsafeApi:
+                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectSkippedUnsafeApi,
+            BeaverFieldBehaviorToxicSmokeChokingCandidates:
+                beaverFieldBehaviorCounters.ToxicSmokeChokingCandidates,
+            BeaverFieldBehaviorToxicSmokeDeathCandidates: beaverFieldBehaviorCounters.ToxicSmokeDeathCandidates,
+            BeaverFieldBehaviorToxicSmokeRecoveryDecays: beaverFieldBehaviorCounters.ToxicSmokeRecoveryDecays,
             BeaverFieldBehaviorFireHeatExposedBeavers: beaverFieldBehaviorCounters.FireHeatExposedBeavers,
             BeaverFieldBehaviorFireHeatActiveFlameContacts: beaverFieldBehaviorCounters.FireHeatActiveFlameContacts,
             BeaverFieldBehaviorFireHeatAvoidanceCandidates: beaverFieldBehaviorCounters.FireHeatAvoidanceCandidates,

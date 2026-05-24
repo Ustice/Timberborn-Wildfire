@@ -225,12 +225,81 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, contaminatedSmoke: 1, toxic: 1)]), tick: 12);
 
         Assert.Equal(3, dispatcher.Counters.SmokeExposedSamples);
-        Assert.Equal(3, dispatcher.Counters.SmokeExposureAccumulatedSamples);
+        Assert.Equal(6, dispatcher.Counters.SmokeExposureAccumulatedSamples);
         Assert.Equal(3, dispatcher.Counters.ToxicSmokeDecisionsApplied);
         Assert.Equal(1, dispatcher.Counters.SmokeCoughingEntered);
+        Assert.Equal(3, dispatcher.Counters.ToxicSmokeExposedBeavers);
+        Assert.Equal(6, dispatcher.Counters.ToxicSmokeExposureAccumulatedSamples);
+        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectAttempts);
+        Assert.Equal(3, dispatcher.Counters.ToxicSmokeContaminationEffectSkippedUnsafeApi);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.ToxicSmoke, actuator.Decisions.Last().Variant);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown, actuator.Decisions.Last().Action);
-        Assert.Equal(3, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
+        Assert.Equal(6, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
+    }
+
+    [Fact]
+    public void DispatcherAdvancesToxicSmokeAcrossRespiratoryThresholdsFasterThanNormalSmoke()
+    {
+        RecordingActuator normalActuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
+        RecordingActuator toxicActuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
+        TimberbornBeaverFieldBehaviorOptions options = new(
+            DecisionCooldownTicks: 1,
+            SmokeCoughingThresholdSamples: 3,
+            SmokeChokingCandidateThresholdSamples: 4,
+            SmokeDeathCandidateThresholdSamples: 8,
+            ToxicSmokeExposureSampleWeight: 2);
+        TimberbornBeaverFieldBehaviorDispatcher normalDispatcher = new(
+            normalActuator,
+            new RecordingFireLogSink(),
+            options);
+        TimberbornBeaverFieldBehaviorDispatcher toxicDispatcher = new(
+            toxicActuator,
+            new RecordingFireLogSink(),
+            options);
+
+        new[]
+        {
+            10u,
+            11u,
+        }.ToList().ForEach(tick =>
+        {
+            normalDispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick);
+            toxicDispatcher.Dispatch(
+                Snapshot([Classification("beaver-1", respiratory: 1, contaminatedSmoke: 1, toxic: 1)]),
+                tick);
+        });
+
+        Assert.Equal(2, normalDispatcher.Counters.SmokeExposureAccumulatedSamples);
+        Assert.Equal(0, normalDispatcher.Counters.SmokeCoughingEntered);
+        Assert.Equal(0, normalDispatcher.Counters.SmokeChokingCandidates);
+        Assert.Equal(4, toxicDispatcher.Counters.SmokeExposureAccumulatedSamples);
+        Assert.Equal(1, toxicDispatcher.Counters.SmokeCoughingEntered);
+        Assert.Equal(1, toxicDispatcher.Counters.SmokeChokingCandidates);
+        Assert.Equal(1, toxicDispatcher.Counters.ToxicSmokeChokingCandidates);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown, toxicActuator.Decisions.Last().Action);
+    }
+
+    [Fact]
+    public void DispatcherKeepsNativeToxicContaminationEffectsSafeUnavailable()
+    {
+        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
+            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Applied),
+            new RecordingFireLogSink(),
+            new TimberbornBeaverFieldBehaviorOptions(
+                DecisionCooldownTicks: 1,
+                SmokeCoughingThresholdSamples: 1,
+                SmokeChokingCandidateThresholdSamples: 2,
+                SmokeDeathCandidateThresholdSamples: 5));
+
+        dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, contaminatedSmoke: 1)]), tick: 10);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, contaminatedSmoke: 1)]), tick: 11);
+
+        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectAttempts);
+        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectSuccesses);
+        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectFailures);
+        Assert.Equal(2, dispatcher.Counters.ToxicSmokeContaminationEffectSkippedUnsafeApi);
+        Assert.Equal(1, dispatcher.Counters.ToxicSmokeChokingCandidates);
+        Assert.Equal(0, dispatcher.Counters.ToxicSmokeDeathCandidates);
     }
 
     [Fact]
@@ -250,11 +319,11 @@ public sealed class TimberbornBeaverFieldBehaviorTests
 
         Assert.Equal(3, dispatcher.Counters.FireHeatDecisionsApplied);
         Assert.Equal(3, dispatcher.Counters.SmokeExposedSamples);
-        Assert.Equal(3, dispatcher.Counters.SmokeExposureAccumulatedSamples);
+        Assert.Equal(6, dispatcher.Counters.SmokeExposureAccumulatedSamples);
         Assert.Equal(1, dispatcher.Counters.SmokeCoughingEntered);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, actuator.Decisions.Last().Variant);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp, actuator.Decisions.Last().Action);
-        Assert.Equal(3, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
+        Assert.Equal(6, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
     }
 
     [Fact]

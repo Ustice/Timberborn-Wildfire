@@ -2414,26 +2414,35 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 76,
             BeaverFieldBehaviorSmokeDeathCandidates: 77,
             BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: 78,
-            BeaverFieldBehaviorFireHeatExposedBeavers: 79,
-            BeaverFieldBehaviorFireHeatActiveFlameContacts: 80,
-            BeaverFieldBehaviorFireHeatAvoidanceCandidates: 81,
-            BeaverFieldBehaviorFireHeatAvoidedCells: 82,
-            BeaverFieldBehaviorFireHeatAvoidanceSkippedNoSafeApi: 83,
-            BeaverFieldBehaviorFireHeatInterruptedJobCandidates: 84,
-            BeaverFieldBehaviorFireHeatInterruptedJobs: 85,
-            BeaverFieldBehaviorFireHeatInterruptedJobsSkippedNoSafeApi: 86,
-            BeaverFieldBehaviorFireHeatSingedEntered: 87,
-            BeaverFieldBehaviorFireHeatSingedRecovered: 88,
-            BeaverFieldBehaviorFireHeatSingedSkippedNoSafeApi: 89,
-            BeaverFieldBehaviorFireHeatBurnedEntered: 90,
-            BeaverFieldBehaviorFireHeatBurnedRecovered: 91,
-            BeaverFieldBehaviorFireHeatBurnedSkippedNoSafeApi: 92,
-            BeaverFieldBehaviorFireHeatDeathCandidates: 93,
-            BeaverFieldBehaviorFireHeatDeathSkippedUnsafeApi: 94,
-            BeaverFieldBehaviorFireHeatRecoveryDecays: 95,
-            BeaverFieldBehaviorPersistenceSaves: 96,
-            BeaverFieldBehaviorPersistenceLoads: 97,
-            BeaverFieldBehaviorLastDecisionTick: 98,
+            BeaverFieldBehaviorToxicSmokeExposedBeavers: 79,
+            BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples: 80,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts: 81,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectSuccesses: 82,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectFailures: 83,
+            BeaverFieldBehaviorToxicSmokeContaminationEffectSkippedUnsafeApi: 84,
+            BeaverFieldBehaviorToxicSmokeChokingCandidates: 85,
+            BeaverFieldBehaviorToxicSmokeDeathCandidates: 86,
+            BeaverFieldBehaviorToxicSmokeRecoveryDecays: 87,
+            BeaverFieldBehaviorFireHeatExposedBeavers: 88,
+            BeaverFieldBehaviorFireHeatActiveFlameContacts: 89,
+            BeaverFieldBehaviorFireHeatAvoidanceCandidates: 90,
+            BeaverFieldBehaviorFireHeatAvoidedCells: 91,
+            BeaverFieldBehaviorFireHeatAvoidanceSkippedNoSafeApi: 92,
+            BeaverFieldBehaviorFireHeatInterruptedJobCandidates: 93,
+            BeaverFieldBehaviorFireHeatInterruptedJobs: 94,
+            BeaverFieldBehaviorFireHeatInterruptedJobsSkippedNoSafeApi: 95,
+            BeaverFieldBehaviorFireHeatSingedEntered: 96,
+            BeaverFieldBehaviorFireHeatSingedRecovered: 97,
+            BeaverFieldBehaviorFireHeatSingedSkippedNoSafeApi: 98,
+            BeaverFieldBehaviorFireHeatBurnedEntered: 99,
+            BeaverFieldBehaviorFireHeatBurnedRecovered: 100,
+            BeaverFieldBehaviorFireHeatBurnedSkippedNoSafeApi: 101,
+            BeaverFieldBehaviorFireHeatDeathCandidates: 102,
+            BeaverFieldBehaviorFireHeatDeathSkippedUnsafeApi: 103,
+            BeaverFieldBehaviorFireHeatRecoveryDecays: 104,
+            BeaverFieldBehaviorPersistenceSaves: 105,
+            BeaverFieldBehaviorPersistenceLoads: 106,
+            BeaverFieldBehaviorLastDecisionTick: 107,
             BurnDurationProofTarget: "medium",
             BurnDurationProofTargetIndex: 42,
             BurnDurationProofTargetX: 5,
@@ -2639,26 +2648,35 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_smoke_choking_skipped_unsafe_api=76", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_candidates=77", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_skipped_unsafe_api=78", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_exposed_beavers=79", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_active_flame_contacts=80", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_avoidance_candidates=81", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_avoided_cells=82", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_avoidance_skipped_no_safe_api=83", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_job_candidates=84", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs=85", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs_skipped_no_safe_api=86", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_singed_entered=87", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_singed_recovered=88", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_singed_skipped_no_safe_api=89", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_burned_entered=90", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_burned_recovered=91", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_burned_skipped_no_safe_api=92", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_death_candidates=93", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_death_skipped_unsafe_api=94", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_recovery_decays=95", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_persistence_saves=96", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_persistence_loads=97", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_last_decision_tick=98", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_exposed_beavers=79", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_exposure_accumulated_samples=80", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_attempts=81", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_successes=82", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_failures=83", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_skipped_unsafe_api=84", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_choking_candidates=85", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_death_candidates=86", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_toxic_smoke_recovery_decays=87", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_exposed_beavers=88", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_active_flame_contacts=89", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_avoidance_candidates=90", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_avoided_cells=91", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_avoidance_skipped_no_safe_api=92", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_job_candidates=93", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs=94", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs_skipped_no_safe_api=95", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_singed_entered=96", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_singed_recovered=97", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_singed_skipped_no_safe_api=98", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_burned_entered=99", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_burned_recovered=100", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_burned_skipped_no_safe_api=101", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_death_candidates=102", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_death_skipped_unsafe_api=103", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_recovery_decays=104", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_saves=105", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_persistence_loads=106", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_last_decision_tick=107", result.ResultToken);
         Assert.Contains("burn_duration_proof_target=medium", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_index=42", result.ResultToken);
         Assert.Contains("burn_duration_proof_target_x=5", result.ResultToken);
