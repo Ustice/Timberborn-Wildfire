@@ -42,6 +42,7 @@ Treat that list as a migration snapshot only. Refresh from GitHub before assigni
 - If shader behavior changes, use the opt-in Unity harness command documented in [TEST_PLAN.md](TEST_PLAN.md) before accepting the change.
 - If a ticket fails required QA or review, keep the GitHub issue open and update labels/comments with the exact blocker.
 - Use `bun run typecheck` before accepting TypeScript script changes.
+- `TWF-074` has fresh partial live evidence in `qa-evidence/twf-074-2026-05-24-live/` and issue #15, but should stay open for a clean release-media rerun: fresh launch/load, camera framed on the sampled beaver, hidden desktop overlays, and a contaminated/toxic setup that places contaminated smoke on sampled beaver cells.
 
 ## Useful Commands
 
