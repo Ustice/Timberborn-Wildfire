@@ -183,6 +183,21 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void IndirectRendererBundleUnloadIsDefensiveDuringUnityTeardown()
+    {
+        string indirectRenderer = ReadTimberbornSource("TimberbornGpuIndirectFireRenderer.cs");
+
+        Assert.Contains("DisposeGpuResources();\n        UnloadBundle();", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("AssetBundle? bundle = _bundle;", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_bundle = null;", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("if (bundle == null)", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("bundle.Unload(unloadAllLoadedObjects: true);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("catch (NullReferenceException exception)", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("catch (MissingReferenceException exception)", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_effects_bundle_unload_skipped", indirectRenderer, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FireSimKeepsDynamicAshOutOfCompanionFields()
     {
         string source = ReadUnitySource("FireSim.compute");

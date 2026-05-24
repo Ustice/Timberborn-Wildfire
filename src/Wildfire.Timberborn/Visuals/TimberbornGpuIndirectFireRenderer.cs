@@ -486,8 +486,33 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
 
     private void UnloadBundle()
     {
-        _bundle?.Unload(unloadAllLoadedObjects: true);
+        AssetBundle? bundle = _bundle;
         _bundle = null;
+        if (bundle == null)
+        {
+            return;
+        }
+
+        try
+        {
+            bundle.Unload(unloadAllLoadedObjects: true);
+        }
+        catch (NullReferenceException exception)
+        {
+            LogBundleUnloadSkipped(exception);
+        }
+        catch (MissingReferenceException exception)
+        {
+            LogBundleUnloadSkipped(exception);
+        }
+    }
+
+    private void LogBundleUnloadSkipped(Exception exception)
+    {
+        _logSink.Warning(
+            "wildfire_timberborn_effects_bundle_unload_skipped " +
+            $"reason=unity_teardown exception={exception.GetType().Name} " +
+            $"message=\"{EscapeLogValue(exception.Message)}\"");
     }
 
     private static string GetBundlePath(string bundleName)
