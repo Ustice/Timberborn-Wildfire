@@ -130,6 +130,39 @@ The SteamCMD VDF `contentfolder` must be `release/workshop/content`, not the inn
 
 No Workshop upload/update validation is required for package staging alone. `TWF-111` owns SteamCMD publish/update proof.
 
+## Steam Workshop Upload And Update Validation
+
+Use [release/workshop.md](release/workshop.md) as the accepted upload/update runbook. For the first public release, publishing is intentionally manual at the Steam account, Steam Guard, metadata review, and visibility-confirmation boundary. `bun run workshop:publish` is allowed as a guarded SteamCMD wrapper, but it is not unattended release automation.
+
+Before a real upload or update, run:
+
+```bash
+bun run workshop:package
+bun run workshop:publish -- --dry-run --skip-preview --user <steam-account>
+```
+
+The dry run must validate the payload under `release/workshop/content/version-1.0/`, confirm the preview file exists and is under Steam's preview-size limit, write `release/workshop/wildfire-workshop-item.generated.vdf`, and record the redacted SteamCMD command in `release/workshop/last-publish-command.txt`.
+
+Required publish/update evidence:
+
+- Steam account has permission to create or update Timberborn app `1062090` Workshop items.
+- Steam Guard prompt is available to the human publisher.
+- `steamcmd` is installed and available on `PATH`.
+- `magick` is installed and available on `PATH`, or `--skip-preview` is used with an already generated `release/workshop/wildfire-workshop-thumbnail.jpg`.
+- `publishedfileid` is confirmed. The current planned id is `3730392791`; if Steam creates or reports a different id, update `release/workshop/wildfire-workshop-item.vdf`.
+- VDF `contentfolder` remains `release/workshop/content`, not `release/workshop/content/version-1.0`.
+- VDF `previewfile` points at the compressed Workshop thumbnail JPG.
+- The generic release ZIP is not uploaded as Workshop content.
+- The SteamCMD result, Workshop item URL, final id, and changenote are recorded in the issue or release notes.
+
+Blockers to report honestly:
+
+- Missing Steam credentials or Steam Guard access.
+- Missing `steamcmd`.
+- Missing `magick` when preview regeneration is required.
+- Unconfirmed or rejected `publishedfileid`.
+- SteamCMD access denied, invalid parameter, file missing, preview too large, or Workshop visibility/metadata requiring human correction.
+
 ## Release Platform Support
 
 The initial public release target is macOS only, contingent on `TWF-104` validating the packaged release artifact in a real macOS Timberborn run. The release package workflow currently builds and validates the four macOS AssetBundles: `wildfire_compute_mac`, `wildfire_diagnostic_mac`, `wildfire_effects_mac`, and `wildfire_visual_mac`.

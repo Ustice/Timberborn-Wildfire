@@ -9,6 +9,7 @@
 - The old alternate C# fire-spread execution path is gone. Future simulation behavior should target `FireSim.compute` and the Unity shader harness.
 - Timberborn QA has a file-backed command bridge with `status`, `qa-readiness`, stimulus commands, deploy tooling, coordinate references, and live evidence conventions.
 - The initial public release platform target is macOS only, contingent on `TWF-104` validating the packaged release artifact in a real macOS Timberborn run. Windows is unvalidated and unsupported unless `TWF-105` and `TWF-106` complete before release; Linux, SteamOS, Steam Deck, Proton, and other platforms are unsupported for the first public release.
+- Steam Workshop packaging uses `release/workshop/content/` as the SteamCMD `contentfolder` and `release/workshop/content/version-1.0/` as the Timberborn mod payload. The generic `release/package/Wildfire-*.zip` is not the Workshop upload body. First-release Workshop publishing is intentionally manual at the Steam credential, Steam Guard, metadata review, and visibility boundary; use `bun run workshop:publish` only as the guarded SteamCMD wrapper documented in [release/workshop.md](release/workshop.md).
 
 ## Durable References
 
@@ -43,6 +44,7 @@ Treat that list as a migration snapshot only. Refresh from GitHub before assigni
 - If shader behavior changes, use the opt-in Unity harness command documented in [TEST_PLAN.md](TEST_PLAN.md) before accepting the change.
 - If a ticket fails required QA or review, keep the GitHub issue open and update labels/comments with the exact blocker.
 - Use `bun run typecheck` before accepting TypeScript script changes.
+- Before any real Steam Workshop upload or update, run `bun run workshop:package` and `bun run workshop:publish -- --dry-run --skip-preview --user <steam-account>`, then confirm Steam account permission, Steam Guard access, `steamcmd`, preview size, VDF metadata, and the final `publishedfileid`. The current planned Workshop item id is `3730392791`, but it remains a confirmation blocker until a real authenticated SteamCMD result or Workshop URL proves it.
 - `TWF-074` has fresh partial live evidence in `qa-evidence/twf-074-2026-05-24-live/` and issue #15, but should stay open for a clean release-media rerun: fresh launch/load, camera framed on the sampled beaver, hidden desktop overlays, and a contaminated/toxic setup that places contaminated smoke on sampled beaver cells.
 - Do not claim platform support from package contents alone. Platform support needs packaged-artifact evidence plus live `Player.log` and `status` or `qa-readiness` proof on that platform; Windows is blocked on a Windows Timberborn validation environment and Windows AssetBundle packaging, while Linux/SteamOS/Deck need an explicit support decision and live target environment.
 
@@ -53,6 +55,8 @@ bun run typecheck
 dotnet test tests/Wildfire.Core.Tests/Wildfire.Core.Tests.csproj
 bun scripts/deploy-timberborn-mod.ts --apply --clean --lock-timeout 60
 bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick
+bun run workshop:package
+bun run workshop:publish -- --dry-run --skip-preview --user <steam-account>
 ```
 
 Use this suppression proof when a ticket needs water-change evidence:
