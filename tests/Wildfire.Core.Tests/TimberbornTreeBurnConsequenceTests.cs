@@ -366,7 +366,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
-    public void UnavailableTreeApiReportsSkippedUnsafeApiWithoutClaimingMutation()
+    public void UnavailableTreeApiFailsLoudly()
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornBurnDamageService burnDamageService = CreateService(
@@ -379,15 +379,10 @@ public sealed class TimberbornTreeBurnConsequenceTests
             UnavailableTimberbornTreeBurnConsequenceApi.Instance);
 
         burnDamageService.ApplyDamage(26, [Decision(0, oldFuel: 15, newFuel: 0)]);
-        TimberbornTreeBurnConsequenceSummary summary =
-            treeSink.ApplyConsequences(26, [Decision(0, oldFuel: 15, newFuel: 0)]);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            treeSink.ApplyConsequences(26, [Decision(0, oldFuel: 15, newFuel: 0)]));
 
-        Assert.Equal(3, summary.SkippedUnsafeApiCount);
-        Assert.Equal(0, summary.YieldLost);
-        Assert.Equal(0, summary.KilledTreeCount);
-        Assert.Equal(0, summary.VisualStateUpdateCount);
-        Assert.Equal(1, summary.ConsideredTreeTargetCount);
-        Assert.Equal(1, summary.BurnableTreeTargetCount);
+        Assert.Contains("Tree burn consequence API is unavailable", exception.Message);
     }
 
     [Fact]

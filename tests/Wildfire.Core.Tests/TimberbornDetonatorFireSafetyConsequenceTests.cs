@@ -89,59 +89,50 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
     }
 
     [Fact]
-    public void SinkReportsSafeUnavailableWrapperWithoutDisabling()
+    public void SinkFailsLoudlyWhenWrapperCannotDisable()
     {
         RecordingDetonatorTargetApi targetApi = new(Target(canDisable: false, canPreserveAutomationState: false));
         TimberbornDetonatorFireSafetySink sink = new(
             () => true,
             targetApi);
 
-        TimberbornDetonatorFireSafetySummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             4,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(0, summary.DisabledTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("Detonator target cannot be disabled", exception.Message);
         Assert.Empty(targetApi.DisabledTargets);
     }
 
     [Fact]
-    public void SinkContainsResolverFailureAsSafeUnavailableTelemetry()
+    public void SinkFailsLoudlyOnResolverFailure()
     {
         RecordingDetonatorTargetApi targetApi = new(Target(), throwOnResolve: true);
         TimberbornDetonatorFireSafetySink sink = new(
             () => true,
             targetApi);
 
-        TimberbornDetonatorFireSafetySummary summary = sink.ApplyConsequences(
+        TypeLoadException exception = Assert.Throws<TypeLoadException>(() => sink.ApplyConsequences(
             4,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(1, summary.ConsideredDeltaCount);
-        Assert.Equal(0, summary.MatchedTargetCellCount);
-        Assert.Equal(0, summary.DisabledTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("detonator type lookup failed", exception.Message);
         Assert.Empty(targetApi.DisabledTargets);
     }
 
     [Fact]
-    public void SinkContainsDisableFailureAsSafeUnavailableTelemetry()
+    public void SinkFailsLoudlyOnDisableFailure()
     {
         RecordingDetonatorTargetApi targetApi = new(Target(), throwOnDisable: true);
         TimberbornDetonatorFireSafetySink sink = new(
             () => true,
             targetApi);
 
-        TimberbornDetonatorFireSafetySummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             4,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(1, summary.MatchedTargetCellCount);
-        Assert.Equal(0, summary.DisabledTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("detonator disarm failed", exception.Message);
         Assert.Single(targetApi.DisabledTargets);
     }
 
@@ -183,33 +174,31 @@ public sealed class TimberbornDetonatorFireSafetyConsequenceTests
     }
 
     [Fact]
-    public void NativeWrapperReportsSafeUnavailableWhenDisarmIsMissing()
+    public void NativeWrapperFailsLoudlyWhenDisarmIsMissing()
     {
         NoDisarmDetonator detonator = new();
 
-        TimberbornDetonatorFireSafetyDisableResult result =
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
             TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
                 detonator,
-                canPreserveAutomationState: true);
+                canPreserveAutomationState: true));
 
-        Assert.Equal(TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi, result.Status);
-        Assert.False(result.RecoverabilityPreserved);
+        Assert.Contains("Detonator Disarm API is unavailable", exception.Message);
         Assert.Equal(0, detonator.ArmCallCount);
         Assert.Equal(0, detonator.EvaluateCallCount);
     }
 
     [Fact]
-    public void NativeWrapperContainsDisarmFailuresAsSafeUnavailable()
+    public void NativeWrapperFailsLoudlyOnDisarmFailure()
     {
         ThrowingDisarmDetonator detonator = new();
 
-        TimberbornDetonatorFireSafetyDisableResult result =
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
             TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
                 detonator,
-                canPreserveAutomationState: true);
+                canPreserveAutomationState: true));
 
-        Assert.Equal(TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi, result.Status);
-        Assert.False(result.RecoverabilityPreserved);
+        Assert.Contains("Detonator disarm failed", exception.Message);
         Assert.Equal(1, detonator.DisarmCallCount);
     }
 

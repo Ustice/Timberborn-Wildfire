@@ -243,6 +243,7 @@ public sealed class TimberbornFireRuntime :
         {
             _logSink.Warning(
                 $"wildfire_timberborn_runtime_dispatch_failed game_update_id={_gameUpdateId} message=\"{exception.Message}\"");
+            throw;
         }
 
         _gpuIndirectRenderer?.OnUpdate();
@@ -377,9 +378,9 @@ public sealed class TimberbornFireRuntime :
             fireSystem.Initialize(grid, sources, companionFields);
         }
 
-        RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);
         _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
         Configure(fireSystem, cadence);
+        RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);
         if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)
         {
             WildfireReleaseVisualSettings visualSettings =

@@ -3,50 +3,38 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornBeaverFieldBehaviorTests
 {
     [Fact]
-    public void DispatcherRoutesExposureTelemetryToBoundedNoOpVariantDecisions()
+    public void DispatcherFailsLoudlyWhenFireHeatBeaverAvoidanceIsRequested()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
 
-        dispatcher.Dispatch(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => dispatcher.Dispatch(
             Snapshot([
                 Classification("beaver-smoke", respiratory: 2),
                 Classification("beaver-toxic", respiratory: 1, contaminatedSmoke: 1, toxic: 1),
                 Classification("beaver-fire", burn: 1),
             ]),
-            tick: 10);
+            tick: 10));
 
-        Assert.Equal(3, dispatcher.Counters.DecisionsEvaluated);
-        Assert.Equal(1, dispatcher.Counters.SmokeDecisionsApplied);
-        Assert.Equal(1, dispatcher.Counters.ToxicSmokeDecisionsApplied);
-        Assert.Equal(1, dispatcher.Counters.FireHeatDecisionsApplied);
-        Assert.Equal(3, dispatcher.Counters.NoOpDecisionsApplied);
-        Assert.Equal([
-            TimberbornBeaverFieldBehaviorVariant.Smoke,
-            TimberbornBeaverFieldBehaviorVariant.ToxicSmoke,
-            TimberbornBeaverFieldBehaviorVariant.FireHeat,
-        ], actuator.Decisions.Select(static decision => decision.Variant).OrderBy(static variant => variant).ToArray());
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
     }
 
     [Fact]
-    public void DispatcherReportsFireHeatAvoidanceAndWorkInterruptionAsSafeUnavailable()
+    public void DispatcherReportsFireHeatAvoidanceAndWorkInterruptionAsMissingImplementation()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 2)]), tick: 10);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 2)]), tick: 10));
 
         TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp, decision.Action);
         Assert.Equal(1, dispatcher.Counters.FireHeatExposedBeavers);
         Assert.Equal(2, dispatcher.Counters.FireHeatAvoidanceCandidates);
-        Assert.Equal(0, dispatcher.Counters.FireHeatAvoidedCells);
-        Assert.Equal(2, dispatcher.Counters.FireHeatAvoidanceSkippedNoSafeApi);
         Assert.Equal(1, dispatcher.Counters.FireHeatInterruptedJobCandidates);
-        Assert.Equal(0, dispatcher.Counters.FireHeatInterruptedJobs);
-        Assert.Equal(1, dispatcher.Counters.FireHeatInterruptedJobsSkippedNoSafeApi);
-        Assert.Equal(3, dispatcher.Counters.SkippedNoSafeApi);
     }
 
     [Fact]
@@ -55,12 +43,13 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1, maxFire: 0.9f)]), tick: 10);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1, maxFire: 0.9f)]), tick: 10));
 
         TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp, decision.Action);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(1, dispatcher.Counters.FireHeatActiveFlameContacts);
-        Assert.Equal(0, dispatcher.Counters.FireHeatSingedEntered);
         Assert.Equal(0.9f, decision.MaxFire);
     }
 
@@ -77,19 +66,10 @@ public sealed class TimberbornBeaverFieldBehaviorTests
                 FireHeatBurnedThresholdSamples: 3,
                 FireHeatDeathCandidateThresholdSamples: 4));
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 11);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 12);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 13);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10));
 
-        Assert.Equal(1, dispatcher.Counters.FireHeatSingedEntered);
-        Assert.Equal(1, dispatcher.Counters.FireHeatBurnedEntered);
-        Assert.Equal(1, dispatcher.Counters.FireHeatDeathCandidates);
-        Assert.Equal(1, dispatcher.Counters.FireHeatSingedSkippedNoSafeApi);
-        Assert.Equal(1, dispatcher.Counters.FireHeatBurnedSkippedNoSafeApi);
-        Assert.Equal(1, dispatcher.Counters.FireHeatDeathSkippedUnsafeApi);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatBurnedSafeNoOp, actuator.Decisions.Last().Action);
-        Assert.Equal(4, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveFireHeatExposedSamples);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
     }
 
     [Fact]
@@ -115,10 +95,12 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             .ToList()
             .ForEach(sample => dispatcher.Dispatch(Snapshot([sample.classification]), tick: (uint)(10 + sample.index)));
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-mixed", burn: 1)]), tick: 13);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-mixed", burn: 1)]), tick: 13));
 
         TimberbornBeaverFieldBehaviorDecision decision = actuator.Decisions.Last();
         TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp, decision.Action);
         Assert.Equal(1, entry.ConsecutiveFireHeatExposedSamples);
@@ -142,17 +124,10 @@ public sealed class TimberbornBeaverFieldBehaviorTests
                 FireHeatBurnedThresholdSamples: 3,
                 FireHeatRecoveryDecaySamples: 2));
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 11);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 12);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-fire")]), tick: 13);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10));
 
-        Assert.Equal(1, dispatcher.Counters.FireHeatRecoveryDecays);
-        Assert.Equal(1, dispatcher.Counters.FireHeatBurnedRecovered);
-        Assert.Equal(1, dispatcher.Counters.FireHeatSingedRecovered);
-        TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
-        Assert.False(entry.IsExposed);
-        Assert.Equal(1, entry.ConsecutiveFireHeatExposedSamples);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
     }
 
     [Fact]
@@ -313,17 +288,11 @@ public sealed class TimberbornBeaverFieldBehaviorTests
                 DecisionCooldownTicks: 1,
                 SmokeCoughingThresholdSamples: 3));
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, burn: 1, toxic: 1)]), tick: 10);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, burn: 1, toxic: 1)]), tick: 11);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, burn: 1, toxic: 1)]), tick: 12);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, burn: 1, toxic: 1)]), tick: 10));
 
-        Assert.Equal(3, dispatcher.Counters.FireHeatDecisionsApplied);
-        Assert.Equal(3, dispatcher.Counters.SmokeExposedSamples);
-        Assert.Equal(6, dispatcher.Counters.SmokeExposureAccumulatedSamples);
-        Assert.Equal(1, dispatcher.Counters.SmokeCoughingEntered);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, actuator.Decisions.Last().Variant);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp, actuator.Decisions.Last().Action);
-        Assert.Equal(6, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
     }
 
     [Fact]
@@ -489,27 +458,26 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-1", burn: 1)]), tick: 10);
-        dispatcher.Dispatch(Snapshot([Classification("beaver-1")]), tick: 15);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-1", burn: 1)]), tick: 10));
 
-        Assert.Equal(1, dispatcher.Counters.RecoveryActions);
-        TimberbornBeaverFieldBehaviorStateEntry recoveredEntry = Assert.Single(actuator.RecoveredEntries);
-        Assert.Equal("beaver-1", recoveredEntry.BeaverId);
+        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
+        Assert.Empty(actuator.RecoveredEntries);
     }
 
     [Fact]
-    public void DispatcherCountsSafeUnavailableActuatorSkipsWithoutMutatingState()
+    public void DispatcherFailsLoudlyWhenActuatorSkips()
     {
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
             new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi),
             new RecordingFireLogSink());
 
-        dispatcher.Dispatch(Snapshot([Classification("beaver-1", burn: 1)]), tick: 10);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10));
 
+        Assert.Contains("Beaver field behavior actuator skipped", exception.Message);
         Assert.Equal(1, dispatcher.Counters.DecisionsEvaluated);
-        Assert.Equal(1, dispatcher.Counters.SkippedNoSafeApi);
         Assert.Equal(0, dispatcher.Counters.TrackedBeaverCount);
-        Assert.Equal(0, dispatcher.Counters.FireHeatDecisionsApplied);
     }
 
     [Fact]

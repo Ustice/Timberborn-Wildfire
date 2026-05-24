@@ -175,7 +175,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
     }
 
     [Fact]
-    public void SinkReportsSkippedNoSafeApiWhenNativeWrapperUnavailable()
+    public void SinkFailsLoudlyWhenNativeWrapperUnavailable()
     {
         RecordingExplosiveTargetApi targetApi = new(Target(depth: 1, canTriggerNative: false));
         RecordingHeatPulseSink heatPulseSink = new();
@@ -184,16 +184,16 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
             targetApi,
             heatPulseSink);
 
-        TimberbornExplosiveInfrastructureConsequenceSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             10,
-            [Decision(12, heat: 10)]);
+            [Decision(12, heat: 10)]));
 
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Contains("Native dynamite trigger is not enabled", exception.Message);
         Assert.Equal(0, targetApi.NativeTriggerCalls);
     }
 
     [Fact]
-    public void SinkContainsNativeWrapperFailureAsSafeUnavailableTelemetry()
+    public void SinkFailsLoudlyOnNativeWrapperFailure()
     {
         RecordingExplosiveTargetApi targetApi = new(
             Target(depth: 1, canTriggerNative: true),
@@ -204,14 +204,11 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
             targetApi,
             heatPulseSink);
 
-        TimberbornExplosiveInfrastructureConsequenceSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             10,
-            [Decision(12, heat: 10)]);
+            [Decision(12, heat: 10)]));
 
-        Assert.Equal(1, summary.TriggeredTargetCount);
-        Assert.Equal(5, summary.HeatPulseCellCount);
-        Assert.Equal(0, summary.NativeTriggeredTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Contains("native trigger failed", exception.Message);
         Assert.Equal(1, targetApi.NativeTriggerCalls);
         Assert.Single(heatPulseSink.Pulses);
     }

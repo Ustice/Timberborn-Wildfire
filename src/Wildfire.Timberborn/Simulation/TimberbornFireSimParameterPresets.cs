@@ -31,7 +31,7 @@ public static class TimberbornFireSimParameterPresets
             {
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 2u,
-                FireCellStepIntervalTicks = 6u,
+                FireCellStepIntervalTicks = 8u,
                 VisualSmokeFuelWeight = 0.6f,
             }),
         new(

@@ -258,12 +258,12 @@ public sealed class TimberbornNoOpBeaverFieldBehaviorActuator : ITimberbornBeave
 
     public TimberbornBeaverFieldBehaviorActuatorResult Apply(TimberbornBeaverFieldBehaviorDecision decision)
     {
-        return TimberbornBeaverFieldBehaviorActuatorResult.Applied;
+        throw new InvalidOperationException("Beaver field behavior actuator is unavailable.");
     }
 
     public TimberbornBeaverFieldBehaviorActuatorResult Recover(TimberbornBeaverFieldBehaviorStateEntry entry, uint? tick)
     {
-        return TimberbornBeaverFieldBehaviorActuatorResult.Applied;
+        throw new InvalidOperationException("Beaver field behavior actuator is unavailable.");
     }
 
     public void Clear()
@@ -384,26 +384,15 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
         TimberbornBeaverFieldBehaviorAction action,
         float multiplier)
     {
-        if (TryGetEntity(beaverId, out EntityComponent? entity, out string unavailableReason) &&
-            entity is not null)
-        {
-            TryApplyStatus(entity, beaverId, action);
-            TryApplyWorkingSpeed(entity, beaverId, multiplier);
-            return TimberbornBeaverWorkerSpeedResult.Applied;
-        }
-
-        return TimberbornBeaverWorkerSpeedResult.Skipped(unavailableReason);
+        EntityComponent entity = GetEntityOrThrow(beaverId);
+        TryApplyStatus(entity, beaverId, action);
+        TryApplyWorkingSpeed(entity, beaverId, multiplier);
+        return TimberbornBeaverWorkerSpeedResult.Applied;
     }
 
     public TimberbornBeaverWorkerSpeedResult RecoverSmokeReaction(string beaverId)
     {
-        if (!TryGetEntity(beaverId, out EntityComponent? entity, out string unavailableReason) ||
-            entity is null)
-        {
-            _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
-            DeactivateStatus(beaverId);
-            return TimberbornBeaverWorkerSpeedResult.Skipped(unavailableReason);
-        }
+        EntityComponent entity = GetEntityOrThrow(beaverId);
 
         DeactivateStatus(beaverId);
         if (!entity.TryGetComponent(out Worker worker))
@@ -423,9 +412,12 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
         {
             bool restored = TrySetWorkingSpeedMultiplier(worker, originalMultiplier);
             _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
-            return restored
-                ? TimberbornBeaverWorkerSpeedResult.Applied
-                : TimberbornBeaverWorkerSpeedResult.Skipped("worker_speed_setter_unavailable");
+            if (!restored)
+            {
+                throw new InvalidOperationException("Worker speed setter is unavailable.");
+            }
+
+            return TimberbornBeaverWorkerSpeedResult.Applied;
         }
 
         _originalWorkingSpeedMultiplierByBeaverId.Remove(beaverId);
@@ -441,32 +433,20 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
         _statusTogglesByBeaverId.Clear();
     }
 
-    private bool TryGetEntity(string beaverId, out EntityComponent? entity, out string unavailableReason)
+    private EntityComponent GetEntityOrThrow(string beaverId)
     {
-        entity = null;
-        unavailableReason = "none";
         if (!Guid.TryParse(beaverId, out Guid entityId))
         {
-            unavailableReason = "invalid_beaver_id";
-            return false;
+            throw new InvalidOperationException($"Invalid beaver id: {beaverId}.");
         }
 
-        try
+        EntityComponent entity = _entityRegistry.GetEntity(entityId);
+        if (!entity.TryGetComponent(out Beaver _))
         {
-            entity = _entityRegistry.GetEntity(entityId);
-            if (!entity.TryGetComponent(out Beaver _))
-            {
-                unavailableReason = "entity_not_beaver";
-                return false;
-            }
+            throw new InvalidOperationException($"Entity {beaverId} is not a beaver.");
+        }
 
-            return true;
-        }
-        catch (Exception exception)
-        {
-            unavailableReason = "worker_api_exception:" + exception.GetType().Name;
-            return false;
-        }
+        return entity;
     }
 
     private void TryApplyWorkingSpeed(EntityComponent entity, string beaverId, float multiplier)
@@ -482,9 +462,12 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
             ? storedMultiplier
             : worker.WorkingSpeedMultiplier;
         _originalWorkingSpeedMultiplierByBeaverId.TryAdd(beaverId, originalMultiplier);
-        TrySetWorkingSpeedMultiplier(
+        if (!TrySetWorkingSpeedMultiplier(
             worker,
-            Math.Min(worker.WorkingSpeedMultiplier, originalMultiplier * multiplier));
+            Math.Min(worker.WorkingSpeedMultiplier, originalMultiplier * multiplier)))
+        {
+            throw new InvalidOperationException("Worker speed setter is unavailable.");
+        }
     }
 
     private static bool TrySetWorkingSpeedMultiplier(Worker worker, float multiplier)
@@ -500,9 +483,9 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
             setter.Invoke(worker, new object[] { multiplier });
             return true;
         }
-        catch
+        catch (Exception exception)
         {
-            return false;
+            throw new InvalidOperationException("Worker speed setter failed.", exception);
         }
     }
 
@@ -521,9 +504,10 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
             TimberbornBeaverSmokeStatusToggles toggles = GetOrCreateStatusToggles(beaverId, statusSubject);
             toggles.Apply(action);
         }
-        catch
+        catch (Exception exception)
         {
             _statusTogglesByBeaverId.Remove(beaverId);
+            throw new InvalidOperationException("Smoke status toggle application failed.", exception);
         }
     }
 
@@ -1021,15 +1005,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Apply(progressedDecision);
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi)
         {
-            _skippedNoSafeApi++;
-            CountSmokeSlowdownSkip(progressedDecision);
-            return;
+            throw new InvalidOperationException(
+                $"Beaver field behavior actuator skipped {progressedDecision.Action} for {progressedDecision.BeaverId}: {result.Reason}.");
         }
 
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Failed)
         {
-            _failedDecisions++;
-            return;
+            throw new InvalidOperationException(
+                $"Beaver field behavior actuator failed {progressedDecision.Action} for {progressedDecision.BeaverId}: {result.Reason}.");
         }
 
         _statesByBeaverId[decision.BeaverId] = new TimberbornBeaverFieldBehaviorStateEntry(
@@ -1062,15 +1045,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Recover(entry, tick);
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi)
         {
-            _skippedNoSafeApi++;
-            CountSmokeSlowdownSkip(entry);
-            return;
+            throw new InvalidOperationException(
+                $"Beaver field behavior actuator skipped recovery for {entry.BeaverId}: {result.Reason}.");
         }
 
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Failed)
         {
-            _failedDecisions++;
-            return;
+            throw new InvalidOperationException(
+                $"Beaver field behavior actuator failed recovery for {entry.BeaverId}: {result.Reason}.");
         }
 
         _statesByBeaverId[entry.BeaverId] = entry with
@@ -1187,11 +1169,13 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _fireHeatExposedBeavers++;
         bool activeFlameContact = decision.MaxFire >= Options.ActiveFlameContactThreshold;
         _fireHeatActiveFlameContacts += activeFlameContact ? 1 : 0;
-        _fireHeatAvoidanceCandidates += decision.BurnExposureCells;
-        _fireHeatAvoidanceSkippedNoSafeApi += decision.BurnExposureCells;
-        _fireHeatInterruptedJobCandidates++;
-        _fireHeatInterruptedJobsSkippedNoSafeApi++;
-        _skippedNoSafeApi += decision.BurnExposureCells + 1;
+        if (decision.BurnExposureCells > 0)
+        {
+            _fireHeatAvoidanceCandidates += decision.BurnExposureCells;
+            _fireHeatInterruptedJobCandidates++;
+            throw new InvalidOperationException(
+                $"Fire heat beaver avoidance is not implemented for beaver {decision.BeaverId}.");
+        }
 
         bool singedEntered = previousExposedSamples < Options.FireHeatSingedThresholdSamples &&
             exposedSamples >= Options.FireHeatSingedThresholdSamples;
@@ -1201,13 +1185,13 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             exposedSamples >= Options.FireHeatDeathCandidateThresholdSamples;
 
         _fireHeatSingedEntered += singedEntered ? 1 : 0;
-        _fireHeatSingedSkippedNoSafeApi += singedEntered ? 1 : 0;
         _fireHeatBurnedEntered += burnedEntered ? 1 : 0;
-        _fireHeatBurnedSkippedNoSafeApi += burnedEntered ? 1 : 0;
         _fireHeatDeathCandidates += deathCandidateEntered ? 1 : 0;
-        _fireHeatDeathSkippedUnsafeApi += deathCandidateEntered ? 1 : 0;
-        _skippedNoSafeApi += singedEntered ? 1 : 0;
-        _skippedNoSafeApi += burnedEntered ? 1 : 0;
+        if (singedEntered || burnedEntered || deathCandidateEntered)
+        {
+            throw new InvalidOperationException(
+                $"Fire heat beaver injury/death is not implemented for beaver {decision.BeaverId}.");
+        }
         _skippedNoSafeApi += deathCandidateEntered ? 1 : 0;
     }
 

@@ -203,34 +203,71 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
         int alreadyAppliedYieldLoss = _appliedYieldLossByTarget.TryGetValue(state.TargetKey, out int appliedYieldLoss)
             ? appliedYieldLoss
             : 0;
-        int incrementalYieldLoss = Math.Max(0, targetYieldLost - alreadyAppliedYieldLoss);
-        TimberbornCropBurnTargetOutcome dryingOutcome = ApplyDryingConsequences(tick, state, initialYield, targetYieldLost);
-        TimberbornCropBurnTargetOutcome yieldOutcome = incrementalYieldLoss > 0
-            ? ApplyYieldLoss(tick, state, incrementalYieldLoss, initialYield, targetYieldLost)
-            : TimberbornCropBurnTargetOutcome.BurnableNoChange;
-        TimberbornCropBurnTargetOutcome deathOutcome = ShouldKillCrop(state)
-            ? ApplyDeathConsequences(
-                tick,
-                state,
-                targetYieldLost,
-                markBurnedDeadVisual: !ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost))
-            : TimberbornCropBurnTargetOutcome.BurnableNoChange;
-        TimberbornCropBurnTargetOutcome leftoverOutcome = ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost)
-            ? ApplyBurnedLeftoverConsequences(tick, state, initialYield, targetYieldLost)
+        TimberbornCropBurnPlan plan = CreatePlan(state, initialYield, targetYieldLost, alreadyAppliedYieldLoss);
+
+        return plan.DesiredState switch
+        {
+            TimberbornCropBurnDesiredState.BurnedLeftover => ApplyBurnedLeftoverConsequences(tick, state, plan),
+            TimberbornCropBurnDesiredState.DeadBurned => ApplyDeadBurnedConsequences(tick, state, plan),
+            _ => ApplyDamagedConsequences(tick, state, plan),
+        };
+    }
+
+    private static TimberbornCropBurnPlan CreatePlan(
+        TimberbornBurnDamageTargetState state,
+        int initialYield,
+        int targetYieldLost,
+        int alreadyAppliedYieldLoss)
+    {
+        bool shouldMarkBurnedLeftover = ShouldMarkBurnedLeftover(state, initialYield, targetYieldLost);
+        bool shouldKillCrop = shouldMarkBurnedLeftover || ShouldKillCrop(state);
+        TimberbornCropBurnDesiredState desiredState = shouldMarkBurnedLeftover
+            ? TimberbornCropBurnDesiredState.BurnedLeftover
+            : shouldKillCrop
+                ? TimberbornCropBurnDesiredState.DeadBurned
+                : TimberbornCropBurnDesiredState.Damaged;
+
+        return new TimberbornCropBurnPlan(
+            desiredState,
+            initialYield,
+            targetYieldLost,
+            Math.Max(0, targetYieldLost - alreadyAppliedYieldLoss));
+    }
+
+    private TimberbornCropBurnTargetOutcome ApplyDamagedConsequences(
+        uint tick,
+        TimberbornBurnDamageTargetState state,
+        TimberbornCropBurnPlan plan)
+    {
+        TimberbornCropBurnTargetOutcome dryingOutcome = ApplyDryingConsequences(tick, state, plan);
+        TimberbornCropBurnTargetOutcome yieldOutcome = plan.IncrementalYieldLoss > 0
+            ? ApplyYieldLoss(tick, state, plan)
             : TimberbornCropBurnTargetOutcome.BurnableNoChange;
 
-        return TimberbornCropBurnTargetOutcome.Combine(
-            TimberbornCropBurnTargetOutcome.Combine(
-                TimberbornCropBurnTargetOutcome.Combine(dryingOutcome, yieldOutcome),
-                deathOutcome),
-            leftoverOutcome);
+        return TimberbornCropBurnTargetOutcome.Combine(dryingOutcome, yieldOutcome);
+    }
+
+    private TimberbornCropBurnTargetOutcome ApplyDeadBurnedConsequences(
+        uint tick,
+        TimberbornBurnDamageTargetState state,
+        TimberbornCropBurnPlan plan)
+    {
+        TimberbornCropBurnTargetOutcome yieldOutcome = plan.IncrementalYieldLoss > 0
+            ? ApplyYieldLoss(tick, state, plan)
+            : TimberbornCropBurnTargetOutcome.BurnableNoChange;
+        TimberbornCropBurnTargetOutcome deathOutcome = ApplyDeathConsequences(
+            tick,
+            state,
+            plan,
+            markBurnedDeadVisual: true);
+
+        return TimberbornCropBurnTargetOutcome.Combine(yieldOutcome, deathOutcome);
     }
 
     private TimberbornCropBurnTargetOutcome ApplyDryingConsequences(
         uint tick,
         TimberbornBurnDamageTargetState state,
-        int initialYield,
-        int targetYieldLost)
+        TimberbornCropBurnPlan plan)
     {
         if (_driedTargets.Contains(state.TargetKey))
         {
@@ -241,8 +278,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             tick,
             state,
             TimberbornCropBurnConsequenceKind.DryCrop,
-            targetYieldLost,
-            Math.Max(0, initialYield - targetYieldLost)));
+            plan.TargetYieldLost,
+            plan.RemainingYield));
         if (!result.MatchedCropTarget)
         {
             return result.SkippedUnsafeApi
@@ -257,16 +294,14 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
     private TimberbornCropBurnTargetOutcome ApplyYieldLoss(
         uint tick,
         TimberbornBurnDamageTargetState state,
-        int incrementalYieldLoss,
-        int initialYield,
-        int targetYieldLost)
+        TimberbornCropBurnPlan plan)
     {
         TimberbornCropBurnConsequenceResult result = _consequenceApi.ApplyConsequence(CreateConsequence(
             tick,
             state,
             TimberbornCropBurnConsequenceKind.ReduceYield,
-            incrementalYieldLoss,
-            Math.Max(0, initialYield - targetYieldLost)));
+            plan.IncrementalYieldLoss,
+            plan.RemainingYield));
         if (!result.MatchedCropTarget)
         {
             return result.SkippedUnsafeApi
@@ -274,7 +309,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
                 : TimberbornCropBurnTargetOutcome.BurnableNoChange;
         }
 
-        _appliedYieldLossByTarget[state.TargetKey] = targetYieldLost;
+        _appliedYieldLossByTarget[state.TargetKey] = plan.TargetYieldLost;
         return new TimberbornCropBurnTargetOutcome(
             Burnable: true,
             YieldLost: result.YieldLost,
@@ -287,7 +322,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
     private TimberbornCropBurnTargetOutcome ApplyDeathConsequences(
         uint tick,
         TimberbornBurnDamageTargetState state,
-        int targetYieldLost,
+        TimberbornCropBurnPlan plan,
         bool markBurnedDeadVisual)
     {
         if (_killedTargets.Contains(state.TargetKey))
@@ -299,7 +334,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             tick,
             state,
             TimberbornCropBurnConsequenceKind.KillCrop,
-            targetYieldLost,
+            plan.TargetYieldLost,
             remainingYield: 0);
         TimberbornCropBurnConsequenceResult killResult = _consequenceApi.ApplyConsequence(killConsequence);
         TimberbornCropBurnConsequenceResult visualResult = markBurnedDeadVisual
@@ -331,8 +366,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
     private TimberbornCropBurnTargetOutcome ApplyBurnedLeftoverConsequences(
         uint tick,
         TimberbornBurnDamageTargetState state,
-        int initialYield,
-        int targetYieldLost)
+        TimberbornCropBurnPlan plan)
     {
         if (_leftoverTargets.Contains(state.TargetKey))
         {
@@ -343,7 +377,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             tick,
             state,
             TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-            targetYieldLost,
+            plan.TargetYieldLost,
             remainingYield: 0));
         if (!result.VisualStateUpdated)
         {
@@ -353,11 +387,12 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
         }
 
         _leftoverTargets.Add(state.TargetKey);
-        _appliedYieldLossByTarget[state.TargetKey] = initialYield;
+        _killedTargets.Add(state.TargetKey);
+        _appliedYieldLossByTarget[state.TargetKey] = plan.InitialYield;
         return new TimberbornCropBurnTargetOutcome(
             Burnable: true,
-            YieldLost: 0,
-            Killed: false,
+            YieldLost: plan.IncrementalYieldLoss,
+            Killed: result.KilledCrop,
             VisualUpdated: true,
             SkippedUnknownResource: false,
             SkippedUnsafeApiCount: 0);
@@ -449,6 +484,22 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
         int CellIndex,
         TimberbornBurnDamageTargetState State);
 
+    private enum TimberbornCropBurnDesiredState
+    {
+        Damaged,
+        DeadBurned,
+        BurnedLeftover,
+    }
+
+    private readonly record struct TimberbornCropBurnPlan(
+        TimberbornCropBurnDesiredState DesiredState,
+        int InitialYield,
+        int TargetYieldLost,
+        int IncrementalYieldLoss)
+    {
+        public int RemainingYield => Math.Max(0, InitialYield - TargetYieldLost);
+    }
+
     private readonly record struct TimberbornCropBurnTargetOutcome(
         bool Burnable,
         int YieldLost,
@@ -505,12 +556,8 @@ public sealed class UnavailableTimberbornCropBurnConsequenceApi : ITimberbornCro
 
     public TimberbornCropBurnConsequenceResult ApplyConsequence(TimberbornCropBurnConsequence consequence)
     {
-        return new TimberbornCropBurnConsequenceResult(
-            MatchedCropTarget: false,
-            YieldLost: 0,
-            KilledCrop: false,
-            VisualStateUpdated: false,
-            SkippedUnsafeApi: true);
+        throw new InvalidOperationException(
+            $"Crop burn consequence API is unavailable for {consequence.TargetKey.StableId}.");
     }
 }
 

@@ -450,7 +450,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         {
             if (RequestsNativeConstructionPhase(request))
             {
-                enteredUnfinishedState = target.CanRepairAfterDanger && TryEnterUnfinishedState(blockObject);
+                throw new InvalidOperationException(
+                    $"Structure burn damage rollback requires a safe native construction-state API for {target.SpecId} at cell {target.CellIndex}.");
             }
 
             ConstructionSite? constructionSite = TryGetConstructionSite(blockObject, coordinates);
@@ -470,6 +471,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         bool skippedNoSafeApi = skippedNativeConstructionApi ||
             (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
             (request.RepairEligible && !accessRestored);
+        if (skippedNoSafeApi)
+        {
+            throw new InvalidOperationException(
+                $"Structure burn damage rollback has no safe implementation for {target.SpecId} at cell {target.CellIndex}.");
+        }
 
         return new TimberbornStructureBurnDamageApplyResult(
             Closed: false,
@@ -516,9 +522,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 $"accesses={snapshots.Sum(static snapshot => snapshot.Accesses.Length)}");
             return true;
         }
-        catch
+        catch (Exception exception)
         {
-            return false;
+            throw new InvalidOperationException($"Structure access restore failed for {target.SpecId}.", exception);
         }
     }
 
@@ -530,9 +536,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 !IsDistrictCenter(blockObject.Name) &&
                 !HasFinishedStateReentryListener(blockObject);
         }
-        catch
+        catch (Exception exception)
         {
-            return false;
+            throw new InvalidOperationException(
+                $"Cannot determine unfinished rollback eligibility for {blockObject.Name}.",
+                exception);
         }
     }
 
@@ -573,7 +581,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(blockObject);
             if (blockObjectState is null)
             {
-                return false;
+                throw new InvalidOperationException("BlockObject private state is unavailable for unfinished rollback.");
             }
 
             MethodInfo? enterStateMethod = blockObjectState.GetType().GetMethod(
@@ -582,16 +590,16 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             Type? stateType = enterStateMethod?.GetParameters().FirstOrDefault()?.ParameterType;
             if (enterStateMethod is null || stateType is null)
             {
-                return false;
+                throw new InvalidOperationException("BlockObject EnterState API is unavailable for unfinished rollback.");
             }
 
             object unfinishedState = Enum.Parse(stateType, "Unfinished");
             enterStateMethod.Invoke(blockObjectState, new[] { unfinishedState });
             return blockObject.IsUnfinished;
         }
-        catch
+        catch (Exception exception) when (exception is not InvalidOperationException)
         {
-            return false;
+            throw new InvalidOperationException("BlockObject unfinished rollback failed.", exception);
         }
     }
 
@@ -662,15 +670,15 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 modifiers: null);
             if (method is null)
             {
-                return false;
+                throw new InvalidOperationException("ConstructionSite.SetBuildTimeProgress API is unavailable.");
             }
 
             method.Invoke(constructionSite, new object[] { buildTimeProgressInHours });
             return true;
         }
-        catch
+        catch (Exception exception) when (exception is not InvalidOperationException)
         {
-            return false;
+            throw new InvalidOperationException("ConstructionSite progress reset failed.", exception);
         }
     }
 

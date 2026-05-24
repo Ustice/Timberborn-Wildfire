@@ -306,11 +306,8 @@ public sealed class TimberbornPowerInfrastructureFireTargetApi : ITimberbornPowe
         int damageApplied,
         bool isFullyDamaged)
     {
-        return new TimberbornPowerInfrastructureApplyResult(
-            AppliedDamage: false,
-            DisabledOrDisconnected: false,
-            SkippedNoSafeApi: true,
-            RepairEligible: target.RepairEligible);
+        throw new InvalidOperationException(
+            $"Power infrastructure fire effect is not implemented for {target.SpecId}.");
     }
 
     private static bool IsPowerInfrastructureName(string name)

@@ -155,10 +155,8 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
         }
 
         ResolvedTarget[] resolvedTargets = consequences
-            .Select(ResolveTargetSafely)
+            .Select(ResolveTarget)
             .ToArray();
-        int resolutionFailureCount = resolvedTargets.Count(static resolvedTarget =>
-            resolvedTarget.ResolutionFailed);
         ResolvedTarget[] matchedTargets = resolvedTargets
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
@@ -181,35 +179,18 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 result.Status == TimberbornDetonatorFireSafetyDisableStatus.Disabled),
             ArmedTargetCount: 0,
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: resolutionFailureCount + results.Count(static result =>
+            SkippedNoSafeApiCount: results.Count(static result =>
                 result.Status == TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
-            RecoverabilityUnknownCount: resolutionFailureCount + results.Count(static result =>
+            RecoverabilityUnknownCount: results.Count(static result =>
                 !result.RecoverabilityPreserved));
         _logSink.Info(summary.ToLogToken(tick));
         return summary;
     }
 
-    private ResolvedTarget ResolveTargetSafely(TimberbornDetonatorFireSafetyConsequence consequence)
+    private ResolvedTarget ResolveTarget(TimberbornDetonatorFireSafetyConsequence consequence)
     {
-        try
-        {
-            return new ResolvedTarget(
-                consequence,
-                _targetApi.ResolveTarget(consequence),
-                ResolutionFailed: false);
-        }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_detonator_fire_safety_safe_unavailable " +
-                $"reason=resolve_target_failed cell_index={consequence.CellIndex} " +
-                $"exception_type={exception.GetType().Name}");
-            return new ResolvedTarget(
-                consequence,
-                Target: null,
-                ResolutionFailed: true);
-        }
+        return new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence));
     }
 
     private TimberbornDetonatorFireSafetyDisableResult DisableTarget(ResolvedTarget resolvedTarget)
@@ -218,31 +199,15 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
             throw new InvalidOperationException("Resolved detonator target cannot be null during safety application.");
         if (!target.CanDisable)
         {
-            return new TimberbornDetonatorFireSafetyDisableResult(
-                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: target.CanPreserveAutomationState);
+            throw new InvalidOperationException($"Detonator target cannot be disabled: {target.StableId}.");
         }
 
-        try
-        {
-            return _targetApi.DisableTarget(target);
-        }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_detonator_fire_safety_safe_unavailable " +
-                $"reason=disable_failed stable_id={target.StableId} " +
-                $"exception_type={exception.GetType().Name}");
-            return new TimberbornDetonatorFireSafetyDisableResult(
-                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
-        }
+        return _targetApi.DisableTarget(target);
     }
 
     private readonly record struct ResolvedTarget(
         TimberbornDetonatorFireSafetyConsequence Consequence,
-        TimberbornDetonatorFireSafetyTarget? Target,
-        bool ResolutionFailed);
+        TimberbornDetonatorFireSafetyTarget? Target);
 }
 
 public sealed class NullTimberbornDetonatorFireSafetySink : ITimberbornDetonatorFireSafetySink
@@ -282,27 +247,9 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
         Vector3Int coordinates = new(x, y, z);
         FindDetonatorResult findResult = FindDetonatorAt(coordinates);
 
-        if (findResult.SafeApiUnavailable)
-        {
-            return new TimberbornDetonatorFireSafetyTarget(
-                $"{TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix}{consequence.CellIndex}",
-                consequence.CellIndex,
-                CanDisable: false,
-                CanPreserveAutomationState: false);
-        }
-
         if (findResult.Detonator is null)
         {
             FindDynamiteControlResult dynamiteControlResult = FindDynamiteControlAt(coordinates);
-            if (dynamiteControlResult.SafeApiUnavailable)
-            {
-                return new TimberbornDetonatorFireSafetyTarget(
-                    $"{TimberbornDetonatorFireSafetyStableIds.UnavailablePrefix}{consequence.CellIndex}",
-                    consequence.CellIndex,
-                    CanDisable: false,
-                    CanPreserveAutomationState: false);
-            }
-
             if (dynamiteControlResult.Dynamite is null)
             {
                 return null;
@@ -334,9 +281,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
     {
         if (!_disarmTargetsByStableId.TryGetValue(target.StableId, out object? disarmTarget))
         {
-            return new TimberbornDetonatorFireSafetyDisableResult(
-                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
+            throw new InvalidOperationException($"Detonator target was not registered: {target.StableId}.");
         }
 
         return TimberbornDetonatorFireSafetyNativeWrapper.DisableTarget(
@@ -348,7 +293,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
     {
         if (_detonatorType is null)
         {
-            return FindDetonatorResult.SafeUnavailable;
+            throw new InvalidOperationException("Detonator type is unavailable.");
         }
 
         MethodInfo? method = typeof(IBlockService)
@@ -359,7 +304,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
             .FirstOrDefault();
         if (method is null)
         {
-            return FindDetonatorResult.SafeUnavailable;
+            throw new InvalidOperationException("IBlockService.GetObjectsWithComponentAt API is unavailable.");
         }
 
         try
@@ -369,7 +314,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
                 .Invoke(_blockService, new object[] { coordinates });
             if (result is not System.Collections.IEnumerable enumerable)
             {
-                return FindDetonatorResult.SafeUnavailable;
+                throw new InvalidOperationException("Detonator lookup returned a non-enumerable result.");
             }
 
             return new FindDetonatorResult(
@@ -379,9 +324,9 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
                     .FirstOrDefault(),
                 SafeApiUnavailable: false);
         }
-        catch
+        catch (Exception exception) when (exception is not InvalidOperationException)
         {
-            return FindDetonatorResult.SafeUnavailable;
+            throw new InvalidOperationException("Detonator lookup failed.", exception);
         }
     }
 
@@ -396,9 +341,9 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
                     .FirstOrDefault(),
                 SafeApiUnavailable: false);
         }
-        catch
+        catch (Exception exception)
         {
-            return FindDynamiteControlResult.SafeUnavailable;
+            throw new InvalidOperationException("Dynamite control lookup failed.", exception);
         }
     }
 
@@ -440,9 +385,8 @@ public static class TimberbornDetonatorFireSafetyNativeWrapper
             .FirstOrDefault();
         if (disarmMethod is null)
         {
-            return new TimberbornDetonatorFireSafetyDisableResult(
-                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
+            throw new InvalidOperationException(
+                $"Detonator Disarm API is unavailable on {detonator.GetType().FullName}.");
         }
 
         try
@@ -452,11 +396,9 @@ public static class TimberbornDetonatorFireSafetyNativeWrapper
                 TimberbornDetonatorFireSafetyDisableStatus.Disabled,
                 RecoverabilityPreserved: canPreserveAutomationState);
         }
-        catch
+        catch (Exception exception)
         {
-            return new TimberbornDetonatorFireSafetyDisableResult(
-                TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
+            throw new InvalidOperationException("Detonator disarm failed.", exception);
         }
     }
 }

@@ -83,42 +83,34 @@ public sealed class TimberbornTunnelFireConsequenceTests
     }
 
     [Fact]
-    public void SinkReportsSafeUnavailableWrapperWithoutNativeMutation()
+    public void SinkFailsLoudlyWhenNativeTunnelWrapperIsUnavailable()
     {
         RecordingTunnelTargetApi targetApi = new(Target(canExplodeNative: false, canRecover: false));
         TimberbornTunnelFireSink sink = new(
             () => Settings(destructionEnabled: true),
             targetApi);
 
-        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             5,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(0, summary.NativeExplodeAttemptedCount);
-        Assert.Equal(0, summary.NativeExplodeAppliedCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("Tunnel target cannot explode natively", exception.Message);
         Assert.Empty(targetApi.ExplodedTargets);
     }
 
     [Fact]
-    public void SinkContainsResolverTypeFailureAsSafeUnavailableTelemetry()
+    public void SinkFailsLoudlyOnResolverTypeFailure()
     {
         RecordingTunnelTargetApi targetApi = new(Target(), throwOnResolve: true);
         TimberbornTunnelFireSink sink = new(
             () => Settings(destructionEnabled: true),
             targetApi);
 
-        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+        TypeLoadException exception = Assert.Throws<TypeLoadException>(() => sink.ApplyConsequences(
             5,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(1, summary.ConsideredDeltaCount);
-        Assert.Equal(0, summary.MatchedTargetCellCount);
-        Assert.Equal(0, summary.NativeExplodeAttemptedCount);
-        Assert.Equal(0, summary.NativeExplodeAppliedCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("tunnel type lookup failed", exception.Message);
         Assert.Empty(targetApi.ExplodedTargets);
     }
 
@@ -146,7 +138,7 @@ public sealed class TimberbornTunnelFireConsequenceTests
     }
 
     [Fact]
-    public void SinkContainsExplodeInvocationFailureAsSafeUnavailableTelemetry()
+    public void SinkFailsLoudlyOnExplodeInvocationFailure()
     {
         RecordingTunnelTargetApi targetApi = new(
             Target(canExplodeNative: true),
@@ -155,14 +147,11 @@ public sealed class TimberbornTunnelFireConsequenceTests
             () => Settings(destructionEnabled: true),
             targetApi);
 
-        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             5,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(1, summary.NativeExplodeAttemptedCount);
-        Assert.Equal(0, summary.NativeExplodeAppliedCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("tunnel explode failed", exception.Message);
         Assert.Single(targetApi.ExplodedTargets);
     }
 

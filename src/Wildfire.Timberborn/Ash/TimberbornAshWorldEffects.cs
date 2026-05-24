@@ -158,10 +158,7 @@ public sealed class UnavailableTimberbornTaintedAshSoilPoisoningAdapter : ITimbe
             throw new ArgumentNullException(nameof(candidates));
         }
 
-        return new TimberbornTaintedAshSoilPoisoningSummary(
-            CandidateCellCount: candidates.Count,
-            AppliedCellCount: 0,
-            SkippedNoSafeApiCount: candidates.Count);
+        throw new InvalidOperationException("Tainted ash soil poisoning adapter is unavailable.");
     }
 }
 
@@ -195,7 +192,9 @@ public sealed class TimberbornTaintedAshSoilPoisoningService
             .Select(static entry => new TimberbornTaintedAshSoilPoisoningCandidate(entry.CellIndex, entry.Strength))
             .ToArray();
 
-        LastSummary = _adapter.ApplyPoisoning(tick, candidates);
+        LastSummary = candidates.Length == 0
+            ? TimberbornTaintedAshSoilPoisoningSummary.Empty
+            : _adapter.ApplyPoisoning(tick, candidates);
         if (LastSummary.CandidateCellCount > 0 ||
             LastSummary.AppliedCellCount > 0 ||
             LastSummary.SkippedNoSafeApiCount > 0)
@@ -321,10 +320,7 @@ public sealed class UnavailableTimberbornAshWaterTaintAdapter : ITimberbornAshWa
             throw new ArgumentNullException(nameof(taintedWashouts));
         }
 
-        return washoutSummary with
-        {
-            SkippedUnsafeWaterApiCount = washoutSummary.SkippedUnsafeWaterApiCount + taintedWashouts.Count,
-        };
+        throw new InvalidOperationException("Ash water taint adapter is unavailable.");
     }
 }
 
@@ -386,7 +382,9 @@ public sealed class TimberbornAshWaterWashoutService
             .Where(static removal => removal.Quality == WildfireAshQuality.Tainted)
             .ToArray();
 
-        LastSummary = _waterTaintAdapter.ApplyWaterTaint(tick, taintedWashouts, washoutSummary);
+        LastSummary = taintedWashouts.Length == 0
+            ? washoutSummary
+            : _waterTaintAdapter.ApplyWaterTaint(tick, taintedWashouts, washoutSummary);
         if (LastSummary.CleanAshWashedCellCount > 0 ||
             LastSummary.TaintedAshWashedCellCount > 0 ||
             LastSummary.WaterTaintAttemptCount > 0 ||
@@ -468,16 +466,17 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
         }
 
         FireGrid? grid = _gridProvider();
-        if (!grid.HasValue || !_poisoningApi.IsAvailable)
+        if (!grid.HasValue)
         {
-            return new TimberbornTaintedAshSoilPoisoningSummary(
-                CandidateCellCount: candidates.Count,
-                AppliedCellCount: 0,
-                SkippedNoSafeApiCount: candidates.Count);
+            throw new InvalidOperationException("Tainted ash soil poisoning grid is unavailable.");
+        }
+
+        if (!_poisoningApi.IsAvailable)
+        {
+            throw new InvalidOperationException("Tainted ash soil poisoning API is unavailable.");
         }
 
         int applied = 0;
-        int skipped = 0;
         candidates.ToList().ForEach(candidate =>
         {
             try
@@ -491,19 +490,16 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
             }
             catch (Exception exception)
             {
-                skipped++;
-                _logSink.Warning(
-                    "wildfire_timberborn_tainted_ash_soil_poisoning_failed " +
-                    $"tick={tick} " +
-                    $"cell_index={candidate.CellIndex} " +
-                    $"message={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
+                throw new InvalidOperationException(
+                    $"Tainted ash soil poisoning failed for cell {candidate.CellIndex}.",
+                    exception);
             }
         });
 
         return new TimberbornTaintedAshSoilPoisoningSummary(
             CandidateCellCount: candidates.Count,
             AppliedCellCount: applied,
-            SkippedNoSafeApiCount: skipped);
+            SkippedNoSafeApiCount: 0);
     }
 }
 
@@ -593,13 +589,7 @@ public sealed class UnavailableTimberbornFertileAshCollectionAdapter : ITimberbo
             throw new ArgumentNullException(nameof(candidates));
         }
 
-        return new TimberbornFertileAshCollectionAdapterResult(
-            GathererPostCount: 0,
-            CandidateCellCount: candidates.Count,
-            ReachableCellCount: 0,
-            CollectedGoodCount: 0,
-            SkippedInventoryApiCount: candidates.Count,
-            CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>());
+        throw new InvalidOperationException("Fertile ash collection adapter is unavailable.");
     }
 }
 
@@ -639,7 +629,15 @@ public sealed class TimberbornFertileAshCollectionService
                 !entry.IsActiveSource)
             .Select(static entry => new TimberbornFertileAshCollectionCandidate(entry.CellIndex, entry.Strength))
             .ToArray();
-        TimberbornFertileAshCollectionAdapterResult adapterResult = _adapter.Collect(tick, candidates);
+        TimberbornFertileAshCollectionAdapterResult adapterResult = candidates.Length == 0
+            ? new TimberbornFertileAshCollectionAdapterResult(
+                GathererPostCount: 0,
+                CandidateCellCount: 0,
+                ReachableCellCount: 0,
+                CollectedGoodCount: 0,
+                SkippedInventoryApiCount: 0,
+                CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>())
+            : _adapter.Collect(tick, candidates);
         TimberbornAshFieldCollectionRemoval[] removals = adapterResult.CollectedCells
             .Select(cell =>
             {
@@ -722,7 +720,7 @@ public sealed class TimberbornGathererPostFertileAshCollectionAdapter : ITimberb
         FireGrid? grid = _gridProvider();
         if (!grid.HasValue)
         {
-            return Unavailable(candidates.Count);
+            throw new InvalidOperationException("Fertile ash collection grid is unavailable.");
         }
 
         GathererPostTarget[] gatherers = TimberbornEntityComponentCells
@@ -738,7 +736,7 @@ public sealed class TimberbornGathererPostFertileAshCollectionAdapter : ITimberb
                 CandidateCellCount: candidates.Count,
                 ReachableCellCount: 0,
                 CollectedGoodCount: 0,
-                SkippedInventoryApiCount: candidates.Count,
+                SkippedInventoryApiCount: 0,
                 CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>());
         }
 
@@ -780,17 +778,6 @@ public sealed class TimberbornGathererPostFertileAshCollectionAdapter : ITimberb
             ReachableCellCount: reachableCells,
             CollectedGoodCount: 0,
             SkippedInventoryApiCount: 0,
-            CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>());
-    }
-
-    private static TimberbornFertileAshCollectionAdapterResult Unavailable(int candidateCount)
-    {
-        return new TimberbornFertileAshCollectionAdapterResult(
-            GathererPostCount: 0,
-            CandidateCellCount: candidateCount,
-            ReachableCellCount: 0,
-            CollectedGoodCount: 0,
-            SkippedInventoryApiCount: candidateCount,
             CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>());
     }
 
@@ -938,7 +925,7 @@ public sealed class TimberbornFertileAshFieldWorkplaceBehavior :
     {
         if (_workplace is null)
         {
-            return;
+            throw new InvalidOperationException("Fertile ash workplace is unavailable.");
         }
 
         FieldInfo? field = typeof(Workplace).GetField(
@@ -946,7 +933,7 @@ public sealed class TimberbornFertileAshFieldWorkplaceBehavior :
             BindingFlags.Instance | BindingFlags.NonPublic);
         if (field?.GetValue(_workplace) is not List<WorkplaceBehavior> workplaceBehaviors)
         {
-            return;
+            throw new InvalidOperationException("Workplace behavior list is unavailable.");
         }
 
         int selfIndex = workplaceBehaviors.IndexOf(this);

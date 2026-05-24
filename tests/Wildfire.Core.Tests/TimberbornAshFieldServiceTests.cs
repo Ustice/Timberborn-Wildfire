@@ -349,22 +349,20 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void UnavailableGrowthAdapterReportsSkippedUnsafeApi()
+    public void UnavailableGrowthAdapterFailsLoudlyForGrowthCandidates()
     {
         TimberbornAshFieldService service = new(UnavailableTimberbornAshGrowthAdapter.Instance);
 
-        TimberbornAshFieldSummary summary = SyncAsh(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => SyncAsh(
             service,
             50,
-            (CellIndex: 11, Ash: 1, AshContamination: 0));
+            (CellIndex: 11, Ash: 1, AshContamination: 0)));
 
-        Assert.Equal(1, summary.GrowthCandidateCellCount);
-        Assert.Equal(1, summary.GrowthSkippedUnsafeApiCount);
-        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
+        Assert.Contains("Ash growth adapter is unavailable", exception.Message);
     }
 
     [Fact]
-    public void TaintedAshSoilPoisoningSkipsUnavailableNativeMutation()
+    public void TaintedAshSoilPoisoningFailsLoudlyWhenAdapterIsUnavailable()
     {
         TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
         SyncAsh(
@@ -373,11 +371,10 @@ public sealed class TimberbornAshFieldServiceTests
             (CellIndex: 12, Ash: 1, AshContamination: 1));
         TimberbornTaintedAshSoilPoisoningService poisoning = new();
 
-        TimberbornTaintedAshSoilPoisoningSummary summary = poisoning.Apply(61, service.Entries);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            poisoning.Apply(61, service.Entries));
 
-        Assert.Equal(1, summary.CandidateCellCount);
-        Assert.Equal(0, summary.AppliedCellCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Contains("Tainted ash soil poisoning adapter is unavailable", exception.Message);
     }
 
     [Fact]
@@ -460,7 +457,7 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void AshWaterWashoutReportsSafeUnavailableWaterTaintForTaintedAsh()
+    public void AshWaterWashoutFailsLoudlyWhenTaintedWaterAdapterIsUnavailable()
     {
         TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
         SyncAsh(
@@ -470,7 +467,7 @@ public sealed class TimberbornAshFieldServiceTests
         TimberbornAshWaterWashoutService washout = new();
         List<TimberbornAshWaterWashoutRemoval> removals = new();
 
-        TimberbornAshWaterWashoutSummary summary = washout.Apply(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => washout.Apply(
             61,
             service.Entries,
             new Dictionary<int, TimberbornAshWaterContact>
@@ -480,16 +477,12 @@ public sealed class TimberbornAshFieldServiceTests
                     WaterLevel: 3,
                     TimberbornAshWaterContactKind.BadwaterOrContaminatedWater),
             },
-            removals.Add);
+            removals.Add));
 
         TimberbornAshWaterWashoutRemoval removal = Assert.Single(removals);
         Assert.Equal(WildfireAshQuality.Tainted, removal.Quality);
         Assert.Equal(TimberbornAshWaterContactKind.BadwaterOrContaminatedWater, removal.WaterKind);
-        Assert.Equal(0, summary.CleanAshWashedCellCount);
-        Assert.Equal(1, summary.TaintedAshWashedCellCount);
-        Assert.Equal(1, summary.WaterTaintAttemptCount);
-        Assert.Equal(0, summary.WaterTaintSuccessCount);
-        Assert.Equal(1, summary.SkippedUnsafeWaterApiCount);
+        Assert.Contains("Ash water taint adapter is unavailable", exception.Message);
     }
 
     [Fact]

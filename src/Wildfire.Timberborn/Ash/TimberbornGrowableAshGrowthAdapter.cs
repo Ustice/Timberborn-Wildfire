@@ -36,11 +36,7 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
         FireGrid? grid = _gridProvider();
         if (!grid.HasValue)
         {
-            return new TimberbornAshGrowthApplicationResult(
-                CandidateGrowableCount: requests.Count,
-                AppliedGrowableCount: 0,
-                SkippedUnsafeApiCount: requests.Count,
-                SkippedUnsupportedGrowableCount: 0);
+            throw new InvalidOperationException("Ash growth grid is unavailable.");
         }
 
         AshGrowthApplicationCounter counter = new();
@@ -93,13 +89,9 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
         }
         catch (Exception exception)
         {
-            counter.SkippedUnsafeApis++;
-            _logSink.Warning(
-                "wildfire_timberborn_ash_growth_lookup_failed " +
-                $"tick={tick} " +
-                $"cell_index={request.CellIndex} " +
-                $"message={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
-            return;
+            throw new InvalidOperationException(
+                $"Ash growth lookup failed for cell {request.CellIndex}.",
+                exception);
         }
 
         if (growables.Length == 0)
@@ -155,13 +147,9 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
         }
         catch (Exception exception)
         {
-            counter.SkippedUnsafeApis++;
-            _logSink.Warning(
-                "wildfire_timberborn_ash_growth_apply_failed " +
-                $"tick={tick} " +
-                $"cell_index={request.CellIndex} " +
-                $"growable_id={growableId} " +
-                $"message={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
+            throw new InvalidOperationException(
+                $"Ash growth apply failed for cell {request.CellIndex} and growable {growableId}.",
+                exception);
         }
     }
 

@@ -3149,7 +3149,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(5u, preset.Parameters.IgnitionPoint);
         Assert.Equal(1u, preset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(2u, preset.Parameters.FireFuelBurnDownPressureDenominator);
-        Assert.Equal(6u, preset.Parameters.FireCellStepIntervalTicks);
+        Assert.Equal(8u, preset.Parameters.FireCellStepIntervalTicks);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("high-threshold-high-bonus", out TimberbornFireSimParameterPreset? highPreset));
         Assert.Equal(5u, highPreset.Parameters.IgnitionPoint);
         Assert.Equal(6u, highPreset.Parameters.FireFuelHeatWeight);

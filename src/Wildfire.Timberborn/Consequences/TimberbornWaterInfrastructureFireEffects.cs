@@ -337,11 +337,8 @@ public sealed class TimberbornWaterInfrastructureFireTargetApi : ITimberbornWate
         int damageApplied,
         bool isFullyDamaged)
     {
-        return new TimberbornWaterInfrastructureApplyResult(
-            AppliedDamage: false,
-            AttemptedWaterStateMutation: false,
-            SkippedNoSafeApi: true,
-            RepairEligible: target.RepairEligible);
+        throw new InvalidOperationException(
+            $"Water infrastructure fire effect is not implemented for {target.SpecId}.");
     }
 
     private static bool IsWaterInfrastructureName(string name)

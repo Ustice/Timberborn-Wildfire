@@ -306,11 +306,8 @@ public sealed class TimberbornPathInfrastructureFireTargetApi : ITimberbornPathI
         int damageApplied,
         bool isFullyDamaged)
     {
-        return new TimberbornPathInfrastructureApplyResult(
-            AppliedDamage: false,
-            AppliedBlock: false,
-            SkippedNoSafeApi: true,
-            RepairEligible: target.RepairEligible);
+        throw new InvalidOperationException(
+            $"Path infrastructure fire effect is not implemented for {target.SpecId}.");
     }
 
     private static bool IsPathInfrastructureName(string name)

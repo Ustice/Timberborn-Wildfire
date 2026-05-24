@@ -84,11 +84,7 @@ public sealed class UnavailableTimberbornAshGrowthAdapter : ITimberbornAshGrowth
             throw new ArgumentNullException(nameof(requests));
         }
 
-        return new TimberbornAshGrowthApplicationResult(
-            CandidateGrowableCount: requests.Count,
-            AppliedGrowableCount: 0,
-            SkippedUnsafeApiCount: requests.Count,
-            SkippedUnsupportedGrowableCount: 0);
+        throw new InvalidOperationException("Ash growth adapter is unavailable.");
     }
 }
 
@@ -359,8 +355,13 @@ public sealed class TimberbornAshFieldService
                 entry.Quality,
                 entry.Strength))
             .ToArray();
-        TimberbornAshGrowthApplicationResult growthResult =
-            _growthAdapter.ApplyGrowthBonuses(tick, growthRequests);
+        TimberbornAshGrowthApplicationResult growthResult = growthRequests.Length == 0
+            ? new TimberbornAshGrowthApplicationResult(
+                CandidateGrowableCount: 0,
+                AppliedGrowableCount: 0,
+                SkippedUnsafeApiCount: 0,
+                SkippedUnsupportedGrowableCount: 0)
+            : _growthAdapter.ApplyGrowthBonuses(tick, growthRequests);
 
         LastSummary = new TimberbornAshFieldSummary(
             Tick: tick,

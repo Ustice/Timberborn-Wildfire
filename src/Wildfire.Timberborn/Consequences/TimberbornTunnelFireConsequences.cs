@@ -160,10 +160,8 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
         }
 
         ResolvedTarget[] resolvedTargets = consequences
-            .Select(ResolveTargetSafely)
+            .Select(ResolveTarget)
             .ToArray();
-        int resolutionFailureCount = resolvedTargets.Count(static resolvedTarget =>
-            resolvedTarget.ResolutionFailed);
         ResolvedTarget[] matchedTargets = resolvedTargets
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
@@ -189,35 +187,18 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             DestructionDeferredCount: results.Count(static result =>
                 result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedSettingDisabled),
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: resolutionFailureCount + results.Count(static result =>
+            SkippedNoSafeApiCount: results.Count(static result =>
                 result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
-            RecoverabilityUnknownCount: resolutionFailureCount + results.Count(static result =>
+            RecoverabilityUnknownCount: results.Count(static result =>
                 !result.RecoverabilityPreserved));
         _logSink.Info(summary.ToLogToken(tick));
         return summary;
     }
 
-    private ResolvedTarget ResolveTargetSafely(TimberbornTunnelFireConsequence consequence)
+    private ResolvedTarget ResolveTarget(TimberbornTunnelFireConsequence consequence)
     {
-        try
-        {
-            return new ResolvedTarget(
-                consequence,
-                _targetApi.ResolveTarget(consequence),
-                ResolutionFailed: false);
-        }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_tunnel_fire_safe_unavailable " +
-                $"reason=resolve_target_failed cell_index={consequence.CellIndex} " +
-                $"exception_type={exception.GetType().Name}");
-            return new ResolvedTarget(
-                consequence,
-                Target: null,
-                ResolutionFailed: true);
-        }
+        return new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence));
     }
 
     private TunnelTargetResult ApplyTarget(
@@ -239,14 +220,10 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
 
         if (!target.CanExplodeNative || _explodedTargets.Contains(target.StableId))
         {
-            return new TunnelTargetResult(
-                MarkedUnstable: markedUnstable,
-                NativeAttempted: false,
-                NativeStatus: TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: target.CanRecover);
+            throw new InvalidOperationException($"Tunnel target cannot explode natively: {target.StableId}.");
         }
 
-        TimberbornTunnelNativeExplodeResult result = ExplodeNativeSafely(target);
+        TimberbornTunnelNativeExplodeResult result = _targetApi.ExplodeNative(target);
         if (result.Status == TimberbornTunnelNativeExplodeStatus.Applied)
         {
             _explodedTargets.Add(target.StableId);
@@ -259,28 +236,9 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             RecoverabilityPreserved: result.RecoverabilityPreserved);
     }
 
-    private TimberbornTunnelNativeExplodeResult ExplodeNativeSafely(TimberbornTunnelFireTarget target)
-    {
-        try
-        {
-            return _targetApi.ExplodeNative(target);
-        }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_tunnel_fire_safe_unavailable " +
-                $"reason=native_explode_failed stable_id={target.StableId} " +
-                $"exception_type={exception.GetType().Name}");
-            return new TimberbornTunnelNativeExplodeResult(
-                TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
-        }
-    }
-
     private readonly record struct ResolvedTarget(
         TimberbornTunnelFireConsequence Consequence,
-        TimberbornTunnelFireTarget? Target,
-        bool ResolutionFailed);
+        TimberbornTunnelFireTarget? Target);
 
     private readonly record struct TunnelTargetResult(
         bool MarkedUnstable,
@@ -324,17 +282,6 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
         Vector3Int coordinates = new(x, y, z);
         FindTunnelResult findResult = FindTunnelAt(coordinates);
 
-        if (findResult.SafeApiUnavailable)
-        {
-            return new TimberbornTunnelFireTarget(
-                $"tunnel-unavailable:{consequence.CellIndex}",
-                consequence.CellIndex,
-                BottomLevel: 0,
-                CanMarkUnstable: false,
-                CanExplodeNative: false,
-                CanRecover: false);
-        }
-
         if (findResult.Tunnel is null)
         {
             return null;
@@ -356,9 +303,7 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
     {
         if (!_tunnelsByStableId.TryGetValue(target.StableId, out object? tunnel))
         {
-            return new TimberbornTunnelNativeExplodeResult(
-                TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
+            throw new InvalidOperationException($"Tunnel target was not registered: {target.StableId}.");
         }
 
         try
@@ -368,9 +313,8 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
                 BindingFlags.Instance | BindingFlags.Public);
             if (explodeMethod is null)
             {
-                return new TimberbornTunnelNativeExplodeResult(
-                    TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
-                    RecoverabilityPreserved: false);
+                throw new InvalidOperationException(
+                    $"Tunnel Explode API is unavailable on {tunnel.GetType().FullName}.");
             }
 
             explodeMethod.Invoke(tunnel, Array.Empty<object>());
@@ -378,11 +322,9 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
                 TimberbornTunnelNativeExplodeStatus.Applied,
                 RecoverabilityPreserved: target.CanRecover);
         }
-        catch
+        catch (Exception exception) when (exception is not InvalidOperationException)
         {
-            return new TimberbornTunnelNativeExplodeResult(
-                TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
-                RecoverabilityPreserved: false);
+            throw new InvalidOperationException("Tunnel explode failed.", exception);
         }
     }
 
@@ -390,7 +332,7 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
     {
         if (_tunnelType is null)
         {
-            return FindTunnelResult.SafeUnavailable;
+            throw new InvalidOperationException("Tunnel type is unavailable.");
         }
 
         MethodInfo? method = typeof(IBlockService)
@@ -401,7 +343,7 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
             .FirstOrDefault();
         if (method is null)
         {
-            return FindTunnelResult.SafeUnavailable;
+            throw new InvalidOperationException("IBlockService.GetObjectsWithComponentAt API is unavailable.");
         }
 
         try
@@ -411,7 +353,7 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
                 .Invoke(_blockService, new object[] { coordinates });
             if (result is not System.Collections.IEnumerable enumerable)
             {
-                return FindTunnelResult.SafeUnavailable;
+                throw new InvalidOperationException("Tunnel lookup returned a non-enumerable result.");
             }
 
             return new FindTunnelResult(
@@ -421,9 +363,9 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
                     .FirstOrDefault(),
                 SafeApiUnavailable: false);
         }
-        catch
+        catch (Exception exception) when (exception is not InvalidOperationException)
         {
-            return FindTunnelResult.SafeUnavailable;
+            throw new InvalidOperationException("Tunnel lookup failed.", exception);
         }
     }
 

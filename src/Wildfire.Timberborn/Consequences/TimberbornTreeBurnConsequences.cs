@@ -516,7 +516,8 @@ public sealed class UnavailableTimberbornTreeBurnConsequenceApi : ITimberbornTre
 
     public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence consequence)
     {
-        return new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true);
+        throw new InvalidOperationException(
+            $"Tree burn consequence API is unavailable for {consequence.TargetKey.StableId}.");
     }
 }
 

@@ -194,10 +194,8 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
         }
 
         ResolvedTarget[] resolvedTargets = consequences
-            .Select(ResolveTargetSafely)
+            .Select(ResolveTarget)
             .ToArray();
-        int resolutionFailureCount = resolvedTargets.Count(static resolvedTarget =>
-            resolvedTarget.ResolutionFailed);
         ResolvedTarget[] matchedTargets = resolvedTargets
             .Where(static resolvedTarget => resolvedTarget.Target is not null)
             .ToArray();
@@ -230,7 +228,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.Triggered),
             HeatPulseCellCount: triggeredResults.Sum(static result => result.HeatPulseCellCount),
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: resolutionFailureCount + triggeredResults.Count(static result =>
+            SkippedNoSafeApiCount: triggeredResults.Count(static result =>
                 result.NativeStatus == TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi),
             SkippedAlreadyTriggeredCount: triggeredResults.Count(static result => result.NativeStatus ==
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedAlreadyTriggered),
@@ -243,26 +241,9 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
         return summary;
     }
 
-    private ResolvedTarget ResolveTargetSafely(TimberbornExplosiveInfrastructureConsequence consequence)
+    private ResolvedTarget ResolveTarget(TimberbornExplosiveInfrastructureConsequence consequence)
     {
-        try
-        {
-            return new ResolvedTarget(
-                consequence,
-                _targetApi.ResolveTarget(consequence),
-                ResolutionFailed: false);
-        }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_explosive_infrastructure_safe_unavailable " +
-                $"reason=resolve_target_failed cell_index={consequence.CellIndex} " +
-                $"exception_type={exception.GetType().Name}");
-            return new ResolvedTarget(
-                consequence,
-                Target: null,
-                ResolutionFailed: true);
-        }
+        return new ResolvedTarget(consequence, _targetApi.ResolveTarget(consequence));
     }
 
     private TriggeredTargetResult ApplyTarget(
@@ -304,23 +285,18 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
         TimberbornExplosiveInfrastructureConsequenceSettings settings,
         TimberbornExplosiveInfrastructureTarget target)
     {
-        if (!settings.NativeDynamiteTriggerEnabled || !target.CanTriggerNative)
+        if (!settings.NativeDynamiteTriggerEnabled)
         {
             return TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi;
         }
 
-        try
+        if (!target.CanTriggerNative)
         {
-            return _targetApi.TriggerNative(target, delayTicks: 1).Status;
+            throw new InvalidOperationException(
+                $"Native dynamite trigger is not enabled for {target.StableId}.");
         }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_explosive_infrastructure_safe_unavailable " +
-                $"reason=native_trigger_failed stable_id={target.StableId} " +
-                $"exception_type={exception.GetType().Name}");
-            return TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi;
-        }
+
+        return _targetApi.TriggerNative(target, delayTicks: 1).Status;
     }
 
     private static string GetExposureKey(TimberbornExplosiveInfrastructureTarget target)
@@ -330,8 +306,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
 
     private readonly record struct ResolvedTarget(
         TimberbornExplosiveInfrastructureConsequence Consequence,
-        TimberbornExplosiveInfrastructureTarget? Target,
-        bool ResolutionFailed);
+        TimberbornExplosiveInfrastructureTarget? Target);
 
     private readonly record struct TriggeredTargetResult(
         bool WasArmedThisTick,
@@ -487,20 +462,10 @@ public sealed class TimberbornDynamiteExplosiveInfrastructureTargetApi :
     {
         if (!_dynamitesByStableId.TryGetValue(target.StableId, out Dynamite dynamite))
         {
-            return new TimberbornExplosiveInfrastructureNativeTriggerResult(
-                TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi);
+            throw new InvalidOperationException($"Dynamite target was not registered: {target.StableId}.");
         }
 
-        bool isTriggered;
-        try
-        {
-            isTriggered = dynamite.IsTriggered;
-        }
-        catch
-        {
-            return new TimberbornExplosiveInfrastructureNativeTriggerResult(
-                TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi);
-        }
+        bool isTriggered = dynamite.IsTriggered;
 
         if (isTriggered)
         {
@@ -508,16 +473,8 @@ public sealed class TimberbornDynamiteExplosiveInfrastructureTargetApi :
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedAlreadyTriggered);
         }
 
-        try
-        {
-            dynamite.TriggerDelayed(Math.Max(1, delayTicks));
-            return new TimberbornExplosiveInfrastructureNativeTriggerResult(
-                TimberbornExplosiveInfrastructureNativeTriggerStatus.Triggered);
-        }
-        catch
-        {
-            return new TimberbornExplosiveInfrastructureNativeTriggerResult(
-                TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi);
-        }
+        dynamite.TriggerDelayed(Math.Max(1, delayTicks));
+        return new TimberbornExplosiveInfrastructureNativeTriggerResult(
+            TimberbornExplosiveInfrastructureNativeTriggerStatus.Triggered);
     }
 }

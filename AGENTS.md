@@ -19,3 +19,4 @@ When visually reviewing screenshots or captures, check the whole scene for anyth
 - Prefer deterministic tests and CLI scenarios before live Timberborn validation.
 - Use GitHub Issues as the durable backlog source of truth.
 - Treat branch `archive/file-kanban-2026-05-23` as the migrated historical board unless a task explicitly asks for file-board archaeology.
+- Do not hide missing Timberborn consequence behavior behind no-op, skip, fallback, or "safe unavailable" stopgaps. If a requested live consequence has no safe implementation, fail loudly so the crash or exception reveals the real missing model.
