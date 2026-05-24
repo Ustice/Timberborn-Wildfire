@@ -50,6 +50,7 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("mesh.uv = uvs;", source, StringComparison.Ordinal);
         Assert.Contains("mesh.uv2 = uv2s;", source, StringComparison.Ordinal);
         Assert.Contains("float y = Z + heightOffset;", source, StringComparison.Ordinal);
+        Assert.Contains("float vertexAlpha = debugOverlayEnabled ? DebugOverlayVertexAlpha : 0f;", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -66,6 +67,46 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("AtmosphericFalloutAshAndContamination", shaderSource, StringComparison.Ordinal);
         Assert.DoesNotContain("for (int scanZ = z + 1; scanZ < _GridDepth; scanZ += 1)", shaderSource, StringComparison.Ordinal);
         Assert.DoesNotContain("projectedAsh = max(projectedAsh, lerp(atmosphericLower, atmosphericUpper, blend.y));", shaderSource, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void PresenterRootActivationKeepsValidSafeDebugOverlayVisible(
+        bool debugOverlayEnabled,
+        bool expectedActive)
+    {
+        TimberbornGpuFieldRendererPresentation presentation = new(
+            MaterialFieldsBuffer: new object(),
+            TransportFieldsBuffer: new object(),
+            GridWidth: 4,
+            GridHeight: 3,
+            GridDepth: 2);
+
+        bool shouldActivate = TimberbornUnityGpuFieldRendererPresenter.ShouldActivateRootForPresentation(
+            presentation,
+            debugOverlayEnabled);
+
+        Assert.Equal(expectedActive, shouldActivate);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PresenterRootActivationRejectsInvalidPresentationInNormalAndDebugModes(bool debugOverlayEnabled)
+    {
+        TimberbornGpuFieldRendererPresentation presentation = new(
+            MaterialFieldsBuffer: new object(),
+            TransportFieldsBuffer: null,
+            GridWidth: 4,
+            GridHeight: 3,
+            GridDepth: 2);
+
+        bool shouldActivate = TimberbornUnityGpuFieldRendererPresenter.ShouldActivateRootForPresentation(
+            presentation,
+            debugOverlayEnabled);
+
+        Assert.False(shouldActivate);
     }
 
     [Fact]
@@ -309,19 +350,19 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("_smokeMaterial.SetColor(\"_BaseColor\",   new Color(0.34f, 0.35f, 0.34f));", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_smokeMaterial.SetFloat(\"_Radius\",        SmokeRadius);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_smokeMaterial.SetFloat(\"_HeightOffset\",  SmokeHeightOffset);", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_smokeMaterial.SetFloat(\"_MaxOpacity\",    SmokeMaxOpacity);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_smokeMaterial.SetFloat(\"_MaxOpacity\",    Math.Clamp(SmokeMaxOpacity * _options.VisualIntensityScale, 0f, 1f));", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_smokeMaterial.SetFloat(\"_PuffsPerCell\",  (float)SmokePuffsPerCell);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("new Color(SteamColorRed, SteamColorGreen, SteamColorBlue)", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_steamMaterial.SetFloat(\"_Radius\",        SteamRadius);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_steamMaterial.SetFloat(\"_HeightOffset\",  SteamHeightOffset);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_steamMaterial.SetFloat(\"_MaxSteamHeight\", SteamMaxHeight);", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("_steamMaterial.SetFloat(\"_MaxOpacity\",    SteamMaxOpacity);", indirectRenderer, StringComparison.Ordinal);
+        Assert.Contains("_steamMaterial.SetFloat(\"_MaxOpacity\",    Math.Clamp(SteamMaxOpacity * _options.VisualIntensityScale, 0f, 1f));", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_smokeMaterial!.SetVector(\"_Wind\", cloudWind);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("_steamMaterial!.SetVector(\"_Wind\", cloudWind);", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("wildfire_timberborn_gpu_indirect_renderer_smoke_tuning", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("wildfire_timberborn_gpu_indirect_renderer_steam_tuning", indirectRenderer, StringComparison.Ordinal);
         Assert.Contains("field_source=atmospheric_fields clean=true contaminated=false", indirectRenderer, StringComparison.Ordinal);
-        Assert.Contains("new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink, _windProvider)", ReadTimberbornSource("TimberbornFireRuntime.cs"), StringComparison.Ordinal);
+        Assert.Contains("visualSettings.ToGpuIndirectFireRendererOptions()", ReadTimberbornSource("TimberbornFireRuntime.cs"), StringComparison.Ordinal);
         Assert.Contains("float orderedSlot = (float)puffSlot", cloudShader, StringComparison.Ordinal);
         Assert.Contains("float slotActivation = smoothstep(slotThreshold", cloudShader, StringComparison.Ordinal);
         Assert.Contains(": saturate(intensity * 1.35);", cloudShader, StringComparison.Ordinal);

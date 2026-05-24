@@ -641,6 +641,15 @@ Use modifiers as state and variant classes. When discussing one block or element
 | `tutorial-step-view`                               | `--finished`                                                                                 |
 | `tutorial-step-view__key-binding`                  | `--text`                                                                                     |
 
+### Wildfire Release Settings
+
+Wildfire release settings should stay in Timberborn's native settings/options surfaces and use the integer-backed `JasonKleinberg.Wildfire.release.*` keys from the adapter settings framework. Player-safe visual controls are limited to bounded presentation values:
+
+- `visual_intensity_percent`: bounded `25` through `150`, default `100`.
+- `visual_debug_visibility`: `0` for hidden, `1` for the safe GPU field overlay.
+
+Do not expose QA commands, arbitrary coordinate tools, simulator mutation controls, raw packed values, or broad debug panels through player-facing settings. Debug visibility is an overlay visibility preference only; it must not unlock command bridge actions or move fire rules into Timberborn UI code.
+
 ## Wildfire-Specific USS Rules
 
 When a Wildfire-specific class is needed, use it only for:

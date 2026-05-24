@@ -107,10 +107,12 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(playerFireAlertCameraFocus));
         _logSink = new UnityTimberbornFireLogSink();
         _debugVisualSink = new TimberbornFireDebugVisualStateSink();
+        WildfireReleaseVisualSettings visualSettings =
+            WildfireReleaseVisualSettings.FromSnapshot(_releaseSettings.GetSnapshot());
         _gpuFieldRenderer = new TimberbornGpuFieldRendererSink(
             visualFieldSurface ?? throw new ArgumentNullException(nameof(visualFieldSurface)),
             _logSink,
-            new TimberbornGpuFieldRendererOptions(IndirectFireRendererActive: true));
+            visualSettings.ToGpuFieldRendererOptions());
         _playerFireAlerts = new TimberbornPlayerFireAlertSink(
             new TimberbornQuickNotificationSink(quickNotificationService, _playerFireAlertCameraFocus),
             _logSink);
@@ -362,7 +364,14 @@ public sealed class TimberbornFireRuntime :
         Configure(fireSystem, cadence);
         if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)
         {
-            _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(computeSim, grid, _logSink, _windProvider);
+            WildfireReleaseVisualSettings visualSettings =
+                WildfireReleaseVisualSettings.FromSnapshot(_releaseSettings.GetSnapshot());
+            _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(
+                computeSim,
+                grid,
+                _logSink,
+                _windProvider,
+                visualSettings.ToGpuIndirectFireRendererOptions());
             _gpuIndirectRenderer.Initialize();
             if (_pendingPersistenceSnapshot?.FireSim is not null)
             {
@@ -757,13 +766,17 @@ public sealed class TimberbornFireRuntime :
     public TimberbornQaCommandState GetState()
     {
         TimberbornFireSimParameterPreset currentPreset = _fireSimParameterPresetState.CurrentPreset;
+        WildfireReleaseSettingsSnapshot releaseSnapshot = _releaseSettings.GetSnapshot();
 
         if (_fireSystem is not { IsInitialized: true } fireSystem)
         {
             return new TimberbornQaCommandState(
                 IsSimulatorIntegrated: false,
                 IsGameContextRuntimeLoaded: _isLoaded,
-                WildfireEnabled: IsWildfireEnabled(),
+                WildfireEnabled: releaseSnapshot.IsWildfireEnabled,
+                VisualIntensityPercent: releaseSnapshot.VisualIntensityPercent,
+                VisualDebugVisibility: releaseSnapshot.VisualDebugVisibility.ToString().ToLowerInvariant(),
+                VisualDebugOverlayEnabled: releaseSnapshot.IsVisualDebugOverlayEnabled,
                 CompatibilityProbeStatus: _compatibilityReport.StatusToken,
                 CompatibilityProbeDegraded: _compatibilityReport.IsDegraded,
                 CompatibilityProbeRequiredPassed: _compatibilityReport.PassedRequiredProbeCount,
@@ -835,7 +848,10 @@ public sealed class TimberbornFireRuntime :
         return new TimberbornQaCommandState(
             IsSimulatorIntegrated: true,
             IsGameContextRuntimeLoaded: _isLoaded,
-            WildfireEnabled: IsWildfireEnabled(),
+            WildfireEnabled: releaseSnapshot.IsWildfireEnabled,
+            VisualIntensityPercent: releaseSnapshot.VisualIntensityPercent,
+            VisualDebugVisibility: releaseSnapshot.VisualDebugVisibility.ToString().ToLowerInvariant(),
+            VisualDebugOverlayEnabled: releaseSnapshot.IsVisualDebugOverlayEnabled,
             Width: fireSystem.Width,
             Height: fireSystem.Height,
             Depth: fireSystem.Depth,

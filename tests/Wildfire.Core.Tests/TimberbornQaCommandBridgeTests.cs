@@ -2301,6 +2301,9 @@ public sealed class TimberbornQaCommandBridgeTests
     {
         TimberbornQaCommandState state = new(
             IsSimulatorIntegrated: true,
+            VisualIntensityPercent: 150,
+            VisualDebugVisibility: "safeoverlay",
+            VisualDebugOverlayEnabled: true,
             Width: 4,
             Height: 5,
             Depth: 6,
@@ -2505,6 +2508,9 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("command=status", result.ResultToken);
         Assert.Contains("success=true", result.ResultToken);
         Assert.Contains("wildfire_enabled=true", result.ResultToken);
+        Assert.Contains("visual_intensity_percent=150", result.ResultToken);
+        Assert.Contains("visual_debug_visibility=safeoverlay", result.ResultToken);
+        Assert.Contains("visual_debug_overlay_enabled=true", result.ResultToken);
         Assert.Contains("simulator_integrated=true", result.ResultToken);
         Assert.Contains("width=4", result.ResultToken);
         Assert.Contains("height=5", result.ResultToken);

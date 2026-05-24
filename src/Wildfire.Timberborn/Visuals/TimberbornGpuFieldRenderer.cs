@@ -15,6 +15,7 @@ public sealed class TimberbornGpuFieldRendererOptions
         bool AshOverlayEnabled = true,
         bool DebugOverlayEnabled = false,
         float DebugOverlayHeightOffset = 0.02f,
+        float VisualIntensityScale = 1f,
         bool IndirectFireRendererActive = false)
     {
         if (RegionSize <= 0)
@@ -46,12 +47,21 @@ public sealed class TimberbornGpuFieldRendererOptions
                 "Debug overlay height offset cannot be negative.");
         }
 
+        if (VisualIntensityScale <= 0f)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(VisualIntensityScale),
+                VisualIntensityScale,
+                "Visual intensity scale must be positive.");
+        }
+
         this.RegionSize = RegionSize;
         this.MaxUpdatedRegionsPerDispatch = MaxUpdatedRegionsPerDispatch;
         this.MinimumVisibleIntensity = MinimumVisibleIntensity;
         this.AshOverlayEnabled = AshOverlayEnabled;
         this.DebugOverlayEnabled = DebugOverlayEnabled;
         this.DebugOverlayHeightOffset = DebugOverlayHeightOffset;
+        this.VisualIntensityScale = VisualIntensityScale;
         this.IndirectFireRendererActive = IndirectFireRendererActive;
     }
 
@@ -66,6 +76,8 @@ public sealed class TimberbornGpuFieldRendererOptions
     public bool DebugOverlayEnabled { get; }
 
     public float DebugOverlayHeightOffset { get; }
+
+    public float VisualIntensityScale { get; }
 
     // When true, fire/smoke/steam are rendered by TimberbornGpuIndirectFireRenderer; this
     // sink only needs to run for cells that carry ash (skipping the per-cell GetData stall
@@ -308,6 +320,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private const float AshOverlayLevel3Coverage = 0.92f;
     private const float AshOverlayCoverageSoftness = 0.065f;
     private const int AshOverlayRenderQueueOffset = -10;
+    private const float DebugOverlayVertexAlpha = 0.42f;
     private static readonly int MainTexturePropertyId = Shader.PropertyToID("_MainTex");
     private static readonly int BaseMapPropertyId = Shader.PropertyToID("_BaseMap");
     private static readonly int AshTexturePropertyId = Shader.PropertyToID("_AshTex");
@@ -328,6 +341,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
     private static readonly int BaseColorPropertyId = Shader.PropertyToID("_BaseColor");
 
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly float _visualIntensityScale;
     private readonly float _heightOffset;
     private readonly bool _debugOverlayEnabled;
     private AssetBundle? _shaderBundle;
@@ -351,6 +365,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
         TimberbornGpuFieldRendererOptions resolvedOptions =
             options ?? throw new ArgumentNullException(nameof(options));
+        _visualIntensityScale = resolvedOptions.VisualIntensityScale;
         _heightOffset = resolvedOptions.DebugOverlayHeightOffset;
         _debugOverlayEnabled = resolvedOptions.DebugOverlayEnabled;
     }
@@ -380,13 +395,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             BuildMesh(_mesh, presentation, _heightOffset, _debugOverlayEnabled);
             if (_root is not null)
             {
-                bool hasAshPresentation = !_debugOverlayEnabled &&
-                    presentation.MaterialFieldsBuffer is not null &&
-                    presentation.TransportFieldsBuffer is not null &&
-                    presentation.GridWidth > 0 &&
-                    presentation.GridHeight > 0 &&
-                    presentation.GridDepth > 0;
-                _root.SetActive(hasAshPresentation);
+                _root.SetActive(ShouldActivateRootForPresentation(presentation, _debugOverlayEnabled));
             }
 
             return TimberbornGpuFieldRendererPresentationResult.Applied;
@@ -396,6 +405,26 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             _materialFailureCount++;
             return TimberbornGpuFieldRendererPresentationResult.Failed(exception.Message);
         }
+    }
+
+    public static bool ShouldActivateRootForPresentation(
+        TimberbornGpuFieldRendererPresentation presentation,
+        bool debugOverlayEnabled)
+    {
+        bool hasAshPresentation =
+            presentation.MaterialFieldsBuffer is not null &&
+            presentation.TransportFieldsBuffer is not null &&
+            presentation.GridWidth > 0 &&
+            presentation.GridHeight > 0 &&
+            presentation.GridDepth > 0;
+
+        if (!debugOverlayEnabled)
+        {
+            return hasAshPresentation;
+        }
+
+        bool hasSafeDebugOverlayPresentation = hasAshPresentation;
+        return hasSafeDebugOverlayPresentation;
     }
 
     private void BindAshPresentation(TimberbornGpuFieldRendererPresentation presentation)
@@ -537,7 +566,7 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         _material.SetTexture(BaseMapPropertyId, _ashOverlayTexture);
         _material.SetTexture(AshTexturePropertyId, _ashOverlayTexture);
         _material.SetTexture(MaskTexturePropertyId, _ashOverlayMaskTexture);
-        _material.SetFloat(MaxOpacityPropertyId, AshOverlayMaxOpacity);
+        _material.SetFloat(MaxOpacityPropertyId, Math.Clamp(AshOverlayMaxOpacity * _visualIntensityScale, 0f, 1f));
         _material.SetFloat(Level1CoveragePropertyId, AshOverlayLevel1Coverage);
         _material.SetFloat(Level2CoveragePropertyId, AshOverlayLevel2Coverage);
         _material.SetFloat(Level3CoveragePropertyId, AshOverlayLevel3Coverage);
@@ -596,7 +625,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         Vector3[] vertices = ashFieldQuads
             .SelectMany(quad => quad.ToVertices(heightOffset))
             .ToArray();
-        Color[] colors = Enumerable.Repeat(new Color(1f, 1f, 1f, 0f), vertices.Length).ToArray();
+        float vertexAlpha = debugOverlayEnabled ? DebugOverlayVertexAlpha : 0f;
+        Color[] colors = Enumerable.Repeat(new Color(1f, 1f, 1f, vertexAlpha), vertices.Length).ToArray();
         Vector2[] uvs = ashFieldQuads
             .SelectMany(quad => quad.ToPatternUvs())
             .ToArray();

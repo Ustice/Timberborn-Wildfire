@@ -1292,6 +1292,9 @@ public sealed record TimberbornQaCommandState(
     bool IsSimulatorIntegrated,
     bool IsGameContextRuntimeLoaded = false,
     bool WildfireEnabled = true,
+    int VisualIntensityPercent = WildfireReleaseSettings.DefaultVisualIntensityPercent,
+    string VisualDebugVisibility = "hidden",
+    bool VisualDebugOverlayEnabled = false,
     int? Width = null,
     int? Height = null,
     int? Depth = null,
@@ -1659,6 +1662,9 @@ public sealed record TimberbornQaCommandResult(
         $"status={Status} " +
         "bridge_alive=true " +
         $"wildfire_enabled={State.WildfireEnabled.ToString().ToLowerInvariant()} " +
+        $"visual_intensity_percent={State.VisualIntensityPercent} " +
+        $"visual_debug_visibility={TimberbornQaCommandBridge.FormatToken(State.VisualDebugVisibility)} " +
+        $"visual_debug_overlay_enabled={State.VisualDebugOverlayEnabled.ToString().ToLowerInvariant()} " +
         $"runtime_loaded={State.IsGameContextRuntimeLoaded.ToString().ToLowerInvariant()} " +
         $"loaded_game_ready={State.IsLoadedGameReady.ToString().ToLowerInvariant()} " +
         $"simulator_integrated={State.IsSimulatorIntegrated.ToString().ToLowerInvariant()} " +

@@ -4,6 +4,26 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Visuals;
 
+public sealed class TimberbornGpuIndirectFireRendererOptions
+{
+    public static readonly TimberbornGpuIndirectFireRendererOptions Default = new();
+
+    public TimberbornGpuIndirectFireRendererOptions(float VisualIntensityScale = 1f)
+    {
+        if (VisualIntensityScale <= 0f)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(VisualIntensityScale),
+                VisualIntensityScale,
+                "Visual intensity scale must be positive.");
+        }
+
+        this.VisualIntensityScale = VisualIntensityScale;
+    }
+
+    public float VisualIntensityScale { get; }
+}
+
 // Renders fire, smoke, and steam directly from the GPU simulation buffers via
 // Graphics.DrawProceduralIndirect — no CPU readback, no mesh rebuilds per frame.
 //
@@ -51,6 +71,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
     private readonly FireGrid _grid;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly ITimberbornWindProvider _windProvider;
+    private readonly TimberbornGpuIndirectFireRendererOptions _options;
 
     private ComputeBuffer? _cellPositionsBuffer;
     private ComputeBuffer? _smoothedFieldsBuffer;
@@ -71,7 +92,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         TimberbornComputeFireSimulator simulator,
         FireGrid grid,
         ITimberbornFireLogSink logSink)
-        : this(simulator, grid, logSink, NullTimberbornWindProvider.Instance)
+        : this(simulator, grid, logSink, NullTimberbornWindProvider.Instance, TimberbornGpuIndirectFireRendererOptions.Default)
     {
     }
 
@@ -80,11 +101,22 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         FireGrid grid,
         ITimberbornFireLogSink logSink,
         ITimberbornWindProvider windProvider)
+        : this(simulator, grid, logSink, windProvider, TimberbornGpuIndirectFireRendererOptions.Default)
+    {
+    }
+
+    public TimberbornGpuIndirectFireRenderer(
+        TimberbornComputeFireSimulator simulator,
+        FireGrid grid,
+        ITimberbornFireLogSink logSink,
+        ITimberbornWindProvider windProvider,
+        TimberbornGpuIndirectFireRendererOptions options)
     {
         _simulator = simulator ?? throw new ArgumentNullException(nameof(simulator));
         _grid = grid;
         _logSink = logSink ?? throw new ArgumentNullException(nameof(logSink));
         _windProvider = windProvider ?? throw new ArgumentNullException(nameof(windProvider));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     public bool IsInitialized => _initialized;
@@ -109,7 +141,8 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
             _logSink.Info(
                 "wildfire_timberborn_gpu_indirect_renderer_initialized " +
                 $"cell_count={_grid.CellCount} " +
-                $"width={_grid.Width} height={_grid.Height} depth={_grid.Depth}");
+                $"width={_grid.Width} height={_grid.Height} depth={_grid.Depth} " +
+                $"visual_intensity_scale={_options.VisualIntensityScale:F2}");
             _logSink.Info(
                 "wildfire_timberborn_gpu_indirect_renderer_smoke_tuning " +
                 $"puffs_per_cell={SmokePuffsPerCell} " +
@@ -327,7 +360,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _smokeMaterial.SetColor("_ContamColor", new Color(0.35f, 0.05f, 0.10f));  // burgundy
         _smokeMaterial.SetFloat("_Radius",        SmokeRadius);
         _smokeMaterial.SetFloat("_HeightOffset",  SmokeHeightOffset);
-        _smokeMaterial.SetFloat("_MaxOpacity",    SmokeMaxOpacity);
+        _smokeMaterial.SetFloat("_MaxOpacity",    Math.Clamp(SmokeMaxOpacity * _options.VisualIntensityScale, 0f, 1f));
         _smokeMaterial.SetFloat("_IsSteam",       0f);
         _smokeMaterial.SetFloat("_PuffsPerCell",  (float)SmokePuffsPerCell);
 
@@ -340,7 +373,7 @@ public sealed class TimberbornGpuIndirectFireRenderer : IDisposable
         _steamMaterial.SetFloat("_Radius",        SteamRadius);
         _steamMaterial.SetFloat("_HeightOffset",  SteamHeightOffset);  // steam starts near ground
         _steamMaterial.SetFloat("_MaxSteamHeight", SteamMaxHeight);
-        _steamMaterial.SetFloat("_MaxOpacity",    SteamMaxOpacity);
+        _steamMaterial.SetFloat("_MaxOpacity",    Math.Clamp(SteamMaxOpacity * _options.VisualIntensityScale, 0f, 1f));
         _steamMaterial.SetFloat("_IsSteam",       1f);
         _steamMaterial.SetFloat("_PuffsPerCell",  (float)SteamPuffsPerCell);
     }

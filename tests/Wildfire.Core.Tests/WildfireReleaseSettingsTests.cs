@@ -42,6 +42,10 @@ public sealed class WildfireReleaseSettingsTests
         Assert.True(snapshot.IsDetonatorFireSafetyEnabled);
         Assert.True(snapshot.IsTunnelFireBehaviorEnabled);
         Assert.False(snapshot.IsTunnelTerrainDestructionEnabled);
+        Assert.Equal(100, snapshot.VisualIntensityPercent);
+        Assert.Equal(1f, snapshot.VisualIntensityScale);
+        Assert.Equal(WildfireReleaseVisualDebugVisibility.Hidden, snapshot.VisualDebugVisibility);
+        Assert.False(snapshot.IsVisualDebugOverlayEnabled);
         Assert.Equal("test", snapshot.SourceName);
         Assert.Empty(snapshot.InvalidValues);
         Assert.Equal(
@@ -56,6 +60,8 @@ public sealed class WildfireReleaseSettingsTests
                 WildfireReleaseSettings.DetonatorFireSafetyEnabledKey,
                 WildfireReleaseSettings.TunnelFireBehaviorEnabledKey,
                 WildfireReleaseSettings.TunnelTerrainDestructionEnabledKey,
+                WildfireReleaseSettings.VisualIntensityPercentKey,
+                WildfireReleaseSettings.VisualDebugVisibilityKey,
             ],
             WildfireReleaseSettings.StableKeys);
         Assert.Contains("wildfire_release_settings", snapshot.StatusToken);
@@ -66,6 +72,9 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Contains("detonator_fire_safety_enabled=true", snapshot.StatusToken);
         Assert.Contains("tunnel_fire_behavior_enabled=true", snapshot.StatusToken);
         Assert.Contains("tunnel_terrain_destruction_enabled=false", snapshot.StatusToken);
+        Assert.Contains("visual_intensity_percent=100", snapshot.StatusToken);
+        Assert.Contains("visual_debug_visibility=hidden", snapshot.StatusToken);
+        Assert.Contains("visual_debug_overlay_enabled=false", snapshot.StatusToken);
         Assert.Contains("invalid_values=0", snapshot.StatusToken);
     }
 
@@ -104,6 +113,8 @@ public sealed class WildfireReleaseSettingsTests
                 [WildfireReleaseSettings.DetonatorFireSafetyEnabledKey] = 1,
                 [WildfireReleaseSettings.TunnelFireBehaviorEnabledKey] = 1,
                 [WildfireReleaseSettings.TunnelTerrainDestructionEnabledKey] = 0,
+                [WildfireReleaseSettings.VisualIntensityPercentKey] = 100,
+                [WildfireReleaseSettings.VisualDebugVisibilityKey] = 0,
             },
             new Dictionary<string, string>
             {
@@ -141,6 +152,8 @@ public sealed class WildfireReleaseSettingsTests
                 [WildfireReleaseSettings.DetonatorFireSafetyEnabledKey] = 1,
                 [WildfireReleaseSettings.TunnelFireBehaviorEnabledKey] = 1,
                 [WildfireReleaseSettings.TunnelTerrainDestructionEnabledKey] = 0,
+                [WildfireReleaseSettings.VisualIntensityPercentKey] = 100,
+                [WildfireReleaseSettings.VisualDebugVisibilityKey] = 0,
             },
             new Dictionary<string, string>
             {
@@ -252,6 +265,104 @@ public sealed class WildfireReleaseSettingsTests
         Assert.Equal(2, logSink.WarningMessages.Count);
         Assert.Contains("wildfire_release_settings", logSink.WarningMessages[0]);
         Assert.Contains("wildfire_release_setting_invalid", logSink.WarningMessages[1]);
+    }
+
+    [Theory]
+    [InlineData(25, 0.25f)]
+    [InlineData(100, 1f)]
+    [InlineData(150, 1.5f)]
+    public void VisualIntensitySettingIsBoundedAndConvertedToScale(int rawValue, float expectedScale)
+    {
+        WildfireReleaseSettings settings = WildfireReleaseSettings.FromStore(
+            new DictionaryReleaseSettingsStore(
+                new Dictionary<string, string?>
+                {
+                    [WildfireReleaseSettings.VisualIntensityPercentKey] = rawValue.ToString(CultureInfo.InvariantCulture),
+                }));
+
+        WildfireReleaseSettingsSnapshot snapshot = settings.GetSnapshot();
+        WildfireReleaseVisualSettings visualSettings = WildfireReleaseVisualSettings.FromSnapshot(snapshot);
+
+        Assert.Equal(rawValue, snapshot.VisualIntensityPercent);
+        Assert.Equal(expectedScale, snapshot.VisualIntensityScale);
+        Assert.Equal(expectedScale, visualSettings.VisualIntensityScale);
+        Assert.Equal(expectedScale, visualSettings.ToGpuFieldRendererOptions().VisualIntensityScale);
+        Assert.Equal(expectedScale, visualSettings.ToGpuIndirectFireRendererOptions().VisualIntensityScale);
+        Assert.Empty(snapshot.InvalidValues);
+    }
+
+    [Theory]
+    [InlineData("24", "outside_supported_range_25_to_150")]
+    [InlineData("151", "outside_supported_range_25_to_150")]
+    [InlineData("bad", "not_an_integer")]
+    public void InvalidVisualIntensityDefaultsToNormalAndReportsInvalidValue(string rawValue, string reason)
+    {
+        WildfireReleaseSettings settings = WildfireReleaseSettings.FromStore(
+            new DictionaryReleaseSettingsStore(
+                new Dictionary<string, string?>
+                {
+                    [WildfireReleaseSettings.VisualIntensityPercentKey] = rawValue,
+                }));
+
+        WildfireReleaseSettingsSnapshot snapshot = settings.GetSnapshot();
+
+        Assert.Equal(100, snapshot.VisualIntensityPercent);
+        Assert.Equal(1f, snapshot.VisualIntensityScale);
+        WildfireReleaseSettingInvalidValue invalidValue = Assert.Single(snapshot.InvalidValues);
+        Assert.Equal(WildfireReleaseSettings.VisualIntensityPercentKey, invalidValue.Key);
+        Assert.Equal(rawValue, invalidValue.RawValue);
+        Assert.Equal("100", invalidValue.DefaultValue);
+        Assert.Equal(reason, invalidValue.Reason);
+    }
+
+    [Theory]
+    [InlineData(0, WildfireReleaseVisualDebugVisibility.Hidden, false)]
+    [InlineData(1, WildfireReleaseVisualDebugVisibility.SafeOverlay, true)]
+    public void VisualDebugVisibilitySettingOnlyEnablesSafeOverlayMode(
+        int rawValue,
+        WildfireReleaseVisualDebugVisibility expectedVisibility,
+        bool expectedOverlayEnabled)
+    {
+        WildfireReleaseSettings settings = WildfireReleaseSettings.FromStore(
+            new DictionaryReleaseSettingsStore(
+                new Dictionary<string, string?>
+                {
+                    [WildfireReleaseSettings.VisualDebugVisibilityKey] = rawValue.ToString(CultureInfo.InvariantCulture),
+                }));
+
+        WildfireReleaseSettingsSnapshot snapshot = settings.GetSnapshot();
+        WildfireReleaseVisualSettings visualSettings = WildfireReleaseVisualSettings.FromSnapshot(snapshot);
+
+        Assert.Equal(expectedVisibility, snapshot.VisualDebugVisibility);
+        Assert.Equal(expectedOverlayEnabled, snapshot.IsVisualDebugOverlayEnabled);
+        Assert.Equal(expectedOverlayEnabled, visualSettings.DebugOverlayEnabled);
+        Assert.Equal(expectedOverlayEnabled, visualSettings.ToGpuFieldRendererOptions().DebugOverlayEnabled);
+        Assert.True(visualSettings.ToGpuFieldRendererOptions().AshOverlayEnabled);
+        Assert.True(visualSettings.ToGpuFieldRendererOptions().IndirectFireRendererActive);
+        Assert.Empty(snapshot.InvalidValues);
+    }
+
+    [Theory]
+    [InlineData("2", "outside_supported_values_0_1")]
+    [InlineData("bad", "not_an_integer")]
+    public void InvalidVisualDebugVisibilityDefaultsHiddenAndReportsInvalidValue(string rawValue, string reason)
+    {
+        WildfireReleaseSettings settings = WildfireReleaseSettings.FromStore(
+            new DictionaryReleaseSettingsStore(
+                new Dictionary<string, string?>
+                {
+                    [WildfireReleaseSettings.VisualDebugVisibilityKey] = rawValue,
+                }));
+
+        WildfireReleaseSettingsSnapshot snapshot = settings.GetSnapshot();
+
+        Assert.Equal(WildfireReleaseVisualDebugVisibility.Hidden, snapshot.VisualDebugVisibility);
+        Assert.False(snapshot.IsVisualDebugOverlayEnabled);
+        WildfireReleaseSettingInvalidValue invalidValue = Assert.Single(snapshot.InvalidValues);
+        Assert.Equal(WildfireReleaseSettings.VisualDebugVisibilityKey, invalidValue.Key);
+        Assert.Equal(rawValue, invalidValue.RawValue);
+        Assert.Equal("0", invalidValue.DefaultValue);
+        Assert.Equal(reason, invalidValue.Reason);
     }
 
     private sealed class DictionaryReleaseSettingsStore : IWildfireReleaseSettingsStore
