@@ -68,6 +68,74 @@ Print usage:
 bun scripts/deploy-timberborn-mod.ts --help
 ```
 
+## Release Packaging
+
+The release package command builds the Release adapter, stages the mod through the same deploy pipeline, validates required shippable files, and writes reviewable artifacts under `release/package/`:
+
+```bash
+bun run release:package
+```
+
+The package command stages into a repo-local Mods directory, not `~/Documents/Timberborn/Mods`, so it can build release artifacts while Timberborn is open without replacing another QA session's live install.
+
+The default output is:
+
+```text
+release/package/
+  Wildfire/
+    manifest.json
+    Scripts/
+      Wildfire.Timberborn.dll
+      Wildfire.Core.dll
+      Wildfire.Timberborn.pdb
+      Wildfire.Core.pdb
+    ComputeShaders/
+      wildfire_compute_mac
+      wildfire_compute_mac.manifest
+      wildfire_diagnostic_mac
+      wildfire_diagnostic_mac.manifest
+      wildfire_effects_mac
+      wildfire_effects_mac.manifest
+      wildfire_visual_mac
+      wildfire_visual_mac.manifest
+    GoodCollections/
+    Goods/
+    Localizations/
+    NaturalResources/
+    Sprites/
+    TemplateCollections/
+  Wildfire-0.1.0.0.zip
+```
+
+Use an artifact directory only when a ZIP is not needed:
+
+```bash
+bun scripts/package-release.ts --no-zip
+```
+
+Use a custom artifact root when a smoke test or downstream release step needs an alternate package name:
+
+```bash
+bun scripts/package-release.ts --artifact-name WildfireSmokeTest
+```
+
+During script development, already-built AssetBundles can be reused explicitly:
+
+```bash
+bun scripts/package-release.ts --deploy-arg --skip-asset-bundle
+```
+
+The package command fails unless it can validate:
+
+- `manifest.json` contains non-empty `Id`, `Name`, `Version`, and `MinimumGameVersion`, and `Version` uses four numeric components.
+- Required Release assemblies exist in `Scripts/`.
+- Required compute, diagnostic, effects, and visual AssetBundles and bundle manifests exist in `ComputeShaders/`.
+- Timberborn `Data` entries from `src/Wildfire.Timberborn/Data` are present at the mod root.
+- The artifact does not contain `docs/`, `kanban/`, `.git/`, `src/`, `tests/`, `artifacts/`, `release/`, `WildfireQA/`, C# project files, solution files, or TypeScript source.
+- The ZIP, when enabled, contains the selected artifact root folder and required files.
+
+The command logs every packaged file as `artifact_file ...` so agents can paste or inspect a concise artifact inventory without launching Timberborn.
+
 ## Locking
 
 The script serializes build/deploy/remove through:

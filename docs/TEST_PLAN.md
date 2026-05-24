@@ -31,6 +31,7 @@ When Steam shows a cloud-save conflict or cloud-save warning while Timberborn st
 - Timberborn burn damage foundation: adapter-owned descriptor lookup, resource-catalog-backed damage capacity, stable target/cell ownership, changed-cell-to-single-owner resolution, multi-cell and vertical duplicate suppression, unknown-resource fail-closed behavior, optional delta-consumer sink telemetry, resource-accounting snapshot fields, and state capture/restore.
 - Timberborn QA command bridge scaffold: read-only `status` and `help` commands, simulator runtime state when available, searchable command request/result tokens, and explicit no-arbitrary-execution command dispatch.
 - Timberborn deploy pipeline scaffold: Bun/TypeScript deploy script, generated Wildfire manifest, managed assembly staging into `~/Documents/Timberborn/Mods/Wildfire/Scripts`, private FireSim and diagnostic AssetBundle staging into `~/Documents/Timberborn/Mods/Wildfire/ComputeShaders`, local build/deploy lock, dry-run/help output, and running-game guard for real deploy/remove.
+- Release package workflow: `bun run release:package` builds Release assemblies, stages the Timberborn mod through the deploy pipeline, writes `release/package/Wildfire/` and `release/package/Wildfire-0.1.0.0.zip`, validates manifest identity/version, required assemblies, compute/diagnostic/effects/visual bundle files and manifests, Timberborn data entries, ZIP shape, and source/docs/kanban/tests/git/local-QA exclusions.
 - Timberborn fixed-cadence dispatch scaffold: adapter initialization from mapped cells through an injected GPU simulator factory, external change registration through `IGpuFireSimulator.RegisterChange`, centralized cadence options, one dispatch per processed game update, compact-delta return/subscription surface, command-bridge status fields, and lifecycle log tokens for attach/init/change/wait/dispatch/readback/failure events.
 - Timberborn compute-backed simulator factory: live adapter loads `wildfire_compute_mac` from the deployed AssetBundle, creates Unity `ComputeBuffer` resources, dispatches `ApplyExternalChanges` and `SimulateFullGrid`, reads compact deltas, and initializes `TimberbornFireRuntime` from real terrain sources supplied by `MapSize` and `ITerrainService`.
 - Timberborn GPU visual-field surface binding: the live compute simulator binds the `VisualFields` compute buffer once as a Timberborn-facing DI singleton surface with one `float4`-equivalent entry per cell, channel order `fire,smoke,ash,visibility`, a consumer-facing binding view for future renderer/effect/debug-inspector systems, bounded sample inspection for specific cell indices, dispatch-update telemetry, and `qa-readiness`/`status` fields that prove the visual surface is bound without routing gameplay consequences through visual output.
@@ -62,6 +63,31 @@ Run the real Unity compute-shader execution harness locally:
 ```bash
 WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 WILDFIRE_UNITY_EXECUTABLE=/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity dotnet test --filter FullyQualifiedName~UnityBatchmodeExecutorCapturesSeededFixtureWhenEnabled
 ```
+
+## Release Package Validation
+
+Run the release package command before handing off release artifacts:
+
+```bash
+bun run release:package
+```
+
+Expected successful output includes:
+
+- `release_package_ready directory=.../release/package/Wildfire`.
+- `release_package_zip=.../release/package/Wildfire-0.1.0.0.zip`.
+- `manifest_id=JasonKleinberg.Wildfire`.
+- `manifest_version=0.1.0.0`.
+- `artifact_file ...` lines for `manifest.json`, `Scripts/Wildfire.Timberborn.dll`, `Scripts/Wildfire.Core.dll`, all four `ComputeShaders/wildfire_*_mac` bundles, all four matching `.manifest` files, and shipped Timberborn data folders.
+
+Inspect the artifact contents without launching Timberborn:
+
+```bash
+find release/package/Wildfire -type f | sort
+unzip -Z1 release/package/Wildfire-0.1.0.0.zip | sort
+```
+
+No live Timberborn QA is required for release packaging alone. Live validation remains owned by feature-specific QA tickets and the deploy pipeline checks that launch Timberborn.
 
 ## Resource Fuel Catalog
 
