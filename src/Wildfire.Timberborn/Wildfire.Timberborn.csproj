@@ -269,6 +269,8 @@
     <EmbeddedResource Include="Assets\WildfireAshMask2048Levels.png" />
     <EmbeddedResource Include="Assets\WildfireAshMask4096Levels.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolIcon.png" />
+    <EmbeddedResource Include="Assets\WildfireFertilizeCropsToolIcon.png" />
+    <EmbeddedResource Include="Assets\WildfireFertilizeTreesToolIcon.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolCursorLarge.png" />
     <EmbeddedResource Include="Assets\WildfireIgniteToolCursorSmall.png" />
   </ItemGroup>

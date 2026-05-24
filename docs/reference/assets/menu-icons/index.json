@@ -602,6 +602,13 @@
     "height": 104
   },
   {
+    "spriteName": "WildfireFertilizeCropsToolIcon",
+    "source": "Wildfire/Assets/WildfireFertilizeCropsToolIcon.png; derived from FieldsPlantingToolGroupIcon.png and FertileAshIcon.png",
+    "path": "WildfireFertilizeCropsToolIcon.png",
+    "width": 112,
+    "height": 112
+  },
+  {
     "spriteName": "FillValveIcon",
     "source": "Buildings/Landscaping/FillValve/FillValve.Folktails.blueprint.json",
     "path": "FillValveIcon.png",
@@ -661,6 +668,13 @@
     "spriteName": "ForestryPlantingToolGroupIcon",
     "source": "ToolGroups/ToolGroups.Forestry.blueprint.json",
     "path": "ForestryPlantingToolGroupIcon.png",
+    "width": 112,
+    "height": 112
+  },
+  {
+    "spriteName": "WildfireFertilizeTreesToolIcon",
+    "source": "Wildfire/Assets/WildfireFertilizeTreesToolIcon.png; derived from ForestryPlantingToolGroupIcon.png and FertileAshIcon.png",
+    "path": "WildfireFertilizeTreesToolIcon.png",
     "width": 112,
     "height": 112
   },

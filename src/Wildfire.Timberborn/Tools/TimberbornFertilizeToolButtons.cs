@@ -1,3 +1,4 @@
+using System.Reflection;
 using Timberborn.BottomBarSystem;
 using Timberborn.ToolButtonSystem;
 using Timberborn.ToolSystem;
@@ -9,12 +10,15 @@ namespace Wildfire.Timberborn.Tools;
 public sealed class TimberbornFertilizeCropsToolButton : IBottomBarElementsProvider
 {
     private const string FarmingToolGroupId = "Fields";
-    private const string BurnToolImageName = "DemolishResourcesTool";
+    private const string FertilizeCropsToolImageName = "FieldsPlantingToolGroupIcon";
+    private const string FertilizeCropsToolIconResourceName =
+        "Wildfire.Timberborn.Assets.WildfireFertilizeCropsToolIcon.png";
 
     private readonly TimberbornFertilizeCropsTool _tool;
     private readonly ToolButtonFactory _toolButtonFactory;
     private readonly ToolButtonService _toolButtonService;
     private readonly ToolGroupService _toolGroupService;
+    private static Texture2D? _fertilizeCropsToolIcon;
     private bool _buttonAdded;
 
     public TimberbornFertilizeCropsToolButton(
@@ -41,8 +45,15 @@ public sealed class TimberbornFertilizeCropsToolButton : IBottomBarElementsProvi
         {
             ToolGroupSpec toolGroup = _toolGroupService.GetGroup(FarmingToolGroupId);
             ToolGroupButton toolGroupButton = FindExistingToolGroupButton(toolGroup);
-            ToolButton button = _toolButtonFactory.Create(_tool, BurnToolImageName, toolGroupButton.ToolButtonsElement);
+            ToolButton button = _toolButtonFactory.Create(
+                _tool,
+                FertilizeCropsToolImageName,
+                toolGroupButton.ToolButtonsElement);
             SetButtonIdentity(button, "WildfireFertilizeCropsTool", "Fertilize crops");
+            TimberbornFertilizeToolButtonIcons.ApplyToolIcon(
+                button,
+                "WildfireFertilizeCropsToolImage",
+                GetFertilizeCropsToolIcon());
             VisualElement? rightmostToolRoot = GetRightmostToolRoot(toolGroupButton);
             toolGroupButton.AddTool(button);
             PlaceButtonBeforeRightmost(button, rightmostToolRoot);
@@ -123,17 +134,33 @@ public sealed class TimberbornFertilizeCropsToolButton : IBottomBarElementsProvi
             parent.Insert(rightmostIndex, button.Root);
         }
     }
+
+    private static Texture2D GetFertilizeCropsToolIcon()
+    {
+        if (_fertilizeCropsToolIcon is not null)
+        {
+            return _fertilizeCropsToolIcon;
+        }
+
+        _fertilizeCropsToolIcon = TimberbornFertilizeToolButtonIcons.LoadToolIcon(
+            FertilizeCropsToolIconResourceName,
+            "WildfireFertilizeCropsToolIcon");
+        return _fertilizeCropsToolIcon;
+    }
 }
 
 public sealed class TimberbornFertilizeTreesToolButton : IBottomBarElementsProvider
 {
     private const string ForestryToolGroupId = "Forestry";
-    private const string BurnToolImageName = "DemolishResourcesTool";
+    private const string FertilizeTreesToolImageName = "ForestryPlantingToolGroupIcon";
+    private const string FertilizeTreesToolIconResourceName =
+        "Wildfire.Timberborn.Assets.WildfireFertilizeTreesToolIcon.png";
 
     private readonly TimberbornFertilizeTreesTool _tool;
     private readonly ToolButtonFactory _toolButtonFactory;
     private readonly ToolButtonService _toolButtonService;
     private readonly ToolGroupService _toolGroupService;
+    private static Texture2D? _fertilizeTreesToolIcon;
     private bool _buttonAdded;
 
     public TimberbornFertilizeTreesToolButton(
@@ -160,8 +187,15 @@ public sealed class TimberbornFertilizeTreesToolButton : IBottomBarElementsProvi
         {
             ToolGroupSpec toolGroup = _toolGroupService.GetGroup(ForestryToolGroupId);
             ToolGroupButton toolGroupButton = FindExistingToolGroupButton(toolGroup);
-            ToolButton button = _toolButtonFactory.Create(_tool, BurnToolImageName, toolGroupButton.ToolButtonsElement);
+            ToolButton button = _toolButtonFactory.Create(
+                _tool,
+                FertilizeTreesToolImageName,
+                toolGroupButton.ToolButtonsElement);
             SetButtonIdentity(button, "WildfireFertilizeTreesTool", "Fertilize trees and bushes");
+            TimberbornFertilizeToolButtonIcons.ApplyToolIcon(
+                button,
+                "WildfireFertilizeTreesToolImage",
+                GetFertilizeTreesToolIcon());
             VisualElement? rightmostToolRoot = GetRightmostToolRoot(toolGroupButton);
             toolGroupButton.AddTool(button);
             PlaceButtonBeforeRightmost(button, rightmostToolRoot);
@@ -241,5 +275,55 @@ public sealed class TimberbornFertilizeTreesToolButton : IBottomBarElementsProvi
             parent.Remove(button.Root);
             parent.Insert(rightmostIndex, button.Root);
         }
+    }
+
+    private static Texture2D GetFertilizeTreesToolIcon()
+    {
+        if (_fertilizeTreesToolIcon is not null)
+        {
+            return _fertilizeTreesToolIcon;
+        }
+
+        _fertilizeTreesToolIcon = TimberbornFertilizeToolButtonIcons.LoadToolIcon(
+            FertilizeTreesToolIconResourceName,
+            "WildfireFertilizeTreesToolIcon");
+        return _fertilizeTreesToolIcon;
+    }
+}
+
+internal static class TimberbornFertilizeToolButtonIcons
+{
+    public static void ApplyToolIcon(ToolButton button, string imageElementName, Texture2D icon)
+    {
+        VisualElement? toolImage = button.Root.Q<VisualElement>(imageElementName) ??
+            button.Root.Q<VisualElement>("ToolImage");
+        if (toolImage is null)
+        {
+            return;
+        }
+
+        toolImage.style.backgroundImage = new StyleBackground(icon);
+    }
+
+    public static Texture2D LoadToolIcon(string resourceName, string textureName)
+    {
+        using Stream stream = Assembly.GetExecutingAssembly()
+            .GetManifestResourceStream(resourceName) ??
+            throw new InvalidOperationException($"Could not load embedded Wildfire tool icon {resourceName}.");
+        using MemoryStream memoryStream = new();
+        stream.CopyTo(memoryStream);
+
+        Texture2D texture = new(112, 112, TextureFormat.RGBA32, mipChain: false)
+        {
+            name = textureName,
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+        if (!texture.LoadImage(memoryStream.ToArray(), markNonReadable: false))
+        {
+            throw new InvalidOperationException($"Could not decode embedded Wildfire tool icon {resourceName}.");
+        }
+
+        return texture;
     }
 }
