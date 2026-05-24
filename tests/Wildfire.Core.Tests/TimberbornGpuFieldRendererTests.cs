@@ -198,6 +198,24 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
+    public void GpuFieldRendererClearIsDefensiveDuringUnityTeardown()
+    {
+        string fieldRenderer = ReadTimberbornGpuFieldRendererSource();
+
+        Assert.Contains("DestroyUnityObject(ref _root);", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("DestroyUnityObject(ref _mesh);", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("DestroyUnityObject(ref _material);", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("UnloadShaderBundle();", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("T? target = unityObject;\n        unityObject = null;", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("UnityEngine.Object.Destroy(target);", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("bundle.Unload(unloadAllLoadedObjects: true);", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("catch (NullReferenceException exception)", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("catch (MissingReferenceException exception)", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_gpu_field_renderer_clear_skipped", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("reason=unity_teardown", fieldRenderer, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FireSimKeepsDynamicAshOutOfCompanionFields()
     {
         string source = ReadUnitySource("FireSim.compute");

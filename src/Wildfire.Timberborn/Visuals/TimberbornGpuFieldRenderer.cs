@@ -478,44 +478,78 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
 
     public void Clear()
     {
-        if (_root is not null)
+        DestroyUnityObject(ref _root);
+        DestroyUnityObject(ref _mesh);
+        DestroyUnityObject(ref _material);
+        if (!ReferenceEquals(_ashOverlayTexture, _ashOverlayMaskTexture))
         {
-            UnityEngine.Object.Destroy(_root);
-            _root = null;
+            DestroyUnityObject(ref _ashOverlayTexture);
+            DestroyUnityObject(ref _ashOverlayMaskTexture);
         }
-
-        if (_mesh is not null)
+        else
         {
-            UnityEngine.Object.Destroy(_mesh);
-            _mesh = null;
-        }
-
-        if (_material is not null)
-        {
-            UnityEngine.Object.Destroy(_material);
-            _material = null;
-        }
-
-        if (_ashOverlayTexture is not null)
-        {
-            UnityEngine.Object.Destroy(_ashOverlayTexture);
-            _ashOverlayTexture = null;
-        }
-
-        if (_ashOverlayMaskTexture is not null)
-        {
-            UnityEngine.Object.Destroy(_ashOverlayMaskTexture);
+            DestroyUnityObject(ref _ashOverlayTexture);
             _ashOverlayMaskTexture = null;
         }
 
-        if (_shaderBundle is not null)
-        {
-            _shaderBundle.Unload(unloadAllLoadedObjects: true);
-            _shaderBundle = null;
-        }
-
+        UnloadShaderBundle();
         _renderer = null;
         _materialFailureCount = 0;
+    }
+
+    private void DestroyUnityObject<T>(ref T? unityObject)
+        where T : UnityEngine.Object
+    {
+        T? target = unityObject;
+        unityObject = null;
+        if (target is null)
+        {
+            return;
+        }
+
+        try
+        {
+            UnityEngine.Object.Destroy(target);
+        }
+        catch (NullReferenceException exception)
+        {
+            LogClearSkipped(exception);
+        }
+        catch (MissingReferenceException exception)
+        {
+            LogClearSkipped(exception);
+        }
+    }
+
+    private void UnloadShaderBundle()
+    {
+        AssetBundle? bundle = _shaderBundle;
+        _shaderBundle = null;
+        if (bundle is null)
+        {
+            return;
+        }
+
+        try
+        {
+            bundle.Unload(unloadAllLoadedObjects: true);
+        }
+        catch (NullReferenceException exception)
+        {
+            LogClearSkipped(exception);
+        }
+        catch (MissingReferenceException exception)
+        {
+            LogClearSkipped(exception);
+        }
+    }
+
+    private void LogClearSkipped(Exception exception)
+    {
+        _logSink.Warning(
+            "wildfire_timberborn_gpu_field_renderer_clear_skipped " +
+            $"reason=unity_teardown exception={exception.GetType().Name} " +
+            $"message=\"{EscapeLogValue(exception.Message)}\"");
     }
 
     private void EnsureObjects()
