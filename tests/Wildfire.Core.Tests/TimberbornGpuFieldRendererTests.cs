@@ -209,10 +209,43 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("T? target = unityObject;\n        unityObject = null;", fieldRenderer, StringComparison.Ordinal);
         Assert.Contains("UnityEngine.Object.Destroy(target);", fieldRenderer, StringComparison.Ordinal);
         Assert.Contains("bundle.Unload(unloadAllLoadedObjects: true);", fieldRenderer, StringComparison.Ordinal);
-        Assert.Contains("catch (NullReferenceException exception)", fieldRenderer, StringComparison.Ordinal);
-        Assert.Contains("catch (MissingReferenceException exception)", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("catch (NullReferenceException)", fieldRenderer, StringComparison.Ordinal);
+        Assert.Contains("catch (MissingReferenceException)", fieldRenderer, StringComparison.Ordinal);
         Assert.Contains("wildfire_timberborn_gpu_field_renderer_clear_skipped", fieldRenderer, StringComparison.Ordinal);
         Assert.Contains("reason=unity_teardown", fieldRenderer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GpuFieldRendererClearSkippedLogDoesNotIncludeExceptionTokens()
+    {
+        string fieldRenderer = ReadTimberbornGpuFieldRendererSource();
+
+        Assert.Contains(
+            "\"wildfire_timberborn_gpu_field_renderer_clear_skipped \" +\n            \"reason=unity_teardown\"",
+            fieldRenderer,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("reason=unity_teardown exception=", fieldRenderer, StringComparison.Ordinal);
+        Assert.DoesNotContain("reason=unity_teardown\" +\n            $\"message=", fieldRenderer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Object reference not set to an instance of an object.", fieldRenderer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GpuFieldRendererClearLogsUnexpectedCleanupExceptionDiagnostics()
+    {
+        TimberbornGpuVisualFieldSurface surface = new(new RecordingFireLogSink());
+        RecordingFireLogSink logSink = new();
+        TimberbornGpuFieldRendererSink renderer = new(
+            surface,
+            logSink,
+            TimberbornGpuFieldRendererOptions.Default,
+            new ThrowingClearGpuFieldRendererPresenter());
+
+        renderer.Clear();
+
+        string warning = Assert.Single(logSink.WarningMessages);
+        Assert.Contains("wildfire_timberborn_gpu_field_renderer_failed", warning, StringComparison.Ordinal);
+        Assert.Contains("stage=clear", warning, StringComparison.Ordinal);
+        Assert.Contains("message=\"synthetic unexpected clear failure\"", warning, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -482,9 +515,35 @@ public sealed class TimberbornGpuFieldRendererTests
         }
     }
 
+    private sealed class ThrowingClearGpuFieldRendererPresenter : ITimberbornGpuFieldRendererPresenter
+    {
+        public TimberbornGpuFieldRendererPresenterState State { get; } = new(
+            RendererEnabled: true,
+            MaterialReady: true);
+
+        public TimberbornGpuFieldRendererPresentationResult RenderRegions(
+            IReadOnlyList<TimberbornGpuFieldRendererRegionState> regions)
+        {
+            return TimberbornGpuFieldRendererPresentationResult.Applied;
+        }
+
+        public TimberbornGpuFieldRendererPresentationResult RenderPresentation(
+            TimberbornGpuFieldRendererPresentation presentation)
+        {
+            return TimberbornGpuFieldRendererPresentationResult.Applied;
+        }
+
+        public void Clear()
+        {
+            throw new InvalidOperationException("synthetic unexpected clear failure");
+        }
+    }
+
     private sealed class RecordingFireLogSink : ITimberbornFireLogSink
     {
         public List<string> InfoMessages { get; } = [];
+
+        public List<string> WarningMessages { get; } = [];
 
         public void Info(string message)
         {
@@ -493,6 +552,7 @@ public sealed class TimberbornGpuFieldRendererTests
 
         public void Warning(string message)
         {
+            WarningMessages.Add(message);
         }
     }
 }

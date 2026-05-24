@@ -511,13 +511,13 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         {
             UnityEngine.Object.Destroy(target);
         }
-        catch (NullReferenceException exception)
+        catch (NullReferenceException)
         {
-            LogClearSkipped(exception);
+            LogClearSkipped();
         }
-        catch (MissingReferenceException exception)
+        catch (MissingReferenceException)
         {
-            LogClearSkipped(exception);
+            LogClearSkipped();
         }
     }
 
@@ -534,22 +534,21 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
         {
             bundle.Unload(unloadAllLoadedObjects: true);
         }
-        catch (NullReferenceException exception)
+        catch (NullReferenceException)
         {
-            LogClearSkipped(exception);
+            LogClearSkipped();
         }
-        catch (MissingReferenceException exception)
+        catch (MissingReferenceException)
         {
-            LogClearSkipped(exception);
+            LogClearSkipped();
         }
     }
 
-    private void LogClearSkipped(Exception exception)
+    private void LogClearSkipped()
     {
         _logSink.Warning(
             "wildfire_timberborn_gpu_field_renderer_clear_skipped " +
-            $"reason=unity_teardown exception={exception.GetType().Name} " +
-            $"message=\"{EscapeLogValue(exception.Message)}\"");
+            "reason=unity_teardown");
     }
 
     private void EnsureObjects()
