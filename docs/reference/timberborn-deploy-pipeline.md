@@ -113,6 +113,18 @@ Use an artifact directory only when a ZIP is not needed:
 bun scripts/package-release.ts --no-zip
 ```
 
+Validate the manifest version against the release checklist before handoff:
+
+```bash
+bun scripts/package-release.ts --version 0.1.0.0 --no-zip
+```
+
+Validate a tagged package:
+
+```bash
+bun run release:package -- --tag v0.1.0.0
+```
+
 Use a custom artifact root when a smoke test or downstream release step needs an alternate package name:
 
 ```bash
@@ -128,6 +140,8 @@ bun scripts/package-release.ts --deploy-arg --skip-asset-bundle
 The package command fails unless it can validate:
 
 - `manifest.json` contains non-empty `Id`, `Name`, `Version`, and `MinimumGameVersion`, and `Version` uses four numeric components.
+- `CHANGELOG.md` contains a heading for the manifest version.
+- Any requested `--version`, `--tag`, `WILDFIRE_RELEASE_TAG`, or GitHub tag ref matches the manifest version.
 - Required Release assemblies exist in `Scripts/`.
 - Required compute, diagnostic, effects, and visual AssetBundles and bundle manifests exist in `ComputeShaders/`.
 - Timberborn `Data` entries from `src/Wildfire.Timberborn/Data` are present at the mod root.

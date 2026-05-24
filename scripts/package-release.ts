@@ -16,6 +16,8 @@ type Options = {
   clean: boolean;
   configuration: string;
   deployArgs: string[];
+  expectedTag?: string;
+  expectedVersion?: string;
   outputDir: string;
   stagingModsDir: string;
   zip: boolean;
@@ -28,11 +30,21 @@ type ReleaseManifest = {
   Version?: unknown;
 };
 
+type ValidatedReleaseManifest = {
+  Id: string;
+  MinimumGameVersion: string;
+  Name: string;
+  Version: string;
+};
+
 type ArtifactSummary = {
+  changelogEntry: string;
   directory: string;
   fileCount: number;
   files: string[];
-  manifest: Required<Pick<ReleaseManifest, "Id" | "MinimumGameVersion" | "Name" | "Version">>;
+  manifest: ValidatedReleaseManifest;
+  releaseTag?: string;
+  releaseVersion: string;
   zipPath?: string;
 };
 
@@ -74,6 +86,8 @@ Options:
   --output <path>         Release output directory. Default: release/package.
   --staging-mods <path>   Temporary staging Mods directory. Default: release/package/staging-mods.
   --artifact-name <name>  Artifact directory name. Default: Wildfire.
+  --version <version>     Expected release version. Must match manifest.json Version.
+  --tag <tag>             Expected release tag. Accepts v-prefixed tags such as v0.1.0.0.
   --no-clean              Keep existing staging and output directories.
   --no-zip                Skip ZIP creation and produce only the artifact directory.
   --deploy-arg <arg>      Extra argument forwarded to deploy-timberborn-mod.ts.
@@ -82,6 +96,7 @@ Options:
 Examples:
   bun run release:package
   bun scripts/package-release.ts --no-zip
+  bun scripts/package-release.ts --version 0.1.0.0 --tag v0.1.0.0
   bun scripts/package-release.ts --artifact-name WildfireSmokeTest
   bun scripts/package-release.ts --deploy-arg --skip-asset-bundle`;
 
@@ -156,6 +171,24 @@ const parseArgs = (args: string[]): Options => {
         return { ...options, deployArgs: [...options.deployArgs, arg.slice("--deploy-arg=".length)] };
       }
 
+      if (arg === "--tag") {
+        consumedIndexes.add(index + 1);
+        return { ...options, expectedTag: requireValue(args, index + 1, arg) };
+      }
+
+      if (arg.startsWith("--tag=")) {
+        return { ...options, expectedTag: arg.slice("--tag=".length) };
+      }
+
+      if (arg === "--version") {
+        consumedIndexes.add(index + 1);
+        return { ...options, expectedVersion: requireValue(args, index + 1, arg) };
+      }
+
+      if (arg.startsWith("--version=")) {
+        return { ...options, expectedVersion: arg.slice("--version=".length) };
+      }
+
       if (arg === "--no-clean") {
         return { ...options, clean: false };
       }
@@ -186,6 +219,28 @@ const validateOptions = (options: Options): void => {
   if (options.artifactName === "." || options.artifactName === ".." || /[\\/]/u.test(options.artifactName)) {
     fail("--artifact-name must be a directory name, not a path.");
   }
+};
+
+const versionPattern = /^\d+\.\d+\.\d+\.\d+$/u;
+
+const normalizeReleaseTag = (tag: string): string => {
+  const normalized = tag.replace(/^refs\/tags\//u, "").replace(/^v/u, "");
+  if (!versionPattern.test(normalized)) {
+    fail(`Release tag must be v-prefixed or bare four-part version: ${tag}`);
+  }
+
+  return normalized;
+};
+
+const readExpectedTag = (options: Options): string | undefined => {
+  const githubTag =
+    process.env.GITHUB_REF_TYPE === "tag"
+      ? process.env.GITHUB_REF_NAME
+      : process.env.GITHUB_REF?.startsWith("refs/tags/")
+        ? process.env.GITHUB_REF
+        : undefined;
+
+  return options.expectedTag ?? process.env.WILDFIRE_RELEASE_TAG ?? githubTag;
 };
 
 const run = (command: string, args: string[], cwd = repoRoot): void => {
@@ -241,7 +296,7 @@ const validateManifest = (artifactDir: string): ArtifactSummary["manifest"] => {
     .filter((key) => typeof manifest[key] !== "string" || !manifest[key].trim())
     .forEach((key) => fail(`manifest.json must contain a non-empty string ${key}.`));
 
-  if (!/^\d+\.\d+\.\d+\.\d+$/u.test(manifest.Version as string)) {
+  if (!versionPattern.test(manifest.Version as string)) {
     fail(`manifest.json Version must use four numeric components: ${String(manifest.Version)}`);
   }
 
@@ -250,6 +305,41 @@ const validateManifest = (artifactDir: string): ArtifactSummary["manifest"] => {
     MinimumGameVersion: manifest.MinimumGameVersion as string,
     Name: manifest.Name as string,
     Version: manifest.Version as string,
+  };
+};
+
+const validateReleaseIdentity = (
+  manifest: ArtifactSummary["manifest"],
+  options: Options,
+  zipPath?: string,
+): Pick<ArtifactSummary, "changelogEntry" | "releaseTag" | "releaseVersion"> => {
+  const releaseVersion = manifest.Version;
+  if (options.expectedVersion && options.expectedVersion !== releaseVersion) {
+    fail(`--version ${options.expectedVersion} does not match manifest.json Version ${releaseVersion}.`);
+  }
+
+  const expectedTag = readExpectedTag(options);
+  const normalizedTagVersion = expectedTag ? normalizeReleaseTag(expectedTag) : undefined;
+  if (normalizedTagVersion && normalizedTagVersion !== releaseVersion) {
+    fail(`Release tag ${expectedTag} does not match manifest.json Version ${releaseVersion}.`);
+  }
+
+  if (zipPath && !zipPath.endsWith(`-${releaseVersion}.zip`)) {
+    fail(`Release zip name must include manifest version ${releaseVersion}: ${zipPath}`);
+  }
+
+  const changelogPath = join(repoRoot, "CHANGELOG.md");
+  requireFile(changelogPath);
+  const changelog = readFileSync(changelogPath, "utf8");
+  const changelogHeading = `## [${releaseVersion}] - `;
+  if (!changelog.includes(changelogHeading)) {
+    fail(`CHANGELOG.md must contain a release heading for ${releaseVersion}.`);
+  }
+
+  return {
+    changelogEntry: `CHANGELOG.md#[${releaseVersion}]`,
+    releaseTag: expectedTag,
+    releaseVersion,
   };
 };
 
@@ -342,9 +432,15 @@ const validateZip = (zipPath: string, artifactName: string): void => {
     .forEach((entry) => fail(`Release zip is missing ${entry}`));
 };
 
-const validateArtifact = (artifactDir: string, artifactName: string, zipPath?: string): ArtifactSummary => {
+const validateArtifact = (
+  artifactDir: string,
+  artifactName: string,
+  options: Options,
+  zipPath?: string,
+): ArtifactSummary => {
   requireDirectory(artifactDir);
   const manifest = validateManifest(artifactDir);
+  const releaseIdentity = validateReleaseIdentity(manifest, options, zipPath);
   validateRequiredFiles(artifactDir);
   validateModData(artifactDir);
   validateBundleManifestText(artifactDir);
@@ -361,6 +457,7 @@ const validateArtifact = (artifactDir: string, artifactName: string, zipPath?: s
     fileCount: files.length,
     files,
     manifest,
+    ...releaseIdentity,
     zipPath,
   };
 };
@@ -409,13 +506,18 @@ const main = (): void => {
     createZip(artifactDir, zipPath, options.artifactName);
   }
 
-  const summary = validateArtifact(artifactDir, options.artifactName, zipPath);
+  const summary = validateArtifact(artifactDir, options.artifactName, options, zipPath);
   log(`release_package_ready directory=${summary.directory}`);
   if (summary.zipPath) {
     log(`release_package_zip=${summary.zipPath}`);
   }
   log(`manifest_id=${summary.manifest.Id}`);
   log(`manifest_version=${summary.manifest.Version}`);
+  log(`release_version=${summary.releaseVersion}`);
+  if (summary.releaseTag) {
+    log(`release_tag=${summary.releaseTag}`);
+  }
+  log(`changelog_entry=${summary.changelogEntry}`);
   log(`file_count=${summary.fileCount}`);
   summary.files.forEach((file) => log(`artifact_file ${file}`));
 };
