@@ -8,6 +8,7 @@
 - The simulation has one authoritative GPU path. `Wildfire.Core` owns packed data and host-facing contracts, `Wildfire.Unity` owns compute dispatch and shader-side field state, and `Wildfire.Timberborn` owns adapter import, QA commands, visuals, alerts, persistence, and gameplay consequences.
 - The old alternate C# fire-spread execution path is gone. Future simulation behavior should target `FireSim.compute` and the Unity shader harness.
 - Timberborn QA has a file-backed command bridge with `status`, `qa-readiness`, stimulus commands, deploy tooling, coordinate references, and live evidence conventions.
+- The initial public release platform target is macOS only, contingent on `TWF-104` validating the packaged release artifact in a real macOS Timberborn run. Windows is unvalidated and unsupported unless `TWF-105` and `TWF-106` complete before release; Linux, SteamOS, Steam Deck, Proton, and other platforms are unsupported for the first public release.
 
 ## Durable References
 
@@ -43,6 +44,7 @@ Treat that list as a migration snapshot only. Refresh from GitHub before assigni
 - If a ticket fails required QA or review, keep the GitHub issue open and update labels/comments with the exact blocker.
 - Use `bun run typecheck` before accepting TypeScript script changes.
 - `TWF-074` has fresh partial live evidence in `qa-evidence/twf-074-2026-05-24-live/` and issue #15, but should stay open for a clean release-media rerun: fresh launch/load, camera framed on the sampled beaver, hidden desktop overlays, and a contaminated/toxic setup that places contaminated smoke on sampled beaver cells.
+- Do not claim platform support from package contents alone. Platform support needs packaged-artifact evidence plus live `Player.log` and `status` or `qa-readiness` proof on that platform; Windows is blocked on a Windows Timberborn validation environment and Windows AssetBundle packaging, while Linux/SteamOS/Deck need an explicit support decision and live target environment.
 
 ## Useful Commands
 

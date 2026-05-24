@@ -104,6 +104,25 @@ unzip -Z1 release/package/Wildfire-0.1.0.0.zip | sort
 
 No live Timberborn QA is required for release packaging alone. Live validation remains owned by feature-specific QA tickets and the deploy pipeline checks that launch Timberborn.
 
+## Release Platform Support
+
+The initial public release target is macOS only, contingent on `TWF-104` validating the packaged release artifact in a real macOS Timberborn run. The release package workflow currently builds and validates the four macOS AssetBundles: `wildfire_compute_mac`, `wildfire_diagnostic_mac`, `wildfire_effects_mac`, and `wildfire_visual_mac`.
+
+Do not claim Windows support for the first release unless `TWF-105` and `TWF-106` complete before release. Runtime code has Windows bundle names, but the current package workflow does not build, validate, or ship the matching `wildfire_*_win` bundles. Windows remains unvalidated and unsupported for the first public release until a Windows Timberborn environment proves the packaged artifact end to end.
+
+Linux, SteamOS, Steam Deck, Proton, and other platforms are unsupported for the first public release. Treat SteamOS or Deck playability as a separate compatibility question, not a native Timberborn mod support claim.
+
+Evidence required before claiming platform support:
+
+- macOS support requires `bun run release:package` evidence showing the expected package directory or ZIP, manifest identity/version, managed assemblies, and all four `*_mac` bundles plus manifests; install or staging evidence from the packaged artifact; a live macOS Timberborn run; copied `Player.log` evidence for required bundle load and startup; and `status` or `qa-readiness` evidence that the game loaded with Wildfire ready.
+- Windows support requires package-script support for Windows AssetBundles, expected names `wildfire_compute_win`, `wildfire_diagnostic_win`, `wildfire_effects_win`, and `wildfire_visual_win`, release artifact validation that includes those files, a real Windows Timberborn install, copied `Player.log`, and `status` or `qa-readiness` evidence from that packaged artifact.
+- Linux, SteamOS, or Steam Deck support would require an explicit product decision, defined platform-specific bundle names and build targets for the runtime platform Unity reports, packaged artifact validation, and live evidence on the chosen Linux, SteamOS, Deck, or Proton environment.
+
+Current environment blockers:
+
+- Windows validation is blocked on access to a Windows machine or VM with Steam Timberborn installed, plus Unity/package support for the Windows bundles.
+- Linux, SteamOS, and Steam Deck validation are blocked on a deliberate support decision and a real target environment with package and live-run evidence.
+
 ## Resource Fuel Catalog
 
 `TWF-114` inspected installed Timberborn blueprints under `~/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/StreamingAssets/Modding/Blueprints`. The adapter catalog covers the 60 shipped `Good.*` resource ids found there, including materials, food, ingredients, liquids, medicine-like goods, volatile goods, and explosive goods. Unknown ids intentionally map to fuel `1`, flammability `0`, unresolved residue, and `Unknown` hazard so downstream destruction logic can stay conservative until the adapter resolves the name.
