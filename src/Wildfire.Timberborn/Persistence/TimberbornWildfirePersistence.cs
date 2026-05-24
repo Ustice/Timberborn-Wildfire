@@ -113,6 +113,7 @@ public static class TimberbornWildfirePersistenceCodec
                 entry.LastDecisionTick.ToString(CultureInfo.InvariantCulture),
                 entry.ConsecutiveExposedSamples.ToString(CultureInfo.InvariantCulture),
                 entry.IsExposed ? "1" : "0",
+                entry.ConsecutiveFireHeatExposedSamples.ToString(CultureInfo.InvariantCulture),
                 entry.PersistenceVersion.ToString(CultureInfo.InvariantCulture))));
 
         snapshot.Consequences.BurnDamageStates
@@ -269,15 +270,26 @@ public static class TimberbornWildfirePersistenceCodec
     private static TimberbornBeaverFieldBehaviorStateEntry DecodeBeaverBehaviorEntry(IReadOnlyList<string> parts)
     {
         bool hasLastAction = parts.Count >= 8;
+        bool hasFireHeatSamples = parts.Count >= 9;
+        TimberbornBeaverFieldBehaviorVariant variant =
+            (TimberbornBeaverFieldBehaviorVariant)ParseInt(parts[2]);
+        int exposedSamples = ParseInt(hasLastAction ? parts[5] : parts[4]);
+        int fireHeatSamples = hasFireHeatSamples
+            ? ParseInt(parts[7])
+            : variant == TimberbornBeaverFieldBehaviorVariant.FireHeat
+                ? exposedSamples
+                : 0;
+
         return new TimberbornBeaverFieldBehaviorStateEntry(
-            ParseInt(hasLastAction ? parts[7] : parts[6]),
+            ParseInt(hasFireHeatSamples ? parts[8] : hasLastAction ? parts[7] : parts[6]),
             DecodeString(parts[1]),
-            (TimberbornBeaverFieldBehaviorVariant)ParseInt(parts[2]),
+            variant,
             hasLastAction
                 ? (TimberbornBeaverFieldBehaviorAction)ParseInt(parts[3])
                 : TimberbornBeaverFieldBehaviorAction.SafeNoOp,
             ParseUInt(hasLastAction ? parts[4] : parts[3]),
-            ParseInt(hasLastAction ? parts[5] : parts[4]),
+            exposedSamples,
+            fireHeatSamples,
             ParseInt(hasLastAction ? parts[6] : parts[5]) != 0);
     }
 

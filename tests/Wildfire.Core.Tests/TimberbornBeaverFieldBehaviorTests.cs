@@ -29,6 +29,133 @@ public sealed class TimberbornBeaverFieldBehaviorTests
     }
 
     [Fact]
+    public void DispatcherReportsFireHeatAvoidanceAndWorkInterruptionAsSafeUnavailable()
+    {
+        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
+        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
+
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 2)]), tick: 10);
+
+        TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
+        Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp, decision.Action);
+        Assert.Equal(1, dispatcher.Counters.FireHeatExposedBeavers);
+        Assert.Equal(2, dispatcher.Counters.FireHeatAvoidanceCandidates);
+        Assert.Equal(0, dispatcher.Counters.FireHeatAvoidedCells);
+        Assert.Equal(2, dispatcher.Counters.FireHeatAvoidanceSkippedNoSafeApi);
+        Assert.Equal(1, dispatcher.Counters.FireHeatInterruptedJobCandidates);
+        Assert.Equal(0, dispatcher.Counters.FireHeatInterruptedJobs);
+        Assert.Equal(1, dispatcher.Counters.FireHeatInterruptedJobsSkippedNoSafeApi);
+        Assert.Equal(3, dispatcher.Counters.SkippedNoSafeApi);
+    }
+
+    [Fact]
+    public void DispatcherTreatsActiveFlameAsImmediateSingedCandidate()
+    {
+        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
+        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
+
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1, maxFire: 0.9f)]), tick: 10);
+
+        TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp, decision.Action);
+        Assert.Equal(1, dispatcher.Counters.FireHeatActiveFlameContacts);
+        Assert.Equal(0, dispatcher.Counters.FireHeatSingedEntered);
+        Assert.Equal(0.9f, decision.MaxFire);
+    }
+
+    [Fact]
+    public void DispatcherAccumulatesFireHeatThroughSingedBurnedAndDeathCandidateStates()
+    {
+        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
+        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
+            actuator,
+            new RecordingFireLogSink(),
+            new TimberbornBeaverFieldBehaviorOptions(
+                DecisionCooldownTicks: 1,
+                FireHeatSingedThresholdSamples: 2,
+                FireHeatBurnedThresholdSamples: 3,
+                FireHeatDeathCandidateThresholdSamples: 4));
+
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 11);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 12);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 13);
+
+        Assert.Equal(1, dispatcher.Counters.FireHeatSingedEntered);
+        Assert.Equal(1, dispatcher.Counters.FireHeatBurnedEntered);
+        Assert.Equal(1, dispatcher.Counters.FireHeatDeathCandidates);
+        Assert.Equal(1, dispatcher.Counters.FireHeatSingedSkippedNoSafeApi);
+        Assert.Equal(1, dispatcher.Counters.FireHeatBurnedSkippedNoSafeApi);
+        Assert.Equal(1, dispatcher.Counters.FireHeatDeathSkippedUnsafeApi);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatBurnedSafeNoOp, actuator.Decisions.Last().Action);
+        Assert.Equal(4, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveFireHeatExposedSamples);
+    }
+
+    [Fact]
+    public void DispatcherDoesNotPrimeFireHeatInjuryFromSmokeOrSteamExposure()
+    {
+        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
+        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
+            actuator,
+            new RecordingFireLogSink(),
+            new TimberbornBeaverFieldBehaviorOptions(
+                DecisionCooldownTicks: 1,
+                SmokeCoughingThresholdSamples: 8,
+                FireHeatSingedThresholdSamples: 2,
+                FireHeatBurnedThresholdSamples: 3,
+                FireHeatDeathCandidateThresholdSamples: 4));
+
+        new[]
+        {
+            Classification("beaver-mixed", respiratory: 1),
+            Classification("beaver-mixed", steam: 1),
+            Classification("beaver-mixed", respiratory: 1),
+        }.Select((classification, index) => (classification, index))
+            .ToList()
+            .ForEach(sample => dispatcher.Dispatch(Snapshot([sample.classification]), tick: (uint)(10 + sample.index)));
+
+        dispatcher.Dispatch(Snapshot([Classification("beaver-mixed", burn: 1)]), tick: 13);
+
+        TimberbornBeaverFieldBehaviorDecision decision = actuator.Decisions.Last();
+        TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
+        Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp, decision.Action);
+        Assert.Equal(1, entry.ConsecutiveFireHeatExposedSamples);
+        Assert.Equal(0, dispatcher.Counters.FireHeatSingedEntered);
+        Assert.Equal(0, dispatcher.Counters.FireHeatBurnedEntered);
+        Assert.Equal(0, dispatcher.Counters.FireHeatDeathCandidates);
+        Assert.Equal(0, dispatcher.Counters.FireHeatSingedSkippedNoSafeApi);
+        Assert.Equal(0, dispatcher.Counters.FireHeatBurnedSkippedNoSafeApi);
+        Assert.Equal(0, dispatcher.Counters.FireHeatDeathSkippedUnsafeApi);
+    }
+
+    [Fact]
+    public void DispatcherDecaysFireHeatStateAfterExposureClears()
+    {
+        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
+            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Applied),
+            new RecordingFireLogSink(),
+            new TimberbornBeaverFieldBehaviorOptions(
+                DecisionCooldownTicks: 1,
+                FireHeatSingedThresholdSamples: 2,
+                FireHeatBurnedThresholdSamples: 3,
+                FireHeatRecoveryDecaySamples: 2));
+
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 11);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 12);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-fire")]), tick: 13);
+
+        Assert.Equal(1, dispatcher.Counters.FireHeatRecoveryDecays);
+        Assert.Equal(1, dispatcher.Counters.FireHeatBurnedRecovered);
+        Assert.Equal(1, dispatcher.Counters.FireHeatSingedRecovered);
+        TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
+        Assert.False(entry.IsExposed);
+        Assert.Equal(1, entry.ConsecutiveFireHeatExposedSamples);
+    }
+
+    [Fact]
     public void DispatcherTreatsCleanSteamAsNonToxicRespiratoryBehavior()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
@@ -126,7 +253,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         Assert.Equal(3, dispatcher.Counters.SmokeExposureAccumulatedSamples);
         Assert.Equal(1, dispatcher.Counters.SmokeCoughingEntered);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, actuator.Decisions.Last().Variant);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown, actuator.Decisions.Last().Action);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp, actuator.Decisions.Last().Action);
         Assert.Equal(3, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
     }
 
@@ -224,6 +351,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
                 TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown,
                 LastDecisionTick: 11,
                 ConsecutiveExposedSamples: 8,
+                ConsecutiveFireHeatExposedSamples: 0,
                 IsExposed: true),
             tick: 12);
 
@@ -310,7 +438,8 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         int contaminatedSmoke = 0,
         int toxic = 0,
         int steam = 0,
-        int taintedAftermath = 0)
+        int taintedAftermath = 0,
+        float maxFire = 0f)
     {
         return new TimberbornBeaverFieldExposureClassification(
             beaverId,
@@ -323,7 +452,8 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             ContaminatedSmokeCells: contaminatedSmoke,
             ToxicExposureCells: toxic,
             SteamCells: steam,
-            TaintedAftermathCells: taintedAftermath);
+            TaintedAftermathCells: taintedAftermath,
+            MaxFire: maxFire);
     }
 
     private static TimberbornBeaverFieldBehaviorDecision Decision(
@@ -343,6 +473,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             ToxicExposureCells: 0,
             SteamCells: 0,
             TaintedAftermathCells: 0,
+            MaxFire: 0f,
             Tick: tick);
     }
 
