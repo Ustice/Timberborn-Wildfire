@@ -388,6 +388,52 @@ public sealed class TimberbornFireDeltaConsumerTests
     }
 
     [Fact]
+    public void ConsumePublishesStructureOnFireFeedbackFromStructureRollbackSummary()
+    {
+        RecordingFireDeltaSinks recordingSinks = new();
+        ScriptedStructureBurnDamageRollbackSink structureRollbackSink = new(
+            [
+                new TimberbornStructureBurnDamageRollbackSummary(
+                    ConsideredDeltaCount: 4,
+                    MatchedStructureCellCount: 4,
+                    DuplicateStructureTargetSuppressedCount: 2,
+                    ZeroBurnableCapacityTargetCount: 0,
+                    MaterialValueLost: 3,
+                    ClosedStructureCount: 0,
+                    RepairBlockedCount: 2,
+                    RepairEligibleCount: 0,
+                    ScorchedStageCount: 1,
+                    PartialConstructionStageCount: 0,
+                    UnfinishedStageCount: 1,
+                    VisualRollbackAppliedCount: 1,
+                    ConstructionPhaseEnteredCount: 0,
+                    SkippedNativeConstructionApiCount: 0,
+                    SkippedNoSafeApiCount: 0,
+                    TotalDamageApplied: 3),
+            ]);
+        TimberbornFireDeltaConsumer consumer = new(
+            new RecordingFireLogSink(),
+            new TimberbornFireDeltaConsumerSinks(
+                structureBurnDamageRollbackSink: structureRollbackSink,
+                alertSink: recordingSinks));
+
+        consumer.Consume(81, [new CellDelta(6, Cell(fuel: 12, heat: 15), Cell(fuel: 9, heat: 15))]);
+
+        TimberbornWorldConsequenceFeedbackInput input = Assert.Single(recordingSinks.WorldConsequenceFeedback);
+        TimberbornWorldConsequenceFeedbackEvent structureEvent = Assert.Single(
+            input.Events,
+            static feedbackEvent => feedbackEvent.EventClass == TimberbornWorldConsequenceFeedbackClass.StructureOnFire);
+        Assert.Equal(4, structureEvent.SourceEventCount);
+        Assert.Equal(2, structureEvent.AffectedCellCount);
+        Assert.Equal("2 structures on fire", structureEvent.Detail);
+        Assert.DoesNotContain(
+            input.Events,
+            static feedbackEvent =>
+                feedbackEvent.EventClass == TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure &&
+                feedbackEvent.SourceEventCount == 2);
+    }
+
+    [Fact]
     public void ConsumeUpdatesOnlyLatestOverlayStatesForRoutedChangedCells()
     {
         RecordingFireDeltaSinks recordingSinks = new();
@@ -454,7 +500,7 @@ public sealed class TimberbornFireDeltaConsumerTests
         ITimberbornFireDebugVisualSink,
         ITimberbornFireVisualEffectSink,
         ITimberbornFireGameplayConsequenceSink,
-        ITimberbornFireAlertSink
+        ITimberbornWorldConsequenceFeedbackSink
     {
         public List<TimberbornFireDebugVisualCellState> DebugVisualStates { get; } = [];
 
@@ -463,6 +509,8 @@ public sealed class TimberbornFireDeltaConsumerTests
         public List<TimberbornFireGameplayConsequence> GameplayConsequences { get; } = [];
 
         public List<TimberbornFireAlertEvent> AlertEvents { get; } = [];
+
+        public List<TimberbornWorldConsequenceFeedbackInput> WorldConsequenceFeedback { get; } = [];
 
         public void UpdateDebugVisualState(TimberbornFireDebugVisualCellState state)
         {
@@ -482,6 +530,23 @@ public sealed class TimberbornFireDeltaConsumerTests
         public void PublishAlert(TimberbornFireAlertEvent alertEvent)
         {
             AlertEvents.Add(alertEvent);
+        }
+
+        public void BeginAlertDispatch(uint tick)
+        {
+        }
+
+        public void CompleteAlertDispatch(uint tick)
+        {
+        }
+
+        public void PublishConsequences(TimberbornWorldConsequenceFeedbackInput input)
+        {
+            WorldConsequenceFeedback.Add(input);
+        }
+
+        public void PublishBeaverBehavior(uint tick, TimberbornBeaverFieldBehaviorCounters counters)
+        {
         }
     }
 

@@ -111,6 +111,29 @@ public sealed class TimberbornPlayerFireAlertTests
     }
 
     [Fact]
+    public void StructureOnFireFeedbackUsesDistinctAlertClassAndCounters()
+    {
+        RecordingPlayerNotificationSink notificationSink = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink);
+
+        sink.BeginAlertDispatch(24);
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            24,
+            [Event(TimberbornWorldConsequenceFeedbackClass.StructureOnFire, 4, 2, 9, "2 structures on fire")]));
+        sink.CompleteAlertDispatch(24);
+
+        Assert.Equal(["Wildfire alert: 2 structures on fire."], notificationSink.WarningMessages);
+        Assert.Equal([9], notificationSink.FocusCellIndices);
+        Assert.Equal(4, sink.Counters.StructureOnFireEventCount);
+        Assert.Equal(2, sink.Counters.StructureOnFireCoalescedEventCount);
+        Assert.Equal(1, sink.Counters.StructureOnFireNotificationCount);
+        Assert.Equal(0, sink.Counters.StructureOnFireNotificationSuppressedThrottleCount);
+        Assert.Equal(0, sink.Counters.StructureOnFirePresentationFailureCount);
+        Assert.Equal(TimberbornWorldConsequenceFeedbackClass.StructureOnFire, sink.Counters.LastPrimaryClass);
+    }
+
+    [Fact]
     public void ThrottlesRepeatedConsequenceNotificationsWithoutDroppingCounters()
     {
         RecordingPlayerNotificationSink notificationSink = new();
@@ -142,6 +165,54 @@ public sealed class TimberbornPlayerFireAlertTests
     }
 
     [Fact]
+    public void ThrottlesRepeatedStructureOnFireNotificationsWithoutDroppingCounters()
+    {
+        RecordingPlayerNotificationSink notificationSink = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink, notificationThrottleTicks: 5);
+
+        sink.BeginAlertDispatch(30);
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            30,
+            [Event(TimberbornWorldConsequenceFeedbackClass.StructureOnFire, 3, 1, 4)]));
+        sink.CompleteAlertDispatch(30);
+        sink.BeginAlertDispatch(32);
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            32,
+            [Event(TimberbornWorldConsequenceFeedbackClass.StructureOnFire, 5, 2, 7)]));
+        sink.CompleteAlertDispatch(32);
+
+        Assert.Single(notificationSink.WarningMessages);
+        Assert.Equal(8, sink.Counters.StructureOnFireEventCount);
+        Assert.Equal(3, sink.Counters.StructureOnFireCoalescedEventCount);
+        Assert.Equal(1, sink.Counters.StructureOnFireNotificationCount);
+        Assert.Equal(1, sink.Counters.StructureOnFireNotificationSuppressedThrottleCount);
+        Assert.False(sink.Counters.LastNotificationSent);
+        Assert.True(sink.Counters.LastNotificationSuppressed);
+    }
+
+    [Fact]
+    public void StructureOnFirePresentationFailuresAreIsolated()
+    {
+        ThrowingPlayerNotificationSink notificationSink = new();
+        RecordingFireLogSink logSink = new();
+        TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink);
+
+        sink.BeginAlertDispatch(35);
+        sink.PublishConsequences(new TimberbornWorldConsequenceFeedbackInput(
+            35,
+            [Event(TimberbornWorldConsequenceFeedbackClass.StructureOnFire, 2, 1, 6)]));
+        sink.CompleteAlertDispatch(35);
+
+        Assert.Equal(0, sink.Counters.TotalNotificationCount);
+        Assert.Equal(2, sink.Counters.StructureOnFireEventCount);
+        Assert.Equal(1, sink.Counters.StructureOnFireCoalescedEventCount);
+        Assert.Equal(1, sink.Counters.StructureOnFirePresentationFailureCount);
+        Assert.Equal(1, sink.Counters.PresentationFailureCount);
+        Assert.False(sink.Counters.LastNotificationSent);
+    }
+
+    [Fact]
     public void BeaverDangerAndDeathFeedbackUsesHighestPriorityClass()
     {
         RecordingPlayerNotificationSink notificationSink = new();
@@ -161,7 +232,8 @@ public sealed class TimberbornPlayerFireAlertTests
         TimberbornWorldConsequenceFeedbackClass eventClass,
         int sourceEvents,
         int affectedCells,
-        int? focusCellIndex)
+        int? focusCellIndex,
+        string? detail = null)
     {
         return new TimberbornWorldConsequenceFeedbackEvent(
             eventClass,
@@ -169,7 +241,7 @@ public sealed class TimberbornPlayerFireAlertTests
             SourceEventCount: sourceEvents,
             AffectedCellCount: affectedCells,
             FocusCellIndex: focusCellIndex,
-            Detail: eventClass.ToString());
+            Detail: detail ?? eventClass.ToString());
     }
 
     private static TimberbornBeaverFieldBehaviorCounters BeaverCounters(

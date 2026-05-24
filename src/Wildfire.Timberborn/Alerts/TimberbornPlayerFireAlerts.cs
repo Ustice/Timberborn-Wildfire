@@ -107,6 +107,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
         string message = FormatMessage(events, primaryClass);
         bool suppressedByThrottle = ShouldSuppressByThrottle(tick);
         bool notificationSent = false;
+        bool presentationFailed = false;
         int failureCount = Counters.PresentationFailureCount;
         int logOnlyFallbackCount = Counters.LogOnlyFallbackCount;
 
@@ -129,6 +130,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
             }
             catch (Exception exception)
             {
+                presentationFailed = true;
                 failureCount++;
                 logOnlyFallbackCount++;
                 _logSink.Warning(
@@ -149,6 +151,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
             LogOnlyFallbackCount: logOnlyFallbackCount,
             LastNotificationSent: notificationSent,
             LastNotificationSuppressed: suppressedByThrottle,
+            LastPresentationFailed: presentationFailed,
             LastPrimaryClass: primaryClass,
             LastMessage: message,
             Events: events);
@@ -353,11 +356,27 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
             return activeFire.Value.Detail;
         }
 
+        TimberbornWorldConsequenceFeedbackEvent? structureOnFire =
+            orderedEvents.SingleOrDefault(static feedbackEvent =>
+                feedbackEvent.EventClass == TimberbornWorldConsequenceFeedbackClass.StructureOnFire);
+        if (orderedEvents.Length == 1 &&
+            primaryClass == TimberbornWorldConsequenceFeedbackClass.StructureOnFire &&
+            structureOnFire is { Detail.Length: > 0 })
+        {
+            return $"Wildfire alert: {structureOnFire.Value.Detail}.";
+        }
+
         string classSummary = string.Join(
             "; ",
             orderedEvents.Select(static feedbackEvent =>
                 $"{FormatClassName(feedbackEvent.EventClass)}: {feedbackEvent.SourceEventCount}"));
         string regionSummary = FormatRegion(orderedEvents);
+        if (primaryClass == TimberbornWorldConsequenceFeedbackClass.StructureOnFire &&
+            structureOnFire is { Detail.Length: > 0 })
+        {
+            return $"Wildfire alert: {structureOnFire.Value.Detail}. {classSummary}{regionSummary}.";
+        }
+
         return $"Wildfire consequence: {FormatClassName(primaryClass)}. {classSummary}{regionSummary}.";
     }
 
@@ -390,6 +409,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
         return eventClass switch
         {
             TimberbornWorldConsequenceFeedbackClass.ActiveFire => "active fire",
+            TimberbornWorldConsequenceFeedbackClass.StructureOnFire => "structure on fire",
             TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure => "building damage/closure",
             TimberbornWorldConsequenceFeedbackClass.PlantCropResourceLoss => "plant/crop/resource loss",
             TimberbornWorldConsequenceFeedbackClass.BeaverDangerDeath => "beaver danger/death",
@@ -413,6 +433,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
         return eventClass switch
         {
             TimberbornWorldConsequenceFeedbackClass.BeaverDangerDeath => 50,
+            TimberbornWorldConsequenceFeedbackClass.StructureOnFire => 45,
             TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure => 40,
             TimberbornWorldConsequenceFeedbackClass.ActiveFire => 30,
             TimberbornWorldConsequenceFeedbackClass.PlantCropResourceLoss => 20,
@@ -453,12 +474,17 @@ public sealed record TimberbornPlayerFireAlertCounters(
     int TotalSourceEventCount,
     int TotalCoalescedEventCount,
     int ActiveFireEventCount,
+    int StructureOnFireEventCount,
+    int StructureOnFireCoalescedEventCount,
     int BuildingDamageClosureEventCount,
     int PlantCropResourceLossEventCount,
     int BeaverDangerDeathEventCount,
     int AshAftermathEventCount,
     int TotalNotificationCount,
     int ActiveFireNotificationCount,
+    int StructureOnFireNotificationCount,
+    int StructureOnFireNotificationSuppressedThrottleCount,
+    int StructureOnFirePresentationFailureCount,
     int BuildingDamageClosureNotificationCount,
     int PlantCropResourceLossNotificationCount,
     int BeaverDangerDeathNotificationCount,
@@ -480,12 +506,17 @@ public sealed record TimberbornPlayerFireAlertCounters(
         TotalSourceEventCount: 0,
         TotalCoalescedEventCount: 0,
         ActiveFireEventCount: 0,
+        StructureOnFireEventCount: 0,
+        StructureOnFireCoalescedEventCount: 0,
         BuildingDamageClosureEventCount: 0,
         PlantCropResourceLossEventCount: 0,
         BeaverDangerDeathEventCount: 0,
         AshAftermathEventCount: 0,
         TotalNotificationCount: 0,
         ActiveFireNotificationCount: 0,
+        StructureOnFireNotificationCount: 0,
+        StructureOnFireNotificationSuppressedThrottleCount: 0,
+        StructureOnFirePresentationFailureCount: 0,
         BuildingDamageClosureNotificationCount: 0,
         PlantCropResourceLossNotificationCount: 0,
         BeaverDangerDeathNotificationCount: 0,
@@ -508,6 +539,7 @@ public sealed record TimberbornPlayerFireAlertCounters(
         int LogOnlyFallbackCount,
         bool LastNotificationSent,
         bool LastNotificationSuppressed,
+        bool LastPresentationFailed,
         TimberbornWorldConsequenceFeedbackClass LastPrimaryClass,
         string LastMessage,
         IReadOnlyList<TimberbornWorldConsequenceFeedbackEvent> Events)
@@ -526,6 +558,10 @@ public sealed record TimberbornPlayerFireAlertCounters(
             TotalCoalescedEventCount = TotalCoalescedEventCount + coalescedEventCount,
             ActiveFireEventCount = ActiveFireEventCount +
                 SumClass(Events, TimberbornWorldConsequenceFeedbackClass.ActiveFire),
+            StructureOnFireEventCount = StructureOnFireEventCount +
+                SumClass(Events, TimberbornWorldConsequenceFeedbackClass.StructureOnFire),
+            StructureOnFireCoalescedEventCount = StructureOnFireCoalescedEventCount +
+                SumAffectedClass(Events, TimberbornWorldConsequenceFeedbackClass.StructureOnFire),
             BuildingDamageClosureEventCount = BuildingDamageClosureEventCount +
                 SumClass(Events, TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure),
             PlantCropResourceLossEventCount = PlantCropResourceLossEventCount +
@@ -537,6 +573,19 @@ public sealed record TimberbornPlayerFireAlertCounters(
             TotalNotificationCount = TotalNotificationCount + (sent ? 1 : 0),
             ActiveFireNotificationCount = ActiveFireNotificationCount +
                 NotificationClassCount(Events, TimberbornWorldConsequenceFeedbackClass.ActiveFire, sent),
+            StructureOnFireNotificationCount = StructureOnFireNotificationCount +
+                NotificationClassCount(Events, TimberbornWorldConsequenceFeedbackClass.StructureOnFire, sent),
+            StructureOnFireNotificationSuppressedThrottleCount =
+                StructureOnFireNotificationSuppressedThrottleCount +
+                NotificationClassCount(
+                    Events,
+                    TimberbornWorldConsequenceFeedbackClass.StructureOnFire,
+                    LastNotificationSuppressed),
+            StructureOnFirePresentationFailureCount = StructureOnFirePresentationFailureCount +
+                NotificationClassCount(
+                    Events,
+                    TimberbornWorldConsequenceFeedbackClass.StructureOnFire,
+                    LastPresentationFailed),
             BuildingDamageClosureNotificationCount = BuildingDamageClosureNotificationCount +
                 NotificationClassCount(Events, TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure, sent),
             PlantCropResourceLossNotificationCount = PlantCropResourceLossNotificationCount +
@@ -565,6 +614,15 @@ public sealed record TimberbornPlayerFireAlertCounters(
             .Sum(static feedbackEvent => feedbackEvent.SourceEventCount);
     }
 
+    private static int SumAffectedClass(
+        IReadOnlyList<TimberbornWorldConsequenceFeedbackEvent> events,
+        TimberbornWorldConsequenceFeedbackClass eventClass)
+    {
+        return events
+            .Where(feedbackEvent => feedbackEvent.EventClass == eventClass)
+            .Sum(static feedbackEvent => feedbackEvent.AffectedCellCount);
+    }
+
     private static int NotificationClassCount(
         IReadOnlyList<TimberbornWorldConsequenceFeedbackEvent> events,
         TimberbornWorldConsequenceFeedbackClass eventClass,
@@ -585,10 +643,11 @@ public enum TimberbornWorldConsequenceFeedbackClass
 {
     None = 0,
     ActiveFire = 1,
-    BuildingDamageClosure = 2,
-    PlantCropResourceLoss = 3,
-    BeaverDangerDeath = 4,
-    AshAftermath = 5,
+    StructureOnFire = 2,
+    BuildingDamageClosure = 3,
+    PlantCropResourceLoss = 4,
+    BeaverDangerDeath = 5,
+    AshAftermath = 6,
 }
 
 public sealed record TimberbornWorldConsequenceFeedbackInput(

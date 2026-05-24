@@ -2633,12 +2633,19 @@ public sealed class TimberbornQaCommandBridgeTests
             WorldConsequenceFeedbackSourceEvents: 120,
             WorldConsequenceFeedbackCoalescedEvents: 121,
             WorldConsequenceFeedbackActiveFireEvents: 122,
+            StructureOnFireEventsReceived: 136,
+            StructureOnFireEventsCoalesced: 137,
+            StructureOnFireNotificationsSent: 138,
+            StructureOnFireNotificationsThrottled: 139,
+            StructureOnFirePresentationFailures: 140,
+            WorldConsequenceFeedbackStructureOnFireEvents: 136,
             WorldConsequenceFeedbackBuildingDamageClosureEvents: 123,
             WorldConsequenceFeedbackPlantCropResourceLossEvents: 124,
             WorldConsequenceFeedbackBeaverDangerDeathEvents: 125,
             WorldConsequenceFeedbackAshAftermathEvents: 126,
             WorldConsequenceFeedbackNotifications: 127,
             WorldConsequenceFeedbackActiveFireNotifications: 128,
+            WorldConsequenceFeedbackStructureOnFireNotifications: 138,
             WorldConsequenceFeedbackBuildingDamageClosureNotifications: 129,
             WorldConsequenceFeedbackPlantCropResourceLossNotifications: 130,
             WorldConsequenceFeedbackBeaverDangerDeathNotifications: 131,
@@ -2902,12 +2909,19 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("world_consequence_feedback_source_events=120", result.ResultToken);
         Assert.Contains("world_consequence_feedback_coalesced_events=121", result.ResultToken);
         Assert.Contains("world_consequence_feedback_active_fire_events=122", result.ResultToken);
+        Assert.Contains("structure_on_fire_events_received=136", result.ResultToken);
+        Assert.Contains("structure_on_fire_events_coalesced=137", result.ResultToken);
+        Assert.Contains("structure_on_fire_notifications_sent=138", result.ResultToken);
+        Assert.Contains("structure_on_fire_notifications_throttled=139", result.ResultToken);
+        Assert.Contains("structure_on_fire_presentation_failures=140", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_structure_on_fire_events=136", result.ResultToken);
         Assert.Contains("world_consequence_feedback_building_damage_closure_events=123", result.ResultToken);
         Assert.Contains("world_consequence_feedback_plant_crop_resource_loss_events=124", result.ResultToken);
         Assert.Contains("world_consequence_feedback_beaver_danger_death_events=125", result.ResultToken);
         Assert.Contains("world_consequence_feedback_ash_aftermath_events=126", result.ResultToken);
         Assert.Contains("world_consequence_feedback_notifications=127", result.ResultToken);
         Assert.Contains("world_consequence_feedback_active_fire_notifications=128", result.ResultToken);
+        Assert.Contains("world_consequence_feedback_structure_on_fire_notifications=138", result.ResultToken);
         Assert.Contains("world_consequence_feedback_building_damage_closure_notifications=129", result.ResultToken);
         Assert.Contains("world_consequence_feedback_plant_crop_resource_loss_notifications=130", result.ResultToken);
         Assert.Contains("world_consequence_feedback_beaver_danger_death_notifications=131", result.ResultToken);

@@ -343,10 +343,16 @@ public sealed class TimberbornFireDeltaConsumer
         TimberbornAshFieldSummary ashFieldSummary)
     {
         int? activeFireFocusCell = alertEvents.Select(static alertEvent => (int?)alertEvent.CellIndex).FirstOrDefault();
+        int structureOnFireEventCount = structureBurnDamageRollbackSummary.MatchedStructureCellCount;
+        int dedupedStructureTargetCount =
+            structureBurnDamageRollbackSummary.MatchedStructureCellCount -
+                structureBurnDamageRollbackSummary.DuplicateStructureTargetSuppressedCount;
+        int structureOnFireTargetCount = structureOnFireEventCount == 0
+            ? 0
+            : Math.Max(1, dedupedStructureTargetCount);
         int buildingDamageEvents =
             buildingBurnoutSummary.AppliedConsequenceCount +
             structureBurnDamageRollbackSummary.ClosedStructureCount +
-            structureBurnDamageRollbackSummary.RepairBlockedCount +
             structureBurnDamageRollbackSummary.RepairEligibleCount +
             pathInfrastructureSummary.DamagedTargetCount +
             pathInfrastructureSummary.BlockedTargetCount +
@@ -375,6 +381,13 @@ public sealed class TimberbornFireDeltaConsumer
         TimberbornWorldConsequenceFeedbackEvent[] events =
         {
             CreateFeedbackEvent(
+                TimberbornWorldConsequenceFeedbackClass.StructureOnFire,
+                tick,
+                structureOnFireEventCount,
+                structureOnFireTargetCount,
+                activeFireFocusCell,
+                FormatStructureOnFireDetail(structureOnFireTargetCount)),
+            CreateFeedbackEvent(
                 TimberbornWorldConsequenceFeedbackClass.BuildingDamageClosure,
                 tick,
                 buildingDamageEvents,
@@ -400,6 +413,13 @@ public sealed class TimberbornFireDeltaConsumer
         return new TimberbornWorldConsequenceFeedbackInput(
             tick,
             events.Where(static feedbackEvent => feedbackEvent.SourceEventCount > 0).ToArray());
+    }
+
+    private static string FormatStructureOnFireDetail(int structureCount)
+    {
+        return structureCount == 1
+            ? "1 structure on fire"
+            : $"{structureCount} structures on fire";
     }
 
     private static TimberbornWorldConsequenceFeedbackEvent CreateFeedbackEvent(
