@@ -2,8 +2,10 @@ using System.Runtime.CompilerServices;
 using System.Reflection;
 using Timberborn.BlockSystem;
 using Timberborn.ConstructionSites;
+using Timberborn.EnterableSystem;
 using Timberborn.Goods;
 using Timberborn.Navigation;
+using Timberborn.WorkSystem;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -29,7 +31,7 @@ public readonly record struct TimberbornStructureBurnDamageConsequence(
 
     public bool HasBurnPressure => true;
 
-    public bool ShouldClose => false;
+    public bool ShouldClose => DamageUnits > 0 || Heat >= RepairBlockedHeat;
 
     public bool ShouldBlockRepair => Fuel > 0 || Heat >= RepairBlockedHeat;
 
@@ -270,7 +272,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             DamageTaken: damageTaken,
             DamageCapacity: damageCapacity,
             RollbackStage: stage,
-            ShouldClose: false,
+            ShouldClose: resolvedTarget.Consequence.ShouldClose,
             RepairBlocked: repairBlocked,
             RepairEligible: repairEligible,
             ShouldApplyRollbackVisual: stage != TimberbornStructureBurnRollbackStage.None);
@@ -295,12 +297,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             return TimberbornStructureBurnRollbackStage.None;
         }
 
-        if (damageTaken >= MinimumUnfinishedDamage(damageCapacity))
-        {
-            return TimberbornStructureBurnRollbackStage.Unfinished;
-        }
-
-        return TimberbornStructureBurnRollbackStage.Scorched;
+        return TimberbornStructureBurnRollbackStage.Unfinished;
     }
 
     internal static int MinimumUnfinishedDamage(int damageCapacity)
@@ -389,7 +386,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     private readonly IBlockService _blockService;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
-    private readonly Dictionary<string, AccessSnapshot[]> _blockedAccessesByStableId = new(StringComparer.Ordinal);
 
     public TimberbornStructureBurnDamageRollbackTargetApi(
         FireGrid grid,
@@ -418,13 +414,14 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         }
 
         bool canEnterUnfinishedState = CanEnterUnfinishedState(blockObject);
+        bool canClose = canEnterUnfinishedState || HasInterruptibleBuildingUse(blockObject);
 
         return new TimberbornStructureBurnDamageTarget(
             StableId: $"structure:{RuntimeHelpers.GetHashCode(blockObject)}",
             SpecId: blockObject.Name,
             CellIndex: consequence.CellIndex,
             ConstructionResources: TimberbornBurnDamageResourceGuesses.ForStructure(blockObject.Name),
-            CanClose: false,
+            CanClose: canClose,
             CanApplyRollbackVisual: true,
             CanRepairAfterDanger: canEnterUnfinishedState);
     }
@@ -439,7 +436,12 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             .GetObjectsWithComponentAt<BlockObject>(coordinates)
             .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
             .FirstOrDefault();
-        bool accessRestored = request.RepairEligible && blockObject is not null && TryRestoreAccess(target);
+        StructureOccupancySnapshot occupancySnapshot = blockObject is null || !request.ShouldClose
+            ? StructureOccupancySnapshot.Empty
+            : GetOccupancySnapshot(blockObject);
+        int interruptedWorkerCount = blockObject is null || !request.ShouldClose
+            ? 0
+            : UnassignWorkers(blockObject);
         bool enteredUnfinishedState = false;
         int removedConstructionMaterialCount = 0;
         bool resetConstructionProgress = false;
@@ -448,11 +450,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         if (blockObject is not null && request.ShouldApplyRollbackVisual)
         {
-            if (RequestsNativeConstructionPhase(request))
-            {
-                throw new InvalidOperationException(
-                    $"Structure burn damage rollback requires a safe native construction-state API for {target.SpecId} at cell {target.CellIndex}.");
-            }
+            enteredUnfinishedState = RequestsNativeConstructionPhase(request) && target.CanRepairAfterDanger
+                ? TryEnterUnfinishedState(blockObject)
+                : false;
 
             ConstructionSite? constructionSite = TryGetConstructionSite(blockObject, coordinates);
             removedConstructionMaterialCount = ShouldRemoveConstructionMaterials(request)
@@ -466,11 +466,26 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             LogRollbackVisual(target, request, enteredUnfinishedState, removedConstructionMaterialCount, resetConstructionProgress, burnedMaterialCount);
         }
 
+        bool closed = request.ShouldClose &&
+            target.CanClose &&
+            blockObject is not null &&
+            (enteredUnfinishedState || blockObject.IsUnfinished || interruptedWorkerCount > 0);
+        if (closed)
+        {
+            LogStructureClosed(
+                target,
+                enteredUnfinishedState,
+                blockObject?.IsUnfinished == true,
+                interruptedWorkerCount,
+                occupancySnapshot);
+            LogWorkerExposureUnavailable(target, occupancySnapshot);
+        }
+
         bool visualRollbackApplied = enteredUnfinishedState || removedConstructionMaterialCount > 0 || hasBurnedTextures;
         bool skippedNativeConstructionApi = RequestsNativeConstructionPhase(request) && !enteredUnfinishedState;
-        bool skippedNoSafeApi = skippedNativeConstructionApi ||
-            (request.ShouldApplyRollbackVisual && !visualRollbackApplied) ||
-            (request.RepairEligible && !accessRestored);
+        bool skippedNoSafeApi =
+            (request.ShouldClose && !closed) ||
+            (request.ShouldApplyRollbackVisual && !visualRollbackApplied);
         if (skippedNoSafeApi)
         {
             throw new InvalidOperationException(
@@ -478,7 +493,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         }
 
         return new TimberbornStructureBurnDamageApplyResult(
-            Closed: false,
+            Closed: closed,
             VisualRollbackApplied: visualRollbackApplied,
             ConstructionPhaseEntered: enteredUnfinishedState,
             SkippedNativeConstructionApi: skippedNativeConstructionApi,
@@ -494,7 +509,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 TimberbornStructureBurnRollbackStage.Unfinished);
     }
 
-    private static Accessible[] GetBlockableAccessibles(BlockObject blockObject)
+    private static Accessible[] GetBuildingAccessibles(BlockObject blockObject)
     {
         return blockObject.GetComponentsAllocating<Accessible>()
             .Concat(blockObject.Transform.GetComponentsInChildren<Accessible>(includeInactive: true))
@@ -503,29 +518,89 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             .ToArray();
     }
 
-    private bool TryRestoreAccess(TimberbornStructureBurnDamageTarget target)
+    private static Workplace[] GetWorkplaces(BlockObject blockObject)
     {
-        if (!_blockedAccessesByStableId.TryGetValue(target.StableId, out AccessSnapshot[]? snapshots))
-        {
-            return true;
-        }
+        return blockObject.GetComponentsAllocating<Workplace>()
+            .Concat(blockObject.Transform.GetComponentsInChildren<Workplace>(includeInactive: true))
+            .GroupBy(static workplace => RuntimeHelpers.GetHashCode(workplace))
+            .Select(static group => group.First())
+            .ToArray();
+    }
 
-        try
-        {
-            Array.ForEach(snapshots, static snapshot => snapshot.Accessible.SetAccesses(snapshot.Accesses));
-            _blockedAccessesByStableId.Remove(target.StableId);
-            _logSink.Info(
-                "wildfire_timberborn_structure_access_restored " +
-                $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
-                $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
-                $"accessibles={snapshots.Length} " +
-                $"accesses={snapshots.Sum(static snapshot => snapshot.Accesses.Length)}");
-            return true;
-        }
-        catch (Exception exception)
-        {
-            throw new InvalidOperationException($"Structure access restore failed for {target.SpecId}.", exception);
-        }
+    private static Enterable[] GetEnterables(BlockObject blockObject)
+    {
+        return blockObject.GetComponentsAllocating<Enterable>()
+            .Concat(blockObject.Transform.GetComponentsInChildren<Enterable>(includeInactive: true))
+            .GroupBy(static enterable => RuntimeHelpers.GetHashCode(enterable))
+            .Select(static group => group.First())
+            .ToArray();
+    }
+
+    private static bool HasInterruptibleBuildingUse(BlockObject blockObject)
+    {
+        return GetWorkplaces(blockObject).Length > 0 ||
+            GetEnterables(blockObject).Length > 0 ||
+            GetBuildingAccessibles(blockObject).Any(static accessible => accessible.Accesses.Count > 0);
+    }
+
+    private void LogStructureClosed(
+        TimberbornStructureBurnDamageTarget target,
+        bool enteredUnfinishedState,
+        bool isUnfinished,
+        int interruptedWorkerCount,
+        StructureOccupancySnapshot occupancySnapshot)
+    {
+        string closureKind = enteredUnfinishedState
+            ? "native_unfinished"
+            : isUnfinished
+                ? "already_unfinished"
+                : "workers_interrupted";
+        _logSink.Info(
+            "wildfire_timberborn_structure_closed " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+            $"closure={closureKind} " +
+            $"construction_phase_entered={enteredUnfinishedState} " +
+            $"assigned_workers_before={occupancySnapshot.AssignedWorkerCount} " +
+            $"assigned_workers_interrupted={interruptedWorkerCount} " +
+            $"enterers_inside_before={occupancySnapshot.EnterersInsideCount}");
+    }
+
+    private static StructureOccupancySnapshot GetOccupancySnapshot(BlockObject blockObject)
+    {
+        return new StructureOccupancySnapshot(
+            AssignedWorkerCount: GetWorkplaces(blockObject).Sum(static workplace => workplace.NumberOfAssignedWorkers),
+            EnterersInsideCount: GetEnterables(blockObject).Sum(static enterable => enterable.NumberOfEnterersInside));
+    }
+
+    private static int UnassignWorkers(BlockObject blockObject)
+    {
+        return GetWorkplaces(blockObject)
+            .Select(static workplace =>
+            {
+                int assignedWorkerCount = workplace.NumberOfAssignedWorkers;
+                if (assignedWorkerCount > 0)
+                {
+                    workplace.UnassignAllWorkers();
+                }
+
+                return assignedWorkerCount;
+            })
+            .Sum();
+    }
+
+    private void LogWorkerExposureUnavailable(
+        TimberbornStructureBurnDamageTarget target,
+        StructureOccupancySnapshot occupancySnapshot)
+    {
+        _logSink.Info(
+            "wildfire_timberborn_structure_worker_exposure " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+            $"candidate_count={occupancySnapshot.CandidateCount} " +
+            $"assigned_workers={occupancySnapshot.AssignedWorkerCount} " +
+            $"enterers_inside={occupancySnapshot.EnterersInsideCount} " +
+            "status=skipped_no_safe_worker_exposure_api");
     }
 
     private static bool CanEnterUnfinishedState(BlockObject blockObject)
@@ -784,5 +859,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             name.Contains("Dynamite", StringComparison.OrdinalIgnoreCase);
     }
 
-    private readonly record struct AccessSnapshot(Accessible Accessible, Vector3[] Accesses);
+    private readonly record struct StructureOccupancySnapshot(int AssignedWorkerCount, int EnterersInsideCount)
+    {
+        public static readonly StructureOccupancySnapshot Empty = new(0, 0);
+
+        public int CandidateCount => AssignedWorkerCount + EnterersInsideCount;
+    }
 }

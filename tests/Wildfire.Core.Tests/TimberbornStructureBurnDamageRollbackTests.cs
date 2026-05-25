@@ -5,7 +5,7 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornStructureBurnDamageRollbackTests
 {
     [Fact]
-    public void SinkKeepsDamagedStructureAccessibleAndBlocksRepairWhileDangerous()
+    public void SinkClosesDamagedStructureAndBlocksRepairWhileDangerous()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 2)],
@@ -18,17 +18,17 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
 
         Assert.Equal(1, summary.MatchedStructureCellCount);
-        Assert.Equal(0, summary.ClosedStructureCount);
+        Assert.Equal(1, summary.ClosedStructureCount);
         Assert.Equal(1, summary.RepairBlockedCount);
         Assert.Equal(0, summary.RepairEligibleCount);
         Assert.Equal(4, summary.MaterialValueLost);
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
-        Assert.False(request.ShouldClose);
+        Assert.True(request.ShouldClose);
         Assert.True(request.RepairBlocked);
     }
 
     [Fact]
-    public void SinkDoesNotCloseStructureOnRepairBlockingFirePressureBeforeDamageThreshold()
+    public void SinkClosesStructureOnDangerHeatBeforeDamageThreshold()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 10)],
@@ -40,10 +40,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             1,
             [Decision(4, oldFuel: 10, newFuel: 10, heat: 5)]);
 
-        Assert.Equal(0, summary.ClosedStructureCount);
+        Assert.Equal(1, summary.ClosedStructureCount);
         Assert.Equal(1, summary.RepairBlockedCount);
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
-        Assert.False(request.ShouldClose);
+        Assert.True(request.ShouldClose);
         Assert.False(request.ShouldApplyRollbackVisual);
         Assert.Equal(TimberbornStructureBurnRollbackStage.None, request.RollbackStage);
     }
@@ -210,6 +210,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
 
         Assert.Equal(0, recovery.RepairBlockedCount);
         Assert.Equal(1, recovery.RepairEligibleCount);
+        Assert.False(targetApi.Requests.Last().ShouldClose);
         Assert.True(targetApi.Requests.Last().RepairEligible);
     }
 
@@ -252,12 +253,35 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
 
         Assert.Equal(2, summary.MatchedStructureCellCount);
         Assert.Equal(1, summary.DuplicateStructureTargetSuppressedCount);
-        Assert.Equal(0, summary.ClosedStructureCount);
+        Assert.Equal(1, summary.ClosedStructureCount);
         Assert.Equal([6], targetApi.Requests.Select(static request => request.DamageApplied).ToArray());
     }
 
     [Fact]
-    public void SinkRevertsStructureToUnfinishedAtTenPercentMaterialLoss()
+    public void SinkRevertsLightDamageToUnfinishedConstructionPhase()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 100)],
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: true));
+        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            6,
+            [Decision(4, oldFuel: 10, newFuel: 9, heat: 10)]);
+
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.True(request.ShouldClose);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
+        Assert.Equal(1, summary.ClosedStructureCount);
+        Assert.Equal(0, summary.ScorchedStageCount);
+        Assert.Equal(1, summary.UnfinishedStageCount);
+        Assert.Equal(1, summary.ConstructionPhaseEnteredCount);
+    }
+
+    [Fact]
+    public void SinkRevertsStructureToUnfinishedAtFirstMaterialLoss()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [],
@@ -308,14 +332,15 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
                         tick: 7),
                 ]));
 
-        TimberbornStructureBurnDamageRollbackSummary scorched = scorchedSink.ApplyConsequences(
+        TimberbornStructureBurnDamageRollbackSummary firstDamage = scorchedSink.ApplyConsequences(
             6,
             [Decision(4, oldFuel: 10, newFuel: 9, heat: 10)]);
         TimberbornStructureBurnDamageRollbackSummary unfinished = unfinishedSink.ApplyConsequences(
             7,
             [Decision(4, oldFuel: 10, newFuel: 5, heat: 10)]);
 
-        Assert.Equal(1, scorched.ScorchedStageCount);
+        Assert.Equal(0, firstDamage.ScorchedStageCount);
+        Assert.Equal(1, firstDamage.UnfinishedStageCount);
         Assert.Equal(1, unfinished.UnfinishedStageCount);
         Assert.Equal(2, targetApi.Requests.Count(static request => request.ShouldApplyRollbackVisual));
     }
@@ -449,6 +474,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            canClose: true,
             canApplyRollbackVisual: true,
             canRepairAfterDanger: false));
         TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
@@ -460,11 +486,12 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
         Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
         Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request));
+        Assert.Equal(1, summary.ClosedStructureCount);
         Assert.Equal(1, summary.UnfinishedStageCount);
         Assert.Equal(1, summary.VisualRollbackAppliedCount);
         Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
         Assert.Equal(1, summary.SkippedNativeConstructionApiCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(0, summary.SkippedNoSafeApiCount);
     }
 
     [Fact]
@@ -502,7 +529,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             [new CellDelta(4, Cell(fuel: 8, heat: 10), Cell(fuel: 5, heat: 10))]);
 
         Assert.Equal(1, summary.StructureBurnDamageRollbackConsideredDeltaCount);
-        Assert.Equal(0, summary.StructureBurnDamageRollbackClosedStructureCount);
+        Assert.Equal(1, summary.StructureBurnDamageRollbackClosedStructureCount);
         Assert.Equal(3, summary.StructureBurnDamageRollbackTotalDamageApplied);
     }
 
@@ -565,8 +592,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
                 SkippedNativeConstructionApi: requestsNativeConstructionPhase && !constructionPhaseEntered,
                 SkippedNoSafeApi:
                     (!damageTarget.CanClose && request.ShouldClose) ||
-                    (!damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual) ||
-                    (requestsNativeConstructionPhase && !constructionPhaseEntered),
+                    (!damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual),
                 RepairEligible: request.RepairEligible);
         }
     }
