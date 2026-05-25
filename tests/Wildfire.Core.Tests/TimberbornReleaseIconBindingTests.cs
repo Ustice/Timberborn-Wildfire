@@ -20,23 +20,21 @@ public sealed class TimberbornReleaseIconBindingTests
 
         Assert.DoesNotContain("BurnToolImageName", source, StringComparison.Ordinal);
         Assert.DoesNotContain("_toolButtonFactory.Create(_tool, \"DemolishResourcesTool\"", source, StringComparison.Ordinal);
-        Assert.Contains("FertilizeCropsToolImageName = \"FieldsPlantingToolGroupIcon\"", source, StringComparison.Ordinal);
-        Assert.Contains("FertilizeTreesToolImageName = \"ForestryPlantingToolGroupIcon\"", source, StringComparison.Ordinal);
-        Assert.Contains("WildfireFertilizeCropsToolIcon.png", source, StringComparison.Ordinal);
-        Assert.Contains("WildfireFertilizeTreesToolIcon.png", source, StringComparison.Ordinal);
+        Assert.Contains("TimberbornFertilizeFieldsToolButton", source, StringComparison.Ordinal);
+        Assert.Contains("TimberbornFertilizeForestryToolButton", source, StringComparison.Ordinal);
+        Assert.Contains("\"FieldsPlantingToolGroupIcon\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"ForestryPlantingToolGroupIcon\"", source, StringComparison.Ordinal);
+        Assert.Contains("WildfireFertilizeToolIcon.png", source, StringComparison.Ordinal);
         Assert.Contains("ApplyToolIcon(", source, StringComparison.Ordinal);
-        Assert.Contains("Assets\\WildfireFertilizeCropsToolIcon.png", project, StringComparison.Ordinal);
-        Assert.Contains("Assets\\WildfireFertilizeTreesToolIcon.png", project, StringComparison.Ordinal);
+        Assert.Contains("Assets\\WildfireFertilizeToolIcon.png", project, StringComparison.Ordinal);
     }
 
     [Fact]
     public void FertilizeToolbarIconAssetsHaveRuntimeAndReferenceCopies()
     {
         string root = FindRepoRoot();
-        AssertPngExists(root, "src", "Wildfire.Timberborn", "Assets", "WildfireFertilizeCropsToolIcon.png");
-        AssertPngExists(root, "src", "Wildfire.Timberborn", "Assets", "WildfireFertilizeTreesToolIcon.png");
-        AssertPngExists(root, "docs", "reference", "assets", "menu-icons", "WildfireFertilizeCropsToolIcon.png");
-        AssertPngExists(root, "docs", "reference", "assets", "menu-icons", "WildfireFertilizeTreesToolIcon.png");
+        AssertPngExists(root, "src", "Wildfire.Timberborn", "Assets", "WildfireFertilizeToolIcon.png");
+        AssertPngExists(root, "docs", "reference", "assets", "menu-icons", "WildfireFertilizeToolIcon.png");
 
         string referenceNotes = File.ReadAllText(Path.Combine(
             root,
@@ -45,9 +43,9 @@ public sealed class TimberbornReleaseIconBindingTests
             "assets",
             "menu-icons",
             "wildfire-fertilize-toolbar-icons.md"));
+        Assert.Contains("WildfireFertilizeToolIcon.png", referenceNotes, StringComparison.Ordinal);
         Assert.Contains("FieldsPlantingToolGroupIcon.png", referenceNotes, StringComparison.Ordinal);
         Assert.Contains("ForestryPlantingToolGroupIcon.png", referenceNotes, StringComparison.Ordinal);
-        Assert.Contains("FertileAshIcon.png", referenceNotes, StringComparison.Ordinal);
     }
 
     private static void AssertPngExists(string root, params string[] pathParts)

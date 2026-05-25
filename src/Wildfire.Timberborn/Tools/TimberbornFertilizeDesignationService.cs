@@ -48,6 +48,25 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
     }
 
     public TimberbornFertilizeDesignationSummary LastSummary { get; private set; }
+    public int FertilizeDesignationCount => _cropDesignations
+        .Concat(_forestryDesignations)
+        .Distinct()
+        .Count();
+
+    public void AddFertilizeDesignation(int cellIndex)
+    {
+        _cropDesignations.Add(cellIndex);
+        _forestryDesignations.Remove(cellIndex);
+    }
+
+    public void RemoveFertilizeDesignation(int cellIndex)
+    {
+        _cropDesignations.Remove(cellIndex);
+        _forestryDesignations.Remove(cellIndex);
+    }
+
+    public bool HasFertilizeDesignation(int cellIndex) =>
+        _cropDesignations.Contains(cellIndex) || _forestryDesignations.Contains(cellIndex);
 
     public void AddCropDesignation(int cellIndex) => _cropDesignations.Add(cellIndex);
     public void RemoveCropDesignation(int cellIndex) => _cropDesignations.Remove(cellIndex);
@@ -124,17 +143,7 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
         int skipped = 0;
 
         ProcessDesignations(
-            _cropDesignations,
-            grid,
-            inventories,
-            ref applied,
-            ref consumed,
-            ref taintedBlocked,
-            ref noInventory,
-            ref skipped);
-
-        ProcessDesignations(
-            _forestryDesignations,
+            _cropDesignations.Concat(_forestryDesignations).Distinct(),
             grid,
             inventories,
             ref applied,
@@ -167,7 +176,7 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
     }
 
     private void ProcessDesignations(
-        HashSet<int> designations,
+        IEnumerable<int> designations,
         FireGrid grid,
         InventoryTarget[] inventories,
         ref int applied,

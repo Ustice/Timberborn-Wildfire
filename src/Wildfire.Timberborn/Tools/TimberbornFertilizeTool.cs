@@ -1,4 +1,3 @@
-using System.Reflection;
 using Timberborn.AreaSelectionSystem;
 using Timberborn.AreaSelectionSystemUI;
 using Timberborn.BlockSystem;
@@ -12,7 +11,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Tools;
 
-public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInputProcessor, ILoadableSingleton
+public sealed class TimberbornFertilizeTool : ITool, IToolDescriptor, IInputProcessor, ILoadableSingleton
 {
     private const string CursorKey = "DemolishResourcesCursor";
 
@@ -26,7 +25,7 @@ public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInpu
     private AreaBlockObjectPicker? _areaBlockObjectPicker;
     private BlockObjectSelectionDrawer? _blockObjectSelectionDrawer;
 
-    public TimberbornFertilizeCropsTool(
+    public TimberbornFertilizeTool(
         TimberbornFireRuntime fireRuntime,
         TimberbornFertilizeDesignationService designationService,
         InputService inputService,
@@ -51,9 +50,9 @@ public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInpu
     {
         _areaBlockObjectPicker = _areaBlockObjectPickerFactory.CreatePickingUpwards();
         _blockObjectSelectionDrawer = _blockObjectSelectionDrawerFactory.Create(
-            new Color(0.38f, 0.72f, 0.18f, 0.85f),
-            new Color(0.28f, 0.60f, 0.12f, 0.28f),
-            new Color(0.28f, 0.60f, 0.12f, 0.55f));
+            new Color(0.34f, 0.64f, 0.22f, 0.85f),
+            new Color(0.24f, 0.52f, 0.16f, 0.28f),
+            new Color(0.24f, 0.52f, 0.16f, 0.55f));
     }
 
     public void Enter()
@@ -81,8 +80,8 @@ public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInpu
 
     public ToolDescription DescribeTool()
     {
-        return new ToolDescription.Builder("Fertilize crops")
-            .AddSection("Drag over soil to designate cells for fertile ash application. Nearby storage with FertileAsh will be consumed by workers.")
+        return new ToolDescription.Builder("Fertilize with fertile ash")
+            .AddSection("Drag over soil to designate cells for fertile ash application beneath crops, trees, and bushes. Nearby storage with FertileAsh will be consumed by workers.")
             .Build();
     }
 
@@ -107,28 +106,27 @@ public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInpu
         try
         {
             FireGrid grid = GetFireGrid();
-            bool remove = _inputService.IsKeyHeld("Cancel") ||
-                IsRightClickAction(blockObjects, start, end, selectionStarted, selectingArea);
+            bool remove = _inputService.IsKeyHeld("Cancel");
             int count = ApplyDesignations(grid, start, end, remove);
 
             if (count > 0)
             {
                 _quickNotificationService.SendNotification(
                     remove
-                        ? $"Wildfire: removed {count} fertilize crop designations."
-                        : $"Wildfire: designated {count} cells for crop fertilization.");
+                        ? $"Wildfire: removed {count} fertile ash designations."
+                        : $"Wildfire: designated {count} cells for fertile ash application.");
                 Debug.Log(
-                    "wildfire_fertilize_crops_tool_applied " +
+                    "wildfire_fertilize_tool_applied " +
                     $"cell_count={count} " +
                     $"remove={remove.ToString().ToLowerInvariant()} " +
-                    $"total_crop_designations={_designationService.LastSummary.CropDesignationCount}");
+                    $"total_fertilize_designations={_designationService.FertilizeDesignationCount}");
             }
         }
         catch (InvalidOperationException exception)
         {
             _quickNotificationService.SendWarningNotification($"Wildfire: {exception.Message}");
             Debug.LogWarning(
-                "wildfire_fertilize_crops_tool_failed " +
+                "wildfire_fertilize_tool_failed " +
                 $"reason={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
         }
     }
@@ -159,11 +157,11 @@ public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInpu
                 int cellIndex = grid.ToIndex(x, y, z);
                 if (remove)
                 {
-                    _designationService.RemoveCropDesignation(cellIndex);
+                    _designationService.RemoveFertilizeDesignation(cellIndex);
                 }
                 else
                 {
-                    _designationService.AddCropDesignation(cellIndex);
+                    _designationService.AddFertilizeDesignation(cellIndex);
                 }
 
                 count++;
@@ -189,25 +187,15 @@ public sealed class TimberbornFertilizeCropsTool : ITool, IToolDescriptor, IInpu
         return new FireGrid(state.Width.Value, state.Height.Value, state.Depth.Value);
     }
 
-    private static bool IsRightClickAction(
-        IEnumerable<BlockObject> blockObjects,
-        Vector3Int start,
-        Vector3Int end,
-        bool selectionStarted,
-        bool selectingArea)
-    {
-        return false;
-    }
-
     private AreaBlockObjectPicker GetAreaBlockObjectPicker()
     {
         return _areaBlockObjectPicker ??
-            throw new InvalidOperationException("Wildfire fertilize crops tool picker is not initialized.");
+            throw new InvalidOperationException("Wildfire fertilize tool picker is not initialized.");
     }
 
     private BlockObjectSelectionDrawer GetBlockObjectSelectionDrawer()
     {
         return _blockObjectSelectionDrawer ??
-            throw new InvalidOperationException("Wildfire fertilize crops tool selection drawer is not initialized.");
+            throw new InvalidOperationException("Wildfire fertilize tool selection drawer is not initialized.");
     }
 }

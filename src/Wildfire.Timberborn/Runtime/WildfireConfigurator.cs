@@ -26,12 +26,11 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornDemolitionBurnToolButton>().AsSingleton();
         MultiBind<BottomBarModule>().ToProvider<DemolitionBurnToolBottomBarModuleProvider>().AsSingleton();
         Bind<TimberbornFertilizeDesignationService>().AsSingleton();
-        Bind<TimberbornFertilizeCropsTool>().AsSingleton();
-        Bind<TimberbornFertilizeTreesTool>().AsSingleton();
-        Bind<TimberbornFertilizeCropsToolButton>().AsSingleton();
-        Bind<TimberbornFertilizeTreesToolButton>().AsSingleton();
-        MultiBind<BottomBarModule>().ToProvider<FertilizeCropsToolBottomBarModuleProvider>().AsSingleton();
-        MultiBind<BottomBarModule>().ToProvider<FertilizeTreesToolBottomBarModuleProvider>().AsSingleton();
+        Bind<TimberbornFertilizeTool>().AsSingleton();
+        Bind<TimberbornFertilizeFieldsToolButton>().AsSingleton();
+        Bind<TimberbornFertilizeForestryToolButton>().AsSingleton();
+        MultiBind<BottomBarModule>().ToProvider<FertilizeFieldsToolBottomBarModuleProvider>().AsSingleton();
+        MultiBind<BottomBarModule>().ToProvider<FertilizeForestryToolBottomBarModuleProvider>().AsSingleton();
         Bind<TimberbornFertileAshFieldWorkplaceBehavior>().AsTransient();
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
@@ -54,11 +53,11 @@ public sealed class WildfireConfigurator : Configurator
         }
     }
 
-    private sealed class FertilizeCropsToolBottomBarModuleProvider : IProvider<BottomBarModule>
+    private sealed class FertilizeFieldsToolBottomBarModuleProvider : IProvider<BottomBarModule>
     {
-        private readonly TimberbornFertilizeCropsToolButton _button;
+        private readonly TimberbornFertilizeFieldsToolButton _button;
 
-        public FertilizeCropsToolBottomBarModuleProvider(TimberbornFertilizeCropsToolButton button)
+        public FertilizeFieldsToolBottomBarModuleProvider(TimberbornFertilizeFieldsToolButton button)
         {
             _button = button ?? throw new ArgumentNullException(nameof(button));
         }
@@ -71,11 +70,11 @@ public sealed class WildfireConfigurator : Configurator
         }
     }
 
-    private sealed class FertilizeTreesToolBottomBarModuleProvider : IProvider<BottomBarModule>
+    private sealed class FertilizeForestryToolBottomBarModuleProvider : IProvider<BottomBarModule>
     {
-        private readonly TimberbornFertilizeTreesToolButton _button;
+        private readonly TimberbornFertilizeForestryToolButton _button;
 
-        public FertilizeTreesToolBottomBarModuleProvider(TimberbornFertilizeTreesToolButton button)
+        public FertilizeForestryToolBottomBarModuleProvider(TimberbornFertilizeForestryToolButton button)
         {
             _button = button ?? throw new ArgumentNullException(nameof(button));
         }
