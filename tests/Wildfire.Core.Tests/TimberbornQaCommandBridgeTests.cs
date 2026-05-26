@@ -883,6 +883,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [InlineData("qa-delta-stimulus path-infrastructure", "path-infrastructure")]
     [InlineData("qa-delta-stimulus power-infrastructure", "power-infrastructure")]
     [InlineData("qa-delta-stimulus water-infrastructure", "water-infrastructure")]
+    [InlineData("qa-delta-stimulus district-center", "district-center")]
     [InlineData("qa-water-suppression-stimulus storage", "storage")]
     [InlineData("qa-water-suppression-stimulus contaminated-tree", "contaminated-tree")]
     public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)

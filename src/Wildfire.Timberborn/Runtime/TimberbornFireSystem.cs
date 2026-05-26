@@ -1574,6 +1574,7 @@ public sealed class TimberbornFireSystem : IDisposable
         return TimberbornQaFieldTargetSelectors.Normalize(selector) switch
         {
             TimberbornQaFieldTargetSelectors.Building => targetKind == TimberbornBurnDamageTargetKind.Structure,
+            TimberbornQaFieldTargetSelectors.DistrictCenter => targetKind == TimberbornBurnDamageTargetKind.Structure,
             TimberbornQaFieldTargetSelectors.Storage => targetKind == TimberbornBurnDamageTargetKind.Storage,
             TimberbornQaFieldTargetSelectors.Infrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
             TimberbornQaFieldTargetSelectors.PathInfrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
@@ -1589,7 +1590,8 @@ public sealed class TimberbornFireSystem : IDisposable
     {
         if (state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure)
         {
-            return true;
+            return TimberbornQaFieldTargetSelectors.Normalize(selector) != TimberbornQaFieldTargetSelectors.DistrictCenter ||
+                state.SpecId.Contains("DistrictCenter", StringComparison.OrdinalIgnoreCase);
         }
 
         string stableId = state.TargetKey.StableId;

@@ -1,8 +1,11 @@
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using Timberborn.BlockSystem;
+using Timberborn.Buildings;
 using Timberborn.ConstructionSites;
+using Timberborn.Coordinates;
 using Timberborn.EnterableSystem;
+using Timberborn.EntitySystem;
 using Timberborn.Goods;
 using Timberborn.Navigation;
 using Timberborn.WorkSystem;
@@ -378,6 +381,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 {
     private readonly FireGrid _grid;
     private readonly IBlockService _blockService;
+    private readonly EntityService? _entityService;
+    private readonly ConstructionFactory? _constructionFactory;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
 
@@ -385,10 +390,14 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         FireGrid grid,
         IBlockService blockService,
         ITimberbornFireLogSink? logSink = null,
-        TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null)
+        TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null,
+        EntityService? entityService = null,
+        ConstructionFactory? constructionFactory = null)
     {
         _grid = grid;
         _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
+        _entityService = entityService;
+        _constructionFactory = constructionFactory;
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
         _textureDeriver = textureDeriver ?? new TimberbornRuntimeBurnedTextureDeriver(_logSink);
     }
@@ -442,20 +451,25 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         int burnedMaterialCount = 0;
         bool hasBurnedTextures = false;
 
-        if (blockObject is not null && request.ShouldApplyRollbackVisual)
+        if (blockObject is not null && (request.ShouldApplyRollbackVisual || request.ShouldClose))
         {
-            enteredUnfinishedState = RequestsNativeConstructionPhase(request)
-                ? TryEnterUnfinishedState(blockObject)
+            ConstructionSite? constructionSite = null;
+            enteredUnfinishedState = request.ShouldClose || RequestsNativeConstructionPhase(request)
+                ? TryApplyNativeConstructionPhase(blockObject, target, out blockObject, out constructionSite)
                 : false;
 
-            ConstructionSite? constructionSite = TryGetConstructionSite(blockObject, coordinates);
-            removedConstructionMaterialCount = ShouldRemoveConstructionMaterials(request)
-                ? RemoveConstructionMaterials(constructionSite, target)
+            constructionSite ??= TryGetConstructionSite(blockObject, coordinates);
+            float remainingConstructionFraction = CalculateRemainingConstructionFraction(request);
+            removedConstructionMaterialCount = request.ShouldApplyRollbackVisual && ShouldRemoveConstructionMaterials(request)
+                ? SynchronizeConstructionMaterials(constructionSite, target, remainingConstructionFraction)
                 : 0;
-            resetConstructionProgress = target.CanRepairAfterDanger &&
+            resetConstructionProgress = request.ShouldApplyRollbackVisual &&
+                target.CanRepairAfterDanger &&
                 request.RepairBlocked &&
-                TrySetConstructionProgress(constructionSite, buildTimeProgressInHours: 0f);
-            burnedMaterialCount = ApplyBurnedTextures(blockObject, target.SpecId);
+                TrySetConstructionProgress(constructionSite, remainingConstructionFraction);
+            burnedMaterialCount = request.ShouldApplyRollbackVisual
+                ? ApplyBurnedTextures(blockObject, target.SpecId)
+                : 0;
             hasBurnedTextures = burnedMaterialCount > 0 || HasBurnedTextures(blockObject);
             LogRollbackVisual(target, request, enteredUnfinishedState, removedConstructionMaterialCount, resetConstructionProgress, burnedMaterialCount);
         }
@@ -497,6 +511,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             request.RollbackStage is (
                 TimberbornStructureBurnRollbackStage.PartialConstruction or
                 TimberbornStructureBurnRollbackStage.Unfinished);
+    }
+
+    public static bool IsDistrictCenterName(string name)
+    {
+        return name.Contains("DistrictCenter", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Accessible[] GetBuildingAccessibles(BlockObject blockObject)
@@ -648,6 +667,123 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         }
     }
 
+    private bool TryApplyNativeConstructionPhase(
+        BlockObject blockObject,
+        TimberbornStructureBurnDamageTarget target,
+        out BlockObject activeBlockObject,
+        out ConstructionSite? constructionSite)
+    {
+        constructionSite = null;
+        activeBlockObject = blockObject;
+        return TryRebuildStructureAsUnfinished(blockObject, target, out activeBlockObject, out constructionSite);
+    }
+
+    private bool TryRebuildStructureAsUnfinished(
+        BlockObject blockObject,
+        TimberbornStructureBurnDamageTarget target,
+        out BlockObject rebuiltBlockObject,
+        out ConstructionSite? rebuiltConstructionSite)
+    {
+        rebuiltBlockObject = blockObject;
+        rebuiltConstructionSite = null;
+        try
+        {
+            if (blockObject.IsUnfinished)
+            {
+                rebuiltConstructionSite = TryGetConstructionSite(blockObject, blockObject.Coordinates);
+                return true;
+            }
+
+            if (!blockObject.IsFinished)
+            {
+                return false;
+            }
+
+            if (_entityService is null || _constructionFactory is null)
+            {
+                throw new InvalidOperationException("Native construction rebuild requires Timberborn entity and construction services.");
+            }
+
+            if (!blockObject.TryGetComponent(out Building building) || building.Spec is null)
+            {
+                throw new InvalidOperationException($"Native construction rebuild cannot resolve building spec for {blockObject.Name}.");
+            }
+
+            bool isDistrictCenter = IsDistrictCenterName(blockObject.Name) || IsDistrictCenterName(target.SpecId);
+            object? districtUpdater = isDistrictCenter
+                ? ResolveDistrictUpdater(ResolveDistrictService(blockObject))
+                : null;
+            Placement placement = blockObject.Placement;
+
+            _entityService.Delete(blockObject);
+            if (districtUpdater is not null)
+            {
+                FlushDistrictRemoval(districtUpdater);
+            }
+
+            rebuiltConstructionSite = _constructionFactory.CreateAsUnfinished(building.Spec, placement);
+            rebuiltBlockObject = rebuiltConstructionSite.GetComponent<BlockObject>();
+            if (!rebuiltBlockObject.IsUnfinished)
+            {
+                throw new InvalidOperationException($"Native construction rebuild recreated {target.SpecId} outside unfinished state.");
+            }
+
+            _logSink.Info(
+                "wildfire_timberborn_structure_burn_rebuilt_unfinished " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+                $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+                $"district_center={isDistrictCenter.ToString().ToLowerInvariant()} " +
+                $"cell={target.CellIndex}");
+            return true;
+        }
+        catch (Exception exception) when (exception is not InvalidOperationException)
+        {
+            throw new InvalidOperationException("Native construction rebuild failed.", exception);
+        }
+    }
+
+    private static object ResolveDistrictService(BlockObject blockObject)
+    {
+        object? districtCenter = blockObject.AllComponents
+            .FirstOrDefault(static component =>
+                component.GetType().FullName == "Timberborn.GameDistricts.DistrictCenter");
+        if (districtCenter is null)
+        {
+            throw new InvalidOperationException($"Native construction rebuild cannot resolve DistrictCenter component for {blockObject.Name}.");
+        }
+
+        object? districtService = districtCenter.GetType()
+            .GetField("_districtService", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.GetValue(districtCenter);
+        return districtService ?? throw new InvalidOperationException("Native construction rebuild cannot resolve DistrictService.");
+    }
+
+    private static object ResolveDistrictUpdater(object districtService)
+    {
+        object? districtUpdater = districtService.GetType()
+            .GetField("_districtUpdater", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.GetValue(districtService);
+        return districtUpdater ?? throw new InvalidOperationException("Native construction rebuild cannot resolve DistrictUpdater.");
+    }
+
+    private static void FlushDistrictRemoval(object districtUpdater)
+    {
+        InvokeDistrictUpdaterFlush(districtUpdater, "ProcessRegularChanges");
+        InvokeDistrictUpdaterFlush(districtUpdater, "ProcessInstantChanges");
+    }
+
+    private static void InvokeDistrictUpdaterFlush(object districtUpdater, string methodName)
+    {
+        MethodInfo? method = districtUpdater.GetType()
+            .GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (method is null)
+        {
+            throw new InvalidOperationException($"Native construction rebuild cannot flush {methodName}.");
+        }
+
+        method.Invoke(districtUpdater, new object?[] { null });
+    }
+
     private ConstructionSite? TryGetConstructionSite(BlockObject blockObject, Vector3Int coordinates)
     {
         if (blockObject.TryGetComponent(out ConstructionSite directConstructionSite))
@@ -661,9 +797,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             .FirstOrDefault();
     }
 
-    private int RemoveConstructionMaterials(
+    private int SynchronizeConstructionMaterials(
         ConstructionSite? constructionSite,
-        TimberbornStructureBurnDamageTarget target)
+        TimberbornStructureBurnDamageTarget target,
+        float remainingConstructionFraction)
     {
         if (constructionSite?.Inventory is null || target.ConstructionResources.Count == 0)
         {
@@ -671,34 +808,51 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         }
 
         return target.ConstructionResources
-            .Select(static resource => resource.ResourceId)
-            .Distinct(StringComparer.Ordinal)
-            .Select(resourceId => RemoveConstructionMaterial(constructionSite, target, resourceId))
+            .GroupBy(static resource => resource.ResourceId, StringComparer.Ordinal)
+            .Select(static group => new TimberbornBurnDamageResourceStack(
+                group.Key,
+                group.Sum(static resource => resource.Amount)))
+            .Select(resource => SynchronizeConstructionMaterial(
+                constructionSite,
+                target,
+                resource.ResourceId,
+                CalculateRequiredConstructionMaterialAmount(resource.Amount, remainingConstructionFraction)))
             .Sum();
     }
 
-    private int RemoveConstructionMaterial(
+    private int SynchronizeConstructionMaterial(
         ConstructionSite constructionSite,
         TimberbornStructureBurnDamageTarget target,
-        string resourceId)
+        string resourceId,
+        int requiredAmount)
     {
         int amount = Math.Max(0, constructionSite.Inventory.AmountInStock(resourceId));
-        if (amount <= 0)
+        int delta = amount - requiredAmount;
+        if (delta == 0)
         {
             return 0;
         }
 
-        constructionSite.Inventory.Take(new GoodAmount(resourceId, amount));
+        if (delta > 0)
+        {
+            constructionSite.Inventory.Take(new GoodAmount(resourceId, delta));
+        }
+        else
+        {
+            constructionSite.Inventory.GiveIgnoringCapacity(new GoodAmount(resourceId, -delta));
+        }
+
         _logSink.Info(
             "wildfire_timberborn_structure_construction_material_burned " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
             $"resource={TimberbornQaCommandBridge.FormatToken(resourceId)} " +
-            $"amount={amount}");
-        return amount;
+            $"amount={Math.Max(0, delta)} " +
+            $"remaining={requiredAmount}");
+        return Math.Max(0, delta);
     }
 
-    private static bool TrySetConstructionProgress(ConstructionSite? constructionSite, float buildTimeProgressInHours)
+    private static bool TrySetConstructionProgress(ConstructionSite? constructionSite, float remainingConstructionFraction)
     {
         if (constructionSite is null)
         {
@@ -707,6 +861,26 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         try
         {
+            MethodInfo? getConstructionTimeMethod = constructionSite.GetType()
+                .GetField(
+                    "_constructionSiteBuildTimeCalculator",
+                    BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(constructionSite)
+                ?.GetType()
+                .GetMethod(
+                    "GetConstructionTimeInHours",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    binder: null,
+                    new[] { typeof(ConstructionSite) },
+                    modifiers: null);
+            if (getConstructionTimeMethod is null)
+            {
+                throw new InvalidOperationException("ConstructionSite build-time calculator API is unavailable.");
+            }
+
+            float constructionTimeInHours = Convert.ToSingle(getConstructionTimeMethod.Invoke(
+                constructionSite,
+                new object[] { constructionSite }));
             MethodInfo? method = constructionSite.GetType().GetMethod(
                 "SetBuildTimeProgress",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
@@ -718,6 +892,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 throw new InvalidOperationException("ConstructionSite.SetBuildTimeProgress API is unavailable.");
             }
 
+            float buildTimeProgressInHours = Math.Clamp(
+                constructionTimeInHours * remainingConstructionFraction,
+                0f,
+                constructionTimeInHours);
             method.Invoke(constructionSite, new object[] { buildTimeProgressInHours });
             return true;
         }
@@ -730,6 +908,27 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     public static bool ShouldRemoveConstructionMaterials(TimberbornStructureBurnDamageApplyRequest request)
     {
         return request.ShouldApplyRollbackVisual && request.RepairBlocked;
+    }
+
+    public static float CalculateRemainingConstructionFraction(TimberbornStructureBurnDamageApplyRequest request)
+    {
+        if (request.DamageCapacity <= 0)
+        {
+            return 0f;
+        }
+
+        float damageFraction = Math.Clamp((float)request.DamageTaken / request.DamageCapacity, 0f, 1f);
+        return Math.Clamp(1f - damageFraction, 0f, 1f);
+    }
+
+    public static int CalculateRequiredConstructionMaterialAmount(int originalAmount, float remainingConstructionFraction)
+    {
+        if (originalAmount <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Ceiling(originalAmount * Math.Clamp(remainingConstructionFraction, 0f, 1f));
     }
 
     private int ApplyBurnedTextures(BlockObject blockObject, string textureLabel)

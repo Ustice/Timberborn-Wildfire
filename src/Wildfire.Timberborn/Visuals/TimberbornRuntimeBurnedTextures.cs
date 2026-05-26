@@ -455,15 +455,20 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 {
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
+    private readonly IBlockService? _blockService;
     private readonly Dictionary<string, BlockObject> _cropTargetsByStableId;
+    private readonly Dictionary<string, Vector3Int[]> _cropTargetCellsByStableId;
 
     public TimberbornTextureCropBurnConsequenceApi(
         EntityRegistry entityRegistry,
         ITimberbornFireLogSink? logSink = null,
-        TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null)
+        TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null,
+        IBlockService? blockService = null,
+        IEnumerable<TimberbornBurnDamageTargetRegistration>? registrations = null)
     {
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
         _textureDeriver = textureDeriver ?? new TimberbornRuntimeBurnedTextureDeriver(_logSink);
+        _blockService = blockService;
         _cropTargetsByStableId = TimberbornEntityComponentCells.BlockObjects(
                 entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry)))
             .Where(static blockObject => IsCropOrHarvestableName(blockObject.Name))
@@ -477,6 +482,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
                     .OrderBy(static blockObject => RuntimeHelpers.GetHashCode(blockObject))
                     .First(),
                 StringComparer.Ordinal);
+        _cropTargetCellsByStableId = BuildCropTargetCellsByStableId(registrations);
     }
 
     public TimberbornCropBurnConsequenceResult ApplyConsequence(TimberbornCropBurnConsequence consequence)
@@ -782,6 +788,23 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
     private bool TryGetTarget(TimberbornCropBurnConsequence consequence, out BlockObject blockObject)
     {
+        if (TryResolveLiveTargetFromRegisteredCells(consequence, out blockObject))
+        {
+            _cropTargetsByStableId[consequence.TargetKey.StableId] = blockObject;
+            return true;
+        }
+
+        if (_blockService is not null && _cropTargetCellsByStableId.ContainsKey(consequence.TargetKey.StableId))
+        {
+            _cropTargetsByStableId.Remove(consequence.TargetKey.StableId);
+            _logSink.Warning(
+                "wildfire_timberborn_crop_consequence_skipped " +
+                $"reason=target_not_live kind={TimberbornQaCommandBridge.FormatToken(consequence.Kind.ToString())} " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)}");
+            return false;
+        }
+
         if (_cropTargetsByStableId.TryGetValue(consequence.TargetKey.StableId, out blockObject!))
         {
             return true;
@@ -793,6 +816,40 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)}");
         return false;
+    }
+
+    private static Dictionary<string, Vector3Int[]> BuildCropTargetCellsByStableId(
+        IEnumerable<TimberbornBurnDamageTargetRegistration>? registrations)
+    {
+        return (registrations ?? Array.Empty<TimberbornBurnDamageTargetRegistration>())
+            .GroupBy(static registration => registration.TargetKey.StableId, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group
+                    .SelectMany(static registration => registration.OwnedCells)
+                    .Select(static cell => new Vector3Int(cell.X, cell.Y, cell.Z))
+                    .Distinct()
+                    .ToArray(),
+                StringComparer.Ordinal);
+    }
+
+    private bool TryResolveLiveTargetFromRegisteredCells(
+        TimberbornCropBurnConsequence consequence,
+        out BlockObject blockObject)
+    {
+        blockObject = null!;
+        if (_blockService is null ||
+            !_cropTargetCellsByStableId.TryGetValue(consequence.TargetKey.StableId, out Vector3Int[] cells))
+        {
+            return false;
+        }
+
+        blockObject = cells
+            .SelectMany(coordinates => _blockService.GetObjectsWithComponentAt<BlockObject>(coordinates))
+            .Where(static candidate => IsCropOrHarvestableName(candidate.Name))
+            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+            .FirstOrDefault()!;
+        return blockObject is not null;
     }
 
     private static string TextureLabel(TimberbornCropBurnConsequence consequence, BlockObject blockObject)

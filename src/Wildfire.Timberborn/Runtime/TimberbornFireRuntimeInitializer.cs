@@ -1,6 +1,7 @@
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
 using Timberborn.BaseComponentSystem;
+using Timberborn.ConstructionSites;
 using Timberborn.Cutting;
 using Timberborn.EntitySystem;
 using Timberborn.MapIndexSystem;
@@ -29,6 +30,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     private readonly MapIndexService _mapIndexService;
     private readonly IBlockService _blockService;
     private readonly EntityRegistry _entityRegistry;
+    private readonly EntityService _entityService;
+    private readonly ConstructionFactory _constructionFactory;
     private readonly ITimberbornFireLogSink _logSink;
     private bool _initialized;
     private int _initializationAttempt;
@@ -44,7 +47,9 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         ISoilContaminationService soilContaminationService,
         MapIndexService mapIndexService,
         IBlockService blockService,
-        EntityRegistry entityRegistry)
+        EntityRegistry entityRegistry,
+        EntityService entityService,
+        ConstructionFactory constructionFactory)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _simulatorFactory = simulatorFactory ?? throw new ArgumentNullException(nameof(simulatorFactory));
@@ -55,6 +60,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         _mapIndexService = mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService));
         _blockService = blockService ?? throw new ArgumentNullException(nameof(blockService));
         _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+        _entityService = entityService ?? throw new ArgumentNullException(nameof(entityService));
+        _constructionFactory = constructionFactory ?? throw new ArgumentNullException(nameof(constructionFactory));
         _logSink = new UnityTimberbornFireLogSink();
     }
 
@@ -162,9 +169,18 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             _runtime.AttachTreeBurnConsequenceApi(
                 new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink));
             _runtime.AttachCropBurnConsequenceApi(
-                new TimberbornTextureCropBurnConsequenceApi(_entityRegistry, _logSink));
+                new TimberbornTextureCropBurnConsequenceApi(
+                    _entityRegistry,
+                    _logSink,
+                    blockService: _blockService,
+                    registrations: cropBurnDamageTargets.Registrations));
             _runtime.AttachStructureBurnDamageRollbackTargetApi(
-                new TimberbornStructureBurnDamageRollbackTargetApi(grid, _blockService, _logSink));
+                new TimberbornStructureBurnDamageRollbackTargetApi(
+                    grid,
+                    _blockService,
+                    _logSink,
+                    entityService: _entityService,
+                    constructionFactory: _constructionFactory));
             _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService));
             _runtime.AttachExplosiveInfrastructureTargetApi(
                 new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));

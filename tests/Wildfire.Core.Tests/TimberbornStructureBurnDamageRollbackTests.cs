@@ -453,6 +453,46 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiKeepsLightBurnDamageNearlyComplete()
+    {
+        TimberbornStructureBurnDamageApplyRequest request = new(
+            DamageApplied: 1,
+            DamageTaken: 1,
+            DamageCapacity: 100,
+            RollbackStage: TimberbornStructureBurnRollbackStage.Unfinished,
+            ShouldClose: true,
+            RepairBlocked: true,
+            RepairEligible: false,
+            ShouldApplyRollbackVisual: true);
+
+        Assert.Equal(0.99f, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRemainingConstructionFraction(request));
+        Assert.Equal(99, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRequiredConstructionMaterialAmount(100, 0.99f));
+    }
+
+    [Fact]
+    public void TargetApiReducesConstructionMaterialsWithBurnDamage()
+    {
+        TimberbornStructureBurnDamageApplyRequest halfBurnedRequest = new(
+            DamageApplied: 50,
+            DamageTaken: 50,
+            DamageCapacity: 100,
+            RollbackStage: TimberbornStructureBurnRollbackStage.Unfinished,
+            ShouldClose: true,
+            RepairBlocked: true,
+            RepairEligible: false,
+            ShouldApplyRollbackVisual: true);
+        TimberbornStructureBurnDamageApplyRequest fullyBurnedRequest = halfBurnedRequest with
+        {
+            DamageTaken = 100,
+        };
+
+        Assert.Equal(0.5f, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRemainingConstructionFraction(halfBurnedRequest));
+        Assert.Equal(5, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRequiredConstructionMaterialAmount(10, 0.5f));
+        Assert.Equal(0f, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRemainingConstructionFraction(fullyBurnedRequest));
+        Assert.Equal(0, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRequiredConstructionMaterialAmount(10, 0f));
+    }
+
+    [Fact]
     public void SinkReportsNativeConstructionSkipWhenBurnedVisualMasksUnfinishedFailure()
     {
         RecordingStructureTargetApi targetApi = new(Target(
@@ -474,6 +514,23 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(1, summary.VisualRollbackAppliedCount);
         Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
         Assert.Equal(1, summary.SkippedNativeConstructionApiCount);
+    }
+
+    [Theory]
+    [InlineData("DistrictCenter")]
+    [InlineData("DistrictCenter.Folktails(Clone)")]
+    [InlineData("DistrictCenter.IronTeeth(Clone)")]
+    public void TargetApiRecognizesDistrictCenterRebuildTargets(string specId)
+    {
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenterName(specId));
+    }
+
+    [Theory]
+    [InlineData("DistrictCrossing.Folktails(Clone)")]
+    [InlineData("LumberMill.Folktails(Clone)")]
+    public void TargetApiDoesNotRebuildOtherBuildingsAsDistrictCenters(string specId)
+    {
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenterName(specId));
     }
 
     [Fact]
