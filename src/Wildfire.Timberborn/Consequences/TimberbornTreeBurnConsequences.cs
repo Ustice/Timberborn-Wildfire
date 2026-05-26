@@ -64,8 +64,7 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
             $"duplicate_cells_suppressed={DuplicateCellSuppressedCount} " +
             $"unmapped_targets={UnmappedTargetCount} " +
             $"unknown_cuttable_resources={UnknownCuttableResourceCount} " +
-            $"non_burnable_tree_targets={NonBurnableTreeTargetCount} " +
-            $"skipped_unsafe_apis={SkippedUnsafeApiCount}";
+            $"non_burnable_tree_targets={NonBurnableTreeTargetCount}";
     }
 }
 

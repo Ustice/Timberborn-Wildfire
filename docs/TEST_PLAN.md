@@ -200,10 +200,10 @@ Evidence required before claiming platform support:
 - Windows support requires package-script support for Windows AssetBundles, expected names `wildfire_compute_win`, `wildfire_diagnostic_win`, `wildfire_effects_win`, and `wildfire_visual_win`, release artifact validation that includes those files, a real Windows Timberborn install, copied `Player.log`, and `status` or `qa-readiness` evidence from that packaged artifact.
 - Linux, SteamOS, or Steam Deck support would require an explicit product decision, defined platform-specific bundle names and build targets for the runtime platform Unity reports, packaged artifact validation, and live evidence on the chosen Linux, SteamOS, Deck, or Proton environment.
 
-Current environment blockers:
+Current environment prerequisites:
 
-- Windows validation is blocked on access to a Windows machine or VM with Steam Timberborn installed, plus Unity/package support for the Windows bundles.
-- Linux, SteamOS, and Steam Deck validation are blocked on a deliberate support decision and a real target environment with package and live-run evidence.
+- Windows validation is pending access to a Windows machine or VM with Steam Timberborn installed, plus Unity/package support for the Windows bundles.
+- Linux, SteamOS, and Steam Deck validation is pending a deliberate support decision and a real target environment with package and live-run evidence.
 
 ## TWF-106 Package Layout Evidence
 
@@ -277,21 +277,27 @@ Deferred names for downstream tickets:
 
 ## Tree Burn Consequences
 
-`TWF-084` binds compact fire deltas to a Timberborn adapter-owned tree consequence lane through the shared `TWF-075` burn-damage ownership/state provider. Live cuttable tree targets are registered separately from crop/harvestable targets, use cuttable yield resources such as `Log` for burn capacity, and resolve multi-cell or vertical tree footprints back to one tree target per dispatch. `TWF-169` keeps that path narrow for fully burned trees: when packed fuel reaches zero, the adapter removes remaining cuttable yield, asks Timberborn's native natural-resource model to refresh so the mature model is hidden and the leftover model is shown, and only counts a visual update when the leftover model is active. If that native refresh path is unavailable, accepted live evidence may show nonzero tree consideration and burnable counters with `tree_burn_skipped_unsafe_apis` rather than claiming stump application.
+`TWF-084` binds compact fire deltas to a Timberborn adapter-owned tree consequence lane through the shared `TWF-075` burn-damage ownership/state provider. Live cuttable tree targets are registered separately from crop/harvestable targets, use cuttable yield resources such as `Log` for burn capacity, and resolve multi-cell or vertical tree footprints back to one tree target per dispatch. `TWF-169` keeps that path narrow for fully burned trees: when packed fuel reaches zero, the adapter removes remaining cuttable yield, asks Timberborn's native natural-resource model to refresh so the mature model is hidden and the leftover model is shown, and only counts a visual update when the leftover model is active.
 
-Automated coverage must prove yield loss from accepted burn damage, full-burn death and burned-visual requests through the safe adapter boundary, duplicate footprint suppression, crop separation, unknown/non-burnable fail-closed behavior, and `last_delta_consumer_tree_burn_*` QA/status tokens.
+Automated coverage must prove yield loss from accepted burn damage, full-burn death and burned-visual requests, duplicate footprint suppression, crop separation, unknown/non-burnable fail-closed behavior, and `last_delta_consumer_tree_burn_*` QA/status tokens.
 
-Live QA must use a real loaded-save tree or cuttable target, preferably through `qa-delta-stimulus selected-tree` or another tree selector, then capture `status` or `qa-readiness` showing `burn_damage_registered_tree_burn_targets=<nonzero>`, `last_delta_consumer_tree_burn_considered_targets=<nonzero>`, and either `last_delta_consumer_tree_burn_visual_state_updates=<nonzero>` with `wildfire_timberborn_tree_burned_leftover_applied ... model_refreshed=true leftover_model_active=true`, or precise safe-unavailable telemetry such as `wildfire_timberborn_tree_burned_leftover_skipped` plus nonzero `last_delta_consumer_tree_burn_skipped_unsafe_apis`. Preserve copied `Player.log` with `wildfire_timberborn_delta_consequence_sink_bound lane=tree_burn_consequences`, `wildfire_timberborn_tree_burn_consequences_applied`, and matching `wildfire_timberborn_delta_consumer_completed ... tree_burn_*` fields. Screenshot review must confirm the full tree model is no longer visually dominant after fuel reaches zero; counters alone are not enough for this ticket.
+Live QA must use a real loaded-save tree or cuttable target, preferably through `qa-delta-stimulus selected-tree` or another tree selector, then capture `status` or `qa-readiness` showing `burn_damage_registered_tree_burn_targets=<nonzero>`, `last_delta_consumer_tree_burn_considered_targets=<nonzero>`, and either `last_delta_consumer_tree_burn_visual_state_updates=<nonzero>` with `wildfire_timberborn_tree_burned_leftover_applied ... model_refreshed=true leftover_model_active=true`. Preserve copied `Player.log` with `wildfire_timberborn_delta_consequence_sink_bound lane=tree_burn_consequences`, `wildfire_timberborn_tree_burn_consequences_applied`, and matching `wildfire_timberborn_delta_consumer_completed ... tree_burn_*` fields. Screenshot review must confirm the full tree model is no longer visually dominant after fuel reaches zero; counters alone are not enough for this ticket.
 
 ## Stored Goods Burn Consequences
 
 `TWF-115` binds fuel-loss compact deltas to a Timberborn adapter-owned stored-goods consequence lane through the `TWF-075` burn-damage ownership/state provider. The deterministic sink resolves one owned storage target per tick, suppresses duplicate cells from the same storage target, classifies stacks through `TimberbornResourceFuelCatalog`, and only mutates stock through Timberborn `Inventory.Take(GoodAmount)` when a live `Stockpile.Inventory` is available. Warehouses, piles, and tanks are treated through their stockpile-backed storage surface when Timberborn exposes it; owned storage cells without a live inventory target report precise skipped-inventory telemetry instead of disappearing. Unknown resources remain searchable skipped cases, inert goods do not burn, and volatile or explosive goods are counted as hazardous so the `TWF-116` pulse lane can own their special behavior.
 
-Automated coverage should prove partial-stack destruction, duplicate target suppression, non-burnable and unknown resource handling, hazardous-good counting, and safe no-op behavior when no inventory API is available. Live QA must capture a storage fire where status or `qa-readiness` reports `last_delta_consumer_stored_good_burn_matched_storage_cells=<nonzero>` and `last_delta_consumer_stored_good_burn_destroyed_items=<nonzero>`, or a precise safe-unavailable result through `last_delta_consumer_stored_good_burn_skipped_no_inventory_api=<nonzero>`. Required log tokens are `wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn`, `wildfire_timberborn_stored_goods_burn_applied`, and the matching `wildfire_timberborn_delta_consumer_completed ... stored_good_burn_*` fields.
+Automated coverage should prove partial-stack destruction, duplicate target suppression, non-burnable and unknown resource handling, hazardous-good counting. Live QA must capture a storage fire where status or `qa-readiness` reports `last_delta_consumer_stored_good_burn_matched_storage_cells=<nonzero>` and `last_delta_consumer_stored_good_burn_destroyed_items=<nonzero>`. Required log tokens are `wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn`, `wildfire_timberborn_stored_goods_burn_applied`, and the matching `wildfire_timberborn_delta_consumer_completed ... stored_good_burn_*` fields.
 
 ## Explosive Infrastructure
 
-`TWF-130` accepts a separate explosive-infrastructure contract for placed `Dynamite`, `DoubleDynamite`, `TripleDynamite`, `Detonator`, and `Tunnel` targets. Automated tests for implementation tickets should start with descriptor classification, sustained-heat arming thresholds, duplicate target suppression, setting gates, bounded heat-pulse output, and safe unavailable wrappers before any live native explosion is attempted.
+`TWF-130` accepts a separate explosive-infrastructure contract for placed
+`Dynamite`, `DoubleDynamite`, `TripleDynamite`, `Detonator`, and `Tunnel`
+targets. Automated tests for implementation tickets should start with
+descriptor classification, sustained-heat arming thresholds, duplicate
+target suppression, setting gates, bounded heat-pulse output, and
+explicit unavailable-path wrappers before any live native explosion is
+attempted.
 
 `TWF-152` adds the first dynamite implementation lane. Compact fire deltas are converted into explosive-infrastructure exposure decisions, resolved through a Timberborn adapter target API, deduplicated by target stable id, and tracked against `explosive_infrastructure_armed_threshold_ticks`. Once armed, the sink enqueues a bounded `FireSimChange` heat pulse through the simulator external-change path. Native `Dynamite.TriggerDelayed(...)` is wrapped, but `native_dynamite_trigger_enabled` defaults to disabled; the default behavior is pulse-only plus skipped-native telemetry. Building against native `Dynamite` also requires explicit `Timberborn.Explosions.dll` and `Timberborn.TickSystem.dll` references.
 
@@ -299,9 +305,36 @@ Automated coverage for `TWF-152` must prove the disabled setting gate, sustained
 
 Live QA must prove each native wrapper independently. Dynamite triggering evidence must show the target id and depth, the arming threshold, the selected native call (`TriggerDelayed` or `Trigger`), bounded Wildfire heat-pulse cells, and final status counters. Detonator evidence must show disable or arming behavior without corrupting automation state. Tunnel terrain destruction must stay disabled until a later ticket captures native `Tunnel.Explode()` proof, terrain/object impact evidence, save/reload behavior, and a player-recoverable rollback or rebuild path.
 
-Use direct conservative QA selectors when generic infrastructure selection would hit unrelated paths or utility buildings. `qa-delta-stimulus dynamite`, `qa-delta-stimulus detonator`, and `qa-delta-stimulus tunnel` must resolve a placed target through the matching safe Timberborn adapter API, queue only Wildfire simulator heat/fuel changes at that resolved cell, and report `direct_target_kind`, `direct_target_stable_id`, and `direct_target_scanned_cells` in the command result. These selectors must not call native `Dynamite.Trigger*`, `Detonator.Arm/Evaluate`, or `Tunnel.Explode()` during command queueing; the existing consequence sinks and release settings own any later native wrapper attempt.
+Use direct conservative QA selectors when generic infrastructure
+selection would hit unrelated paths or utility buildings.
+`qa-delta-stimulus dynamite`, `qa-delta-stimulus detonator`, and
+`qa-delta-stimulus tunnel` must resolve a placed target through the
+matching Timberborn adapter API, queue only Wildfire simulator
+heat/fuel changes at that resolved cell, and report `direct_target_kind`,
+`direct_target_stable_id`, and `direct_target_scanned_cells` in the
+command result. These selectors must not call native
+`Dynamite.Trigger*`, `Detonator.Arm/Evaluate`, or `Tunnel.Explode()`
+during command queueing; the existing consequence sinks and release
+settings own any later native wrapper attempt.
 
-`TWF-153` adds the first detonator fire-safety lane. Compact fire deltas are converted into detonator safety decisions, deduplicated by stable target id, and handled as trigger-device safety consequences rather than fuel or heat-pulse sources. The current accepted behavior is `Disarm()` only, never `Arm()` or `Evaluate()`, behind `detonator_fire_safety_enabled`. Timberborn's `Detonator` type is present in `Timberborn.AutomationBuildings.dll` but is not publicly accessible to the mod assembly, and its native `Disarm()` method is non-public. The live adapter therefore uses a reflection wrapper around `GetObjectsWithComponentAt<Detonator>` and non-public `Disarm()` while deterministic tests stay on the typed adapter interface. If a save serializes detonator-controlled explosive infrastructure as `Dynamite`, `DoubleDynamite`, or `TripleDynamite` templates without a literal `Detonator` template, `qa-delta-stimulus detonator` may resolve a same-cell `detonator-dynamite-control:*` fallback target and pass it through the same `Disarm()`-only wrapper. `detonator-unavailable:*` pseudo-targets remain a safe-unavailable signal and must still fail direct QA selection without queueing.
+`TWF-153` adds the first detonator fire-safety lane. Compact fire deltas
+are converted into detonator safety decisions, deduplicated by stable
+target id, and handled as trigger-device safety consequences rather than
+fuel or heat-pulse sources. The current accepted behavior is `Disarm()`
+only, never `Arm()` or `Evaluate()`, behind
+`detonator_fire_safety_enabled`. Timberborn's `Detonator` type is
+present in `Timberborn.AutomationBuildings.dll` but is not publicly
+accessible to the mod assembly, and its native `Disarm()` method is
+non-public. The live adapter therefore uses a reflection wrapper around
+`GetObjectsWithComponentAt<Detonator>` and non-public `Disarm()` while
+deterministic tests stay on the typed adapter interface. If a save
+serializes detonator-controlled explosive infrastructure as `Dynamite`,
+`DoubleDynamite`, or `TripleDynamite` templates without a literal
+`Detonator` template, `qa-delta-stimulus detonator` may resolve a
+same-cell `detonator-dynamite-control:*` fallback target and pass it
+through the same `Disarm()`-only wrapper. `detonator-unavailable:*`
+pseudo-targets remain an unavailable-path signal and must still fail
+direct QA selection without queueing.
 
 Automated coverage for `TWF-153` must prove the disabled setting gate, duplicate target suppression, disabled behavior, unavailable wrapper telemetry, zero armed targets, recoverability counters, and `last_delta_consumer_detonator_fire_safety_*` QA/status tokens.
 
@@ -313,13 +346,53 @@ Automated coverage for `TWF-154` must prove the behavior setting gate, duplicate
 
 `TWF-075` keeps burn-damage state deterministic and Timberborn-local. Automated coverage should prove that static descriptors do not store per-instance damage, target registration owns the stable entity/cell mapping, and downstream consequence tickets can consume bounded state without adding host-owned spread rules.
 
-`TWF-077` adds the first structure burn-damage rollback lane. It consumes compact deltas as construction-value loss through the `TWF-075` burn-damage ownership/state provider, resolves only the Timberborn target that owns the damaged cell, deduplicates multi-cell structures by stable target id, closes pausable structures while fire or dangerous heat is present, blocks repair until danger falls below the accepted heat threshold, and reports rollback stages without directly destroying Timberborn entities. Live QA can accept a safely closed/repair-gated structure or an explicit `structure_burn_damage_rollback_skipped_no_safe_api` result; unfinished/construction visual rollback remains telemetry-only until a safe native presentation wrapper is proven.
+`TWF-077` adds the first structure burn-damage rollback lane. It
+consumes compact deltas as construction-value loss through the `TWF-075`
+burn-damage ownership/state provider, resolves only the Timberborn
+target that owns the damaged cell, deduplicates multi-cell structures by
+stable target id, closes pausable structures while fire or dangerous
+heat is present, blocks repair until danger falls below the accepted
+heat threshold, and reports rollback stages without directly destroying
+Timberborn entities. Live QA must prove a closed/repair-gated structure
+through the implemented native path.
+missing-path skip counters are failure
+telemetry, not passing evidence. If these counters are nonzero, the
+ticket is failing until the action is implemented. Unfinished/construction visual rollback
+remains telemetry-only until a native presentation wrapper is proven.
 
-`TWF-127` adds the first path-infrastructure consequence lane. It consumes compact deltas as burn-damage units through the `TWF-075` burn-damage ownership/state provider, resolves only path-like targets that own the damaged cell, deduplicates by stable target id, treats zero-cost paths as non-burnable safe no-ops, and reports safe-unavailable passability mutation instead of blocking Timberborn paths. Live QA can accept either a safe damaged/repair-eligible target or an explicit `path_infrastructure_skipped_no_safe_api` result; path blocking must remain zero until a recoverable native pathing wrapper is proven.
+`TWF-127` adds the first path-infrastructure consequence lane. It
+consumes compact deltas as burn-damage units through the `TWF-075`
+burn-damage ownership/state provider, resolves only path-like targets
+that own the damaged cell, deduplicates by stable target id, treats
+zero-cost paths as non-burnable no-ops, and reports explicit
+passability-mutation blockers instead of blocking Timberborn paths. Live
+QA must prove a damaged/repair-eligible target through the implemented
+pathing wrapper. missing-path skip counters are failure
+telemetry, and path blocking must remain zero until a recoverable native
+pathing wrapper is proven.
 
-`TWF-128` adds the first power-infrastructure consequence lane. It consumes compact deltas as burn-damage units through the `TWF-075` burn-damage ownership/state provider, resolves only power-like targets that own the damaged cell, deduplicates by stable target id, treats metal-only infrastructure as safe no-op, and reports safe-unavailable network mutation instead of faking a power outage. Live QA can accept a safely damaged/repair-eligible power target or an explicit `power_infrastructure_skipped_no_safe_api` result; disconnect counters must stay zero until a recoverable Timberborn power-network wrapper is proven.
+`TWF-128` adds the first power-infrastructure consequence lane. It
+consumes compact deltas as burn-damage units through the `TWF-075`
+burn-damage ownership/state provider, resolves only power-like targets
+that own the damaged cell, deduplicates by stable target id, treats
+metal-only infrastructure as no-op, and reports explicit network-mutation
+blockers instead of faking a power outage. Live QA must prove a
+damaged/repair-eligible power target through the implemented
+power-network wrapper. missing-path skip counters are
+failure telemetry, and disconnect counters must stay zero until a
+recoverable Timberborn power-network wrapper is proven.
 
-`TWF-129` adds the first water-infrastructure consequence lane. It consumes compact deltas as burn-damage units through the `TWF-075` burn-damage ownership/state provider, resolves only dam/levee/floodgate/valve/sluice-like targets that own the damaged cell, deduplicates by stable target id, treats water/dirt/metal-only infrastructure as inert safe no-op, and applies an explicit difficult-to-burn resistance before any damage is reported. Live QA can accept a safely damaged/repair-eligible water target or an explicit `water_infrastructure_skipped_no_safe_api` result; water-state mutation counters must stay zero until a recoverable Timberborn water-passage wrapper is proven.
+`TWF-129` adds the first water-infrastructure consequence lane. It
+consumes compact deltas as burn-damage units through the `TWF-075`
+burn-damage ownership/state provider, resolves only
+dam/levee/floodgate/valve/sluice-like targets that own the damaged cell,
+deduplicates by stable target id, treats water/dirt/metal-only
+infrastructure as inert no-op, and applies an explicit difficult-to-burn
+resistance before any damage is reported. Live QA must prove a
+damaged/repair-eligible water target through the implemented
+water-passage wrapper. missing-path skip counters are
+failure telemetry, and water-state mutation counters must stay zero
+until a recoverable Timberborn water-passage wrapper is proven.
 
 Run:
 
@@ -329,7 +402,7 @@ dotnet test --filter FullyQualifiedName~TimberbornBurnDamageStateTests
 
 Required deterministic evidence:
 
-- Descriptor lookup returns known static descriptors and safe unknown descriptors.
+- Descriptor lookup returns known static descriptors and conservative unknown descriptors.
 - Damage capacity uses yielded goods and construction investment through `TimberbornResourceFuelCatalog`.
 - Unknown resource ids contribute no capacity and remain searchable in state/telemetry.
 - Resource-accounting fields, including `FuelValue`, `Flammability`, and `AccountedResourceIds`, survive into exposed state snapshots.
@@ -342,7 +415,7 @@ Required deterministic evidence:
 
 Ash is simulator-owned transport state and must stay out of `PackedCell`. Timberborn ash services consume simulator ash deltas or readback and queue bounded ash mutations; they must not own a competing ash source of truth.
 
-`TWF-079` keeps the broad contamination contract separate from tainted-ash live proof. Fire, heat, and suppression must never reduce native Timberborn contamination. Badwater and contaminated water-like cells import as packed water-band inputs while remaining visibly unsafe in telemetry. They must not be reported as actual suppression inputs unless a fire/suppression event proves that cell supplied the suppression; otherwise status must expose safe-unavailable telemetry instead of over-claiming. Toxic-smoke readiness is exposed through contaminated-smoke and toxic exposure classifications for `TWF-086`; this ticket does not add toxic or contaminated steam.
+`TWF-079` keeps the broad contamination contract separate from tainted-ash live proof. Fire, heat, and suppression must never reduce native Timberborn contamination. Badwater and contaminated water-like cells import as packed water-band inputs while remaining visibly unsafe in telemetry. They must not be reported as actual suppression inputs unless a fire/suppression event proves that cell supplied the suppression; otherwise status must expose unavailable-path telemetry instead of over-claiming. Toxic-smoke readiness is exposed through contaminated-smoke and toxic exposure classifications for `TWF-086`; this ticket does not add toxic or contaminated steam.
 
 Required deterministic coverage:
 
@@ -350,10 +423,12 @@ Required deterministic coverage:
 - Fertile ash growth remains bounded to a `10%` maximum multiplier and reports applied, unsupported, unsafe, and tainted-skip counters.
 - Contaminated burn sources or affected contaminated soil create contaminated ash and never request growth.
 - Badwater and contaminated water-like sources map to water-like cells without creating a native decontamination attempt, and actual suppression-input counters remain separate from water-like map-presence counters.
-- Tainted ash soil poisoning reports candidate, applied, and safe-unavailable mutation counters without reducing native contamination.
+- Tainted ash soil poisoning reports candidate, applied, and unavailable-path mutation counters without reducing native contamination.
 - Clean ash decay removes `1` simulator ash unit per in-game day; contaminated ash decay removes `1` simulator ash unit every two in-game days.
 - Water reaching clean ash queues simulator-owned ash removal without tainting water.
-- Water reaching tainted ash queues simulator-owned ash removal and attempts bounded water taint only when a safe API exists; unavailable APIs must report safe-unavailable telemetry.
+- Water reaching tainted ash queues simulator-owned ash removal and
+  attempts bounded water taint through the implemented API path;
+  unavailable APIs must report unavailable-path telemetry.
 - Badwater or contaminated water reaching ash may wash ash away but must not create any decontamination attempt or reduce native contamination.
 - Shader simulation must not perform inline water washout; `FireSim.compute` should preserve ash under water until an external simulator ash mutation is queued. If this shader behavior changes, run the opt-in Unity shader harness with `WILDFIRE_RUN_UNITY_SHADER_HARNESS=1`.
 - Existing Gatherer Posts collect only uncontaminated ash, convert `1` ash unit into `1` `FertileAsh` good, reduce ash amount after successful inventory mutation, and leave contaminated ash untouched.
@@ -362,33 +437,87 @@ Required deterministic coverage:
 Status and `qa-readiness` should expose simulator-owned ash state and adapter effects:
 
 - `ash_field_entries`, `ash_field_fertile_cells`, `ash_field_spent_cells`, and `ash_field_tainted_cells`.
-- `ash_field_growth_candidate_cells`, `ash_field_growth_applied_growables`, `ash_field_growth_skipped_tainted_cells`, and `ash_field_growth_skipped_unsafe_apis`.
-- `ash_field_contaminated_burn_sources`, `ash_field_contaminated_affected_cells`, `contamination_fire_contaminated_burn_sources`, `contamination_fire_contaminated_affected_cells`, `contamination_fire_contaminated_affected_map_cells`, `contamination_fire_badwater_water_like_map_cells`, `contamination_fire_contaminated_water_like_map_cells`, `contamination_fire_badwater_suppression_inputs`, `contamination_fire_contaminated_water_suppression_inputs`, `contamination_fire_water_suppression_input_safe_unavailable`, `contamination_fire_toxic_smoke_cells`, `contamination_fire_native_decontamination_attempts`, and `contamination_fire_skipped_unsafe_contamination_apis`.
-- `tainted_ash_poison_candidate_cells`, `tainted_ash_poison_applied_cells`, and `tainted_ash_poison_skipped_no_safe_api`.
-- Tainted ash decay or washout counters: `ash_water_washout_candidate_ash_cells`, `ash_water_washout_clean_ash_washed`, `ash_water_washout_tainted_ash_washed`, `ash_water_washout_water_taint_attempts`, `ash_water_washout_water_taint_successes`, `ash_water_washout_skipped_unsafe_water_apis`, and `ash_water_washout_no_op_cells`.
+- `ash_field_growth_candidate_cells`, `ash_field_growth_applied_growables`, and `ash_field_growth_skipped_tainted_cells`.
+- `ash_field_contaminated_burn_sources`, `ash_field_contaminated_affected_cells`, `contamination_fire_contaminated_burn_sources`, `contamination_fire_contaminated_affected_cells`, `contamination_fire_contaminated_affected_map_cells`, `contamination_fire_badwater_water_like_map_cells`, `contamination_fire_contaminated_water_like_map_cells`, `contamination_fire_badwater_suppression_inputs`, `contamination_fire_contaminated_water_suppression_inputs`, `contamination_fire_toxic_smoke_cells`, and `contamination_fire_native_decontamination_attempts`.
+- `tainted_ash_poison_candidate_cells` and `tainted_ash_poison_applied_cells`.
+- Tainted ash decay or washout counters: `ash_water_washout_candidate_ash_cells`, `ash_water_washout_clean_ash_washed`, `ash_water_washout_tainted_ash_washed`, `ash_water_washout_water_taint_attempts`, `ash_water_washout_water_taint_successes`, and `ash_water_washout_no_op_cells`.
 - `fertile_ash_gatherer_posts`, `fertile_ash_collection_candidate_cells`, `fertile_ash_collection_reachable_cells`, `fertile_ash_collected_goods`, `fertile_ash_collection_depleted_cells`, `fertile_ash_collection_skipped_tainted_or_spent_cells`, and `fertile_ash_collection_skipped_inventory_api`.
 
-Live QA should burn one clean organic target and one contaminated or contaminated-soil target. Prefer `qa-delta-stimulus contaminated-tree` when the loaded map contains a contaminated tree. If the map cannot reliably provide that source, use `qa-delta-stimulus tainted-ash` as the narrow QA-only affected-cell route; it queues simulator ash plus ash contamination and must not mutate native soil or badwater contamination. Passing evidence must include a copied `Player.log`, a `status` or `qa-readiness` result with nonzero fertile and tainted ash counters, growth or safe-unavailable growth telemetry, tainted soil-poisoning applied or safe-unavailable telemetry, and Gatherer Post collection of `FertileAsh` or an explicit inventory API blocker. Save/reload QA should confirm ash entries survive through Wildfire persistence before collection depletes them. For ash-water evidence, use `qa-ash-water-stimulus clean` or `qa-ash-water-stimulus tainted` to queue simulator-owned ash plus water contact on one imported burnable field target, capture the reported `target_index` with before/after `qa-ash-cell <target_index>` or status output, then verify nonzero `ash_water_washout_clean_ash_washed` or `ash_water_washout_tainted_ash_washed`, `ash_water_washout_water_taint_attempts` for tainted ash, and either `ash_water_washout_water_taint_successes` or `ash_water_washout_skipped_unsafe_water_apis`. If partial washout leaves ash behind, live QA must save and reload that state, then capture a post-reload `qa-ash-cell` or status result proving the remaining simulator-owned ash is still present.
+Live QA should burn one clean organic target and one contaminated or
+contaminated-soil target. Prefer `qa-delta-stimulus contaminated-tree`
+when the loaded map contains a contaminated tree. If the map cannot
+reliably provide that source, use `qa-delta-stimulus tainted-ash` as the
+narrow QA-only affected-cell route; it queues simulator ash plus ash
+contamination and must not mutate native soil or badwater
+contamination. Passing evidence must include a copied `Player.log`, a
+`status` or `qa-readiness` result with nonzero fertile and tainted ash
+counters, successful growth on supported targets, tainted
+soil-poisoning application where supported, and Gatherer Post collection
+of `FertileAsh` or an explicit inventory API failure. Unavailable-path
+growth or soil-poisoning telemetry is failure evidence, not acceptance.
+Save/reload QA should confirm ash entries survive through Wildfire
+persistence before collection depletes them. For ash-water evidence, use
+`qa-ash-water-stimulus clean` or `qa-ash-water-stimulus tainted` to
+queue simulator-owned ash plus water contact on one imported burnable
+field target, capture the reported `target_index` with before/after
+`qa-ash-cell <target_index>` or status output, then verify nonzero
+`ash_water_washout_clean_ash_washed` or
+`ash_water_washout_tainted_ash_washed`,
+`ash_water_washout_water_taint_attempts` for tainted ash, and nonzero
+`ash_water_washout_water_taint_successes` for tainted-ash water contact.
+If partial washout leaves ash behind, live QA must save and reload that
+state, then capture a post-reload `qa-ash-cell` or status result proving
+the remaining simulator-owned ash is still present.
 
-For `TWF-079` live QA, use `qa-water-suppression-stimulus contaminated-tree` after confirming the loaded map has at least one contaminated tree target. Capture the command result, one or more dispatch ticks, and `status` or `qa-readiness` fields showing `target_soil_contamination`, `affected_cell_contaminated=true`, `contaminated_suppression_input=false` unless a real contaminated-water suppressor is proven, `water_suppression_input_safe_unavailable` when the suppressor is only QA-injected water, `native_decontamination_attempts=0`, distinct contaminated source and affected-cell counters, and the existing beaver exposure toxic-smoke fields. If no contaminated-tree target exists, report the command failure as a map/setup blocker and keep `qa-delta-stimulus contaminated-tree`/`qa-delta-stimulus tainted-ash` limited to tainted-ash evidence rather than treating it as badwater suppression proof.
+For `TWF-079` live QA, use
+`qa-water-suppression-stimulus contaminated-tree` after confirming the
+loaded map has at least one contaminated tree target. Capture the
+command result, one or more dispatch ticks, and `status` or
+`qa-readiness` fields showing `target_soil_contamination`,
+`affected_cell_contaminated=true`,
+`contaminated_suppression_input=false` unless a real
+contaminated-water suppressor is proven, `native_decontamination_attempts=0`,
+distinct contaminated source and affected-cell counters, and the
+existing beaver exposure toxic-smoke fields. If
+missing-path suppression counters appear, treat it as failure
+telemetry. If no contaminated-tree target exists, report the command
+failure as a map/setup failure and keep
+`qa-delta-stimulus contaminated-tree`/`qa-delta-stimulus tainted-ash`
+limited to tainted-ash evidence rather than treating it as badwater
+suppression proof.
 
-Fertile ash application adds two player-facing toolbar paths: crop fertilizing and forestry fertilizing. Deterministic and live QA should prove that designations consume `1` `FertileAsh` good, queue `1` uncontaminated ash unit into simulator ash state, persist crop and forestry designations across save/reload, skip contaminated cells without consuming goods, and report no-inventory or safe-API failures clearly.
+Fertile ash application adds two player-facing toolbar paths: crop
+fertilizing and forestry fertilizing. Deterministic and live QA should
+prove that designations consume `1` `FertileAsh` good, queue `1`
+uncontaminated ash unit into simulator ash state, persist crop and
+forestry designations across save/reload, skip contaminated cells
+without consuming goods, and report no-inventory or API-path failures
+clearly as failures.
 
 Icon QA for ash and consequence feedback should compare generated or edited Wildfire assets against `docs/reference/assets/menu-icons/composite.png` and `docs/reference/assets/goods-icons/composite.png`. Fertile ash should keep the dirt/ash base with a monochrome sprout, contaminated or tainted ash should use the same base with a native monochrome contamination cue, and the combined fertilize toolbar icon should read as a Timberborn area tool. Current goods-icon references include `docs/reference/assets/goods-icons/FertileAshIcon.png` and `docs/reference/assets/goods-icons/ContaminatedAshIcon.png`. The current fertilize toolbar reference is `docs/reference/assets/menu-icons/WildfireFertilizeToolIcon.png`; live UI screenshot QA should show the same combined fertilize button in both the Fields and Forestry planting groups, not Timberborn's `DemolishResourcesTool` shovel/root icon.
 
 ## Beaver Field Effects
 
-`TWF-071` accepts a conservative beaver-facing field contract. Fire, heat, smoke, toxic smoke, clean steam, ash aftermath, and wet suppression are field inputs from the simulator or Timberborn-side consequence fields. The release ladder is exposure telemetry, avoidance or work interruption, reversible debuffs, incapacitation, then death. Automatic death, forced incapacitation, native contamination coupling, beaver health effects from ash, firefighting panic, faction-specific response behavior, and arbitrary path graph mutation are deferred until separate tickets prove safe APIs and recoverability.
+`TWF-071` accepts a conservative beaver-facing field contract. Fire,
+heat, smoke, toxic smoke, clean steam, ash aftermath, and wet
+suppression are field inputs from the simulator or Timberborn-side
+consequence fields. The release ladder is exposure telemetry, avoidance
+or work interruption, reversible debuffs, incapacitation, then death.
+Automatic death, forced incapacitation, native contamination coupling,
+beaver health effects from ash, firefighting panic, faction-specific
+response behavior, and arbitrary path graph mutation are deferred until
+separate tickets prove implementation and recoverability.
 
 Automated coverage for downstream implementation tickets must prove:
 
 - Exposure samples come from real field values or deterministic field fixtures, not hard-coded beaver triggers.
 - Field classes remain distinguishable in telemetry: fire, heat, smoke, toxic smoke, clean steam, ash, and wet suppression.
 - Respiratory progression moves through coughing, choking, and death-candidate counters without applying unsafe irreversible native effects by default.
-- Burn progression moves through singed, burned, and death-candidate counters without applying unsafe native effects by default. Use `WildfireBurnedStatus` for beaver burn injury once the status path is safe; reserve `WildfireBurningStatus` for structures that are actively on fire.
+- Burn progression moves through singed, burned, and death-candidate counters. Use `WildfireBurnedStatus` for beaver burn injury once work-prevention behavior is implemented and validated; reserve `WildfireBurningStatus` for structures that are actively on fire.
 - Work interruption and avoidance are reported separately from injury or incapacitation.
 - Hysteresis prevents a beaver from flickering between exposed and recovered states across adjacent ticks.
-- Safe no-op counters identify missing pathing, status, incapacitation, contamination, and death APIs.
+- No-op counters identify missing pathing, status, incapacitation,
+  contamination, and death APIs.
 - Player feedback aggregates beaver danger instead of emitting one alert per beaver per tick.
 
 `TWF-072` adds the first telemetry-only bridge. `status` and `qa-readiness` should include `beaver_field_exposure_available`, `beaver_field_exposure_sampled_beavers`, `beaver_field_exposure_exposed_beavers`, `beaver_field_exposure_respiratory_cells`, `beaver_field_exposure_burn_cells`, `beaver_field_exposure_contaminated_smoke_cells`, `beaver_field_exposure_toxic_cells`, `beaver_field_exposure_steam_cells`, `beaver_field_exposure_tainted_aftermath_cells`, `beaver_field_exposure_skipped_no_position_api`, `beaver_field_exposure_skipped_bounded_sampling`, and `beaver_field_exposure_unavailable_reason`. This pass is telemetry-only; it must not alter beaver pathing, work, health, contamination, behavior, or the simulation grid outside explicit QA-only simulator field stimuli. When `beaver_field_exposure_skipped_bounded_sampling` is nonzero, `sampled_beavers` is a partial sample count rather than the loaded beaver count.
@@ -401,25 +530,206 @@ Release spontaneous ignition must be rare, deterministic, and legible. Automated
 
 Required telemetry includes ignition candidates, eligible fire-using buildings, eligible dead vegetation, drought-risk multiplier, ignition rolls, ignitions started, and skipped ineligible sources. Live QA should use a forced high-test-rate preset to prove the path, then capture release/default settings showing the behavior remains rare.
 
-Live QA for the first accepted beaver behavior must use a real fire or suppression event, then capture `status` or `qa-readiness` fields showing nonzero exposure telemetry for at least one field class. If an implementation applies a native debuff, the evidence must also show the matching safe wrapper result and recovery path.
+Live QA for the first accepted beaver behavior must use a real fire or
+suppression event, then capture `status` or `qa-readiness` fields
+showing nonzero exposure telemetry for at least one field class. If an
+implementation applies a native debuff, the evidence must also show the
+matching wrapper result and recovery path.
 
-`TWF-073` adds the shared behavior harness without accepting final smoke, toxic smoke, fire, injury, incapacitation, or death variants. `status` and `qa-readiness` should prove that behavior decisions are downstream of the accepted exposure telemetry via `beaver_field_behavior_dispatcher_enabled`, `beaver_field_behavior_tracked_beavers`, `beaver_field_behavior_decisions_evaluated`, `beaver_field_behavior_smoke_decisions_applied`, `beaver_field_behavior_toxic_smoke_decisions_applied`, `beaver_field_behavior_fire_heat_decisions_applied`, `beaver_field_behavior_noop_decisions_applied`, `beaver_field_behavior_decisions_skipped_cooldown`, `beaver_field_behavior_skipped_no_safe_api`, `beaver_field_behavior_failed_decisions`, `beaver_field_behavior_recovery_actions`, `beaver_field_behavior_persistence_saves`, `beaver_field_behavior_persistence_loads`, and `beaver_field_behavior_last_decision_tick`. Live evidence for this ticket can pass with bounded safe no-op decisions as long as nonzero exposure telemetry precedes the behavior counters and no visual-field-driven avoidance path is active beside the dispatcher.
+`TWF-073` adds the shared behavior harness without accepting final
+smoke, toxic smoke, fire, injury, incapacitation, or death variants.
+`status` and `qa-readiness` should prove that behavior decisions are
+downstream of the accepted exposure telemetry via
+`beaver_field_behavior_dispatcher_enabled`,
+`beaver_field_behavior_tracked_beavers`,
+`beaver_field_behavior_decisions_evaluated`,
+`beaver_field_behavior_smoke_decisions_applied`,
+`beaver_field_behavior_toxic_smoke_decisions_applied`,
+`beaver_field_behavior_fire_heat_decisions_applied`,
+`beaver_field_behavior_noop_decisions_applied`,
+`beaver_field_behavior_decisions_skipped_cooldown`,
+dispatcher skip counters,
+`beaver_field_behavior_failed_decisions`,
+`beaver_field_behavior_recovery_actions`,
+`beaver_field_behavior_persistence_saves`,
+`beaver_field_behavior_persistence_loads`, and
+`beaver_field_behavior_last_decision_tick`. Live evidence for this
+ticket must include implemented behavior decisions; bounded no-op
+decisions are failure evidence even when exposure telemetry is nonzero.
 
-`TWF-087` accepts the direct fire/heat slice on top of the shared dispatcher. Fire/heat decisions must consume `TWF-072` burn exposure classifications and keep active flame contacts higher priority than smoke. Deterministic coverage must prove bounded batch processing, cooldown skips, active-flame contact classification, heat exposure accumulation, singed and burned threshold transitions, recovery decay after heat clears, work-interruption and avoidance decision output, and safe no-op behavior when native pathing, work-cancellation, injury, or death APIs are unavailable. `status` and `qa-readiness` should include `beaver_field_behavior_fire_heat_exposed_beavers`, `beaver_field_behavior_fire_heat_active_flame_contacts`, `beaver_field_behavior_fire_heat_avoidance_candidates`, `beaver_field_behavior_fire_heat_avoided_cells`, `beaver_field_behavior_fire_heat_avoidance_skipped_no_safe_api`, `beaver_field_behavior_fire_heat_interrupted_job_candidates`, `beaver_field_behavior_fire_heat_interrupted_jobs`, `beaver_field_behavior_fire_heat_interrupted_jobs_skipped_no_safe_api`, `beaver_field_behavior_fire_heat_singed_entered`, `beaver_field_behavior_fire_heat_singed_recovered`, `beaver_field_behavior_fire_heat_singed_skipped_no_safe_api`, `beaver_field_behavior_fire_heat_burned_entered`, `beaver_field_behavior_fire_heat_burned_recovered`, `beaver_field_behavior_fire_heat_burned_skipped_no_safe_api`, `beaver_field_behavior_fire_heat_death_candidates`, `beaver_field_behavior_fire_heat_death_skipped_unsafe_api`, and `beaver_field_behavior_fire_heat_recovery_decays`. Live QA should use a real fire/heat exposure near a real beaver, then capture `status` or `qa-readiness` showing nonzero burn exposure telemetry before nonzero fire/heat behavior counters. Passing worker-lane handoff can show explicit safe-unavailable telemetry for avoidance, work interruption, singed, or burned APIs; QA must not claim native injury, work blocking, or death unless the evidence shows the matching safe wrapper result and recovery path. Death remains candidate/skipped telemetry only until a separate sustained severe exposure proof accepts it.
+`TWF-087` accepts the direct fire/heat slice on top of the shared
+dispatcher. Fire/heat decisions must consume `TWF-072` burn exposure
+classifications and keep active flame contacts higher priority than
+smoke. Deterministic coverage must prove bounded batch processing,
+cooldown skips, active-flame contact classification, heat exposure
+accumulation, singed and burned threshold transitions, recovery decay
+after heat clears, work-interruption and avoidance decision output, and
+bounded no-op behavior when native pathing, work-cancellation, injury,
+or death APIs are unavailable. `status` and `qa-readiness` should
+include `beaver_field_behavior_fire_heat_exposed_beavers`,
+`beaver_field_behavior_fire_heat_active_flame_contacts`,
+`beaver_field_behavior_fire_heat_avoidance_candidates`,
+`beaver_field_behavior_fire_heat_avoided_cells`,
+fire-heat avoidance skip counters,
+`beaver_field_behavior_fire_heat_interrupted_job_candidates`,
+`beaver_field_behavior_fire_heat_interrupted_jobs`,
+fire-heat interrupted-job skip counters,
+`beaver_field_behavior_fire_heat_singed_entered`,
+`beaver_field_behavior_fire_heat_singed_recovered`,
+fire-heat singed skip counters,
+`beaver_field_behavior_fire_heat_burned_entered`,
+`beaver_field_behavior_fire_heat_burned_recovered`,
+fire-heat burned skip counters,
+`beaver_field_behavior_fire_heat_death_candidates`,
+fire-heat death skip counters, and
+`beaver_field_behavior_fire_heat_recovery_decays`. Live QA should use a
+real fire/heat exposure near a real beaver, then capture `status` or
+`qa-readiness` showing nonzero burn exposure telemetry before nonzero
+fire/heat behavior counters. Skip counters are failure evidence for the affected
+behavior lanes. QA must not claim native injury, work blocking, or death
+unless the evidence shows the matching wrapper result and recovery path.
+Death remains candidate/skipped telemetry only until a separate
+sustained severe exposure proof accepts it.
 
-`TWF-085` accepts the respiratory-smoke slice on top of the shared dispatcher: clean smoke, contaminated smoke, and toxic smoke all contribute to coughing/choking accumulation while preserving separate toxic-smoke decision telemetry. Deterministic coverage must prove bounded batch skips, cooldown skips, multi-sample smoke accumulation, transition into reversible coughing and choking states, recovery decay after smoke clears, native status-toggle activation, worker-speed debuff application, and safe no-op behavior when a specific Timberborn API is unavailable. `status` and `qa-readiness` should include `beaver_field_behavior_decisions_skipped_batch`, `beaver_field_behavior_smoke_exposed_samples`, `beaver_field_behavior_smoke_exposure_accumulated_samples`, `beaver_field_behavior_smoke_coughing_entered`, `beaver_field_behavior_smoke_coughing_recovered`, `beaver_field_behavior_smoke_coughing_slowdowns_applied`, `beaver_field_behavior_smoke_coughing_slowdowns_recovered`, `beaver_field_behavior_smoke_coughing_slowdowns_skipped_no_safe_api`, `beaver_field_behavior_smoke_recovery_decays`, `beaver_field_behavior_smoke_choking_candidates`, `beaver_field_behavior_smoke_choking_slowdowns_applied`, `beaver_field_behavior_smoke_choking_slowdowns_recovered`, `beaver_field_behavior_smoke_choking_slowdowns_skipped_no_safe_api`, `beaver_field_behavior_smoke_choking_skipped_unsafe_api`, `beaver_field_behavior_smoke_death_candidates`, and `beaver_field_behavior_smoke_death_skipped_unsafe_api`. Live QA should use `qa-delta-stimulus beaver-exposure` or a real smoky fire, then capture `status` or `qa-readiness` showing nonzero exposure telemetry before nonzero smoke behavior counters. Visual QA must confirm the affected beaver shows a floating coughing or choking status icon, and runtime/status proof must show the matching reversible worker-speed debuff and recovery counter. Death remains candidate/skipped telemetry only; QA must not claim death without a separate safe API proof and accepted follow-up ticket.
+`TWF-085` accepts the respiratory-smoke slice on top of the shared
+dispatcher: clean smoke, contaminated smoke, and toxic smoke all
+contribute to coughing/choking accumulation while preserving separate
+toxic-smoke decision telemetry. Deterministic coverage must prove
+bounded batch skips, cooldown skips, multi-sample smoke accumulation,
+transition into reversible coughing and choking states, recovery decay
+after smoke clears, native status-toggle activation, worker-speed debuff
+application, and bounded no-op behavior when a specific Timberborn API
+is unavailable. `status` and `qa-readiness` should include
+`beaver_field_behavior_decisions_skipped_batch`,
+`beaver_field_behavior_smoke_exposed_samples`,
+`beaver_field_behavior_smoke_exposure_accumulated_samples`,
+`beaver_field_behavior_smoke_coughing_entered`,
+`beaver_field_behavior_smoke_coughing_recovered`,
+`beaver_field_behavior_smoke_coughing_slowdowns_applied`,
+`beaver_field_behavior_smoke_coughing_slowdowns_recovered`,
+smoke-coughing slowdown skip counters,
+`beaver_field_behavior_smoke_recovery_decays`,
+`beaver_field_behavior_smoke_choking_candidates`,
+`beaver_field_behavior_smoke_choking_slowdowns_applied`,
+`beaver_field_behavior_smoke_choking_slowdowns_recovered`,
+smoke-choking slowdown skip counters,
+smoke-choking skip counters,
+`beaver_field_behavior_smoke_death_candidates`, and
+smoke-death skip counters. Live QA should
+use `qa-delta-stimulus beaver-exposure` or a real smoky fire, then
+capture `status` or `qa-readiness` showing nonzero exposure telemetry
+before nonzero smoke behavior counters. Visual QA must confirm the
+affected beaver shows a floating coughing or choking status icon, and
+runtime/status proof must show the matching reversible worker-speed
+debuff and recovery counter. Skip counters are failure evidence for the affected
+behavior lanes.
 
-`TWF-171` extends the accepted respiratory ladder without adding a separate behavior system. Sustained smoke first keeps the `TWF-085` coughing/choking status icons and worker-speed slowdown, then reports a choking-incapacitation gate, and only later reports a smoke-death gate. The current Timberborn assembly surface shows sleep, need, healthcare, life, and death systems, but no proven reversible incapacitation API or safe smoke-death API; worker-lane behavior therefore must keep native incapacitation and death disabled until a QA/research pass proves a reversible hook. Deterministic coverage must prove the choking-incapacitation threshold is after choking slowdown and before death, recovery can decay below the incapacitation threshold before death, persistence preserves the respiratory state shape, unsafe native incapacitation/death remain unapplied, and existing coughing/choking slowdown/icon counters still advance. `status` and `qa-readiness` should include `beaver_field_behavior_smoke_choking_incapacitation_candidates`, `beaver_field_behavior_smoke_choking_incapacitation_attempts`, `beaver_field_behavior_smoke_choking_incapacitations_applied`, `beaver_field_behavior_smoke_choking_incapacitations_recovered`, `beaver_field_behavior_smoke_choking_incapacitation_skipped_unsafe_api`, `beaver_field_behavior_smoke_choking_incapacitation_failures`, `beaver_field_behavior_smoke_death_attempts`, `beaver_field_behavior_smoke_deaths_applied`, and `beaver_field_behavior_smoke_death_failures` beside the existing smoke-death candidate/skipped fields. Passing worker-lane handoff can show nonzero choking-incapacitation candidates and skipped-unsafe telemetry with zero native attempts/applied/failures. Live QA should capture `Player.log`, the stimulus command result, and `status` or `qa-readiness` showing sustained respiratory exposure before the incapacitation gate; QA must not claim native incapacitation, recovery from native incapacitation, or smoke death unless the evidence shows the matching safe wrapper result and recovery or irreversible death proof.
+`TWF-171` extends the accepted respiratory ladder without adding a
+separate behavior system. Sustained smoke first keeps the `TWF-085`
+coughing/choking status icons and worker-speed slowdown, then reports a
+choking-incapacitation gate, and only later reports a smoke-death gate.
+The current Timberborn assembly surface shows sleep, need, healthcare,
+life, and death systems, but no proven reversible incapacitation API or
+smoke-death API; worker-lane behavior therefore must keep native
+incapacitation and death disabled until a QA/research pass proves a
+reversible hook. Deterministic coverage must prove the
+choking-incapacitation threshold is after choking slowdown and before
+death, recovery can decay below the incapacitation threshold before
+death, persistence preserves the respiratory state shape, native
+incapacitation/death remain unapplied until validated, and existing
+coughing/choking slowdown/icon counters still advance. `status` and
+`qa-readiness` should include
+`beaver_field_behavior_smoke_choking_incapacitation_candidates`,
+`beaver_field_behavior_smoke_choking_incapacitation_attempts`,
+`beaver_field_behavior_smoke_choking_incapacitations_applied`,
+`beaver_field_behavior_smoke_choking_incapacitations_recovered`,
+smoke-choking incapacitation skip counters,
+`beaver_field_behavior_smoke_choking_incapacitation_failures`,
+`beaver_field_behavior_smoke_death_attempts`,
+`beaver_field_behavior_smoke_deaths_applied`, and
+`beaver_field_behavior_smoke_death_failures` beside the existing
+smoke-death candidate/skipped fields. Nonzero skip counters
+counters are failure evidence for this gate. Live QA should capture
+`Player.log`, the stimulus command result, and `status` or
+`qa-readiness` showing sustained respiratory exposure before the
+incapacitation gate; QA must not claim native incapacitation, recovery
+from native incapacitation, or smoke death unless the evidence shows the
+matching wrapper result and recovery or irreversible death proof.
 
-`TWF-086` accepts the toxic/contaminated smoke behavior slice on top of the same dispatcher. Toxic smoke must be selected from contaminated-smoke or toxic-smoke exposure classifications, must accumulate respiratory exposure faster than normal clean smoke through behavior thresholds, and must not introduce a separate behavior system. Native badwater contamination effects remain safe-unavailable unless a live API wrapper proves a reversible path; worker-lane evidence should therefore show zero native contamination attempts/successes/failures and nonzero skipped-unsafe telemetry when toxic smoke is encountered. Fire, heat, recovery, or toxic exposure must never reduce native soil, badwater, or beaver contamination.
+`TWF-086` accepts the toxic/contaminated smoke behavior slice on top of
+the same dispatcher. Toxic smoke must be selected from
+contaminated-smoke or toxic-smoke exposure classifications, must
+accumulate respiratory exposure faster than normal clean smoke through
+behavior thresholds, and must not introduce a separate behavior system.
+Native badwater contamination effects must remain disabled until a live
+API wrapper proves a reversible path; worker-lane evidence should
+therefore show zero native contamination attempts/successes/failures and
+treat skipped-unsafe telemetry as failure evidence when toxic smoke is
+encountered. Fire, heat, recovery, or toxic exposure must never reduce
+native soil, badwater, or beaver contamination.
 
-Deterministic coverage must prove toxic exposure accumulation, faster threshold crossing than normal smoke, clean steam staying non-toxic, contaminated-smoke-only classification selecting the toxic lane, choking and death-candidate counters, recovery decay, native contamination decision telemetry, and safe no-op behavior when native contamination APIs are unavailable. `status` and `qa-readiness` should include `beaver_field_behavior_toxic_smoke_exposed_beavers`, `beaver_field_behavior_toxic_smoke_exposure_accumulated_samples`, `beaver_field_behavior_toxic_smoke_contamination_effect_attempts`, `beaver_field_behavior_toxic_smoke_contamination_effect_successes`, `beaver_field_behavior_toxic_smoke_contamination_effect_failures`, `beaver_field_behavior_toxic_smoke_contamination_effect_skipped_unsafe_api`, `beaver_field_behavior_toxic_smoke_choking_candidates`, `beaver_field_behavior_toxic_smoke_death_candidates`, and `beaver_field_behavior_toxic_smoke_recovery_decays` beside the existing exposure and smoke behavior fields.
+Deterministic coverage must prove toxic exposure accumulation, faster
+threshold crossing than normal smoke, clean steam staying non-toxic,
+contaminated-smoke-only classification selecting the toxic lane,
+choking and death-candidate counters, recovery decay, native
+contamination decision telemetry, and bounded no-op behavior when native
+contamination APIs are unavailable. `status` and `qa-readiness` should
+include `beaver_field_behavior_toxic_smoke_exposed_beavers`,
+`beaver_field_behavior_toxic_smoke_exposure_accumulated_samples`,
+`beaver_field_behavior_toxic_smoke_contamination_effect_attempts`,
+`beaver_field_behavior_toxic_smoke_contamination_effect_successes`,
+`beaver_field_behavior_toxic_smoke_contamination_effect_failures`,
+toxic-smoke contamination-effect skip counters,
+`beaver_field_behavior_toxic_smoke_choking_candidates`,
+`beaver_field_behavior_toxic_smoke_death_candidates`, and
+`beaver_field_behavior_toxic_smoke_recovery_decays` beside the existing
+exposure and smoke behavior fields.
 
-Live QA should use a real contaminated smoky fire near a real beaver when available, or a QA-only beaver-exposure stimulus that produces contaminated or toxic smoke classifications without mutating native contamination. Passing evidence must capture `Player.log`, the stimulus command result, and `status` or `qa-readiness` showing nonzero `beaver_field_exposure_contaminated_smoke_cells` or `beaver_field_exposure_toxic_cells`, nonzero `beaver_field_behavior_toxic_smoke_decisions_applied`, faster toxic accumulation counters, and either proven native contamination application with a reversible safe wrapper or explicit safe-unavailable telemetry through `beaver_field_behavior_toxic_smoke_contamination_effect_skipped_unsafe_api`. Do not claim native badwater contamination, choking incapacitation, smoke death, or decontamination unless a separate accepted ticket proves those paths.
+Live QA should use a real contaminated smoky fire near a real beaver
+when available, or a QA-only beaver-exposure stimulus that produces
+contaminated or toxic smoke classifications without mutating native
+contamination. Passing evidence must capture `Player.log`, the stimulus
+command result, and `status` or `qa-readiness` showing nonzero
+`beaver_field_exposure_contaminated_smoke_cells` or
+`beaver_field_exposure_toxic_cells`, nonzero
+`beaver_field_behavior_toxic_smoke_decisions_applied`, faster toxic
+accumulation counters, and proven native contamination application with
+a reversible wrapper.
+toxic-smoke contamination-effect skip counters
+is failure telemetry for this gate. Do not claim native badwater
+contamination, choking incapacitation, smoke death, or decontamination
+unless a separate accepted ticket proves those paths.
 
-`TWF-074` is the release-media validation pass for accepted beaver-field behavior. A 2026-05-24 partial live run in `qa-evidence/twf-074-2026-05-24-live/` proved live smoke, toxic-smoke, and fire/heat counters plus visible flame/smoke and safe deferrals, but it is not closure-quality release media because the session was not a clean counter reset, the camera was not framed tightly on the sampled beaver, desktop overlay content was visible, and contaminated smoke reached the smoke-height surface but not sampled beaver cells. Closure-quality evidence should use a fresh launch/load, a clean generated scenario or named save, close camera framing on the sampled beaver, one low-resolution timing clip, high-resolution detail screenshots or clips, copied `Player.log`, and `qa-readiness`/`status` counters for smoke, toxic-smoke, and fire/heat behavior variants.
+`TWF-074` is the release-media validation pass for accepted beaver-field
+behavior. A 2026-05-24 partial live run in
+`qa-evidence/twf-074-2026-05-24-live/` proved live smoke, toxic-smoke,
+and fire/heat counters plus visible flame/smoke and deferred outcomes,
+but it is not closure-quality release media because the session was not
+a clean counter reset, the camera was not framed tightly on the sampled
+beaver, desktop overlay content was visible, and contaminated smoke
+reached the smoke-height surface but not sampled beaver cells.
+Closure-quality evidence should use a fresh launch/load, a clean
+generated scenario or named save, close camera framing on the sampled
+beaver, one low-resolution timing clip, high-resolution detail
+screenshots or clips, copied `Player.log`, and `qa-readiness`/`status`
+counters for smoke, toxic-smoke, and fire/heat behavior variants.
 
-For the TWF-074 toxic sampled-beaver rerun, use `bun scripts/invoke-timberborn-command.ts qa-delta-stimulus toxic-beaver-exposure --wait=30` after the clean baseline and before the toxic follow-up `qa-readiness` or `status` capture. Passing command evidence should report `target_selector=toxic-beaver-exposure`, `target_source=beaver_candidate_toxic_smoke_cell`, `target_x`, `target_y`, `target_z`, `set_smoke=5`, `set_smoke_contamination=7`, `queued_smoke_changes=<nonzero>`, `beaver_exposure_target_beaver_id`, `beaver_exposure_target_beaver_x`, `beaver_exposure_target_beaver_y`, `beaver_exposure_target_beaver_z`, `beaver_exposure_target_candidate_cells`, and `beaver_exposure_target_sampled_beavers`. The follow-up readiness/status capture should then prove nonzero `beaver_field_exposure_contaminated_smoke_cells` or `beaver_field_exposure_toxic_cells` at the sampled-beaver exposure surface plus the accepted toxic behavior counters or safe-unavailable telemetry.
+For the TWF-074 toxic sampled-beaver rerun, use
+`bun scripts/invoke-timberborn-command.ts qa-delta-stimulus toxic-beaver-exposure --wait=30`
+after the clean baseline and before the toxic follow-up `qa-readiness`
+or `status` capture. Passing command evidence should report
+`target_selector=toxic-beaver-exposure`,
+`target_source=beaver_candidate_toxic_smoke_cell`, `target_x`,
+`target_y`, `target_z`, `set_smoke=5`, `set_smoke_contamination=7`,
+`queued_smoke_changes=<nonzero>`, `beaver_exposure_target_beaver_id`,
+`beaver_exposure_target_beaver_x`, `beaver_exposure_target_beaver_y`,
+`beaver_exposure_target_beaver_z`,
+`beaver_exposure_target_candidate_cells`, and
+`beaver_exposure_target_sampled_beavers`. The follow-up
+readiness/status capture should then prove nonzero
+`beaver_field_exposure_contaminated_smoke_cells` or
+`beaver_field_exposure_toxic_cells` at the sampled-beaver exposure
+surface plus the accepted toxic behavior counters.
 
 ## Release Log Noise Policy
 
@@ -432,7 +742,7 @@ Release logs should preserve:
 - Bounded dispatch-completed summaries, because they prove cadence and delta counts.
 - Sink-bound tokens, because they prove feature wiring once per runtime configuration.
 - QA command request/result tokens, but only for QA sessions and support captures.
-- Consequence summaries only when a target matched or an action, safe limitation, repair state, destruction, hazardous result, or mutation attempt happened.
+- Consequence summaries only when a target matched or an action, limitation, repair state, destruction, hazardous result, or mutation attempt happened.
 
 Release logs should avoid:
 
@@ -825,7 +1135,7 @@ Current `TWF-008` coverage adds a Timberborn game-context runtime singleton for 
 
 `TWF-099` adds release visual settings on the same integer-backed settings surface. Deterministic coverage must prove that missing values default to normal visuals with debug hidden, `visual_intensity_percent` accepts only `25` through `150` and converts to a visual scale, and `visual_debug_visibility` accepts only `0` (`hidden`) or `1` (`safeoverlay`). Invalid intensity values must default to `100`; invalid debug visibility values must default to hidden. These settings are adapter presentation controls only: they may scale the ash overlay and indirect smoke/steam opacity and may enable the safe GPU field overlay, but they must not change `FireSimParameters`, packed-cell state, imported companion fields, compact-delta gameplay consequences, QA command availability, or broad debug command UI. Live QA remains a later gate: deploy the reviewed build, set `visual_intensity_percent` to a low value and then a high value, set `visual_debug_visibility=1`, load and unpause a command-responsive save, trigger `qa-delta-stimulus tree`, and capture whole-scene screenshots or recording frames plus `Player.log`. Passing evidence should show `wildfire_release_settings ... visual_intensity_percent=<value> ... visual_debug_visibility=<hidden|safeoverlay> ... visual_debug_overlay_enabled=<true|false>`, a `status` or `qa-readiness` result with the same visual setting fields, `wildfire_timberborn_gpu_indirect_renderer_initialized ... visual_intensity_scale=<scale>`, no visual presentation failure tokens, and no new QA command/debug UI in player-facing settings. If the setting is visible but rendered-pixel intensity or overlay behavior cannot be proven live, keep the issue open for QA rather than accepting deterministic tests alone.
 
-`TWF-049` adds startup compatibility probes before the runtime enters normal loaded-save evidence collection. QA should capture `Player.log` `wildfire_timberborn_compatibility_probe_summary ... status=<compatible|degraded|failed> ... required_passed=<n>/<n> ... optional_passed=<n>/<n> ... degraded_features=<tokens>` and at least one `wildfire_timberborn_compatibility_probe_result` token for each release-facing startup lane: `terrain`, `building_burnout`, `compute`, `diagnostic_assets`, and `player_alerts`. The procedural Fire/Smoke/Steam/Ash visual lane no longer scans Timberborn native prefabs during startup; prove it after dispatch through pooled-effect counters and `wildfire_timberborn_pooled_fire_effect_native_prefab_resolved ... prefab=WildfireProcedural<kind>Particles` tokens instead. A release-compatible live run should show `compatibility_probe_status=compatible` or an intentionally accepted `compatibility_probe_status=degraded` in a follow-up `qa-readiness` or `status` result; `compatibility_probe_status=failed` is a blocker because the required compute-backed runtime path or required Timberborn terrain surface is unavailable. Required failures must also produce `wildfire_timberborn_runtime_initialization_blocked` or `wildfire_timberborn_runtime_initialize_rejected`, and `qa-readiness` must report `loaded_game_ready=false`.
+`TWF-049` adds startup compatibility probes before the runtime enters normal loaded-save evidence collection. QA should capture `Player.log` `wildfire_timberborn_compatibility_probe_summary ... status=<compatible|degraded|failed> ... required_passed=<n>/<n> ... optional_passed=<n>/<n> ... degraded_features=<tokens>` and at least one `wildfire_timberborn_compatibility_probe_result` token for each release-facing startup lane: `terrain`, `building_burnout`, `compute`, `diagnostic_assets`, and `player_alerts`. The procedural Fire/Smoke/Steam/Ash visual lane no longer scans Timberborn native prefabs during startup; prove it after dispatch through pooled-effect counters and `wildfire_timberborn_pooled_fire_effect_native_prefab_resolved ... prefab=WildfireProcedural<kind>Particles` tokens instead. A release-compatible live run should show `compatibility_probe_status=compatible` or an intentionally accepted `compatibility_probe_status=degraded` in a follow-up `qa-readiness` or `status` result; `compatibility_probe_status=failed` is a failure because the required compute-backed runtime path or required Timberborn terrain surface is unavailable. Required failures must also produce `wildfire_timberborn_runtime_initialization_blocked` or `wildfire_timberborn_runtime_initialize_rejected`, and `qa-readiness` must report `loaded_game_ready=false`.
 
 The building-burnout probes are optional compatibility probes. Missing or changed `IBlockService` or `PausableBuilding` surfaces should degrade the `building_burnout` lane and become follow-up evidence for `TWF-064`, but they should not block healthy terrain mapping or compute dispatch by themselves. The compute bundle probe is intentionally stronger than `File.Exists`: it checks that the selected private bundle exists, is non-empty, and starts with a Unity AssetBundle header such as `UnityFS`. This catches missing, empty, or plainly wrong content in `TWF-049`; full AssetBundle loading, FireSim asset lookup, and kernel validation remain the runtime load path and should be hardened further by `TWF-050`. Optional degradation, such as the diagnostic bundle, must be called out in the QA notes with the exact `compatibility_probe_degraded_features` token.
 
@@ -863,9 +1173,9 @@ The first command queues the bounded water change and should report `queued_chan
 
 `TWF-170` fixes paused loaded-save ash presentation by keeping simulator-owned ash as the only ash authority while binding both restored transport fields and companion material fields to the Timberborn visual-field surface before any advancing dispatch. Runtime initialization performs one GPU field renderer presentation pass after persistence restore and simulator configuration, so the ash overlay can be active while the save is still paused instead of waiting for the first unpause tick. Deterministic coverage must prove the binding lifecycle exposes transport and material buffers before dispatch, the renderer can render a restored presentation from those buffers, and runtime initialization calls the renderer after `RestorePersistentConsequenceAndAshState`. Live QA remains required before final acceptance: deploy the reviewed build, load a save with existing ash, keep the game paused, capture the whole scene plus `status` or `qa-readiness` showing `visual_field_surface_bound=true`, `visual_field_surface_updated_tick=<restored tick>`, `gpu_field_renderer_enabled=true`, `gpu_field_renderer_material_ready=true`, and `gpu_field_renderer_material_failures=0`, then unpause and capture follow-up evidence that ash remains stable without duplicate field entries or collection goods. If command-responsive Timberborn is unavailable, keep this as a QA blocker instead of marking the ticket done from deterministic tests alone.
 
-`TWF-066` live QA on 2026-05-03 proved the command-responsive and native-prefab portions of the fire-effect gate but did not accept the visual readability gate. Evidence from `~/repos/wildfire-TWF-066` branch `codex/TWF-066-visible-fire-effect` commit `199047d8b7ac854d102c708854506a1bc1b6e62e` lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-live-rapid-20260503T153723Z`, `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-recording-20260503T153735Z/2026-05-03T15-37-36-337Z-high`, and `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-recording-command-20260503T153750Z`. Rapid `status` polling after `qa-delta-stimulus` reported `active_pooled_fire_effects=1`, `pooled_fire_effects_visible_enabled=true`, `pooled_fire_effects_native_prefab_resolved=true`, `pooled_fire_effects_native_prefab=CampfireFire`, and `pooled_fire_effect_presentation_failures=0`, with matching `wildfire_timberborn_pooled_fire_effects_updated` tokens in `Player.log`. The captured normal-camera screenshots still showed only a tiny fire spark, not a legible fire effect, so this run is blocker evidence rather than accepted fire-effect tuning evidence.
+`TWF-066` live QA on 2026-05-03 proved the command-responsive and native-prefab portions of the fire-effect gate but did not accept the visual readability gate. Evidence from `~/repos/wildfire-TWF-066` branch `codex/TWF-066-visible-fire-effect` commit `199047d8b7ac854d102c708854506a1bc1b6e62e` lives under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-live-rapid-20260503T153723Z`, `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-recording-20260503T153735Z/2026-05-03T15-37-36-337Z-high`, and `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-recording-command-20260503T153750Z`. Rapid `status` polling after `qa-delta-stimulus` reported `active_pooled_fire_effects=1`, `pooled_fire_effects_visible_enabled=true`, `pooled_fire_effects_native_prefab_resolved=true`, `pooled_fire_effects_native_prefab=CampfireFire`, and `pooled_fire_effect_presentation_failures=0`, with matching `wildfire_timberborn_pooled_fire_effects_updated` tokens in `Player.log`. The captured normal-camera screenshots still showed only a tiny fire spark, not a legible fire effect, so this run is failure evidence rather than accepted fire-effect tuning evidence.
 
-`TWF-066` Fire-only readability follow-up live QA on 2026-05-03 also remains blocker evidence, not acceptance. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-live-readable-20260503T160350Z` proves deployment, command-responsive loaded-save startup, high-resolution recording, copied `Player.log`, and no presentation failures. `Player.log` reported `active_pooled_effects=1`, `visible_effects_enabled=true`, `native_effect_prefab_resolved=true`, `native_effect_prefab=CampfireFire`, and `presentation_failures=0` during active fire ticks `35`, `36`, and `73`, but extracted normal-camera frames `recording-second-frame-5s.png` and `recording-second-frame-6s.png` still show only a small orange flicker in the trees. Future TWF-066 acceptance must produce high-resolution recording and screenshots where the fire effect itself is plainly legible at normal gameplay camera angles, not merely active in counters or visible as alert text.
+`TWF-066` Fire-only readability follow-up live QA on 2026-05-03 also remains failure evidence, not acceptance. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/twf-066-live-readable-20260503T160350Z` proves deployment, command-responsive loaded-save startup, high-resolution recording, copied `Player.log`, and no presentation failures. `Player.log` reported `active_pooled_effects=1`, `visible_effects_enabled=true`, `native_effect_prefab_resolved=true`, `native_effect_prefab=CampfireFire`, and `presentation_failures=0` during active fire ticks `35`, `36`, and `73`, but extracted normal-camera frames `recording-second-frame-5s.png` and `recording-second-frame-6s.png` still show only a small orange flicker in the trees. Future TWF-066 acceptance must produce high-resolution recording and screenshots where the fire effect itself is plainly legible at normal gameplay camera angles, not merely active in counters or visible as alert text.
 
 `TWF-066` live visual QA on 2026-05-06 is the accepted fire-effect readability evidence. Evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/TWF-066-qa-20260506T194339Z` used `QA Tunnels and Booms` save `/Users/jasonkleinberg/Documents/Timberborn/ExperimentalSaves/QA Tunnels and Booms/2026-05-06 15h39m, Day 2-2.autosave.timber`, deployed the current main checkout from `source/current-existing-source-files.tar.gz`, loaded a command-responsive save, and triggered `qa-delta-stimulus tree`. The accepted artifacts are `recording-primary/2026-05-06T19-46-39-140Z-high/recording.mov`, `twf-066-after-stimulus-normal-gameplay.png`, and extracted frames `extracted-frames/recording-frame-08s.png` and `extracted-frames/recording-frame-12s.png`, which show a plainly legible normal-gameplay procedural Fire particle cluster without relying on alert text or counters. `log-excerpts/procedural-fire-and-status-tokens.txt` proves `kind=fire prefab=WildfireProceduralFireParticles`, `pooled_fire_effects_visible_enabled=true`, active pooled Fire effects `75` then `65`, updated visual regions `111` then `100`, and debug GPU field renderer disabled with `renderer_enabled=false`; `log-excerpts/presentation-failure-scan.txt` records zero presentation, material, and visual failures, and `final/final-lock-process-state.txt` records final lock state.
 
@@ -881,7 +1191,37 @@ The first command queues the bounded water change and should report `queued_chan
 
 `TWF-080` broadens the same native quick-warning path into aggregated world-consequence feedback. The adapter must coalesce active fire, building damage or closure, plant/crop/resource loss, beaver danger or death candidates, and ash aftermath into bounded consequence summaries instead of per-cell or per-entity alerts. `status` and `qa-readiness` should expose `world_consequence_feedback_source_events`, `world_consequence_feedback_coalesced_events`, per-class event counters, per-class notification counters, `world_consequence_feedback_suppressed_throttle`, `world_consequence_feedback_presentation_failures`, `world_consequence_feedback_log_only_fallbacks`, `world_consequence_feedback_notification_sent`, `world_consequence_feedback_notification_suppressed`, and `world_consequence_feedback_primary_class`. Live QA should trigger at least two consequence classes in a short window, capture one native quick-warning screenshot or recording frame, and preserve `Player.log` plus a follow-up `status` or `qa-readiness` result proving nonzero class counters with bounded notification count. If release icon binding from `TWF-163` is unavailable, acceptance should rely on text quick warnings and telemetry; do not block this ticket on custom icon art.
 
-`TWF-168` adds a structure-on-fire alert class on top of the same compact-delta consequence path, distinct from generic active-fire alerts and the broader `TWF-080` consequence summary. The alert is sourced from the existing `TWF-077` structure burn-damage rollback lane: matched burning structure cells count as `structure_on_fire_events_received`, and duplicate footprint cells are coalesced into deduped target counts reported as `structure_on_fire_events_coalesced`. The current Timberborn quick notification surface is text-only through `QuickNotificationService.SendWarningNotification(string)`, so no structure-on-fire icon is bound in this ticket; live QA must not claim icon success unless a later native alert surface exposes a safe custom-icon API. Passing live QA must trigger a burning structure through an existing structure/burn-damage stimulus path, capture a native quick warning whose message starts with `Wildfire alert:` and names structures on fire, and preserve `Player.log` with `wildfire_timberborn_delta_consequence_sink_bound lane=structure_burn_damage_rollback`, `wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert`, `wildfire_timberborn_structure_burn_damage_rollback_applied ... matched_structure_cells=<nonzero>`, and `wildfire_timberborn_world_consequence_feedback_updated ... classes=...structureonfire... notification_sent=true`. Follow-up `status` or `qa-readiness` must show nonzero `structure_on_fire_events_received`, nonzero `structure_on_fire_events_coalesced`, nonzero `structure_on_fire_notifications_sent`, zero `structure_on_fire_presentation_failures`, bounded `structure_on_fire_notifications_throttled`, and `world_consequence_feedback_primary_class=structureonfire` when the structure alert is the highest-priority class. If the notification is throttled by an immediately preceding alert, preserve the throttled token and rerun after the throttle window before accepting screenshot evidence.
+`TWF-168` adds a structure-on-fire alert class on top of the same
+compact-delta consequence path, distinct from generic active-fire alerts
+and the broader `TWF-080` consequence summary. The alert is sourced from
+the existing `TWF-077` structure burn-damage rollback lane: matched
+burning structure cells count as `structure_on_fire_events_received`,
+and duplicate footprint cells are coalesced into deduped target counts
+reported as `structure_on_fire_events_coalesced`. The current Timberborn
+quick notification surface is text-only through
+`QuickNotificationService.SendWarningNotification(string)`, so no
+structure-on-fire icon is bound in this ticket; live QA must not claim
+icon success unless a later native alert surface exposes a custom-icon
+API. Passing live QA must trigger a burning structure through an
+existing structure/burn-damage stimulus path, capture a native quick
+warning whose message starts with `Wildfire alert:` and names structures
+on fire, and preserve `Player.log` with
+`wildfire_timberborn_delta_consequence_sink_bound lane=structure_burn_damage_rollback`,
+`wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert`,
+`wildfire_timberborn_structure_burn_damage_rollback_applied ... matched_structure_cells=<nonzero>`,
+and
+`wildfire_timberborn_world_consequence_feedback_updated ... classes=...structureonfire... notification_sent=true`.
+Follow-up `status` or `qa-readiness` must show nonzero
+`structure_on_fire_events_received`, nonzero
+`structure_on_fire_events_coalesced`, nonzero
+`structure_on_fire_notifications_sent`, zero
+`structure_on_fire_presentation_failures`, bounded
+`structure_on_fire_notifications_throttled`, and
+`world_consequence_feedback_primary_class=structureonfire` when the
+structure alert is the highest-priority class. If the notification is
+throttled by an immediately preceding alert, preserve the throttled
+token and rerun after the throttle window before accepting screenshot
+evidence.
 
 Current `TWF-021` coverage adds the live compute-backed attachment path. `TimberbornFireRuntimeInitializer` builds the initial `FireGrid` from `MapSize.TerrainSize`, converts terrain cells from `ITerrainService.GetAllHeightsInCell(...)` through `TimberbornTerrainAdapter`, and initializes the runtime through `ITimberbornFireSimulatorFactory`. The factory manually loads `ComputeShaders/wildfire_compute_mac`, creates a real Unity `ComputeShader` simulator, and leaves fire-spread behavior in `FireSim.compute`.
 

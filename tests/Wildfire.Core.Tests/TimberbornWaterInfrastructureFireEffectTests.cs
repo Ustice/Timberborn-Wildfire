@@ -159,7 +159,7 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
     }
 
     [Fact]
-    public void SinkReportsNoSafeApiWhenWaterMutationIsUnavailable()
+    public void SinkReportsUnavailablePathWhenWaterMutationIsUnavailable()
     {
         RecordingWaterInfrastructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
@@ -173,7 +173,7 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
 
         Assert.Equal(0, summary.DamagedTargetCount);
         Assert.Equal(0, summary.WaterStateMutationAttemptCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.SkippedUnavailablePathCount);
         Assert.Equal(4, summary.TotalDamageApplied);
     }
 
@@ -244,7 +244,7 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
             return new TimberbornWaterInfrastructureApplyResult(
                 AppliedDamage: damageTarget.CanMarkDamaged,
                 AttemptedWaterStateMutation: damageTarget.CanMutateWaterState && isFullyDamaged,
-                SkippedNoSafeApi: !damageTarget.CanMarkDamaged && !damageTarget.CanMutateWaterState,
+                SkippedUnavailablePath: !damageTarget.CanMarkDamaged && !damageTarget.CanMutateWaterState,
                 RepairEligible: damageTarget.RepairEligible);
         }
     }

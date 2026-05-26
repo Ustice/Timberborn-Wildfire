@@ -391,25 +391,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(0, summary.ScorchedStageCount);
     }
 
-    [Theory]
-    [InlineData("DistrictCenter")]
-    [InlineData("DistrictCenter.Folktails(Clone)")]
-    [InlineData("DistrictCenter.IronTeeth(Clone)")]
-    public void TargetApiTreatsDistrictCentersAsUnsafeForUnfinishedRollback(string specId)
-    {
-        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenter(specId));
-    }
-
-    [Theory]
-    [InlineData("DistrictCrossing.Folktails(Clone)")]
-    [InlineData("LumberMill.Folktails(Clone)")]
-    public void TargetApiDoesNotTreatOtherBuildingsAsDistrictCenters(string specId)
-    {
-        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenter(specId));
-    }
-
     [Fact]
-    public void SinkStillAllowsNonDistrictStructuresToUseUnfinishedRollback()
+    public void SinkAttemptsUnfinishedRollbackForDamagedStructures()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [],
@@ -491,11 +474,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(1, summary.VisualRollbackAppliedCount);
         Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
         Assert.Equal(1, summary.SkippedNativeConstructionApiCount);
-        Assert.Equal(0, summary.SkippedNoSafeApiCount);
     }
 
     [Fact]
-    public void SinkReportsSafeLimitationWhenVisualRollbackIsUnavailable()
+    public void SinkThrowsWhenClosureCannotBeApplied()
     {
         RecordingStructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
@@ -503,14 +485,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             canApplyRollbackVisual: false));
         TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
 
-        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
-            9,
-            [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            sink.ApplyConsequences(9, [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]));
 
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
-        Assert.Equal(0, summary.ClosedStructureCount);
-        Assert.Equal(0, summary.VisualRollbackAppliedCount);
-        Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
+        Assert.Contains("failed to close", exception.Message);
     }
 
     [Fact]
@@ -585,14 +563,17 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
                 TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request);
             bool constructionPhaseEntered = damageTarget.CanRepairAfterDanger && requestsNativeConstructionPhase;
             bool visualRollbackApplied = damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual;
+            if (request.ShouldClose && !damageTarget.CanClose)
+            {
+                throw new InvalidOperationException(
+                    $"Structure burn damage rollback failed to close {damageTarget.SpecId} at cell {damageTarget.CellIndex}.");
+            }
+
             return new TimberbornStructureBurnDamageApplyResult(
                 Closed: damageTarget.CanClose && request.ShouldClose,
                 VisualRollbackApplied: visualRollbackApplied,
                 ConstructionPhaseEntered: constructionPhaseEntered,
                 SkippedNativeConstructionApi: requestsNativeConstructionPhase && !constructionPhaseEntered,
-                SkippedNoSafeApi:
-                    (!damageTarget.CanClose && request.ShouldClose) ||
-                    (!damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual),
                 RepairEligible: request.RepairEligible);
         }
     }

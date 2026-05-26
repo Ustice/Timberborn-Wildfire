@@ -121,7 +121,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
         TimberbornBeaverFieldExposureSnapshot snapshot = telemetry.Sample(new FireGrid(2, 2, 1), tick: 9);
 
         Assert.False(snapshot.IsAvailable);
-        Assert.Equal("position_api_unavailable", snapshot.UnavailableReason);
+        Assert.Equal("position_missing", snapshot.UnavailableReason);
         Assert.Equal(1, snapshot.SkippedNoPositionApi);
         Assert.Contains("available=false", logSink.InfoMessages.Single());
     }
@@ -227,7 +227,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
         TimberbornBeaverFieldExposureQaTarget target = telemetry.SelectQaStimulusTarget(new FireGrid(2, 2, 1));
 
         Assert.False(target.IsAvailable);
-        Assert.Equal("position_api_unavailable", target.UnavailableReason);
+        Assert.Equal("position_missing", target.UnavailableReason);
         Assert.Equal(1, target.SkippedNoPositionApiCount);
         Assert.Null(target.CellIndex);
     }
@@ -301,7 +301,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
     {
         public TimberbornBeaverPositionSnapshot GetPositions(FireGrid grid)
         {
-            return TimberbornBeaverPositionSnapshot.Unavailable("position_api_unavailable");
+            return TimberbornBeaverPositionSnapshot.Unavailable("position_missing");
         }
     }
 

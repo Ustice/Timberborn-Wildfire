@@ -51,9 +51,7 @@ public sealed record TimberbornWorldCellImportSummary(
         $"resolved_storage_cells={ResolvedCount(WildfireMaterialClass.Storage)} " +
         $"resolved_infrastructure_cells={ResolvedCount(WildfireMaterialClass.Infrastructure)} " +
         $"resolved_water_cells={ResolvedCount(WildfireMaterialClass.Water)} " +
-        $"resolved_badwater_cells={ResolvedCount(WildfireMaterialClass.Badwater)} " +
-        $"safe_unavailable={ProviderSafeUnavailableCounts.Values.Sum()} " +
-        $"safe_unavailable_families={TimberbornQaCommandBridge.FormatToken(FormatSafeUnavailableFamilies())}";
+        $"resolved_badwater_cells={ResolvedCount(WildfireMaterialClass.Badwater)}";
 
     public int Count(WildfireMaterialClass materialClass)
     {
@@ -177,7 +175,7 @@ public sealed class TimberbornSafeUnavailableCellSourceProvider : ITimberbornWor
         Family = string.IsNullOrWhiteSpace(family)
             ? throw new ArgumentException("Provider family is required.", nameof(family))
             : family;
-        _reason = string.IsNullOrWhiteSpace(reason) ? "safe_api_unavailable" : reason;
+        _reason = string.IsNullOrWhiteSpace(reason) ? "provider_missing" : reason;
     }
 
     public string Family { get; }

@@ -78,7 +78,7 @@ These references support building native Wildfire UI or mod persistence. They do
 
 ## Inference
 
-The presence of named UXML elements means an in-game mod could probably locate some UI elements after they are loaded, but invoking those elements generically would be brittle and version-sensitive. It would also blur the safety boundary because it can accidentally click destructive or external-opening controls such as delete buttons, feedback links, browse-folder buttons, or exit buttons.
+The presence of named UXML elements means an in-game mod could probably locate some UI elements after they are loaded, but invoking those elements generically would be brittle and version-sensitive.
 
 The safer architecture is command-oriented, not menu-oriented:
 

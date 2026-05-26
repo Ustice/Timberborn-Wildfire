@@ -73,7 +73,6 @@ public readonly record struct TimberbornStructureBurnDamageApplyResult(
     bool VisualRollbackApplied,
     bool ConstructionPhaseEntered,
     bool SkippedNativeConstructionApi,
-    bool SkippedNoSafeApi,
     bool RepairEligible);
 
 public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
@@ -91,7 +90,6 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
     int VisualRollbackAppliedCount,
     int ConstructionPhaseEnteredCount,
     int SkippedNativeConstructionApiCount,
-    int SkippedNoSafeApiCount,
     int TotalDamageApplied)
 {
     public static readonly TimberbornStructureBurnDamageRollbackSummary Empty = new(
@@ -109,7 +107,6 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
         VisualRollbackAppliedCount: 0,
         ConstructionPhaseEnteredCount: 0,
         SkippedNativeConstructionApiCount: 0,
-        SkippedNoSafeApiCount: 0,
         TotalDamageApplied: 0);
 
     public string ToLogToken(uint tick)
@@ -130,7 +127,6 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
             $"visual_rollback_applied={VisualRollbackAppliedCount} " +
             $"construction_phase_entered={ConstructionPhaseEnteredCount} " +
             $"skipped_native_construction_api={SkippedNativeConstructionApiCount} " +
-            $"skipped_no_safe_api={SkippedNoSafeApiCount} " +
             $"total_damage_applied={TotalDamageApplied}";
     }
 }
@@ -213,14 +209,12 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             VisualRollbackAppliedCount: outcomes.Count(static outcome => outcome.ApplyResult.VisualRollbackApplied),
             ConstructionPhaseEnteredCount: outcomes.Count(static outcome => outcome.ApplyResult.ConstructionPhaseEntered),
             SkippedNativeConstructionApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNativeConstructionApi),
-            SkippedNoSafeApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNoSafeApi),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.Request.DamageApplied));
         if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
             summary.MatchedStructureCellCount,
             summary.ClosedStructureCount,
             summary.RepairEligibleCount,
-            summary.VisualRollbackAppliedCount,
-            summary.SkippedNoSafeApiCount))
+            summary.VisualRollbackAppliedCount))
         {
             _logSink.Info(summary.ToLogToken(tick));
         }
@@ -247,7 +241,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
                 IsZeroBurnableCapacity: true,
                 MaterialValueLost: 0,
                 TimberbornStructureBurnDamageApplyRequestDefaults.None,
-                new TimberbornStructureBurnDamageApplyResult(false, false, false, false, false, false));
+                new TimberbornStructureBurnDamageApplyResult(false, false, false, false, false));
         }
 
         StructureDamageState localState = _statesByStableId.GetValueOrDefault(target.StableId, new StructureDamageState(0));
@@ -281,7 +275,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
             request.RepairBlocked ||
             request.RepairEligible
                 ? _targetApi.ApplyState(target, request)
-                : new TimberbornStructureBurnDamageApplyResult(false, false, false, false, false, repairEligible);
+                : new TimberbornStructureBurnDamageApplyResult(false, false, false, false, repairEligible);
 
         return new StructureApplyOutcome(
             IsZeroBurnableCapacity: false,
@@ -423,7 +417,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             ConstructionResources: TimberbornBurnDamageResourceGuesses.ForStructure(blockObject.Name),
             CanClose: canClose,
             CanApplyRollbackVisual: true,
-            CanRepairAfterDanger: canEnterUnfinishedState);
+            CanRepairAfterDanger: canClose || canEnterUnfinishedState);
     }
 
     public TimberbornStructureBurnDamageApplyResult ApplyState(
@@ -450,7 +444,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         if (blockObject is not null && request.ShouldApplyRollbackVisual)
         {
-            enteredUnfinishedState = RequestsNativeConstructionPhase(request) && target.CanRepairAfterDanger
+            enteredUnfinishedState = RequestsNativeConstructionPhase(request)
                 ? TryEnterUnfinishedState(blockObject)
                 : false;
 
@@ -483,13 +477,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         bool visualRollbackApplied = enteredUnfinishedState || removedConstructionMaterialCount > 0 || hasBurnedTextures;
         bool skippedNativeConstructionApi = RequestsNativeConstructionPhase(request) && !enteredUnfinishedState;
-        bool skippedNoSafeApi =
-            (request.ShouldClose && !closed) ||
-            (request.ShouldApplyRollbackVisual && !visualRollbackApplied);
-        if (skippedNoSafeApi)
+        if (request.ShouldClose && !closed)
         {
             throw new InvalidOperationException(
-                $"Structure burn damage rollback has no safe implementation for {target.SpecId} at cell {target.CellIndex}.");
+                $"Structure burn damage rollback failed to close {target.SpecId} at cell {target.CellIndex}.");
         }
 
         return new TimberbornStructureBurnDamageApplyResult(
@@ -497,7 +488,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             VisualRollbackApplied: visualRollbackApplied,
             ConstructionPhaseEntered: enteredUnfinishedState,
             SkippedNativeConstructionApi: skippedNativeConstructionApi,
-            SkippedNoSafeApi: skippedNoSafeApi,
             RepairEligible: request.RepairEligible);
     }
 
@@ -600,16 +590,14 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             $"candidate_count={occupancySnapshot.CandidateCount} " +
             $"assigned_workers={occupancySnapshot.AssignedWorkerCount} " +
             $"enterers_inside={occupancySnapshot.EnterersInsideCount} " +
-            "status=skipped_no_safe_worker_exposure_api");
+            "status=skipped_worker_exposure");
     }
 
     private static bool CanEnterUnfinishedState(BlockObject blockObject)
     {
         try
         {
-            return blockObject.IsFinished &&
-                !IsDistrictCenter(blockObject.Name) &&
-                !HasFinishedStateReentryListener(blockObject);
+            return blockObject.IsFinished;
         }
         catch (Exception exception)
         {
@@ -617,24 +605,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 $"Cannot determine unfinished rollback eligibility for {blockObject.Name}.",
                 exception);
         }
-    }
-
-    public static bool IsDistrictCenter(string specId)
-    {
-        return specId.StartsWith("DistrictCenter.", StringComparison.Ordinal) ||
-            string.Equals(specId, "DistrictCenter", StringComparison.Ordinal);
-    }
-
-    private static bool HasFinishedStateReentryListener(BlockObject blockObject)
-    {
-        return blockObject.GetComponentsAllocating<Component>()
-            .Concat(blockObject.Transform.GetComponentsInChildren<Component>(includeInactive: true))
-            .Where(static component => component is not null)
-            .Select(static component => component.GetType())
-            .Distinct()
-            .Any(static type => type.GetMethod(
-                "OnEnterFinishedState",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) is not null);
     }
 
     private static bool TryEnterUnfinishedState(BlockObject blockObject)
@@ -797,16 +767,21 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
     private Material? CreateBurnedMaterialOrOriginal(Material? source, string textureLabel)
     {
-        if (source is null ||
-            IsBurnedMaterial(source) ||
-            !source.HasProperty("_MainTex") ||
-            source.mainTexture is null)
+        if (source is null || IsBurnedMaterial(source))
         {
             return source;
         }
 
-        Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(source.mainTexture, textureLabel);
-        return burnedTexture is null ? source : CreateBurnedMaterial(source, burnedTexture);
+        if (source.HasProperty("_MainTex") && source.mainTexture is not null)
+        {
+            Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(source.mainTexture, textureLabel);
+            if (burnedTexture is not null)
+            {
+                return CreateBurnedMaterial(source, burnedTexture);
+            }
+        }
+
+        return CreateBurnedTintMaterial(source);
     }
 
     private static Material CreateBurnedMaterial(Material source, Texture burnedTexture)
@@ -818,6 +793,26 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             hideFlags = HideFlags.HideAndDontSave,
         };
         return material;
+    }
+
+    private static Material CreateBurnedTintMaterial(Material source)
+    {
+        Material material = new(source)
+        {
+            name = $"{source.name} Wildfire Burned",
+            hideFlags = HideFlags.HideAndDontSave,
+        };
+        SetColorIfPresent(material, "_BaseColor", new Color(0.18f, 0.16f, 0.14f, 1f));
+        SetColorIfPresent(material, "_Color", new Color(0.18f, 0.16f, 0.14f, 1f));
+        return material;
+    }
+
+    private static void SetColorIfPresent(Material material, string propertyName, Color color)
+    {
+        if (material.HasProperty(propertyName))
+        {
+            material.SetColor(propertyName, color);
+        }
     }
 
     private static bool IsBurnedMaterial(Material material)

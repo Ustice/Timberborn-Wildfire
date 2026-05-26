@@ -47,7 +47,7 @@ public readonly record struct TimberbornTunnelFireSettings(
 public enum TimberbornTunnelNativeExplodeStatus
 {
     SkippedSettingDisabled,
-    SkippedNoSafeApi,
+    SkippedUnavailablePath,
     Applied,
 }
 
@@ -64,7 +64,7 @@ public readonly record struct TimberbornTunnelFireSummary(
     int NativeExplodeAppliedCount,
     int DestructionDeferredCount,
     int SkippedSettingDisabledCount,
-    int SkippedNoSafeApiCount,
+    int SkippedUnavailablePathCount,
     int RecoverabilityPreservedCount,
     int RecoverabilityUnknownCount)
 {
@@ -77,7 +77,7 @@ public readonly record struct TimberbornTunnelFireSummary(
         NativeExplodeAppliedCount: 0,
         DestructionDeferredCount: 0,
         SkippedSettingDisabledCount: 0,
-        SkippedNoSafeApiCount: 0,
+        SkippedUnavailablePathCount: 0,
         RecoverabilityPreservedCount: 0,
         RecoverabilityUnknownCount: 0);
 
@@ -93,7 +93,6 @@ public readonly record struct TimberbornTunnelFireSummary(
             $"native_explode_applied={NativeExplodeAppliedCount} " +
             $"destruction_deferred={DestructionDeferredCount} " +
             $"skipped_setting_disabled={SkippedSettingDisabledCount} " +
-            $"skipped_no_safe_api={SkippedNoSafeApiCount} " +
             $"recoverability_preserved={RecoverabilityPreservedCount} " +
             $"recoverability_unknown={RecoverabilityUnknownCount}";
     }
@@ -152,7 +151,7 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
                 NativeExplodeAppliedCount: 0,
                 DestructionDeferredCount: 0,
                 SkippedSettingDisabledCount: consequences.Length,
-                SkippedNoSafeApiCount: 0,
+                SkippedUnavailablePathCount: 0,
                 RecoverabilityPreservedCount: 0,
                 RecoverabilityUnknownCount: 0);
             _logSink.Info(disabledSummary.ToLogToken(tick));
@@ -187,8 +186,8 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             DestructionDeferredCount: results.Count(static result =>
                 result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedSettingDisabled),
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: results.Count(static result =>
-                result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi),
+            SkippedUnavailablePathCount: results.Count(static result =>
+                result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedUnavailablePath),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
             RecoverabilityUnknownCount: results.Count(static result =>
                 !result.RecoverabilityPreserved));

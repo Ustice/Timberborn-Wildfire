@@ -409,7 +409,7 @@ public sealed record TimberbornBeaverPositionSnapshot(
             IsAvailable: false,
             Beavers: Array.Empty<TimberbornBeaverPositionSample>(),
             SkippedNoPositionApiCount: 1,
-            UnavailableReason: string.IsNullOrWhiteSpace(reason) ? "position_api_unavailable" : reason);
+            UnavailableReason: string.IsNullOrWhiteSpace(reason) ? "position_missing" : reason);
     }
 }
 

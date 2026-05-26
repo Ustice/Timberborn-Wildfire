@@ -148,7 +148,6 @@ public readonly record struct TimberbornAshFieldSummary(
             $"ash_growth_candidate_cells={GrowthCandidateCellCount} " +
             $"ash_growth_applied_growables={GrowthAppliedGrowableCount} " +
             $"ash_growth_skipped_tainted_cells={GrowthSkippedTaintedCellCount} " +
-            $"ash_growth_skipped_unsafe_apis={GrowthSkippedUnsafeApiCount} " +
             $"ash_growth_skipped_unsupported_growables={GrowthSkippedUnsupportedGrowableCount} " +
             $"ash_persistence_saves={PersistenceSaveCount} " +
             $"ash_persistence_loads={PersistenceLoadCount}";

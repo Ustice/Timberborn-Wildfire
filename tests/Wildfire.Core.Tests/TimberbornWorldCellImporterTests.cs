@@ -61,7 +61,6 @@ public sealed class TimberbornWorldCellImporterTests
         Assert.Contains("resolved_empty_cells=5", result.Summary.StatusToken);
         Assert.Contains("resolved_vegetation_cells=1", result.Summary.StatusToken);
         Assert.Contains("resolved_tree_cells=1", result.Summary.StatusToken);
-        Assert.Contains("safe_unavailable=1", result.Summary.StatusToken);
 
         WildfireMaterialField treeMaterial = result.MaterialFields[grid.ToIndex(1, 0, 0)];
         Assert.Equal(77u, treeMaterial.TargetId);

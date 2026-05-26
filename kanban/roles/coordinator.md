@@ -56,7 +56,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Link bulky runtime evidence through `kanban/evidence-manifest-template.md`-style manifests rather than copying long logs into tickets.
 - Do not ask sub-agents to update `docs/HANDOFF.md`, `docs/TODO.md`, `docs/DESIGN.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`, or `README.md` unless an issue explicitly assigns those files.
 - Do not treat historical ticket notes or status symlinks inside implementation worktrees as authoritative.
-- Use GitHub issue comments when Jason needs to read, decide, or approve before the next safe action.
+- Use GitHub issue comments when Jason needs to read, decide, or approve before the next action.
 - For failed QA, keep the issue open and use `status:blocked` when the next action needs evidence, environment access, or a decision.
 - For failed review, keep the issue open for fixes and require a fresh review before closure.
 

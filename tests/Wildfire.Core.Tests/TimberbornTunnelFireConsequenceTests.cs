@@ -120,7 +120,7 @@ public sealed class TimberbornTunnelFireConsequenceTests
         RecordingTunnelTargetApi targetApi = new(
             Target(canExplodeNative: true),
             explodeResult: new TimberbornTunnelNativeExplodeResult(
-                TimberbornTunnelNativeExplodeStatus.SkippedNoSafeApi,
+                TimberbornTunnelNativeExplodeStatus.SkippedUnavailablePath,
                 RecoverabilityPreserved: false));
         TimberbornTunnelFireSink sink = new(
             () => Settings(destructionEnabled: true),
@@ -132,7 +132,7 @@ public sealed class TimberbornTunnelFireConsequenceTests
 
         Assert.Equal(1, summary.NativeExplodeAttemptedCount);
         Assert.Equal(0, summary.NativeExplodeAppliedCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.SkippedUnavailablePathCount);
         Assert.Equal(1, summary.RecoverabilityUnknownCount);
         Assert.Single(targetApi.ExplodedTargets);
     }

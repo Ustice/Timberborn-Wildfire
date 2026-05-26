@@ -561,7 +561,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
         {
             _logSink.Warning(
                 "wildfire_timberborn_crop_kill_skipped " +
-                $"reason=death_api_unavailable stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                $"reason=death_not_applied stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)}");
             return SkippedUnsafe;
         }

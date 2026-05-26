@@ -22,7 +22,6 @@ Each consequence ticket should be small enough that a junior developer can answe
 
 - What simulation input wakes this consequence?
 - Which Timberborn-side service owns the persistent state?
-- Which native Timberborn APIs are proven safe, and which calls must remain logged no-ops?
 - Which counters prove the ticket did something?
 - Which deterministic tests pass without launching Timberborn?
 - What live evidence is required before the ticket can integrate?
@@ -30,14 +29,11 @@ Each consequence ticket should be small enough that a junior developer can answe
 Default implementation order:
 
 1. Add or update a small contract type in `src/Wildfire.Timberborn/**`.
-2. Add a null or safe-unavailable adapter so the live runtime can load before native APIs are proven.
-3. Add a deterministic service that consumes compact deltas, visual-field samples, atmospheric-field samples, or burn-damage decisions.
-4. Add telemetry/status fields and structured log tokens.
-5. Add tests in `tests/Wildfire.Core.Tests/**`.
-6. Wire the service into `TimberbornFireRuntime` or the existing command/status surface only after the deterministic path is covered.
-7. Add live QA instructions to `docs/TEST_PLAN.md` if the ticket changes player-visible behavior.
-
-Do not start by calling reflection or mutating live Timberborn entities. First build the deterministic service and the safe adapter interface, then bind the native API behind that interface after it has been inspected. If the API is not safe, the ticket can still pass deterministic review by reporting precise `skipped_*` counters, but it cannot claim live gameplay behavior.
+2. Add a deterministic service that consumes compact deltas, visual-field samples, atmospheric-field samples, or burn-damage decisions.
+3. Add telemetry/status fields and structured log tokens.
+4. Add tests in `tests/Wildfire.Core.Tests/**`.
+5. Wire the service into `TimberbornFireRuntime` or the existing command/status surface only after the deterministic path is covered.
+6. Add live QA instructions to `docs/TEST_PLAN.md` if the ticket changes player-visible behavior.
 
 Useful starting points:
 
@@ -76,7 +72,7 @@ Required proof:
 
 ### Structure Burn State
 
-Structures on fire should cease operations immediately. Any beaver working in the structure should abandon work if possible and have a high chance of injury from either the `Burned` or `Coughing` debuff, depending on whether the exposure is heat/flame or smoke/toxic smoke. Injury application remains API-gated: if a safe native debuff path is unavailable, the first implementation should log the exact skipped reason and still cancel work or close the structure when that path is safe.
+Structures on fire should cease operations immediately. Any beaver working in the structure should abandon work and have a high chance of injury from either the `Burned` or `Coughing` debuff, depending on whether the exposure is heat/flame or smoke/toxic smoke.
 
 As structure fuel is consumed, the structure enters a `Burned` state using the same number of phases as construction. This is a rollback of construction value, not direct deletion. Each time fuel is burned, a proportional amount of construction material is destroyed. Destruction thresholds should match construction thresholds so the visual stage and repair requirement are legible to players.
 
@@ -88,13 +84,13 @@ Burned structure visuals should use the same model as the corresponding construc
 - Use burned variants only through a reversible visual/material path.
 - Record attribution and generated-asset provenance where required by release packaging.
 
-Structures can be repaired only after fire and dangerous heat are gone. Repair should require the destroyed construction materials again, preserve entity identity when safe, and move visuals forward through the same phase thresholds used during construction.
+Structures can be repaired only after fire and dangerous heat are gone. Repair should require the destroyed construction materials again, and move visuals forward through the same phase thresholds used during construction.
 
 Required proof:
 
 - Deterministic tests for close-on-fire, material destruction proportionality, threshold transitions, duplicate-cell suppression, repair blocking while hot, and repair eligibility after cooling.
 - A texture-generation artifact trail for at least one representative structure before broad rollout.
-- Live QA showing a structure closes from fire exposure, records material loss, enters an accepted burned phase or precise safe-unavailable visual state, and becomes repair-eligible only after the fire is out.
+- Live QA showing a structure closes from fire exposure, records material loss, enters an accepted burned phase, and becomes repair-eligible only after the fire is out.
 
 ### Crop Burn State
 
@@ -102,17 +98,15 @@ When a crop burns, it dies. Crops should have a `Burned` state that replaces the
 
 Crop consequence state should consume the burn-damage foundation but be stricter than the older yield-loss-only wording:
 
-- First fire exposure marks the crop as dead or burn-damaged if the safe crop API exists.
+- First fire exposure marks the crop as dead or burn-damaged.
 - Fuel loss destroys proportional yield or crop value.
 - The visual state switches to a burned dead texture when the crop reaches the accepted burned threshold.
-- Full fuel depletion removes or destroys the crop through a native-safe path.
-
-If Timberborn does not expose safe crop death, texture replacement, or destruction APIs, each unsafe operation should degrade to explicit telemetry rather than fake state.
+- Full fuel depletion removes or destroys the crop.
 
 Required proof:
 
-- Deterministic tests for crop death on burn, proportional value loss, burned texture request, full-fuel destruction, and safe no-op paths.
-- Live QA with at least one crop or harvestable showing nonzero crop-burn counters and either real death/visual/destruction behavior or precise skipped-unsafe-API evidence.
+- Deterministic tests for crop death on burn, proportional value loss, burned texture request, full-fuel destruction.
+- Live QA with at least one crop or harvestable showing nonzero crop-burn counters and either real death/visual/destruction behavior.
 
 ### Tree Burn State
 
@@ -127,14 +121,14 @@ Accepted thresholds:
 The tree lane should keep cuttable yield, visual state, and model switching separate:
 
 - Yield loss follows burn damage and resource fuel value.
-- Death and model/state changes use Timberborn-safe plant/cuttable APIs only.
+- Death and model/state changes use Timberborn APIs.
 - Burned textures are generated from located source textures, like structures.
 - Stump remnant presentation should preserve native stump placement and collision expectations where possible.
 
 Required proof:
 
-- Deterministic tests for desert-threshold drying, one-third consumed death threshold, full-depletion stump remnant threshold, duplicate vertical footprint suppression, and safe-unavailable API behavior.
-- Live QA with one tree target showing nonzero burn telemetry and either real burned/stump visual behavior or precise skipped-unsafe-API evidence.
+- Deterministic tests for desert-threshold drying, one-third consumed death threshold, full-depletion stump remnant threshold, duplicate vertical and footprint suppression.
+- Live QA with one tree target showing nonzero burn telemetry and either real burned/stump visual behavior.
 
 ### Ash Deposition And Soil Effects
 
@@ -148,7 +142,7 @@ Ash quality:
 - `spent`: visible inert ash with no growth benefit.
 - `contaminated`: from toxic smoke, badwater-adjacent burn sources, contaminated soil, contaminated water, or contaminated goods.
 
-Contaminated ash should increase ground-soil contamination or poison the soil through the safest native contamination path. Fire should never reduce contamination. If direct contamination mutation is unsafe, record tainted ash separately and expose telemetry until a safe adapter path is proven.
+Contaminated ash should increase ground-soil contamination or poison the soil. Fire should never reduce contamination.
 
 Fertile ash should increase plant growth rate by `10%` while active, subject to caps and decay so burning land is not always optimal. This is a field effect, not an inventory good in the first pass. Collection and application can remain later work.
 
@@ -159,19 +153,15 @@ Required proof:
 
 ### Moisture, Evaporation, And Water
 
-If Wildfire can safely evaporate soil moisture, it should do so directly from heat exposure. This should be a Timberborn adapter consequence of heat fields, not a new fire-spread rule owned by Timberborn.
+Wildfire should evaporate soil moisture directly from heat exposure. This should be a Timberborn adapter consequence of heat fields, not a new fire-spread rule owned by Timberborn.
 
-The first direct-moisture target is soil moisture. A later nice-to-have is increasing evaporation of standing water in the heat field. Both should be API-gated:
-
-- Soil moisture evaporation may be implemented when a safe mutable soil-moisture path is found.
-- Standing-water evaporation should wait until water-volume mutation and save/reload behavior are proven.
-- Badwater or contaminated water should remain contaminated; heating it can create steam and contaminated ash, but steam itself is clean and must not carry contamination or cleanse the water.
+The first direct-moisture target is soil moisture. A later nice-to-have is increasing evaporation of standing water in the heat field.
 
 Required proof:
 
-- Reflection or adapter evidence for the safe mutable API before mutation.
+- Reflection or adapter evidence API.
 - Deterministic tests around heat threshold, evaporation amount, no-op behavior, and contamination invariants.
-- Live QA proving soil moisture or water changes only after a safe API path is available.
+- Live QA proving soil moisture or water changes.
 
 ### Ticket Reconciliation
 
@@ -353,18 +343,10 @@ Do:
 - Treat contaminated simulator ash as tainted ash.
 - Expose status counters for ash cells by quality, new cells, decayed cells, persistence saves, and persistence loads.
 
-Do not:
-
-- Store ash in `PackedCell`.
-- Seed ash read-model entries from burn consequence source events.
-- Render the overlay directly if that is owned by `TWF-068`.
-- Implement ash collection or manual application.
-- Mutate native contamination unless the contaminated-ash ticket proves that path safe.
-
 Done when:
 
-- Tests cover simulator readback, quality classification, source handling, decay mutation requests, sparse persistence, and safe no-op behavior when source or contamination data is unavailable.
-- Live QA proves field state for fertile and tainted ash, or records exact safe-unavailable blockers.
+- Tests cover simulator readback, quality classification, source handling, decay mutation requests, sparse persistence.
+- Live QA proves field state for fertile and tainted ash.
 
 #### New Ticket: Scorch Heat History
 
@@ -427,7 +409,7 @@ Do not:
 
 - Require a whole-map burn.
 - Treat `50x50` smoke-test saves as satisfying the max-size gate.
-- Prefer JSON mutation over map editor/dev tools when the editor can create the scenario safely.
+- Prefer JSON mutation over map editor/dev tools.
 
 Done when:
 
@@ -478,10 +460,10 @@ Inputs:
 
 Do:
 
-- Treat first active burn as crop death when a safe native API exists.
+- Treat first active burn as crop death.
 - Destroy proportional yield or crop value as fuel is consumed.
 - Request the burned-dead texture state at the accepted threshold.
-- Request removal/destruction at full fuel depletion through a safe API.
+- Request removal/destruction at full fuel depletion.
 - Report every unavailable native API separately.
 
 Do not:
@@ -493,8 +475,8 @@ Do not:
 
 Done when:
 
-- Tests cover death-on-burn, proportional value loss, burned texture request, full-depletion destruction request, duplicate-cell suppression, and safe no-op paths.
-- Live QA shows nonzero crop counters and either real crop state changes or precise skipped-unsafe-API evidence.
+- Tests cover death-on-burn, proportional value loss, burned texture request, full-depletion destruction request, and duplicate-cell suppression.
+- Live QA shows nonzero crop counters and either real crop state changes evidence.
 
 #### `TWF-077`: Structure Burn Damage Rollback
 
@@ -531,8 +513,8 @@ Do not:
 
 Done when:
 
-- Tests cover closure, material loss, phase thresholds, repair blocked while hot, repair eligible after cooling, multi-cell rollup, and skipped unsafe APIs.
-- Live QA proves closure/material-loss counters and either burned visual phase behavior or precise safe-unavailable visual evidence.
+- Tests cover closure, material loss, phase thresholds, repair blocked while hot, repair eligible after cooling, and multi-cell rollup.
+- Live QA proves closure/material-loss counters and either burned visual phase behavior visual evidence.
 
 #### New Ticket: Burned Texture Asset Pipeline
 
@@ -581,22 +563,19 @@ Start from:
 
 Do:
 
-- Add read-only adapter probes for contaminated soil, badwater, contaminated water, contaminated goods, and contaminated entities where safe.
+- Add read-only adapter probes for contaminated soil, badwater, contaminated water, contaminated goods, and contaminated entities.
 - Classify ash as contaminated when source or soil is contaminated.
 - Classify toxic smoke for downstream beaver telemetry.
 - Assert that heat/fire never reduces contamination.
-- Report skipped unsafe contamination APIs.
 
 Do not:
 
 - Apply beaver toxic-smoke behavior.
-- Clean contamination.
-- Mutate native contamination before a safe API path is proven.
 
 Done when:
 
-- Tests cover tainted classification, no-decontamination invariant, badwater suppression semantics, toxic field classification, and skipped unsafe reads.
-- Live QA captures one contamination-aware interaction or precise safe-unavailable evidence.
+- Tests cover tainted classification, no-decontamination invariant, badwater suppression semantics, and toxic field classification.
+- Live QA captures one contamination-aware interaction evidence.
 
 #### New Ticket: Fertile Ash Growth Multiplier
 
@@ -614,9 +593,6 @@ Do:
 
 - Read fertile ash strength from simulator ash readback through the Timberborn adapter.
 - Clamp the growth multiplier to `1.10`.
-- Apply only to plants or crops whose native growth API is proven safe.
-- Decay or remove the bonus when ash expires.
-- Report skipped unsafe growable APIs separately from no fertile ash present.
 
 Do not:
 
@@ -626,14 +602,14 @@ Do not:
 
 Done when:
 
-- Tests cover active fertile ash, expired ash, contaminated ash, multiplier clamp, and safe no-op behavior.
-- Live QA proves a safe growth API path or records exact skipped-unsafe-API evidence.
+- Tests cover active fertile ash, expired ash, contaminated ash, and multiplier clamp.
+- Live QA proves path.
 
 #### New Ticket: Contaminated Ash Soil Interaction
 
 Purpose:
 
-- Let contaminated ash poison or increase ground-soil contamination where a safe native path exists.
+- Let contaminated ash poison or increase ground-soil contamination.
 
 Start from:
 
@@ -644,7 +620,7 @@ Start from:
 Do:
 
 - Convert contaminated ash strength into a bounded contamination effect.
-- Use native contamination mutation only if it is safe and save/reload-safe.
+- Use native contamination mutation.
 - Preserve the no-decontamination invariant.
 - Keep tainted ash as visible/persistent Wildfire state if native mutation is unavailable.
 
@@ -695,7 +671,6 @@ Do:
 - Distinguish active fire, building closure/damage, plant/resource loss, beaver danger, explosive hazard, fertile ash, and tainted ash.
 - Prefer native alert/status/notification surfaces.
 - Throttle repeated common aftermath events.
-- Preserve log/status-only fallback when no native UI path is safe.
 
 Do not:
 
@@ -712,7 +687,7 @@ Done when:
 
 Purpose:
 
-- Prove durable consequence state survives save/reload, disable/re-enable, or degrades safely.
+- Prove durable consequence state survives save/reload, and disable/re-enable.
 
 Start from:
 
@@ -732,12 +707,12 @@ Do not:
 
 - Treat deterministic tests as a substitute for required save/reload proof.
 - Broaden behavior scope while doing QA.
-- Claim persistence for a lane that only returned safe-unavailable telemetry.
+- Claim persistence for a lane that only returned unavailable telemetry.
 
 Done when:
 
 - The save/reload window has no new critical Unity or Wildfire failure tokens.
-- Each durable lane either survives reload or has a documented safe degradation/blocker.
+- Each durable lane either survives reload.
 
 #### `TWF-084`: Tree Burn Consequences
 
@@ -754,7 +729,7 @@ Start from:
 Inputs:
 
 - Burn-damage decisions for tree/cuttable targets.
-- Moisture or desert-threshold state from the material field, soil moisture probe, or safe adapter source.
+- Moisture or desert-threshold state from the material field, or soil moisture probe.
 
 Do:
 
@@ -768,18 +743,17 @@ Do not:
 
 - Implement crop behavior.
 - Apply fertile ash.
-- Directly destroy Unity objects or force stump model swaps without a safe API.
 
 Done when:
 
-- Tests cover dry-threshold behavior, one-third death threshold, full-depletion remnant threshold, duplicate footprint suppression, and safe-unavailable APIs.
-- Live QA shows nonzero tree counters and either real state changes or precise skipped-unsafe-API evidence.
+- Tests cover dry-threshold behavior, one-third death threshold, full-depletion remnant threshold, and duplicate footprint suppression.
+- Live QA shows nonzero tree counters and either real state changes.
 
 #### New Ticket: Soil Moisture Evaporation Research
 
 Purpose:
 
-- Find out whether Wildfire can safely reduce soil moisture from heat exposure.
+- Find out whether Wildfire can reduce soil moisture from heat exposure.
 
 Start from:
 
@@ -790,8 +764,8 @@ Start from:
 Do:
 
 - Inspect the actual Timberborn APIs before proposing mutation.
-- Record read-only, mutable, and unsafe surfaces separately.
-- Write a tiny proof adapter only if the API is safe.
+- Record read-only and mutable surfaces separately.
+- Write a tiny proof adapter.
 - Document exact class/method names and save/reload risks.
 
 Do not:
@@ -801,13 +775,13 @@ Do not:
 
 Done when:
 
-- The ticket says either "safe mutable path found" with exact API evidence or "mutation unavailable" with exact blocker evidence.
+- The ticket says exact API evidence e.
 
 #### New Ticket: Heat-Driven Soil Moisture Evaporation
 
 Purpose:
 
-- Implement direct soil moisture evaporation only after the research ticket proves a safe mutable path.
+- Implement direct soil moisture evaporation.
 
 Start from:
 
@@ -820,7 +794,7 @@ Do:
 - Evaporate soil moisture from heat exposure using bounded settings.
 - Skip invalid terrain cells.
 - Preserve badwater and contamination invariants.
-- Expose counters for considered cells, changed cells, skipped invalid cells, and skipped unsafe APIs.
+- Expose counters for considered cells, changed cells, and skipped invalid cells.
 
 Do not:
 
@@ -830,14 +804,14 @@ Do not:
 
 Done when:
 
-- Tests cover heat threshold, evaporation amount, invalid terrain no-op, contamination invariant, and safe-unavailable behavior.
+- Tests cover heat threshold, evaporation amount, invalid terrain no-op, and contamination invariant.
 - Live QA proves soil moisture changes or exact blocker telemetry.
 
 #### New Ticket: Heat-Driven Water Evaporation
 
 Purpose:
 
-- Nice-to-have follow-up after soil moisture. Increase evaporation of standing water in heat fields only if Timberborn water mutation is safe.
+- Nice-to-have follow-up after soil moisture. Increase evaporation of standing water in heat fields.
 
 Start from:
 
@@ -846,7 +820,7 @@ Start from:
 
 Do:
 
-- Research water-volume mutation first if no safe path is already proven.
+- Research water-volume mutation first.
 - Apply bounded heat-driven evaporation.
 - Preserve badwater/contaminated-water identity.
 - Emit clean steam when heated water evaporates.
@@ -859,8 +833,8 @@ Do not:
 
 Done when:
 
-- Tests cover clean water, badwater, no-decontamination, bounded evaporation, and skipped unsafe APIs.
-- Live QA proves safe mutation or precise blocker telemetry.
+- Tests cover clean water, badwater, no-decontamination, and bounded evaporation.
+- Live QA proves mutation.
 
 #### `TWF-071` Through `TWF-074`: Beaver Workplace Exposure
 
@@ -877,9 +851,8 @@ Start from:
 Do:
 
 - Feed worker exposure from burning structure footprints into the beaver exposure service.
-- Cancel or interrupt unsafe work when safe.
-- Apply `Coughing` for smoke/toxic-smoke exposure only after a safe debuff API is proven.
-- Apply `Burned` for heat/flame exposure only after a safe injury API is proven.
+- Apply `Coughing` for smoke/toxic-smoke exposure.
+- Apply `Burned` for heat/flame exposure.
 - Keep all debuff outcomes reversible or explicitly timed.
 
 Do not:
@@ -889,14 +862,14 @@ Do not:
 
 Done when:
 
-- Tests cover exposure aggregation, work cancellation decisions, debuff routing, cooldown/hysteresis, skipped unsafe APIs, and recovery.
-- Live QA proves exposure telemetry and either real safe behavior or precise skipped-unsafe-API evidence.
+- Tests cover exposure aggregation, work cancellation decisions, debuff routing, cooldown/hysteresis, and recovery.
+- Live QA proves exposure telemetry and real behavior.
 
 #### `TWF-085`: Beaver Smoke Exposure
 
 Purpose:
 
-- Implement normal smoke exposure as coughing first, then choking and death only behind later safe evidence.
+- Implement normal smoke exposure as coughing first, then choking and death.
 
 Start from:
 
@@ -907,7 +880,7 @@ Start from:
 Do:
 
 - Accumulate smoke exposure over multiple ticks.
-- Apply coughing as the first live proof target if a safe slowdown or work-inefficiency API exists.
+- Apply coughing as the first live proof target.
 - Recover coughing when exposure clears.
 - Keep choking and death gated behind separate evidence.
 
@@ -919,8 +892,8 @@ Do not:
 
 Done when:
 
-- Tests cover accumulation, coughing threshold, recovery, choking/death gates, batching, and skipped unsafe APIs.
-- Live QA proves coughing or a precise safe-unavailable state.
+- Tests cover accumulation, coughing threshold, recovery, choking/death gates, and batching.
+- Live QA proves coughing.
 
 #### `TWF-086`: Beaver Toxic Smoke Exposure
 
@@ -949,8 +922,8 @@ Do not:
 
 Done when:
 
-- Tests cover toxic threshold differences, native-effect decision logic, recovery, skipped unsafe APIs, and no-decontamination.
-- Live QA proves toxic exposure behavior or exact safe-unavailable evidence.
+- Tests cover toxic threshold differences, native-effect decision logic, recovery, and no-decontamination.
+- Live QA proves toxic exposure evidence.
 
 #### `TWF-087`: Beaver Fire And Heat Exposure
 
@@ -967,9 +940,8 @@ Start from:
 Do:
 
 - Treat active flame cells as the highest-priority danger.
-- Interrupt unsafe work assigned to burning buildings, crops, or trees where safe.
+- Interrupt work assigned to burning buildings, crops, or trees.
 - Apply singed as the first injury proof target.
-- Apply burned only after a safe work-preventing injury path is proven.
 - Keep death behind sustained exposure and separate live evidence.
 
 Do not:
@@ -980,8 +952,8 @@ Do not:
 
 Done when:
 
-- Tests cover active-flame contact, heat exposure, work interruption, singed, burned gate, recovery, and skipped unsafe APIs.
-- Live QA proves singed or work interruption, or exact safe-unavailable evidence.
+- Tests cover active-flame contact, heat exposure, work interruption, singed, burned gate, and recovery.
+- Live QA proves singed or work interruption.
 
 #### `TWF-115`: Stored Goods Burn Consequences
 
@@ -1004,12 +976,12 @@ Do not:
 
 - Apply structure burned phases.
 - Deposit ash directly except by queuing a bounded simulator ash mutation.
-- Fake inventory loss without a safe API.
+- Fake inventory loss.
 
 Done when:
 
-- Tests cover partial stack burn, inert goods, hazardous routing, duplicate storage cells, and safe no-op behavior.
-- Live QA proves real inventory reduction or exact safe-unavailable telemetry.
+- Tests cover partial stack burn, inert goods, hazardous routing, and duplicate storage cells.
+- Live QA proves real inventory reduction telemetry.
 
 Summary of existing ticket changes:
 
@@ -1048,7 +1020,7 @@ The resource catalog should carry at least `fuelValue`, `flammability`, `smokePr
 
 Construction materials can reuse the same catalog. Building burn capacity should start from the resources invested in construction, with non-burnable resources excluded from fuel burn but still potentially left as unusable or repair-required structure value. This keeps metal from powering the fire while still allowing a metal-containing building to be damaged by the loss of its wood, paper, or plank components.
 
-Explosives should be treated as hazardous stored goods, not ordinary fuel. The first safe behavior should be:
+Explosives should be treated as hazardous stored goods, not ordinary fuel. The first behavior should be:
 
 - High flammability once exposed to heat or flame.
 - A short armed/unstable threshold so it is not a random instant deletion.
@@ -1056,7 +1028,7 @@ Explosives should be treated as hazardous stored goods, not ordinary fuel. The f
 - A bounded heat and fire pulse into nearby simulation cells.
 - Optional structure damage only through the same burn-damage service used by all structures.
 
-We should not start with arbitrary physics blasts, displaced terrain, or direct entity deletion. Those can come later if the Timberborn API and balance design make them safe. The first version should be deterministic, bounded, logged, and easy to disable through release settings.
+We should not start with arbitrary physics blasts, displaced terrain, or direct entity deletion. Try to reuse the code from unstable cores.
 
 ## Dynamite, Detonators, And Tunnels
 
@@ -1071,7 +1043,7 @@ Accepted first contract:
 
 - Stored `Explosives` and `Fireworks` remain the stored-goods lane from `TWF-116`.
 - Placed dynamite is an armed explosive infrastructure target. Fire exposure can advance an arming threshold and, if the release setting allows it, call a wrapped native `Dynamite.TriggerDelayed(...)` or `Trigger()` path. The same event should enqueue a bounded heat pulse into the Wildfire sim so the field remains visually and mechanically coherent.
-- Detonators are trigger devices, not fuel. Fire can disable them or mark them unsafe first; premature arming needs a separate wrapper because automation state and recoverability are risky.
+- Detonators are trigger devices, not fuel. Fire can disable them; premature arming needs a separate wrapper because automation state and recoverability are risky.
 - Tunnels are special terrain-affecting infrastructure. Fire can damage or mark them unstable in the first implementation, but native `Tunnel.Explode()` and terrain mutation stay behind a separate opt-in ticket with live QA and rollback evidence.
 - Direct terrain deformation, broad physics blasts, and direct entity deletion are not allowed from generic fire deltas. Those behaviors must go through named native wrappers, settings, telemetry, and live proof.
 
@@ -1091,21 +1063,18 @@ Required telemetry:
 - `explosive_infrastructure_triggered`
 - `explosive_infrastructure_native_triggered`
 - `explosive_infrastructure_heat_pulse_cells`
-- `explosive_infrastructure_skipped_no_safe_api`
 - `explosive_infrastructure_skipped_setting_disabled`
 - `tunnel_destruction_deferred`
 
-Follow-up implementation should split into separate tickets for native dynamite triggering, detonator safety behavior, and tunnel instability or terrain-destruction gating.
-
 `TWF-152` implements the first dynamite lane with native triggering disabled by default. The adapter resolves placed `Dynamite` components from exposed compact deltas, reads native `Dynamite.Depth`, tracks sustained exposure by stable target id, suppresses duplicate cells in one dispatch, and pushes a bounded heat pulse back into Wildfire through queued `FireSimChange` values. `Dynamite.TriggerDelayed(...)` is present only behind `native_dynamite_trigger_enabled`; `Detonate()` remains out of bounds for generic fire deltas.
 
-`TWF-153` implements the first detonator lane as fire safety, not fire spread. Exposed detonators are resolved and deduplicated, then disarmed through a wrapped `Disarm()` path when `detonator_fire_safety_enabled` is true. The lane records recoverability telemetry and intentionally never calls `Arm()`, `Evaluate()`, adjacent dynamite triggers, terrain mutation, or heat-pulse output.
+`TWF-153` implements the first detonator lane. Exposed detonators are resolved and deduplicated.
 
 `TWF-154` implements the first tunnel lane as instability/deferred-destruction telemetry. Exposed tunnels are resolved and deduplicated, then marked unstable while `tunnel_terrain_destruction_enabled` remains false by default. The native `Tunnel.Explode()` wrapper is isolated behind that setting and is not part of generic fire deltas, because it can mutate terrain and must be live-proven with save/reload and rebuild evidence before release.
 
 ## Scenario Save Generator
 
-The first generated scenario tool is `scripts/generate-wildfire-scenario-save.ts`, run with Bun. It inspects a selected known-good `.timber` archive, parses JSON through structured APIs, writes a generated output folder under the real Wildfire QA generated-scenarios root, refuses unsafe overwrites, and writes a manifest next to the generated archive.
+The first generated scenario tool is `scripts/generate-wildfire-scenario-save.ts`, run with Bun. It inspects a selected known-good `.timber` archive, parses JSON through structured APIs, writes a generated output folder under the real Wildfire QA generated-scenarios root, and writes a manifest next to the generated archive.
 
 Run shape:
 
@@ -1149,7 +1118,7 @@ The generator currently mutates entity placement only when matching prototype en
 
 Faction suppression should stay distinct from passive world consequences. It adds player strategy and should consume the same simulation inputs and suppression output channels as water changes, instead of owning fire rules directly.
 
-Ironteeth should get Fire Wardens. This is the capital-intensive response: protective clothing, sprayers, more building/resource cost, fewer beavers required. The gameplay effect is concentrated water application into the simulation, and if the Timberborn API allows it safely, visible water delivery in the game world.
+Ironteeth should get Fire Wardens. This is the capital-intensive response: protective clothing, sprayers, more building/resource cost, fewer beavers required. The gameplay effect is concentrated water application into the simulation, visible water delivery in the game world.
 
 Folktails should get a Fire Bell. This is the labor-intensive response: one staffed bell summons nearby beavers, assigns buckets, and creates a bucket brigade from the nearest natural water source or stored water tanks when no natural source is in range. Each beaver dumps water on one target spot, so the response is powerful only when the community can mobilize enough bodies.
 
@@ -1173,7 +1142,6 @@ Tickets in this lane should be junior-ready before assignment. Each implementati
 
 - The durable design references it implements.
 - The likely source files or services to inspect first.
-- The expected safe no-op behavior when a Timberborn API is unavailable.
 - The telemetry counters or QA status fields needed for evidence.
 - Deterministic tests before live Timberborn validation.
 - The smallest acceptable live proof or explicit blocker evidence.

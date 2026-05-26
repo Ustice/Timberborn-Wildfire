@@ -330,7 +330,6 @@ public sealed class TimberbornFireCellMapperTests
         Assert.Equal(1, summary.SkippedUnsafeContaminationApiCount);
         Assert.Contains("badwater_water_like_map_cells=1", summary.ToLogToken());
         Assert.Contains("badwater_suppression_inputs=0", summary.ToLogToken());
-        Assert.Contains("water_suppression_input_safe_unavailable=1", summary.ToLogToken());
         Assert.Contains("native_decontamination_attempts=0", summary.ToLogToken());
     }
 

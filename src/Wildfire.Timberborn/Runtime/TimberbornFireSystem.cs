@@ -193,9 +193,6 @@ public sealed class TimberbornFireSystem : IDisposable
     public int LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount =>
         _deltaConsumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount;
 
-    public int LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount =>
-        _deltaConsumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount;
-
     public int LastPositiveStructureBurnDamageRollbackTotalDamageApplied =>
         _deltaConsumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied;
 
@@ -331,7 +328,7 @@ public sealed class TimberbornFireSystem : IDisposable
         {
             _logSink.Warning(
                 "wildfire_timberborn_firesim_persistence_skipped " +
-                "reason=snapshot_api_unavailable");
+                "reason=snapshot_missing");
         }
     }
 
@@ -1092,7 +1089,7 @@ public sealed class TimberbornFireSystem : IDisposable
                 catch (Exception exception)
                 {
                     _logSink.Warning(
-                        "wildfire_timberborn_qa_direct_consequence_target_safe_unavailable " +
+                        "wildfire_timberborn_qa_direct_consequence_target_unresolved " +
                         $"selector={TimberbornQaCommandBridge.FormatToken(selector)} " +
                         $"cell_index={cellIndex} " +
                         $"exception_type={exception.GetType().Name}");

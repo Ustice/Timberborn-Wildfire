@@ -51,7 +51,6 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
                 $"requests={requests.Count} " +
                 $"candidate_growables={counter.CandidateGrowables} " +
                 $"applied_growables={counter.AppliedGrowables} " +
-                $"skipped_unsafe_apis={counter.SkippedUnsafeApis} " +
                 $"skipped_unsupported_growables={counter.SkippedUnsupportedGrowables}");
         }
 

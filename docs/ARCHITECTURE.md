@@ -24,7 +24,7 @@ Wildfire separates simulation authority from host integration. There is one auth
 
 `Wildfire.Timberborn` owns release-facing compatibility probes for Timberborn APIs, Unity capabilities, and adapter-owned asset paths. The probe layer is evidence-only: it checks service/member availability, compute support, private compute/diagnostic bundles, native effect prefab availability, and quick-notification access, then logs whether each release-facing feature is compatible, degraded, or failed. It does not own fire rules, mutate the grid, or install a fake simulator fallback.
 
-Required terrain and compute failures block the real compute-backed runtime path and surface as `compatibility_probe_status=failed`; the runtime logs `wildfire_timberborn_runtime_initialization_blocked`, rejects initialization, and `qa-readiness` reports `loaded_game_ready=false` even if other status fields are present. Optional feature failures, including building-burnout consequence APIs, native visual-effect prefabs, quick notifications, and diagnostic bundles, surface as `compatibility_probe_status=degraded` with `compatibility_probe_degraded_features=<tokens>`, so QA can distinguish a playable-but-degraded adapter from a release blocker. Reflection belongs behind this probe boundary when Timberborn has no stable public surface for a version-sensitive member; gameplay code should consume public services directly after the probe evidence is logged.
+Required terrain and compute failures stop the real compute-backed runtime path and surface as `compatibility_probe_status=failed`; the runtime logs `wildfire_timberborn_runtime_initialization_blocked`, rejects initialization, and `qa-readiness` reports `loaded_game_ready=false` even if other status fields are present. Optional feature failures, including building-burnout consequence APIs, native visual-effect prefabs, quick notifications, and diagnostic bundles, surface as `compatibility_probe_status=degraded` with `compatibility_probe_degraded_features=<tokens>`, so QA can distinguish a playable-but-degraded adapter from a release failure state. Reflection belongs behind this probe boundary when Timberborn has no stable public surface for a version-sensitive member; gameplay code should consume public services directly after the probe evidence is logged.
 
 ## Data Flow
 
@@ -106,7 +106,7 @@ The schema classifies observed map inputs into material classes before they beco
 
 Each profile defines the packed fuel, flammability, heat loss, terrain bit, water band, burn capacity, consequence target kind, ash quality, contamination behavior, and resource policy. Packed bands remain small and deterministic; resource-specific detail still flows through adapter catalogs such as `TimberbornResourceFuelCatalog`.
 
-Unknown materials fail closed. They do not invent fuel, burn capacity, consequence targets, or clean aftermath. This is deliberate: importer gaps should become explicit telemetry and ticket blockers instead of another layer of fake fuel.
+Unknown materials fail closed. They do not invent fuel, burn capacity, consequence targets, or clean aftermath. This is deliberate: importer gaps should become explicit telemetry and ticket failures instead of another layer of fake fuel.
 
 ## Timberborn Consequence Services
 
@@ -154,10 +154,10 @@ Responsibilities:
 
 - Resolve stockpiles, warehouses, tanks, and other storage entities from changed simulation cells.
 - Use the shared resource fuel and flammability catalog for burnable goods.
-- Destroy stored items only through safe Timberborn inventory APIs.
+- Destroy stored items only through Timberborn inventory APIs.
 - Keep inventory loss separate from structural damage to the storage building.
 - Route explosives or volatile goods through a bounded hazardous-good behavior before broader blast mechanics are considered.
-- Expose counters for item loss by resource, skipped non-burnable goods, hazardous goods, and unsafe API paths.
+- Expose counters for item loss by resource, skipped non-burnable goods, and hazardous goods.
 
 ### Ash Adapter Services
 
@@ -170,7 +170,9 @@ Responsibilities:
 - Queue `FertileAsh` application and ash-removal actions for the next simulator cycle.
 - Prevent contaminated ash from producing a fertility bonus unless a future decontamination mechanic explicitly allows it.
 - Fade tainted ash over time and wash it away through water-contact mutations only through simulator-owned ash state.
-- Treat water tainting from washed tainted ash as a bounded Timberborn adapter mutation with safe-unavailable telemetry when no safe API exists.
+- Treat water tainting from washed tainted ash as a bounded Timberborn
+  adapter mutation through the supported water-contamination mutation
+  path.
 - Preserve simulator ash state across save/load.
 - Expose collection hooks so beavers can gather uncontaminated ash as `FertileAsh` and place it in fields.
 
@@ -178,23 +180,31 @@ Responsibilities:
 
 The beaver exposure service translates fire, heat, smoke, clean steam, ash, and contamination-adjacent fields into beaver-facing effects. It should be built as an evidence ladder: exposure telemetry first, then debuffs, then incapacitation, then death.
 
-The service reads sampled simulator fields and compact-delta-driven field summaries. It does not write packed cells and does not infer alternate spread rules. Timberborn-owned behavior adapters can cancel unsafe work, apply native status effects, change path costs, or report safe no-op outcomes, but only through narrow wrappers with telemetry.
+The service reads sampled simulator fields and compact-delta-driven field
+summaries. It does not write packed cells and does not infer alternate
+spread rules. Timberborn-owned behavior adapters can cancel hazardous
+work, apply native status effects, and change path costs.
 
 Respiratory progression:
 
 - Coughing: slowdown and work inefficiency.
-- Choking: sleep-like or incapacitated state if Timberborn exposes a safe API.
+- Choking: sleep-like or incapacitated state.
 - Death: sustained severe exposure after avoidance and status behavior are proven.
 
 Burn progression:
 
 - Singed: injury-style debuff.
 - Burned: contamination-like severe injury that prevents work until healed.
-- Death: sustained direct heat or flame exposure after safer states are proven.
+- Death: sustained direct heat or flame.
 
-The service should cancel or interrupt unsafe work, increase path costs or avoidance where Timberborn supports it, and aggregate danger telemetry for player feedback. It should reuse native injury, sleep, contamination, treatment, and death APIs only after live tests prove the paths safe.
+The service should cancel or interrupt hazardous work, increase path
+costs or avoidance where Timberborn supports it, and aggregate danger
+telemetry for player feedback. It should reuse native injury, sleep,
+contamination, treatment, and death.
 
-Release scope is telemetry, avoidance/work interruption, coughing, singed, burned behavior when API-safe, and fertile ash collection when the gatherer/inventory path is proven. Choking, death, native badwater contamination coupling, and faction response are later gates unless a ticket proves the API path and recoverability.
+Release scope is telemetry, avoidance/work interruption, coughing,
+singed, burned behavior, and fertile ash collection. Choking, death, native
+badwater contamination coupling, and faction response.
 
 ### Active Suppression Services
 
@@ -218,8 +228,10 @@ Timberborn consequence services should apply these rules:
 - Contaminated water or badwater can suppress fire but does not become clean water.
 - Contaminated soil remains contaminated after fire.
 - Ash on contaminated soil is tainted rather than fertile.
-- Tainted ash can fade or wash away, but washing it should slightly taint water when a safe water-contamination mutation path exists.
-- Contaminated beaver exposure can combine respiratory or burn progressions with native badwater contamination if the API path is proven safe.
+- Tainted ash can fade or wash away, but washing it should slightly taint water.
+- Contaminated beaver exposure can combine respiratory or burn
+  progressions with native badwater contamination if the API path is
+  validated.
 
 ### Rare Ignition Inputs
 

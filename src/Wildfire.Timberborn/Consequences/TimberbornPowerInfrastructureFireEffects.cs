@@ -37,7 +37,7 @@ public sealed record TimberbornPowerInfrastructureFireTarget(
 public readonly record struct TimberbornPowerInfrastructureApplyResult(
     bool AppliedDamage,
     bool DisabledOrDisconnected,
-    bool SkippedNoSafeApi,
+    bool SkippedUnavailablePath,
     bool RepairEligible);
 
 public readonly record struct TimberbornPowerInfrastructureFireSummary(
@@ -47,7 +47,7 @@ public readonly record struct TimberbornPowerInfrastructureFireSummary(
     int MetalOnlyNoOpTargetCount,
     int DamagedTargetCount,
     int DisabledOrDisconnectedTargetCount,
-    int SkippedNoSafeApiCount,
+    int SkippedUnavailablePathCount,
     int RepairEligibleTargetCount,
     int TotalDamageApplied)
 {
@@ -58,7 +58,7 @@ public readonly record struct TimberbornPowerInfrastructureFireSummary(
         MetalOnlyNoOpTargetCount: 0,
         DamagedTargetCount: 0,
         DisabledOrDisconnectedTargetCount: 0,
-        SkippedNoSafeApiCount: 0,
+        SkippedUnavailablePathCount: 0,
         RepairEligibleTargetCount: 0,
         TotalDamageApplied: 0);
 
@@ -72,7 +72,6 @@ public readonly record struct TimberbornPowerInfrastructureFireSummary(
             $"metal_only_noop_targets={MetalOnlyNoOpTargetCount} " +
             $"damaged_targets={DamagedTargetCount} " +
             $"disabled_or_disconnected_targets={DisabledOrDisconnectedTargetCount} " +
-            $"skipped_no_safe_api={SkippedNoSafeApiCount} " +
             $"repair_eligible_targets={RepairEligibleTargetCount} " +
             $"total_damage_applied={TotalDamageApplied}";
     }
@@ -147,14 +146,14 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
             MetalOnlyNoOpTargetCount: outcomes.Count(static outcome => outcome.IsMetalOnlyNoOp),
             DamagedTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.AppliedDamage),
             DisabledOrDisconnectedTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.DisabledOrDisconnected),
-            SkippedNoSafeApiCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedNoSafeApi),
+            SkippedUnavailablePathCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedUnavailablePath),
             RepairEligibleTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.RepairEligible),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.DamageApplied));
         if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
             summary.MatchedTargetCellCount,
             summary.DamagedTargetCount,
             summary.DisabledOrDisconnectedTargetCount,
-            summary.SkippedNoSafeApiCount))
+            summary.SkippedUnavailablePathCount))
         {
             _logSink.Info(summary.ToLogToken(tick));
         }
@@ -183,7 +182,7 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
                 new TimberbornPowerInfrastructureApplyResult(
                     AppliedDamage: false,
                     DisabledOrDisconnected: false,
-                    SkippedNoSafeApi: false,
+                    SkippedUnavailablePath: false,
                     RepairEligible: target.RepairEligible));
         }
 

@@ -71,8 +71,7 @@ public readonly record struct TimberbornCropBurnConsequenceSummary(
             $"duplicate_cells_suppressed={DuplicateCellSuppressedCount} " +
             $"unmapped_targets={UnmappedTargetCount} " +
             $"unknown_harvest_resources={UnknownHarvestResourceCount} " +
-            $"non_burnable_crop_targets={NonBurnableCropTargetCount} " +
-            $"skipped_unsafe_apis={SkippedUnsafeApiCount}";
+            $"non_burnable_crop_targets={NonBurnableCropTargetCount}";
     }
 }
 

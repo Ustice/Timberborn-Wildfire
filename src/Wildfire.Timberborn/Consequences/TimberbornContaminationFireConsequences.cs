@@ -30,9 +30,7 @@ public readonly record struct TimberbornContaminationFireConsequenceSummary(
             $"contaminated_water_like_map_cells={ContaminatedWaterLikeMapCellCount} " +
             $"badwater_suppression_inputs={BadwaterSuppressionInputCellCount} " +
             $"contaminated_water_suppression_inputs={ContaminatedWaterSuppressionInputCellCount} " +
-            $"water_suppression_input_safe_unavailable={WaterSuppressionInputSafeUnavailableCount} " +
-            $"native_decontamination_attempts={NativeDecontaminationAttemptCount} " +
-            $"skipped_unsafe_contamination_apis={SkippedUnsafeContaminationApiCount}";
+            $"native_decontamination_attempts={NativeDecontaminationAttemptCount}";
     }
 }
 

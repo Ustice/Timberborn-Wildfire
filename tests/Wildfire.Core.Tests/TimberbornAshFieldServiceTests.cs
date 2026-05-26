@@ -563,7 +563,7 @@ public sealed class TimberbornAshFieldServiceTests
 
         Assert.Equal(1, summary.CandidateCellCount);
         Assert.Equal(1, summary.AppliedCellCount);
-        Assert.Equal(0, summary.SkippedNoSafeApiCount);
+        Assert.Equal(0, summary.SkippedUnavailablePathCount);
         Assert.Equal([nativeMapIndex], soilContamination.ContaminationIndices);
         Assert.Equal([(12, 13, 4)], soilContamination.UpdatedCoordinates);
         Assert.Equal([0.9f], soilContamination.UpdatedContamination);

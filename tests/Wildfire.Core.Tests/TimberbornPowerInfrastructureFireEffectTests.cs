@@ -133,7 +133,7 @@ public sealed class TimberbornPowerInfrastructureFireEffectTests
     }
 
     [Fact]
-    public void SinkReportsNoSafeApiWhenPowerMutationIsUnavailable()
+    public void SinkReportsUnavailablePathWhenPowerMutationIsUnavailable()
     {
         RecordingPowerInfrastructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
@@ -145,7 +145,7 @@ public sealed class TimberbornPowerInfrastructureFireEffectTests
             [Decision(4, oldFuel: 8, newFuel: 3)]);
 
         Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.SkippedUnavailablePathCount);
         Assert.Equal(5, summary.TotalDamageApplied);
     }
 
@@ -216,7 +216,7 @@ public sealed class TimberbornPowerInfrastructureFireEffectTests
             return new TimberbornPowerInfrastructureApplyResult(
                 AppliedDamage: damageTarget.CanMarkDamaged,
                 DisabledOrDisconnected: damageTarget.CanDisableOrDisconnect && isFullyDamaged,
-                SkippedNoSafeApi: !damageTarget.CanMarkDamaged && !damageTarget.CanDisableOrDisconnect,
+                SkippedUnavailablePath: !damageTarget.CanMarkDamaged && !damageTarget.CanDisableOrDisconnect,
                 RepairEligible: damageTarget.RepairEligible);
         }
     }

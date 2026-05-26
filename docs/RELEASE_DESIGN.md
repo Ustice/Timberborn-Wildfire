@@ -64,7 +64,7 @@ The default material schema maps Timberborn surfaces into simulation-ready profi
 | badwater | 0 | 0 | 3 | 0 | water | tainted |
 | unknown | 0 | 0 | 0 | 0 | none | none |
 
-Crops, trees, buildings, storage, and infrastructure use the resource catalog where available. Unknown or unsafe resource paths fail closed instead of inventing burnable state.
+Crops, trees, buildings, storage, and infrastructure use the resource catalog. Unknown resource paths fail closed instead of inventing burnable state.
 
 ## Fire Simulation
 
@@ -267,7 +267,7 @@ Delta consumers fan out cell changes into release-facing consequences:
 
 | Surface | Release behavior |
 | --- | --- |
-| structures | fire damage accumulates through a burn damage state, with rollback/repair-aware presentation where safe APIs exist |
+| structures | fire damage accumulates through a burn damage state, with rollback/repair-aware presentation |
 | stored goods | burnable stockpile contents can be destroyed based on resource classification |
 | explosive infrastructure | heated explosive targets can arm, trigger, and enqueue heat pulses |
 | detonators | fire safety behavior can disable or protect detonator-related targets |
@@ -280,7 +280,7 @@ Consequences deduplicate multi-cell structures by target before applying damage,
 
 ## Release Settings
 
-Release settings are stored under the `JasonKleinberg.Wildfire.release.` prefix. Missing settings use safe defaults; invalid settings default to a fail-closed value where the feature could be risky.
+Release settings are stored under the `JasonKleinberg.Wildfire.release.` prefix.
 
 Nonzero defaults:
 
@@ -292,21 +292,9 @@ Nonzero defaults:
 | explosive infrastructure armed threshold ticks | 2 |
 | explosive infrastructure pulse heat | 15 |
 | explosive infrastructure pulse radius | 1 |
-| detonator fire safety enabled | true |
-| tunnel fire behavior enabled | true |
+| tunnel fire behavior enabled | false |
 
 Feature gates with false defaults are intentionally omitted here because they are not active release behavior.
-
-## Safety And Failure Modes
-
-The release path favors degradation over hard failure:
-
-- Compatibility probes classify required and optional features before live readiness is reported.
-- Asset bundle or compute shader failure degrades runtime features instead of mutating Timberborn state unsafely.
-- Unknown material/resource classifications fail closed.
-- Debug overlays are disabled unless explicitly enabled.
-- Release log noise policy suppresses empty consequence summaries but keeps positive or failure summaries visible.
-- Oversized maps skip auto-dispatch rather than locking the game.
 
 ## Verification Evidence
 

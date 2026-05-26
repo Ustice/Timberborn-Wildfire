@@ -74,7 +74,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
         Assert.Equal(1, secondSummary.ArmedTargetCount);
         Assert.Equal(1, secondSummary.TriggeredTargetCount);
         Assert.Equal(5, secondSummary.HeatPulseCellCount);
-        Assert.Equal(1, secondSummary.SkippedNoSafeApiCount);
+        Assert.Equal(1, secondSummary.SkippedUnavailablePathCount);
         Assert.Equal(0, targetApi.NativeTriggerCalls);
         Assert.Single(heatPulseSink.Pulses);
     }
@@ -104,7 +104,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
         Assert.Equal(2, firstSummary.MatchedTargetCellCount);
         Assert.Equal(0, firstSummary.TriggeredTargetCount);
         Assert.Equal(1, secondSummary.TriggeredTargetCount);
-        Assert.Equal(1, secondSummary.SkippedNoSafeApiCount);
+        Assert.Equal(1, secondSummary.SkippedUnavailablePathCount);
         Assert.Equal(0, targetApi.NativeTriggerCalls);
         Assert.Single(heatPulseSink.Pulses);
     }
@@ -169,7 +169,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
         Assert.Equal(1, summary.TriggeredTargetCount);
         Assert.Equal(5, summary.HeatPulseCellCount);
         Assert.Equal(0, summary.NativeTriggeredTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.SkippedUnavailablePathCount);
         Assert.Equal(0, targetApi.NativeTriggerCalls);
         Assert.Single(heatPulseSink.Pulses);
     }

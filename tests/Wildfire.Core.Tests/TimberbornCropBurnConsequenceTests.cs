@@ -265,7 +265,6 @@ public sealed class TimberbornCropBurnConsequenceTests
         Assert.Contains("crop_burn_yield_lost=1", summary.ToLogToken());
         Assert.Contains("last_delta_consumer_crop_burn_considered_targets=1", result.ResultToken);
         Assert.Contains("last_delta_consumer_crop_burn_yield_lost=1", result.ResultToken);
-        Assert.Contains("last_delta_consumer_crop_burn_skipped_unsafe_apis=0", result.ResultToken);
     }
 
     private static TimberbornBurnDamageService CreateService(params TimberbornBurnDamageDescriptor[] descriptors)

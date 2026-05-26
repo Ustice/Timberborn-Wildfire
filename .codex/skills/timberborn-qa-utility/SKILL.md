@@ -91,7 +91,6 @@ While writing the utility:
 When testing the utility:
 
 - Run dry-run or help mode first with `bun`.
-- Run the safest non-destructive path before any state-changing path.
 - Confirm failure behavior by testing at least one missing or mismatched precondition when practical.
 - Run `git diff --check`.
 - Run any additional ticket-required tests.

@@ -305,7 +305,6 @@ public sealed class TimberbornFireDeltaConsumerTests
                     VisualRollbackAppliedCount: 1,
                     ConstructionPhaseEnteredCount: 1,
                     SkippedNativeConstructionApiCount: 0,
-                    SkippedNoSafeApiCount: 0,
                     TotalDamageApplied: 3),
                 new TimberbornStructureBurnDamageRollbackSummary(
                     ConsideredDeltaCount: 1,
@@ -322,7 +321,6 @@ public sealed class TimberbornFireDeltaConsumerTests
                     VisualRollbackAppliedCount: 1,
                     ConstructionPhaseEnteredCount: 0,
                     SkippedNativeConstructionApiCount: 1,
-                    SkippedNoSafeApiCount: 1,
                     TotalDamageApplied: 0),
             ]);
         TimberbornFireDeltaConsumer consumer = new(
@@ -339,12 +337,10 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackUnfinishedStageCount);
         Assert.Equal(0, zeroAppliedSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount);
         Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount);
-        Assert.Equal(1, zeroAppliedSummary.StructureBurnDamageRollbackSkippedNoSafeApiCount);
         Assert.Equal(61u, consumer.LastPositiveStructureBurnDamageRollbackTick);
         Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount);
         Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount);
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount);
-        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount);
         Assert.Equal(3, consumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied);
     }
 
@@ -368,7 +364,6 @@ public sealed class TimberbornFireDeltaConsumerTests
                     VisualRollbackAppliedCount: 1,
                     ConstructionPhaseEnteredCount: 0,
                     SkippedNativeConstructionApiCount: 1,
-                    SkippedNoSafeApiCount: 1,
                     TotalDamageApplied: 0),
                 TimberbornStructureBurnDamageRollbackSummary.Empty,
             ]);
@@ -383,7 +378,6 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount);
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount);
         Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount);
-        Assert.Equal(1, consumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount);
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied);
     }
 
@@ -408,7 +402,6 @@ public sealed class TimberbornFireDeltaConsumerTests
                     VisualRollbackAppliedCount: 1,
                     ConstructionPhaseEnteredCount: 0,
                     SkippedNativeConstructionApiCount: 0,
-                    SkippedNoSafeApiCount: 0,
                     TotalDamageApplied: 3),
             ]);
         TimberbornFireDeltaConsumer consumer = new(
@@ -487,7 +480,6 @@ public sealed class TimberbornFireDeltaConsumerTests
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount);
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount);
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount);
-        Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount);
         Assert.Equal(0, consumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied);
     }
 

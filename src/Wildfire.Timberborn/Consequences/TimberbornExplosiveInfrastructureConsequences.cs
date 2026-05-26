@@ -40,7 +40,7 @@ public enum TimberbornExplosiveInfrastructureKind
 
 public enum TimberbornExplosiveInfrastructureNativeTriggerStatus
 {
-    SkippedNoSafeApi,
+    SkippedUnavailablePath,
     SkippedAlreadyTriggered,
     Triggered,
 }
@@ -83,7 +83,7 @@ public readonly record struct TimberbornExplosiveInfrastructureConsequenceSummar
     int NativeTriggeredTargetCount,
     int HeatPulseCellCount,
     int SkippedSettingDisabledCount,
-    int SkippedNoSafeApiCount,
+    int SkippedUnavailablePathCount,
     int SkippedAlreadyTriggeredCount,
     int LastTriggeredDepth)
 {
@@ -96,7 +96,7 @@ public readonly record struct TimberbornExplosiveInfrastructureConsequenceSummar
         NativeTriggeredTargetCount: 0,
         HeatPulseCellCount: 0,
         SkippedSettingDisabledCount: 0,
-        SkippedNoSafeApiCount: 0,
+        SkippedUnavailablePathCount: 0,
         SkippedAlreadyTriggeredCount: 0,
         LastTriggeredDepth: 0);
 
@@ -112,7 +112,6 @@ public readonly record struct TimberbornExplosiveInfrastructureConsequenceSummar
             $"native_triggered_targets={NativeTriggeredTargetCount} " +
             $"heat_pulse_cells={HeatPulseCellCount} " +
             $"skipped_setting_disabled={SkippedSettingDisabledCount} " +
-            $"skipped_no_safe_api={SkippedNoSafeApiCount} " +
             $"skipped_already_triggered={SkippedAlreadyTriggeredCount} " +
             $"last_triggered_depth={LastTriggeredDepth}";
     }
@@ -186,7 +185,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
                 NativeTriggeredTargetCount: 0,
                 HeatPulseCellCount: 0,
                 SkippedSettingDisabledCount: consequences.Length,
-                SkippedNoSafeApiCount: 0,
+                SkippedUnavailablePathCount: 0,
                 SkippedAlreadyTriggeredCount: 0,
                 LastTriggeredDepth: 0);
             _logSink.Info(disabledSummary.ToLogToken(tick));
@@ -228,8 +227,8 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.Triggered),
             HeatPulseCellCount: triggeredResults.Sum(static result => result.HeatPulseCellCount),
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: triggeredResults.Count(static result =>
-                result.NativeStatus == TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi),
+            SkippedUnavailablePathCount: triggeredResults.Count(static result =>
+                result.NativeStatus == TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedUnavailablePath),
             SkippedAlreadyTriggeredCount: triggeredResults.Count(static result => result.NativeStatus ==
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedAlreadyTriggered),
             LastTriggeredDepth: triggeredResults
@@ -287,7 +286,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
     {
         if (!settings.NativeDynamiteTriggerEnabled)
         {
-            return TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi;
+            return TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedUnavailablePath;
         }
 
         if (!target.CanTriggerNative)
@@ -320,7 +319,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
             return new TriggeredTargetResult(
                 WasArmedThisTick: false,
                 WasTriggeredThisTick: false,
-                NativeStatus: TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedNoSafeApi,
+                NativeStatus: TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedUnavailablePath,
                 HeatPulseCellCount: 0,
                 Depth: depth);
         }

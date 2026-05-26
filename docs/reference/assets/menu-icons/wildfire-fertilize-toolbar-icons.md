@@ -15,4 +15,4 @@ Runtime copies:
 
 Binding note:
 
-- `TimberbornFertilizeToolButtons.cs` creates native Timberborn tool buttons in both Fields and Forestry using the relevant group icon names as safe fallbacks, then replaces the `ToolImage` background with the embedded Wildfire-owned PNG. Both buttons point at the same combined `TimberbornFertilizeTool`.
+- `TimberbornFertilizeToolButtons.cs` creates native Timberborn tool buttons in both Fields and Forestry using the relevant group icon names, then replaces the `ToolImage` background with the embedded Wildfire-owned PNG. Both buttons point at the same combined `TimberbornFertilizeTool`.

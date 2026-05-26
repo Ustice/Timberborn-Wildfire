@@ -51,7 +51,7 @@ public static class TimberbornDetonatorFireSafetyStableIds
 
 public enum TimberbornDetonatorFireSafetyDisableStatus
 {
-    SkippedNoSafeApi,
+    SkippedUnavailablePath,
     Disabled,
 }
 
@@ -66,7 +66,7 @@ public readonly record struct TimberbornDetonatorFireSafetySummary(
     int DisabledTargetCount,
     int ArmedTargetCount,
     int SkippedSettingDisabledCount,
-    int SkippedNoSafeApiCount,
+    int SkippedUnavailablePathCount,
     int RecoverabilityPreservedCount,
     int RecoverabilityUnknownCount)
 {
@@ -77,7 +77,7 @@ public readonly record struct TimberbornDetonatorFireSafetySummary(
         DisabledTargetCount: 0,
         ArmedTargetCount: 0,
         SkippedSettingDisabledCount: 0,
-        SkippedNoSafeApiCount: 0,
+        SkippedUnavailablePathCount: 0,
         RecoverabilityPreservedCount: 0,
         RecoverabilityUnknownCount: 0);
 
@@ -91,7 +91,6 @@ public readonly record struct TimberbornDetonatorFireSafetySummary(
             $"disabled_targets={DisabledTargetCount} " +
             $"armed_targets={ArmedTargetCount} " +
             $"skipped_setting_disabled={SkippedSettingDisabledCount} " +
-            $"skipped_no_safe_api={SkippedNoSafeApiCount} " +
             $"recoverability_preserved={RecoverabilityPreservedCount} " +
             $"recoverability_unknown={RecoverabilityUnknownCount}";
     }
@@ -147,7 +146,7 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 DisabledTargetCount: 0,
                 ArmedTargetCount: 0,
                 SkippedSettingDisabledCount: consequences.Length,
-                SkippedNoSafeApiCount: 0,
+                SkippedUnavailablePathCount: 0,
                 RecoverabilityPreservedCount: 0,
                 RecoverabilityUnknownCount: 0);
             _logSink.Info(disabledSummary.ToLogToken(tick));
@@ -179,8 +178,8 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 result.Status == TimberbornDetonatorFireSafetyDisableStatus.Disabled),
             ArmedTargetCount: 0,
             SkippedSettingDisabledCount: 0,
-            SkippedNoSafeApiCount: results.Count(static result =>
-                result.Status == TimberbornDetonatorFireSafetyDisableStatus.SkippedNoSafeApi),
+            SkippedUnavailablePathCount: results.Count(static result =>
+                result.Status == TimberbornDetonatorFireSafetyDisableStatus.SkippedUnavailablePath),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
             RecoverabilityUnknownCount: results.Count(static result =>
                 !result.RecoverabilityPreserved));

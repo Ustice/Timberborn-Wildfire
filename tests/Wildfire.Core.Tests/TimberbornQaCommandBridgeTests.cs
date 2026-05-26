@@ -773,7 +773,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("affected_cell_contaminated=true", result.Message);
         Assert.Contains("contaminated_suppression_input=false", result.Message);
         Assert.Contains("badwater_suppression_input=false", result.Message);
-        Assert.Contains("water_suppression_input_safe_unavailable=1", result.Message);
         Assert.Contains("native_decontamination_attempts=0", result.Message);
         Assert.Contains("initial_cell=498", result.Message);
         Assert.Contains("set_water=3", result.Message);
@@ -863,10 +862,9 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("queued_water_changes=1", result.Message);
         Assert.Contains($"expected_water_taint_attempts={expectedWaterTaintAttempts}", result.Message);
         Assert.Contains(
-            $"expected_safe_unavailable_water_taint={expectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}",
+            $"expected_water_taint={expectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}",
             result.Message);
         Assert.Contains($"ash_water_washout_water_taint_attempts={expectedWaterTaintAttempts}", result.ResultToken);
-        Assert.Contains($"ash_water_washout_skipped_unsafe_water_apis={expectedWaterTaintAttempts}", result.ResultToken);
         Assert.Contains("wildfire_command_request command=qa-ash-water-stimulus", logSink.InfoMessages);
         Assert.Contains(result.ResultToken, logSink.InfoMessages);
     }
@@ -1209,10 +1207,10 @@ public sealed class TimberbornQaCommandBridgeTests
             () => fireSystem.QueueQaDeltaStimulus(
                 TimberbornQaFieldTargetSelectors.BeaverExposure,
                 beaverExposureTarget: TimberbornBeaverFieldExposureQaTarget.Unavailable(
-                    "position_api_unavailable",
+                    "position_missing",
                     skippedNoPositionApiCount: 1)));
 
-        Assert.Contains("position_api_unavailable", exception.Message);
+        Assert.Contains("position_missing", exception.Message);
         Assert.Empty(simulator.RegisteredChanges);
     }
 
@@ -2600,7 +2598,6 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount: 93,
             LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount: 94,
             LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount: 95,
-            LastDeltaConsumerStructureBurnDamageRollbackSkippedNoSafeApiCount: 96,
             LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied: 97,
             LastDeltaConsumerBurnDamageConsideredCellCount: 98,
             LastDeltaConsumerBurnDamageDamageCandidateCellCount: 99,
@@ -2619,7 +2616,6 @@ public sealed class TimberbornQaCommandBridgeTests
             LastPositiveStructureBurnDamageRollbackUnfinishedStageCount: 110,
             LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount: 111,
             LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount: 112,
-            LastPositiveStructureBurnDamageRollbackSkippedNoSafeApiCount: 113,
             LastPositiveStructureBurnDamageRollbackTotalDamageApplied: 114,
             LastDeltaConsumerAlertCount: 23,
             LastPlayerFireAlertTick: 34,
@@ -2684,7 +2680,7 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorNoOpDecisionsApplied: 58,
             BeaverFieldBehaviorDecisionsSkippedCooldown: 59,
             BeaverFieldBehaviorDecisionsSkippedBatch: 60,
-            BeaverFieldBehaviorSkippedNoSafeApi: 61,
+            BeaverFieldBehaviorSkippedUnavailablePath: 61,
             BeaverFieldBehaviorFailedDecisions: 62,
             BeaverFieldBehaviorRecoveryActions: 63,
             BeaverFieldBehaviorSmokeExposedSamples: 64,
@@ -2693,12 +2689,12 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorSmokeCoughingRecovered: 67,
             BeaverFieldBehaviorSmokeCoughingSlowdownsApplied: 68,
             BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered: 69,
-            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedNoSafeApi: 70,
+            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedUnavailablePath: 70,
             BeaverFieldBehaviorSmokeRecoveryDecays: 71,
             BeaverFieldBehaviorSmokeChokingCandidates: 72,
             BeaverFieldBehaviorSmokeChokingSlowdownsApplied: 73,
             BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: 74,
-            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedNoSafeApi: 75,
+            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedUnavailablePath: 75,
             BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 76,
             BeaverFieldBehaviorSmokeChokingIncapacitationCandidates: 108,
             BeaverFieldBehaviorSmokeChokingIncapacitationAttempts: 109,
@@ -2724,16 +2720,16 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorFireHeatActiveFlameContacts: 89,
             BeaverFieldBehaviorFireHeatAvoidanceCandidates: 90,
             BeaverFieldBehaviorFireHeatAvoidedCells: 91,
-            BeaverFieldBehaviorFireHeatAvoidanceSkippedNoSafeApi: 92,
+            BeaverFieldBehaviorFireHeatAvoidanceSkippedUnavailablePath: 92,
             BeaverFieldBehaviorFireHeatInterruptedJobCandidates: 93,
             BeaverFieldBehaviorFireHeatInterruptedJobs: 94,
-            BeaverFieldBehaviorFireHeatInterruptedJobsSkippedNoSafeApi: 95,
+            BeaverFieldBehaviorFireHeatInterruptedJobsSkippedUnavailablePath: 95,
             BeaverFieldBehaviorFireHeatSingedEntered: 96,
             BeaverFieldBehaviorFireHeatSingedRecovered: 97,
-            BeaverFieldBehaviorFireHeatSingedSkippedNoSafeApi: 98,
+            BeaverFieldBehaviorFireHeatSingedSkippedUnavailablePath: 98,
             BeaverFieldBehaviorFireHeatBurnedEntered: 99,
             BeaverFieldBehaviorFireHeatBurnedRecovered: 100,
-            BeaverFieldBehaviorFireHeatBurnedSkippedNoSafeApi: 101,
+            BeaverFieldBehaviorFireHeatBurnedSkippedUnavailablePath: 101,
             BeaverFieldBehaviorFireHeatDeathCandidates: 102,
             BeaverFieldBehaviorFireHeatDeathSkippedUnsafeApi: 103,
             BeaverFieldBehaviorFireHeatRecoveryDecays: 104,
@@ -2815,7 +2811,7 @@ public sealed class TimberbornQaCommandBridgeTests
             ContaminationFireSkippedUnsafeContaminationApis: 11,
             TaintedAshPoisonCandidateCells: 1,
             TaintedAshPoisonAppliedCells: 1,
-            TaintedAshPoisonSkippedNoSafeApi: 0,
+            TaintedAshPoisonSkippedUnavailablePath: 0,
             AshWaterWashoutCandidateAshCells: 4,
             AshWaterWashoutCleanAshWashed: 2,
             AshWaterWashoutTaintedAshWashed: 1,
@@ -2876,7 +2872,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_visual_applied=93", result.ResultToken);
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_construction_phase_entered=94", result.ResultToken);
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_skipped_native_construction_api=95", result.ResultToken);
-        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_skipped_no_safe_api=96", result.ResultToken);
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_total_damage_applied=97", result.ResultToken);
         Assert.Contains("last_delta_consumer_burn_damage_considered_cells=98", result.ResultToken);
         Assert.Contains("last_delta_consumer_burn_damage_candidate_cells=99", result.ResultToken);
@@ -2895,7 +2890,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_positive_structure_burn_damage_rollback_stage_unfinished=110", result.ResultToken);
         Assert.Contains("last_positive_structure_burn_damage_rollback_construction_phase_entered=111", result.ResultToken);
         Assert.Contains("last_positive_structure_burn_damage_rollback_skipped_native_construction_api=112", result.ResultToken);
-        Assert.Contains("last_positive_structure_burn_damage_rollback_skipped_no_safe_api=113", result.ResultToken);
         Assert.Contains("last_positive_structure_burn_damage_rollback_total_damage_applied=114", result.ResultToken);
         Assert.Contains("last_delta_consumer_alerts=23", result.ResultToken);
         Assert.Contains("last_player_fire_alert_tick=34", result.ResultToken);
@@ -2960,7 +2954,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_noop_decisions_applied=58", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_cooldown=59", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_batch=60", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_skipped_no_safe_api=61", result.ResultToken);
         Assert.Contains("beaver_field_behavior_failed_decisions=62", result.ResultToken);
         Assert.Contains("beaver_field_behavior_recovery_actions=63", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_exposed_samples=64", result.ResultToken);
@@ -2969,30 +2962,24 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_smoke_coughing_recovered=67", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_applied=68", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_recovered=69", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_skipped_no_safe_api=70", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_recovery_decays=71", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_candidates=72", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_applied=73", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_recovered=74", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_skipped_no_safe_api=75", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_skipped_unsafe_api=76", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_candidates=108", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_attempts=109", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_incapacitations_applied=110", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_incapacitations_recovered=111", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_skipped_unsafe_api=112", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_failures=113", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_candidates=77", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_attempts=114", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_deaths_applied=115", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_death_skipped_unsafe_api=78", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_death_failures=116", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_exposed_beavers=79", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_exposure_accumulated_samples=80", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_attempts=81", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_successes=82", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_failures=83", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_skipped_unsafe_api=84", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_choking_candidates=85", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_death_candidates=86", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_recovery_decays=87", result.ResultToken);
@@ -3000,18 +2987,13 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_fire_heat_active_flame_contacts=89", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_avoidance_candidates=90", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_avoided_cells=91", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_avoidance_skipped_no_safe_api=92", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_interrupted_job_candidates=93", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs=94", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs_skipped_no_safe_api=95", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_singed_entered=96", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_singed_recovered=97", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_singed_skipped_no_safe_api=98", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_burned_entered=99", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_burned_recovered=100", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_burned_skipped_no_safe_api=101", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_death_candidates=102", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_death_skipped_unsafe_api=103", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_recovery_decays=104", result.ResultToken);
         Assert.Contains("beaver_field_behavior_persistence_saves=105", result.ResultToken);
         Assert.Contains("beaver_field_behavior_persistence_loads=106", result.ResultToken);
@@ -3053,7 +3035,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("world_import_resolved_empty_cells=45", result.ResultToken);
         Assert.Contains("world_import_resolved_vegetation_cells=3", result.ResultToken);
         Assert.Contains("world_import_resolved_tree_cells=2", result.ResultToken);
-        Assert.Contains("world_import_safe_unavailable=3", result.ResultToken);
         Assert.Contains("persistent_restore_no_live_fuel_cells_cleared=4", result.ResultToken);
         Assert.Contains("ash_field_entries=4", result.ResultToken);
         Assert.Contains("ash_field_fertile_cells=2", result.ResultToken);
@@ -3064,7 +3045,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("ash_field_growth_candidate_cells=2", result.ResultToken);
         Assert.Contains("ash_field_growth_applied_growables=1", result.ResultToken);
         Assert.Contains("ash_field_growth_skipped_tainted_cells=1", result.ResultToken);
-        Assert.Contains("ash_field_growth_skipped_unsafe_apis=0", result.ResultToken);
         Assert.Contains("contamination_fire_contaminated_burn_sources=6", result.ResultToken);
         Assert.Contains("contamination_fire_contaminated_affected_cells=7", result.ResultToken);
         Assert.Contains("contamination_fire_contaminated_affected_map_cells=8", result.ResultToken);
@@ -3072,19 +3052,15 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("contamination_fire_contaminated_water_like_map_cells=10", result.ResultToken);
         Assert.Contains("contamination_fire_badwater_suppression_inputs=0", result.ResultToken);
         Assert.Contains("contamination_fire_contaminated_water_suppression_inputs=0", result.ResultToken);
-        Assert.Contains("contamination_fire_water_suppression_input_safe_unavailable=11", result.ResultToken);
         Assert.Contains("contamination_fire_toxic_smoke_cells=48", result.ResultToken);
         Assert.Contains("contamination_fire_native_decontamination_attempts=0", result.ResultToken);
-        Assert.Contains("contamination_fire_skipped_unsafe_contamination_apis=11", result.ResultToken);
         Assert.Contains("tainted_ash_poison_candidate_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_applied_cells=1", result.ResultToken);
-        Assert.Contains("tainted_ash_poison_skipped_no_safe_api=0", result.ResultToken);
         Assert.Contains("ash_water_washout_candidate_ash_cells=4", result.ResultToken);
         Assert.Contains("ash_water_washout_clean_ash_washed=2", result.ResultToken);
         Assert.Contains("ash_water_washout_tainted_ash_washed=1", result.ResultToken);
         Assert.Contains("ash_water_washout_water_taint_attempts=1", result.ResultToken);
         Assert.Contains("ash_water_washout_water_taint_successes=0", result.ResultToken);
-        Assert.Contains("ash_water_washout_skipped_unsafe_water_apis=1", result.ResultToken);
         Assert.Contains("ash_water_washout_no_op_cells=1", result.ResultToken);
         Assert.Contains("fertile_ash_gatherer_posts=2", result.ResultToken);
         Assert.Contains("fertile_ash_collection_candidate_cells=2", result.ResultToken);

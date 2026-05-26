@@ -71,20 +71,19 @@ public readonly record struct TimberbornTaintedAshSoilPoisoningCandidate(
 public readonly record struct TimberbornTaintedAshSoilPoisoningSummary(
     int CandidateCellCount,
     int AppliedCellCount,
-    int SkippedNoSafeApiCount)
+    int SkippedUnavailablePathCount)
 {
     public static readonly TimberbornTaintedAshSoilPoisoningSummary Empty = new(
         CandidateCellCount: 0,
         AppliedCellCount: 0,
-        SkippedNoSafeApiCount: 0);
+        SkippedUnavailablePathCount: 0);
 
     public string ToLogToken(uint tick)
     {
         return "wildfire_timberborn_tainted_ash_soil_poisoning_applied " +
             $"tick={tick} " +
             $"candidate_cells={CandidateCellCount} " +
-            $"applied_cells={AppliedCellCount} " +
-            $"skipped_no_safe_api={SkippedNoSafeApiCount}";
+            $"applied_cells={AppliedCellCount}";
     }
 }
 
@@ -197,7 +196,7 @@ public sealed class TimberbornTaintedAshSoilPoisoningService
             : _adapter.ApplyPoisoning(tick, candidates);
         if (LastSummary.CandidateCellCount > 0 ||
             LastSummary.AppliedCellCount > 0 ||
-            LastSummary.SkippedNoSafeApiCount > 0)
+            LastSummary.SkippedUnavailablePathCount > 0)
         {
             _logSink.Info(LastSummary.ToLogToken(tick));
         }
@@ -289,7 +288,6 @@ public readonly record struct TimberbornAshWaterWashoutSummary(
             $"tainted_ash_washed={TaintedAshWashedCellCount} " +
             $"water_taint_attempts={WaterTaintAttemptCount} " +
             $"water_taint_successes={WaterTaintSuccessCount} " +
-            $"skipped_unsafe_water_apis={SkippedUnsafeWaterApiCount} " +
             $"no_op_cells={NoOpCellCount}";
     }
 }
@@ -499,7 +497,7 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
         return new TimberbornTaintedAshSoilPoisoningSummary(
             CandidateCellCount: candidates.Count,
             AppliedCellCount: applied,
-            SkippedNoSafeApiCount: 0);
+            SkippedUnavailablePathCount: 0);
     }
 }
 

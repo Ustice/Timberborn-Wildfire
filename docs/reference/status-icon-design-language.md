@@ -144,7 +144,7 @@ Use `WildfireChokingStatus`. It uses a red ring, dark inner background, tan fore
 
 ### Burned
 
-Use `WildfireBurnedStatus` for beaver fire or heat injury. It uses a gold ring, tan inner background, dark foreground, with optional exclamation. This means the beaver is burned but may still function unless a later safe injury API proves work prevention.
+Use `WildfireBurnedStatus` for beaver fire or heat injury. It uses a gold ring, tan inner background, dark foreground, with optional exclamation. This means the beaver is burned but may still function until work-prevention behavior is implemented and validated.
 
 ### Burning
 

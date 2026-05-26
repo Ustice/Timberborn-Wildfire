@@ -107,8 +107,8 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         Assert.Equal(0, dispatcher.Counters.FireHeatSingedEntered);
         Assert.Equal(0, dispatcher.Counters.FireHeatBurnedEntered);
         Assert.Equal(0, dispatcher.Counters.FireHeatDeathCandidates);
-        Assert.Equal(0, dispatcher.Counters.FireHeatSingedSkippedNoSafeApi);
-        Assert.Equal(0, dispatcher.Counters.FireHeatBurnedSkippedNoSafeApi);
+        Assert.Equal(0, dispatcher.Counters.FireHeatSingedSkippedUnavailablePath);
+        Assert.Equal(0, dispatcher.Counters.FireHeatBurnedSkippedUnavailablePath);
         Assert.Equal(0, dispatcher.Counters.FireHeatDeathSkippedUnsafeApi);
     }
 
@@ -352,7 +352,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         Assert.Equal(0, dispatcher.Counters.SmokeDeathsApplied);
         Assert.Equal(1, dispatcher.Counters.SmokeDeathSkippedUnsafeApi);
         Assert.Equal(0, dispatcher.Counters.SmokeDeathFailures);
-        Assert.Equal(2, dispatcher.Counters.SkippedNoSafeApi);
+        Assert.Equal(2, dispatcher.Counters.SkippedUnavailablePath);
         Assert.Equal(4, dispatcher.Counters.SmokeDecisionsApplied);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown, actuator.Decisions.Last().Action);
     }
@@ -469,7 +469,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
     public void DispatcherFailsLoudlyWhenActuatorSkips()
     {
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
-            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.SkippedNoSafeApi),
+            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.SkippedUnavailablePath),
             new RecordingFireLogSink());
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>

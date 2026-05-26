@@ -1022,7 +1022,6 @@ Prometheus-specific hardening worth copying:
 - Use official component/services where possible; when a public API is missing, create a narrow adapter and log compatibility probes.
 - Treat loaded-scene object scanning as dangerous until the world is ready.
 - Query terrain and soil services only for cells that are valid for that service. Prometheus hit soil-moisture warnings by asking Timberborn for invalid/non-terrain cells.
-- Debug/admin tools must be as safe as production code. Prometheus replaced unsafe destructive shortcuts with game-owned actions or guarded state transitions.
 - A result named \`success\` must mean the requested game-state change actually happened. Otherwise return \`rejected\`, \`no_target\`, or a specific reason.
 - Deterministic tests catch rule regressions cheaply. Live Timberborn QA catches lifecycle, UI, asset, save/load, and component integration failures that tests cannot.
 - Sibling worktrees are useful for risky cleanup and multi-agent work, but build/deploy/QA must be serialized.

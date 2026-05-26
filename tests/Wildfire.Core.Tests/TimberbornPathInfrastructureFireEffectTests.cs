@@ -17,7 +17,7 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
         Assert.Equal(1, summary.MatchedTargetCellCount);
         Assert.Equal(1, summary.ZeroCostPathTargetCount);
         Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(0, summary.SkippedNoSafeApiCount);
+        Assert.Equal(0, summary.SkippedUnavailablePathCount);
         Assert.Empty(targetApi.AppliedDamage);
     }
 
@@ -133,7 +133,7 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
     }
 
     [Fact]
-    public void SinkReportsNoSafeApiWhenPathMutationIsUnavailable()
+    public void SinkReportsUnavailablePathWhenPathMutationIsUnavailable()
     {
         RecordingPathInfrastructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
@@ -145,7 +145,7 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
             [Decision(4, oldFuel: 8, newFuel: 3)]);
 
         Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(1, summary.SkippedNoSafeApiCount);
+        Assert.Equal(1, summary.SkippedUnavailablePathCount);
         Assert.Equal(5, summary.TotalDamageApplied);
     }
 
@@ -216,7 +216,7 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
             return new TimberbornPathInfrastructureApplyResult(
                 AppliedDamage: damageTarget.CanMarkDamaged,
                 AppliedBlock: false,
-                SkippedNoSafeApi: !damageTarget.CanMarkDamaged,
+                SkippedUnavailablePath: !damageTarget.CanMarkDamaged,
                 RepairEligible: damageTarget.RepairEligible);
         }
     }
