@@ -6,7 +6,7 @@ Sources:
 
 - `docs/reference/assets/menu-icons/FieldsPlantingToolGroupIcon.png`
 - `docs/reference/assets/menu-icons/ForestryPlantingToolGroupIcon.png`
-- User-provided `fertilize.png` attachment, `106 x 91` RGBA.
+- Project-root `menu-crops-fertilize.png`, `112 x 109` RGBA.
 
 Runtime copies:
 

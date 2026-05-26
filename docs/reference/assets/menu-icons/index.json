@@ -605,8 +605,8 @@
     "spriteName": "WildfireFertilizeToolIcon",
     "source": "Wildfire/Assets/WildfireFertilizeToolIcon.png; shared combined fertilize tool icon",
     "path": "WildfireFertilizeToolIcon.png",
-    "width": 106,
-    "height": 91
+    "width": 112,
+    "height": 109
   },
   {
     "spriteName": "FillValveIcon",
