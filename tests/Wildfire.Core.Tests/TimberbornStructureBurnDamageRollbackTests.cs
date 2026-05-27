@@ -560,6 +560,62 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Contains("RestoreBurnedTextures(blockObject)", source, StringComparison.Ordinal);
         Assert.Contains("wildfire_timberborn_structure_repair_unlocked", source, StringComparison.Ordinal);
         Assert.Contains("wildfire_timberborn_structure_repair_waiting_for_materials", source, StringComparison.Ordinal);
+        Assert.Contains("RestoreRepairCompletedStructures()", source, StringComparison.Ordinal);
+        Assert.Contains("_burnedStructureCellIndexByStableId", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_structure_repair_completed_visual_restored", source, StringComparison.Ordinal);
+        Assert.Contains("_originalStructureMaterialsByBurnedName", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TargetApiKeepsStructureBurnVisualsAwayFromFloatingStatusIcons()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("IsStructureVisualRenderer", source, StringComparison.Ordinal);
+        Assert.Contains("renderer is SpriteRenderer or LineRenderer or TrailRenderer or ParticleSystemRenderer", source, StringComparison.Ordinal);
+        Assert.Contains("\"Status\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"Icon\"", source, StringComparison.Ordinal);
+        Assert.Contains(".GetComponentsInChildren<Renderer>(includeInactive: false)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TargetApiShowsBurningStatusWhileRepairIsBlocked()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("StatusToggle.CreatePriorityStatusWithFloatingIcon", source, StringComparison.Ordinal);
+        Assert.Contains("\"WildfireBurningStatus\"", source, StringComparison.Ordinal);
+        Assert.Contains("SynchronizeBurningStatus(blockObject, target, request.RepairBlocked)", source, StringComparison.Ordinal);
+        Assert.Contains("SynchronizeBurningStatus(blockObject, target, isBurning: false)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TargetApiPreservesRuntimeSettingsAndSuppressesRecoveredGoodsDuringFireRebuild()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("CaptureRuntimeSettings(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("runtimeSettingsSnapshot.ApplyTo(rebuiltBlockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("DisableRecoverableGoodProviders(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("\"DisableGoodRecovery\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"Timberborn.Workshops.Manufactory\"", source, StringComparison.Ordinal);
+        Assert.Contains("AllowedGoods: inventory.AllowedGoods.ToArray()", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SinkRunsRepairCompletionMaintenanceEvenWithoutNewFireDeltas()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: true));
+        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(9, []);
+
+        Assert.Equal(1, targetApi.RestoreRepairCompletedStructuresCallCount);
+        Assert.Equal(TimberbornStructureBurnDamageRollbackSummary.Empty, summary);
     }
 
     [Fact]
@@ -699,9 +755,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     private sealed class RecordingStructureTargetApi(TimberbornStructureBurnDamageTarget? target)
-        : ITimberbornStructureBurnDamageRollbackTargetApi
+        : ITimberbornStructureBurnDamageRollbackTargetApi, ITimberbornStructureBurnRepairCompletionMaintenance
     {
         public List<TimberbornStructureBurnDamageApplyRequest> Requests { get; } = [];
+
+        public int RestoreRepairCompletedStructuresCallCount { get; private set; }
 
         public TimberbornStructureBurnDamageTarget? ResolveTarget(
             TimberbornStructureBurnDamageConsequence consequence)
@@ -730,6 +788,12 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
                 ConstructionPhaseEntered: constructionPhaseEntered,
                 SkippedNativeConstructionApi: requestsNativeConstructionPhase && !constructionPhaseEntered,
                 RepairEligible: request.RepairEligible);
+        }
+
+        public int RestoreRepairCompletedStructures()
+        {
+            RestoreRepairCompletedStructuresCallCount++;
+            return 0;
         }
     }
 

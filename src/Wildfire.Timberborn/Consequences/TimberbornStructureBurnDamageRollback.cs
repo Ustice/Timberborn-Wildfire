@@ -7,7 +7,9 @@ using Timberborn.Coordinates;
 using Timberborn.EnterableSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Goods;
+using Timberborn.InventorySystem;
 using Timberborn.Navigation;
+using Timberborn.StatusSystem;
 using Timberborn.WorkSystem;
 using UnityEngine;
 using Wildfire.Core;
@@ -151,6 +153,11 @@ public interface ITimberbornStructureBurnDamageRollbackTargetApi
         TimberbornStructureBurnDamageApplyRequest request);
 }
 
+public interface ITimberbornStructureBurnRepairCompletionMaintenance
+{
+    int RestoreRepairCompletedStructures();
+}
+
 public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStructureBurnDamageRollbackSink
 {
     internal const int UnfinishedDamageThresholdPercent = 10;
@@ -177,6 +184,7 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
         uint tick,
         IReadOnlyList<TimberbornFireCellDeltaDecision> decisions)
     {
+        (_targetApi as ITimberbornStructureBurnRepairCompletionMaintenance)?.RestoreRepairCompletedStructures();
         TimberbornStructureBurnDamageConsequence[] consequences = decisions
             .Select(decision => TimberbornStructureBurnDamageConsequence.FromDecision(tick, decision))
             .Where(static consequence => consequence.HasBurnPressure)
@@ -381,7 +389,9 @@ public static class TimberbornStructureBurnDamageApplyRequestDefaults
         ShouldApplyRollbackVisual: false);
 }
 
-public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberbornStructureBurnDamageRollbackTargetApi
+public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
+    ITimberbornStructureBurnDamageRollbackTargetApi,
+    ITimberbornStructureBurnRepairCompletionMaintenance
 {
     private readonly FireGrid _grid;
     private readonly IBlockService _blockService;
@@ -390,9 +400,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
     private readonly Dictionary<int, Material> _originalStructureMaterialsByBurnedInstanceId = new();
+    private readonly Dictionary<string, Material> _originalStructureMaterialsByBurnedName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _burnedStructureCellIndexByStableId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _lastConstructionMaterialStockByStableId = new(StringComparer.Ordinal);
     private readonly HashSet<string> _repairWaitingForMaterialsLoggedStableIds = new(StringComparer.Ordinal);
     private readonly HashSet<string> _restoredStructureTextureStableIds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, StructureBurningStatusBinding> _burningStatusTogglesByStableId =
+        new(StringComparer.Ordinal);
 
     public TimberbornStructureBurnDamageRollbackTargetApi(
         FireGrid grid,
@@ -467,6 +481,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 : false;
 
             constructionSite ??= TryGetConstructionSite(blockObject, coordinates);
+            SynchronizeBurningStatus(blockObject, target, request.RepairBlocked);
             float remainingConstructionFraction = CalculateRemainingConstructionFraction(request);
             bool shouldSynchronizeConstructionState = ShouldSynchronizeConstructionState(
                 request,
@@ -477,6 +492,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             int constructionMaterialStock = TotalConstructionMaterialStock(constructionSite, target);
             if (request.RepairBlocked)
             {
+                _burnedStructureCellIndexByStableId[target.StableId] = target.CellIndex;
                 _lastConstructionMaterialStockByStableId[target.StableId] = constructionMaterialStock;
                 _repairWaitingForMaterialsLoggedStableIds.Remove(target.StableId);
                 _restoredStructureTextureStableIds.Remove(target.StableId);
@@ -489,8 +505,14 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             burnedMaterialCount = request.ShouldApplyRollbackVisual
                 ? ApplyBurnedTextures(blockObject, target.SpecId)
                 : 0;
+            if (burnedMaterialCount > 0)
+            {
+                _burnedStructureCellIndexByStableId[target.StableId] = target.CellIndex;
+            }
+
             if (request.RepairEligible)
             {
+                SynchronizeBurningStatus(blockObject, target, isBurning: false);
                 int lastConstructionMaterialStock = _lastConstructionMaterialStockByStableId.GetValueOrDefault(
                     target.StableId,
                     constructionMaterialStock);
@@ -550,6 +572,66 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             SkippedNativeConstructionApi: skippedNativeConstructionApi,
             RepairEligible: request.RepairEligible);
     }
+
+    public int RestoreRepairCompletedStructures()
+    {
+        StructureRepairCompletion[] completedStructures = _burnedStructureCellIndexByStableId
+            .Select(entry => new StructureRepairCompletion(
+                StableId: entry.Key,
+                CellIndex: entry.Value,
+                BlockObject: ResolveBlockObject(entry.Value)))
+            .Where(static completion => completion.BlockObject?.IsFinished == true)
+            .ToArray();
+        int restoredMaterialCount = completedStructures
+            .Select(RestoreRepairCompletedStructure)
+            .Sum();
+        completedStructures
+            .Select(static completion => completion.StableId)
+            .ToList()
+            .ForEach(stableId =>
+            {
+                _burnedStructureCellIndexByStableId.Remove(stableId);
+                _lastConstructionMaterialStockByStableId.Remove(stableId);
+                _repairWaitingForMaterialsLoggedStableIds.Remove(stableId);
+                _restoredStructureTextureStableIds.Remove(stableId);
+                if (_burningStatusTogglesByStableId.Remove(stableId, out StructureBurningStatusBinding binding))
+                {
+                    binding.StatusToggle.Deactivate();
+                }
+            });
+        return restoredMaterialCount;
+    }
+
+    private int RestoreRepairCompletedStructure(StructureRepairCompletion completion)
+    {
+        if (completion.BlockObject is null)
+        {
+            return 0;
+        }
+
+        int restoredMaterialCount = RestoreBurnedTextures(completion.BlockObject);
+        _logSink.Info(
+            "wildfire_timberborn_structure_repair_completed_visual_restored " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(completion.StableId)} " +
+            $"cell={completion.CellIndex} " +
+            $"restored_materials={restoredMaterialCount}");
+        return restoredMaterialCount;
+    }
+
+    private BlockObject? ResolveBlockObject(int cellIndex)
+    {
+        (int x, int y, int z) = _grid.FromIndex(cellIndex);
+        Vector3Int coordinates = new(x, y, z);
+        return _blockService
+            .GetObjectsWithComponentAt<BlockObject>(coordinates)
+            .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
+            .FirstOrDefault();
+    }
+
+    private readonly record struct StructureRepairCompletion(
+        string StableId,
+        int CellIndex,
+        BlockObject? BlockObject);
 
     public static bool RequestsNativeConstructionPhase(TimberbornStructureBurnDamageApplyRequest request)
     {
@@ -755,6 +837,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 throw new InvalidOperationException($"Native construction rebuild cannot resolve building spec for {blockObject.Name}.");
             }
 
+            StructureRuntimeSettingsSnapshot runtimeSettingsSnapshot = CaptureRuntimeSettings(blockObject);
+            int disabledRecoverableGoodProviders = DisableRecoverableGoodProviders(blockObject);
             bool isDistrictCenter = IsDistrictCenterName(blockObject.Name) || IsDistrictCenterName(target.SpecId);
             object? districtUpdater = isDistrictCenter
                 ? ResolveDistrictUpdater(ResolveDistrictService(blockObject))
@@ -769,6 +853,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
             rebuiltConstructionSite = _constructionFactory.CreateAsUnfinished(building.Spec, placement);
             rebuiltBlockObject = rebuiltConstructionSite.GetComponent<BlockObject>();
+            runtimeSettingsSnapshot.ApplyTo(rebuiltBlockObject);
             if (!rebuiltBlockObject.IsUnfinished)
             {
                 throw new InvalidOperationException($"Native construction rebuild recreated {target.SpecId} outside unfinished state.");
@@ -779,6 +864,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
                 $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
                 $"district_center={isDistrictCenter.ToString().ToLowerInvariant()} " +
+                $"recoverable_good_providers_disabled={disabledRecoverableGoodProviders} " +
+                $"runtime_settings_restored={runtimeSettingsSnapshot.HasSettings.ToString().ToLowerInvariant()} " +
                 $"cell={target.CellIndex}");
             return true;
         }
@@ -1003,7 +1090,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     private int ApplyBurnedTextures(BlockObject blockObject, string textureLabel)
     {
         return blockObject.Transform
-            .GetComponentsInChildren<Renderer>(includeInactive: true)
+            .GetComponentsInChildren<Renderer>(includeInactive: false)
+            .Where(IsStructureVisualRenderer)
             .Sum(renderer => ApplyBurnedTextures(renderer, textureLabel));
     }
 
@@ -1011,6 +1099,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     {
         return blockObject.Transform
             .GetComponentsInChildren<Renderer>(includeInactive: true)
+            .Where(IsStructureVisualRenderer)
             .SelectMany(static renderer => renderer.sharedMaterials)
             .OfType<Material>()
             .Any(IsBurnedMaterial);
@@ -1061,6 +1150,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             hideFlags = HideFlags.HideAndDontSave,
         };
         _originalStructureMaterialsByBurnedInstanceId[material.GetInstanceID()] = source;
+        _originalStructureMaterialsByBurnedName[material.name] = source;
         return material;
     }
 
@@ -1074,6 +1164,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         SetColorIfPresent(material, "_BaseColor", new Color(0.18f, 0.16f, 0.14f, 1f));
         SetColorIfPresent(material, "_Color", new Color(0.18f, 0.16f, 0.14f, 1f));
         _originalStructureMaterialsByBurnedInstanceId[material.GetInstanceID()] = source;
+        _originalStructureMaterialsByBurnedName[material.name] = source;
         return material;
     }
 
@@ -1081,6 +1172,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     {
         return blockObject.Transform
             .GetComponentsInChildren<Renderer>(includeInactive: true)
+            .Where(IsStructureVisualRenderer)
             .Sum(RestoreBurnedTextures);
     }
 
@@ -1108,8 +1200,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             return material;
         }
 
-        return _originalStructureMaterialsByBurnedInstanceId.TryGetValue(material.GetInstanceID(), out Material? original)
-            ? original
+        if (_originalStructureMaterialsByBurnedInstanceId.TryGetValue(material.GetInstanceID(), out Material? original))
+        {
+            return original;
+        }
+
+        return _originalStructureMaterialsByBurnedName.TryGetValue(material.name, out Material? originalByName)
+            ? originalByName
             : material;
     }
 
@@ -1124,6 +1221,314 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     private static bool IsBurnedMaterial(Material material)
     {
         return material.name.EndsWith(" Wildfire Burned", StringComparison.Ordinal);
+    }
+
+    private static bool IsStructureVisualRenderer(Renderer renderer)
+    {
+        if (renderer is SpriteRenderer or LineRenderer or TrailRenderer or ParticleSystemRenderer)
+        {
+            return false;
+        }
+
+        string path = TransformPath(renderer.transform);
+        string[] skippedPathTokens =
+        {
+            "Status",
+            "Icon",
+            "Notification",
+            "Marker",
+            "Highlight",
+            "Selection",
+            "Preview",
+            "Guideline",
+            "Floating",
+        };
+        return !skippedPathTokens.Any(token => path.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string TransformPath(Transform transform)
+    {
+        return transform.parent is null
+            ? transform.name
+            : $"{TransformPath(transform.parent)}/{transform.name}";
+    }
+
+    private void SynchronizeBurningStatus(
+        BlockObject blockObject,
+        TimberbornStructureBurnDamageTarget target,
+        bool isBurning)
+    {
+        if (!blockObject.TryGetComponent(out StatusSubject statusSubject))
+        {
+            return;
+        }
+
+        StatusToggle statusToggle = GetOrCreateBurningStatusToggle(target.StableId, statusSubject);
+        if (isBurning)
+        {
+            statusToggle.Activate();
+            return;
+        }
+
+        statusToggle.Deactivate();
+    }
+
+    private StatusToggle GetOrCreateBurningStatusToggle(string stableId, StatusSubject statusSubject)
+    {
+        if (_burningStatusTogglesByStableId.TryGetValue(stableId, out StructureBurningStatusBinding binding) &&
+            ReferenceEquals(binding.StatusSubject, statusSubject))
+        {
+            return binding.StatusToggle;
+        }
+
+        StatusToggle createdStatusToggle = StatusToggle.CreatePriorityStatusWithFloatingIcon(
+            "WildfireBurningStatus",
+            "Building is burning",
+            delayInHours: 0f);
+        statusSubject.RegisterStatus(createdStatusToggle);
+        _burningStatusTogglesByStableId[stableId] = new StructureBurningStatusBinding(
+            statusSubject,
+            createdStatusToggle);
+        return createdStatusToggle;
+    }
+
+    private readonly record struct StructureBurningStatusBinding(
+        StatusSubject StatusSubject,
+        StatusToggle StatusToggle);
+
+    private static int DisableRecoverableGoodProviders(BlockObject blockObject)
+    {
+        return blockObject.Transform
+            .GetComponentsInChildren<Component>(includeInactive: true)
+            .Where(static component => component is not null &&
+                component.GetType().FullName == "Timberborn.RecoverableGoodSystem.RecoverableGoodProvider")
+            .Select(static component => TryInvokeNoArgumentMethod(component, "DisableGoodRecovery") ? 1 : 0)
+            .Sum();
+    }
+
+    private static StructureRuntimeSettingsSnapshot CaptureRuntimeSettings(BlockObject blockObject)
+    {
+        object[] manufactorySnapshots = blockObject.AllComponents
+            .Where(static component => component.GetType().FullName == "Timberborn.Workshops.Manufactory")
+            .Select(ManufactoryRuntimeSettingsSnapshot.Capture)
+            .Where(static snapshot => snapshot.HasSettings)
+            .Cast<object>()
+            .ToArray();
+        InventoryRuntimeSettingsSnapshot[] inventorySnapshots = blockObject.AllComponents
+            .OfType<Inventory>()
+            .Select(InventoryRuntimeSettingsSnapshot.Capture)
+            .ToArray();
+        return new StructureRuntimeSettingsSnapshot(manufactorySnapshots, inventorySnapshots);
+    }
+
+    private static bool TryInvokeNoArgumentMethod(object target, string methodName)
+    {
+        try
+        {
+            MethodInfo? method = target.GetType().GetMethod(
+                methodName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                Type.EmptyTypes,
+                modifiers: null);
+            if (method is null)
+            {
+                return false;
+            }
+
+            method.Invoke(target, null);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private readonly record struct StructureRuntimeSettingsSnapshot(
+        object[] ManufactorySnapshots,
+        InventoryRuntimeSettingsSnapshot[] InventorySnapshots)
+    {
+        public bool HasSettings => ManufactorySnapshots.Length > 0 || InventorySnapshots.Length > 0;
+
+        public void ApplyTo(BlockObject blockObject)
+        {
+            ManufactorySnapshots
+                .OfType<ManufactoryRuntimeSettingsSnapshot>()
+                .ToList()
+                .ForEach(snapshot => snapshot.ApplyTo(blockObject));
+            InventoryRuntimeSettingsSnapshot.ApplyAll(InventorySnapshots, blockObject);
+        }
+    }
+
+    private readonly record struct ManufactoryRuntimeSettingsSnapshot(
+        object? CurrentRecipe,
+        float? FuelRemaining,
+        float? ProductionProgress)
+    {
+        public bool HasSettings => CurrentRecipe is not null || FuelRemaining.HasValue || ProductionProgress.HasValue;
+
+        public static ManufactoryRuntimeSettingsSnapshot Capture(object manufactory)
+        {
+            Type type = manufactory.GetType();
+            return new ManufactoryRuntimeSettingsSnapshot(
+                CurrentRecipe: type.GetProperty("CurrentRecipe", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    ?.GetValue(manufactory),
+                FuelRemaining: TryGetFloatProperty(manufactory, type, "FuelRemaining"),
+                ProductionProgress: TryGetFloatProperty(manufactory, type, "ProductionProgress"));
+        }
+
+        public void ApplyTo(BlockObject blockObject)
+        {
+            object? manufactory = blockObject.AllComponents
+                .FirstOrDefault(static component => component.GetType().FullName == "Timberborn.Workshops.Manufactory");
+            if (manufactory is null)
+            {
+                return;
+            }
+
+            Type type = manufactory.GetType();
+            if (CurrentRecipe is not null)
+            {
+                MethodInfo? setRecipeMethod = type.GetMethod(
+                    "SetRecipe",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                setRecipeMethod?.Invoke(manufactory, new[] { CurrentRecipe });
+            }
+
+            TrySetFloatProperty(manufactory, type, "FuelRemaining", FuelRemaining);
+            TrySetFloatProperty(manufactory, type, "ProductionProgress", ProductionProgress);
+        }
+
+        private static float? TryGetFloatProperty(object target, Type type, string propertyName)
+        {
+            try
+            {
+                object? value = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    ?.GetValue(target);
+                return value is null ? null : Convert.ToSingle(value);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void TrySetFloatProperty(object target, Type type, string propertyName, float? value)
+        {
+            if (!value.HasValue)
+            {
+                return;
+            }
+
+            try
+            {
+                PropertyInfo? property = type.GetProperty(
+                    propertyName,
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                property?.SetValue(target, value.Value);
+            }
+            catch
+            {
+                // Best-effort state preservation; failed settings should not block fire aftermath.
+            }
+        }
+    }
+
+    private readonly record struct InventoryRuntimeSettingsSnapshot(
+        string ComponentName,
+        int Capacity,
+        bool PublicInput,
+        bool PublicOutput,
+        bool IgnorableCapacity,
+        object? GoodDisallower,
+        StorableGoodAmount[] AllowedGoods)
+    {
+        public static InventoryRuntimeSettingsSnapshot Capture(Inventory inventory)
+        {
+            return new InventoryRuntimeSettingsSnapshot(
+                inventory.ComponentName,
+                inventory.Capacity,
+                inventory.PublicInput,
+                inventory.PublicOutput,
+                IgnorableCapacity: TryGetPrivateBoolField(inventory, "_ignorableCapacity"),
+                GoodDisallower: TryGetPrivateField<object>(inventory, "_goodDisallower"),
+                AllowedGoods: inventory.AllowedGoods.ToArray());
+        }
+
+        public static void ApplyAll(InventoryRuntimeSettingsSnapshot[] snapshots, BlockObject blockObject)
+        {
+            Inventory[] inventories = blockObject.AllComponents.OfType<Inventory>().ToArray();
+            snapshots
+                .Select(snapshot => (
+                    Snapshot: snapshot,
+                    Inventory: inventories.FirstOrDefault(inventory =>
+                        string.Equals(inventory.ComponentName, snapshot.ComponentName, StringComparison.Ordinal))))
+                .Where(static pair => pair.Inventory is not null)
+                .ToList()
+                .ForEach(static pair => pair.Snapshot.ApplyTo(pair.Inventory!));
+        }
+
+        private void ApplyTo(Inventory inventory)
+        {
+            if (AllowedGoods.Length == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                MethodInfo? initializeMethod = typeof(Inventory).GetMethod(
+                    "Initialize",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                initializeMethod?.Invoke(
+                    inventory,
+                    new object?[]
+                    {
+                        ComponentName,
+                        Capacity,
+                        AllowedGoods,
+                        PublicInput,
+                        PublicOutput,
+                        IgnorableCapacity,
+                        GoodDisallower,
+                    });
+            }
+            catch
+            {
+                // Best-effort storage policy preservation; stock burning/removal must remain authoritative.
+            }
+        }
+
+        private static T? TryGetPrivateField<T>(object target, string fieldName)
+        {
+            try
+            {
+                object? value = target.GetType()
+                    .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(target);
+                return value is T typedValue ? typedValue : default;
+            }
+            catch
+            {
+                return default;
+            }
+        }
+
+        private static bool TryGetPrivateBoolField(object target, string fieldName)
+        {
+            try
+            {
+                object? value = target.GetType()
+                    .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(target);
+                return value is bool typedValue && typedValue;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 
     private void LogRollbackVisual(
