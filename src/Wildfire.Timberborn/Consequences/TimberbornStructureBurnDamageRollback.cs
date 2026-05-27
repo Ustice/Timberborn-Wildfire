@@ -864,11 +864,12 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
         try
         {
-            MethodInfo? getConstructionTimeMethod = constructionSite.GetType()
+            object? buildTimeCalculator = constructionSite.GetType()
                 .GetField(
                     "_constructionSiteBuildTimeCalculator",
                     BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(constructionSite)
+                ?.GetValue(constructionSite);
+            MethodInfo? getConstructionTimeMethod = buildTimeCalculator
                 ?.GetType()
                 .GetMethod(
                     "GetConstructionTimeInHours",
@@ -882,7 +883,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             }
 
             float constructionTimeInHours = Convert.ToSingle(getConstructionTimeMethod.Invoke(
-                constructionSite,
+                buildTimeCalculator,
                 new object[] { constructionSite }));
             MethodInfo? method = constructionSite.GetType().GetMethod(
                 "SetBuildTimeProgress",
