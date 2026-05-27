@@ -453,6 +453,29 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiSynchronizesConstructionStateWhenClosureEntersUnfinishedBeforeDamage()
+    {
+        TimberbornStructureBurnDamageApplyRequest closeRequest = new(
+            DamageApplied: 0,
+            DamageTaken: 0,
+            DamageCapacity: 100,
+            RollbackStage: TimberbornStructureBurnRollbackStage.None,
+            ShouldClose: true,
+            RepairBlocked: true,
+            RepairEligible: false,
+            ShouldApplyRollbackVisual: false);
+
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.ShouldSynchronizeConstructionState(
+            closeRequest,
+            enteredUnfinishedState: false));
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.ShouldSynchronizeConstructionState(
+            closeRequest,
+            enteredUnfinishedState: true));
+        Assert.Equal(1f, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRemainingConstructionFraction(closeRequest));
+        Assert.Equal(10, TimberbornStructureBurnDamageRollbackTargetApi.CalculateRequiredConstructionMaterialAmount(10, 1f));
+    }
+
+    [Fact]
     public void TargetApiKeepsLightBurnDamageNearlyComplete()
     {
         TimberbornStructureBurnDamageApplyRequest request = new(

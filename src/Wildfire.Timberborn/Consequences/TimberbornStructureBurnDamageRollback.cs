@@ -460,10 +460,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
 
             constructionSite ??= TryGetConstructionSite(blockObject, coordinates);
             float remainingConstructionFraction = CalculateRemainingConstructionFraction(request);
-            removedConstructionMaterialCount = request.ShouldApplyRollbackVisual && ShouldRemoveConstructionMaterials(request)
+            bool shouldSynchronizeConstructionState = ShouldSynchronizeConstructionState(
+                request,
+                enteredUnfinishedState);
+            removedConstructionMaterialCount = shouldSynchronizeConstructionState && request.RepairBlocked
                 ? SynchronizeConstructionMaterials(constructionSite, target, remainingConstructionFraction)
                 : 0;
-            resetConstructionProgress = request.ShouldApplyRollbackVisual &&
+            resetConstructionProgress = shouldSynchronizeConstructionState &&
                 target.CanRepairAfterDanger &&
                 request.RepairBlocked &&
                 TrySetConstructionProgress(constructionSite, remainingConstructionFraction);
@@ -908,6 +911,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     public static bool ShouldRemoveConstructionMaterials(TimberbornStructureBurnDamageApplyRequest request)
     {
         return request.ShouldApplyRollbackVisual && request.RepairBlocked;
+    }
+
+    public static bool ShouldSynchronizeConstructionState(
+        TimberbornStructureBurnDamageApplyRequest request,
+        bool enteredUnfinishedState)
+    {
+        return request.ShouldApplyRollbackVisual || enteredUnfinishedState;
     }
 
     public static float CalculateRemainingConstructionFraction(TimberbornStructureBurnDamageApplyRequest request)
