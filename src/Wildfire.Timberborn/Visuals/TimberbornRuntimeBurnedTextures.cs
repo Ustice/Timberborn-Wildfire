@@ -182,7 +182,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         cuttable.Yielder.RemoveRemainingYield();
         if (blockObject.TryGetComponent(out GoodStack goodStack))
         {
-            foreach (GoodAmount goodAmount in goodStack.Inventory.Stock.ToArray())
+            foreach (GoodAmount goodAmount in goodStack.Inventory.UnreservedTakeableStock().ToArray())
             {
                 goodStack.Inventory.Take(goodAmount);
             }
@@ -743,7 +743,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
             return false;
         }
 
-        foreach (GoodAmount goodAmount in goodStack.Inventory.Stock.ToArray())
+        foreach (GoodAmount goodAmount in goodStack.Inventory.UnreservedTakeableStock().ToArray())
         {
             goodStack.Inventory.Take(goodAmount);
         }

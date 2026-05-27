@@ -51,6 +51,15 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     }
 
     [Fact]
+    public void BurnedGoodStackClearingConsumesOnlyUnreservedTakeableStock()
+    {
+        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+
+        Assert.Contains("goodStack.Inventory.UnreservedTakeableStock().ToArray()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("goodStack.Inventory.Stock.ToArray()", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FertileAshLandingCellResolutionUsesCurrentSimulatorTerrainSnapshot()
     {
         string source = ReadTimberbornSource("TimberbornFireRuntime.cs");
