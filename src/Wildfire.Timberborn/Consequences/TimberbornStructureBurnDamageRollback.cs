@@ -317,12 +317,16 @@ public sealed class TimberbornStructureBurnDamageRollbackSink : ITimberbornStruc
 
         if (!_burnDamageTargets.TryGetStateForCell(consequence.CellIndex, out TimberbornBurnDamageTargetState state) ||
             state.TargetKind != TimberbornBurnDamageTargetKind.Structure ||
-            target is null ||
-            !string.Equals(target.StableId, state.TargetKey.StableId, StringComparison.Ordinal))
+            target is null)
         {
             return new ResolvedTarget(consequence, Target: null, BurnDamageState: null);
         }
 
+        target = target with
+        {
+            StableId = state.TargetKey.StableId,
+            SpecId = state.SpecId,
+        };
         bool hasAppliedEvent = _burnDamageTargets.TryGetAppliedEvent(
             state.TargetKey,
             out TimberbornBurnDamageAppliedEvent appliedEvent);
@@ -385,6 +389,10 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
     private readonly ConstructionFactory? _constructionFactory;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
+    private readonly Dictionary<int, Material> _originalStructureMaterialsByBurnedInstanceId = new();
+    private readonly Dictionary<string, int> _lastConstructionMaterialStockByStableId = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _repairWaitingForMaterialsLoggedStableIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _restoredStructureTextureStableIds = new(StringComparer.Ordinal);
 
     public TimberbornStructureBurnDamageRollbackTargetApi(
         FireGrid grid,
@@ -451,7 +459,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         int burnedMaterialCount = 0;
         bool hasBurnedTextures = false;
 
-        if (blockObject is not null && (request.ShouldApplyRollbackVisual || request.ShouldClose))
+        if (blockObject is not null && (request.ShouldApplyRollbackVisual || request.ShouldClose || request.RepairEligible))
         {
             ConstructionSite? constructionSite = null;
             enteredUnfinishedState = request.ShouldClose || RequestsNativeConstructionPhase(request)
@@ -466,6 +474,14 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             removedConstructionMaterialCount = shouldSynchronizeConstructionState && request.RepairBlocked
                 ? SynchronizeConstructionMaterials(constructionSite, target, remainingConstructionFraction)
                 : 0;
+            int constructionMaterialStock = TotalConstructionMaterialStock(constructionSite, target);
+            if (request.RepairBlocked)
+            {
+                _lastConstructionMaterialStockByStableId[target.StableId] = constructionMaterialStock;
+                _repairWaitingForMaterialsLoggedStableIds.Remove(target.StableId);
+                _restoredStructureTextureStableIds.Remove(target.StableId);
+            }
+
             resetConstructionProgress = shouldSynchronizeConstructionState &&
                 target.CanRepairAfterDanger &&
                 request.RepairBlocked &&
@@ -473,6 +489,33 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             burnedMaterialCount = request.ShouldApplyRollbackVisual
                 ? ApplyBurnedTextures(blockObject, target.SpecId)
                 : 0;
+            if (request.RepairEligible)
+            {
+                int lastConstructionMaterialStock = _lastConstructionMaterialStockByStableId.GetValueOrDefault(
+                    target.StableId,
+                    constructionMaterialStock);
+                bool constructionMaterialAddedAfterFire = constructionMaterialStock > lastConstructionMaterialStock;
+                bool hasRepairMaterial = constructionMaterialStock > 0;
+                if ((constructionMaterialAddedAfterFire || hasRepairMaterial) &&
+                    _restoredStructureTextureStableIds.Add(target.StableId))
+                {
+                    int restoredMaterialCount = RestoreBurnedTextures(blockObject);
+                    LogRepairUnlocked(
+                        target,
+                        restoredMaterialCount,
+                        lastConstructionMaterialStock,
+                        constructionMaterialStock);
+                    _lastConstructionMaterialStockByStableId[target.StableId] = constructionMaterialStock;
+                }
+                else if (_repairWaitingForMaterialsLoggedStableIds.Add(target.StableId))
+                {
+                    LogRepairWaitingForMaterials(
+                        target,
+                        lastConstructionMaterialStock,
+                        constructionMaterialStock);
+                }
+            }
+
             hasBurnedTextures = burnedMaterialCount > 0 || HasBurnedTextures(blockObject);
             LogRollbackVisual(target, request, enteredUnfinishedState, removedConstructionMaterialCount, resetConstructionProgress, burnedMaterialCount);
         }
@@ -855,6 +898,21 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         return Math.Max(0, delta);
     }
 
+    private static int TotalConstructionMaterialStock(
+        ConstructionSite? constructionSite,
+        TimberbornStructureBurnDamageTarget target)
+    {
+        if (constructionSite?.Inventory is null || target.ConstructionResources.Count == 0)
+        {
+            return 0;
+        }
+
+        return target.ConstructionResources
+            .Select(static resource => resource.ResourceId)
+            .Distinct(StringComparer.Ordinal)
+            .Sum(resourceId => Math.Max(0, constructionSite.Inventory.AmountInStock(resourceId)));
+    }
+
     private static bool TrySetConstructionProgress(ConstructionSite? constructionSite, float remainingConstructionFraction)
     {
         if (constructionSite is null)
@@ -994,7 +1052,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         return CreateBurnedTintMaterial(source);
     }
 
-    private static Material CreateBurnedMaterial(Material source, Texture burnedTexture)
+    private Material CreateBurnedMaterial(Material source, Texture burnedTexture)
     {
         Material material = new(source)
         {
@@ -1002,10 +1060,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             mainTexture = burnedTexture,
             hideFlags = HideFlags.HideAndDontSave,
         };
+        _originalStructureMaterialsByBurnedInstanceId[material.GetInstanceID()] = source;
         return material;
     }
 
-    private static Material CreateBurnedTintMaterial(Material source)
+    private Material CreateBurnedTintMaterial(Material source)
     {
         Material material = new(source)
         {
@@ -1014,7 +1073,44 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
         };
         SetColorIfPresent(material, "_BaseColor", new Color(0.18f, 0.16f, 0.14f, 1f));
         SetColorIfPresent(material, "_Color", new Color(0.18f, 0.16f, 0.14f, 1f));
+        _originalStructureMaterialsByBurnedInstanceId[material.GetInstanceID()] = source;
         return material;
+    }
+
+    private int RestoreBurnedTextures(BlockObject blockObject)
+    {
+        return blockObject.Transform
+            .GetComponentsInChildren<Renderer>(includeInactive: true)
+            .Sum(RestoreBurnedTextures);
+    }
+
+    private int RestoreBurnedTextures(Renderer renderer)
+    {
+        Material?[] materials = renderer.sharedMaterials;
+        Material?[] restoredMaterials = materials
+            .Select(RestoreBurnedMaterialOrOriginal)
+            .ToArray();
+        int restoredMaterialCount = Enumerable.Range(0, materials.Length)
+            .Count(index => !ReferenceEquals(materials[index], restoredMaterials[index]));
+
+        if (restoredMaterialCount > 0)
+        {
+            renderer.sharedMaterials = restoredMaterials;
+        }
+
+        return restoredMaterialCount;
+    }
+
+    private Material? RestoreBurnedMaterialOrOriginal(Material? material)
+    {
+        if (material is null || !IsBurnedMaterial(material))
+        {
+            return material;
+        }
+
+        return _originalStructureMaterialsByBurnedInstanceId.TryGetValue(material.GetInstanceID(), out Material? original)
+            ? original
+            : material;
     }
 
     private static void SetColorIfPresent(Material material, string propertyName, Color color)
@@ -1048,6 +1144,34 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi : ITimberborn
             $"repair_blocked={request.RepairBlocked} " +
             $"construction_progress_reset={resetConstructionProgress} " +
             $"materials={burnedMaterialCount}");
+    }
+
+    private void LogRepairUnlocked(
+        TimberbornStructureBurnDamageTarget target,
+        int restoredMaterialCount,
+        int previousConstructionMaterialStock,
+        int constructionMaterialStock)
+    {
+        _logSink.Info(
+            "wildfire_timberborn_structure_repair_unlocked " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+            $"restored_materials={restoredMaterialCount} " +
+            $"previous_construction_materials={previousConstructionMaterialStock} " +
+            $"construction_materials={constructionMaterialStock}");
+    }
+
+    private void LogRepairWaitingForMaterials(
+        TimberbornStructureBurnDamageTarget target,
+        int previousConstructionMaterialStock,
+        int constructionMaterialStock)
+    {
+        _logSink.Info(
+            "wildfire_timberborn_structure_repair_waiting_for_materials " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(target.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(target.SpecId)} " +
+            $"previous_construction_materials={previousConstructionMaterialStock} " +
+            $"construction_materials={constructionMaterialStock}");
     }
 
     private static bool IsInfrastructureLikeName(string name)

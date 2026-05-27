@@ -215,6 +215,39 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void SinkAllowsRepairAfterNativeRebuildChangesLiveObjectStableId()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 2)],
+            stableId: "structure:new-construction-site",
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: true));
+        TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
+            [
+                TimberbornBurnDamageTestStateProvider.State(
+                    "structure:original-building",
+                    "Building.LumberMill",
+                    TimberbornBurnDamageTargetKind.Structure,
+                    damageCapacity: 8,
+                    damageTaken: 4,
+                    ownedCellIndices: [4]),
+            ]);
+        TimberbornStructureBurnDamageRollbackSink sink = new(
+            targetApi,
+            burnDamageTargets: burnDamageTargets);
+
+        TimberbornStructureBurnDamageRollbackSummary recovery = sink.ApplyConsequences(
+            3,
+            [Decision(4, oldFuel: 0, newFuel: 0, heat: 4, oldHeat: 10)]);
+
+        Assert.Equal(1, recovery.RepairEligibleCount);
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.False(request.ShouldClose);
+        Assert.True(request.RepairEligible);
+    }
+
+    [Fact]
     public void SinkIgnoresNonBurnableConstructionValueForMaterialLoss()
     {
         RecordingStructureTargetApi targetApi = new(Target(
@@ -516,6 +549,20 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiRestoresStructureTexturesWhenRepairUnlocks()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("private readonly Dictionary<int, Material> _originalStructureMaterialsByBurnedInstanceId", source, StringComparison.Ordinal);
+        Assert.Contains("if (request.RepairEligible)", source, StringComparison.Ordinal);
+        Assert.Contains("constructionMaterialStock > lastConstructionMaterialStock", source, StringComparison.Ordinal);
+        Assert.Contains("constructionMaterialStock > 0", source, StringComparison.Ordinal);
+        Assert.Contains("RestoreBurnedTextures(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_structure_repair_unlocked", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_structure_repair_waiting_for_materials", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SinkReportsNativeConstructionSkipWhenBurnedVisualMasksUnfinishedFailure()
     {
         RecordingStructureTargetApi targetApi = new(Target(
@@ -593,13 +640,15 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
 
     private static TimberbornStructureBurnDamageTarget Target(
         IReadOnlyList<TimberbornBurnDamageResourceStack> resources,
+        string stableId = "structure-1",
+        string specId = "Building.LumberMill",
         bool canClose = false,
         bool canApplyRollbackVisual = false,
         bool canRepairAfterDanger = false)
     {
         return new TimberbornStructureBurnDamageTarget(
-            "structure-1",
-            "Building.LumberMill",
+            stableId,
+            specId,
             CellIndex: 4,
             resources,
             canClose,
@@ -621,6 +670,32 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     private static ushort Cell(int fuel, int heat)
     {
         return PackedCell.Pack(fuel, heat, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
+    }
+
+    private static string ReadTimberbornSource(string fileName)
+    {
+        string root = FindRepoRoot();
+        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
+        string path = Directory
+            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
+            .First();
+        return File.ReadAllText(path);
+    }
+
+    private static string FindRepoRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate Wildfire repo root.");
     }
 
     private sealed class RecordingStructureTargetApi(TimberbornStructureBurnDamageTarget? target)

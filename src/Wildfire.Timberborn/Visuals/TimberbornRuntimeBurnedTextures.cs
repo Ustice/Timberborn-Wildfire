@@ -40,7 +40,13 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
 
         foreach (BlockObject blockObject in _treeTargetsByStableId.Values)
         {
-            if (blockObject.TryGetComponent(out Cuttable cuttable) && IsInLeftoverState(cuttable))
+            if (TryGetTreeComponent(
+                    blockObject,
+                    StableTreeTargetId(blockObject),
+                    blockObject.Name,
+                    "Cuttable",
+                    out Cuttable cuttable) &&
+                IsInLeftoverState(cuttable))
             {
                 int restored = ApplyBurnedTextures(blockObject, blockObject.Name);
                 if (restored == 0)
@@ -71,7 +77,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             return new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true);
         }
 
-        if (!blockObject.TryGetComponent(out WateredNaturalResource wateredNaturalResource))
+        if (!TryGetTreeComponent(
+                blockObject,
+                consequence.TargetKey.StableId,
+                consequence.SpecId,
+                "WateredNaturalResource",
+                out WateredNaturalResource wateredNaturalResource))
         {
             _logSink.Warning(
                 "wildfire_timberborn_tree_dry_skipped " +
@@ -115,7 +126,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             return new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true);
         }
 
-        if (!blockObject.TryGetComponent(out LivingNaturalResource livingNaturalResource))
+        if (!TryGetTreeComponent(
+                blockObject,
+                consequence.TargetKey.StableId,
+                consequence.SpecId,
+                "LivingNaturalResource",
+                out LivingNaturalResource livingNaturalResource))
         {
             _logSink.Warning(
                 "wildfire_timberborn_tree_kill_skipped " +
@@ -170,7 +186,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             return new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true);
         }
 
-        if (!blockObject.TryGetComponent(out Cuttable cuttable))
+        if (!TryGetTreeComponent(
+                blockObject,
+                consequence.TargetKey.StableId,
+                consequence.SpecId,
+                "Cuttable",
+                out Cuttable cuttable))
         {
             _logSink.Warning(
                 "wildfire_timberborn_tree_burned_leftover_skipped " +
@@ -180,7 +201,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         }
 
         cuttable.Yielder.RemoveRemainingYield();
-        if (blockObject.TryGetComponent(out GoodStack goodStack))
+        if (TryGetTreeComponent(
+                blockObject,
+                consequence.TargetKey.StableId,
+                consequence.SpecId,
+                "GoodStack",
+                out GoodStack goodStack))
         {
             foreach (GoodAmount goodAmount in goodStack.Inventory.UnreservedTakeableStock().ToArray())
             {
@@ -296,7 +322,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         TimberbornTreeBurnConsequence consequence,
         out string reason)
     {
-        object? naturalResourceModel = blockObject.TryGetComponent(out NaturalResourceModel typedNaturalResourceModel)
+        object? naturalResourceModel = TryGetTreeComponent(
+                blockObject,
+                consequence.TargetKey.StableId,
+                consequence.SpecId,
+                "NaturalResourceModel",
+                out NaturalResourceModel typedNaturalResourceModel)
             ? typedNaturalResourceModel
             : blockObject.Transform
                 .GetComponentsInChildren<Component>(includeInactive: true)
@@ -422,6 +453,30 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         return string.IsNullOrWhiteSpace(consequence.SpecId)
             ? blockObject.Name
             : consequence.SpecId;
+    }
+
+    private bool TryGetTreeComponent<T>(
+        BlockObject blockObject,
+        string stableId,
+        string specId,
+        string componentName,
+        out T component)
+    {
+        try
+        {
+            return blockObject.TryGetComponent(out component);
+        }
+        catch (Exception exception) when (exception is NullReferenceException or InvalidOperationException)
+        {
+            component = default!;
+            _logSink.Warning(
+                "wildfire_timberborn_tree_component_probe_failed " +
+                $"component={TimberbornQaCommandBridge.FormatToken(componentName)} " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(stableId)} " +
+                $"spec_id={TimberbornQaCommandBridge.FormatToken(specId)} " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+            return false;
+        }
     }
 
     private static bool TryInvokeNoArgumentMethod(object target, string methodName)

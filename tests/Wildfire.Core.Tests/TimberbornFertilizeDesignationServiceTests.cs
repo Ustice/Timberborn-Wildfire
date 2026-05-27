@@ -60,6 +60,16 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     }
 
     [Fact]
+    public void TreeBurnedLeftoverComponentProbesSkipStaleNativeObjects()
+    {
+        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+
+        Assert.Contains("TryGetTreeComponent(", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_tree_component_probe_failed", source, StringComparison.Ordinal);
+        Assert.Contains("exception is NullReferenceException or InvalidOperationException", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FertileAshLandingCellResolutionUsesCurrentSimulatorTerrainSnapshot()
     {
         string source = ReadTimberbornSource("TimberbornFireRuntime.cs");
