@@ -202,7 +202,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         if (updatedMaterialCount == 0)
         {
             updatedMaterialCount = ApplyCharredTintToActive(blockObject);
-            if (updatedMaterialCount == 0)
+            if (updatedMaterialCount == 0 && !HasBurnedMaterial(blockObject))
             {
                 throw new InvalidOperationException(
                     $"Tree burned leftover visual produced no material updates for {consequence.TargetKey.StableId} ({textureLabel}).");
@@ -215,6 +215,14 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
             $"materials={updatedMaterialCount} model_refreshed=true leftover_model_active=true");
         return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+    }
+
+    private static bool HasBurnedMaterial(BlockObject blockObject)
+    {
+        return blockObject.Transform
+            .GetComponentsInChildren<Renderer>(includeInactive: false)
+            .Any(static renderer => renderer.sharedMaterials
+                .Any(static material => material is not null && IsBurnedMaterial(material)));
     }
 
     private int ApplyCharredTintToActive(BlockObject blockObject)
