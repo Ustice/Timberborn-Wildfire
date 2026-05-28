@@ -168,7 +168,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
             throw MissingTreeComponent(consequence, "Cuttable");
         }
 
-        cuttable.Yielder.RemoveRemainingYield();
+        InvokeNoArgumentMethod(cuttable, "Cut");
         if (TryGetTreeComponent(
                 blockObject,
                 consequence.TargetKey.StableId,
@@ -185,6 +185,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         }
         string textureLabel = TextureLabel(consequence, blockObject);
         bool modelRefreshed = TryRefreshNaturalResourceModel(blockObject, consequence, out string modelRefreshReason);
+        InvokeNoArgumentMethod(cuttable, "ShowLeftoverModel");
         bool leftoverModelActive = IsInLeftoverState(cuttable);
         int updatedMaterialCount = modelRefreshed && leftoverModelActive
             ? ApplyBurnedTextures(blockObject, textureLabel)
