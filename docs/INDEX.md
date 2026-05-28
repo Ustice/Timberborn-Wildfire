@@ -17,6 +17,7 @@ Use this page as the startup map for humans and agents.
 - [TEST_PLAN.md](TEST_PLAN.md) owns validation strategy and evidence expectations.
 - [release/versioning.md](release/versioning.md) owns changelog, manifest version, package version, and tag consistency rules.
 - [reference/timberborn-ui.md](reference/timberborn-ui.md) owns Timberborn UI design-system notes for adapter-facing UI.
+- [reference/native-api-support-requests.md](reference/native-api-support-requests.md) catalogs Timberborn native non-public/reflection calls that should become supported modding APIs.
 - [timberborn-debug-panels.md](timberborn-debug-panels.md) owns the focused Timberborn debug/developer panel reference for QA.
 - [TODO.md](TODO.md) owns milestone-level status, not per-agent scratch work.
 - [../kanban/github-issue-migration.md](../kanban/github-issue-migration.md) maps migrated file-board tickets to GitHub issues.
