@@ -127,8 +127,8 @@ public static class TimberbornLiveBurnDamageTargetCollector
             .Select((item, index) => BuildTarget(
                 $"stockpile:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.Component)}",
                 item.BlockObject.Name,
-                TimberbornBurnDamageTargetKind.Storage,
-                TimberbornBurnMaterialKind.StoredGood,
+                TimberbornBurnDamageTargetKind.Structure,
+                TimberbornBurnMaterialKind.Constructed,
                 TimberbornEntityComponentCells.OccupiedCoordinates(item.BlockObject),
                 grid,
                 TimberbornBurnDamageResourceGuesses.ForStructure(item.BlockObject.Name),

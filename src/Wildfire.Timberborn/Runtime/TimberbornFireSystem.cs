@@ -1575,7 +1575,8 @@ public sealed class TimberbornFireSystem : IDisposable
         {
             TimberbornQaFieldTargetSelectors.Building => targetKind == TimberbornBurnDamageTargetKind.Structure,
             TimberbornQaFieldTargetSelectors.DistrictCenter => targetKind == TimberbornBurnDamageTargetKind.Structure,
-            TimberbornQaFieldTargetSelectors.Storage => targetKind == TimberbornBurnDamageTargetKind.Storage,
+            TimberbornQaFieldTargetSelectors.Storage => targetKind is TimberbornBurnDamageTargetKind.Storage or
+                TimberbornBurnDamageTargetKind.Structure,
             TimberbornQaFieldTargetSelectors.Infrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
             TimberbornQaFieldTargetSelectors.PathInfrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
             TimberbornQaFieldTargetSelectors.PowerInfrastructure => targetKind == TimberbornBurnDamageTargetKind.Infrastructure,
@@ -1588,14 +1589,25 @@ public sealed class TimberbornFireSystem : IDisposable
         string selector,
         TimberbornBurnDamageTargetState state)
     {
+        string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(selector);
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.Storage)
+        {
+            return IsStorageBurnDamageState(state);
+        }
+
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.Building && IsStorageBurnDamageState(state))
+        {
+            return false;
+        }
+
         if (state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure)
         {
-            return TimberbornQaFieldTargetSelectors.Normalize(selector) != TimberbornQaFieldTargetSelectors.DistrictCenter ||
+            return normalizedSelector != TimberbornQaFieldTargetSelectors.DistrictCenter ||
                 state.SpecId.Contains("DistrictCenter", StringComparison.OrdinalIgnoreCase);
         }
 
         string stableId = state.TargetKey.StableId;
-        return TimberbornQaFieldTargetSelectors.Normalize(selector) switch
+        return normalizedSelector switch
         {
             TimberbornQaFieldTargetSelectors.Infrastructure => true,
             TimberbornQaFieldTargetSelectors.PathInfrastructure =>
@@ -1606,6 +1618,15 @@ public sealed class TimberbornFireSystem : IDisposable
                 stableId.StartsWith("water_infrastructure:", StringComparison.Ordinal),
             _ => true,
         };
+    }
+
+    private static bool IsStorageBurnDamageState(TimberbornBurnDamageTargetState state)
+    {
+        return state.TargetKind == TimberbornBurnDamageTargetKind.Storage ||
+            state.TargetKey.StableId.StartsWith("stockpile:", StringComparison.Ordinal) ||
+            state.SpecId.Contains("Warehouse", StringComparison.OrdinalIgnoreCase) ||
+            state.SpecId.Contains("Pile", StringComparison.OrdinalIgnoreCase) ||
+            state.SpecId.Contains("Tank", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasEnoughRemainingCapacityForBurnDamageProbe(

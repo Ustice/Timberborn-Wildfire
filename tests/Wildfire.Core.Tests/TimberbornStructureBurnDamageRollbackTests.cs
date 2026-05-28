@@ -603,6 +603,18 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiRevertsOverlappingPathInfrastructureWhenStructureBurns()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("ResolveStructureBlockObject(coordinates)", source, StringComparison.Ordinal);
+        Assert.Contains(".Where(static candidate => !IsInfrastructureLikeName(candidate.Name))", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveOverlappingPathInfrastructure(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("RebuildOverlappingPathInfrastructureAsUnfinished", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_structure_overlapping_path_rebuilt_unfinished", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SinkRunsRepairCompletionMaintenanceEvenWithoutNewFireDeltas()
     {
         RecordingStructureTargetApi targetApi = new(Target(
@@ -616,6 +628,28 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
 
         Assert.Equal(1, targetApi.RestoreRepairCompletedStructuresCallCount);
         Assert.Equal(TimberbornStructureBurnDamageRollbackSummary.Empty, summary);
+    }
+
+    [Fact]
+    public void SinkClearsBurningStatusesWhenFireNoLongerProducesStructureDeltas()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            stableId: "structure:district-center",
+            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canRepairAfterDanger: true));
+        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+
+        sink.ApplyConsequences(9, [Decision(4, oldFuel: 8, newFuel: 4, heat: 10)]);
+        sink.ApplyConsequences(10, []);
+
+        Assert.Equal(
+            [
+                ["structure:district-center"],
+                [],
+            ],
+            targetApi.BurningStatusSynchronizations);
     }
 
     [Fact]
@@ -640,6 +674,32 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(1, summary.VisualRollbackAppliedCount);
         Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
         Assert.Equal(1, summary.SkippedNativeConstructionApiCount);
+    }
+
+    [Fact]
+    public void SinkUsesScorchedVisualWithoutNativeConstructionForTargetsWithoutConstructionRollback()
+    {
+        RecordingStructureTargetApi targetApi = new(Target(
+            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+            specId: "DistrictCenter.Folktails(Clone)",
+            canClose: true,
+            canApplyRollbackVisual: true,
+            canUseNativeConstructionRollback: false,
+            canRepairAfterDanger: false));
+        TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
+
+        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+            9,
+            [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]);
+
+        TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
+        Assert.Equal(TimberbornStructureBurnRollbackStage.Scorched, request.RollbackStage);
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request));
+        Assert.Equal(0, summary.UnfinishedStageCount);
+        Assert.Equal(1, summary.ScorchedStageCount);
+        Assert.Equal(1, summary.VisualRollbackAppliedCount);
+        Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
+        Assert.Equal(0, summary.SkippedNativeConstructionApiCount);
     }
 
     [Theory]
@@ -700,6 +760,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         string specId = "Building.LumberMill",
         bool canClose = false,
         bool canApplyRollbackVisual = false,
+        bool canUseNativeConstructionRollback = true,
         bool canRepairAfterDanger = false)
     {
         return new TimberbornStructureBurnDamageTarget(
@@ -709,6 +770,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             resources,
             canClose,
             canApplyRollbackVisual,
+            canUseNativeConstructionRollback,
             canRepairAfterDanger);
     }
 
@@ -755,9 +817,13 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     private sealed class RecordingStructureTargetApi(TimberbornStructureBurnDamageTarget? target)
-        : ITimberbornStructureBurnDamageRollbackTargetApi, ITimberbornStructureBurnRepairCompletionMaintenance
+        : ITimberbornStructureBurnDamageRollbackTargetApi,
+            ITimberbornStructureBurnRepairCompletionMaintenance,
+            ITimberbornStructureBurningStatusMaintenance
     {
         public List<TimberbornStructureBurnDamageApplyRequest> Requests { get; } = [];
+
+        public List<string[]> BurningStatusSynchronizations { get; } = [];
 
         public int RestoreRepairCompletedStructuresCallCount { get; private set; }
 
@@ -774,7 +840,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             Requests.Add(request);
             bool requestsNativeConstructionPhase =
                 TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request);
-            bool constructionPhaseEntered = damageTarget.CanRepairAfterDanger && requestsNativeConstructionPhase;
+            bool constructionPhaseEntered = damageTarget.CanUseNativeConstructionRollback &&
+                damageTarget.CanRepairAfterDanger &&
+                requestsNativeConstructionPhase;
             bool visualRollbackApplied = damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual;
             if (request.ShouldClose && !damageTarget.CanClose)
             {
@@ -793,6 +861,12 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         public int RestoreRepairCompletedStructures()
         {
             RestoreRepairCompletedStructuresCallCount++;
+            return 0;
+        }
+
+        public int SynchronizeBurningStatuses(IReadOnlyCollection<string> activeRepairBlockedStableIds)
+        {
+            BurningStatusSynchronizations.Add(activeRepairBlockedStableIds.ToArray());
             return 0;
         }
     }

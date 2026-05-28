@@ -1299,7 +1299,7 @@ public static class TimberbornQaFieldTargetSelectors
 
     public static bool IsBurnDamageProbeSelector(string selector)
     {
-        return Normalize(selector) is Building or Storage or Infrastructure or PathInfrastructure or
+        return Normalize(selector) is Building or Storage or DistrictCenter or Infrastructure or PathInfrastructure or
             PowerInfrastructure or WaterInfrastructure;
     }
 
