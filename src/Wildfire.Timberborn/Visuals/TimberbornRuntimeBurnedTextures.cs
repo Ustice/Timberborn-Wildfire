@@ -356,47 +356,68 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
 
     private int ApplyBurnedTextures(BlockObject blockObject, string textureLabel)
     {
-        return blockObject.Transform
-            .GetComponentsInChildren<Renderer>(includeInactive: true)
+        return GetLiveRenderers(blockObject)
             .Sum(renderer => ApplyBurnedTextures(renderer, textureLabel));
     }
 
     private int ApplyBurnedTextures(Renderer renderer, string textureLabel)
     {
-        Material?[] materials = renderer.sharedMaterials;
-        Material?[] updatedMaterials = materials
-            .Select(material => CreateBurnedMaterialOrOriginal(material, textureLabel))
-            .ToArray();
-        int updatedMaterialCount = Enumerable.Range(0, materials.Length)
-            .Count(index => !ReferenceEquals(materials[index], updatedMaterials[index]));
-
-        if (updatedMaterialCount > 0)
+        try
         {
-            renderer.sharedMaterials = updatedMaterials;
-        }
+            Material?[] materials = renderer.sharedMaterials;
+            Material?[] updatedMaterials = materials
+                .Select(material => CreateBurnedMaterialOrOriginal(material, textureLabel))
+                .ToArray();
+            int updatedMaterialCount = Enumerable.Range(0, materials.Length)
+                .Count(index => !ReferenceEquals(materials[index], updatedMaterials[index]));
 
-        return updatedMaterialCount;
+            if (updatedMaterialCount > 0)
+            {
+                renderer.sharedMaterials = updatedMaterials;
+            }
+
+            return updatedMaterialCount;
+        }
+        catch (Exception exception) when (exception is MissingReferenceException or NullReferenceException)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_tree_burned_texture_renderer_skipped " +
+                $"reason=renderer_invalid target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+            return 0;
+        }
     }
 
     private Material? CreateBurnedMaterialOrOriginal(Material? source, string textureLabel)
     {
-        if (source is null || IsBurnedMaterial(source))
+        if (source == null || IsBurnedMaterial(source))
         {
             return source;
         }
 
-        TexturePropertyBinding? textureBinding = BurnedTexturePropertyNames
-            .Select(propertyName => TryGetTexture(source, propertyName))
-            .FirstOrDefault(static binding => binding.HasValue);
-        if (!textureBinding.HasValue)
+        try
         {
+            TexturePropertyBinding? textureBinding = BurnedTexturePropertyNames
+                .Select(propertyName => TryGetTexture(source, propertyName))
+                .FirstOrDefault(static binding => binding.HasValue);
+            if (!textureBinding.HasValue)
+            {
+                return source;
+            }
+
+            Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(textureBinding.Value.Texture, textureLabel);
+            return burnedTexture is null
+                ? source
+                : CreateBurnedMaterial(source, burnedTexture, textureBinding.Value.PropertyName);
+        }
+        catch (Exception exception) when (exception is MissingReferenceException or NullReferenceException)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_tree_burned_texture_material_skipped " +
+                $"reason=material_invalid target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
             return source;
         }
-
-        Texture2D? burnedTexture = _textureDeriver.DeriveBurnedTexture(textureBinding.Value.Texture, textureLabel);
-        return burnedTexture is null
-            ? source
-            : CreateBurnedMaterial(source, burnedTexture, textureBinding.Value.PropertyName);
     }
 
     private static Material CreateBurnedMaterial(Material source, Texture burnedTexture, string propertyName)
@@ -412,7 +433,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
 
     private static bool IsBurnedMaterial(Material material)
     {
-        return material.name.EndsWith(" Wildfire Burned", StringComparison.Ordinal);
+        return material != null && material.name.EndsWith(" Wildfire Burned", StringComparison.Ordinal);
     }
 
     private static TexturePropertyBinding? TryGetTexture(Material material, string propertyName)
@@ -427,6 +448,32 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
     }
 
     private readonly record struct TexturePropertyBinding(string PropertyName, Texture Texture);
+
+    private Renderer[] GetLiveRenderers(BlockObject blockObject)
+    {
+        try
+        {
+            Transform transform = blockObject.Transform;
+            if (transform == null)
+            {
+                return Array.Empty<Renderer>();
+            }
+
+            return transform
+                .GetComponentsInChildren<Renderer>(includeInactive: true)
+                .Where(static renderer => renderer != null)
+                .ToArray();
+        }
+        catch (Exception exception) when (exception is MissingReferenceException or NullReferenceException)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_tree_burned_texture_skipped " +
+                "reason=target_transform_invalid " +
+                $"target={TimberbornQaCommandBridge.FormatToken(blockObject != null ? blockObject.Name : "unknown")} " +
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+            return Array.Empty<Renderer>();
+        }
+    }
 
     private static string StableTreeTargetId(BlockObject blockObject)
     {
