@@ -603,7 +603,10 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
     private TimberbornCropBurnConsequenceResult ApplyDryCrop(TimberbornCropBurnConsequence consequence)
     {
-        BlockObject blockObject = GetTarget(consequence);
+        if (!TryGetTargetOrAlreadyRemoved(consequence, out BlockObject blockObject, out TimberbornCropBurnConsequenceResult alreadyRemovedResult))
+        {
+            return alreadyRemovedResult;
+        }
 
         if (!blockObject.TryGetComponent(out WateredNaturalResource wateredNaturalResource))
         {
@@ -621,7 +624,11 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
     private TimberbornCropBurnConsequenceResult ApplyYieldLoss(TimberbornCropBurnConsequence consequence)
     {
-        BlockObject blockObject = GetTarget(consequence);
+        if (!TryGetTargetOrAlreadyRemoved(consequence, out BlockObject blockObject, out TimberbornCropBurnConsequenceResult alreadyRemovedResult))
+        {
+            return alreadyRemovedResult;
+        }
+
         if (!TryGetYielder(blockObject, out Yielder yielder))
         {
             throw MissingCropComponent(consequence, "Yielder");
@@ -653,7 +660,10 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
     private TimberbornCropBurnConsequenceResult ApplyKillCrop(TimberbornCropBurnConsequence consequence)
     {
-        BlockObject blockObject = GetTarget(consequence);
+        if (!TryGetTargetOrAlreadyRemoved(consequence, out BlockObject blockObject, out TimberbornCropBurnConsequenceResult alreadyRemovedResult))
+        {
+            return alreadyRemovedResult;
+        }
 
         bool killed = TryKillNaturalResource(blockObject) || TryRemoveGatherableYield(blockObject);
         if (!killed)
@@ -677,32 +687,22 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
     private TimberbornCropBurnConsequenceResult ApplyBurnedVisual(TimberbornCropBurnConsequence consequence)
     {
+        if (!TryGetTargetOrAlreadyRemoved(consequence, out BlockObject blockObject, out TimberbornCropBurnConsequenceResult alreadyRemovedResult))
+        {
+            return alreadyRemovedResult;
+        }
+
         return ApplyBurnedTextures(
             consequence,
-            GetTarget(consequence),
+            blockObject,
             "wildfire_timberborn_crop_burned_texture_applied");
     }
 
     private TimberbornCropBurnConsequenceResult ApplyBurnedLeftover(TimberbornCropBurnConsequence consequence)
     {
-        if (!TryGetTarget(consequence, out BlockObject blockObject))
+        if (!TryGetTargetOrAlreadyRemoved(consequence, out BlockObject blockObject, out TimberbornCropBurnConsequenceResult alreadyRemovedResult))
         {
-            if (IsRegisteredCropTarget(consequence))
-            {
-                _logSink.Info(
-                    "wildfire_timberborn_crop_burned_leftover_already_removed " +
-                    $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
-                    $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)}");
-                return new TimberbornCropBurnConsequenceResult(
-                    MatchedCropTarget: true,
-                    YieldLost: 0,
-                    KilledCrop: true,
-                    VisualStateUpdated: true,
-                    FailedConsequence: false);
-            }
-
-            throw new InvalidOperationException(
-                $"Crop burn consequence target is missing for {consequence.TargetKey.StableId} ({consequence.Kind}).");
+            return alreadyRemovedResult;
         }
 
         if (TryGetYielder(blockObject, out Yielder yielder))
@@ -975,6 +975,37 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
     private bool IsRegisteredCropTarget(TimberbornCropBurnConsequence consequence) =>
         _blockService is not null &&
         _cropTargetCellsByStableId.ContainsKey(consequence.TargetKey.StableId);
+
+    private bool TryGetTargetOrAlreadyRemoved(
+        TimberbornCropBurnConsequence consequence,
+        out BlockObject blockObject,
+        out TimberbornCropBurnConsequenceResult alreadyRemovedResult)
+    {
+        if (TryGetTarget(consequence, out blockObject))
+        {
+            alreadyRemovedResult = default;
+            return true;
+        }
+
+        if (!IsRegisteredCropTarget(consequence))
+        {
+            throw new InvalidOperationException(
+                $"Crop burn consequence target is missing for {consequence.TargetKey.StableId} ({consequence.Kind}).");
+        }
+
+        _logSink.Info(
+            "wildfire_timberborn_crop_consequence_already_removed " +
+            $"kind={TimberbornQaCommandBridge.FormatToken(consequence.Kind.ToString())} " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+            $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)}");
+        alreadyRemovedResult = new TimberbornCropBurnConsequenceResult(
+            MatchedCropTarget: true,
+            YieldLost: 0,
+            KilledCrop: true,
+            VisualStateUpdated: true,
+            FailedConsequence: false);
+        return false;
+    }
 
     private BlockObject GetTarget(TimberbornCropBurnConsequence consequence)
     {
