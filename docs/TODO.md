@@ -37,7 +37,7 @@ Historical sprint boundaries, closeout charters, final file-board statuses, and 
 - [x] Add burn-damage foundation and first crop, tree, structure, storage, infrastructure, explosive, tunnel, ash, and beaver-exposure consequence lanes.
 - [x] Move ash amount and contamination authority into simulator transport state.
 - [x] Add clean and tainted ash proof gates.
-- [ ] Continue remaining release gameplay work from GitHub Issues, especially current `status:ready` and `status:blocked` issues.
+- [ ] Continue remaining release gameplay work from GitHub Issues, especially current `status:qa-needed`, `status:ready`, and `status:blocked` issues.
 
 ## Live QA And Evidence
 

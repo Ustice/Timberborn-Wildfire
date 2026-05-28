@@ -8,6 +8,7 @@ Repository: <https://github.com/Ustice/Timberborn-Wildfire/issues>
 
 - `status:todo`: scoped work that is not selected as an active ready item.
 - `status:ready`: dependency-ready work that can be assigned.
+- `status:qa-needed`: implementation or setup is ready and the next action is a QA run, recording, screenshot pass, or live evidence rerun.
 - `status:blocked`: work blocked on evidence, environment access, dependencies, or decisions.
 - `status:deferred`: valid future work that is intentionally out of the current milestone.
 - `source:kanban`: issue migrated from the historical file-board ticket system.
@@ -25,6 +26,7 @@ Repository: <https://github.com/Ustice/Timberborn-Wildfire/issues>
 ## Status Changes
 
 - Move to `status:ready` only when dependencies are accepted and the issue is assignable.
+- Move to `status:qa-needed` when the next assignable action is QA evidence rather than implementation.
 - Move to `status:blocked` when the next action needs missing evidence, environment access, upstream work, or a decision.
 - Move to `status:deferred` when the work is real but intentionally later.
 - Close the issue only after required review, tests, QA, and integration are complete.

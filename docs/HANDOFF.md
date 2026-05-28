@@ -25,6 +25,7 @@ Do not mirror GitHub issue status in this file. Start from GitHub every time:
 
 ```bash
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:ready
+gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:qa-needed
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:blocked
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label source:kanban --limit 100
 ```
