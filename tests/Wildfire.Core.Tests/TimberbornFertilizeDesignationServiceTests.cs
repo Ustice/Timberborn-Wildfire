@@ -70,6 +70,19 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     }
 
     [Fact]
+    public void CropBurnedLeftoverRefreshesNativeResourceModelAfterDeath()
+    {
+        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+
+        Assert.Contains("TryDeleteBurnedResource(blockObject, consequence, textureLabel)", source, StringComparison.Ordinal);
+        Assert.Contains("_entityService.Delete(blockObject);", source, StringComparison.Ordinal);
+        Assert.Contains("deleted=true reason=native_entity_service", source, StringComparison.Ordinal);
+        Assert.Contains("TryRefreshCropNaturalResourceModel(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("NaturalResourceModel naturalResourceModel", source, StringComparison.Ordinal);
+        Assert.Contains("TryInvokeNoArgumentMethod(naturalResourceModel, \"ShowCurrentModel\")", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FertileAshLandingCellResolutionUsesCurrentSimulatorTerrainSnapshot()
     {
         string source = ReadTimberbornSource("TimberbornFireRuntime.cs");

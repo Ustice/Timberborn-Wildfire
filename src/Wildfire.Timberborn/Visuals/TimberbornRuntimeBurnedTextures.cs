@@ -558,6 +558,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
     private readonly IBlockService? _blockService;
+    private readonly EntityService? _entityService;
     private readonly Dictionary<string, BlockObject> _cropTargetsByStableId;
     private readonly Dictionary<string, Vector3Int[]> _cropTargetCellsByStableId;
 
@@ -566,11 +567,13 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
         ITimberbornFireLogSink? logSink = null,
         TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null,
         IBlockService? blockService = null,
+        EntityService? entityService = null,
         IEnumerable<TimberbornBurnDamageTargetRegistration>? registrations = null)
     {
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
         _textureDeriver = textureDeriver ?? new TimberbornRuntimeBurnedTextureDeriver(_logSink);
         _blockService = blockService;
+        _entityService = entityService;
         _cropTargetsByStableId = TimberbornEntityComponentCells.BlockObjects(
                 entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry)))
             .Where(static blockObject => IsCropOrHarvestableName(blockObject.Name))
@@ -712,16 +715,31 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
         TryRemoveGatherableYield(blockObject);
         TryClearGoodStack(blockObject);
         TryKillNaturalResource(blockObject);
-        TimberbornCropBurnConsequenceResult visualResult = ApplyBurnedTextures(
-            consequence,
-            blockObject,
-            "wildfire_timberborn_crop_burned_leftover_texture_applied");
+        string textureLabel = TextureLabel(consequence, blockObject);
+        if (consequence.TargetKind == TimberbornBurnDamageTargetKind.Resource &&
+            TryDeleteBurnedResource(blockObject, consequence, textureLabel))
+        {
+            return new TimberbornCropBurnConsequenceResult(
+                MatchedCropTarget: true,
+                YieldLost: 0,
+                KilledCrop: true,
+                VisualStateUpdated: true,
+                SkippedUnsafeApi: false);
+        }
+
+        bool modelRefreshed = TryRefreshCropNaturalResourceModel(blockObject);
+        TimberbornCropBurnConsequenceResult visualResult = modelRefreshed
+            ? ApplyBurnedTextures(
+                consequence,
+                blockObject,
+                "wildfire_timberborn_crop_burned_leftover_texture_applied")
+            : SkippedUnsafe;
 
         _logSink.Info(
             "wildfire_timberborn_crop_burned_leftover_applied " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
-            $"target={TimberbornQaCommandBridge.FormatToken(TextureLabel(consequence, blockObject))} " +
-            "deleted=false reason=unsafe_destroy_deferred");
+            $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
+            $"deleted=false reason=unsafe_destroy_deferred model_refreshed={modelRefreshed.ToString().ToLowerInvariant()}");
         return new TimberbornCropBurnConsequenceResult(
             MatchedCropTarget: true,
             YieldLost: 0,
@@ -836,6 +854,51 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
         }
 
         return TryInvokeNoArgumentMethod(gatherableYieldGrower, "RemoveYield");
+    }
+
+    private bool TryDeleteBurnedResource(
+        BlockObject blockObject,
+        TimberbornCropBurnConsequence consequence,
+        string textureLabel)
+    {
+        if (_entityService is null)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_crop_burned_leftover_delete_skipped " +
+                $"reason=entity_service_missing stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)}");
+            return false;
+        }
+
+        _entityService.Delete(blockObject);
+        _cropTargetsByStableId.Remove(consequence.TargetKey.StableId);
+        _logSink.Info(
+            "wildfire_timberborn_crop_burned_leftover_applied " +
+            $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+            $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
+            "deleted=true reason=native_entity_service");
+        return true;
+    }
+
+    private bool TryRefreshCropNaturalResourceModel(BlockObject blockObject)
+    {
+        if (!blockObject.TryGetComponent(out NaturalResourceModel naturalResourceModel))
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_crop_burned_leftover_refresh_skipped " +
+                $"reason=natural_resource_model_missing target={TimberbornQaCommandBridge.FormatToken(blockObject.Name)}");
+            return false;
+        }
+
+        bool refreshed = TryInvokeNoArgumentMethod(naturalResourceModel, "ShowCurrentModel");
+        if (!refreshed)
+        {
+            _logSink.Warning(
+                "wildfire_timberborn_crop_burned_leftover_refresh_skipped " +
+                $"reason=show_current_model_unavailable target={TimberbornQaCommandBridge.FormatToken(blockObject.Name)}");
+        }
+
+        return refreshed;
     }
 
     private static bool TryClearGoodStack(BlockObject blockObject)

@@ -173,6 +173,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                     _entityRegistry,
                     _logSink,
                     blockService: _blockService,
+                    entityService: _entityService,
                     registrations: cropBurnDamageTargets.Registrations));
             _runtime.AttachStructureBurnDamageRollbackTargetApi(
                 new TimberbornStructureBurnDamageRollbackTargetApi(
