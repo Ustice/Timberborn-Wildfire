@@ -70,13 +70,11 @@ public readonly record struct TimberbornTaintedAshSoilPoisoningCandidate(
 
 public readonly record struct TimberbornTaintedAshSoilPoisoningSummary(
     int CandidateCellCount,
-    int AppliedCellCount,
-    int SkippedUnavailablePathCount)
+    int AppliedCellCount)
 {
     public static readonly TimberbornTaintedAshSoilPoisoningSummary Empty = new(
         CandidateCellCount: 0,
-        AppliedCellCount: 0,
-        SkippedUnavailablePathCount: 0);
+        AppliedCellCount: 0);
 
     public string ToLogToken(uint tick)
     {
@@ -195,8 +193,7 @@ public sealed class TimberbornTaintedAshSoilPoisoningService
             ? TimberbornTaintedAshSoilPoisoningSummary.Empty
             : _adapter.ApplyPoisoning(tick, candidates);
         if (LastSummary.CandidateCellCount > 0 ||
-            LastSummary.AppliedCellCount > 0 ||
-            LastSummary.SkippedUnavailablePathCount > 0)
+            LastSummary.AppliedCellCount > 0)
         {
             _logSink.Info(LastSummary.ToLogToken(tick));
         }
@@ -237,7 +234,7 @@ public static class TimberbornAshWaterContactClassifier
             throw new ArgumentNullException(nameof(importedTargets));
         }
 
-        HashSet<int> unsafeWaterCells = importedTargets
+        HashSet<int> contaminatedWaterCells = importedTargets
             .Where(static target => target.MaterialClass == WildfireMaterialClass.Badwater)
             .Select(static target => target.CellIndex)
             .ToHashSet();
@@ -249,7 +246,7 @@ public static class TimberbornAshWaterContactClassifier
                 item => new TimberbornAshWaterContact(
                     item.CellIndex,
                     item.Water,
-                    unsafeWaterCells.Contains(item.CellIndex)
+                    contaminatedWaterCells.Contains(item.CellIndex)
                         ? TimberbornAshWaterContactKind.BadwaterOrContaminatedWater
                         : TimberbornAshWaterContactKind.CleanWater));
     }
@@ -267,7 +264,6 @@ public readonly record struct TimberbornAshWaterWashoutSummary(
     int TaintedAshWashedCellCount,
     int WaterTaintAttemptCount,
     int WaterTaintSuccessCount,
-    int SkippedUnsafeWaterApiCount,
     int NoOpCellCount)
 {
     public static readonly TimberbornAshWaterWashoutSummary Empty = new(
@@ -276,7 +272,6 @@ public readonly record struct TimberbornAshWaterWashoutSummary(
         TaintedAshWashedCellCount: 0,
         WaterTaintAttemptCount: 0,
         WaterTaintSuccessCount: 0,
-        SkippedUnsafeWaterApiCount: 0,
         NoOpCellCount: 0);
 
     public string ToLogToken(uint tick)
@@ -374,7 +369,6 @@ public sealed class TimberbornAshWaterWashoutService
             TaintedAshWashedCellCount: removals.Count(static removal => removal.Quality == WildfireAshQuality.Tainted),
             WaterTaintAttemptCount: removals.Count(static removal => removal.Quality == WildfireAshQuality.Tainted),
             WaterTaintSuccessCount: 0,
-            SkippedUnsafeWaterApiCount: 0,
             NoOpCellCount: noOpCells);
         TimberbornAshWaterWashoutRemoval[] taintedWashouts = removals
             .Where(static removal => removal.Quality == WildfireAshQuality.Tainted)
@@ -385,8 +379,7 @@ public sealed class TimberbornAshWaterWashoutService
             : _waterTaintAdapter.ApplyWaterTaint(tick, taintedWashouts, washoutSummary);
         if (LastSummary.CleanAshWashedCellCount > 0 ||
             LastSummary.TaintedAshWashedCellCount > 0 ||
-            LastSummary.WaterTaintAttemptCount > 0 ||
-            LastSummary.SkippedUnsafeWaterApiCount > 0)
+            LastSummary.WaterTaintAttemptCount > 0)
         {
             _logSink.Info(LastSummary.ToLogToken(tick));
         }
@@ -496,8 +489,7 @@ public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberborn
 
         return new TimberbornTaintedAshSoilPoisoningSummary(
             CandidateCellCount: candidates.Count,
-            AppliedCellCount: applied,
-            SkippedUnavailablePathCount: 0);
+            AppliedCellCount: applied);
     }
 }
 
@@ -528,7 +520,6 @@ public readonly record struct TimberbornFertileAshCollectionAdapterResult(
     int CandidateCellCount,
     int ReachableCellCount,
     int CollectedGoodCount,
-    int SkippedInventoryApiCount,
     IReadOnlyList<TimberbornFertileAshCollectedCell> CollectedCells);
 
 public readonly record struct TimberbornFertileAshCollectionSummary(
@@ -537,8 +528,7 @@ public readonly record struct TimberbornFertileAshCollectionSummary(
     int ReachableCellCount,
     int CollectedGoodCount,
     int DepletedAshCellCount,
-    int SkippedTaintedOrSpentCellCount,
-    int SkippedInventoryApiCount)
+    int SkippedTaintedOrSpentCellCount)
 {
     public static readonly TimberbornFertileAshCollectionSummary Empty = new(
         GathererPostCount: 0,
@@ -546,8 +536,7 @@ public readonly record struct TimberbornFertileAshCollectionSummary(
         ReachableCellCount: 0,
         CollectedGoodCount: 0,
         DepletedAshCellCount: 0,
-        SkippedTaintedOrSpentCellCount: 0,
-        SkippedInventoryApiCount: 0);
+        SkippedTaintedOrSpentCellCount: 0);
 
     public string ToLogToken(uint tick)
     {
@@ -558,8 +547,7 @@ public readonly record struct TimberbornFertileAshCollectionSummary(
             $"reachable_cells={ReachableCellCount} " +
             $"collected_goods={CollectedGoodCount} " +
             $"depleted_ash_cells={DepletedAshCellCount} " +
-            $"skipped_tainted_or_spent_cells={SkippedTaintedOrSpentCellCount} " +
-            $"skipped_inventory_api={SkippedInventoryApiCount}";
+            $"skipped_tainted_or_spent_cells={SkippedTaintedOrSpentCellCount}";
     }
 }
 
@@ -633,7 +621,6 @@ public sealed class TimberbornFertileAshCollectionService
                 CandidateCellCount: 0,
                 ReachableCellCount: 0,
                 CollectedGoodCount: 0,
-                SkippedInventoryApiCount: 0,
                 CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>())
             : _adapter.Collect(tick, candidates);
         TimberbornAshFieldCollectionRemoval[] removals = adapterResult.CollectedCells
@@ -649,13 +636,11 @@ public sealed class TimberbornFertileAshCollectionService
             ReachableCellCount: adapterResult.ReachableCellCount,
             CollectedGoodCount: adapterResult.CollectedGoodCount,
             DepletedAshCellCount: removals.Count(static removal => removal.RemovedEntry),
-            SkippedTaintedOrSpentCellCount: skippedTaintedOrSpent,
-            SkippedInventoryApiCount: adapterResult.SkippedInventoryApiCount);
+            SkippedTaintedOrSpentCellCount: skippedTaintedOrSpent);
 
         if (LastSummary.GathererPostCount > 0 ||
             LastSummary.CandidateCellCount > 0 ||
-            LastSummary.CollectedGoodCount > 0 ||
-            LastSummary.SkippedInventoryApiCount > 0)
+            LastSummary.CollectedGoodCount > 0)
         {
             _logSink.Info(LastSummary.ToLogToken(tick));
         }
@@ -734,7 +719,6 @@ public sealed class TimberbornGathererPostFertileAshCollectionAdapter : ITimberb
                 CandidateCellCount: candidates.Count,
                 ReachableCellCount: 0,
                 CollectedGoodCount: 0,
-                SkippedInventoryApiCount: 0,
                 CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>());
         }
 
@@ -775,7 +759,6 @@ public sealed class TimberbornGathererPostFertileAshCollectionAdapter : ITimberb
             CandidateCellCount: candidates.Count,
             ReachableCellCount: reachableCells,
             CollectedGoodCount: 0,
-            SkippedInventoryApiCount: 0,
             CollectedCells: Array.Empty<TimberbornFertileAshCollectedCell>());
     }
 

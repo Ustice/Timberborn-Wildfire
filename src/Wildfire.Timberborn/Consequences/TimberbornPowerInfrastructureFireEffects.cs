@@ -37,7 +37,6 @@ public sealed record TimberbornPowerInfrastructureFireTarget(
 public readonly record struct TimberbornPowerInfrastructureApplyResult(
     bool AppliedDamage,
     bool DisabledOrDisconnected,
-    bool SkippedUnavailablePath,
     bool RepairEligible);
 
 public readonly record struct TimberbornPowerInfrastructureFireSummary(
@@ -47,7 +46,6 @@ public readonly record struct TimberbornPowerInfrastructureFireSummary(
     int MetalOnlyNoOpTargetCount,
     int DamagedTargetCount,
     int DisabledOrDisconnectedTargetCount,
-    int SkippedUnavailablePathCount,
     int RepairEligibleTargetCount,
     int TotalDamageApplied)
 {
@@ -58,7 +56,6 @@ public readonly record struct TimberbornPowerInfrastructureFireSummary(
         MetalOnlyNoOpTargetCount: 0,
         DamagedTargetCount: 0,
         DisabledOrDisconnectedTargetCount: 0,
-        SkippedUnavailablePathCount: 0,
         RepairEligibleTargetCount: 0,
         TotalDamageApplied: 0);
 
@@ -146,14 +143,12 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
             MetalOnlyNoOpTargetCount: outcomes.Count(static outcome => outcome.IsMetalOnlyNoOp),
             DamagedTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.AppliedDamage),
             DisabledOrDisconnectedTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.DisabledOrDisconnected),
-            SkippedUnavailablePathCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedUnavailablePath),
             RepairEligibleTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.RepairEligible),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.DamageApplied));
         if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
             summary.MatchedTargetCellCount,
             summary.DamagedTargetCount,
-            summary.DisabledOrDisconnectedTargetCount,
-            summary.SkippedUnavailablePathCount))
+            summary.DisabledOrDisconnectedTargetCount))
         {
             _logSink.Info(summary.ToLogToken(tick));
         }
@@ -182,7 +177,6 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
                 new TimberbornPowerInfrastructureApplyResult(
                     AppliedDamage: false,
                     DisabledOrDisconnected: false,
-                    SkippedUnavailablePath: false,
                     RepairEligible: target.RepairEligible));
         }
 
@@ -198,8 +192,14 @@ public sealed class TimberbornPowerInfrastructureFireSink : ITimberbornPowerInfr
             damageTaken = nextState.DamageTaken;
         }
 
+        if (damageApplied > 0 && !target.CanMarkDamaged && !target.CanDisableOrDisconnect)
+        {
+            throw new InvalidOperationException(
+                $"Power infrastructure damage mutation is unavailable for {target.StableId}.");
+        }
+
         TimberbornPowerInfrastructureApplyResult applyResult = damageApplied <= 0
-            ? new TimberbornPowerInfrastructureApplyResult(false, false, false, target.RepairEligible)
+            ? new TimberbornPowerInfrastructureApplyResult(false, false, target.RepairEligible)
             : _targetApi.ApplyDamage(target, damageApplied, damageTaken >= damageCapacity);
 
         return new PowerApplyOutcome(

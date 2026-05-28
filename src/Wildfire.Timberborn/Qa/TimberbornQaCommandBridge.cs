@@ -586,7 +586,6 @@ public sealed class TimberbornQaCommandBridge
             $"affected_cell_contaminated={stimulusResult.IsAffectedCellContaminated.ToString().ToLowerInvariant()}_" +
             $"contaminated_suppression_input={stimulusResult.IsContaminatedSuppressionInput.ToString().ToLowerInvariant()}_" +
             $"badwater_suppression_input={stimulusResult.IsBadwaterSuppressionInput.ToString().ToLowerInvariant()}_" +
-            $"native_decontamination_attempts={stimulusResult.NativeDecontaminationAttemptCount}_" +
             $"initial_cell={stimulusResult.InitialCell}_" +
             $"set_water={stimulusResult.SetWater}_" +
             $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}");
@@ -628,7 +627,7 @@ public sealed class TimberbornQaCommandBridge
             $"queued_ash_changes={stimulusResult.QueuedAshChangeCount}_" +
             $"queued_water_changes={stimulusResult.QueuedWaterChangeCount}_" +
             $"expected_water_taint_attempts={stimulusResult.ExpectedWaterTaintAttemptCount}_" +
-            $"expected_water_taint={stimulusResult.ExpectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}");
+            $"expected_water_taint={stimulusResult.ExpectedWaterTaint.ToString().ToLowerInvariant()}");
     }
 
     private TimberbornQaCommandResult ExecuteQaBurnDurationStimulus(string? commandText)
@@ -997,9 +996,7 @@ public sealed record TimberbornQaWaterSuppressionStimulusResult(
     byte TargetSoilContamination = 0,
     bool IsAffectedCellContaminated = false,
     bool IsContaminatedSuppressionInput = false,
-    bool IsBadwaterSuppressionInput = false,
-    int WaterSuppressionInputSafeUnavailableCount = 0,
-    int NativeDecontaminationAttemptCount = 0);
+    bool IsBadwaterSuppressionInput = false);
 
 public interface ITimberbornQaAshWaterStimulus
 {
@@ -1022,7 +1019,7 @@ public sealed record TimberbornQaAshWaterStimulusResult(
     int QueuedAshChangeCount,
     int QueuedWaterChangeCount,
     int ExpectedWaterTaintAttemptCount,
-    bool ExpectedSafeUnavailableWaterTaint);
+    bool ExpectedWaterTaint);
 
 public static class TimberbornQaAshWaterStimulusTargets
 {
@@ -1498,7 +1495,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerCropBurnUnmappedTargetCount = null,
     int? LastDeltaConsumerCropBurnUnknownHarvestResourceCount = null,
     int? LastDeltaConsumerCropBurnNonBurnableTargetCount = null,
-    int? LastDeltaConsumerCropBurnSkippedUnsafeApiCount = null,
+    int? LastDeltaConsumerCropBurnFailedConsequenceCount = null,
     int? LastDeltaConsumerTreeBurnConsideredTargetCount = null,
     int? LastDeltaConsumerTreeBurnBurnableTargetCount = null,
     int? LastDeltaConsumerTreeBurnYieldLost = null,
@@ -1508,7 +1505,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerTreeBurnUnmappedTargetCount = null,
     int? LastDeltaConsumerTreeBurnUnknownCuttableResourceCount = null,
     int? LastDeltaConsumerTreeBurnNonBurnableTargetCount = null,
-    int? LastDeltaConsumerTreeBurnSkippedUnsafeApiCount = null,
+    int? LastDeltaConsumerTreeBurnFailedConsequenceCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount = null,
@@ -1522,7 +1519,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount = null,
-    int? LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount = null,
     int? LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied = null,
     int? LastDeltaConsumerBurnDamageConsideredCellCount = null,
     int? LastDeltaConsumerBurnDamageDamageCandidateCellCount = null,
@@ -1540,7 +1536,6 @@ public sealed record TimberbornQaCommandState(
     uint? LastPositiveStructureBurnDamageRollbackTick = null,
     int? LastPositiveStructureBurnDamageRollbackUnfinishedStageCount = null,
     int? LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount = null,
-    int? LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount = null,
     int? LastPositiveStructureBurnDamageRollbackTotalDamageApplied = null,
     int? LastDeltaConsumerStoredGoodBurnConsideredDeltaCount = null,
     int? LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount = null,
@@ -1548,8 +1543,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerStoredGoodBurnableStackCount = null,
     int? LastDeltaConsumerStoredGoodBurnDestroyedItemCount = null,
     int? LastDeltaConsumerStoredGoodBurnHazardousGoodCount = null,
-    int? LastDeltaConsumerStoredGoodBurnSkippedNoInventoryApiCount = null,
-    int? LastDeltaConsumerStoredGoodBurnSkippedUnknownResourceCount = null,
+    int? LastDeltaConsumerStoredGoodBurnUnknownResourceCount = null,
     int? LastDeltaConsumerStoredGoodBurnSkippedNonBurnableItemCount = null,
     int? LastDeltaConsumerExplosiveInfrastructureConsideredDeltaCount = null,
     int? LastDeltaConsumerExplosiveInfrastructureMatchedTargetCellCount = null,
@@ -1559,7 +1553,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerExplosiveInfrastructureNativeTriggeredTargetCount = null,
     int? LastDeltaConsumerExplosiveInfrastructureHeatPulseCellCount = null,
     int? LastDeltaConsumerExplosiveInfrastructureSkippedSettingDisabledCount = null,
-    int? LastDeltaConsumerExplosiveInfrastructureSkippedUnavailablePathCount = null,
     int? LastDeltaConsumerExplosiveInfrastructureSkippedAlreadyTriggeredCount = null,
     int? LastDeltaConsumerExplosiveInfrastructureLastTriggeredDepth = null,
     int? LastDeltaConsumerDetonatorFireSafetyConsideredDeltaCount = null,
@@ -1568,7 +1561,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerDetonatorFireSafetyDisabledTargetCount = null,
     int? LastDeltaConsumerDetonatorFireSafetyArmedTargetCount = null,
     int? LastDeltaConsumerDetonatorFireSafetySkippedSettingDisabledCount = null,
-    int? LastDeltaConsumerDetonatorFireSafetySkippedUnavailablePathCount = null,
     int? LastDeltaConsumerDetonatorFireSafetyRecoverabilityPreservedCount = null,
     int? LastDeltaConsumerDetonatorFireSafetyRecoverabilityUnknownCount = null,
     int? LastDeltaConsumerTunnelFireConsideredDeltaCount = null,
@@ -1579,7 +1571,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerTunnelFireNativeExplodeAppliedCount = null,
     int? LastDeltaConsumerTunnelFireDestructionDeferredCount = null,
     int? LastDeltaConsumerTunnelFireSkippedSettingDisabledCount = null,
-    int? LastDeltaConsumerTunnelFireSkippedUnavailablePathCount = null,
     int? LastDeltaConsumerTunnelFireRecoverabilityPreservedCount = null,
     int? LastDeltaConsumerTunnelFireRecoverabilityUnknownCount = null,
     int? LastDeltaConsumerPathInfrastructureConsideredDeltaCount = null,
@@ -1588,7 +1579,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerPathInfrastructureZeroCostTargetCount = null,
     int? LastDeltaConsumerPathInfrastructureDamagedTargetCount = null,
     int? LastDeltaConsumerPathInfrastructureBlockedTargetCount = null,
-    int? LastDeltaConsumerPathInfrastructureSkippedUnavailablePathCount = null,
     int? LastDeltaConsumerPathInfrastructureRepairEligibleTargetCount = null,
     int? LastDeltaConsumerPathInfrastructureTotalDamageApplied = null,
     int? LastDeltaConsumerPowerInfrastructureConsideredDeltaCount = null,
@@ -1597,7 +1587,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerPowerInfrastructureMetalOnlyNoOpTargetCount = null,
     int? LastDeltaConsumerPowerInfrastructureDamagedTargetCount = null,
     int? LastDeltaConsumerPowerInfrastructureDisabledOrDisconnectedTargetCount = null,
-    int? LastDeltaConsumerPowerInfrastructureSkippedUnavailablePathCount = null,
     int? LastDeltaConsumerPowerInfrastructureRepairEligibleTargetCount = null,
     int? LastDeltaConsumerPowerInfrastructureTotalDamageApplied = null,
     int? LastDeltaConsumerWaterInfrastructureConsideredDeltaCount = null,
@@ -1608,7 +1597,6 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerWaterInfrastructureBurnableMaterialValue = null,
     int? LastDeltaConsumerWaterInfrastructureDamagedTargetCount = null,
     int? LastDeltaConsumerWaterInfrastructureWaterStateMutationAttemptCount = null,
-    int? LastDeltaConsumerWaterInfrastructureSkippedUnavailablePathCount = null,
     int? LastDeltaConsumerWaterInfrastructureRepairEligibleTargetCount = null,
     int? LastDeltaConsumerWaterInfrastructureTotalDamageApplied = null,
     int? AshFieldEntries = null,
@@ -1620,7 +1608,7 @@ public sealed record TimberbornQaCommandState(
     int? AshFieldGrowthCandidateCells = null,
     int? AshFieldGrowthAppliedGrowables = null,
     int? AshFieldGrowthSkippedTaintedCells = null,
-    int? AshFieldGrowthSkippedUnsafeApis = null,
+    int? AshFieldGrowthFailedApplications = null,
     int? ContaminationFireContaminatedBurnSources = null,
     int? ContaminationFireContaminatedAffectedCells = null,
     int? ContaminationFireContaminatedAffectedMapCells = null,
@@ -1628,19 +1616,15 @@ public sealed record TimberbornQaCommandState(
     int? ContaminationFireContaminatedWaterLikeMapCells = null,
     int? ContaminationFireBadwaterSuppressionInputs = null,
     int? ContaminationFireContaminatedWaterSuppressionInputs = null,
-    int? ContaminationFireWaterSuppressionInputSafeUnavailable = null,
     int? ContaminationFireToxicSmokeCells = null,
     int? ContaminationFireNativeDecontaminationAttempts = null,
-    int? ContaminationFireSkippedUnsafeContaminationApis = null,
     int? TaintedAshPoisonCandidateCells = null,
     int? TaintedAshPoisonAppliedCells = null,
-    int? TaintedAshPoisonSkippedUnavailablePath = null,
     int? AshWaterWashoutCandidateAshCells = null,
     int? AshWaterWashoutCleanAshWashed = null,
     int? AshWaterWashoutTaintedAshWashed = null,
     int? AshWaterWashoutWaterTaintAttempts = null,
     int? AshWaterWashoutWaterTaintSuccesses = null,
-    int? AshWaterWashoutSkippedUnsafeWaterApis = null,
     int? AshWaterWashoutNoOpCells = null,
     int? FertileAshGathererPosts = null,
     int? FertileAshCollectionCandidateCells = null,
@@ -1648,7 +1632,6 @@ public sealed record TimberbornQaCommandState(
     int? FertileAshCollectedGoods = null,
     int? FertileAshCollectionDepletedCells = null,
     int? FertileAshCollectionSkippedTaintedOrSpentCells = null,
-    int? FertileAshCollectionSkippedInventoryApi = null,
     int? LastDeltaConsumerAlertCount = null,
     uint? LastPlayerFireAlertTick = null,
     int? LastPlayerFireAlertStartedFireCount = null,
@@ -1733,7 +1716,6 @@ public sealed record TimberbornQaCommandState(
     int? BeaverFieldBehaviorNoOpDecisionsApplied = null,
     int? BeaverFieldBehaviorDecisionsSkippedCooldown = null,
     int? BeaverFieldBehaviorDecisionsSkippedBatch = null,
-    int? BeaverFieldBehaviorSkippedUnavailablePath = null,
     int? BeaverFieldBehaviorFailedDecisions = null,
     int? BeaverFieldBehaviorRecoveryActions = null,
     int? BeaverFieldBehaviorSmokeExposedSamples = null,
@@ -1742,49 +1724,14 @@ public sealed record TimberbornQaCommandState(
     int? BeaverFieldBehaviorSmokeCoughingRecovered = null,
     int? BeaverFieldBehaviorSmokeCoughingSlowdownsApplied = null,
     int? BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered = null,
-    int? BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedUnavailablePath = null,
     int? BeaverFieldBehaviorSmokeRecoveryDecays = null,
-    int? BeaverFieldBehaviorSmokeChokingCandidates = null,
     int? BeaverFieldBehaviorSmokeChokingSlowdownsApplied = null,
     int? BeaverFieldBehaviorSmokeChokingSlowdownsRecovered = null,
-    int? BeaverFieldBehaviorSmokeChokingSlowdownsSkippedUnavailablePath = null,
-    int? BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi = null,
-    int? BeaverFieldBehaviorSmokeChokingIncapacitationCandidates = null,
-    int? BeaverFieldBehaviorSmokeChokingIncapacitationAttempts = null,
-    int? BeaverFieldBehaviorSmokeChokingIncapacitationsApplied = null,
-    int? BeaverFieldBehaviorSmokeChokingIncapacitationsRecovered = null,
-    int? BeaverFieldBehaviorSmokeChokingIncapacitationSkippedUnsafeApi = null,
-    int? BeaverFieldBehaviorSmokeChokingIncapacitationFailures = null,
-    int? BeaverFieldBehaviorSmokeDeathCandidates = null,
-    int? BeaverFieldBehaviorSmokeDeathAttempts = null,
-    int? BeaverFieldBehaviorSmokeDeathsApplied = null,
-    int? BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi = null,
-    int? BeaverFieldBehaviorSmokeDeathFailures = null,
     int? BeaverFieldBehaviorToxicSmokeExposedBeavers = null,
     int? BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples = null,
-    int? BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts = null,
-    int? BeaverFieldBehaviorToxicSmokeContaminationEffectSuccesses = null,
-    int? BeaverFieldBehaviorToxicSmokeContaminationEffectFailures = null,
-    int? BeaverFieldBehaviorToxicSmokeContaminationEffectSkippedUnsafeApi = null,
-    int? BeaverFieldBehaviorToxicSmokeChokingCandidates = null,
-    int? BeaverFieldBehaviorToxicSmokeDeathCandidates = null,
     int? BeaverFieldBehaviorToxicSmokeRecoveryDecays = null,
     int? BeaverFieldBehaviorFireHeatExposedBeavers = null,
     int? BeaverFieldBehaviorFireHeatActiveFlameContacts = null,
-    int? BeaverFieldBehaviorFireHeatAvoidanceCandidates = null,
-    int? BeaverFieldBehaviorFireHeatAvoidedCells = null,
-    int? BeaverFieldBehaviorFireHeatAvoidanceSkippedUnavailablePath = null,
-    int? BeaverFieldBehaviorFireHeatInterruptedJobCandidates = null,
-    int? BeaverFieldBehaviorFireHeatInterruptedJobs = null,
-    int? BeaverFieldBehaviorFireHeatInterruptedJobsSkippedUnavailablePath = null,
-    int? BeaverFieldBehaviorFireHeatSingedEntered = null,
-    int? BeaverFieldBehaviorFireHeatSingedRecovered = null,
-    int? BeaverFieldBehaviorFireHeatSingedSkippedUnavailablePath = null,
-    int? BeaverFieldBehaviorFireHeatBurnedEntered = null,
-    int? BeaverFieldBehaviorFireHeatBurnedRecovered = null,
-    int? BeaverFieldBehaviorFireHeatBurnedSkippedUnavailablePath = null,
-    int? BeaverFieldBehaviorFireHeatDeathCandidates = null,
-    int? BeaverFieldBehaviorFireHeatDeathSkippedUnsafeApi = null,
     int? BeaverFieldBehaviorFireHeatRecoveryDecays = null,
     int? BeaverFieldBehaviorPersistenceSaves = null,
     int? BeaverFieldBehaviorPersistenceLoads = null,
@@ -1839,7 +1786,6 @@ public sealed record TimberbornQaCommandState(
     int? WorldImportResolvedInfrastructureCells = null,
     int? WorldImportResolvedWaterCells = null,
     int? WorldImportResolvedBadwaterCells = null,
-    int? WorldImportSafeUnavailableCount = null,
     int? PersistentRestoreNoLiveFuelCellsCleared = null)
 {
     public static readonly TimberbornQaCommandState Placeholder = new(IsSimulatorIntegrated: false);
@@ -1959,7 +1905,6 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_structure_burn_damage_rollback_stage_unfinished={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_visual_applied={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_construction_phase_entered={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount)} " +
-        $"last_delta_consumer_structure_burn_damage_rollback_skipped_native_construction_api={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount)} " +
         $"last_delta_consumer_structure_burn_damage_rollback_total_damage_applied={FormatNumber(State.LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied)} " +
         $"last_delta_consumer_burn_damage_considered_cells={FormatNumber(State.LastDeltaConsumerBurnDamageConsideredCellCount)} " +
         $"last_delta_consumer_burn_damage_candidate_cells={FormatNumber(State.LastDeltaConsumerBurnDamageDamageCandidateCellCount)} " +
@@ -1977,7 +1922,6 @@ public sealed record TimberbornQaCommandResult(
         $"last_positive_structure_burn_damage_rollback_tick={FormatNumber(State.LastPositiveStructureBurnDamageRollbackTick)} " +
         $"last_positive_structure_burn_damage_rollback_stage_unfinished={FormatNumber(State.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount)} " +
         $"last_positive_structure_burn_damage_rollback_construction_phase_entered={FormatNumber(State.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount)} " +
-        $"last_positive_structure_burn_damage_rollback_skipped_native_construction_api={FormatNumber(State.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount)} " +
         $"last_positive_structure_burn_damage_rollback_total_damage_applied={FormatNumber(State.LastPositiveStructureBurnDamageRollbackTotalDamageApplied)} " +
         $"last_delta_consumer_stored_good_burn_considered_deltas={FormatNumber(State.LastDeltaConsumerStoredGoodBurnConsideredDeltaCount)} " +
         $"last_delta_consumer_stored_good_burn_matched_storage_cells={FormatNumber(State.LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount)} " +
@@ -1985,8 +1929,7 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_stored_good_burnable_stacks={FormatNumber(State.LastDeltaConsumerStoredGoodBurnableStackCount)} " +
         $"last_delta_consumer_stored_good_burn_destroyed_items={FormatNumber(State.LastDeltaConsumerStoredGoodBurnDestroyedItemCount)} " +
         $"last_delta_consumer_stored_good_burn_hazardous_goods={FormatNumber(State.LastDeltaConsumerStoredGoodBurnHazardousGoodCount)} " +
-        $"last_delta_consumer_stored_good_burn_skipped_no_inventory_api={FormatNumber(State.LastDeltaConsumerStoredGoodBurnSkippedNoInventoryApiCount)} " +
-        $"last_delta_consumer_stored_good_burn_skipped_unknown_resources={FormatNumber(State.LastDeltaConsumerStoredGoodBurnSkippedUnknownResourceCount)} " +
+        $"last_delta_consumer_stored_good_burn_unknown_resources={FormatNumber(State.LastDeltaConsumerStoredGoodBurnUnknownResourceCount)} " +
         $"last_delta_consumer_stored_good_burn_skipped_non_burnable_items={FormatNumber(State.LastDeltaConsumerStoredGoodBurnSkippedNonBurnableItemCount)} " +
         $"last_delta_consumer_explosive_infrastructure_considered_deltas={FormatNumber(State.LastDeltaConsumerExplosiveInfrastructureConsideredDeltaCount)} " +
         $"last_delta_consumer_explosive_infrastructure_matched_target_cells={FormatNumber(State.LastDeltaConsumerExplosiveInfrastructureMatchedTargetCellCount)} " +
@@ -2074,7 +2017,6 @@ public sealed record TimberbornQaCommandResult(
         $"fertile_ash_collected_goods={FormatNumber(State.FertileAshCollectedGoods)} " +
         $"fertile_ash_collection_depleted_cells={FormatNumber(State.FertileAshCollectionDepletedCells)} " +
         $"fertile_ash_collection_skipped_tainted_or_spent_cells={FormatNumber(State.FertileAshCollectionSkippedTaintedOrSpentCells)} " +
-        $"fertile_ash_collection_skipped_inventory_api={FormatNumber(State.FertileAshCollectionSkippedInventoryApi)} " +
         $"last_delta_consumer_alerts={FormatNumber(State.LastDeltaConsumerAlertCount)} " +
         $"last_player_fire_alert_tick={FormatNumber(State.LastPlayerFireAlertTick)} " +
         $"last_player_fire_alert_started_fires={FormatNumber(State.LastPlayerFireAlertStartedFireCount)} " +
@@ -2168,37 +2110,13 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_behavior_smoke_coughing_slowdowns_applied={FormatNumber(State.BeaverFieldBehaviorSmokeCoughingSlowdownsApplied)} " +
         $"beaver_field_behavior_smoke_coughing_slowdowns_recovered={FormatNumber(State.BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered)} " +
         $"beaver_field_behavior_smoke_recovery_decays={FormatNumber(State.BeaverFieldBehaviorSmokeRecoveryDecays)} " +
-        $"beaver_field_behavior_smoke_choking_candidates={FormatNumber(State.BeaverFieldBehaviorSmokeChokingCandidates)} " +
         $"beaver_field_behavior_smoke_choking_slowdowns_applied={FormatNumber(State.BeaverFieldBehaviorSmokeChokingSlowdownsApplied)} " +
         $"beaver_field_behavior_smoke_choking_slowdowns_recovered={FormatNumber(State.BeaverFieldBehaviorSmokeChokingSlowdownsRecovered)} " +
-        $"beaver_field_behavior_smoke_choking_incapacitation_candidates={FormatNumber(State.BeaverFieldBehaviorSmokeChokingIncapacitationCandidates)} " +
-        $"beaver_field_behavior_smoke_choking_incapacitation_attempts={FormatNumber(State.BeaverFieldBehaviorSmokeChokingIncapacitationAttempts)} " +
-        $"beaver_field_behavior_smoke_choking_incapacitations_applied={FormatNumber(State.BeaverFieldBehaviorSmokeChokingIncapacitationsApplied)} " +
-        $"beaver_field_behavior_smoke_choking_incapacitations_recovered={FormatNumber(State.BeaverFieldBehaviorSmokeChokingIncapacitationsRecovered)} " +
-        $"beaver_field_behavior_smoke_choking_incapacitation_failures={FormatNumber(State.BeaverFieldBehaviorSmokeChokingIncapacitationFailures)} " +
-        $"beaver_field_behavior_smoke_death_candidates={FormatNumber(State.BeaverFieldBehaviorSmokeDeathCandidates)} " +
-        $"beaver_field_behavior_smoke_death_attempts={FormatNumber(State.BeaverFieldBehaviorSmokeDeathAttempts)} " +
-        $"beaver_field_behavior_smoke_deaths_applied={FormatNumber(State.BeaverFieldBehaviorSmokeDeathsApplied)} " +
-        $"beaver_field_behavior_smoke_death_failures={FormatNumber(State.BeaverFieldBehaviorSmokeDeathFailures)} " +
         $"beaver_field_behavior_toxic_smoke_exposed_beavers={FormatNumber(State.BeaverFieldBehaviorToxicSmokeExposedBeavers)} " +
         $"beaver_field_behavior_toxic_smoke_exposure_accumulated_samples={FormatNumber(State.BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples)} " +
-        $"beaver_field_behavior_toxic_smoke_contamination_effect_attempts={FormatNumber(State.BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts)} " +
-        $"beaver_field_behavior_toxic_smoke_contamination_effect_successes={FormatNumber(State.BeaverFieldBehaviorToxicSmokeContaminationEffectSuccesses)} " +
-        $"beaver_field_behavior_toxic_smoke_contamination_effect_failures={FormatNumber(State.BeaverFieldBehaviorToxicSmokeContaminationEffectFailures)} " +
-        $"beaver_field_behavior_toxic_smoke_choking_candidates={FormatNumber(State.BeaverFieldBehaviorToxicSmokeChokingCandidates)} " +
-        $"beaver_field_behavior_toxic_smoke_death_candidates={FormatNumber(State.BeaverFieldBehaviorToxicSmokeDeathCandidates)} " +
         $"beaver_field_behavior_toxic_smoke_recovery_decays={FormatNumber(State.BeaverFieldBehaviorToxicSmokeRecoveryDecays)} " +
         $"beaver_field_behavior_fire_heat_exposed_beavers={FormatNumber(State.BeaverFieldBehaviorFireHeatExposedBeavers)} " +
         $"beaver_field_behavior_fire_heat_active_flame_contacts={FormatNumber(State.BeaverFieldBehaviorFireHeatActiveFlameContacts)} " +
-        $"beaver_field_behavior_fire_heat_avoidance_candidates={FormatNumber(State.BeaverFieldBehaviorFireHeatAvoidanceCandidates)} " +
-        $"beaver_field_behavior_fire_heat_avoided_cells={FormatNumber(State.BeaverFieldBehaviorFireHeatAvoidedCells)} " +
-        $"beaver_field_behavior_fire_heat_interrupted_job_candidates={FormatNumber(State.BeaverFieldBehaviorFireHeatInterruptedJobCandidates)} " +
-        $"beaver_field_behavior_fire_heat_interrupted_jobs={FormatNumber(State.BeaverFieldBehaviorFireHeatInterruptedJobs)} " +
-        $"beaver_field_behavior_fire_heat_singed_entered={FormatNumber(State.BeaverFieldBehaviorFireHeatSingedEntered)} " +
-        $"beaver_field_behavior_fire_heat_singed_recovered={FormatNumber(State.BeaverFieldBehaviorFireHeatSingedRecovered)} " +
-        $"beaver_field_behavior_fire_heat_burned_entered={FormatNumber(State.BeaverFieldBehaviorFireHeatBurnedEntered)} " +
-        $"beaver_field_behavior_fire_heat_burned_recovered={FormatNumber(State.BeaverFieldBehaviorFireHeatBurnedRecovered)} " +
-        $"beaver_field_behavior_fire_heat_death_candidates={FormatNumber(State.BeaverFieldBehaviorFireHeatDeathCandidates)} " +
         $"beaver_field_behavior_fire_heat_recovery_decays={FormatNumber(State.BeaverFieldBehaviorFireHeatRecoveryDecays)} " +
         $"beaver_field_behavior_persistence_saves={FormatNumber(State.BeaverFieldBehaviorPersistenceSaves)} " +
         $"beaver_field_behavior_persistence_loads={FormatNumber(State.BeaverFieldBehaviorPersistenceLoads)} " +

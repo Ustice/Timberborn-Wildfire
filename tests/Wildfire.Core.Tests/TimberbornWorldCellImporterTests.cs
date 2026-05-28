@@ -41,7 +41,6 @@ public sealed class TimberbornWorldCellImporterTests
                 new TimberbornStaticCellSourceProvider(
                     "vegetation",
                     [resourceAdapter.CreateVegetationSource(2, 0, 0)]),
-                new TimberbornSafeUnavailableCellSourceProvider("crops", "safe_live_crop_enumeration_unavailable"),
             ]);
 
         TimberbornWorldCellImportResult result = importer.Import(grid);
@@ -54,7 +53,6 @@ public sealed class TimberbornWorldCellImporterTests
         Assert.Equal(1, result.Summary.ResolvedCount(WildfireMaterialClass.Terrain));
         Assert.Equal(1, result.Summary.ResolvedCount(WildfireMaterialClass.Vegetation));
         Assert.Equal(1, result.Summary.ResolvedCount(WildfireMaterialClass.Tree));
-        Assert.Equal(1, result.Summary.ProviderSafeUnavailableCounts["crops"]);
         Assert.Contains("terrain_sources=2", result.Summary.StatusToken);
         Assert.Contains("vegetation_sources=1", result.Summary.StatusToken);
         Assert.Contains("tree_sources=1", result.Summary.StatusToken);

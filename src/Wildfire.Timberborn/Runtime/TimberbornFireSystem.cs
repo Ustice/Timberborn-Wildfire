@@ -190,8 +190,6 @@ public sealed class TimberbornFireSystem : IDisposable
     public int LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount =>
         _deltaConsumer.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount;
 
-    public int LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount =>
-        _deltaConsumer.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount;
 
     public int LastPositiveStructureBurnDamageRollbackTotalDamageApplied =>
         _deltaConsumer.LastPositiveStructureBurnDamageRollbackTotalDamageApplied;
@@ -759,12 +757,7 @@ public sealed class TimberbornFireSystem : IDisposable
             TargetSoilContamination: target.SoilContamination,
             IsAffectedCellContaminated: target.SoilContamination > 0,
             IsContaminatedSuppressionInput: target.MaterialClass == WildfireMaterialClass.Badwater,
-            IsBadwaterSuppressionInput: target.MaterialClass == WildfireMaterialClass.Badwater,
-            WaterSuppressionInputSafeUnavailableCount: target.SoilContamination > 0 &&
-                target.MaterialClass != WildfireMaterialClass.Badwater
-                    ? 1
-                    : 0,
-            NativeDecontaminationAttemptCount: 0);
+            IsBadwaterSuppressionInput: target.MaterialClass == WildfireMaterialClass.Badwater);
     }
 
     public TimberbornQaAshWaterStimulusResult QueueAshWaterQaStimulus(string target)
@@ -806,7 +799,7 @@ public sealed class TimberbornFireSystem : IDisposable
             QueuedAshChangeCount: 1,
             QueuedWaterChangeCount: 1,
             ExpectedWaterTaintAttemptCount: normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted ? 1 : 0,
-            ExpectedSafeUnavailableWaterTaint: normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted);
+            ExpectedWaterTaint: normalizedTarget == TimberbornQaAshWaterStimulusTargets.Tainted);
     }
 
     public TimberbornQaBurnDurationStimulusResult QueueBurnDurationQaStimulus(string target)

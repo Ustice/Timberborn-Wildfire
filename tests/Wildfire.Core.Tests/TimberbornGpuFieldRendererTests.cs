@@ -72,7 +72,7 @@ public sealed class TimberbornGpuFieldRendererTests
     [Theory]
     [InlineData(false, true)]
     [InlineData(true, true)]
-    public void PresenterRootActivationKeepsValidSafeDebugOverlayVisible(
+    public void PresenterRootActivationKeepsValidDebugOverlayVisible(
         bool debugOverlayEnabled,
         bool expectedActive)
     {

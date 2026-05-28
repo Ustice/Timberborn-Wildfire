@@ -5,7 +5,7 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornPathInfrastructureFireEffectTests
 {
     [Fact]
-    public void SinkTreatsZeroCostPathsAsSafeNoOps()
+    public void SinkTreatsZeroCostPathsAsValidNoOps()
     {
         RecordingPathInfrastructureTargetApi targetApi = new(Target(resources: []));
         TimberbornPathInfrastructureFireSink sink = new(targetApi);
@@ -17,7 +17,6 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
         Assert.Equal(1, summary.MatchedTargetCellCount);
         Assert.Equal(1, summary.ZeroCostPathTargetCount);
         Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(0, summary.SkippedUnavailablePathCount);
         Assert.Empty(targetApi.AppliedDamage);
     }
 
@@ -133,20 +132,18 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
     }
 
     [Fact]
-    public void SinkReportsUnavailablePathWhenPathMutationIsUnavailable()
+    public void SinkThrowsWhenPathMutationIsUnavailable()
     {
         RecordingPathInfrastructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
             canMarkDamaged: false));
         TimberbornPathInfrastructureFireSink sink = new(targetApi);
 
-        TimberbornPathInfrastructureFireSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             4,
-            [Decision(4, oldFuel: 8, newFuel: 3)]);
+            [Decision(4, oldFuel: 8, newFuel: 3)]));
 
-        Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(1, summary.SkippedUnavailablePathCount);
-        Assert.Equal(5, summary.TotalDamageApplied);
+        Assert.Contains("Path infrastructure damage mutation is unavailable", exception.Message);
     }
 
     [Fact]
@@ -216,7 +213,6 @@ public sealed class TimberbornPathInfrastructureFireEffectTests
             return new TimberbornPathInfrastructureApplyResult(
                 AppliedDamage: damageTarget.CanMarkDamaged,
                 AppliedBlock: false,
-                SkippedUnavailablePath: !damageTarget.CanMarkDamaged,
                 RepairEligible: damageTarget.RepairEligible);
         }
     }

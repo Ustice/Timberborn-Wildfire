@@ -79,7 +79,7 @@ public sealed class TimberbornFertilizeDesignationServiceTests
         Assert.Contains("deleted=true reason=native_entity_service", source, StringComparison.Ordinal);
         Assert.Contains("TryRefreshCropNaturalResourceModel(blockObject)", source, StringComparison.Ordinal);
         Assert.Contains("NaturalResourceModel naturalResourceModel", source, StringComparison.Ordinal);
-        Assert.Contains("TryInvokeNoArgumentMethod(naturalResourceModel, \"ShowCurrentModel\")", source, StringComparison.Ordinal);
+        Assert.Contains("InvokeNoArgumentMethod(naturalResourceModel, \"ShowCurrentModel\")", source, StringComparison.Ordinal);
     }
 
     [Fact]

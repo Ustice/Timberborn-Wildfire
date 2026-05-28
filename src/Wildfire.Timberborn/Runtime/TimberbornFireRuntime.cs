@@ -607,10 +607,7 @@ public sealed class TimberbornFireRuntime :
                 normalizedSelector is TimberbornQaFieldTargetSelectors.Default or
                     TimberbornQaFieldTargetSelectors.Crop or
                     TimberbornQaFieldTargetSelectors.Bush
-                    ? FindOrRegisterSelectedCropTarget(
-                        RequireFireSystem().RequireInitializedGrid(),
-                        allowRegisteredTargetFallback: normalizedSelector is TimberbornQaFieldTargetSelectors.Crop or
-                            TimberbornQaFieldTargetSelectors.Bush)
+                    ? FindOrRegisterSelectedCropTarget(RequireFireSystem().RequireInitializedGrid())
                     : null,
                 beaverExposureTarget);
         if (normalizedSelector == TimberbornQaFieldTargetSelectors.ContaminatedTree)
@@ -663,9 +660,7 @@ public sealed class TimberbornFireRuntime :
         return result;
     }
 
-    private TimberbornQaSelectedCropTarget? FindOrRegisterSelectedCropTarget(
-        FireGrid grid,
-        bool allowRegisteredTargetFallback)
+    private TimberbornQaSelectedCropTarget? FindOrRegisterSelectedCropTarget(FireGrid grid)
     {
         if (_burnDamageService is null)
         {
@@ -675,10 +670,6 @@ public sealed class TimberbornFireRuntime :
         try
         {
             return _selectedCropTargetProvider.FindSelectedTarget(grid, _burnDamageService.States);
-        }
-        catch (InvalidOperationException) when (allowRegisteredTargetFallback && _burnDamageService.States.Count > 0)
-        {
-            return null;
         }
         catch (InvalidOperationException) when (_burnDamageService.States.Count == 0)
         {
@@ -741,7 +732,6 @@ public sealed class TimberbornFireRuntime :
             $"affected_cell_contaminated={result.IsAffectedCellContaminated.ToString().ToLowerInvariant()} " +
             $"contaminated_suppression_input={result.IsContaminatedSuppressionInput.ToString().ToLowerInvariant()} " +
             $"badwater_suppression_input={result.IsBadwaterSuppressionInput.ToString().ToLowerInvariant()} " +
-            $"native_decontamination_attempts={result.NativeDecontaminationAttemptCount} " +
             $"initial_cell={result.InitialCell} " +
             $"set_water={result.SetWater} " +
             $"queued_water_changes={result.QueuedWaterChangeCount}");
@@ -866,7 +856,6 @@ public sealed class TimberbornFireRuntime :
                 WorldImportResolvedInfrastructureCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Infrastructure),
                 WorldImportResolvedWaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Water),
                 WorldImportResolvedBadwaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Badwater),
-                WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum(),
                 PersistentRestoreNoLiveFuelCellsCleared: 0);
         }
 
@@ -970,7 +959,7 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerCropBurnUnmappedTargetCount: deltaConsumerSummary.CropBurnUnmappedTargetCount,
             LastDeltaConsumerCropBurnUnknownHarvestResourceCount: deltaConsumerSummary.CropBurnUnknownHarvestResourceCount,
             LastDeltaConsumerCropBurnNonBurnableTargetCount: deltaConsumerSummary.CropBurnNonBurnableTargetCount,
-            LastDeltaConsumerCropBurnSkippedUnsafeApiCount: deltaConsumerSummary.CropBurnSkippedUnsafeApiCount,
+            LastDeltaConsumerCropBurnFailedConsequenceCount: deltaConsumerSummary.CropBurnFailedConsequenceCount,
             LastDeltaConsumerTreeBurnConsideredTargetCount: deltaConsumerSummary.TreeBurnConsideredTargetCount,
             LastDeltaConsumerTreeBurnBurnableTargetCount: deltaConsumerSummary.TreeBurnBurnableTargetCount,
             LastDeltaConsumerTreeBurnYieldLost: deltaConsumerSummary.TreeBurnYieldLost,
@@ -980,7 +969,7 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerTreeBurnUnmappedTargetCount: deltaConsumerSummary.TreeBurnUnmappedTargetCount,
             LastDeltaConsumerTreeBurnUnknownCuttableResourceCount: deltaConsumerSummary.TreeBurnUnknownCuttableResourceCount,
             LastDeltaConsumerTreeBurnNonBurnableTargetCount: deltaConsumerSummary.TreeBurnNonBurnableTargetCount,
-            LastDeltaConsumerTreeBurnSkippedUnsafeApiCount: deltaConsumerSummary.TreeBurnSkippedUnsafeApiCount,
+            LastDeltaConsumerTreeBurnFailedConsequenceCount: deltaConsumerSummary.TreeBurnFailedConsequenceCount,
             LastDeltaConsumerStructureBurnDamageRollbackConsideredDeltaCount: deltaConsumerSummary.StructureBurnDamageRollbackConsideredDeltaCount,
             LastDeltaConsumerStructureBurnDamageRollbackMatchedStructureCellCount: deltaConsumerSummary.StructureBurnDamageRollbackMatchedStructureCellCount,
             LastDeltaConsumerStructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount: deltaConsumerSummary.StructureBurnDamageRollbackDuplicateStructureTargetSuppressedCount,
@@ -994,7 +983,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount: deltaConsumerSummary.StructureBurnDamageRollbackUnfinishedStageCount,
             LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount: deltaConsumerSummary.StructureBurnDamageRollbackVisualRollbackAppliedCount,
             LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount: deltaConsumerSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount,
-            LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount: deltaConsumerSummary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount,
             LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied: deltaConsumerSummary.StructureBurnDamageRollbackTotalDamageApplied,
             LastDeltaConsumerBurnDamageConsideredCellCount: deltaConsumerSummary.BurnDamageConsideredCellCount,
             LastDeltaConsumerBurnDamageDamageCandidateCellCount: deltaConsumerSummary.BurnDamageDamageCandidateCellCount,
@@ -1012,7 +1000,6 @@ public sealed class TimberbornFireRuntime :
             LastPositiveStructureBurnDamageRollbackTick: fireSystem.LastPositiveStructureBurnDamageRollbackTick,
             LastPositiveStructureBurnDamageRollbackUnfinishedStageCount: fireSystem.LastPositiveStructureBurnDamageRollbackUnfinishedStageCount,
             LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount: fireSystem.LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount,
-            LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount: fireSystem.LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount,
             LastPositiveStructureBurnDamageRollbackTotalDamageApplied: fireSystem.LastPositiveStructureBurnDamageRollbackTotalDamageApplied,
             LastDeltaConsumerStoredGoodBurnConsideredDeltaCount: deltaConsumerSummary.StoredGoodBurnConsideredDeltaCount,
             LastDeltaConsumerStoredGoodBurnMatchedStorageCellCount: deltaConsumerSummary.StoredGoodBurnMatchedStorageCellCount,
@@ -1020,8 +1007,7 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerStoredGoodBurnableStackCount: deltaConsumerSummary.StoredGoodBurnableStackCount,
             LastDeltaConsumerStoredGoodBurnDestroyedItemCount: deltaConsumerSummary.StoredGoodBurnDestroyedItemCount,
             LastDeltaConsumerStoredGoodBurnHazardousGoodCount: deltaConsumerSummary.StoredGoodBurnHazardousGoodCount,
-            LastDeltaConsumerStoredGoodBurnSkippedNoInventoryApiCount: deltaConsumerSummary.StoredGoodBurnSkippedNoInventoryApiCount,
-            LastDeltaConsumerStoredGoodBurnSkippedUnknownResourceCount: deltaConsumerSummary.StoredGoodBurnSkippedUnknownResourceCount,
+            LastDeltaConsumerStoredGoodBurnUnknownResourceCount: deltaConsumerSummary.StoredGoodBurnUnknownResourceCount,
             LastDeltaConsumerStoredGoodBurnSkippedNonBurnableItemCount: deltaConsumerSummary.StoredGoodBurnSkippedNonBurnableItemCount,
             LastDeltaConsumerExplosiveInfrastructureConsideredDeltaCount: deltaConsumerSummary.ExplosiveInfrastructureConsideredDeltaCount,
             LastDeltaConsumerExplosiveInfrastructureMatchedTargetCellCount: deltaConsumerSummary.ExplosiveInfrastructureMatchedTargetCellCount,
@@ -1031,7 +1017,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerExplosiveInfrastructureNativeTriggeredTargetCount: deltaConsumerSummary.ExplosiveInfrastructureNativeTriggeredTargetCount,
             LastDeltaConsumerExplosiveInfrastructureHeatPulseCellCount: deltaConsumerSummary.ExplosiveInfrastructureHeatPulseCellCount,
             LastDeltaConsumerExplosiveInfrastructureSkippedSettingDisabledCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedSettingDisabledCount,
-            LastDeltaConsumerExplosiveInfrastructureSkippedUnavailablePathCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedUnavailablePathCount,
             LastDeltaConsumerExplosiveInfrastructureSkippedAlreadyTriggeredCount: deltaConsumerSummary.ExplosiveInfrastructureSkippedAlreadyTriggeredCount,
             LastDeltaConsumerExplosiveInfrastructureLastTriggeredDepth: deltaConsumerSummary.ExplosiveInfrastructureLastTriggeredDepth,
             LastDeltaConsumerDetonatorFireSafetyConsideredDeltaCount: deltaConsumerSummary.DetonatorFireSafetyConsideredDeltaCount,
@@ -1040,7 +1025,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerDetonatorFireSafetyDisabledTargetCount: deltaConsumerSummary.DetonatorFireSafetyDisabledTargetCount,
             LastDeltaConsumerDetonatorFireSafetyArmedTargetCount: deltaConsumerSummary.DetonatorFireSafetyArmedTargetCount,
             LastDeltaConsumerDetonatorFireSafetySkippedSettingDisabledCount: deltaConsumerSummary.DetonatorFireSafetySkippedSettingDisabledCount,
-            LastDeltaConsumerDetonatorFireSafetySkippedUnavailablePathCount: deltaConsumerSummary.DetonatorFireSafetySkippedUnavailablePathCount,
             LastDeltaConsumerDetonatorFireSafetyRecoverabilityPreservedCount: deltaConsumerSummary.DetonatorFireSafetyRecoverabilityPreservedCount,
             LastDeltaConsumerDetonatorFireSafetyRecoverabilityUnknownCount: deltaConsumerSummary.DetonatorFireSafetyRecoverabilityUnknownCount,
             LastDeltaConsumerTunnelFireConsideredDeltaCount: deltaConsumerSummary.TunnelFireConsideredDeltaCount,
@@ -1051,7 +1035,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerTunnelFireNativeExplodeAppliedCount: deltaConsumerSummary.TunnelFireNativeExplodeAppliedCount,
             LastDeltaConsumerTunnelFireDestructionDeferredCount: deltaConsumerSummary.TunnelFireDestructionDeferredCount,
             LastDeltaConsumerTunnelFireSkippedSettingDisabledCount: deltaConsumerSummary.TunnelFireSkippedSettingDisabledCount,
-            LastDeltaConsumerTunnelFireSkippedUnavailablePathCount: deltaConsumerSummary.TunnelFireSkippedUnavailablePathCount,
             LastDeltaConsumerTunnelFireRecoverabilityPreservedCount: deltaConsumerSummary.TunnelFireRecoverabilityPreservedCount,
             LastDeltaConsumerTunnelFireRecoverabilityUnknownCount: deltaConsumerSummary.TunnelFireRecoverabilityUnknownCount,
             LastDeltaConsumerPathInfrastructureConsideredDeltaCount: deltaConsumerSummary.PathInfrastructureConsideredDeltaCount,
@@ -1060,7 +1043,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerPathInfrastructureZeroCostTargetCount: deltaConsumerSummary.PathInfrastructureZeroCostTargetCount,
             LastDeltaConsumerPathInfrastructureDamagedTargetCount: deltaConsumerSummary.PathInfrastructureDamagedTargetCount,
             LastDeltaConsumerPathInfrastructureBlockedTargetCount: deltaConsumerSummary.PathInfrastructureBlockedTargetCount,
-            LastDeltaConsumerPathInfrastructureSkippedUnavailablePathCount: deltaConsumerSummary.PathInfrastructureSkippedUnavailablePathCount,
             LastDeltaConsumerPathInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.PathInfrastructureRepairEligibleTargetCount,
             LastDeltaConsumerPathInfrastructureTotalDamageApplied: deltaConsumerSummary.PathInfrastructureTotalDamageApplied,
             LastDeltaConsumerPowerInfrastructureConsideredDeltaCount: deltaConsumerSummary.PowerInfrastructureConsideredDeltaCount,
@@ -1069,7 +1051,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerPowerInfrastructureMetalOnlyNoOpTargetCount: deltaConsumerSummary.PowerInfrastructureMetalOnlyNoOpTargetCount,
             LastDeltaConsumerPowerInfrastructureDamagedTargetCount: deltaConsumerSummary.PowerInfrastructureDamagedTargetCount,
             LastDeltaConsumerPowerInfrastructureDisabledOrDisconnectedTargetCount: deltaConsumerSummary.PowerInfrastructureDisabledOrDisconnectedTargetCount,
-            LastDeltaConsumerPowerInfrastructureSkippedUnavailablePathCount: deltaConsumerSummary.PowerInfrastructureSkippedUnavailablePathCount,
             LastDeltaConsumerPowerInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.PowerInfrastructureRepairEligibleTargetCount,
             LastDeltaConsumerPowerInfrastructureTotalDamageApplied: deltaConsumerSummary.PowerInfrastructureTotalDamageApplied,
             LastDeltaConsumerWaterInfrastructureConsideredDeltaCount: deltaConsumerSummary.WaterInfrastructureConsideredDeltaCount,
@@ -1080,7 +1061,6 @@ public sealed class TimberbornFireRuntime :
             LastDeltaConsumerWaterInfrastructureBurnableMaterialValue: deltaConsumerSummary.WaterInfrastructureBurnableMaterialValue,
             LastDeltaConsumerWaterInfrastructureDamagedTargetCount: deltaConsumerSummary.WaterInfrastructureDamagedTargetCount,
             LastDeltaConsumerWaterInfrastructureWaterStateMutationAttemptCount: deltaConsumerSummary.WaterInfrastructureWaterStateMutationAttemptCount,
-            LastDeltaConsumerWaterInfrastructureSkippedUnavailablePathCount: deltaConsumerSummary.WaterInfrastructureSkippedUnavailablePathCount,
             LastDeltaConsumerWaterInfrastructureRepairEligibleTargetCount: deltaConsumerSummary.WaterInfrastructureRepairEligibleTargetCount,
             LastDeltaConsumerWaterInfrastructureTotalDamageApplied: deltaConsumerSummary.WaterInfrastructureTotalDamageApplied,
             AshFieldEntries: _ashFieldService.Entries.Count,
@@ -1092,7 +1072,7 @@ public sealed class TimberbornFireRuntime :
             AshFieldGrowthCandidateCells: ashFieldSummary.GrowthCandidateCellCount,
             AshFieldGrowthAppliedGrowables: ashFieldSummary.GrowthAppliedGrowableCount,
             AshFieldGrowthSkippedTaintedCells: ashFieldSummary.GrowthSkippedTaintedCellCount,
-            AshFieldGrowthSkippedUnsafeApis: ashFieldSummary.GrowthSkippedUnsafeApiCount,
+            AshFieldGrowthFailedApplications: ashFieldSummary.GrowthFailedConsequenceCount,
             ContaminationFireContaminatedBurnSources: ashFieldSummary.ContaminatedBurnSourceCellCount,
             ContaminationFireContaminatedAffectedCells: ashFieldSummary.ContaminatedAffectedCellCount,
             ContaminationFireContaminatedAffectedMapCells: contaminationFireSummary.ContaminatedAffectedMapCellCount,
@@ -1100,19 +1080,15 @@ public sealed class TimberbornFireRuntime :
             ContaminationFireContaminatedWaterLikeMapCells: contaminationFireSummary.ContaminatedWaterLikeMapCellCount,
             ContaminationFireBadwaterSuppressionInputs: contaminationFireSummary.BadwaterSuppressionInputCellCount,
             ContaminationFireContaminatedWaterSuppressionInputs: contaminationFireSummary.ContaminatedWaterSuppressionInputCellCount,
-            ContaminationFireWaterSuppressionInputSafeUnavailable: contaminationFireSummary.WaterSuppressionInputSafeUnavailableCount,
             ContaminationFireToxicSmokeCells: beaverExposure.ToxicExposureCells,
             ContaminationFireNativeDecontaminationAttempts: contaminationFireSummary.NativeDecontaminationAttemptCount,
-            ContaminationFireSkippedUnsafeContaminationApis: contaminationFireSummary.SkippedUnsafeContaminationApiCount,
             TaintedAshPoisonCandidateCells: taintedAshSummary.CandidateCellCount,
             TaintedAshPoisonAppliedCells: taintedAshSummary.AppliedCellCount,
-            TaintedAshPoisonSkippedUnavailablePath: taintedAshSummary.SkippedUnavailablePathCount,
             AshWaterWashoutCandidateAshCells: ashWaterWashoutSummary.CandidateAshCellCount,
             AshWaterWashoutCleanAshWashed: ashWaterWashoutSummary.CleanAshWashedCellCount,
             AshWaterWashoutTaintedAshWashed: ashWaterWashoutSummary.TaintedAshWashedCellCount,
             AshWaterWashoutWaterTaintAttempts: ashWaterWashoutSummary.WaterTaintAttemptCount,
             AshWaterWashoutWaterTaintSuccesses: ashWaterWashoutSummary.WaterTaintSuccessCount,
-            AshWaterWashoutSkippedUnsafeWaterApis: ashWaterWashoutSummary.SkippedUnsafeWaterApiCount,
             AshWaterWashoutNoOpCells: ashWaterWashoutSummary.NoOpCellCount,
             FertileAshGathererPosts: fertileAshCollectionSummary.GathererPostCount,
             FertileAshCollectionCandidateCells: fertileAshCollectionSummary.CandidateCellCount,
@@ -1120,7 +1096,6 @@ public sealed class TimberbornFireRuntime :
             FertileAshCollectedGoods: fertileAshCollectionSummary.CollectedGoodCount,
             FertileAshCollectionDepletedCells: fertileAshCollectionSummary.DepletedAshCellCount,
             FertileAshCollectionSkippedTaintedOrSpentCells: fertileAshCollectionSummary.SkippedTaintedOrSpentCellCount,
-            FertileAshCollectionSkippedInventoryApi: fertileAshCollectionSummary.SkippedInventoryApiCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
             LastPlayerFireAlertStartedFireCount: alertCounters.LastFireStartedCount,
@@ -1205,7 +1180,6 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldBehaviorNoOpDecisionsApplied: beaverFieldBehaviorCounters.NoOpDecisionsApplied,
             BeaverFieldBehaviorDecisionsSkippedCooldown: beaverFieldBehaviorCounters.DecisionsSkippedCooldown,
             BeaverFieldBehaviorDecisionsSkippedBatch: beaverFieldBehaviorCounters.DecisionsSkippedBatch,
-            BeaverFieldBehaviorSkippedUnavailablePath: beaverFieldBehaviorCounters.SkippedUnavailablePath,
             BeaverFieldBehaviorFailedDecisions: beaverFieldBehaviorCounters.FailedDecisions,
             BeaverFieldBehaviorRecoveryActions: beaverFieldBehaviorCounters.RecoveryActions,
             BeaverFieldBehaviorSmokeExposedSamples: beaverFieldBehaviorCounters.SmokeExposedSamples,
@@ -1214,61 +1188,15 @@ public sealed class TimberbornFireRuntime :
             BeaverFieldBehaviorSmokeCoughingRecovered: beaverFieldBehaviorCounters.SmokeCoughingRecovered,
             BeaverFieldBehaviorSmokeCoughingSlowdownsApplied: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsApplied,
             BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsRecovered,
-            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedUnavailablePath: beaverFieldBehaviorCounters.SmokeCoughingSlowdownsSkippedUnavailablePath,
             BeaverFieldBehaviorSmokeRecoveryDecays: beaverFieldBehaviorCounters.SmokeRecoveryDecays,
-            BeaverFieldBehaviorSmokeChokingCandidates: beaverFieldBehaviorCounters.SmokeChokingCandidates,
             BeaverFieldBehaviorSmokeChokingSlowdownsApplied: beaverFieldBehaviorCounters.SmokeChokingSlowdownsApplied,
             BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: beaverFieldBehaviorCounters.SmokeChokingSlowdownsRecovered,
-            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedUnavailablePath: beaverFieldBehaviorCounters.SmokeChokingSlowdownsSkippedUnavailablePath,
-            BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeChokingSkippedUnsafeApi,
-            BeaverFieldBehaviorSmokeChokingIncapacitationCandidates:
-                beaverFieldBehaviorCounters.SmokeChokingIncapacitationCandidates,
-            BeaverFieldBehaviorSmokeChokingIncapacitationAttempts:
-                beaverFieldBehaviorCounters.SmokeChokingIncapacitationAttempts,
-            BeaverFieldBehaviorSmokeChokingIncapacitationsApplied:
-                beaverFieldBehaviorCounters.SmokeChokingIncapacitationsApplied,
-            BeaverFieldBehaviorSmokeChokingIncapacitationsRecovered:
-                beaverFieldBehaviorCounters.SmokeChokingIncapacitationsRecovered,
-            BeaverFieldBehaviorSmokeChokingIncapacitationSkippedUnsafeApi:
-                beaverFieldBehaviorCounters.SmokeChokingIncapacitationSkippedUnsafeApi,
-            BeaverFieldBehaviorSmokeChokingIncapacitationFailures:
-                beaverFieldBehaviorCounters.SmokeChokingIncapacitationFailures,
-            BeaverFieldBehaviorSmokeDeathCandidates: beaverFieldBehaviorCounters.SmokeDeathCandidates,
-            BeaverFieldBehaviorSmokeDeathAttempts: beaverFieldBehaviorCounters.SmokeDeathAttempts,
-            BeaverFieldBehaviorSmokeDeathsApplied: beaverFieldBehaviorCounters.SmokeDeathsApplied,
-            BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: beaverFieldBehaviorCounters.SmokeDeathSkippedUnsafeApi,
-            BeaverFieldBehaviorSmokeDeathFailures: beaverFieldBehaviorCounters.SmokeDeathFailures,
             BeaverFieldBehaviorToxicSmokeExposedBeavers: beaverFieldBehaviorCounters.ToxicSmokeExposedBeavers,
             BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples:
                 beaverFieldBehaviorCounters.ToxicSmokeExposureAccumulatedSamples,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts:
-                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectAttempts,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectSuccesses:
-                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectSuccesses,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectFailures:
-                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectFailures,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectSkippedUnsafeApi:
-                beaverFieldBehaviorCounters.ToxicSmokeContaminationEffectSkippedUnsafeApi,
-            BeaverFieldBehaviorToxicSmokeChokingCandidates:
-                beaverFieldBehaviorCounters.ToxicSmokeChokingCandidates,
-            BeaverFieldBehaviorToxicSmokeDeathCandidates: beaverFieldBehaviorCounters.ToxicSmokeDeathCandidates,
             BeaverFieldBehaviorToxicSmokeRecoveryDecays: beaverFieldBehaviorCounters.ToxicSmokeRecoveryDecays,
             BeaverFieldBehaviorFireHeatExposedBeavers: beaverFieldBehaviorCounters.FireHeatExposedBeavers,
             BeaverFieldBehaviorFireHeatActiveFlameContacts: beaverFieldBehaviorCounters.FireHeatActiveFlameContacts,
-            BeaverFieldBehaviorFireHeatAvoidanceCandidates: beaverFieldBehaviorCounters.FireHeatAvoidanceCandidates,
-            BeaverFieldBehaviorFireHeatAvoidedCells: beaverFieldBehaviorCounters.FireHeatAvoidedCells,
-            BeaverFieldBehaviorFireHeatAvoidanceSkippedUnavailablePath: beaverFieldBehaviorCounters.FireHeatAvoidanceSkippedUnavailablePath,
-            BeaverFieldBehaviorFireHeatInterruptedJobCandidates: beaverFieldBehaviorCounters.FireHeatInterruptedJobCandidates,
-            BeaverFieldBehaviorFireHeatInterruptedJobs: beaverFieldBehaviorCounters.FireHeatInterruptedJobs,
-            BeaverFieldBehaviorFireHeatInterruptedJobsSkippedUnavailablePath: beaverFieldBehaviorCounters.FireHeatInterruptedJobsSkippedUnavailablePath,
-            BeaverFieldBehaviorFireHeatSingedEntered: beaverFieldBehaviorCounters.FireHeatSingedEntered,
-            BeaverFieldBehaviorFireHeatSingedRecovered: beaverFieldBehaviorCounters.FireHeatSingedRecovered,
-            BeaverFieldBehaviorFireHeatSingedSkippedUnavailablePath: beaverFieldBehaviorCounters.FireHeatSingedSkippedUnavailablePath,
-            BeaverFieldBehaviorFireHeatBurnedEntered: beaverFieldBehaviorCounters.FireHeatBurnedEntered,
-            BeaverFieldBehaviorFireHeatBurnedRecovered: beaverFieldBehaviorCounters.FireHeatBurnedRecovered,
-            BeaverFieldBehaviorFireHeatBurnedSkippedUnavailablePath: beaverFieldBehaviorCounters.FireHeatBurnedSkippedUnavailablePath,
-            BeaverFieldBehaviorFireHeatDeathCandidates: beaverFieldBehaviorCounters.FireHeatDeathCandidates,
-            BeaverFieldBehaviorFireHeatDeathSkippedUnsafeApi: beaverFieldBehaviorCounters.FireHeatDeathSkippedUnsafeApi,
             BeaverFieldBehaviorFireHeatRecoveryDecays: beaverFieldBehaviorCounters.FireHeatRecoveryDecays,
             BeaverFieldBehaviorPersistenceSaves: beaverFieldBehaviorCounters.PersistenceSaveCount,
             BeaverFieldBehaviorPersistenceLoads: beaverFieldBehaviorCounters.PersistenceLoadCount,
@@ -1323,7 +1251,6 @@ public sealed class TimberbornFireRuntime :
             WorldImportResolvedInfrastructureCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Infrastructure),
             WorldImportResolvedWaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Water),
             WorldImportResolvedBadwaterCells: _lastWorldImportSummary?.ResolvedCount(WildfireMaterialClass.Badwater),
-            WorldImportSafeUnavailableCount: _lastWorldImportSummary?.ProviderSafeUnavailableCounts.Values.Sum(),
             PersistentRestoreNoLiveFuelCellsCleared: fireSystem.LastPersistentRestoreNoLiveFuelCellsCleared);
     }
 
@@ -1875,21 +1802,10 @@ public sealed class TimberbornFireRuntime :
 
     private bool IsAffectedCellContaminated(int cellIndex)
     {
-        try
-        {
-            FireGrid grid = _fireSystem?.RequireInitializedGrid() ??
-                throw new InvalidOperationException("Fire system grid is unavailable.");
-            (int x, int y, int z) = grid.FromIndex(cellIndex);
-            return _soilContaminationService.SoilIsContaminated(new Vector3Int(x, y, z));
-        }
-        catch (Exception exception)
-        {
-            _logSink.Warning(
-                "wildfire_timberborn_ash_contamination_lookup_failed " +
-                $"cell_index={cellIndex} " +
-                $"message={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
-            return true;
-        }
+        FireGrid grid = _fireSystem?.RequireInitializedGrid() ??
+            throw new InvalidOperationException("Fire system grid is unavailable.");
+        (int x, int y, int z) = grid.FromIndex(cellIndex);
+        return _soilContaminationService.SoilIsContaminated(new Vector3Int(x, y, z));
     }
 
     private bool TryAllowExternalChange(string source, int? count)

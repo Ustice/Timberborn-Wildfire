@@ -110,7 +110,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
     }
 
     [Fact]
-    public void SampleReportsSafeUnavailableWhenPositionApiIsUnavailable()
+    public void SampleReportsUnavailableWhenPositionApiIsUnavailable()
     {
         RecordingFireLogSink logSink = new();
         TimberbornBeaverFieldExposureTelemetry telemetry = new(
@@ -217,7 +217,7 @@ public sealed class TimberbornBeaverFieldExposureTelemetryTests
     }
 
     [Fact]
-    public void SelectQaStimulusTargetReportsSafeUnavailableWhenPositionApiIsUnavailable()
+    public void SelectQaStimulusTargetReportsUnavailableWhenPositionApiIsUnavailable()
     {
         TimberbornBeaverFieldExposureTelemetry telemetry = new(
             new UnavailablePositionProvider(),

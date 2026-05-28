@@ -57,8 +57,8 @@ public readonly record struct TimberbornAshGrowthBonusRequest(
 public readonly record struct TimberbornAshGrowthApplicationResult(
     int CandidateGrowableCount,
     int AppliedGrowableCount,
-    int SkippedUnsafeApiCount,
-    int SkippedUnsupportedGrowableCount);
+    int FailedConsequenceCount,
+    int UnsupportedGrowableCount);
 
 public interface ITimberbornAshGrowthAdapter
 {
@@ -110,8 +110,8 @@ public readonly record struct TimberbornAshFieldSummary(
     int GrowthCandidateCellCount,
     int GrowthAppliedGrowableCount,
     int GrowthSkippedTaintedCellCount,
-    int GrowthSkippedUnsafeApiCount,
-    int GrowthSkippedUnsupportedGrowableCount,
+    int GrowthFailedConsequenceCount,
+    int GrowthUnsupportedGrowableCount,
     int PersistenceSaveCount,
     int PersistenceLoadCount)
 {
@@ -128,8 +128,8 @@ public readonly record struct TimberbornAshFieldSummary(
         GrowthCandidateCellCount: 0,
         GrowthAppliedGrowableCount: 0,
         GrowthSkippedTaintedCellCount: 0,
-        GrowthSkippedUnsafeApiCount: 0,
-        GrowthSkippedUnsupportedGrowableCount: 0,
+        GrowthFailedConsequenceCount: 0,
+        GrowthUnsupportedGrowableCount: 0,
         PersistenceSaveCount: 0,
         PersistenceLoadCount: 0);
 
@@ -148,7 +148,7 @@ public readonly record struct TimberbornAshFieldSummary(
             $"ash_growth_candidate_cells={GrowthCandidateCellCount} " +
             $"ash_growth_applied_growables={GrowthAppliedGrowableCount} " +
             $"ash_growth_skipped_tainted_cells={GrowthSkippedTaintedCellCount} " +
-            $"ash_growth_skipped_unsupported_growables={GrowthSkippedUnsupportedGrowableCount} " +
+            $"ash_growth_unsupported_growables={GrowthUnsupportedGrowableCount} " +
             $"ash_persistence_saves={PersistenceSaveCount} " +
             $"ash_persistence_loads={PersistenceLoadCount}";
     }
@@ -358,8 +358,8 @@ public sealed class TimberbornAshFieldService
             ? new TimberbornAshGrowthApplicationResult(
                 CandidateGrowableCount: 0,
                 AppliedGrowableCount: 0,
-                SkippedUnsafeApiCount: 0,
-                SkippedUnsupportedGrowableCount: 0)
+                FailedConsequenceCount: 0,
+                UnsupportedGrowableCount: 0)
             : _growthAdapter.ApplyGrowthBonuses(tick, growthRequests);
 
         LastSummary = new TimberbornAshFieldSummary(
@@ -375,8 +375,8 @@ public sealed class TimberbornAshFieldService
             GrowthCandidateCellCount: growthRequests.Length,
             GrowthAppliedGrowableCount: growthResult.AppliedGrowableCount,
             GrowthSkippedTaintedCellCount: _entries.Values.Count(static entry => entry.Quality == WildfireAshQuality.Tainted),
-            GrowthSkippedUnsafeApiCount: growthResult.SkippedUnsafeApiCount,
-            GrowthSkippedUnsupportedGrowableCount: growthResult.SkippedUnsupportedGrowableCount,
+            GrowthFailedConsequenceCount: growthResult.FailedConsequenceCount,
+            GrowthUnsupportedGrowableCount: growthResult.UnsupportedGrowableCount,
             PersistenceSaveCount: _persistenceSaveCount,
             PersistenceLoadCount: _persistenceLoadCount);
 
@@ -385,7 +385,7 @@ public sealed class TimberbornAshFieldService
             LastSummary.SpentAshCellCount > 0 ||
             LastSummary.TaintedAshCellCount > 0 ||
             LastSummary.DecayedAshCellCount > 0 ||
-            LastSummary.GrowthSkippedUnsafeApiCount > 0 ||
+            LastSummary.GrowthFailedConsequenceCount > 0 ||
             LastSummary.GrowthAppliedGrowableCount > 0)
         {
             _logSink.Info(LastSummary.ToLogToken());

@@ -24,7 +24,7 @@ public readonly record struct TimberbornTreeBurnConsequence(
 
 public readonly record struct TimberbornTreeBurnConsequenceResult(
     bool Applied,
-    bool SafeApiUnavailable);
+    bool Failed);
 
 public readonly record struct TimberbornTreeBurnConsequenceSummary(
     uint Tick,
@@ -37,7 +37,7 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
     int UnmappedTargetCount,
     int UnknownCuttableResourceCount,
     int NonBurnableTreeTargetCount,
-    int SkippedUnsafeApiCount)
+    int FailedConsequenceCount)
 {
     public static readonly TimberbornTreeBurnConsequenceSummary Empty = new(
         Tick: 0,
@@ -50,7 +50,7 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
         UnmappedTargetCount: 0,
         UnknownCuttableResourceCount: 0,
         NonBurnableTreeTargetCount: 0,
-        SkippedUnsafeApiCount: 0);
+        FailedConsequenceCount: 0);
 
     public string ToLogToken()
     {
@@ -151,13 +151,13 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             NonBurnableTreeTargetCount: consideredTreeTargetStates.Count(static state =>
                 state.MaterialKind is TimberbornBurnMaterialKind.NonBurnable ||
                 (state.DamageCapacity == 0 && state.MissingResourceIds.Count == 0)),
-            SkippedUnsafeApiCount: outcomes.Sum(static outcome => outcome.SkippedUnsafeApiCount));
+            FailedConsequenceCount: outcomes.Sum(static outcome => outcome.FailedConsequenceCount));
 
         if (summary.ConsideredTreeTargetCount > 0 ||
             summary.YieldLost > 0 ||
             summary.KilledTreeCount > 0 ||
             summary.VisualStateUpdateCount > 0 ||
-            summary.SkippedUnsafeApiCount > 0)
+            summary.FailedConsequenceCount > 0)
         {
             _logSink.Info(summary.ToLogToken());
         }
@@ -262,9 +262,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
         if (!result.Applied)
         {
-            return result.SafeApiUnavailable
-                ? TimberbornTreeBurnTargetOutcome.SkippedUnsafeApi
-                : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+            ThrowIfFailed(result, TimberbornTreeBurnConsequenceKind.DryTree, state);
+            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
         }
 
         _driedTargets.Add(state.TargetKey);
@@ -287,9 +286,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
         if (!result.Applied)
         {
-            return result.SafeApiUnavailable
-                ? TimberbornTreeBurnTargetOutcome.SkippedUnsafeApi
-                : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+            ThrowIfFailed(result, TimberbornTreeBurnConsequenceKind.ReduceYield, state);
+            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
         }
 
         _appliedYieldLossByTarget[state.TargetKey] = targetYieldLost;
@@ -298,8 +296,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             YieldLost: incrementalYieldLoss,
             Killed: false,
             VisualUpdated: false,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: 0);
+            IsUnknownResource: false,
+            FailedConsequenceCount: 0);
     }
 
     private TimberbornTreeBurnTargetOutcome ApplyDeathConsequences(
@@ -326,20 +324,22 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             {
                 Kind = TimberbornTreeBurnConsequenceKind.MarkBurnedVisual,
             })
-            : new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: false);
+            : new TimberbornTreeBurnConsequenceResult(Applied: false, Failed: false);
 
         if (killResult.Applied)
         {
             _killedTargets.Add(state.TargetKey);
         }
+        ThrowIfFailed(killResult, TimberbornTreeBurnConsequenceKind.KillTree, state);
+        ThrowIfFailed(visualResult, TimberbornTreeBurnConsequenceKind.MarkBurnedVisual, state);
 
         return new TimberbornTreeBurnTargetOutcome(
             Burnable: true,
             YieldLost: 0,
             Killed: killResult.Applied,
             VisualUpdated: visualResult.Applied,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: CountUnavailable(killResult) + CountUnavailable(visualResult));
+            IsUnknownResource: false,
+            FailedConsequenceCount: CountUnavailable(killResult) + CountUnavailable(visualResult));
     }
 
     private TimberbornTreeBurnTargetOutcome ApplyBurnedLeftoverConsequences(
@@ -362,9 +362,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
         if (!result.Applied)
         {
-            return result.SafeApiUnavailable
-                ? TimberbornTreeBurnTargetOutcome.SkippedUnsafeApi
-                : TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+            ThrowIfFailed(result, TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover, state);
+            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
         }
 
         _leftoverTargets.Add(state.TargetKey);
@@ -374,8 +373,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             YieldLost: 0,
             Killed: false,
             VisualUpdated: true,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: 0);
+            IsUnknownResource: false,
+            FailedConsequenceCount: 0);
     }
 
     private TimberbornTreeBurnConsequence CreateConsequence(
@@ -445,7 +444,21 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
     private static int CountUnavailable(TimberbornTreeBurnConsequenceResult result)
     {
-        return !result.Applied && result.SafeApiUnavailable ? 1 : 0;
+        return 0;
+    }
+
+    private static void ThrowIfFailed(
+        TimberbornTreeBurnConsequenceResult result,
+        TimberbornTreeBurnConsequenceKind kind,
+        TimberbornBurnDamageTargetState state)
+    {
+        if (!result.Failed)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Tree burn consequence failed for {state.TargetKey.StableId} ({state.SpecId}, {kind}).");
     }
 
     private readonly record struct TreeCandidateHit(
@@ -464,16 +477,16 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         int YieldLost,
         bool Killed,
         bool VisualUpdated,
-        bool SkippedUnknownResource,
-        int SkippedUnsafeApiCount)
+        bool IsUnknownResource,
+        int FailedConsequenceCount)
     {
         public static readonly TimberbornTreeBurnTargetOutcome NoOp = new(
             Burnable: false,
             YieldLost: 0,
             Killed: false,
             VisualUpdated: false,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: 0);
+            IsUnknownResource: false,
+            FailedConsequenceCount: 0);
 
         public static readonly TimberbornTreeBurnTargetOutcome BurnableNoChange = NoOp with
         {
@@ -482,12 +495,12 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
         public static readonly TimberbornTreeBurnTargetOutcome UnknownResource = NoOp with
         {
-            SkippedUnknownResource = true,
+            IsUnknownResource = true,
         };
 
-        public static readonly TimberbornTreeBurnTargetOutcome SkippedUnsafeApi = BurnableNoChange with
+        public static readonly TimberbornTreeBurnTargetOutcome FailedConsequence = BurnableNoChange with
         {
-            SkippedUnsafeApiCount = 1,
+            FailedConsequenceCount = 1,
         };
 
         public static TimberbornTreeBurnTargetOutcome Combine(
@@ -499,8 +512,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
                 YieldLost: first.YieldLost + second.YieldLost,
                 Killed: first.Killed || second.Killed,
                 VisualUpdated: first.VisualUpdated || second.VisualUpdated,
-                SkippedUnknownResource: first.SkippedUnknownResource || second.SkippedUnknownResource,
-                SkippedUnsafeApiCount: first.SkippedUnsafeApiCount + second.SkippedUnsafeApiCount);
+                IsUnknownResource: first.IsUnknownResource || second.IsUnknownResource,
+                FailedConsequenceCount: first.FailedConsequenceCount + second.FailedConsequenceCount);
         }
     }
 }

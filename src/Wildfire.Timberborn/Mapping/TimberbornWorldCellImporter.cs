@@ -9,26 +9,13 @@ public interface ITimberbornWorldCellSourceProvider
 
 public sealed record TimberbornWorldCellImportProviderResult(
     string Family,
-    IReadOnlyList<TimberbornCellSource> Sources,
-    int SkippedSafeUnavailableCount = 0,
-    string SafeUnavailableReason = "none")
-{
-    public static TimberbornWorldCellImportProviderResult SafeUnavailable(string family, string reason)
-    {
-        return new TimberbornWorldCellImportProviderResult(
-            family,
-            Array.Empty<TimberbornCellSource>(),
-            SkippedSafeUnavailableCount: 1,
-            SafeUnavailableReason: reason);
-    }
-}
+    IReadOnlyList<TimberbornCellSource> Sources);
 
 public sealed record TimberbornWorldCellImportSummary(
     int TotalSources,
     IReadOnlyDictionary<WildfireMaterialClass, int> SourceCountsByMaterialClass,
     IReadOnlyDictionary<WildfireMaterialClass, int> ResolvedCellCountsByMaterialClass,
-    IReadOnlyDictionary<string, int> ProviderSourceCounts,
-    IReadOnlyDictionary<string, int> ProviderSafeUnavailableCounts)
+    IReadOnlyDictionary<string, int> ProviderSourceCounts)
 {
     public string StatusToken =>
         "wildfire_timberborn_world_import_summary " +
@@ -63,18 +50,6 @@ public sealed record TimberbornWorldCellImportSummary(
         return ResolvedCellCountsByMaterialClass.TryGetValue(materialClass, out int count) ? count : 0;
     }
 
-    private string FormatSafeUnavailableFamilies()
-    {
-        string[] unavailableFamilies = ProviderSafeUnavailableCounts
-            .Where(static item => item.Value > 0)
-            .Select(static item => $"{item.Key}:{item.Value}")
-            .OrderBy(static item => item, StringComparer.Ordinal)
-            .ToArray();
-
-        return unavailableFamilies.Length == 0
-            ? "none"
-            : string.Join(",", unavailableFamilies);
-    }
 }
 
 public sealed record TimberbornWorldCellImportResult(
@@ -134,15 +109,12 @@ public sealed class TimberbornWorldCellImporter
             .ToDictionary(static group => group.Key, static group => group.Count());
         IReadOnlyDictionary<string, int> providerSourceCounts = providerResults
             .ToDictionary(static result => result.Family, static result => result.Sources.Count, StringComparer.OrdinalIgnoreCase);
-        IReadOnlyDictionary<string, int> providerSafeUnavailableCounts = providerResults
-            .ToDictionary(static result => result.Family, static result => result.SkippedSafeUnavailableCount, StringComparer.OrdinalIgnoreCase);
 
         return new TimberbornWorldCellImportSummary(
             sources.Count,
             sourceCountsByMaterialClass,
             resolvedCountsByMaterialClass,
-            providerSourceCounts,
-            providerSafeUnavailableCounts);
+            providerSourceCounts);
     }
 }
 
@@ -163,25 +135,5 @@ public sealed class TimberbornStaticCellSourceProvider : ITimberbornWorldCellSou
     public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
     {
         return new TimberbornWorldCellImportProviderResult(Family, _sources);
-    }
-}
-
-public sealed class TimberbornSafeUnavailableCellSourceProvider : ITimberbornWorldCellSourceProvider
-{
-    private readonly string _reason;
-
-    public TimberbornSafeUnavailableCellSourceProvider(string family, string reason)
-    {
-        Family = string.IsNullOrWhiteSpace(family)
-            ? throw new ArgumentException("Provider family is required.", nameof(family))
-            : family;
-        _reason = string.IsNullOrWhiteSpace(reason) ? "provider_missing" : reason;
-    }
-
-    public string Family { get; }
-
-    public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
-    {
-        return TimberbornWorldCellImportProviderResult.SafeUnavailable(Family, _reason);
     }
 }

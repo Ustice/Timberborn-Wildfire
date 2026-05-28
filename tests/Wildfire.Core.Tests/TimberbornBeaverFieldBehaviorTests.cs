@@ -20,7 +20,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
     }
 
     [Fact]
-    public void DispatcherReportsFireHeatAvoidanceAndWorkInterruptionAsMissingImplementation()
+    public void DispatcherFailsLoudlyWhenFireHeatExposureRequiresBeaverAvoidance()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
@@ -31,14 +31,12 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
         Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp, decision.Action);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt, decision.Action);
         Assert.Equal(1, dispatcher.Counters.FireHeatExposedBeavers);
-        Assert.Equal(2, dispatcher.Counters.FireHeatAvoidanceCandidates);
-        Assert.Equal(1, dispatcher.Counters.FireHeatInterruptedJobCandidates);
     }
 
     [Fact]
-    public void DispatcherTreatsActiveFlameAsImmediateSingedCandidate()
+    public void DispatcherTracksActiveFlameContactBeforeFailingFireHeatAttempt()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
@@ -47,24 +45,21 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1, maxFire: 0.9f)]), tick: 10));
 
         TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp, decision.Action);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt, decision.Action);
         Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(1, dispatcher.Counters.FireHeatActiveFlameContacts);
         Assert.Equal(0.9f, decision.MaxFire);
     }
 
     [Fact]
-    public void DispatcherAccumulatesFireHeatThroughSingedBurnedAndDeathCandidateStates()
+    public void DispatcherFailsLoudlyWhenFireHeatExposureHasNoImplementedActuator()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
             actuator,
             new RecordingFireLogSink(),
             new TimberbornBeaverFieldBehaviorOptions(
-                DecisionCooldownTicks: 1,
-                FireHeatSingedThresholdSamples: 2,
-                FireHeatBurnedThresholdSamples: 3,
-                FireHeatDeathCandidateThresholdSamples: 4));
+                DecisionCooldownTicks: 1));
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
             dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10));
@@ -81,10 +76,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new RecordingFireLogSink(),
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 1,
-                SmokeCoughingThresholdSamples: 8,
-                FireHeatSingedThresholdSamples: 2,
-                FireHeatBurnedThresholdSamples: 3,
-                FireHeatDeathCandidateThresholdSamples: 4));
+                SmokeCoughingThresholdSamples: 8));
 
         new[]
         {
@@ -102,14 +94,8 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
         Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp, decision.Action);
+        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt, decision.Action);
         Assert.Equal(1, entry.ConsecutiveFireHeatExposedSamples);
-        Assert.Equal(0, dispatcher.Counters.FireHeatSingedEntered);
-        Assert.Equal(0, dispatcher.Counters.FireHeatBurnedEntered);
-        Assert.Equal(0, dispatcher.Counters.FireHeatDeathCandidates);
-        Assert.Equal(0, dispatcher.Counters.FireHeatSingedSkippedUnavailablePath);
-        Assert.Equal(0, dispatcher.Counters.FireHeatBurnedSkippedUnavailablePath);
-        Assert.Equal(0, dispatcher.Counters.FireHeatDeathSkippedUnsafeApi);
     }
 
     [Fact]
@@ -120,8 +106,6 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new RecordingFireLogSink(),
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 1,
-                FireHeatSingedThresholdSamples: 2,
-                FireHeatBurnedThresholdSamples: 3,
                 FireHeatRecoveryDecaySamples: 2));
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
@@ -205,8 +189,6 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         Assert.Equal(1, dispatcher.Counters.SmokeCoughingEntered);
         Assert.Equal(3, dispatcher.Counters.ToxicSmokeExposedBeavers);
         Assert.Equal(6, dispatcher.Counters.ToxicSmokeExposureAccumulatedSamples);
-        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectAttempts);
-        Assert.Equal(3, dispatcher.Counters.ToxicSmokeContaminationEffectSkippedUnsafeApi);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.ToxicSmoke, actuator.Decisions.Last().Variant);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown, actuator.Decisions.Last().Action);
         Assert.Equal(6, Assert.Single(dispatcher.CaptureState().Entries).ConsecutiveExposedSamples);
@@ -220,8 +202,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         TimberbornBeaverFieldBehaviorOptions options = new(
             DecisionCooldownTicks: 1,
             SmokeCoughingThresholdSamples: 3,
-            SmokeChokingCandidateThresholdSamples: 4,
-            SmokeDeathCandidateThresholdSamples: 8,
+            SmokeChokingThresholdSamples: 4,
             ToxicSmokeExposureSampleWeight: 2);
         TimberbornBeaverFieldBehaviorDispatcher normalDispatcher = new(
             normalActuator,
@@ -246,16 +227,13 @@ public sealed class TimberbornBeaverFieldBehaviorTests
 
         Assert.Equal(2, normalDispatcher.Counters.SmokeExposureAccumulatedSamples);
         Assert.Equal(0, normalDispatcher.Counters.SmokeCoughingEntered);
-        Assert.Equal(0, normalDispatcher.Counters.SmokeChokingCandidates);
         Assert.Equal(4, toxicDispatcher.Counters.SmokeExposureAccumulatedSamples);
         Assert.Equal(1, toxicDispatcher.Counters.SmokeCoughingEntered);
-        Assert.Equal(1, toxicDispatcher.Counters.SmokeChokingCandidates);
-        Assert.Equal(1, toxicDispatcher.Counters.ToxicSmokeChokingCandidates);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown, toxicActuator.Decisions.Last().Action);
     }
 
     [Fact]
-    public void DispatcherKeepsNativeToxicContaminationEffectsSafeUnavailable()
+    public void DispatcherTracksToxicSmokeExposureWithoutFutureContaminationCounters()
     {
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
             new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Applied),
@@ -263,18 +241,13 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 1,
                 SmokeCoughingThresholdSamples: 1,
-                SmokeChokingCandidateThresholdSamples: 2,
-                SmokeDeathCandidateThresholdSamples: 5));
+                SmokeChokingThresholdSamples: 2));
 
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, contaminatedSmoke: 1)]), tick: 10);
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, contaminatedSmoke: 1)]), tick: 11);
 
-        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectAttempts);
-        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectSuccesses);
-        Assert.Equal(0, dispatcher.Counters.ToxicSmokeContaminationEffectFailures);
-        Assert.Equal(2, dispatcher.Counters.ToxicSmokeContaminationEffectSkippedUnsafeApi);
-        Assert.Equal(1, dispatcher.Counters.ToxicSmokeChokingCandidates);
-        Assert.Equal(0, dispatcher.Counters.ToxicSmokeDeathCandidates);
+        Assert.Equal(2, dispatcher.Counters.ToxicSmokeExposedBeavers);
+        Assert.Equal(4, dispatcher.Counters.ToxicSmokeExposureAccumulatedSamples);
     }
 
     [Fact]
@@ -321,7 +294,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
     }
 
     [Fact]
-    public void DispatcherAppliesChokingDebuffButKeepsIncapacitationAndDeathAsSkippedUnsafeCandidates()
+    public void DispatcherAppliesChokingDebuff()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
@@ -330,35 +303,20 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 1,
                 SmokeCoughingThresholdSamples: 1,
-                SmokeChokingCandidateThresholdSamples: 2,
-                SmokeChokingIncapacitationThresholdSamples: 3,
-                SmokeDeathCandidateThresholdSamples: 4));
+                SmokeChokingThresholdSamples: 2));
 
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10);
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 11);
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 12);
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 13);
 
-        Assert.Equal(1, dispatcher.Counters.SmokeChokingCandidates);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingSkippedUnsafeApi);
-        Assert.Equal(1, dispatcher.Counters.SmokeChokingIncapacitationCandidates);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingIncapacitationAttempts);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingIncapacitationsApplied);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingIncapacitationsRecovered);
-        Assert.Equal(1, dispatcher.Counters.SmokeChokingIncapacitationSkippedUnsafeApi);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingIncapacitationFailures);
-        Assert.Equal(1, dispatcher.Counters.SmokeDeathCandidates);
-        Assert.Equal(0, dispatcher.Counters.SmokeDeathAttempts);
-        Assert.Equal(0, dispatcher.Counters.SmokeDeathsApplied);
-        Assert.Equal(1, dispatcher.Counters.SmokeDeathSkippedUnsafeApi);
-        Assert.Equal(0, dispatcher.Counters.SmokeDeathFailures);
-        Assert.Equal(2, dispatcher.Counters.SkippedUnavailablePath);
+        Assert.Equal(3, dispatcher.Counters.SmokeChokingSlowdownsApplied);
         Assert.Equal(4, dispatcher.Counters.SmokeDecisionsApplied);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown, actuator.Decisions.Last().Action);
     }
 
     [Fact]
-    public void DispatcherRecoversChokingIncapacitationCandidateBeforeDeathThreshold()
+    public void DispatcherRecoversChokingSlowdownAfterExposureClears()
     {
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
             new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Applied),
@@ -366,9 +324,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 1,
                 SmokeCoughingThresholdSamples: 1,
-                SmokeChokingCandidateThresholdSamples: 2,
-                SmokeChokingIncapacitationThresholdSamples: 3,
-                SmokeDeathCandidateThresholdSamples: 5,
+                SmokeChokingThresholdSamples: 2,
                 SmokeRecoveryDecaySamples: 2));
 
         dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10);
@@ -377,17 +333,11 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         dispatcher.Dispatch(Snapshot([Classification("beaver-1")]), tick: 13);
         dispatcher.Dispatch(Snapshot([Classification("beaver-1")]), tick: 14);
 
-        Assert.Equal(1, dispatcher.Counters.SmokeChokingIncapacitationCandidates);
-        Assert.Equal(1, dispatcher.Counters.SmokeChokingIncapacitationSkippedUnsafeApi);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingIncapacitationsApplied);
-        Assert.Equal(0, dispatcher.Counters.SmokeChokingIncapacitationsRecovered);
-        Assert.Equal(0, dispatcher.Counters.SmokeDeathCandidates);
+        Assert.Equal(2, dispatcher.Counters.SmokeChokingSlowdownsRecovered);
         Assert.Equal(2, dispatcher.Counters.SmokeRecoveryDecays);
         Assert.Equal(1, dispatcher.Counters.SmokeCoughingRecovered);
         TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
         Assert.False(entry.IsExposed);
-        Assert.False(entry.IsChokingIncapacitated);
-        Assert.False(entry.IsSmokeDead);
         Assert.Equal(0, entry.ConsecutiveExposedSamples);
     }
 
@@ -466,16 +416,16 @@ public sealed class TimberbornBeaverFieldBehaviorTests
     }
 
     [Fact]
-    public void DispatcherFailsLoudlyWhenActuatorSkips()
+    public void DispatcherFailsLoudlyWhenActuatorFails()
     {
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
-            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.SkippedUnavailablePath),
+            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Failed),
             new RecordingFireLogSink());
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
             dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10));
 
-        Assert.Contains("Beaver field behavior actuator skipped", exception.Message);
+        Assert.Contains("Beaver field behavior actuator failed", exception.Message);
         Assert.Equal(1, dispatcher.Counters.DecisionsEvaluated);
         Assert.Equal(0, dispatcher.Counters.TrackedBeaverCount);
     }
@@ -489,9 +439,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 1,
                 SmokeCoughingThresholdSamples: 1,
-                SmokeChokingCandidateThresholdSamples: 2,
-                SmokeChokingIncapacitationThresholdSamples: 3,
-                SmokeDeathCandidateThresholdSamples: 5));
+                SmokeChokingThresholdSamples: 2));
         source.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10);
         source.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 11);
         source.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 12);
@@ -503,19 +451,14 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new TimberbornBeaverFieldBehaviorOptions(
                 DecisionCooldownTicks: 3,
                 SmokeCoughingThresholdSamples: 1,
-                SmokeChokingCandidateThresholdSamples: 2,
-                SmokeChokingIncapacitationThresholdSamples: 3,
-                SmokeDeathCandidateThresholdSamples: 5));
+                SmokeChokingThresholdSamples: 2));
         restored.RestoreState(snapshot);
         restored.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 13);
 
         TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(snapshot.Entries);
         Assert.Equal("beaver-1", entry.BeaverId);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.Smoke, entry.LastVariant);
-        Assert.False(entry.IsChokingIncapacitated);
-        Assert.False(entry.IsSmokeDead);
-        Assert.Equal(1, source.Counters.SmokeChokingIncapacitationCandidates);
-        Assert.Equal(1, source.Counters.SmokeChokingIncapacitationSkippedUnsafeApi);
+        Assert.Equal(2, source.Counters.SmokeChokingSlowdownsApplied);
         Assert.Equal(1, source.Counters.PersistenceSaveCount);
         Assert.Equal(1, restored.Counters.PersistenceLoadCount);
         Assert.Equal(1, restored.Counters.DecisionsSkippedCooldown);

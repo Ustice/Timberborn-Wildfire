@@ -51,7 +51,6 @@ public static class TimberbornDetonatorFireSafetyStableIds
 
 public enum TimberbornDetonatorFireSafetyDisableStatus
 {
-    SkippedUnavailablePath,
     Disabled,
 }
 
@@ -66,7 +65,6 @@ public readonly record struct TimberbornDetonatorFireSafetySummary(
     int DisabledTargetCount,
     int ArmedTargetCount,
     int SkippedSettingDisabledCount,
-    int SkippedUnavailablePathCount,
     int RecoverabilityPreservedCount,
     int RecoverabilityUnknownCount)
 {
@@ -77,7 +75,6 @@ public readonly record struct TimberbornDetonatorFireSafetySummary(
         DisabledTargetCount: 0,
         ArmedTargetCount: 0,
         SkippedSettingDisabledCount: 0,
-        SkippedUnavailablePathCount: 0,
         RecoverabilityPreservedCount: 0,
         RecoverabilityUnknownCount: 0);
 
@@ -146,7 +143,6 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 DisabledTargetCount: 0,
                 ArmedTargetCount: 0,
                 SkippedSettingDisabledCount: consequences.Length,
-                SkippedUnavailablePathCount: 0,
                 RecoverabilityPreservedCount: 0,
                 RecoverabilityUnknownCount: 0);
             _logSink.Info(disabledSummary.ToLogToken(tick));
@@ -178,8 +174,6 @@ public sealed class TimberbornDetonatorFireSafetySink : ITimberbornDetonatorFire
                 result.Status == TimberbornDetonatorFireSafetyDisableStatus.Disabled),
             ArmedTargetCount: 0,
             SkippedSettingDisabledCount: 0,
-            SkippedUnavailablePathCount: results.Count(static result =>
-                result.Status == TimberbornDetonatorFireSafetyDisableStatus.SkippedUnavailablePath),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
             RecoverabilityUnknownCount: results.Count(static result =>
                 !result.RecoverabilityPreserved));
@@ -321,7 +315,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
                     .Cast<object>()
                     .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
                     .FirstOrDefault(),
-                SafeApiUnavailable: false);
+                Failed: false);
         }
         catch (Exception exception) when (exception is not InvalidOperationException)
         {
@@ -338,7 +332,7 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
                     .GetObjectsWithComponentAt<Dynamite>(coordinates)
                     .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
                     .FirstOrDefault(),
-                SafeApiUnavailable: false);
+                Failed: false);
         }
         catch (Exception exception)
         {
@@ -348,21 +342,11 @@ public sealed class TimberbornDetonatorFireSafetyTargetApi : ITimberbornDetonato
 
     private readonly record struct FindDetonatorResult(
         object? Detonator,
-        bool SafeApiUnavailable)
-    {
-        public static readonly FindDetonatorResult SafeUnavailable = new(
-            Detonator: null,
-            SafeApiUnavailable: true);
-    }
+        bool Failed);
 
     private readonly record struct FindDynamiteControlResult(
         Dynamite? Dynamite,
-        bool SafeApiUnavailable)
-    {
-        public static readonly FindDynamiteControlResult SafeUnavailable = new(
-            Dynamite: null,
-            SafeApiUnavailable: true);
-    }
+        bool Failed);
 }
 
 public static class TimberbornDetonatorFireSafetyNativeWrapper

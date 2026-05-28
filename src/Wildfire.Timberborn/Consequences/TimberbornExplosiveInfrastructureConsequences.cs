@@ -42,7 +42,7 @@ public enum TimberbornExplosiveInfrastructureKind
 
 public enum TimberbornExplosiveInfrastructureNativeTriggerStatus
 {
-    SkippedUnavailablePath,
+    NotAttempted,
     SkippedAlreadyTriggered,
     Triggered,
 }
@@ -85,7 +85,6 @@ public readonly record struct TimberbornExplosiveInfrastructureConsequenceSummar
     int NativeTriggeredTargetCount,
     int HeatPulseCellCount,
     int SkippedSettingDisabledCount,
-    int SkippedUnavailablePathCount,
     int SkippedAlreadyTriggeredCount,
     int LastTriggeredDepth)
 {
@@ -98,7 +97,6 @@ public readonly record struct TimberbornExplosiveInfrastructureConsequenceSummar
         NativeTriggeredTargetCount: 0,
         HeatPulseCellCount: 0,
         SkippedSettingDisabledCount: 0,
-        SkippedUnavailablePathCount: 0,
         SkippedAlreadyTriggeredCount: 0,
         LastTriggeredDepth: 0);
 
@@ -258,7 +256,6 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
                 NativeTriggeredTargetCount: 0,
                 HeatPulseCellCount: 0,
                 SkippedSettingDisabledCount: consequences.Length,
-                SkippedUnavailablePathCount: 0,
                 SkippedAlreadyTriggeredCount: 0,
                 LastTriggeredDepth: 0);
             _logSink.Info(disabledSummary.ToLogToken(tick));
@@ -300,8 +297,6 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.Triggered),
             HeatPulseCellCount: triggeredResults.Sum(static result => result.HeatPulseCellCount),
             SkippedSettingDisabledCount: 0,
-            SkippedUnavailablePathCount: triggeredResults.Count(static result =>
-                result.NativeStatus == TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedUnavailablePath),
             SkippedAlreadyTriggeredCount: triggeredResults.Count(static result => result.NativeStatus ==
                 TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedAlreadyTriggered),
             LastTriggeredDepth: triggeredResults
@@ -359,7 +354,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
     {
         if (!settings.NativeDynamiteTriggerEnabled)
         {
-            return TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedUnavailablePath;
+            return TimberbornExplosiveInfrastructureNativeTriggerStatus.NotAttempted;
         }
 
         if (!target.CanTriggerNative)
@@ -368,7 +363,14 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
                 $"Native dynamite trigger is not enabled for {target.StableId}.");
         }
 
-        return _targetApi.TriggerNative(target, delayTicks: 1).Status;
+        TimberbornExplosiveInfrastructureNativeTriggerStatus status = _targetApi.TriggerNative(target, delayTicks: 1).Status;
+        if (status == TimberbornExplosiveInfrastructureNativeTriggerStatus.NotAttempted)
+        {
+            throw new InvalidOperationException(
+                $"Native dynamite trigger did not apply for {target.StableId}.");
+        }
+
+        return status;
     }
 
     private static string GetExposureKey(TimberbornExplosiveInfrastructureTarget target)
@@ -392,7 +394,7 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
             return new TriggeredTargetResult(
                 WasArmedThisTick: false,
                 WasTriggeredThisTick: false,
-                NativeStatus: TimberbornExplosiveInfrastructureNativeTriggerStatus.SkippedUnavailablePath,
+                NativeStatus: TimberbornExplosiveInfrastructureNativeTriggerStatus.NotAttempted,
                 HeatPulseCellCount: 0,
                 Depth: depth);
         }

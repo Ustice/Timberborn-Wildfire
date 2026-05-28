@@ -317,8 +317,8 @@ public sealed class WildfireReleaseSettingsTests
 
     [Theory]
     [InlineData(0, WildfireReleaseVisualDebugVisibility.Hidden, false)]
-    [InlineData(1, WildfireReleaseVisualDebugVisibility.SafeOverlay, true)]
-    public void VisualDebugVisibilitySettingOnlyEnablesSafeOverlayMode(
+    [InlineData(1, WildfireReleaseVisualDebugVisibility.DebugOverlay, true)]
+    public void VisualDebugVisibilitySettingOnlyEnablesDebugOverlayMode(
         int rawValue,
         WildfireReleaseVisualDebugVisibility expectedVisibility,
         bool expectedOverlayEnabled)

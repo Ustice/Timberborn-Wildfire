@@ -143,7 +143,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
-    public void FullyBurnedTreeRequestsDeathAndBurnedVisualThroughSafeBoundary()
+    public void FullyBurnedTreeRequestsDeathAndBurnedVisualThroughNativeBoundary()
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornBurnDamageService burnDamageService = CreateService(
@@ -168,7 +168,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
         Assert.Equal(1, summary.YieldLost);
         Assert.Equal(1, summary.KilledTreeCount);
         Assert.Equal(1, summary.VisualStateUpdateCount);
-        Assert.Equal(0, summary.SkippedUnsafeApiCount);
+        Assert.Equal(0, summary.FailedConsequenceCount);
     }
 
     [Fact]
@@ -430,7 +430,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
-    public void FuelDepletedTreeDoesNotClaimLeftoverVisualWhenNativeRefreshIsUnavailable()
+    public void FuelDepletedTreeFailsWhenNativeLeftoverRefreshFails()
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornBurnDamageService burnDamageService = CreateService(
@@ -440,8 +440,8 @@ public sealed class TimberbornTreeBurnConsequenceTests
             [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
         RecordingTreeBurnConsequenceApi treeApi = new(static consequence =>
             consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover
-                ? new TimberbornTreeBurnConsequenceResult(Applied: false, SafeApiUnavailable: true)
-                : new TimberbornTreeBurnConsequenceResult(Applied: true, SafeApiUnavailable: false));
+                ? new TimberbornTreeBurnConsequenceResult(Applied: false, Failed: true)
+                : new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false));
         TimberbornTreeBurnConsequenceSink treeSink = new(burnDamageService, treeApi);
         TimberbornFireCellDeltaDecision burnStep = Decision(0, oldFuel: 15, newFuel: 3);
         TimberbornFireCellDeltaDecision spentFuel = Decision(0, oldFuel: 3, newFuel: 0);
@@ -449,7 +449,8 @@ public sealed class TimberbornTreeBurnConsequenceTests
         burnDamageService.ApplyDamage(33, [burnStep]);
         TimberbornTreeBurnConsequenceSummary partialSummary = treeSink.ApplyConsequences(33, [burnStep]);
         burnDamageService.ApplyDamage(42, [spentFuel]);
-        TimberbornTreeBurnConsequenceSummary fullSummary = treeSink.ApplyConsequences(42, [spentFuel]);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            treeSink.ApplyConsequences(42, [spentFuel]));
 
         Assert.Contains(
             treeApi.Consequences,
@@ -461,9 +462,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
                 consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover);
         Assert.Equal(1, partialSummary.KilledTreeCount);
         Assert.Equal(1, partialSummary.VisualStateUpdateCount);
-        Assert.Equal(0, fullSummary.KilledTreeCount);
-        Assert.Equal(0, fullSummary.VisualStateUpdateCount);
-        Assert.Equal(1, fullSummary.SkippedUnsafeApiCount);
+        Assert.Contains("Tree burn consequence failed", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -505,7 +504,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
                 LastDeltaConsumerTreeBurnConsideredTargetCount: summary.TreeBurnConsideredTargetCount,
                 LastDeltaConsumerTreeBurnYieldLost: summary.TreeBurnYieldLost,
                 LastDeltaConsumerTreeBurnKilledTreeCount: summary.TreeBurnKilledTreeCount,
-                LastDeltaConsumerTreeBurnSkippedUnsafeApiCount: summary.TreeBurnSkippedUnsafeApiCount),
+                LastDeltaConsumerTreeBurnFailedConsequenceCount: summary.TreeBurnFailedConsequenceCount),
             ["help", "qa-readiness", "status"]);
 
         Assert.Equal(1, summary.TreeBurnConsideredTargetCount);
@@ -615,7 +614,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
             Consequences.Add(consequence);
             return apply?.Invoke(consequence) ?? new TimberbornTreeBurnConsequenceResult(
                 Applied: true,
-                SafeApiUnavailable: false);
+                Failed: false);
         }
     }
 

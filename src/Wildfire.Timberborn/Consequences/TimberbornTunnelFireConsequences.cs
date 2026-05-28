@@ -47,7 +47,6 @@ public readonly record struct TimberbornTunnelFireSettings(
 public enum TimberbornTunnelNativeExplodeStatus
 {
     SkippedSettingDisabled,
-    SkippedUnavailablePath,
     Applied,
 }
 
@@ -64,7 +63,6 @@ public readonly record struct TimberbornTunnelFireSummary(
     int NativeExplodeAppliedCount,
     int DestructionDeferredCount,
     int SkippedSettingDisabledCount,
-    int SkippedUnavailablePathCount,
     int RecoverabilityPreservedCount,
     int RecoverabilityUnknownCount)
 {
@@ -77,7 +75,6 @@ public readonly record struct TimberbornTunnelFireSummary(
         NativeExplodeAppliedCount: 0,
         DestructionDeferredCount: 0,
         SkippedSettingDisabledCount: 0,
-        SkippedUnavailablePathCount: 0,
         RecoverabilityPreservedCount: 0,
         RecoverabilityUnknownCount: 0);
 
@@ -151,7 +148,6 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
                 NativeExplodeAppliedCount: 0,
                 DestructionDeferredCount: 0,
                 SkippedSettingDisabledCount: consequences.Length,
-                SkippedUnavailablePathCount: 0,
                 RecoverabilityPreservedCount: 0,
                 RecoverabilityUnknownCount: 0);
             _logSink.Info(disabledSummary.ToLogToken(tick));
@@ -186,8 +182,6 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
             DestructionDeferredCount: results.Count(static result =>
                 result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedSettingDisabled),
             SkippedSettingDisabledCount: 0,
-            SkippedUnavailablePathCount: results.Count(static result =>
-                result.NativeStatus == TimberbornTunnelNativeExplodeStatus.SkippedUnavailablePath),
             RecoverabilityPreservedCount: results.Count(static result => result.RecoverabilityPreserved),
             RecoverabilityUnknownCount: results.Count(static result =>
                 !result.RecoverabilityPreserved));
@@ -223,11 +217,12 @@ public sealed class TimberbornTunnelFireSink : ITimberbornTunnelFireSink
         }
 
         TimberbornTunnelNativeExplodeResult result = _targetApi.ExplodeNative(target);
-        if (result.Status == TimberbornTunnelNativeExplodeStatus.Applied)
+        if (result.Status != TimberbornTunnelNativeExplodeStatus.Applied)
         {
-            _explodedTargets.Add(target.StableId);
+            throw new InvalidOperationException($"Tunnel native explode did not apply for {target.StableId}.");
         }
 
+        _explodedTargets.Add(target.StableId);
         return new TunnelTargetResult(
             MarkedUnstable: markedUnstable,
             NativeAttempted: true,
@@ -360,7 +355,7 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
                     .Cast<object>()
                     .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
                     .FirstOrDefault(),
-                SafeApiUnavailable: false);
+                Failed: false);
         }
         catch (Exception exception) when (exception is not InvalidOperationException)
         {
@@ -384,10 +379,5 @@ public sealed class TimberbornTunnelFireTargetApi : ITimberbornTunnelFireTargetA
 
     private readonly record struct FindTunnelResult(
         object? Tunnel,
-        bool SafeApiUnavailable)
-    {
-        public static readonly FindTunnelResult SafeUnavailable = new(
-            Tunnel: null,
-            SafeApiUnavailable: true);
-    }
+        bool Failed);
 }

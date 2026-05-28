@@ -5,7 +5,7 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornWaterInfrastructureFireEffectTests
 {
     [Fact]
-    public void SinkTreatsInertWaterInfrastructureAsSafeNoOps()
+    public void SinkTreatsInertWaterInfrastructureAsValidNoOps()
     {
         RecordingWaterInfrastructureTargetApi targetApi = new(Target(
             resources:
@@ -159,7 +159,7 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
     }
 
     [Fact]
-    public void SinkReportsUnavailablePathWhenWaterMutationIsUnavailable()
+    public void SinkThrowsWhenWaterMutationIsUnavailable()
     {
         RecordingWaterInfrastructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
@@ -167,14 +167,11 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
             canMutateWaterState: false));
         TimberbornWaterInfrastructureFireSink sink = new(targetApi);
 
-        TimberbornWaterInfrastructureFireSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             5,
-            [Decision(4, oldFuel: 9, newFuel: 2)]);
+            [Decision(4, oldFuel: 9, newFuel: 2)]));
 
-        Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(0, summary.WaterStateMutationAttemptCount);
-        Assert.Equal(1, summary.SkippedUnavailablePathCount);
-        Assert.Equal(4, summary.TotalDamageApplied);
+        Assert.Contains("Water infrastructure damage mutation is unavailable", exception.Message);
     }
 
     [Fact]
@@ -244,7 +241,6 @@ public sealed class TimberbornWaterInfrastructureFireEffectTests
             return new TimberbornWaterInfrastructureApplyResult(
                 AppliedDamage: damageTarget.CanMarkDamaged,
                 AttemptedWaterStateMutation: damageTarget.CanMutateWaterState && isFullyDamaged,
-                SkippedUnavailablePath: !damageTarget.CanMarkDamaged && !damageTarget.CanMutateWaterState,
                 RepairEligible: damageTarget.RepairEligible);
         }
     }

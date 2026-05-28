@@ -384,7 +384,7 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void ExecuteQaReadinessReturnsSafeLoadedGameReadinessState()
+    public void ExecuteQaReadinessReturnsLoadedGameReadinessState()
     {
         TimberbornQaCommandState state = new(
             IsSimulatorIntegrated: true,
@@ -743,9 +743,7 @@ public sealed class TimberbornQaCommandBridgeTests
                 TargetSoilContamination: 6,
                 IsAffectedCellContaminated: true,
                 IsContaminatedSuppressionInput: false,
-                IsBadwaterSuppressionInput: false,
-                WaterSuppressionInputSafeUnavailableCount: 1,
-                NativeDecontaminationAttemptCount: 0));
+                IsBadwaterSuppressionInput: false));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
@@ -773,7 +771,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("affected_cell_contaminated=true", result.Message);
         Assert.Contains("contaminated_suppression_input=false", result.Message);
         Assert.Contains("badwater_suppression_input=false", result.Message);
-        Assert.Contains("native_decontamination_attempts=0", result.Message);
         Assert.Contains("initial_cell=498", result.Message);
         Assert.Contains("set_water=3", result.Message);
         Assert.Contains("queued_water_changes=1", result.Message);
@@ -790,7 +787,7 @@ public sealed class TimberbornQaCommandBridgeTests
         string target,
         byte ashContamination,
         int expectedWaterTaintAttempts,
-        bool expectedSafeUnavailableWaterTaint)
+        bool expectedWaterTaint)
     {
         TimberbornQaCommandState state = new(
             IsSimulatorIntegrated: true,
@@ -806,7 +803,6 @@ public sealed class TimberbornQaCommandBridgeTests
             AshWaterWashoutTaintedAshWashed: target == "tainted" ? 1 : 0,
             AshWaterWashoutWaterTaintAttempts: expectedWaterTaintAttempts,
             AshWaterWashoutWaterTaintSuccesses: 0,
-            AshWaterWashoutSkippedUnsafeWaterApis: expectedWaterTaintAttempts,
             AshWaterWashoutNoOpCells: 0);
         RecordingStateProvider stateProvider = new(state);
         RecordingAshWaterStimulus ashWaterStimulus = new(
@@ -826,7 +822,7 @@ public sealed class TimberbornQaCommandBridgeTests
                 QueuedAshChangeCount: 1,
                 QueuedWaterChangeCount: 1,
                 ExpectedWaterTaintAttemptCount: expectedWaterTaintAttempts,
-                ExpectedSafeUnavailableWaterTaint: expectedSafeUnavailableWaterTaint));
+                ExpectedWaterTaint: expectedWaterTaint));
         RecordingLogSink logSink = new();
         TimberbornQaCommandBridge bridge = new(
             stateProvider,
@@ -862,7 +858,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("queued_water_changes=1", result.Message);
         Assert.Contains($"expected_water_taint_attempts={expectedWaterTaintAttempts}", result.Message);
         Assert.Contains(
-            $"expected_water_taint={expectedSafeUnavailableWaterTaint.ToString().ToLowerInvariant()}",
+            $"expected_water_taint={expectedWaterTaint.ToString().ToLowerInvariant()}",
             result.Message);
         Assert.Contains($"ash_water_washout_water_taint_attempts={expectedWaterTaintAttempts}", result.ResultToken);
         Assert.Contains("wildfire_command_request command=qa-ash-water-stimulus", logSink.InfoMessages);
@@ -1695,7 +1691,7 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueQaDeltaStimulusPathInfrastructureAllowsZeroCapacitySafeNoOpProbe()
+    public void QueueQaDeltaStimulusPathInfrastructureAllowsZeroCapacityValidNoOpProbe()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
@@ -2088,7 +2084,7 @@ public sealed class TimberbornQaCommandBridgeTests
         string target,
         byte ashContamination,
         int expectedWaterTaintAttempts,
-        bool expectedSafeUnavailableWaterTaint)
+        bool expectedWaterTaint)
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
@@ -2111,7 +2107,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(1, result.QueuedAshChangeCount);
         Assert.Equal(1, result.QueuedWaterChangeCount);
         Assert.Equal(expectedWaterTaintAttempts, result.ExpectedWaterTaintAttemptCount);
-        Assert.Equal(expectedSafeUnavailableWaterTaint, result.ExpectedSafeUnavailableWaterTaint);
+        Assert.Equal(expectedWaterTaint, result.ExpectedWaterTaint);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
         Assert.Equal(38, change.CellIndex);
         Assert.Null(change.SetCell);
@@ -2149,8 +2145,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.True(result.IsAffectedCellContaminated);
         Assert.False(result.IsContaminatedSuppressionInput);
         Assert.False(result.IsBadwaterSuppressionInput);
-        Assert.Equal(1, result.WaterSuppressionInputSafeUnavailableCount);
-        Assert.Equal(0, result.NativeDecontaminationAttemptCount);
         Assert.Equal(1, fireSystem.ContaminationFireSummary.ContaminatedAffectedMapCellCount);
         Assert.Equal(0, fireSystem.ContaminationFireSummary.ContaminatedWaterSuppressionInputCellCount);
         FireSimChange change = Assert.Single(simulator.RegisteredChanges);
@@ -2547,7 +2541,7 @@ public sealed class TimberbornQaCommandBridgeTests
                     1,
                     1,
                     0,
-                    ExpectedSafeUnavailableWaterTaint: false)));
+                    ExpectedWaterTaint: false)));
 
         TimberbornQaCommandResult result = bridge.Execute(command);
 
@@ -2598,7 +2592,6 @@ public sealed class TimberbornQaCommandBridgeTests
             LastDeltaConsumerStructureBurnDamageRollbackUnfinishedStageCount: 92,
             LastDeltaConsumerStructureBurnDamageRollbackVisualRollbackAppliedCount: 93,
             LastDeltaConsumerStructureBurnDamageRollbackConstructionPhaseEnteredCount: 94,
-            LastDeltaConsumerStructureBurnDamageRollbackSkippedNativeConstructionApiCount: 95,
             LastDeltaConsumerStructureBurnDamageRollbackTotalDamageApplied: 97,
             LastDeltaConsumerBurnDamageConsideredCellCount: 98,
             LastDeltaConsumerBurnDamageDamageCandidateCellCount: 99,
@@ -2616,7 +2609,6 @@ public sealed class TimberbornQaCommandBridgeTests
             LastPositiveStructureBurnDamageRollbackTick: 109,
             LastPositiveStructureBurnDamageRollbackUnfinishedStageCount: 110,
             LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount: 111,
-            LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount: 112,
             LastPositiveStructureBurnDamageRollbackTotalDamageApplied: 114,
             LastDeltaConsumerAlertCount: 23,
             LastPlayerFireAlertTick: 34,
@@ -2681,7 +2673,6 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorNoOpDecisionsApplied: 58,
             BeaverFieldBehaviorDecisionsSkippedCooldown: 59,
             BeaverFieldBehaviorDecisionsSkippedBatch: 60,
-            BeaverFieldBehaviorSkippedUnavailablePath: 61,
             BeaverFieldBehaviorFailedDecisions: 62,
             BeaverFieldBehaviorRecoveryActions: 63,
             BeaverFieldBehaviorSmokeExposedSamples: 64,
@@ -2690,49 +2681,14 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorSmokeCoughingRecovered: 67,
             BeaverFieldBehaviorSmokeCoughingSlowdownsApplied: 68,
             BeaverFieldBehaviorSmokeCoughingSlowdownsRecovered: 69,
-            BeaverFieldBehaviorSmokeCoughingSlowdownsSkippedUnavailablePath: 70,
             BeaverFieldBehaviorSmokeRecoveryDecays: 71,
-            BeaverFieldBehaviorSmokeChokingCandidates: 72,
             BeaverFieldBehaviorSmokeChokingSlowdownsApplied: 73,
             BeaverFieldBehaviorSmokeChokingSlowdownsRecovered: 74,
-            BeaverFieldBehaviorSmokeChokingSlowdownsSkippedUnavailablePath: 75,
-            BeaverFieldBehaviorSmokeChokingSkippedUnsafeApi: 76,
-            BeaverFieldBehaviorSmokeChokingIncapacitationCandidates: 108,
-            BeaverFieldBehaviorSmokeChokingIncapacitationAttempts: 109,
-            BeaverFieldBehaviorSmokeChokingIncapacitationsApplied: 110,
-            BeaverFieldBehaviorSmokeChokingIncapacitationsRecovered: 111,
-            BeaverFieldBehaviorSmokeChokingIncapacitationSkippedUnsafeApi: 112,
-            BeaverFieldBehaviorSmokeChokingIncapacitationFailures: 113,
-            BeaverFieldBehaviorSmokeDeathCandidates: 77,
-            BeaverFieldBehaviorSmokeDeathAttempts: 114,
-            BeaverFieldBehaviorSmokeDeathsApplied: 115,
-            BeaverFieldBehaviorSmokeDeathSkippedUnsafeApi: 78,
-            BeaverFieldBehaviorSmokeDeathFailures: 116,
             BeaverFieldBehaviorToxicSmokeExposedBeavers: 79,
             BeaverFieldBehaviorToxicSmokeExposureAccumulatedSamples: 80,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectAttempts: 81,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectSuccesses: 82,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectFailures: 83,
-            BeaverFieldBehaviorToxicSmokeContaminationEffectSkippedUnsafeApi: 84,
-            BeaverFieldBehaviorToxicSmokeChokingCandidates: 85,
-            BeaverFieldBehaviorToxicSmokeDeathCandidates: 86,
             BeaverFieldBehaviorToxicSmokeRecoveryDecays: 87,
             BeaverFieldBehaviorFireHeatExposedBeavers: 88,
             BeaverFieldBehaviorFireHeatActiveFlameContacts: 89,
-            BeaverFieldBehaviorFireHeatAvoidanceCandidates: 90,
-            BeaverFieldBehaviorFireHeatAvoidedCells: 91,
-            BeaverFieldBehaviorFireHeatAvoidanceSkippedUnavailablePath: 92,
-            BeaverFieldBehaviorFireHeatInterruptedJobCandidates: 93,
-            BeaverFieldBehaviorFireHeatInterruptedJobs: 94,
-            BeaverFieldBehaviorFireHeatInterruptedJobsSkippedUnavailablePath: 95,
-            BeaverFieldBehaviorFireHeatSingedEntered: 96,
-            BeaverFieldBehaviorFireHeatSingedRecovered: 97,
-            BeaverFieldBehaviorFireHeatSingedSkippedUnavailablePath: 98,
-            BeaverFieldBehaviorFireHeatBurnedEntered: 99,
-            BeaverFieldBehaviorFireHeatBurnedRecovered: 100,
-            BeaverFieldBehaviorFireHeatBurnedSkippedUnavailablePath: 101,
-            BeaverFieldBehaviorFireHeatDeathCandidates: 102,
-            BeaverFieldBehaviorFireHeatDeathSkippedUnsafeApi: 103,
             BeaverFieldBehaviorFireHeatRecoveryDecays: 104,
             BeaverFieldBehaviorPersistenceSaves: 105,
             BeaverFieldBehaviorPersistenceLoads: 106,
@@ -2787,7 +2743,6 @@ public sealed class TimberbornQaCommandBridgeTests
             WorldImportResolvedInfrastructureCells: 0,
             WorldImportResolvedWaterCells: 0,
             WorldImportResolvedBadwaterCells: 0,
-            WorldImportSafeUnavailableCount: 3,
             PersistentRestoreNoLiveFuelCellsCleared: 4,
             AshFieldEntries: 4,
             AshFieldFertileCells: 2,
@@ -2798,7 +2753,7 @@ public sealed class TimberbornQaCommandBridgeTests
             AshFieldGrowthCandidateCells: 2,
             AshFieldGrowthAppliedGrowables: 1,
             AshFieldGrowthSkippedTaintedCells: 1,
-            AshFieldGrowthSkippedUnsafeApis: 0,
+            AshFieldGrowthFailedApplications: 0,
             ContaminationFireContaminatedBurnSources: 6,
             ContaminationFireContaminatedAffectedCells: 7,
             ContaminationFireContaminatedAffectedMapCells: 8,
@@ -2806,27 +2761,22 @@ public sealed class TimberbornQaCommandBridgeTests
             ContaminationFireContaminatedWaterLikeMapCells: 10,
             ContaminationFireBadwaterSuppressionInputs: 0,
             ContaminationFireContaminatedWaterSuppressionInputs: 0,
-            ContaminationFireWaterSuppressionInputSafeUnavailable: 11,
             ContaminationFireToxicSmokeCells: 48,
             ContaminationFireNativeDecontaminationAttempts: 0,
-            ContaminationFireSkippedUnsafeContaminationApis: 11,
             TaintedAshPoisonCandidateCells: 1,
             TaintedAshPoisonAppliedCells: 1,
-            TaintedAshPoisonSkippedUnavailablePath: 0,
             AshWaterWashoutCandidateAshCells: 4,
             AshWaterWashoutCleanAshWashed: 2,
             AshWaterWashoutTaintedAshWashed: 1,
             AshWaterWashoutWaterTaintAttempts: 1,
             AshWaterWashoutWaterTaintSuccesses: 0,
-            AshWaterWashoutSkippedUnsafeWaterApis: 1,
             AshWaterWashoutNoOpCells: 1,
             FertileAshGathererPosts: 2,
             FertileAshCollectionCandidateCells: 2,
             FertileAshCollectionReachableCells: 1,
             FertileAshCollectedGoods: 1,
             FertileAshCollectionDepletedCells: 1,
-            FertileAshCollectionSkippedTaintedOrSpentCells: 2,
-            FertileAshCollectionSkippedInventoryApi: 0);
+            FertileAshCollectionSkippedTaintedOrSpentCells: 2);
         TimberbornQaCommandBridge bridge = new(new RecordingStateProvider(state), new RecordingLogSink());
 
         TimberbornQaCommandResult result = bridge.Execute("status");
@@ -2872,7 +2822,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_stage_unfinished=92", result.ResultToken);
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_visual_applied=93", result.ResultToken);
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_construction_phase_entered=94", result.ResultToken);
-        Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_skipped_native_construction_api=95", result.ResultToken);
         Assert.Contains("last_delta_consumer_structure_burn_damage_rollback_total_damage_applied=97", result.ResultToken);
         Assert.Contains("last_delta_consumer_burn_damage_considered_cells=98", result.ResultToken);
         Assert.Contains("last_delta_consumer_burn_damage_candidate_cells=99", result.ResultToken);
@@ -2890,7 +2839,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("last_positive_structure_burn_damage_rollback_tick=109", result.ResultToken);
         Assert.Contains("last_positive_structure_burn_damage_rollback_stage_unfinished=110", result.ResultToken);
         Assert.Contains("last_positive_structure_burn_damage_rollback_construction_phase_entered=111", result.ResultToken);
-        Assert.Contains("last_positive_structure_burn_damage_rollback_skipped_native_construction_api=112", result.ResultToken);
         Assert.Contains("last_positive_structure_burn_damage_rollback_total_damage_applied=114", result.ResultToken);
         Assert.Contains("last_delta_consumer_alerts=23", result.ResultToken);
         Assert.Contains("last_player_fire_alert_tick=34", result.ResultToken);
@@ -2964,37 +2912,13 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_applied=68", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_coughing_slowdowns_recovered=69", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_recovery_decays=71", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_candidates=72", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_applied=73", result.ResultToken);
         Assert.Contains("beaver_field_behavior_smoke_choking_slowdowns_recovered=74", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_candidates=108", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_attempts=109", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitations_applied=110", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitations_recovered=111", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_choking_incapacitation_failures=113", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_death_candidates=77", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_death_attempts=114", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_deaths_applied=115", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_smoke_death_failures=116", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_exposed_beavers=79", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_exposure_accumulated_samples=80", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_attempts=81", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_successes=82", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_toxic_smoke_contamination_effect_failures=83", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_toxic_smoke_choking_candidates=85", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_toxic_smoke_death_candidates=86", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_recovery_decays=87", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_exposed_beavers=88", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_active_flame_contacts=89", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_avoidance_candidates=90", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_avoided_cells=91", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_job_candidates=93", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_interrupted_jobs=94", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_singed_entered=96", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_singed_recovered=97", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_burned_entered=99", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_burned_recovered=100", result.ResultToken);
-        Assert.Contains("beaver_field_behavior_fire_heat_death_candidates=102", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_recovery_decays=104", result.ResultToken);
         Assert.Contains("beaver_field_behavior_persistence_saves=105", result.ResultToken);
         Assert.Contains("beaver_field_behavior_persistence_loads=106", result.ResultToken);
@@ -3069,7 +2993,6 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("fertile_ash_collected_goods=1", result.ResultToken);
         Assert.Contains("fertile_ash_collection_depleted_cells=1", result.ResultToken);
         Assert.Contains("fertile_ash_collection_skipped_tainted_or_spent_cells=2", result.ResultToken);
-        Assert.Contains("fertile_ash_collection_skipped_inventory_api=0", result.ResultToken);
     }
 
     [Fact]

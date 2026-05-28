@@ -213,13 +213,13 @@ public sealed class TimberbornPlayerFireAlertTests
     }
 
     [Fact]
-    public void BeaverDangerAndDeathFeedbackUsesHighestPriorityClass()
+    public void BeaverDangerFeedbackUsesHighestPriorityClass()
     {
         RecordingPlayerNotificationSink notificationSink = new();
         RecordingFireLogSink logSink = new();
         TimberbornPlayerFireAlertSink sink = new(notificationSink, logSink);
 
-        sink.PublishBeaverBehavior(40, BeaverCounters(tracked: 2, fireHeatDeaths: 1, smokeDeaths: 1));
+        sink.PublishBeaverBehavior(40, BeaverCounters(tracked: 2, coughingSlowdowns: 1, chokingSlowdowns: 1));
 
         string message = Assert.Single(notificationSink.WarningMessages);
         Assert.Contains("Wildfire consequence: beaver danger/death", message);
@@ -246,8 +246,8 @@ public sealed class TimberbornPlayerFireAlertTests
 
     private static TimberbornBeaverFieldBehaviorCounters BeaverCounters(
         int tracked,
-        int fireHeatDeaths,
-        int smokeDeaths)
+        int coughingSlowdowns,
+        int chokingSlowdowns)
     {
         return new TimberbornBeaverFieldBehaviorCounters(
             DispatcherEnabled: true,
@@ -259,58 +259,22 @@ public sealed class TimberbornPlayerFireAlertTests
             NoOpDecisionsApplied: 0,
             DecisionsSkippedCooldown: 0,
             DecisionsSkippedBatch: 0,
-            SkippedUnavailablePath: 0,
             FailedDecisions: 0,
             RecoveryActions: 0,
             SmokeExposedSamples: 0,
             SmokeExposureAccumulatedSamples: 0,
             SmokeCoughingEntered: 0,
             SmokeCoughingRecovered: 0,
-            SmokeCoughingSlowdownsApplied: 0,
+            SmokeCoughingSlowdownsApplied: coughingSlowdowns,
             SmokeCoughingSlowdownsRecovered: 0,
-            SmokeCoughingSlowdownsSkippedUnavailablePath: 0,
             SmokeRecoveryDecays: 0,
-            SmokeChokingCandidates: 0,
-            SmokeChokingSlowdownsApplied: 0,
+            SmokeChokingSlowdownsApplied: chokingSlowdowns,
             SmokeChokingSlowdownsRecovered: 0,
-            SmokeChokingSlowdownsSkippedUnavailablePath: 0,
-            SmokeChokingSkippedUnsafeApi: 0,
-            SmokeChokingIncapacitationCandidates: 0,
-            SmokeChokingIncapacitationAttempts: 0,
-            SmokeChokingIncapacitationsApplied: 0,
-            SmokeChokingIncapacitationsRecovered: 0,
-            SmokeChokingIncapacitationSkippedUnsafeApi: 0,
-            SmokeChokingIncapacitationFailures: 0,
-            SmokeDeathCandidates: smokeDeaths,
-            SmokeDeathAttempts: 0,
-            SmokeDeathsApplied: 0,
-            SmokeDeathSkippedUnsafeApi: 0,
-            SmokeDeathFailures: 0,
             ToxicSmokeExposedBeavers: 0,
             ToxicSmokeExposureAccumulatedSamples: 0,
-            ToxicSmokeContaminationEffectAttempts: 0,
-            ToxicSmokeContaminationEffectSuccesses: 0,
-            ToxicSmokeContaminationEffectFailures: 0,
-            ToxicSmokeContaminationEffectSkippedUnsafeApi: 0,
-            ToxicSmokeChokingCandidates: 0,
-            ToxicSmokeDeathCandidates: 0,
             ToxicSmokeRecoveryDecays: 0,
             FireHeatExposedBeavers: 0,
             FireHeatActiveFlameContacts: 0,
-            FireHeatAvoidanceCandidates: 0,
-            FireHeatAvoidedCells: 0,
-            FireHeatAvoidanceSkippedUnavailablePath: 0,
-            FireHeatInterruptedJobCandidates: 0,
-            FireHeatInterruptedJobs: 0,
-            FireHeatInterruptedJobsSkippedUnavailablePath: 0,
-            FireHeatSingedEntered: 0,
-            FireHeatSingedRecovered: 0,
-            FireHeatSingedSkippedUnavailablePath: 0,
-            FireHeatBurnedEntered: 0,
-            FireHeatBurnedRecovered: 0,
-            FireHeatBurnedSkippedUnavailablePath: 0,
-            FireHeatDeathCandidates: fireHeatDeaths,
-            FireHeatDeathSkippedUnsafeApi: 0,
             FireHeatRecoveryDecays: 0,
             PersistenceSaveCount: 0,
             PersistenceLoadCount: 0,

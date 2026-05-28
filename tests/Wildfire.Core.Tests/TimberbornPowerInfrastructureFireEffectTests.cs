@@ -133,20 +133,18 @@ public sealed class TimberbornPowerInfrastructureFireEffectTests
     }
 
     [Fact]
-    public void SinkReportsUnavailablePathWhenPowerMutationIsUnavailable()
+    public void SinkThrowsWhenPowerMutationIsUnavailable()
     {
         RecordingPowerInfrastructureTargetApi targetApi = new(Target(
             resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
             canMarkDamaged: false));
         TimberbornPowerInfrastructureFireSink sink = new(targetApi);
 
-        TimberbornPowerInfrastructureFireSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             4,
-            [Decision(4, oldFuel: 8, newFuel: 3)]);
+            [Decision(4, oldFuel: 8, newFuel: 3)]));
 
-        Assert.Equal(0, summary.DamagedTargetCount);
-        Assert.Equal(1, summary.SkippedUnavailablePathCount);
-        Assert.Equal(5, summary.TotalDamageApplied);
+        Assert.Contains("Power infrastructure damage mutation is unavailable", exception.Message);
     }
 
     [Fact]
@@ -216,7 +214,6 @@ public sealed class TimberbornPowerInfrastructureFireEffectTests
             return new TimberbornPowerInfrastructureApplyResult(
                 AppliedDamage: damageTarget.CanMarkDamaged,
                 DisabledOrDisconnected: damageTarget.CanDisableOrDisconnect && isFullyDamaged,
-                SkippedUnavailablePath: !damageTarget.CanMarkDamaged && !damageTarget.CanDisableOrDisconnect,
                 RepairEligible: damageTarget.RepairEligible);
         }
     }

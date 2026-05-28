@@ -14,14 +14,9 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
         uint DecisionCooldownTicks = 3,
         int MaxDecisionsPerDispatch = 64,
         int SmokeCoughingThresholdSamples = 3,
-        int SmokeChokingCandidateThresholdSamples = 8,
-        int SmokeChokingIncapacitationThresholdSamples = -1,
-        int SmokeDeathCandidateThresholdSamples = 16,
+        int SmokeChokingThresholdSamples = 8,
         int SmokeRecoveryDecaySamples = 1,
         int ToxicSmokeExposureSampleWeight = 2,
-        int FireHeatSingedThresholdSamples = 2,
-        int FireHeatBurnedThresholdSamples = 5,
-        int FireHeatDeathCandidateThresholdSamples = 12,
         int FireHeatRecoveryDecaySamples = 1,
         float ActiveFlameContactThreshold = 0.75f)
     {
@@ -49,42 +44,12 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
                 "The smoke coughing threshold must be positive.");
         }
 
-        if (SmokeChokingCandidateThresholdSamples < SmokeCoughingThresholdSamples)
+        if (SmokeChokingThresholdSamples < SmokeCoughingThresholdSamples)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(SmokeChokingCandidateThresholdSamples),
-                SmokeChokingCandidateThresholdSamples,
-                "The smoke choking candidate threshold must not be below the coughing threshold.");
-        }
-
-        if (SmokeDeathCandidateThresholdSamples < SmokeChokingCandidateThresholdSamples)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(SmokeDeathCandidateThresholdSamples),
-                SmokeDeathCandidateThresholdSamples,
-                "The smoke death candidate threshold must not be below the choking candidate threshold.");
-        }
-
-        int effectiveSmokeChokingIncapacitationThresholdSamples =
-            SmokeChokingIncapacitationThresholdSamples < 0
-                ? SmokeChokingCandidateThresholdSamples +
-                    ((SmokeDeathCandidateThresholdSamples - SmokeChokingCandidateThresholdSamples) / 2)
-                : SmokeChokingIncapacitationThresholdSamples;
-
-        if (effectiveSmokeChokingIncapacitationThresholdSamples < SmokeChokingCandidateThresholdSamples)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(SmokeChokingIncapacitationThresholdSamples),
-                SmokeChokingIncapacitationThresholdSamples,
-                "The smoke choking incapacitation threshold must not be below the choking candidate threshold.");
-        }
-
-        if (SmokeDeathCandidateThresholdSamples < effectiveSmokeChokingIncapacitationThresholdSamples)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(SmokeDeathCandidateThresholdSamples),
-                SmokeDeathCandidateThresholdSamples,
-                "The smoke death candidate threshold must not be below the choking incapacitation threshold.");
+                nameof(SmokeChokingThresholdSamples),
+                SmokeChokingThresholdSamples,
+                "The smoke choking threshold must not be below the coughing threshold.");
         }
 
         if (SmokeRecoveryDecaySamples <= 0)
@@ -101,30 +66,6 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
                 nameof(ToxicSmokeExposureSampleWeight),
                 ToxicSmokeExposureSampleWeight,
                 "The toxic smoke exposure sample weight must be positive.");
-        }
-
-        if (FireHeatSingedThresholdSamples <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(FireHeatSingedThresholdSamples),
-                FireHeatSingedThresholdSamples,
-                "The fire/heat singed threshold must be positive.");
-        }
-
-        if (FireHeatBurnedThresholdSamples < FireHeatSingedThresholdSamples)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(FireHeatBurnedThresholdSamples),
-                FireHeatBurnedThresholdSamples,
-                "The fire/heat burned threshold must not be below the singed threshold.");
-        }
-
-        if (FireHeatDeathCandidateThresholdSamples < FireHeatBurnedThresholdSamples)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(FireHeatDeathCandidateThresholdSamples),
-                FireHeatDeathCandidateThresholdSamples,
-                "The fire/heat death candidate threshold must not be below the burned threshold.");
         }
 
         if (FireHeatRecoveryDecaySamples <= 0)
@@ -146,14 +87,9 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
         this.DecisionCooldownTicks = DecisionCooldownTicks;
         this.MaxDecisionsPerDispatch = MaxDecisionsPerDispatch;
         this.SmokeCoughingThresholdSamples = SmokeCoughingThresholdSamples;
-        this.SmokeChokingCandidateThresholdSamples = SmokeChokingCandidateThresholdSamples;
-        this.SmokeChokingIncapacitationThresholdSamples = effectiveSmokeChokingIncapacitationThresholdSamples;
-        this.SmokeDeathCandidateThresholdSamples = SmokeDeathCandidateThresholdSamples;
+        this.SmokeChokingThresholdSamples = SmokeChokingThresholdSamples;
         this.SmokeRecoveryDecaySamples = SmokeRecoveryDecaySamples;
         this.ToxicSmokeExposureSampleWeight = ToxicSmokeExposureSampleWeight;
-        this.FireHeatSingedThresholdSamples = FireHeatSingedThresholdSamples;
-        this.FireHeatBurnedThresholdSamples = FireHeatBurnedThresholdSamples;
-        this.FireHeatDeathCandidateThresholdSamples = FireHeatDeathCandidateThresholdSamples;
         this.FireHeatRecoveryDecaySamples = FireHeatRecoveryDecaySamples;
         this.ActiveFlameContactThreshold = ActiveFlameContactThreshold;
     }
@@ -164,21 +100,11 @@ public sealed class TimberbornBeaverFieldBehaviorOptions
 
     public int SmokeCoughingThresholdSamples { get; }
 
-    public int SmokeChokingCandidateThresholdSamples { get; }
-
-    public int SmokeChokingIncapacitationThresholdSamples { get; }
-
-    public int SmokeDeathCandidateThresholdSamples { get; }
+    public int SmokeChokingThresholdSamples { get; }
 
     public int SmokeRecoveryDecaySamples { get; }
 
     public int ToxicSmokeExposureSampleWeight { get; }
-
-    public int FireHeatSingedThresholdSamples { get; }
-
-    public int FireHeatBurnedThresholdSamples { get; }
-
-    public int FireHeatDeathCandidateThresholdSamples { get; }
 
     public int FireHeatRecoveryDecaySamples { get; }
 
@@ -194,20 +120,16 @@ public enum TimberbornBeaverFieldBehaviorVariant
 
 public enum TimberbornBeaverFieldBehaviorAction
 {
-    SafeNoOp = 1,
-    CoughingSafeNoOp = 2,
+    NoOp = 1,
     CoughingWorkSlowdown = 3,
     ChokingWorkSlowdown = 4,
-    FireHeatAvoidanceSafeNoOp = 5,
-    FireHeatSingedSafeNoOp = 6,
-    FireHeatBurnedSafeNoOp = 7,
+    FireHeatExposureAttempt = 5,
 }
 
 public enum TimberbornBeaverFieldBehaviorActuatorStatus
 {
     Applied = 1,
-    SkippedUnavailablePath = 2,
-    Failed = 3,
+    Failed = 2,
 }
 
 public readonly record struct TimberbornBeaverFieldBehaviorDecision(
@@ -234,9 +156,6 @@ public readonly record struct TimberbornBeaverFieldBehaviorActuatorResult(
         TimberbornBeaverFieldBehaviorActuatorStatus.Applied,
         "applied");
 
-    public static readonly TimberbornBeaverFieldBehaviorActuatorResult SkippedUnavailablePath = new(
-        TimberbornBeaverFieldBehaviorActuatorStatus.SkippedUnavailablePath,
-        "skipped");
 }
 
 public interface ITimberbornBeaverFieldBehaviorActuator
@@ -290,13 +209,6 @@ public readonly record struct TimberbornBeaverWorkerSpeedResult(
     public static readonly TimberbornBeaverWorkerSpeedResult Applied = new(
         TimberbornBeaverFieldBehaviorActuatorStatus.Applied,
         "applied");
-
-    public static TimberbornBeaverWorkerSpeedResult Skipped(string reason)
-    {
-        return new TimberbornBeaverWorkerSpeedResult(
-            TimberbornBeaverFieldBehaviorActuatorStatus.SkippedUnavailablePath,
-            string.IsNullOrWhiteSpace(reason) ? "skipped" : reason);
-    }
 
     public static TimberbornBeaverWorkerSpeedResult Failed(string reason)
     {
@@ -595,7 +507,6 @@ public readonly record struct TimberbornBeaverFieldBehaviorCounters(
     int NoOpDecisionsApplied,
     int DecisionsSkippedCooldown,
     int DecisionsSkippedBatch,
-    int SkippedUnavailablePath,
     int FailedDecisions,
     int RecoveryActions,
     int SmokeExposedSamples,
@@ -604,49 +515,14 @@ public readonly record struct TimberbornBeaverFieldBehaviorCounters(
     int SmokeCoughingRecovered,
     int SmokeCoughingSlowdownsApplied,
     int SmokeCoughingSlowdownsRecovered,
-    int SmokeCoughingSlowdownsSkippedUnavailablePath,
     int SmokeRecoveryDecays,
-    int SmokeChokingCandidates,
     int SmokeChokingSlowdownsApplied,
     int SmokeChokingSlowdownsRecovered,
-    int SmokeChokingSlowdownsSkippedUnavailablePath,
-    int SmokeChokingSkippedUnsafeApi,
-    int SmokeChokingIncapacitationCandidates,
-    int SmokeChokingIncapacitationAttempts,
-    int SmokeChokingIncapacitationsApplied,
-    int SmokeChokingIncapacitationsRecovered,
-    int SmokeChokingIncapacitationSkippedUnsafeApi,
-    int SmokeChokingIncapacitationFailures,
-    int SmokeDeathCandidates,
-    int SmokeDeathAttempts,
-    int SmokeDeathsApplied,
-    int SmokeDeathSkippedUnsafeApi,
-    int SmokeDeathFailures,
     int ToxicSmokeExposedBeavers,
     int ToxicSmokeExposureAccumulatedSamples,
-    int ToxicSmokeContaminationEffectAttempts,
-    int ToxicSmokeContaminationEffectSuccesses,
-    int ToxicSmokeContaminationEffectFailures,
-    int ToxicSmokeContaminationEffectSkippedUnsafeApi,
-    int ToxicSmokeChokingCandidates,
-    int ToxicSmokeDeathCandidates,
     int ToxicSmokeRecoveryDecays,
     int FireHeatExposedBeavers,
     int FireHeatActiveFlameContacts,
-    int FireHeatAvoidanceCandidates,
-    int FireHeatAvoidedCells,
-    int FireHeatAvoidanceSkippedUnavailablePath,
-    int FireHeatInterruptedJobCandidates,
-    int FireHeatInterruptedJobs,
-    int FireHeatInterruptedJobsSkippedUnavailablePath,
-    int FireHeatSingedEntered,
-    int FireHeatSingedRecovered,
-    int FireHeatSingedSkippedUnavailablePath,
-    int FireHeatBurnedEntered,
-    int FireHeatBurnedRecovered,
-    int FireHeatBurnedSkippedUnavailablePath,
-    int FireHeatDeathCandidates,
-    int FireHeatDeathSkippedUnsafeApi,
     int FireHeatRecoveryDecays,
     int PersistenceSaveCount,
     int PersistenceLoadCount,
@@ -671,9 +547,7 @@ public sealed record TimberbornBeaverFieldBehaviorStateEntry(
     uint LastDecisionTick,
     int ConsecutiveExposedSamples,
     int ConsecutiveFireHeatExposedSamples,
-    bool IsExposed,
-    bool IsChokingIncapacitated = false,
-    bool IsSmokeDead = false)
+    bool IsExposed)
 {
     public const int CurrentPersistenceVersion = 1;
 }
@@ -691,7 +565,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private int _noOpDecisionsApplied;
     private int _decisionsSkippedCooldown;
     private int _decisionsSkippedBatch;
-    private int _skippedUnavailablePath;
     private int _failedDecisions;
     private int _recoveryActions;
     private int _smokeExposedSamples;
@@ -700,49 +573,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private int _smokeCoughingRecovered;
     private int _smokeCoughingSlowdownsApplied;
     private int _smokeCoughingSlowdownsRecovered;
-    private int _smokeCoughingSlowdownsSkippedUnavailablePath;
     private int _smokeRecoveryDecays;
-    private int _smokeChokingCandidates;
     private int _smokeChokingSlowdownsApplied;
     private int _smokeChokingSlowdownsRecovered;
-    private int _smokeChokingSlowdownsSkippedUnavailablePath;
-    private int _smokeChokingSkippedUnsafeApi;
-    private int _smokeChokingIncapacitationCandidates;
-    private int _smokeChokingIncapacitationAttempts;
-    private int _smokeChokingIncapacitationsApplied;
-    private int _smokeChokingIncapacitationsRecovered;
-    private int _smokeChokingIncapacitationSkippedUnsafeApi;
-    private int _smokeChokingIncapacitationFailures;
-    private int _smokeDeathCandidates;
-    private int _smokeDeathAttempts;
-    private int _smokeDeathsApplied;
-    private int _smokeDeathSkippedUnsafeApi;
-    private int _smokeDeathFailures;
     private int _toxicSmokeExposedBeavers;
     private int _toxicSmokeExposureAccumulatedSamples;
-    private int _toxicSmokeContaminationEffectAttempts;
-    private int _toxicSmokeContaminationEffectSuccesses;
-    private int _toxicSmokeContaminationEffectFailures;
-    private int _toxicSmokeContaminationEffectSkippedUnsafeApi;
-    private int _toxicSmokeChokingCandidates;
-    private int _toxicSmokeDeathCandidates;
     private int _toxicSmokeRecoveryDecays;
     private int _fireHeatExposedBeavers;
     private int _fireHeatActiveFlameContacts;
-    private int _fireHeatAvoidanceCandidates;
-    private int _fireHeatAvoidedCells;
-    private int _fireHeatAvoidanceSkippedUnavailablePath;
-    private int _fireHeatInterruptedJobCandidates;
-    private int _fireHeatInterruptedJobs;
-    private int _fireHeatInterruptedJobsSkippedUnavailablePath;
-    private int _fireHeatSingedEntered;
-    private int _fireHeatSingedRecovered;
-    private int _fireHeatSingedSkippedUnavailablePath;
-    private int _fireHeatBurnedEntered;
-    private int _fireHeatBurnedRecovered;
-    private int _fireHeatBurnedSkippedUnavailablePath;
-    private int _fireHeatDeathCandidates;
-    private int _fireHeatDeathSkippedUnsafeApi;
     private int _fireHeatRecoveryDecays;
     private int _persistenceSaveCount;
     private int _persistenceLoadCount;
@@ -770,7 +608,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         NoOpDecisionsApplied: _noOpDecisionsApplied,
         DecisionsSkippedCooldown: _decisionsSkippedCooldown,
         DecisionsSkippedBatch: _decisionsSkippedBatch,
-        SkippedUnavailablePath: _skippedUnavailablePath,
         FailedDecisions: _failedDecisions,
         RecoveryActions: _recoveryActions,
         SmokeExposedSamples: _smokeExposedSamples,
@@ -779,49 +616,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         SmokeCoughingRecovered: _smokeCoughingRecovered,
         SmokeCoughingSlowdownsApplied: _smokeCoughingSlowdownsApplied,
         SmokeCoughingSlowdownsRecovered: _smokeCoughingSlowdownsRecovered,
-        SmokeCoughingSlowdownsSkippedUnavailablePath: _smokeCoughingSlowdownsSkippedUnavailablePath,
         SmokeRecoveryDecays: _smokeRecoveryDecays,
-        SmokeChokingCandidates: _smokeChokingCandidates,
         SmokeChokingSlowdownsApplied: _smokeChokingSlowdownsApplied,
         SmokeChokingSlowdownsRecovered: _smokeChokingSlowdownsRecovered,
-        SmokeChokingSlowdownsSkippedUnavailablePath: _smokeChokingSlowdownsSkippedUnavailablePath,
-        SmokeChokingSkippedUnsafeApi: _smokeChokingSkippedUnsafeApi,
-        SmokeChokingIncapacitationCandidates: _smokeChokingIncapacitationCandidates,
-        SmokeChokingIncapacitationAttempts: _smokeChokingIncapacitationAttempts,
-        SmokeChokingIncapacitationsApplied: _smokeChokingIncapacitationsApplied,
-        SmokeChokingIncapacitationsRecovered: _smokeChokingIncapacitationsRecovered,
-        SmokeChokingIncapacitationSkippedUnsafeApi: _smokeChokingIncapacitationSkippedUnsafeApi,
-        SmokeChokingIncapacitationFailures: _smokeChokingIncapacitationFailures,
-        SmokeDeathCandidates: _smokeDeathCandidates,
-        SmokeDeathAttempts: _smokeDeathAttempts,
-        SmokeDeathsApplied: _smokeDeathsApplied,
-        SmokeDeathSkippedUnsafeApi: _smokeDeathSkippedUnsafeApi,
-        SmokeDeathFailures: _smokeDeathFailures,
         ToxicSmokeExposedBeavers: _toxicSmokeExposedBeavers,
         ToxicSmokeExposureAccumulatedSamples: _toxicSmokeExposureAccumulatedSamples,
-        ToxicSmokeContaminationEffectAttempts: _toxicSmokeContaminationEffectAttempts,
-        ToxicSmokeContaminationEffectSuccesses: _toxicSmokeContaminationEffectSuccesses,
-        ToxicSmokeContaminationEffectFailures: _toxicSmokeContaminationEffectFailures,
-        ToxicSmokeContaminationEffectSkippedUnsafeApi: _toxicSmokeContaminationEffectSkippedUnsafeApi,
-        ToxicSmokeChokingCandidates: _toxicSmokeChokingCandidates,
-        ToxicSmokeDeathCandidates: _toxicSmokeDeathCandidates,
         ToxicSmokeRecoveryDecays: _toxicSmokeRecoveryDecays,
         FireHeatExposedBeavers: _fireHeatExposedBeavers,
         FireHeatActiveFlameContacts: _fireHeatActiveFlameContacts,
-        FireHeatAvoidanceCandidates: _fireHeatAvoidanceCandidates,
-        FireHeatAvoidedCells: _fireHeatAvoidedCells,
-        FireHeatAvoidanceSkippedUnavailablePath: _fireHeatAvoidanceSkippedUnavailablePath,
-        FireHeatInterruptedJobCandidates: _fireHeatInterruptedJobCandidates,
-        FireHeatInterruptedJobs: _fireHeatInterruptedJobs,
-        FireHeatInterruptedJobsSkippedUnavailablePath: _fireHeatInterruptedJobsSkippedUnavailablePath,
-        FireHeatSingedEntered: _fireHeatSingedEntered,
-        FireHeatSingedRecovered: _fireHeatSingedRecovered,
-        FireHeatSingedSkippedUnavailablePath: _fireHeatSingedSkippedUnavailablePath,
-        FireHeatBurnedEntered: _fireHeatBurnedEntered,
-        FireHeatBurnedRecovered: _fireHeatBurnedRecovered,
-        FireHeatBurnedSkippedUnavailablePath: _fireHeatBurnedSkippedUnavailablePath,
-        FireHeatDeathCandidates: _fireHeatDeathCandidates,
-        FireHeatDeathSkippedUnsafeApi: _fireHeatDeathSkippedUnsafeApi,
         FireHeatRecoveryDecays: _fireHeatRecoveryDecays,
         PersistenceSaveCount: _persistenceSaveCount,
         PersistenceLoadCount: _persistenceLoadCount,
@@ -916,7 +718,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _noOpDecisionsApplied = 0;
         _decisionsSkippedCooldown = 0;
         _decisionsSkippedBatch = 0;
-        _skippedUnavailablePath = 0;
         _failedDecisions = 0;
         _recoveryActions = 0;
         _smokeExposedSamples = 0;
@@ -925,49 +726,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _smokeCoughingRecovered = 0;
         _smokeCoughingSlowdownsApplied = 0;
         _smokeCoughingSlowdownsRecovered = 0;
-        _smokeCoughingSlowdownsSkippedUnavailablePath = 0;
         _smokeRecoveryDecays = 0;
-        _smokeChokingCandidates = 0;
         _smokeChokingSlowdownsApplied = 0;
         _smokeChokingSlowdownsRecovered = 0;
-        _smokeChokingSlowdownsSkippedUnavailablePath = 0;
-        _smokeChokingSkippedUnsafeApi = 0;
-        _smokeChokingIncapacitationCandidates = 0;
-        _smokeChokingIncapacitationAttempts = 0;
-        _smokeChokingIncapacitationsApplied = 0;
-        _smokeChokingIncapacitationsRecovered = 0;
-        _smokeChokingIncapacitationSkippedUnsafeApi = 0;
-        _smokeChokingIncapacitationFailures = 0;
-        _smokeDeathCandidates = 0;
-        _smokeDeathAttempts = 0;
-        _smokeDeathsApplied = 0;
-        _smokeDeathSkippedUnsafeApi = 0;
-        _smokeDeathFailures = 0;
         _toxicSmokeExposedBeavers = 0;
         _toxicSmokeExposureAccumulatedSamples = 0;
-        _toxicSmokeContaminationEffectAttempts = 0;
-        _toxicSmokeContaminationEffectSuccesses = 0;
-        _toxicSmokeContaminationEffectFailures = 0;
-        _toxicSmokeContaminationEffectSkippedUnsafeApi = 0;
-        _toxicSmokeChokingCandidates = 0;
-        _toxicSmokeDeathCandidates = 0;
         _toxicSmokeRecoveryDecays = 0;
         _fireHeatExposedBeavers = 0;
         _fireHeatActiveFlameContacts = 0;
-        _fireHeatAvoidanceCandidates = 0;
-        _fireHeatAvoidedCells = 0;
-        _fireHeatAvoidanceSkippedUnavailablePath = 0;
-        _fireHeatInterruptedJobCandidates = 0;
-        _fireHeatInterruptedJobs = 0;
-        _fireHeatInterruptedJobsSkippedUnavailablePath = 0;
-        _fireHeatSingedEntered = 0;
-        _fireHeatSingedRecovered = 0;
-        _fireHeatSingedSkippedUnavailablePath = 0;
-        _fireHeatBurnedEntered = 0;
-        _fireHeatBurnedRecovered = 0;
-        _fireHeatBurnedSkippedUnavailablePath = 0;
-        _fireHeatDeathCandidates = 0;
-        _fireHeatDeathSkippedUnsafeApi = 0;
         _fireHeatRecoveryDecays = 0;
         _lastDecisionTick = null;
         _actuator.Clear();
@@ -1003,12 +769,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         };
 
         TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Apply(progressedDecision);
-        if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.SkippedUnavailablePath)
-        {
-            throw new InvalidOperationException(
-                $"Beaver field behavior actuator skipped {progressedDecision.Action} for {progressedDecision.BeaverId}: {result.Reason}.");
-        }
-
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Failed)
         {
             throw new InvalidOperationException(
@@ -1023,9 +783,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             tick ?? 0,
             exposedSamples,
             fireHeatExposedSamples,
-            IsExposed: true,
-            IsChokingIncapacitated: false,
-            IsSmokeDead: false);
+            IsExposed: true);
         _lastDecisionTick = tick;
         CountAppliedVariant(progressedDecision);
         CountSmokeProgression(progressedDecision, previousExposedSamples, exposedSamples);
@@ -1043,12 +801,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private void Recover(TimberbornBeaverFieldBehaviorStateEntry entry, uint? tick)
     {
         TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Recover(entry, tick);
-        if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.SkippedUnavailablePath)
-        {
-            throw new InvalidOperationException(
-                $"Beaver field behavior actuator skipped recovery for {entry.BeaverId}: {result.Reason}.");
-        }
-
         if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Failed)
         {
             throw new InvalidOperationException(
@@ -1061,9 +813,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             ConsecutiveExposedSamples = RecoverySmokeExposedSamples(entry.ConsecutiveExposedSamples),
             ConsecutiveFireHeatExposedSamples =
                 RecoveryFireHeatExposedSamples(entry.ConsecutiveFireHeatExposedSamples),
-            IsChokingIncapacitated = entry.IsChokingIncapacitated &&
-                RecoverySmokeExposedSamples(entry.ConsecutiveExposedSamples) >=
-                Options.SmokeChokingIncapacitationThresholdSamples,
             };
         _recoveryActions++;
         CountSmokeRecovery(entry, _statesByBeaverId[entry.BeaverId].ConsecutiveExposedSamples);
@@ -1093,8 +842,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         {
             _toxicSmokeExposedBeavers++;
             _toxicSmokeExposureAccumulatedSamples += SmokeExposureSampleWeight(decision);
-            _toxicSmokeContaminationEffectSkippedUnsafeApi++;
-            _skippedUnavailablePath++;
         }
 
         _smokeCoughingEntered += !IsSmokeCoughing(previousExposedSamples) && IsSmokeCoughing(exposedSamples) ? 1 : 0;
@@ -1102,26 +849,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             ? 1
             : 0;
         _smokeChokingSlowdownsApplied += decision.Action == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown
-            ? 1
-            : 0;
-        bool chokingCandidateEntered = previousExposedSamples < Options.SmokeChokingCandidateThresholdSamples &&
-            exposedSamples >= Options.SmokeChokingCandidateThresholdSamples;
-        bool chokingIncapacitationCandidateEntered =
-            previousExposedSamples < Options.SmokeChokingIncapacitationThresholdSamples &&
-            exposedSamples >= Options.SmokeChokingIncapacitationThresholdSamples;
-        bool deathCandidateEntered = previousExposedSamples < Options.SmokeDeathCandidateThresholdSamples &&
-            exposedSamples >= Options.SmokeDeathCandidateThresholdSamples;
-        _smokeChokingCandidates += chokingCandidateEntered ? 1 : 0;
-        _smokeChokingIncapacitationCandidates += chokingIncapacitationCandidateEntered ? 1 : 0;
-        _smokeChokingIncapacitationSkippedUnsafeApi += chokingIncapacitationCandidateEntered ? 1 : 0;
-        _smokeDeathCandidates += deathCandidateEntered ? 1 : 0;
-        _smokeDeathSkippedUnsafeApi += deathCandidateEntered ? 1 : 0;
-        _toxicSmokeChokingCandidates += IsToxicSmokeExposure(decision) && chokingCandidateEntered ? 1 : 0;
-        _toxicSmokeDeathCandidates += IsToxicSmokeExposure(decision) && deathCandidateEntered ? 1 : 0;
-        _skippedUnavailablePath += chokingIncapacitationCandidateEntered
-            ? 1
-            : 0;
-        _skippedUnavailablePath += deathCandidateEntered
             ? 1
             : 0;
     }
@@ -1145,11 +872,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _smokeChokingSlowdownsRecovered += entry.LastAction == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown
             ? 1
             : 0;
-        _smokeChokingIncapacitationsRecovered +=
-            entry.IsChokingIncapacitated &&
-            recoveredExposedSamples < Options.SmokeChokingIncapacitationThresholdSamples
-                ? 1
-                : 0;
         _smokeCoughingRecovered +=
             IsSmokeCoughing(entry.ConsecutiveExposedSamples) && !IsSmokeCoughing(recoveredExposedSamples)
                 ? 1
@@ -1171,28 +893,9 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _fireHeatActiveFlameContacts += activeFlameContact ? 1 : 0;
         if (decision.BurnExposureCells > 0)
         {
-            _fireHeatAvoidanceCandidates += decision.BurnExposureCells;
-            _fireHeatInterruptedJobCandidates++;
             throw new InvalidOperationException(
                 $"Fire heat beaver avoidance is not implemented for beaver {decision.BeaverId}.");
         }
-
-        bool singedEntered = previousExposedSamples < Options.FireHeatSingedThresholdSamples &&
-            exposedSamples >= Options.FireHeatSingedThresholdSamples;
-        bool burnedEntered = previousExposedSamples < Options.FireHeatBurnedThresholdSamples &&
-            exposedSamples >= Options.FireHeatBurnedThresholdSamples;
-        bool deathCandidateEntered = previousExposedSamples < Options.FireHeatDeathCandidateThresholdSamples &&
-            exposedSamples >= Options.FireHeatDeathCandidateThresholdSamples;
-
-        _fireHeatSingedEntered += singedEntered ? 1 : 0;
-        _fireHeatBurnedEntered += burnedEntered ? 1 : 0;
-        _fireHeatDeathCandidates += deathCandidateEntered ? 1 : 0;
-        if (singedEntered || burnedEntered || deathCandidateEntered)
-        {
-            throw new InvalidOperationException(
-                $"Fire heat beaver injury/death is not implemented for beaver {decision.BeaverId}.");
-        }
-        _skippedUnavailablePath += deathCandidateEntered ? 1 : 0;
     }
 
     private void CountFireHeatRecovery(TimberbornBeaverFieldBehaviorStateEntry entry, int recoveredExposedSamples)
@@ -1203,14 +906,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         }
 
         _fireHeatRecoveryDecays += recoveredExposedSamples < entry.ConsecutiveFireHeatExposedSamples ? 1 : 0;
-        _fireHeatSingedRecovered +=
-            IsFireHeatSinged(entry.ConsecutiveFireHeatExposedSamples) && !IsFireHeatSinged(recoveredExposedSamples)
-                ? 1
-                : 0;
-        _fireHeatBurnedRecovered +=
-            IsFireHeatBurned(entry.ConsecutiveFireHeatExposedSamples) && !IsFireHeatBurned(recoveredExposedSamples)
-                ? 1
-                : 0;
     }
 
     private int RecoverySmokeExposedSamples(int exposedSamples)
@@ -1230,61 +925,27 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     {
         if (decision.Variant == TimberbornBeaverFieldBehaviorVariant.FireHeat)
         {
-            if (fireHeatExposedSamples >= Options.FireHeatBurnedThresholdSamples)
-            {
-                return TimberbornBeaverFieldBehaviorAction.FireHeatBurnedSafeNoOp;
-            }
-
-            return fireHeatExposedSamples >= Options.FireHeatSingedThresholdSamples ||
-                decision.MaxFire >= Options.ActiveFlameContactThreshold
-                ? TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp
-                : TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp;
+            return TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt;
         }
 
         if (!HasSmokeReactionExposure(decision))
         {
-            return TimberbornBeaverFieldBehaviorAction.SafeNoOp;
+            return TimberbornBeaverFieldBehaviorAction.NoOp;
         }
 
-        if (exposedSamples >= Options.SmokeChokingCandidateThresholdSamples)
+        if (exposedSamples >= Options.SmokeChokingThresholdSamples)
         {
             return TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown;
         }
 
         return IsSmokeCoughing(exposedSamples)
             ? TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown
-            : TimberbornBeaverFieldBehaviorAction.SafeNoOp;
-    }
-
-    private void CountSmokeSlowdownSkip(TimberbornBeaverFieldBehaviorDecision decision)
-    {
-        _smokeCoughingSlowdownsSkippedUnavailablePath +=
-            decision.Action == TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown ? 1 : 0;
-        _smokeChokingSlowdownsSkippedUnavailablePath +=
-            decision.Action == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown ? 1 : 0;
-    }
-
-    private void CountSmokeSlowdownSkip(TimberbornBeaverFieldBehaviorStateEntry entry)
-    {
-        _smokeCoughingSlowdownsSkippedUnavailablePath +=
-            entry.LastAction == TimberbornBeaverFieldBehaviorAction.CoughingWorkSlowdown ? 1 : 0;
-        _smokeChokingSlowdownsSkippedUnavailablePath +=
-            entry.LastAction == TimberbornBeaverFieldBehaviorAction.ChokingWorkSlowdown ? 1 : 0;
+            : TimberbornBeaverFieldBehaviorAction.NoOp;
     }
 
     private bool IsSmokeCoughing(int exposedSamples)
     {
         return exposedSamples >= Options.SmokeCoughingThresholdSamples;
-    }
-
-    private bool IsFireHeatSinged(int exposedSamples)
-    {
-        return exposedSamples >= Options.FireHeatSingedThresholdSamples;
-    }
-
-    private bool IsFireHeatBurned(int exposedSamples)
-    {
-        return exposedSamples >= Options.FireHeatBurnedThresholdSamples;
     }
 
     private static bool IsSmokeReactionVariant(TimberbornBeaverFieldBehaviorVariant variant)
@@ -1318,11 +979,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
 
     private static bool IsNoOpAction(TimberbornBeaverFieldBehaviorAction action)
     {
-        return action is TimberbornBeaverFieldBehaviorAction.SafeNoOp or
-            TimberbornBeaverFieldBehaviorAction.CoughingSafeNoOp or
-            TimberbornBeaverFieldBehaviorAction.FireHeatAvoidanceSafeNoOp or
-            TimberbornBeaverFieldBehaviorAction.FireHeatSingedSafeNoOp or
-            TimberbornBeaverFieldBehaviorAction.FireHeatBurnedSafeNoOp;
+        return action == TimberbornBeaverFieldBehaviorAction.NoOp;
     }
 
     private static bool IsSmokeReactionAction(TimberbornBeaverFieldBehaviorAction action)
@@ -1341,7 +998,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             classification.Y,
             classification.Z,
             SelectVariant(classification),
-            TimberbornBeaverFieldBehaviorAction.SafeNoOp,
+            TimberbornBeaverFieldBehaviorAction.NoOp,
             classification.RespiratoryExposureCells,
             classification.BurnExposureCells,
             classification.ContaminatedSmokeCells,
@@ -1393,37 +1050,13 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             $"smoke_coughing_slowdowns_applied={counters.SmokeCoughingSlowdownsApplied} " +
             $"smoke_coughing_slowdowns_recovered={counters.SmokeCoughingSlowdownsRecovered} " +
             $"smoke_recovery_decays={counters.SmokeRecoveryDecays} " +
-            $"smoke_choking_candidates={counters.SmokeChokingCandidates} " +
             $"smoke_choking_slowdowns_applied={counters.SmokeChokingSlowdownsApplied} " +
             $"smoke_choking_slowdowns_recovered={counters.SmokeChokingSlowdownsRecovered} " +
-            $"smoke_choking_incapacitation_candidates={counters.SmokeChokingIncapacitationCandidates} " +
-            $"smoke_choking_incapacitation_attempts={counters.SmokeChokingIncapacitationAttempts} " +
-            $"smoke_choking_incapacitations_applied={counters.SmokeChokingIncapacitationsApplied} " +
-            $"smoke_choking_incapacitations_recovered={counters.SmokeChokingIncapacitationsRecovered} " +
-            $"smoke_choking_incapacitation_failures={counters.SmokeChokingIncapacitationFailures} " +
-            $"smoke_death_candidates={counters.SmokeDeathCandidates} " +
-            $"smoke_death_attempts={counters.SmokeDeathAttempts} " +
-            $"smoke_deaths_applied={counters.SmokeDeathsApplied} " +
-            $"smoke_death_failures={counters.SmokeDeathFailures} " +
             $"toxic_smoke_exposed_beavers={counters.ToxicSmokeExposedBeavers} " +
             $"toxic_smoke_exposure_accumulated_samples={counters.ToxicSmokeExposureAccumulatedSamples} " +
-            $"toxic_smoke_contamination_effect_attempts={counters.ToxicSmokeContaminationEffectAttempts} " +
-            $"toxic_smoke_contamination_effect_successes={counters.ToxicSmokeContaminationEffectSuccesses} " +
-            $"toxic_smoke_contamination_effect_failures={counters.ToxicSmokeContaminationEffectFailures} " +
-            $"toxic_smoke_choking_candidates={counters.ToxicSmokeChokingCandidates} " +
-            $"toxic_smoke_death_candidates={counters.ToxicSmokeDeathCandidates} " +
             $"toxic_smoke_recovery_decays={counters.ToxicSmokeRecoveryDecays} " +
             $"fire_heat_exposed_beavers={counters.FireHeatExposedBeavers} " +
             $"fire_heat_active_flame_contacts={counters.FireHeatActiveFlameContacts} " +
-            $"fire_heat_avoidance_candidates={counters.FireHeatAvoidanceCandidates} " +
-            $"fire_heat_avoided_cells={counters.FireHeatAvoidedCells} " +
-            $"fire_heat_interrupted_job_candidates={counters.FireHeatInterruptedJobCandidates} " +
-            $"fire_heat_interrupted_jobs={counters.FireHeatInterruptedJobs} " +
-            $"fire_heat_singed_entered={counters.FireHeatSingedEntered} " +
-            $"fire_heat_singed_recovered={counters.FireHeatSingedRecovered} " +
-            $"fire_heat_burned_entered={counters.FireHeatBurnedEntered} " +
-            $"fire_heat_burned_recovered={counters.FireHeatBurnedRecovered} " +
-            $"fire_heat_death_candidates={counters.FireHeatDeathCandidates} " +
             $"fire_heat_recovery_decays={counters.FireHeatRecoveryDecays} " +
             $"persistence_saves={counters.PersistenceSaveCount} " +
             $"persistence_loads={counters.PersistenceLoadCount}");

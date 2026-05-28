@@ -422,7 +422,7 @@ public enum WildfireReleaseSettingReadStatus
 public enum WildfireReleaseVisualDebugVisibility
 {
     Hidden = 0,
-    SafeOverlay = 1,
+    DebugOverlay = 1,
 }
 
 public sealed record WildfireReleaseSettingsSnapshot(
@@ -443,7 +443,7 @@ public sealed record WildfireReleaseSettingsSnapshot(
 {
     public bool HasInvalidValues => InvalidValues.Count > 0;
 
-    public bool IsVisualDebugOverlayEnabled => VisualDebugVisibility == WildfireReleaseVisualDebugVisibility.SafeOverlay;
+    public bool IsVisualDebugOverlayEnabled => VisualDebugVisibility == WildfireReleaseVisualDebugVisibility.DebugOverlay;
 
     public float VisualIntensityScale => VisualIntensityPercent / 100f;
 

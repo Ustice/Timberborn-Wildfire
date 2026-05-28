@@ -42,7 +42,6 @@ public sealed class TimberbornFireDeltaConsumer
 
     public int LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount { get; private set; }
 
-    public int LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount { get; private set; }
 
     public int LastPositiveStructureBurnDamageRollbackTotalDamageApplied { get; private set; }
 
@@ -62,7 +61,6 @@ public sealed class TimberbornFireDeltaConsumer
         LastPositiveStructureBurnDamageRollbackTick = 0;
         LastPositiveStructureBurnDamageRollbackUnfinishedStageCount = 0;
         LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount = 0;
-        LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount = 0;
         LastPositiveStructureBurnDamageRollbackTotalDamageApplied = 0;
     }
 
@@ -189,8 +187,6 @@ public sealed class TimberbornFireDeltaConsumer
                 LastSummary.StructureBurnDamageRollbackUnfinishedStageCount;
             LastPositiveStructureBurnDamageRollbackConstructionPhaseEnteredCount =
                 LastSummary.StructureBurnDamageRollbackConstructionPhaseEnteredCount;
-            LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount =
-                LastSummary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount;
             LastPositiveStructureBurnDamageRollbackTotalDamageApplied =
                 LastSummary.StructureBurnDamageRollbackTotalDamageApplied;
         }
@@ -223,11 +219,6 @@ public sealed class TimberbornFireDeltaConsumer
             return 3;
         }
 
-        if (LastPositiveStructureBurnDamageRollbackSkippedNativeConstructionApiCount > 0)
-        {
-            return 2;
-        }
-
         return LastPositiveStructureBurnDamageRollbackUnfinishedStageCount > 0 ? 1 : 0;
     }
 
@@ -241,11 +232,6 @@ public sealed class TimberbornFireDeltaConsumer
         if (summary.StructureBurnDamageRollbackTotalDamageApplied > 0)
         {
             return 3;
-        }
-
-        if (summary.StructureBurnDamageRollbackSkippedNativeConstructionApiCount > 0)
-        {
-            return 2;
         }
 
         return summary.StructureBurnDamageRollbackUnfinishedStageCount > 0 ? 1 : 0;
@@ -793,7 +779,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int StructureBurnDamageRollbackUnfinishedStageCount,
     int StructureBurnDamageRollbackVisualRollbackAppliedCount,
     int StructureBurnDamageRollbackConstructionPhaseEnteredCount,
-    int StructureBurnDamageRollbackSkippedNativeConstructionApiCount,
     int StructureBurnDamageRollbackTotalDamageApplied,
     int BurnDamageConsideredCellCount,
     int BurnDamageDamageCandidateCellCount,
@@ -812,7 +797,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int CropBurnUnmappedTargetCount,
     int CropBurnUnknownHarvestResourceCount,
     int CropBurnNonBurnableTargetCount,
-    int CropBurnSkippedUnsafeApiCount,
+    int CropBurnFailedConsequenceCount,
     int TreeBurnConsideredTargetCount,
     int TreeBurnBurnableTargetCount,
     int TreeBurnYieldLost,
@@ -822,15 +807,14 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int TreeBurnUnmappedTargetCount,
     int TreeBurnUnknownCuttableResourceCount,
     int TreeBurnNonBurnableTargetCount,
-    int TreeBurnSkippedUnsafeApiCount,
+    int TreeBurnFailedConsequenceCount,
     int StoredGoodBurnConsideredDeltaCount,
     int StoredGoodBurnMatchedStorageCellCount,
     int StoredGoodBurnDuplicateStorageTargetSuppressedCount,
     int StoredGoodBurnableStackCount,
     int StoredGoodBurnDestroyedItemCount,
     int StoredGoodBurnHazardousGoodCount,
-    int StoredGoodBurnSkippedNoInventoryApiCount,
-    int StoredGoodBurnSkippedUnknownResourceCount,
+    int StoredGoodBurnUnknownResourceCount,
     int StoredGoodBurnSkippedNonBurnableItemCount,
     int ExplosiveInfrastructureConsideredDeltaCount,
     int ExplosiveInfrastructureMatchedTargetCellCount,
@@ -840,7 +824,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int ExplosiveInfrastructureNativeTriggeredTargetCount,
     int ExplosiveInfrastructureHeatPulseCellCount,
     int ExplosiveInfrastructureSkippedSettingDisabledCount,
-    int ExplosiveInfrastructureSkippedUnavailablePathCount,
     int ExplosiveInfrastructureSkippedAlreadyTriggeredCount,
     int ExplosiveInfrastructureLastTriggeredDepth,
     int DetonatorFireSafetyConsideredDeltaCount,
@@ -849,7 +832,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int DetonatorFireSafetyDisabledTargetCount,
     int DetonatorFireSafetyArmedTargetCount,
     int DetonatorFireSafetySkippedSettingDisabledCount,
-    int DetonatorFireSafetySkippedUnavailablePathCount,
     int DetonatorFireSafetyRecoverabilityPreservedCount,
     int DetonatorFireSafetyRecoverabilityUnknownCount,
     int TunnelFireConsideredDeltaCount,
@@ -860,7 +842,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int TunnelFireNativeExplodeAppliedCount,
     int TunnelFireDestructionDeferredCount,
     int TunnelFireSkippedSettingDisabledCount,
-    int TunnelFireSkippedUnavailablePathCount,
     int TunnelFireRecoverabilityPreservedCount,
     int TunnelFireRecoverabilityUnknownCount,
     int PathInfrastructureConsideredDeltaCount,
@@ -869,7 +850,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int PathInfrastructureZeroCostTargetCount,
     int PathInfrastructureDamagedTargetCount,
     int PathInfrastructureBlockedTargetCount,
-    int PathInfrastructureSkippedUnavailablePathCount,
     int PathInfrastructureRepairEligibleTargetCount,
     int PathInfrastructureTotalDamageApplied,
     int PowerInfrastructureConsideredDeltaCount,
@@ -878,7 +858,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int PowerInfrastructureMetalOnlyNoOpTargetCount,
     int PowerInfrastructureDamagedTargetCount,
     int PowerInfrastructureDisabledOrDisconnectedTargetCount,
-    int PowerInfrastructureSkippedUnavailablePathCount,
     int PowerInfrastructureRepairEligibleTargetCount,
     int PowerInfrastructureTotalDamageApplied,
     int WaterInfrastructureConsideredDeltaCount,
@@ -889,7 +868,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int WaterInfrastructureBurnableMaterialValue,
     int WaterInfrastructureDamagedTargetCount,
     int WaterInfrastructureWaterStateMutationAttemptCount,
-    int WaterInfrastructureSkippedUnavailablePathCount,
     int WaterInfrastructureRepairEligibleTargetCount,
     int WaterInfrastructureTotalDamageApplied,
     int AshFieldSourceEventCount,
@@ -903,8 +881,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int AshFieldGrowthCandidateCellCount,
     int AshFieldGrowthAppliedGrowableCount,
     int AshFieldGrowthSkippedTaintedCellCount,
-    int AshFieldGrowthSkippedUnsafeApiCount,
-    int AshFieldGrowthSkippedUnsupportedGrowableCount,
+    int AshFieldGrowthFailedConsequenceCount,
+    int AshFieldGrowthUnsupportedGrowableCount,
     int AshFieldPersistenceSaveCount,
     int AshFieldPersistenceLoadCount,
     int AlertCount,
@@ -939,7 +917,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         StructureBurnDamageRollbackUnfinishedStageCount: 0,
         StructureBurnDamageRollbackVisualRollbackAppliedCount: 0,
         StructureBurnDamageRollbackConstructionPhaseEnteredCount: 0,
-        StructureBurnDamageRollbackSkippedNativeConstructionApiCount: 0,
         StructureBurnDamageRollbackTotalDamageApplied: 0,
         BurnDamageConsideredCellCount: 0,
         BurnDamageDamageCandidateCellCount: 0,
@@ -958,7 +935,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         CropBurnUnmappedTargetCount: 0,
         CropBurnUnknownHarvestResourceCount: 0,
         CropBurnNonBurnableTargetCount: 0,
-        CropBurnSkippedUnsafeApiCount: 0,
+        CropBurnFailedConsequenceCount: 0,
         TreeBurnConsideredTargetCount: 0,
         TreeBurnBurnableTargetCount: 0,
         TreeBurnYieldLost: 0,
@@ -968,15 +945,14 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         TreeBurnUnmappedTargetCount: 0,
         TreeBurnUnknownCuttableResourceCount: 0,
         TreeBurnNonBurnableTargetCount: 0,
-        TreeBurnSkippedUnsafeApiCount: 0,
+        TreeBurnFailedConsequenceCount: 0,
         StoredGoodBurnConsideredDeltaCount: 0,
         StoredGoodBurnMatchedStorageCellCount: 0,
         StoredGoodBurnDuplicateStorageTargetSuppressedCount: 0,
         StoredGoodBurnableStackCount: 0,
         StoredGoodBurnDestroyedItemCount: 0,
         StoredGoodBurnHazardousGoodCount: 0,
-        StoredGoodBurnSkippedNoInventoryApiCount: 0,
-        StoredGoodBurnSkippedUnknownResourceCount: 0,
+        StoredGoodBurnUnknownResourceCount: 0,
         StoredGoodBurnSkippedNonBurnableItemCount: 0,
         ExplosiveInfrastructureConsideredDeltaCount: 0,
         ExplosiveInfrastructureMatchedTargetCellCount: 0,
@@ -986,7 +962,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         ExplosiveInfrastructureNativeTriggeredTargetCount: 0,
         ExplosiveInfrastructureHeatPulseCellCount: 0,
         ExplosiveInfrastructureSkippedSettingDisabledCount: 0,
-        ExplosiveInfrastructureSkippedUnavailablePathCount: 0,
         ExplosiveInfrastructureSkippedAlreadyTriggeredCount: 0,
         ExplosiveInfrastructureLastTriggeredDepth: 0,
         DetonatorFireSafetyConsideredDeltaCount: 0,
@@ -995,7 +970,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         DetonatorFireSafetyDisabledTargetCount: 0,
         DetonatorFireSafetyArmedTargetCount: 0,
         DetonatorFireSafetySkippedSettingDisabledCount: 0,
-        DetonatorFireSafetySkippedUnavailablePathCount: 0,
         DetonatorFireSafetyRecoverabilityPreservedCount: 0,
         DetonatorFireSafetyRecoverabilityUnknownCount: 0,
         TunnelFireConsideredDeltaCount: 0,
@@ -1006,7 +980,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         TunnelFireNativeExplodeAppliedCount: 0,
         TunnelFireDestructionDeferredCount: 0,
         TunnelFireSkippedSettingDisabledCount: 0,
-        TunnelFireSkippedUnavailablePathCount: 0,
         TunnelFireRecoverabilityPreservedCount: 0,
         TunnelFireRecoverabilityUnknownCount: 0,
         PathInfrastructureConsideredDeltaCount: 0,
@@ -1015,7 +988,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         PathInfrastructureZeroCostTargetCount: 0,
         PathInfrastructureDamagedTargetCount: 0,
         PathInfrastructureBlockedTargetCount: 0,
-        PathInfrastructureSkippedUnavailablePathCount: 0,
         PathInfrastructureRepairEligibleTargetCount: 0,
         PathInfrastructureTotalDamageApplied: 0,
         PowerInfrastructureConsideredDeltaCount: 0,
@@ -1024,7 +996,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         PowerInfrastructureMetalOnlyNoOpTargetCount: 0,
         PowerInfrastructureDamagedTargetCount: 0,
         PowerInfrastructureDisabledOrDisconnectedTargetCount: 0,
-        PowerInfrastructureSkippedUnavailablePathCount: 0,
         PowerInfrastructureRepairEligibleTargetCount: 0,
         PowerInfrastructureTotalDamageApplied: 0,
         WaterInfrastructureConsideredDeltaCount: 0,
@@ -1035,7 +1006,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         WaterInfrastructureBurnableMaterialValue: 0,
         WaterInfrastructureDamagedTargetCount: 0,
         WaterInfrastructureWaterStateMutationAttemptCount: 0,
-        WaterInfrastructureSkippedUnavailablePathCount: 0,
         WaterInfrastructureRepairEligibleTargetCount: 0,
         WaterInfrastructureTotalDamageApplied: 0,
         AshFieldSourceEventCount: 0,
@@ -1049,8 +1019,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         AshFieldGrowthCandidateCellCount: 0,
         AshFieldGrowthAppliedGrowableCount: 0,
         AshFieldGrowthSkippedTaintedCellCount: 0,
-        AshFieldGrowthSkippedUnsafeApiCount: 0,
-        AshFieldGrowthSkippedUnsupportedGrowableCount: 0,
+        AshFieldGrowthFailedConsequenceCount: 0,
+        AshFieldGrowthUnsupportedGrowableCount: 0,
         AshFieldPersistenceSaveCount: 0,
         AshFieldPersistenceLoadCount: 0,
         AlertCount: 0,
@@ -1108,7 +1078,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             structureBurnDamageRollbackSummary.UnfinishedStageCount,
             structureBurnDamageRollbackSummary.VisualRollbackAppliedCount,
             structureBurnDamageRollbackSummary.ConstructionPhaseEnteredCount,
-            structureBurnDamageRollbackSummary.SkippedNativeConstructionApiCount,
             structureBurnDamageRollbackSummary.TotalDamageApplied,
             burnDamageSummary.ConsideredCellCount,
             burnDamageSummary.DamageCandidateCellCount,
@@ -1127,7 +1096,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             cropBurnSummary.UnmappedTargetCount,
             cropBurnSummary.UnknownHarvestResourceCount,
             cropBurnSummary.NonBurnableCropTargetCount,
-            cropBurnSummary.SkippedUnsafeApiCount,
+            cropBurnSummary.FailedConsequenceCount,
             treeBurnSummary.ConsideredTreeTargetCount,
             treeBurnSummary.BurnableTreeTargetCount,
             treeBurnSummary.YieldLost,
@@ -1137,15 +1106,14 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             treeBurnSummary.UnmappedTargetCount,
             treeBurnSummary.UnknownCuttableResourceCount,
             treeBurnSummary.NonBurnableTreeTargetCount,
-            treeBurnSummary.SkippedUnsafeApiCount,
+            treeBurnSummary.FailedConsequenceCount,
             storedGoodBurnSummary.ConsideredDeltaCount,
             storedGoodBurnSummary.MatchedStorageCellCount,
             storedGoodBurnSummary.DuplicateStorageTargetSuppressedCount,
             storedGoodBurnSummary.BurnableStackCount,
             storedGoodBurnSummary.DestroyedItemCount,
             storedGoodBurnSummary.HazardousGoodCount,
-            storedGoodBurnSummary.SkippedNoInventoryApiCount,
-            storedGoodBurnSummary.SkippedUnknownResourceCount,
+            storedGoodBurnSummary.UnknownResourceCount,
             storedGoodBurnSummary.SkippedNonBurnableItemCount,
             explosiveInfrastructureSummary.ConsideredDeltaCount,
             explosiveInfrastructureSummary.MatchedTargetCellCount,
@@ -1155,7 +1123,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             explosiveInfrastructureSummary.NativeTriggeredTargetCount,
             explosiveInfrastructureSummary.HeatPulseCellCount,
             explosiveInfrastructureSummary.SkippedSettingDisabledCount,
-            explosiveInfrastructureSummary.SkippedUnavailablePathCount,
             explosiveInfrastructureSummary.SkippedAlreadyTriggeredCount,
             explosiveInfrastructureSummary.LastTriggeredDepth,
             detonatorFireSafetySummary.ConsideredDeltaCount,
@@ -1164,7 +1131,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             detonatorFireSafetySummary.DisabledTargetCount,
             detonatorFireSafetySummary.ArmedTargetCount,
             detonatorFireSafetySummary.SkippedSettingDisabledCount,
-            detonatorFireSafetySummary.SkippedUnavailablePathCount,
             detonatorFireSafetySummary.RecoverabilityPreservedCount,
             detonatorFireSafetySummary.RecoverabilityUnknownCount,
             tunnelFireSummary.ConsideredDeltaCount,
@@ -1175,7 +1141,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             tunnelFireSummary.NativeExplodeAppliedCount,
             tunnelFireSummary.DestructionDeferredCount,
             tunnelFireSummary.SkippedSettingDisabledCount,
-            tunnelFireSummary.SkippedUnavailablePathCount,
             tunnelFireSummary.RecoverabilityPreservedCount,
             tunnelFireSummary.RecoverabilityUnknownCount,
             pathInfrastructureSummary.ConsideredDeltaCount,
@@ -1184,7 +1149,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             pathInfrastructureSummary.ZeroCostPathTargetCount,
             pathInfrastructureSummary.DamagedTargetCount,
             pathInfrastructureSummary.BlockedTargetCount,
-            pathInfrastructureSummary.SkippedUnavailablePathCount,
             pathInfrastructureSummary.RepairEligibleTargetCount,
             pathInfrastructureSummary.TotalDamageApplied,
             powerInfrastructureSummary.ConsideredDeltaCount,
@@ -1193,7 +1157,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             powerInfrastructureSummary.MetalOnlyNoOpTargetCount,
             powerInfrastructureSummary.DamagedTargetCount,
             powerInfrastructureSummary.DisabledOrDisconnectedTargetCount,
-            powerInfrastructureSummary.SkippedUnavailablePathCount,
             powerInfrastructureSummary.RepairEligibleTargetCount,
             powerInfrastructureSummary.TotalDamageApplied,
             waterInfrastructureSummary.ConsideredDeltaCount,
@@ -1204,7 +1167,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             waterInfrastructureSummary.BurnableMaterialValue,
             waterInfrastructureSummary.DamagedTargetCount,
             waterInfrastructureSummary.WaterStateMutationAttemptCount,
-            waterInfrastructureSummary.SkippedUnavailablePathCount,
             waterInfrastructureSummary.RepairEligibleTargetCount,
             waterInfrastructureSummary.TotalDamageApplied,
             ashFieldSummary.SourceEventCount,
@@ -1218,8 +1180,8 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             ashFieldSummary.GrowthCandidateCellCount,
             ashFieldSummary.GrowthAppliedGrowableCount,
             ashFieldSummary.GrowthSkippedTaintedCellCount,
-            ashFieldSummary.GrowthSkippedUnsafeApiCount,
-            ashFieldSummary.GrowthSkippedUnsupportedGrowableCount,
+            ashFieldSummary.GrowthFailedConsequenceCount,
+            ashFieldSummary.GrowthUnsupportedGrowableCount,
             ashFieldSummary.PersistenceSaveCount,
             ashFieldSummary.PersistenceLoadCount,
             alertCount,
@@ -1257,7 +1219,6 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"structure_burn_damage_rollback_stage_unfinished={StructureBurnDamageRollbackUnfinishedStageCount} " +
             $"structure_burn_damage_rollback_visual_applied={StructureBurnDamageRollbackVisualRollbackAppliedCount} " +
             $"structure_burn_damage_rollback_construction_phase_entered={StructureBurnDamageRollbackConstructionPhaseEnteredCount} " +
-            $"structure_burn_damage_rollback_skipped_native_construction_api={StructureBurnDamageRollbackSkippedNativeConstructionApiCount} " +
             $"structure_burn_damage_rollback_total_damage_applied={StructureBurnDamageRollbackTotalDamageApplied} " +
             $"burn_damage_considered_cells={BurnDamageConsideredCellCount} " +
             $"burn_damage_candidate_cells={BurnDamageDamageCandidateCellCount} " +
@@ -1291,8 +1252,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"stored_good_burnable_stacks={StoredGoodBurnableStackCount} " +
             $"stored_good_burn_destroyed_items={StoredGoodBurnDestroyedItemCount} " +
             $"stored_good_burn_hazardous_goods={StoredGoodBurnHazardousGoodCount} " +
-            $"stored_good_burn_skipped_no_inventory_api={StoredGoodBurnSkippedNoInventoryApiCount} " +
-            $"stored_good_burn_skipped_unknown_resources={StoredGoodBurnSkippedUnknownResourceCount} " +
+            $"stored_good_burn_unknown_resources={StoredGoodBurnUnknownResourceCount} " +
             $"stored_good_burn_skipped_non_burnable_items={StoredGoodBurnSkippedNonBurnableItemCount} " +
             $"explosive_infrastructure_considered_deltas={ExplosiveInfrastructureConsideredDeltaCount} " +
             $"explosive_infrastructure_matched_target_cells={ExplosiveInfrastructureMatchedTargetCellCount} " +
@@ -1359,7 +1319,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"ash_field_growth_candidate_cells={AshFieldGrowthCandidateCellCount} " +
             $"ash_field_growth_applied_growables={AshFieldGrowthAppliedGrowableCount} " +
             $"ash_field_growth_skipped_tainted_cells={AshFieldGrowthSkippedTaintedCellCount} " +
-            $"ash_field_growth_skipped_unsupported_growables={AshFieldGrowthSkippedUnsupportedGrowableCount} " +
+            $"ash_field_growth_unsupported_growables={AshFieldGrowthUnsupportedGrowableCount} " +
             $"ash_field_persistence_saves={AshFieldPersistenceSaveCount} " +
             $"ash_field_persistence_loads={AshFieldPersistenceLoadCount} " +
             $"alerts={AlertCount} " +

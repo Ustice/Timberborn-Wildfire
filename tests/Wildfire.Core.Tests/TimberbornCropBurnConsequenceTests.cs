@@ -54,7 +54,7 @@ public sealed class TimberbornCropBurnConsequenceTests
                     or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
                 VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
                     or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-                SkippedUnsafeApi: false));
+                FailedConsequence: false));
         TimberbornCropBurnConsequenceSink cropSink = new(burnDamageService, cropApi);
 
         burnDamageService.ApplyDamage(22, [Decision(0, oldFuel: 3, newFuel: 0)]);
@@ -158,7 +158,7 @@ public sealed class TimberbornCropBurnConsequenceTests
     }
 
     [Fact]
-    public void NonBurnableCropTargetNoOpsWithoutCallingUnsafeApi()
+    public void NonBurnableCropTargetNoOpsWithoutCallingConsequenceApi()
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornBurnDamageService burnDamageService = CreateService(
@@ -256,7 +256,7 @@ public sealed class TimberbornCropBurnConsequenceTests
                 LastDeltaConsumerCropBurnConsideredTargetCount: summary.CropBurnConsideredTargetCount,
                 LastDeltaConsumerCropBurnYieldLost: summary.CropBurnYieldLost,
                 LastDeltaConsumerCropBurnKilledCropCount: summary.CropBurnKilledCropCount,
-                LastDeltaConsumerCropBurnSkippedUnsafeApiCount: summary.CropBurnSkippedUnsafeApiCount),
+                LastDeltaConsumerCropBurnFailedConsequenceCount: summary.CropBurnFailedConsequenceCount),
             ["help", "qa-readiness", "status"]);
 
         Assert.Equal(1, summary.CropBurnConsideredTargetCount);
@@ -334,7 +334,7 @@ public sealed class TimberbornCropBurnConsequenceTests
                     or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
                 VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
                     or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-                SkippedUnsafeApi: false);
+                FailedConsequence: false);
         }
     }
 

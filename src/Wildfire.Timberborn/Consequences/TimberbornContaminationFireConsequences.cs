@@ -8,9 +8,7 @@ public readonly record struct TimberbornContaminationFireConsequenceSummary(
     int ContaminatedWaterLikeMapCellCount,
     int BadwaterSuppressionInputCellCount,
     int ContaminatedWaterSuppressionInputCellCount,
-    int WaterSuppressionInputSafeUnavailableCount,
-    int NativeDecontaminationAttemptCount,
-    int SkippedUnsafeContaminationApiCount)
+    int NativeDecontaminationAttemptCount)
 {
     public static readonly TimberbornContaminationFireConsequenceSummary Empty = new(
         ContaminatedAffectedMapCellCount: 0,
@@ -18,9 +16,7 @@ public readonly record struct TimberbornContaminationFireConsequenceSummary(
         ContaminatedWaterLikeMapCellCount: 0,
         BadwaterSuppressionInputCellCount: 0,
         ContaminatedWaterSuppressionInputCellCount: 0,
-        WaterSuppressionInputSafeUnavailableCount: 0,
-        NativeDecontaminationAttemptCount: 0,
-        SkippedUnsafeContaminationApiCount: 0);
+        NativeDecontaminationAttemptCount: 0);
 
     public string ToLogToken()
     {
@@ -70,17 +66,13 @@ public static class TimberbornContaminationFireConsequenceTelemetry
 
         int badwaterWaterLikeMapCells = waterInputs.Count(static input => input.IsBadwater);
         int contaminatedWaterLikeMapCells = waterInputs.Count(static input => input.IsContaminated);
-        int safeUnavailableInputs = Math.Max(badwaterWaterLikeMapCells, contaminatedWaterLikeMapCells);
-
         return new TimberbornContaminationFireConsequenceSummary(
             ContaminatedAffectedMapCellCount: burnableTargets.Count(static target => target.SoilContamination > 0),
             BadwaterWaterLikeMapCellCount: badwaterWaterLikeMapCells,
             ContaminatedWaterLikeMapCellCount: contaminatedWaterLikeMapCells,
             BadwaterSuppressionInputCellCount: 0,
             ContaminatedWaterSuppressionInputCellCount: 0,
-            WaterSuppressionInputSafeUnavailableCount: safeUnavailableInputs,
-            NativeDecontaminationAttemptCount: 0,
-            SkippedUnsafeContaminationApiCount: safeUnavailableInputs);
+            NativeDecontaminationAttemptCount: 0);
     }
 
     private static int ToIndex(FireGrid grid, TimberbornCellSource source)

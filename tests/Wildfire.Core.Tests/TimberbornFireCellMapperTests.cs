@@ -305,7 +305,7 @@ public sealed class TimberbornFireCellMapperTests
     }
 
     [Fact]
-    public void BadwaterSourceActsWaterLikeWithoutBecomingSafeWater()
+    public void BadwaterSourceActsWaterLikeWithoutBecomingCleanWater()
     {
         FireGrid grid = new(1, 1, 1);
         TimberbornFireCellMapper mapper = new();
@@ -369,9 +369,7 @@ public sealed class TimberbornFireCellMapperTests
         Assert.Equal(1, summary.ContaminatedWaterLikeMapCellCount);
         Assert.Equal(0, summary.BadwaterSuppressionInputCellCount);
         Assert.Equal(0, summary.ContaminatedWaterSuppressionInputCellCount);
-        Assert.Equal(1, summary.WaterSuppressionInputSafeUnavailableCount);
         Assert.Equal(0, summary.NativeDecontaminationAttemptCount);
-        Assert.Equal(1, summary.SkippedUnsafeContaminationApiCount);
         Assert.Contains("badwater_water_like_map_cells=1", summary.ToLogToken());
         Assert.Contains("badwater_suppression_inputs=0", summary.ToLogToken());
         Assert.Contains("native_decontamination_attempts=0", summary.ToLogToken());

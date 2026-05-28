@@ -39,7 +39,7 @@ public sealed class TimberbornWildfirePersistenceTests
                         TimberbornBeaverFieldBehaviorStateEntry.CurrentPersistenceVersion,
                         "beaver:1",
                         TimberbornBeaverFieldBehaviorVariant.FireHeat,
-                        TimberbornBeaverFieldBehaviorAction.SafeNoOp,
+                        TimberbornBeaverFieldBehaviorAction.NoOp,
                         LastDecisionTick: 40,
                         ConsecutiveExposedSamples: 2,
                         ConsecutiveFireHeatExposedSamples: 2,

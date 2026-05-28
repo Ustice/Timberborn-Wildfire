@@ -43,7 +43,7 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
         HashSet<int> appliedGrowableIds = new();
         requests.ToList().ForEach(request => ApplyRequest(tick, grid.Value, request, appliedGrowableIds, counter));
 
-        if (counter.AppliedGrowables > 0 || counter.SkippedUnsafeApis > 0)
+        if (counter.AppliedGrowables > 0 || counter.FailedApplications > 0)
         {
             _logSink.Info(
                 "wildfire_timberborn_ash_growth_adapter_applied " +
@@ -51,14 +51,14 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
                 $"requests={requests.Count} " +
                 $"candidate_growables={counter.CandidateGrowables} " +
                 $"applied_growables={counter.AppliedGrowables} " +
-                $"skipped_unsupported_growables={counter.SkippedUnsupportedGrowables}");
+                $"unsupported_growables={counter.UnsupportedGrowables}");
         }
 
         return new TimberbornAshGrowthApplicationResult(
             CandidateGrowableCount: counter.CandidateGrowables,
             AppliedGrowableCount: counter.AppliedGrowables,
-            SkippedUnsafeApiCount: counter.SkippedUnsafeApis,
-            SkippedUnsupportedGrowableCount: counter.SkippedUnsupportedGrowables);
+            FailedConsequenceCount: counter.FailedApplications,
+            UnsupportedGrowableCount: counter.UnsupportedGrowables);
     }
 
     private void ApplyRequest(
@@ -95,7 +95,7 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
 
         if (growables.Length == 0)
         {
-            counter.SkippedUnsupportedGrowables++;
+            counter.UnsupportedGrowables++;
             return;
         }
 
@@ -129,14 +129,14 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
         {
             if (growable.IsGrown || !growable.GrowthInProgress)
             {
-                counter.SkippedUnsupportedGrowables++;
+                counter.UnsupportedGrowables++;
                 return;
             }
 
             float progressBonus = ProgressBonus(request);
             if (progressBonus <= 0f)
             {
-                counter.SkippedUnsupportedGrowables++;
+                counter.UnsupportedGrowables++;
                 return;
             }
 
@@ -162,7 +162,7 @@ public sealed class TimberbornGrowableAshGrowthAdapter : ITimberbornAshGrowthAda
     {
         public int CandidateGrowables { get; set; }
         public int AppliedGrowables { get; set; }
-        public int SkippedUnsafeApis { get; set; }
-        public int SkippedUnsupportedGrowables { get; set; }
+        public int FailedApplications { get; set; }
+        public int UnsupportedGrowables { get; set; }
     }
 }

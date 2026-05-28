@@ -19,7 +19,7 @@ public sealed class TimberbornResourceFuelCatalogTests
     }
 
     [Fact]
-    public void LookupDefaultsUnknownResourcesToSafeLowFuel()
+    public void LookupDefaultsUnknownResourcesToConservativeLowFuel()
     {
         TimberbornResourceFuelProfile profile = TimberbornResourceFuelCatalog.Default.Lookup("MysteryResource");
 
@@ -234,7 +234,7 @@ public sealed class TimberbornResourceFuelCatalogTests
     }
 
     [Fact]
-    public void ResourceAdapterMapsUnknownResourceIdsToSafeLowFuelStockpileSources()
+    public void ResourceAdapterMapsUnknownResourceIdsToConservativeLowFuelStockpileSources()
     {
         TimberbornResourceAdapter resourceAdapter = new();
         TimberbornFireCellMapper mapper = new();

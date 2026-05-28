@@ -31,7 +31,7 @@ public readonly record struct TimberbornCropBurnConsequenceResult(
     int YieldLost,
     bool KilledCrop,
     bool VisualStateUpdated,
-    bool SkippedUnsafeApi);
+    bool FailedConsequence);
 
 public readonly record struct TimberbornCropBurnConsequenceSummary(
     uint Tick,
@@ -44,7 +44,7 @@ public readonly record struct TimberbornCropBurnConsequenceSummary(
     int UnmappedTargetCount,
     int UnknownHarvestResourceCount,
     int NonBurnableCropTargetCount,
-    int SkippedUnsafeApiCount)
+    int FailedConsequenceCount)
 {
     public static readonly TimberbornCropBurnConsequenceSummary Empty = new(
         Tick: 0,
@@ -57,7 +57,7 @@ public readonly record struct TimberbornCropBurnConsequenceSummary(
         UnmappedTargetCount: 0,
         UnknownHarvestResourceCount: 0,
         NonBurnableCropTargetCount: 0,
-        SkippedUnsafeApiCount: 0);
+        FailedConsequenceCount: 0);
 
     public string ToLogToken()
     {
@@ -148,13 +148,13 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             NonBurnableCropTargetCount: consideredCropTargets.Count(static state =>
                 state.MaterialKind is TimberbornBurnMaterialKind.NonBurnable ||
                 (state.DamageCapacity == 0 && state.MissingResourceIds.Count == 0)),
-            SkippedUnsafeApiCount: outcomes.Sum(static outcome => outcome.SkippedUnsafeApiCount));
+            FailedConsequenceCount: outcomes.Sum(static outcome => outcome.FailedConsequenceCount));
 
         if (summary.ConsideredCropTargetCount > 0 ||
             summary.YieldLost > 0 ||
             summary.KilledCropCount > 0 ||
             summary.VisualStateUpdateCount > 0 ||
-            summary.SkippedUnsafeApiCount > 0)
+            summary.FailedConsequenceCount > 0)
         {
             _logSink.Info(summary.ToLogToken());
         }
@@ -281,9 +281,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             plan.RemainingYield));
         if (!result.MatchedCropTarget)
         {
-            return result.SkippedUnsafeApi
-                ? TimberbornCropBurnTargetOutcome.SkippedUnsafeApi
-                : TimberbornCropBurnTargetOutcome.BurnableNoChange;
+            ThrowIfFailed(result, TimberbornCropBurnConsequenceKind.DryCrop, state);
+            return TimberbornCropBurnTargetOutcome.BurnableNoChange;
         }
 
         _driedTargets.Add(state.TargetKey);
@@ -303,9 +302,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             plan.RemainingYield));
         if (!result.MatchedCropTarget)
         {
-            return result.SkippedUnsafeApi
-                ? TimberbornCropBurnTargetOutcome.SkippedUnsafeApi
-                : TimberbornCropBurnTargetOutcome.BurnableNoChange;
+            ThrowIfFailed(result, TimberbornCropBurnConsequenceKind.ReduceYield, state);
+            return TimberbornCropBurnTargetOutcome.BurnableNoChange;
         }
 
         _appliedYieldLossByTarget[state.TargetKey] = plan.TargetYieldLost;
@@ -314,8 +312,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             YieldLost: result.YieldLost,
             Killed: false,
             VisualUpdated: false,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: 0);
+            IsUnknownResource: false,
+            FailedConsequenceCount: 0);
     }
 
     private TimberbornCropBurnTargetOutcome ApplyDeathConsequences(
@@ -346,20 +344,22 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
                 YieldLost: 0,
                 KilledCrop: false,
                 VisualStateUpdated: false,
-                SkippedUnsafeApi: false);
+                FailedConsequence: false);
 
         if (killResult.KilledCrop)
         {
             _killedTargets.Add(state.TargetKey);
         }
+        ThrowIfFailed(killResult, TimberbornCropBurnConsequenceKind.KillCrop, state);
+        ThrowIfFailed(visualResult, TimberbornCropBurnConsequenceKind.MarkBurnedVisual, state);
 
         return new TimberbornCropBurnTargetOutcome(
             Burnable: true,
             YieldLost: 0,
             Killed: killResult.KilledCrop,
             VisualUpdated: visualResult.VisualStateUpdated,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: CountUnavailable(killResult) + CountUnavailable(visualResult));
+            IsUnknownResource: false,
+            FailedConsequenceCount: CountUnavailable(killResult) + CountUnavailable(visualResult));
     }
 
     private TimberbornCropBurnTargetOutcome ApplyBurnedLeftoverConsequences(
@@ -380,9 +380,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             remainingYield: 0));
         if (!result.VisualStateUpdated)
         {
-            return result.SkippedUnsafeApi
-                ? TimberbornCropBurnTargetOutcome.SkippedUnsafeApi
-                : TimberbornCropBurnTargetOutcome.BurnableNoChange;
+            ThrowIfFailed(result, TimberbornCropBurnConsequenceKind.MarkBurnedLeftover, state);
+            return TimberbornCropBurnTargetOutcome.BurnableNoChange;
         }
 
         _leftoverTargets.Add(state.TargetKey);
@@ -393,8 +392,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             YieldLost: plan.IncrementalYieldLoss,
             Killed: result.KilledCrop,
             VisualUpdated: true,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: 0);
+            IsUnknownResource: false,
+            FailedConsequenceCount: 0);
     }
 
     private TimberbornCropBurnConsequence CreateConsequence(
@@ -468,7 +467,21 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
 
     private static int CountUnavailable(TimberbornCropBurnConsequenceResult result)
     {
-        return !result.MatchedCropTarget && result.SkippedUnsafeApi ? 1 : 0;
+        return 0;
+    }
+
+    private static void ThrowIfFailed(
+        TimberbornCropBurnConsequenceResult result,
+        TimberbornCropBurnConsequenceKind kind,
+        TimberbornBurnDamageTargetState state)
+    {
+        if (!result.FailedConsequence)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Crop burn consequence failed for {state.TargetKey.StableId} ({state.SpecId}, {kind}).");
     }
 
     private static string PrimaryYieldResourceId(TimberbornBurnDamageTargetState state)
@@ -504,16 +517,16 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
         int YieldLost,
         bool Killed,
         bool VisualUpdated,
-        bool SkippedUnknownResource,
-        int SkippedUnsafeApiCount)
+        bool IsUnknownResource,
+        int FailedConsequenceCount)
     {
         public static readonly TimberbornCropBurnTargetOutcome NoOp = new(
             Burnable: false,
             YieldLost: 0,
             Killed: false,
             VisualUpdated: false,
-            SkippedUnknownResource: false,
-            SkippedUnsafeApiCount: 0);
+            IsUnknownResource: false,
+            FailedConsequenceCount: 0);
 
         public static readonly TimberbornCropBurnTargetOutcome BurnableNoChange = NoOp with
         {
@@ -522,12 +535,12 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
 
         public static readonly TimberbornCropBurnTargetOutcome UnknownResource = NoOp with
         {
-            SkippedUnknownResource = true,
+            IsUnknownResource = true,
         };
 
-        public static readonly TimberbornCropBurnTargetOutcome SkippedUnsafeApi = BurnableNoChange with
+        public static readonly TimberbornCropBurnTargetOutcome FailedConsequence = BurnableNoChange with
         {
-            SkippedUnsafeApiCount = 1,
+            FailedConsequenceCount = 1,
         };
 
         public static TimberbornCropBurnTargetOutcome Combine(
@@ -539,8 +552,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
                 YieldLost: first.YieldLost + second.YieldLost,
                 Killed: first.Killed || second.Killed,
                 VisualUpdated: first.VisualUpdated || second.VisualUpdated,
-                SkippedUnknownResource: first.SkippedUnknownResource || second.SkippedUnknownResource,
-                SkippedUnsafeApiCount: first.SkippedUnsafeApiCount + second.SkippedUnsafeApiCount);
+                IsUnknownResource: first.IsUnknownResource || second.IsUnknownResource,
+                FailedConsequenceCount: first.FailedConsequenceCount + second.FailedConsequenceCount);
         }
     }
 }

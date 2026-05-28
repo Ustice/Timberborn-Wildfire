@@ -286,7 +286,7 @@ public static class TimberbornWildfirePersistenceCodec
             variant,
             hasLastAction
                 ? (TimberbornBeaverFieldBehaviorAction)ParseInt(parts[3])
-                : TimberbornBeaverFieldBehaviorAction.SafeNoOp,
+                : TimberbornBeaverFieldBehaviorAction.NoOp,
             ParseUInt(hasLastAction ? parts[4] : parts[3]),
             exposedSamples,
             fireHeatSamples,

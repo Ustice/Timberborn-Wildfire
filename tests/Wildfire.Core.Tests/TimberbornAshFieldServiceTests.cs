@@ -127,7 +127,7 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal([20, 21, 22], growthAdapter.Requests.Select(static request => request.CellIndex).ToArray());
         Assert.Equal(3, summary.GrowthCandidateCellCount);
         Assert.Equal(2, summary.GrowthAppliedGrowableCount);
-        Assert.Equal(1, summary.GrowthSkippedUnsupportedGrowableCount);
+        Assert.Equal(1, summary.GrowthUnsupportedGrowableCount);
     }
 
     [Fact]
@@ -407,11 +407,10 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(1, summary.CleanAshWashedCellCount);
         Assert.Equal(0, summary.TaintedAshWashedCellCount);
         Assert.Equal(0, summary.WaterTaintAttemptCount);
-        Assert.Equal(0, summary.SkippedUnsafeWaterApiCount);
     }
 
     [Fact]
-    public void AshWaterContactClassifierSeparatesCleanWaterFromUnsafeWaterLikeCells()
+    public void AshWaterContactClassifierSeparatesCleanWaterFromContaminatedWaterLikeCells()
     {
         TimberbornFireSimPersistenceSnapshot snapshot = new(
             Width: 3,
@@ -517,7 +516,7 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void AshWaterWashoutCanReportSafeWaterTaintSuccessWithoutDeletingLocally()
+    public void AshWaterWashoutCanReportWaterTaintAttemptSuccessWithoutDeletingLocally()
     {
         TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
         SyncAsh(
@@ -541,7 +540,6 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(1, entry.Strength);
         Assert.Equal(1, summary.WaterTaintAttemptCount);
         Assert.Equal(1, summary.WaterTaintSuccessCount);
-        Assert.Equal(0, summary.SkippedUnsafeWaterApiCount);
     }
 
     [Fact]
@@ -563,7 +561,6 @@ public sealed class TimberbornAshFieldServiceTests
 
         Assert.Equal(1, summary.CandidateCellCount);
         Assert.Equal(1, summary.AppliedCellCount);
-        Assert.Equal(0, summary.SkippedUnavailablePathCount);
         Assert.Equal([nativeMapIndex], soilContamination.ContaminationIndices);
         Assert.Equal([(12, 13, 4)], soilContamination.UpdatedCoordinates);
         Assert.Equal([0.9f], soilContamination.UpdatedContamination);
@@ -712,8 +709,8 @@ public sealed class TimberbornAshFieldServiceTests
             return new TimberbornAshGrowthApplicationResult(
                 CandidateGrowableCount: requests.Count,
                 AppliedGrowableCount: applied,
-                SkippedUnsafeApiCount: 0,
-                SkippedUnsupportedGrowableCount: requests.Count - applied);
+                FailedConsequenceCount: 0,
+                UnsupportedGrowableCount: requests.Count - applied);
         }
     }
 
@@ -730,7 +727,6 @@ public sealed class TimberbornAshFieldServiceTests
                 CandidateCellCount: candidates.Count,
                 ReachableCellCount: collectedCells.Count,
                 CollectedGoodCount: collectedCells.Sum(static cell => cell.GoodAmount),
-                SkippedInventoryApiCount: 0,
                 CollectedCells: collectedCells);
         }
     }

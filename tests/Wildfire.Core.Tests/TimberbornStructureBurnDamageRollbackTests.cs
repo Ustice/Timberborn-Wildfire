@@ -653,27 +653,25 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
-    public void SinkReportsNativeConstructionSkipWhenBurnedVisualMasksUnfinishedFailure()
+    public void SinkThrowsWhenNativeConstructionRollbackAttemptDoesNotEnterConstructionPhase()
     {
-        RecordingStructureTargetApi targetApi = new(Target(
-            resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
-            canClose: true,
-            canApplyRollbackVisual: true,
-            canRepairAfterDanger: false));
+        RecordingStructureTargetApi targetApi = new(
+            Target(
+                resources: [new TimberbornBurnDamageResourceStack("Log", 1)],
+                canClose: true,
+                canApplyRollbackVisual: true,
+                canRepairAfterDanger: false),
+            failNativeConstructionRollback: true);
         TimberbornStructureBurnDamageRollbackSink sink = new(targetApi);
 
-        TimberbornStructureBurnDamageRollbackSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             9,
-            [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]);
+            [Decision(4, oldFuel: 8, newFuel: 0, heat: 10)]));
 
         TimberbornStructureBurnDamageApplyRequest request = Assert.Single(targetApi.Requests);
         Assert.Equal(TimberbornStructureBurnRollbackStage.Unfinished, request.RollbackStage);
         Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request));
-        Assert.Equal(1, summary.ClosedStructureCount);
-        Assert.Equal(1, summary.UnfinishedStageCount);
-        Assert.Equal(1, summary.VisualRollbackAppliedCount);
-        Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
-        Assert.Equal(1, summary.SkippedNativeConstructionApiCount);
+        Assert.Contains("failed to enter native construction phase", exception.Message);
     }
 
     [Fact]
@@ -699,7 +697,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Equal(1, summary.ScorchedStageCount);
         Assert.Equal(1, summary.VisualRollbackAppliedCount);
         Assert.Equal(0, summary.ConstructionPhaseEnteredCount);
-        Assert.Equal(0, summary.SkippedNativeConstructionApiCount);
     }
 
     [Theory]
@@ -816,7 +813,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         throw new InvalidOperationException("Could not locate Wildfire repo root.");
     }
 
-    private sealed class RecordingStructureTargetApi(TimberbornStructureBurnDamageTarget? target)
+    private sealed class RecordingStructureTargetApi(
+        TimberbornStructureBurnDamageTarget? target,
+        bool failNativeConstructionRollback = false)
         : ITimberbornStructureBurnDamageRollbackTargetApi,
             ITimberbornStructureBurnRepairCompletionMaintenance,
             ITimberbornStructureBurningStatusMaintenance
@@ -841,8 +840,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
             bool requestsNativeConstructionPhase =
                 TimberbornStructureBurnDamageRollbackTargetApi.RequestsNativeConstructionPhase(request);
             bool constructionPhaseEntered = damageTarget.CanUseNativeConstructionRollback &&
-                damageTarget.CanRepairAfterDanger &&
-                requestsNativeConstructionPhase;
+                requestsNativeConstructionPhase &&
+                !failNativeConstructionRollback;
             bool visualRollbackApplied = damageTarget.CanApplyRollbackVisual && request.ShouldApplyRollbackVisual;
             if (request.ShouldClose && !damageTarget.CanClose)
             {
@@ -854,7 +853,6 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
                 Closed: damageTarget.CanClose && request.ShouldClose,
                 VisualRollbackApplied: visualRollbackApplied,
                 ConstructionPhaseEntered: constructionPhaseEntered,
-                SkippedNativeConstructionApi: requestsNativeConstructionPhase && !constructionPhaseEntered,
                 RepairEligible: request.RepairEligible);
         }
 

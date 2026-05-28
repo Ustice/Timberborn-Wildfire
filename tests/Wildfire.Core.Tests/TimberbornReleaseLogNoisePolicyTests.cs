@@ -62,7 +62,7 @@ public sealed class TimberbornReleaseLogNoisePolicyTests
             int damageApplied,
             bool isFullyDamaged)
         {
-            return new TimberbornPowerInfrastructureApplyResult(false, false, false, false);
+            return new TimberbornPowerInfrastructureApplyResult(false, false, false);
         }
     }
 

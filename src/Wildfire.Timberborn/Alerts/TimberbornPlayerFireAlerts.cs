@@ -227,7 +227,6 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
                 NoOpDecisionsApplied: 0,
                 DecisionsSkippedCooldown: 0,
                 DecisionsSkippedBatch: 0,
-                SkippedUnavailablePath: 0,
                 FailedDecisions: 0,
                 RecoveryActions: 0,
                 SmokeExposedSamples: 0,
@@ -236,66 +235,23 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
                 SmokeCoughingRecovered: 0,
                 SmokeCoughingSlowdownsApplied: 0,
                 SmokeCoughingSlowdownsRecovered: 0,
-                SmokeCoughingSlowdownsSkippedUnavailablePath: 0,
                 SmokeRecoveryDecays: 0,
-                SmokeChokingCandidates: 0,
                 SmokeChokingSlowdownsApplied: 0,
                 SmokeChokingSlowdownsRecovered: 0,
-                SmokeChokingSlowdownsSkippedUnavailablePath: 0,
-                SmokeChokingSkippedUnsafeApi: 0,
-                SmokeChokingIncapacitationCandidates: 0,
-                SmokeChokingIncapacitationAttempts: 0,
-                SmokeChokingIncapacitationsApplied: 0,
-                SmokeChokingIncapacitationsRecovered: 0,
-                SmokeChokingIncapacitationSkippedUnsafeApi: 0,
-                SmokeChokingIncapacitationFailures: 0,
-                SmokeDeathCandidates: 0,
-                SmokeDeathAttempts: 0,
-                SmokeDeathsApplied: 0,
-                SmokeDeathSkippedUnsafeApi: 0,
-                SmokeDeathFailures: 0,
                 ToxicSmokeExposedBeavers: 0,
                 ToxicSmokeExposureAccumulatedSamples: 0,
-                ToxicSmokeContaminationEffectAttempts: 0,
-                ToxicSmokeContaminationEffectSuccesses: 0,
-                ToxicSmokeContaminationEffectFailures: 0,
-                ToxicSmokeContaminationEffectSkippedUnsafeApi: 0,
-                ToxicSmokeChokingCandidates: 0,
-                ToxicSmokeDeathCandidates: 0,
                 ToxicSmokeRecoveryDecays: 0,
                 FireHeatExposedBeavers: 0,
                 FireHeatActiveFlameContacts: 0,
-                FireHeatAvoidanceCandidates: 0,
-                FireHeatAvoidedCells: 0,
-                FireHeatAvoidanceSkippedUnavailablePath: 0,
-                FireHeatInterruptedJobCandidates: 0,
-                FireHeatInterruptedJobs: 0,
-                FireHeatInterruptedJobsSkippedUnavailablePath: 0,
-                FireHeatSingedEntered: 0,
-                FireHeatSingedRecovered: 0,
-                FireHeatSingedSkippedUnavailablePath: 0,
-                FireHeatBurnedEntered: 0,
-                FireHeatBurnedRecovered: 0,
-                FireHeatBurnedSkippedUnavailablePath: 0,
-                FireHeatDeathCandidates: 0,
-                FireHeatDeathSkippedUnsafeApi: 0,
                 FireHeatRecoveryDecays: 0,
                 PersistenceSaveCount: 0,
                 PersistenceLoadCount: 0,
                 LastDecisionTick: null);
         int dangerEvents =
             PositiveDelta(counters.SmokeCoughingEntered, previous.SmokeCoughingEntered) +
-            PositiveDelta(counters.SmokeChokingCandidates, previous.SmokeChokingCandidates) +
-            PositiveDelta(counters.SmokeChokingIncapacitationCandidates, previous.SmokeChokingIncapacitationCandidates) +
-            PositiveDelta(counters.ToxicSmokeChokingCandidates, previous.ToxicSmokeChokingCandidates) +
-            PositiveDelta(counters.FireHeatSingedEntered, previous.FireHeatSingedEntered) +
-            PositiveDelta(counters.FireHeatBurnedEntered, previous.FireHeatBurnedEntered);
-        int deathEvents =
-            PositiveDelta(counters.SmokeDeathCandidates, previous.SmokeDeathCandidates) +
-            PositiveDelta(counters.SmokeDeathsApplied, previous.SmokeDeathsApplied) +
-            PositiveDelta(counters.ToxicSmokeDeathCandidates, previous.ToxicSmokeDeathCandidates) +
-            PositiveDelta(counters.FireHeatDeathCandidates, previous.FireHeatDeathCandidates);
-        int eventCount = dangerEvents + deathEvents;
+            PositiveDelta(counters.SmokeCoughingSlowdownsApplied, previous.SmokeCoughingSlowdownsApplied) +
+            PositiveDelta(counters.SmokeChokingSlowdownsApplied, previous.SmokeChokingSlowdownsApplied);
+        int eventCount = dangerEvents;
 
         return eventCount == 0
             ? null
@@ -305,9 +261,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
                 SourceEventCount: eventCount,
                 AffectedCellCount: Math.Max(1, counters.TrackedBeaverCount),
                 FocusCellIndex: null,
-                Detail: deathEvents > 0
-                    ? FormatCount(deathEvents, "beaver death risk", "beaver death risks")
-                    : FormatCount(dangerEvents, "beaver danger", "beaver dangers"));
+                Detail: FormatCount(dangerEvents, "beaver danger", "beaver dangers"));
     }
 
     private bool ShouldSuppressByThrottle(uint tick)

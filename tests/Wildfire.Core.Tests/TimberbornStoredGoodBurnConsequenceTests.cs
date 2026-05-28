@@ -182,7 +182,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     }
 
     [Fact]
-    public void SinkReportsOwnedStorageWhenLiveInventoryApiCannotResolveTarget()
+    public void SinkThrowsWhenLiveInventoryApiCannotResolveOwnedStorage()
     {
         RecordingStoredGoodBurnInventoryApi inventoryApi = new(target: null);
         TimberbornBurnDamageTestStateProvider burnDamageTargets = new(
@@ -199,12 +199,11 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
             inventoryApi,
             burnDamageTargets: burnDamageTargets);
 
-        TimberbornStoredGoodBurnConsequenceSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             8,
-            [Decision(4, oldFuel: 5, newFuel: 2)]);
+            [Decision(4, oldFuel: 5, newFuel: 2)]));
 
-        Assert.Equal(1, summary.MatchedStorageCellCount);
-        Assert.Equal(3, summary.SkippedNoInventoryApiCount);
+        Assert.Contains("failed to resolve inventory target", exception.Message);
         Assert.Empty(inventoryApi.DestroyedStacks);
     }
 
@@ -233,7 +232,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     }
 
     [Fact]
-    public void SinkSkipsMutationWhenInventoryApiIsUnavailable()
+    public void SinkThrowsWhenInventoryMutationIsUnavailable()
     {
         RecordingStoredGoodBurnInventoryApi inventoryApi = new(
             new TimberbornStoredGoodBurnTarget(
@@ -242,13 +241,11 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
                 CanMutateInventory: false));
         TimberbornStoredGoodBurnConsequenceSink sink = new(inventoryApi);
 
-        TimberbornStoredGoodBurnConsequenceSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             10,
-            [Decision(4, oldFuel: 5, newFuel: 1)]);
+            [Decision(4, oldFuel: 5, newFuel: 1)]));
 
-        Assert.Equal(1, summary.BurnableStackCount);
-        Assert.Equal(0, summary.DestroyedItemCount);
-        Assert.Equal(6, summary.SkippedNoInventoryApiCount);
+        Assert.Contains("inventory mutation is unavailable", exception.Message);
         Assert.Empty(inventoryApi.DestroyedStacks);
     }
 
@@ -274,7 +271,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
         Assert.Equal(2, summary.HazardousGoodCount);
         Assert.Equal(2, summary.ExplosiveGoodCount);
         Assert.Equal(1, summary.ExplosiveBlastTriggeredCount);
-        Assert.Equal(1, summary.SkippedUnknownResourceCount);
+        Assert.Equal(1, summary.UnknownResourceCount);
         Assert.Equal(5, summary.DestroyedItemCount);
         Assert.Equal(
             [
@@ -367,8 +364,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
                 ExplosiveBlastTriggeredCount: 0,
                 ContaminatedGoodCount: 0,
                 ContaminationPulseCellCount: 0,
-                SkippedNoInventoryApiCount: 0,
-                SkippedUnknownResourceCount: 0,
+                UnknownResourceCount: 0,
                 SkippedNonBurnableItemCount: 0);
         }
     }
@@ -409,8 +405,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
                 ExplosiveBlastTriggeredCount: 0,
                 ContaminatedGoodCount: 0,
                 ContaminationPulseCellCount: 0,
-                SkippedNoInventoryApiCount: 0,
-                SkippedUnknownResourceCount: 0,
+                UnknownResourceCount: 0,
                 SkippedNonBurnableItemCount: 0);
         }
     }

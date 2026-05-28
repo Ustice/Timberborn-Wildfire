@@ -115,25 +115,22 @@ public sealed class TimberbornTunnelFireConsequenceTests
     }
 
     [Fact]
-    public void SinkReportsExplodeMethodFailureAsSafeUnavailableTelemetry()
+    public void SinkThrowsWhenNativeExplodeDoesNotApply()
     {
         RecordingTunnelTargetApi targetApi = new(
             Target(canExplodeNative: true),
             explodeResult: new TimberbornTunnelNativeExplodeResult(
-                TimberbornTunnelNativeExplodeStatus.SkippedUnavailablePath,
+                TimberbornTunnelNativeExplodeStatus.SkippedSettingDisabled,
                 RecoverabilityPreserved: false));
         TimberbornTunnelFireSink sink = new(
             () => Settings(destructionEnabled: true),
             targetApi);
 
-        TimberbornTunnelFireSummary summary = sink.ApplyConsequences(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => sink.ApplyConsequences(
             5,
-            [Decision(12, heat: 5)]);
+            [Decision(12, heat: 5)]));
 
-        Assert.Equal(1, summary.NativeExplodeAttemptedCount);
-        Assert.Equal(0, summary.NativeExplodeAppliedCount);
-        Assert.Equal(1, summary.SkippedUnavailablePathCount);
-        Assert.Equal(1, summary.RecoverabilityUnknownCount);
+        Assert.Contains("Tunnel native explode did not apply", exception.Message);
         Assert.Single(targetApi.ExplodedTargets);
     }
 

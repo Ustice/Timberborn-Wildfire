@@ -51,8 +51,7 @@ public readonly record struct TimberbornStoredGoodBurnConsequenceResult(
     int ExplosiveBlastTriggeredCount,
     int ContaminatedGoodCount,
     int ContaminationPulseCellCount,
-    int SkippedNoInventoryApiCount,
-    int SkippedUnknownResourceCount,
+    int UnknownResourceCount,
     int SkippedNonBurnableItemCount);
 
 public sealed record TimberbornStoredGoodHazardStack(
@@ -88,8 +87,7 @@ public readonly record struct TimberbornStoredGoodBurnConsequenceSummary(
     int ExplosiveBlastTriggeredCount,
     int ContaminatedGoodCount,
     int ContaminationPulseCellCount,
-    int SkippedNoInventoryApiCount,
-    int SkippedUnknownResourceCount,
+    int UnknownResourceCount,
     int SkippedNonBurnableItemCount)
 {
     public static readonly TimberbornStoredGoodBurnConsequenceSummary Empty = new(
@@ -103,8 +101,7 @@ public readonly record struct TimberbornStoredGoodBurnConsequenceSummary(
         ExplosiveBlastTriggeredCount: 0,
         ContaminatedGoodCount: 0,
         ContaminationPulseCellCount: 0,
-        SkippedNoInventoryApiCount: 0,
-        SkippedUnknownResourceCount: 0,
+        UnknownResourceCount: 0,
         SkippedNonBurnableItemCount: 0);
 
     public string ToLogToken(uint tick)
@@ -121,8 +118,7 @@ public readonly record struct TimberbornStoredGoodBurnConsequenceSummary(
             $"explosive_blasts_triggered={ExplosiveBlastTriggeredCount} " +
             $"contaminated_goods={ContaminatedGoodCount} " +
             $"contamination_pulse_cells={ContaminationPulseCellCount} " +
-            $"skipped_no_inventory_api={SkippedNoInventoryApiCount} " +
-            $"skipped_unknown_resources={SkippedUnknownResourceCount} " +
+            $"unknown_resources={UnknownResourceCount} " +
             $"skipped_non_burnable_items={SkippedNonBurnableItemCount}";
     }
 }
@@ -368,15 +364,13 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
             ExplosiveBlastTriggeredCount: results.Sum(static result => result.ExplosiveBlastTriggeredCount),
             ContaminatedGoodCount: results.Sum(static result => result.ContaminatedGoodCount),
             ContaminationPulseCellCount: results.Sum(static result => result.ContaminationPulseCellCount),
-            SkippedNoInventoryApiCount: results.Sum(static result => result.SkippedNoInventoryApiCount),
-            SkippedUnknownResourceCount: results.Sum(static result => result.SkippedUnknownResourceCount),
+            UnknownResourceCount: results.Sum(static result => result.UnknownResourceCount),
             SkippedNonBurnableItemCount: results.Sum(static result => result.SkippedNonBurnableItemCount));
         if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
             summary.MatchedStorageCellCount,
             summary.DestroyedItemCount,
             summary.HazardousGoodCount,
-            summary.SkippedNoInventoryApiCount,
-            summary.SkippedUnknownResourceCount))
+            summary.UnknownResourceCount))
         {
             _logSink.Info(summary.ToLogToken(tick));
         }
@@ -388,19 +382,8 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
     {
         if (resolvedTarget.Target is null)
         {
-            return new TimberbornStoredGoodBurnConsequenceResult(
-                MatchedStorageCell: true,
-                AppliedConsequence: false,
-                BurnableStackCount: 0,
-                DestroyedItemCount: 0,
-                HazardousGoodCount: 0,
-                ExplosiveGoodCount: 0,
-                ExplosiveBlastTriggeredCount: 0,
-                ContaminatedGoodCount: 0,
-                ContaminationPulseCellCount: 0,
-                SkippedNoInventoryApiCount: resolvedTarget.Consequence.BurnBudget,
-                SkippedUnknownResourceCount: 0,
-                SkippedNonBurnableItemCount: 0);
+            throw new InvalidOperationException(
+                $"Stored good burn failed to resolve inventory target for owned storage {resolvedTarget.StableId}.");
         }
 
         TimberbornStoredGoodBurnTarget target = resolvedTarget.Target;
@@ -459,20 +442,8 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
 
         if (!target.CanMutateInventory)
         {
-            return new TimberbornStoredGoodBurnConsequenceResult(
-                MatchedStorageCell: true,
-                AppliedConsequence: false,
-                BurnableStackCount: burnableStacks.Length + hazardStacks.Length,
-                DestroyedItemCount: 0,
-                HazardousGoodCount: hazardousGoodCount,
-                ExplosiveGoodCount: explosiveGoodCount,
-                ExplosiveBlastTriggeredCount: hazardResult.ExplosiveBlastTriggeredCount,
-                ContaminatedGoodCount: contaminatedGoodCount,
-                ContaminationPulseCellCount: hazardResult.ContaminationPulseCellCount,
-                SkippedNoInventoryApiCount: burnableStacks.Sum(static stack => stack.Stack.Amount) +
-                    hazardStacksToDestroy.Sum(static stack => stack.Amount),
-                SkippedUnknownResourceCount: skippedUnknownResourceCount,
-                SkippedNonBurnableItemCount: skippedNonBurnableItemCount);
+            throw new InvalidOperationException(
+                $"Stored good burn inventory mutation is unavailable for {target.StableId}.");
         }
 
         TimberbornStoredGoodStack[] stacksToDestroyIncludingHazards = hazardStacksToDestroy
@@ -491,7 +462,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceSink : ITimberbornStoredG
             ExplosiveBlastTriggeredCount = hazardResult.ExplosiveBlastTriggeredCount,
             ContaminatedGoodCount = contaminatedGoodCount,
             ContaminationPulseCellCount = hazardResult.ContaminationPulseCellCount,
-            SkippedUnknownResourceCount = skippedUnknownResourceCount,
+            UnknownResourceCount = skippedUnknownResourceCount,
             SkippedNonBurnableItemCount = skippedNonBurnableItemCount,
         };
     }
@@ -744,19 +715,8 @@ public sealed class TimberbornStockpileStoredGoodBurnInventoryApi :
         Inventory? inventory = FindInventory(target.StableId);
         if (inventory is null)
         {
-            return new TimberbornStoredGoodBurnConsequenceResult(
-                MatchedStorageCell: true,
-                AppliedConsequence: false,
-                BurnableStackCount: 0,
-                DestroyedItemCount: 0,
-                HazardousGoodCount: 0,
-                ExplosiveGoodCount: 0,
-                ExplosiveBlastTriggeredCount: 0,
-                ContaminatedGoodCount: 0,
-                ContaminationPulseCellCount: 0,
-                SkippedNoInventoryApiCount: stacksToDestroy.Sum(static stack => stack.Amount),
-                SkippedUnknownResourceCount: 0,
-                SkippedNonBurnableItemCount: 0);
+            throw new InvalidOperationException(
+                $"Stored good burn inventory target disappeared before mutation for {target.StableId}.");
         }
 
         stacksToDestroy
@@ -782,8 +742,7 @@ public sealed class TimberbornStockpileStoredGoodBurnInventoryApi :
             ExplosiveBlastTriggeredCount: 0,
             ContaminatedGoodCount: 0,
             ContaminationPulseCellCount: 0,
-            SkippedNoInventoryApiCount: 0,
-            SkippedUnknownResourceCount: 0,
+            UnknownResourceCount: 0,
             SkippedNonBurnableItemCount: 0);
     }
 

@@ -37,7 +37,6 @@ public sealed record TimberbornWaterInfrastructureFireTarget(
 public readonly record struct TimberbornWaterInfrastructureApplyResult(
     bool AppliedDamage,
     bool AttemptedWaterStateMutation,
-    bool SkippedUnavailablePath,
     bool RepairEligible);
 
 public readonly record struct TimberbornWaterInfrastructureFireSummary(
@@ -49,7 +48,6 @@ public readonly record struct TimberbornWaterInfrastructureFireSummary(
     int BurnableMaterialValue,
     int DamagedTargetCount,
     int WaterStateMutationAttemptCount,
-    int SkippedUnavailablePathCount,
     int RepairEligibleTargetCount,
     int TotalDamageApplied)
 {
@@ -62,7 +60,6 @@ public readonly record struct TimberbornWaterInfrastructureFireSummary(
         BurnableMaterialValue: 0,
         DamagedTargetCount: 0,
         WaterStateMutationAttemptCount: 0,
-        SkippedUnavailablePathCount: 0,
         RepairEligibleTargetCount: 0,
         TotalDamageApplied: 0);
 
@@ -156,14 +153,12 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
             BurnableMaterialValue: outcomes.Sum(static outcome => outcome.BurnableMaterialValue),
             DamagedTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.AppliedDamage),
             WaterStateMutationAttemptCount: outcomes.Count(static outcome => outcome.ApplyResult.AttemptedWaterStateMutation),
-            SkippedUnavailablePathCount: outcomes.Count(static outcome => outcome.ApplyResult.SkippedUnavailablePath),
             RepairEligibleTargetCount: outcomes.Count(static outcome => outcome.ApplyResult.RepairEligible),
             TotalDamageApplied: outcomes.Sum(static outcome => outcome.DamageApplied));
         if (TimberbornReleaseLogNoisePolicy.ShouldLogConsequenceSummary(
             summary.MatchedTargetCellCount,
             summary.DamagedTargetCount,
-            summary.WaterStateMutationAttemptCount,
-            summary.SkippedUnavailablePathCount))
+            summary.WaterStateMutationAttemptCount))
         {
             _logSink.Info(summary.ToLogToken(tick));
         }
@@ -194,7 +189,6 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
                 new TimberbornWaterInfrastructureApplyResult(
                     AppliedDamage: false,
                     AttemptedWaterStateMutation: false,
-                    SkippedUnavailablePath: false,
                     RepairEligible: target.RepairEligible));
         }
 
@@ -209,7 +203,6 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
                 new TimberbornWaterInfrastructureApplyResult(
                     AppliedDamage: false,
                     AttemptedWaterStateMutation: false,
-                    SkippedUnavailablePath: false,
                     RepairEligible: target.RepairEligible));
         }
 
@@ -225,8 +218,14 @@ public sealed class TimberbornWaterInfrastructureFireSink : ITimberbornWaterInfr
             damageTaken = nextState.DamageTaken;
         }
 
+        if (damageApplied > 0 && !target.CanMarkDamaged && !target.CanMutateWaterState)
+        {
+            throw new InvalidOperationException(
+                $"Water infrastructure damage mutation is unavailable for {target.StableId}.");
+        }
+
         TimberbornWaterInfrastructureApplyResult applyResult = damageApplied <= 0
-            ? new TimberbornWaterInfrastructureApplyResult(false, false, false, target.RepairEligible)
+            ? new TimberbornWaterInfrastructureApplyResult(false, false, target.RepairEligible)
             : _targetApi.ApplyDamage(target, damageApplied, damageTaken >= damageCapacity);
 
         return new WaterApplyOutcome(

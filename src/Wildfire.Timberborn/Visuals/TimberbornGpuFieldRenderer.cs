@@ -423,8 +423,8 @@ public sealed class TimberbornUnityGpuFieldRendererPresenter : ITimberbornGpuFie
             return hasAshPresentation;
         }
 
-        bool hasSafeDebugOverlayPresentation = hasAshPresentation;
-        return hasSafeDebugOverlayPresentation;
+        bool hasDebugOverlayPresentation = hasAshPresentation;
+        return hasDebugOverlayPresentation;
     }
 
     private void BindAshPresentation(TimberbornGpuFieldRendererPresentation presentation)
