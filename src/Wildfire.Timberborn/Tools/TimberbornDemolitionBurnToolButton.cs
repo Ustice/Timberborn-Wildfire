@@ -49,6 +49,7 @@ public sealed class TimberbornDemolitionBurnToolButton : IBottomBarElementsProvi
             toolGroupButton.ToolButtonsElement);
         SetUniqueButtonIdentity(button);
         ApplyBurnToolIcon(button);
+        button.PostLoad();
 
         VisualElement? rightmostToolRoot = GetRightmostToolRoot(toolGroupButton);
         toolGroupButton.AddTool(button);

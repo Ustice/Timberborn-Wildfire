@@ -21,8 +21,7 @@ public sealed class TimberbornFertilizeFieldsToolButton : TimberbornFertilizeToo
             toolGroupService,
             "Fields",
             "FieldsPlantingToolGroupIcon",
-            "WildfireFertilizeFieldsTool",
-            "wildfire_fertilize_fields_tool_button_failed")
+            "WildfireFertilizeFieldsTool")
     {
     }
 }
@@ -41,8 +40,7 @@ public sealed class TimberbornFertilizeForestryToolButton : TimberbornFertilizeT
             toolGroupService,
             "Forestry",
             "ForestryPlantingToolGroupIcon",
-            "WildfireFertilizeForestryTool",
-            "wildfire_fertilize_forestry_tool_button_failed")
+            "WildfireFertilizeForestryTool")
     {
     }
 }
@@ -60,7 +58,6 @@ public abstract class TimberbornFertilizeToolButton : IBottomBarElementsProvider
     private readonly string _toolGroupId;
     private readonly string _fallbackImageName;
     private readonly string _keyPrefix;
-    private readonly string _failureLogToken;
     private static Texture2D? _fertilizeToolIcon;
     private bool _buttonAdded;
 
@@ -71,8 +68,7 @@ public abstract class TimberbornFertilizeToolButton : IBottomBarElementsProvider
         ToolGroupService toolGroupService,
         string toolGroupId,
         string fallbackImageName,
-        string keyPrefix,
-        string failureLogToken)
+        string keyPrefix)
     {
         _tool = tool ?? throw new ArgumentNullException(nameof(tool));
         _toolButtonFactory = toolButtonFactory ?? throw new ArgumentNullException(nameof(toolButtonFactory));
@@ -81,7 +77,6 @@ public abstract class TimberbornFertilizeToolButton : IBottomBarElementsProvider
         _toolGroupId = toolGroupId ?? throw new ArgumentNullException(nameof(toolGroupId));
         _fallbackImageName = fallbackImageName ?? throw new ArgumentNullException(nameof(fallbackImageName));
         _keyPrefix = keyPrefix ?? throw new ArgumentNullException(nameof(keyPrefix));
-        _failureLogToken = failureLogToken ?? throw new ArgumentNullException(nameof(failureLogToken));
     }
 
     public IEnumerable<BottomBarElement> GetElements()
@@ -92,27 +87,20 @@ public abstract class TimberbornFertilizeToolButton : IBottomBarElementsProvider
             return Array.Empty<BottomBarElement>();
         }
 
-        try
-        {
-            ToolGroupSpec toolGroup = _toolGroupService.GetGroup(_toolGroupId);
-            ToolGroupButton toolGroupButton = FindExistingToolGroupButton(toolGroup);
-            ToolButton button = _toolButtonFactory.Create(
-                _tool,
-                _fallbackImageName,
-                toolGroupButton.ToolButtonsElement);
-            SetButtonIdentity(button);
-            TimberbornFertilizeToolButtonIcons.ApplyToolIcon(button, $"{_keyPrefix}Image", GetFertilizeToolIcon());
-            VisualElement? rightmostToolRoot = GetRightmostToolRoot(toolGroupButton);
-            toolGroupButton.AddTool(button);
-            PlaceButtonBeforeRightmost(button, rightmostToolRoot);
-            _toolGroupService.AssignToGroup(toolGroup, _tool);
-            _buttonAdded = true;
-        }
-        catch (Exception exception)
-        {
-            Debug.LogWarning(
-                $"{_failureLogToken} reason={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
-        }
+        ToolGroupSpec toolGroup = _toolGroupService.GetGroup(_toolGroupId);
+        ToolGroupButton toolGroupButton = FindExistingToolGroupButton(toolGroup);
+        ToolButton button = _toolButtonFactory.Create(
+            _tool,
+            _fallbackImageName,
+            toolGroupButton.ToolButtonsElement);
+        SetButtonIdentity(button);
+        TimberbornFertilizeToolButtonIcons.ApplyToolIcon(button, $"{_keyPrefix}Image", GetFertilizeToolIcon());
+        button.PostLoad();
+        VisualElement? rightmostToolRoot = GetRightmostToolRoot(toolGroupButton);
+        toolGroupButton.AddTool(button);
+        PlaceButtonBeforeRightmost(button, rightmostToolRoot);
+        _toolGroupService.AssignToGroup(toolGroup, _tool);
+        _buttonAdded = true;
 
         return Array.Empty<BottomBarElement>();
     }
