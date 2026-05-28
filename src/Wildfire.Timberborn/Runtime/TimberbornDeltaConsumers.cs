@@ -103,10 +103,10 @@ public sealed class TimberbornFireDeltaConsumer
             _sinks.TreeBurnConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornBuildingBurnoutConsequenceSummary buildingBurnoutSummary =
             _sinks.BuildingBurnoutConsequenceSink.ApplyConsequences(tick, decisions);
-        TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary =
-            _sinks.StructureBurnDamageRollbackSink.ApplyConsequences(tick, decisions);
         TimberbornStoredGoodBurnConsequenceSummary storedGoodBurnSummary =
             _sinks.StoredGoodBurnConsequenceSink.ApplyConsequences(tick, decisions);
+        TimberbornStructureBurnDamageRollbackSummary structureBurnDamageRollbackSummary =
+            _sinks.StructureBurnDamageRollbackSink.ApplyConsequences(tick, decisions);
         TimberbornExplosiveInfrastructureConsequenceSummary explosiveInfrastructureSummary =
             _sinks.ExplosiveInfrastructureConsequenceSink.ApplyConsequences(tick, decisions);
         TimberbornDetonatorFireSafetySummary detonatorFireSafetySummary =

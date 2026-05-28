@@ -59,8 +59,10 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private ITimberbornStructureBurnDamageRollbackTargetApi? _structureBurnDamageRollbackTargetApi;
     private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
+    private ITimberbornNativeBlastRadiusApi? _storedGoodNativeBlastRadiusApi;
     private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
+    private TimberbornQueuedStoredGoodContaminationPulseSink? _storedGoodContaminationPulseSink;
     private ITimberbornDetonatorFireSafetyTargetApi? _detonatorFireSafetyTargetApi;
     private ITimberbornTunnelFireTargetApi? _tunnelFireTargetApi;
     private ITimberbornPathInfrastructureFireTargetApi? _pathInfrastructureFireTargetApi;
@@ -74,6 +76,7 @@ public sealed class TimberbornFireRuntime :
     private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
     private bool _compatibilityProbesRan;
     private string? _autoDispatchDisabledReason;
+    private FireGrid? _initializingGrid;
     private long _gameUpdateId;
     private bool _isLoaded;
     private TimberbornWildfirePersistenceSnapshot? _pendingPersistenceSnapshot;
@@ -173,6 +176,7 @@ public sealed class TimberbornFireRuntime :
         _gpuIndirectRenderer?.Dispose();
         _gpuIndirectRenderer = null;
         _explosiveInfrastructureHeatPulseSink?.Detach();
+        _storedGoodContaminationPulseSink?.Detach();
         _gpuFieldRenderer.Clear();
         _playerFireAlerts.Clear();
         _playerFireAlertCameraFocus.Clear();
@@ -184,6 +188,7 @@ public sealed class TimberbornFireRuntime :
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
+        _initializingGrid = null;
         _burnDamageService = null;
         _autoDispatchDisabledReason = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
@@ -362,7 +367,9 @@ public sealed class TimberbornFireRuntime :
 
         RunCompatibilityProbesIfNeeded();
         TimberbornCompatibilityRuntimeGate.ThrowIfRequiredProbesFailed(_compatibilityReport, _logSink);
+        _initializingGrid = grid;
         _explosiveInfrastructureHeatPulseSink = new TimberbornQueuedFireSimHeatPulseSink(grid);
+        _storedGoodContaminationPulseSink = new TimberbornQueuedStoredGoodContaminationPulseSink(grid);
         _ashFieldService.Clear();
         TimberbornFireSystem fireSystem = new(
             simulatorFactory,
@@ -380,6 +387,7 @@ public sealed class TimberbornFireRuntime :
 
         _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
         Configure(fireSystem, cadence);
+        _initializingGrid = null;
         RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);
         if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)
         {
@@ -1417,6 +1425,12 @@ public sealed class TimberbornFireRuntime :
         _storedGoodBurnInventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
     }
 
+    public void AttachStoredGoodNativeBlastRadiusApi(ITimberbornNativeBlastRadiusApi nativeBlastRadiusApi)
+    {
+        _storedGoodNativeBlastRadiusApi = nativeBlastRadiusApi ??
+            throw new ArgumentNullException(nameof(nativeBlastRadiusApi));
+    }
+
     public void AttachExplosiveInfrastructureTargetApi(ITimberbornExplosiveInfrastructureTargetApi targetApi)
     {
         _explosiveInfrastructureTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
@@ -1595,6 +1609,7 @@ public sealed class TimberbornFireRuntime :
         _gpuIndirectRenderer?.Dispose();
         _gpuIndirectRenderer = null;
         _explosiveInfrastructureHeatPulseSink?.Attach(fireSystem);
+        _storedGoodContaminationPulseSink?.Attach(fireSystem);
         _debugVisualSink.Clear();
         _gpuFieldRenderer.Clear();
         _playerFireAlerts.Clear();
@@ -1694,7 +1709,7 @@ public sealed class TimberbornFireRuntime :
                 fireSystem.Width ?? throw new InvalidOperationException("Fire system width is unavailable."),
                 fireSystem.Height ?? throw new InvalidOperationException("Fire system height is unavailable."),
                 fireSystem.Depth ?? throw new InvalidOperationException("Fire system depth is unavailable."))
-            : null;
+            : _initializingGrid;
     }
 
     private TimberbornWildfirePersistenceSnapshot CapturePersistentState()
@@ -1790,6 +1805,7 @@ public sealed class TimberbornFireRuntime :
                 ? null
                 : new TimberbornStoredGoodBurnConsequenceSink(
                     _storedGoodBurnInventoryApi,
+                    CreateStoredGoodHazardConsequenceSink(),
                     logSink: _logSink,
                     burnDamageTargets: _burnDamageService),
             explosiveInfrastructureConsequenceSink:
@@ -1837,6 +1853,24 @@ public sealed class TimberbornFireRuntime :
                     _burnDamageService,
                     _ashFieldService,
                     affectedCellContaminationProvider: IsAffectedCellContaminated));
+    }
+
+    private ITimberbornStoredGoodHazardConsequenceSink? CreateStoredGoodHazardConsequenceSink()
+    {
+        if (CurrentGrid() is not { } grid ||
+            _storedGoodNativeBlastRadiusApi is null ||
+            _explosiveInfrastructureHeatPulseSink is null ||
+            _storedGoodContaminationPulseSink is null)
+        {
+            return null;
+        }
+
+        return new TimberbornStoredGoodHazardConsequenceSink(
+            grid,
+            () => TimberbornExplosiveInfrastructureConsequenceSettings.FromSnapshot(_releaseSettings.GetSnapshot()),
+            _storedGoodNativeBlastRadiusApi,
+            _explosiveInfrastructureHeatPulseSink,
+            _storedGoodContaminationPulseSink);
     }
 
     private bool IsAffectedCellContaminated(int cellIndex)

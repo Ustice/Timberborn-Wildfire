@@ -180,6 +180,50 @@ public sealed class TimberbornFireCellMapperTests
     }
 
     [Fact]
+    public void CreateMappedCellsAddsStoredGoodFuelToStorageBuildingFuel()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornFireCellMapper mapper = new();
+        TimberbornBuildingAdapter buildingAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+
+        TimberbornMappedCell cell = Assert.Single(mapper.CreateMappedCells(
+            grid,
+            [
+                buildingAdapter.CreateBuildingSource(0, 0, 0, "SmallWarehouse.Folktails"),
+                resourceAdapter.CreateStockpileResourceSource(0, 0, 0, "Log"),
+            ]));
+
+        Assert.Equal(
+            new TimberbornMappedCell(
+                0,
+                PackedCell.Pack(fuel: 4, heat: 0, flammability: 1, water: 0, terrain: 1, burningLevel: 0)),
+            cell);
+    }
+
+    [Fact]
+    public void CreateMappedCellsClampsStoredGoodFuelAddedToStorageBuilding()
+    {
+        FireGrid grid = new(1, 1, 1);
+        TimberbornFireCellMapper mapper = new();
+        TimberbornBuildingAdapter buildingAdapter = new();
+        TimberbornResourceAdapter resourceAdapter = new();
+
+        TimberbornMappedCell cell = Assert.Single(mapper.CreateMappedCells(
+            grid,
+            [
+                buildingAdapter.CreateBuildingSource(0, 0, 0, "LargeWarehouse.Folktails"),
+                resourceAdapter.CreateStockpileResourceSource(0, 0, 0, "Log"),
+            ]));
+
+        Assert.Equal(
+            new TimberbornMappedCell(
+                0,
+                PackedCell.Pack(fuel: 15, heat: 0, flammability: 2, water: 0, terrain: 1, burningLevel: 0)),
+            cell);
+    }
+
+    [Fact]
     public void CreateMappedCellsClampsWetCellsWithoutOverwritingMaterial()
     {
         FireGrid grid = new(1, 1, 1);

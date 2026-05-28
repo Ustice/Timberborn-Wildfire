@@ -1011,10 +1011,10 @@ New or revised tickets should be split before implementation if the current tick
 
 ## Stored Items And Explosives
 
-Stored items should burn as inventory contents, not as part of the storage building's construction value. A warehouse, pile, or tank can therefore have two separate burn consequences:
+Stored items should burn as inventory contents, not as part of the storage building's construction value, while still contributing blueprint-derived packed fuel to the storage cell before simulation. A warehouse, pile, or tank can therefore have two separate burn consequences:
 
 - The structure loses construction-material value through the burn damage service.
-- The stored contents lose item counts through resource fuel accounting.
+- The stored contents add `FuelValue` to available cell fuel, then lose item counts through resource fuel accounting as that fuel burns.
 
 The resource catalog should carry at least `fuelValue`, `flammability`, `smokeProfile`, and `burnResidueQuality`. Metal should be non-burnable or effectively inert. Logs, planks, gears, paper, books, food packaging, and similar dry goods should contribute fuel. Food should usually be low-flame but smoke-producing unless a specific good deserves special behavior.
 
@@ -1024,11 +1024,13 @@ Explosives should be treated as hazardous stored goods, not ordinary fuel. The f
 
 - High flammability once exposed to heat or flame.
 - A short armed/unstable threshold so it is not a random instant deletion.
+- A bounded heat pulse matching the unstable-core pattern.
+- Entity destruction in blast radius through the wrapped native Timberborn `ExplosionService` affected-tile pipeline.
 - Stock destruction when the threshold is reached.
 - A bounded heat and fire pulse into nearby simulation cells.
 - Optional structure damage only through the same burn-damage service used by all structures.
 
-We should not start with arbitrary physics blasts, displaced terrain, or direct entity deletion. Try to reuse the code from unstable cores.
+We should not start with arbitrary physics blasts, displaced terrain, or direct entity deletion. Stored explosive goods should use the same bounded heat pulse pattern as unstable cores and the named Timberborn explosion adapter for blast-radius destruction.
 
 ## Dynamite, Detonators, And Tunnels
 
@@ -1067,6 +1069,8 @@ Required telemetry:
 - `tunnel_destruction_deferred`
 
 `TWF-152` implements the first dynamite lane with native triggering disabled by default. The adapter resolves placed `Dynamite` components from exposed compact deltas, reads native `Dynamite.Depth`, tracks sustained exposure by stable target id, suppresses duplicate cells in one dispatch, and pushes a bounded heat pulse back into Wildfire through queued `FireSimChange` values. `Dynamite.TriggerDelayed(...)` is present only behind `native_dynamite_trigger_enabled`; `Detonate()` remains out of bounds for generic fire deltas.
+
+`TWF-176` uses the same native-surface rule for stored explosive goods. Timberborn does not expose a clean public `Explode(center, radius)` method, but `ExplosionOutcomeGatherer.GetAffectedTilesPerRadius(...)` and the private `ExplosionService.ProcessAffectedTiles(...)` are the native unstable-core blast-radius path. Wildfire wraps that exact path in a small Timberborn adapter and fails loudly if the signature moves.
 
 `TWF-153` implements the first detonator lane. Exposed detonators are resolved and deduplicated.
 

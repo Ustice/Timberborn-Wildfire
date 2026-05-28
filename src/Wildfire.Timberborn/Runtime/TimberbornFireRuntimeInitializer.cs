@@ -4,9 +4,12 @@ using Timberborn.BaseComponentSystem;
 using Timberborn.ConstructionSites;
 using Timberborn.Cutting;
 using Timberborn.EntitySystem;
+using Timberborn.Explosions;
+using Timberborn.InventorySystem;
 using Timberborn.MapIndexSystem;
 using Timberborn.MapStateSystem;
 using Timberborn.SingletonSystem;
+using Timberborn.SimpleOutputBuildings;
 using Timberborn.SoilContaminationSystem;
 using Timberborn.SoilMoistureSystem;
 using Timberborn.Stockpiles;
@@ -32,6 +35,8 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     private readonly EntityRegistry _entityRegistry;
     private readonly EntityService _entityService;
     private readonly ConstructionFactory _constructionFactory;
+    private readonly ExplosionOutcomeGatherer _explosionOutcomeGatherer;
+    private readonly ExplosionService _explosionService;
     private readonly ITimberbornFireLogSink _logSink;
     private bool _initialized;
     private int _initializationAttempt;
@@ -49,7 +54,9 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         IBlockService blockService,
         EntityRegistry entityRegistry,
         EntityService entityService,
-        ConstructionFactory constructionFactory)
+        ConstructionFactory constructionFactory,
+        ExplosionOutcomeGatherer explosionOutcomeGatherer,
+        ExplosionService explosionService)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _simulatorFactory = simulatorFactory ?? throw new ArgumentNullException(nameof(simulatorFactory));
@@ -62,6 +69,9 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         _entityRegistry = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
         _entityService = entityService ?? throw new ArgumentNullException(nameof(entityService));
         _constructionFactory = constructionFactory ?? throw new ArgumentNullException(nameof(constructionFactory));
+        _explosionOutcomeGatherer = explosionOutcomeGatherer ??
+            throw new ArgumentNullException(nameof(explosionOutcomeGatherer));
+        _explosionService = explosionService ?? throw new ArgumentNullException(nameof(explosionService));
         _logSink = new UnityTimberbornFireLogSink();
     }
 
@@ -182,7 +192,12 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                     _logSink,
                     entityService: _entityService,
                     constructionFactory: _constructionFactory));
-            _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService));
+            _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(
+                grid,
+                _blockService,
+                _entityRegistry));
+            _runtime.AttachStoredGoodNativeBlastRadiusApi(
+                new TimberbornExplosionServiceBlastRadiusApi(_explosionOutcomeGatherer, _explosionService));
             _runtime.AttachExplosiveInfrastructureTargetApi(
                 new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));
             _runtime.AttachDetonatorFireSafetyTargetApi(
@@ -346,7 +361,7 @@ public sealed class TimberbornStorageCellSourceProvider : ITimberbornWorldCellSo
 
     public TimberbornWorldCellImportProviderResult Import(FireGrid grid)
     {
-        TimberbornCellSource[] sources = TimberbornEntityComponentCells.ComponentsWithBlockObject<Stockpile>(_entityRegistry)
+        TimberbornCellSource[] stockpileSources = TimberbornEntityComponentCells.ComponentsWithBlockObject<Stockpile>(_entityRegistry)
             .SelectMany((stockpile, stockpileIndex) => TimberbornEntityComponentCells.OccupiedCoordinates(stockpile)
                 .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
                 .Select(coordinates => _resourceAdapter.CreateStockpileResourceSource(
@@ -356,8 +371,23 @@ public sealed class TimberbornStorageCellSourceProvider : ITimberbornWorldCellSo
                     stockpile.WhitelistedGoodType,
                     checked((uint)stockpileIndex + 1u))))
             .ToArray();
+        TimberbornCellSource[] outputInventorySources =
+            TimberbornEntityComponentCells.ComponentsWithBlockObject<SimpleOutputInventory>(_entityRegistry)
+                .SelectMany((inventory, inventoryIndex) => inventory.Inventory.Stock
+                    .Where(static good => good.Amount > 0)
+                    .Select(static good => good.GoodId)
+                    .Distinct(StringComparer.Ordinal)
+                    .SelectMany(goodId => TimberbornEntityComponentCells.OccupiedCoordinates(inventory)
+                        .Where(coordinates => TimberbornEntityComponentCells.IsInsideGrid(coordinates, grid))
+                        .Select(coordinates => _resourceAdapter.CreateStockpileResourceSource(
+                            coordinates.x,
+                            coordinates.y,
+                            coordinates.z,
+                            goodId,
+                            checked((uint)stockpileSources.Length + (uint)inventoryIndex + 1u)))))
+                .ToArray();
 
-        return new TimberbornWorldCellImportProviderResult("storage", sources);
+        return new TimberbornWorldCellImportProviderResult("storage", stockpileSources.Concat(outputInventorySources).ToArray());
     }
 }
 

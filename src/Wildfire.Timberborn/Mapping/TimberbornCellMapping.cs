@@ -553,13 +553,28 @@ public sealed class TimberbornFireCellMapper
 
     private static MaterialContribution SelectMaterial(IReadOnlyList<TimberbornCellSource> sources)
     {
-        return sources
+        MaterialContribution selectedMaterial = sources
             .SelectMany(static source => EnumerateMaterialContributions(source))
             .DefaultIfEmpty(MaterialContribution.Empty)
             .OrderByDescending(static contribution => contribution.Priority)
             .ThenByDescending(static contribution => contribution.Fuel)
             .ThenByDescending(static contribution => contribution.Flammability)
             .First();
+        MaterialContribution[] storedGoods = sources
+            .Where(static source => source.MaterialClass == WildfireMaterialClass.Storage)
+            .SelectMany(static source => EnumerateMaterialContributions(source))
+            .Where(static contribution => contribution.Priority == 2)
+            .ToArray();
+
+        return selectedMaterial.Priority >= 3 && storedGoods.Length > 0
+            ? new MaterialContribution(
+                selectedMaterial.Priority,
+                Fuel: Math.Clamp(selectedMaterial.Fuel + storedGoods.Sum(static contribution => contribution.Fuel), 0, 15),
+                Flammability: Math.Max(
+                    selectedMaterial.Flammability,
+                    storedGoods.Max(static contribution => contribution.Flammability)),
+                selectedMaterial.Terrain)
+            : selectedMaterial;
     }
 
     private static WildfireMaterialClass SelectMaterialClass(IReadOnlyList<TimberbornCellSource> sources)
