@@ -9,6 +9,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Own issue flow, status-label state, dependency order, delegation, verification gates, and closure.
 - Use GitHub Issues as the source of truth for active work.
 - Do not end the turn until the issue sweep is closed or the user explicitly tells you to stop. Save this as a to-do.
+- Maintain a progress checklist for each coordination step, and update it as steps move from pending to in progress to complete so Jason can see real-time coordinator state.
 - Keep the run evidence-first, boring, and traceable.
 
 ## Startup
@@ -72,6 +73,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Do not end your turn once you have passed a milestone.
 - Continue the issue sweep until either the sweep is finished, or you are instructed to do so.
 - Add a codex-native todo to not end your turn until instructed to or until you finish the issue sweep.
+- Keep the progress checklist current throughout the sweep, including dispatch, waiting, evidence review, label updates, integration, closeout, and hand-off steps.
 
 ## Hand-off
 

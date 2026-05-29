@@ -41,3 +41,5 @@ Before final response, verify GitHub issue state is current, required checks are
 ## To-Do
 
 Keep your codex todo items updated with the current issue state and next steps. Add an item to not end your turn until the issue sweep is closed or the user explicitly tells you to stop.
+
+Maintain a progress checklist for the coordinator run. Break the sweep into visible steps, mark the current step in progress before acting on it, and update completed steps promptly so Jason can tell what the coordinator is doing in real time.
