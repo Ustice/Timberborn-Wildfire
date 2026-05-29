@@ -98,6 +98,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bundleId = "com.mechanistry.timberborn";
 const processName = "Timberborn";
 const qaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
+const qaTempRoot = join("/tmp", "wildfire-qa");
 const lockDir = join(home, "Library", "Application Support", "Timberborn", "WildfireQA", "locks", "build-deploy.lock");
 const lockInfoPath = join(lockDir, "lock.json");
 const playerLogDefault = join(home, "Library", "Logs", "Mechanistry", "Timberborn", "Player.log");
@@ -133,7 +134,7 @@ Options:
   --wait <seconds>          Seconds to wait for each expected UI transition. Default: 180.
   --player-log <path>       Player.log path. Default: ~/Library/Logs/Mechanistry/Timberborn/Player.log.
   --command-dir <path>      Wildfire command bridge directory. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA.
-  --artifacts-dir <path>    Evidence root. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/latest-save-startup.
+  --artifacts-dir <path>    Evidence root. Default: /tmp/wildfire-qa/latest-save-startup.
   --classify-screenshot <path>
                             Classify an existing screenshot, then exit without locking, launching, or clicking.
   --expected-resolution <WxH> Display resolution required by the coordinate guide. Default: 1920x1080.
@@ -194,7 +195,7 @@ const parseSeconds = (value: string, flag: string): number => {
 
 const parseArgs = (args: string[]): Options => {
   const options: Options = {
-    artifactsDir: join(qaRoot, "latest-save-startup"),
+    artifactsDir: join(qaTempRoot, "latest-save-startup"),
     classifyScreenshotPath: null,
     commandDir: qaRoot,
     dryRun: false,

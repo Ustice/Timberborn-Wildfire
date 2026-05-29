@@ -20,13 +20,14 @@ type Candidate = {
 
 const home = process.env.HOME ?? "";
 const defaultQaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
+const defaultTempQaRoot = join("/tmp", "wildfire-qa");
 const mediaExtensions = new Set([".jpeg", ".jpg", ".mov", ".mp4", ".png"]);
 
 const usage = `Usage:
   bun scripts/cleanup-wildfire-qa-media.ts [options]
 
 Options:
-  --root <path>             Root folder to scan. Can be repeated. Default: Timberborn WildfireQA.
+  --root <path>             Root folder to scan. Can be repeated. Default: /tmp/wildfire-qa plus Timberborn WildfireQA.
   --age-hours <hours>       Delete files older than this many hours. Default: 24.
   --all-files               Delete every old file under the scan roots, not just image/video media.
   --dry-run                 Print what would be deleted without deleting files.
@@ -104,7 +105,7 @@ const parseArgs = (args: string[]): CleanupOptions => {
 
   return {
     ...options,
-    roots: options.roots.length === 0 ? [defaultQaRoot] : options.roots,
+    roots: options.roots.length === 0 ? [defaultTempQaRoot, defaultQaRoot] : options.roots,
   };
 };
 

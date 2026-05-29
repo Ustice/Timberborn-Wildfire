@@ -82,6 +82,7 @@ const home = process.env.HOME ?? "";
 const bundleId = "com.mechanistry.timberborn";
 const processName = "Timberborn";
 const qaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
+const qaTempRoot = join("/tmp", "wildfire-qa");
 const commandInboxFileName = "command-inbox.txt";
 const commandOutboxFileName = "command-outbox.txt";
 const playerLogDefault = join(home, "Library", "Logs", "Mechanistry", "Timberborn", "Player.log");
@@ -106,7 +107,7 @@ Options:
   --command <text>          QA command or action to write into metadata. Can be repeated.
   --commands-file <path>    Newline-delimited command sequence to write into metadata.
   --note <text>             Freeform review note to write into metadata.
-  --artifacts-dir <path>    Evidence root. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/screen-recordings.
+  --artifacts-dir <path>    Evidence root. Default: /tmp/wildfire-qa/screen-recordings.
   --no-activate             Do not activate Timberborn before recording.
   --include-cursor          Include cursor in the recording.
   --show-clicks             Show clicks in the recording.
@@ -197,7 +198,7 @@ const parseRect = (value: string): Rect => {
 const parseArgs = (args: string[]): Options => {
   const options: Options = {
     activate: true,
-    artifactsDir: join(qaRoot, "screen-recordings"),
+    artifactsDir: join(qaTempRoot, "screen-recordings"),
     audio: false,
     commands: [],
     commandsFile: null,

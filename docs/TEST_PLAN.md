@@ -1256,7 +1256,7 @@ Use `--launch` instead of `--attach` when Timberborn should be opened by bundle 
 bun scripts/check-timberborn-startup.ts --launch --wait=120
 ```
 
-The harness serializes with deploy work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, captures a `Player.log` baseline before attach or launch work, activates `com.mechanistry.timberborn`, waits for required current-window `Player.log` tokens, and writes evidence under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/startup-harness/<timestamp>/`.
+The harness serializes with deploy work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, captures a `Player.log` baseline before attach or launch work, activates `com.mechanistry.timberborn`, waits for required current-window `Player.log` tokens, and writes evidence under `/tmp/wildfire-qa/startup-harness/<timestamp>/` by default. Pass `--artifacts-dir` only when a run needs durable evidence outside temp storage.
 
 Default required startup tokens are:
 
@@ -1271,7 +1271,7 @@ Use `--require-command-status` only when a save is already loaded and the comman
 
 ## Timberborn Screen Recording QA
 
-Use the screen recording utility when visual tuning or behavior tuning needs time-based evidence instead of still screenshots. The utility wraps macOS `screencapture -v`, stays outside Timberborn UI automation, and writes a timestamped evidence directory under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/screen-recordings/` by default.
+Use the screen recording utility when visual tuning or behavior tuning needs time-based evidence instead of still screenshots. The utility wraps macOS `screencapture -v`, stays outside Timberborn UI automation, and writes a timestamped evidence directory under `/tmp/wildfire-qa/screen-recordings/` by default. Pass `--artifacts-dir` only for evidence that must be retained.
 
 High-resolution mode records the full selected display and is intended for fire, smoke, ash, steam, and alert readability:
 
@@ -1354,14 +1354,14 @@ bun scripts/load-latest-save-and-unpause.ts --attach --wait=120
 
 The `--attach` route stays classifier-driven for already-running sessions. If `--launch` is used while Timberborn is already running, the utility also uses the classifier path instead of sending fast startup inputs into an unknown live state.
 
-The utility serializes with deploy/startup work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, activates `com.mechanistry.timberborn`, captures screenshots for each identified transition under `~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/latest-save-startup/<timestamp>/`, and preserves classifier screenshots as fallback/debug aids.
+The utility serializes with deploy/startup work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, activates `com.mechanistry.timberborn`, captures screenshots for each identified transition under `/tmp/wildfire-qa/latest-save-startup/<timestamp>/` by default, and preserves classifier screenshots as fallback/debug aids.
 
 The narrow allowed path is startup confirmation by `Enter`, main-menu `Continue`, loaded-save HUD, and `hud.speed1` to unpause or set normal speed. The classifier attach path may click documented startup Mods `OK` or Experimental Mode Information `Start!` only after positive screen identification. The utility does not navigate arbitrary menus, select saves, delete saves, save the game, open debug panels, exit Timberborn, or invoke destructive actions.
 
 Use screenshot classification mode to debug captured UI evidence without acquiring the shared QA lock, launching Timberborn, or clicking:
 
 ```bash
-bun scripts/load-latest-save-and-unpause.ts --classify-screenshot ~/Library/Application\ Support/Mechanistry/Timberborn/WildfireQA/latest-save-startup/<timestamp>/<screen>.png
+bun scripts/load-latest-save-and-unpause.ts --classify-screenshot /tmp/wildfire-qa/latest-save-startup/<timestamp>/<screen>.png
 ```
 
 The classifier reports the visible Timberborn screen separately from blocking overlays, for example `screen=startup-mods blocking_overlay=mac-system-alert`. Live automation fails before clicking any Timberborn coordinate when a real macOS system alert overlay is detected. Clear system alerts manually before retrying the live startup path.

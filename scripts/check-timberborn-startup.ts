@@ -52,6 +52,7 @@ const home = process.env.HOME ?? "";
 const bundleId = "com.mechanistry.timberborn";
 const processName = "Timberborn";
 const qaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
+const qaTempRoot = join("/tmp", "wildfire-qa");
 const lockDir = join(home, "Library", "Application Support", "Timberborn", "WildfireQA", "locks", "build-deploy.lock");
 const lockInfoPath = join(lockDir, "lock.json");
 const playerLogDefault = join(home, "Library", "Logs", "Mechanistry", "Timberborn", "Player.log");
@@ -88,7 +89,7 @@ Options:
   --command-dir <path>      Wildfire command bridge directory. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA.
   --require-token <token>   Require an additional searchable Player.log token. Can be repeated.
   --require-command-status  Write read-only status to the command bridge and require a successful simulator-integrated result.
-  --artifacts-dir <path>    Evidence root. Default: ~/Library/Application Support/Mechanistry/Timberborn/WildfireQA/startup-harness.
+  --artifacts-dir <path>    Evidence root. Default: /tmp/wildfire-qa/startup-harness.
   --screenshot <mode>       Screenshot capture mode: failure, always, never. Default: failure.
   --expected-resolution <WxH> Display resolution required by the coordinate guide. Default: 1920x1080.
   --skip-resolution-check   Skip display validation. Use only when no UI automation or screenshot claim is needed.
@@ -147,7 +148,7 @@ const parseScreenshotMode = (value: string): ScreenshotMode => {
 
 const parseArgs = (args: string[]): StartupOptions => {
   const options: StartupOptions = {
-    artifactsDir: join(qaRoot, "startup-harness"),
+    artifactsDir: join(qaTempRoot, "startup-harness"),
     commandDir: qaRoot,
     dryRun: false,
     expectedResolution: "1920x1080",
