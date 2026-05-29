@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ToolRunResult {
+  pass
+  fail
+  blocked
+  unknown
+}
+
+enum FailureClass {
+  tool_failure
+  environment_failure
+  product_failure
+  test_design_failure
+  unknown
+}
+
+model Tool {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  category  String    @default("other")
+  owner     String    @default("qa")
+  createdAt DateTime  @default(now()) @map("created_at")
+  retiredAt DateTime? @map("retired_at")
+  runs      ToolRun[]
+
+  @@map("tools")
+}
+
+model ToolRun {
+  id                Int        @id @default(autoincrement())
+  toolId            Int        @map("tool_id")
+  startedAt         DateTime   @map("started_at")
+  finishedAt        DateTime   @map("finished_at")
+  command           String
+  gitSha            String?    @map("git_sha")
+  timberbornVersion String?    @map("timberborn_version")
+  displayResolution String?    @map("display_resolution")
+  uiScale           String?    @map("ui_scale")
+  result            ToolRunResult
+  artifacts         Artifact[]
+  failures          Failure[]
+  tool              Tool       @relation(fields: [toolId], references: [id])
+
+  @@index([toolId, startedAt], map: "idx_tool_runs_tool_id_started_at")
+  @@map("tool_runs")
+}
+
+model Failure {
+  id     Int     @id @default(autoincrement())
+  runId  Int     @map("run_id")
+  class  FailureClass
+  reason String
+  detail String  @default("")
+  run    ToolRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, class], map: "idx_failures_run_id_class")
+  @@map("failures")
+}
+
+model Artifact {
+  id     Int     @id @default(autoincrement())
+  runId  Int     @map("run_id")
+  type   String
+  path   String
+  sha256 String?
+  run    ToolRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId], map: "idx_artifacts_run_id")
+  @@map("artifacts")
+}

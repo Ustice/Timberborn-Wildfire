@@ -1258,6 +1258,8 @@ bun scripts/check-timberborn-startup.ts --launch --wait=120
 
 The harness serializes with deploy work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, captures a `Player.log` baseline before attach or launch work, activates `com.mechanistry.timberborn`, waits for required current-window `Player.log` tokens, and writes evidence under `/tmp/wildfire-qa/startup-harness/<timestamp>/` by default. Pass `--artifacts-dir` only when a run needs durable evidence outside temp storage.
 
+QA automation that affects issue status, release confidence, or tool reliability should also record a local tool run with `bun scripts/qa-log-tool-run.ts`. The ignored repo-local database lives at `qa/tool-runs.sqlite`; [qa-tooling.md](qa-tooling.md) owns the schema, failure classes, and reporting procedure. Use `bun scripts/qa-tool-report.ts` when repeated failures may indicate a QA-tooling issue instead of a product blocker.
+
 Default required startup tokens are:
 
 - `wildfire_command_bridge_ready`.

@@ -4,13 +4,20 @@
     "blueprints:generate": "bun scripts/generate-wildfire-fuel-blueprints.ts",
     "qa:cleanup-media": "bun scripts/cleanup-wildfire-qa-media.ts",
     "qa:cleanup-media:install": "bun scripts/install-wildfire-qa-cleanup-launchd.ts",
+    "qa:db:generate": "bunx prisma generate",
+    "qa:db:migrate": "bunx prisma migrate deploy",
+    "qa:log-tool-run": "bun scripts/qa-log-tool-run.ts",
+    "qa:tool-report": "bun scripts/qa-tool-report.ts",
     "release:package": "bun scripts/package-release.ts",
     "workshop:package": "bun scripts/package-steam-workshop.ts",
     "workshop:publish": "bun scripts/publish-steam-workshop.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run qa:db:generate && tsc --noEmit"
   },
   "devDependencies": {
+    "@prisma/adapter-libsql": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "@types/bun": "^1.3.13",
+    "prisma": "^7.8.0",
     "typescript": "^6.0.3"
   }
 }

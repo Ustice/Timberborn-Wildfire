@@ -19,6 +19,8 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Explicitly out of scope:
 - Dependencies already accepted:
 - Dependencies still risky:
+- QA tooling allowed:
+- QA tool write scope:
 
 ## Instructions
 
@@ -33,12 +35,15 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Required commands:
 - Live QA required:
 - Evidence required:
+- Tool-run logging required:
 
 ## Final Report Shape
 
 - Changed files:
 - Tests and checks:
 - Evidence paths:
+- QA tool run ids:
+- Failure classification:
 - Blockers:
 - Issue notes for coordinator:
 - Recommended status-label change:

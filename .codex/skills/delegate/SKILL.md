@@ -20,7 +20,7 @@ Use this skill only for a specific assigned Wildfire GitHub issue or explicitly 
 ## Role Dispatch
 
 - Worker: implement the scoped issue, run required checks, and report changed files, checks, unknowns, and evidence.
-- QA: own launch/runtime validation, screenshots, logs, and pass/fail evidence per acceptance criterion.
+- QA: own launch/runtime validation, screenshots, logs, pass/fail evidence, failure classification, and the smallest QA-tool improvement needed to make repeated validation reliable.
 - Reviewer: review architecture, correctness, tests, evidence, risk, and integration order.
 - Researcher: answer the assigned unknown from repo state, docs, source, public sources, or archived notes.
 

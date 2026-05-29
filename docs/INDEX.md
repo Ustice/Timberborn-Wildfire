@@ -15,6 +15,7 @@ Use this page as the startup map for humans and agents.
 - [world-consequence-first-pass.md](world-consequence-first-pass.md) owns the current first-pass plan for stored-item consequences, generated scenario saves, and faction fire-response ideas.
 - [HANDOFF.md](HANDOFF.md) owns current status, blockers, and next exact action.
 - [TEST_PLAN.md](TEST_PLAN.md) owns validation strategy and evidence expectations.
+- [qa-tooling.md](qa-tooling.md) owns QA-tool reliability tracking, failure classification, and the local ignored SQLite run log.
 - [release/versioning.md](release/versioning.md) owns changelog, manifest version, package version, and tag consistency rules.
 - [reference/timberborn-ui.md](reference/timberborn-ui.md) owns Timberborn UI design-system notes for adapter-facing UI.
 - [reference/native-api-support-requests.md](reference/native-api-support-requests.md) catalogs Timberborn native non-public/reflection calls that should become supported modding APIs.

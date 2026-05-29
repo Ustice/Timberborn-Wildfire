@@ -16,6 +16,7 @@ Read these before designing the utility:
 - `AGENTS.md`.
 - `docs/INDEX.md`.
 - `docs/TEST_PLAN.md`.
+- `docs/qa-tooling.md`.
 - `docs/timberborn-menu-coordinate-guide.md`.
 - The assigned ticket and role instructions.
 
@@ -28,6 +29,8 @@ For UI automation, `docs/timberborn-menu-coordinate-guide.md` is the only approv
 - Keep utility scripts local to the assigned ticket scope. If the ticket does not allow script changes, outline the utility in notes instead of adding files.
 - Prefer deterministic CLI or log checks before live UI automation.
 - Treat Timberborn as an adapter target. Do not move fire rules into Timberborn-facing code to make QA easier.
+- Record meaningful tool runs with `bun scripts/qa-log-tool-run.ts` when they affect issue status, release confidence, or tool reliability.
+- Use `tool_failure`, not `product_failure`, when the automation cannot fairly evaluate the Wildfire behavior.
 
 ## UI Automation Rules
 
@@ -57,6 +60,7 @@ Capture evidence around automation:
 - Save or reference screenshots when the ticket asks for visual proof.
 - Log the before-screen, click target, after-screen, and pass/fail result.
 - Include searchable tokens in output when possible, such as `wildfire_qa_utility`, the utility name, and the target id from the coordinate guide.
+- Include enough output for a QA agent to log the run id, result, failure class, and artifact paths in `qa/tool-runs.sqlite`.
 
 ## Screen Checks
 
@@ -92,6 +96,7 @@ When testing the utility:
 
 - Run dry-run or help mode first with `bun`.
 - Confirm failure behavior by testing at least one missing or mismatched precondition when practical.
+- Log at least one representative run with `bun scripts/qa-log-tool-run.ts` when the utility is meant to become part of the durable QA workflow.
 - Run `git diff --check`.
 - Run any additional ticket-required tests.
 
@@ -100,4 +105,5 @@ When documenting the utility:
 - Update the assigned ticket with commands, output summary, evidence paths, and unresolved blockers.
 - Link any new coordinate evidence back to `docs/timberborn-menu-coordinate-guide.md`.
 - Update `docs/TEST_PLAN.md` or a more specific doc when the utility changes durable QA workflow.
+- Update `docs/qa-tooling.md` when the utility changes the reliability taxonomy, database shape, or reporting procedure.
 - Recommend the next GitHub issue status-label change, but do not change labels unless explicitly assigned.
