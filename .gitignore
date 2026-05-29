@@ -12,6 +12,7 @@ node_modules/
 .screenshots/
 artifacts/
 /release/
+qa-evidence/
 qa/*.sqlite
 qa/*.sqlite-*
 prisma/generated/

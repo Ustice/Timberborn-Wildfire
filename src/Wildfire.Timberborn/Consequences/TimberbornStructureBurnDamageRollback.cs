@@ -521,7 +521,8 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             float remainingConstructionFraction = CalculateRemainingConstructionFraction(request);
             bool shouldSynchronizeConstructionState = ShouldSynchronizeConstructionState(
                 request,
-                enteredUnfinishedState);
+                enteredUnfinishedState,
+                target.CanUseNativeConstructionRollback);
             removedConstructionMaterialCount = shouldSynchronizeConstructionState && request.RepairBlocked
                 ? SynchronizeConstructionMaterials(constructionSite, target, remainingConstructionFraction)
                 : 0;
@@ -729,6 +730,15 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
         return name.Contains("DistrictCenter", StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool IsStorageLikeName(string name)
+    {
+        return name.Contains("Warehouse", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Storage", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Stockpile", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Pile", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Tank", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Accessible[] GetBuildingAccessibles(BlockObject blockObject)
     {
         return blockObject.GetComponentsAllocating<Accessible>()
@@ -825,7 +835,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
 
     private static bool CanEnterUnfinishedState(BlockObject blockObject)
     {
-        if (IsDistrictCenterName(blockObject.Name))
+        if (IsDistrictCenterName(blockObject.Name) || IsStorageLikeName(blockObject.Name))
         {
             return false;
         }
@@ -1337,7 +1347,18 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
         TimberbornStructureBurnDamageApplyRequest request,
         bool enteredUnfinishedState)
     {
-        return request.ShouldApplyRollbackVisual || enteredUnfinishedState;
+        return ShouldSynchronizeConstructionState(
+            request,
+            enteredUnfinishedState,
+            canUseNativeConstructionRollback: true);
+    }
+
+    public static bool ShouldSynchronizeConstructionState(
+        TimberbornStructureBurnDamageApplyRequest request,
+        bool enteredUnfinishedState,
+        bool canUseNativeConstructionRollback)
+    {
+        return enteredUnfinishedState || (canUseNativeConstructionRollback && request.ShouldApplyRollbackVisual);
     }
 
     public static float CalculateRemainingConstructionFraction(TimberbornStructureBurnDamageApplyRequest request)

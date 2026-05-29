@@ -509,6 +509,29 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiDoesNotSynchronizeConstructionInventoryForScorchedStorageTargets()
+    {
+        TimberbornStructureBurnDamageApplyRequest scorchedStorageRequest = new(
+            DamageApplied: 3,
+            DamageTaken: 3,
+            DamageCapacity: 6,
+            RollbackStage: TimberbornStructureBurnRollbackStage.Scorched,
+            ShouldClose: true,
+            RepairBlocked: true,
+            RepairEligible: false,
+            ShouldApplyRollbackVisual: true);
+
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.ShouldSynchronizeConstructionState(
+            scorchedStorageRequest,
+            enteredUnfinishedState: false,
+            canUseNativeConstructionRollback: false));
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.ShouldSynchronizeConstructionState(
+            scorchedStorageRequest,
+            enteredUnfinishedState: true,
+            canUseNativeConstructionRollback: false));
+    }
+
+    [Fact]
     public void TargetApiKeepsLightBurnDamageNearlyComplete()
     {
         TimberbornStructureBurnDamageApplyRequest request = new(
@@ -603,20 +626,15 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
-    public void TargetApiRebuildsStorageAndWaterTanksWithCachedRuntimeStateInsteadOfInPlaceRollback()
+    public void TargetApiKeepsStorageAndWaterTanksOutOfNativeConstructionRollback()
     {
         string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
 
+        Assert.Contains("IsStorageLikeName(blockObject.Name)", source, StringComparison.Ordinal);
         Assert.Contains("TryRebuildStructureAsUnfinished", source, StringComparison.Ordinal);
-        Assert.Contains("CaptureRuntimeSettings(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("DisableRecoverableGoodProviders(blockObject)", source, StringComparison.Ordinal);
         Assert.Contains("_entityService.Delete(blockObject)", source, StringComparison.Ordinal);
-        Assert.Contains("_constructionFactory.CreateAsUnfinished(building.Spec, placement)", source, StringComparison.Ordinal);
-        Assert.Contains("runtimeSettingsSnapshot.ApplyTo(rebuiltBlockObject)", source, StringComparison.Ordinal);
-        Assert.Contains("AllowedGoods: inventory.AllowedGoods.ToArray()", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("ShouldPreserveRuntimeStateDuringRollback", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("TryEnterConstructionPhaseInPlace", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("TryEnterUnfinishedState", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("wildfire_timberborn_structure_burn_entered_unfinished_in_place", source, StringComparison.Ordinal);
+        Assert.Contains("ApplyBurnedTextures(blockObject, target.SpecId)", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -782,6 +800,27 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     public void TargetApiDoesNotRebuildOtherBuildingsAsDistrictCenters(string specId)
     {
         Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsDistrictCenterName(specId));
+    }
+
+    [Theory]
+    [InlineData("SmallWarehouse.Folktails(Clone)")]
+    [InlineData("UndergroundWarehouse.Folktails(Clone)")]
+    [InlineData("SmallTank.IronTeeth(Clone)")]
+    [InlineData("StoragePile.Log(Clone)")]
+    [InlineData("Stockpile")]
+    public void TargetApiRecognizesStorageLikeRebuildTargets(string specId)
+    {
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.IsStorageLikeName(specId));
+    }
+
+    [Theory]
+    [InlineData("LumberMill.Folktails(Clone)")]
+    [InlineData("WaterPump.Folktails(Clone)")]
+    [InlineData("Forester.Folktails(Clone)")]
+    [InlineData("DistrictCenter.Folktails(Clone)")]
+    public void TargetApiDoesNotTreatOtherBuildingsAsStorageLikeRebuildTargets(string specId)
+    {
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsStorageLikeName(specId));
     }
 
     [Fact]

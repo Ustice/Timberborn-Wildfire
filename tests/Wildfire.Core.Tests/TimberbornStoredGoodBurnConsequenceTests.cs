@@ -113,6 +113,16 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     }
 
     [Fact]
+    public void LiveInventoryApiConsumesOnlyUnreservedTakeableStoredGoods()
+    {
+        string source = ReadTimberbornSource("TimberbornStoredGoodBurnConsequences.cs");
+
+        Assert.Contains("inventory.UnreservedTakeableStock()", source, StringComparison.Ordinal);
+        Assert.Contains("goodAmount.GoodId, stack.ResourceId", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("int availableAmount = inventory.AmountInStock(stack.ResourceId);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SinkResolvesStructureRollbackStorageInventoryFromBurnDamageState()
     {
         StateAwareStoredGoodBurnInventoryApi inventoryApi = new(
@@ -336,6 +346,32 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     private static ushort Cell(int fuel, int heat, int flammability = 3, int water = 0, int terrain = 1, int burningLevel = 0)
     {
         return PackedCell.Pack(fuel, heat, flammability, water, terrain, burningLevel);
+    }
+
+    private static string ReadTimberbornSource(string fileName)
+    {
+        string root = FindRepoRoot();
+        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
+        string path = Directory
+            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
+            .First();
+        return File.ReadAllText(path);
+    }
+
+    private static string FindRepoRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate Wildfire repo root.");
     }
 
     private sealed class RecordingStoredGoodBurnInventoryApi(TimberbornStoredGoodBurnTarget? target)

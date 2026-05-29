@@ -723,7 +723,9 @@ public sealed class TimberbornStockpileStoredGoodBurnInventoryApi :
             .ToList()
             .ForEach(stack =>
             {
-                int availableAmount = inventory.AmountInStock(stack.ResourceId);
+                int availableAmount = inventory.UnreservedTakeableStock()
+                    .Where(goodAmount => string.Equals(goodAmount.GoodId, stack.ResourceId, StringComparison.Ordinal))
+                    .Sum(static goodAmount => Math.Max(0, goodAmount.Amount));
                 int amountToDestroy = Math.Min(availableAmount, stack.Amount);
                 if (amountToDestroy > 0)
                 {
