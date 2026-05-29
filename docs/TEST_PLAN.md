@@ -766,6 +766,21 @@ Automated coverage must prove `TimberbornReleaseLogNoisePolicy` classification a
 - Heat loss: scenario snapshots and mapping tests should pin material-driven heat-loss bands for terrain, vegetation, stockpile resources, wood-like buildings, and non-burnable buildings. Weather, biome, or season-driven heat-loss changes are out of release scope unless a later adapter ticket adds explicit tests.
 - Dispatch strategy: full-grid dispatch is accepted for the first release. `TWF-051` reviewed `TWF-034` profiling and `TWF-046` live-loop evidence and keeps active-frontier optimization deferred. Release validation should watch dispatch/readback timing for regressions, but it must not require active-frontier buffers.
 
+## Release Screenshot Evidence
+
+`TWF-101` post-lodge-fix screenshot QA on 2026-05-29 accepted the current `main` release candidates under `release/screenshots/twf-101-post-lodge-fix-20260529T181116Z/`.
+
+Accepted release candidates:
+
+- `release/screenshots/twf-101-post-lodge-fix-20260529T181116Z/07-windowid-cliclick-ctrl-h.png` for a clean gameplay-loop screenshot.
+- `release/screenshots/twf-101-post-lodge-fix-20260529T181116Z/21-windowid-fire-smoke-ash-after-tree-stimulus.png` for crash-free fire/smoke/ash release media.
+
+Supporting evidence:
+
+- `release/screenshots/twf-101-post-lodge-fix-20260529T181116Z/artifact-metadata.json` records accepted and rejected captures, visual-review notes, commands, and QA tool run ids.
+- `release/screenshots/twf-101-post-lodge-fix-20260529T181116Z/20-post-tree-status.txt`, `22-final-readiness-after-tree.txt`, and `23-final-status-after-tree.txt` prove the accepted fire/smoke/ash media came from a responsive, crash-free command-bridge run.
+- `release/screenshots/twf-101-post-lodge-fix-20260529T181116Z/Player.log` and `24-error-scan-focused.txt` preserve the copied live log and focused exception/crash scan.
+
 ## CLI Fixture Export
 
 Use the CLI fixture exporter when shader tests need deterministic packed-cell inputs without launching Timberborn:
