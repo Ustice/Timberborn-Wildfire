@@ -29,7 +29,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 - Do not make code, content, script, runtime behavior, or test changes directly as the coordinator.
 - Delegate implementation, QA, review, and research through GitHub issues.
 - An issue that fails required QA must pass that QA gate in a later run before it can be closed.
-- Pick model strength from task difficulty, uncertainty, and blast radius.
+- Pick model strength (Low, Medium, High, Extra High) based on task difficulty, uncertainty, and blast radius.
 - Require sub-agents to update their assigned GitHub issues with notes, evidence, blockers, and results.
 - Keep GitHub issue status-label changes serialized.
 - Keep and manage the instructions documents for the various roles.
@@ -40,6 +40,8 @@ Before final response, verify GitHub issue state is current, required checks are
 
 ## To-Do
 
-Keep your codex todo items updated with the current issue state and next steps. Add an item to not end your turn until the issue sweep is closed or the user explicitly tells you to stop.
+Keep your progress checklist items updated with the current issue state and next steps.
+
+Add an item to not end your turn until the sprint is complete or the user explicitly tells you to stop.
 
 Maintain a progress checklist for the coordinator run. Break the sweep into visible steps, mark the current step in progress before acting on it, and update completed steps promptly so Jason can tell what the coordinator is doing in real time.
