@@ -2,8 +2,9 @@
 
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { createHash } from "crypto";
-import { existsSync, readFileSync, statSync } from "fs";
-import { resolve } from "path";
+import { Database } from "bun:sqlite";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "fs";
+import { dirname, resolve } from "path";
 import { PrismaClient } from "../prisma/generated/client/client";
 
 type FailureClass = "environment_failure" | "product_failure" | "test_design_failure" | "tool_failure" | "unknown";
@@ -75,6 +76,42 @@ const fail = (message: string): never => {
 
 const sqliteUrlForPath = (path: string): string => `file:${resolve(path)}`;
 
+const tableExists = (db: Database, tableName: string): boolean =>
+  Boolean(
+    db
+      .query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(tableName),
+  );
+
+const applySqliteMigrationFallback = (dbPath: string): void => {
+  const resolvedDbPath = resolve(dbPath);
+  mkdirSync(dirname(resolvedDbPath), { recursive: true });
+
+  const db = new Database(resolvedDbPath);
+  try {
+    if (tableExists(db, "tools")) {
+      return;
+    }
+
+    const migrationsDir = resolve("prisma/migrations");
+    const migrationFiles = readdirSync(migrationsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => resolve(migrationsDir, entry.name, "migration.sql"))
+      .filter((migrationPath) => existsSync(migrationPath))
+      .sort();
+
+    if (migrationFiles.length === 0) {
+      fail("Prisma migration failed and no SQLite migration files were found.");
+    }
+
+    migrationFiles
+      .map((migrationPath) => readFileSync(migrationPath, "utf8"))
+      .forEach((sql) => db.exec(sql));
+  } finally {
+    db.close();
+  }
+};
+
 const ensureMigrated = (dbPath: string): void => {
   const result = Bun.spawnSync(["bunx", "prisma", "migrate", "deploy"], {
     env: {
@@ -88,7 +125,14 @@ const ensureMigrated = (dbPath: string): void => {
   if (result.exitCode !== 0) {
     const stderr = new TextDecoder().decode(result.stderr).trim();
     const stdout = new TextDecoder().decode(result.stdout).trim();
-    fail(`Prisma migration failed. ${stderr || stdout}`);
+    const migrationError = stderr || stdout;
+
+    try {
+      applySqliteMigrationFallback(dbPath);
+    } catch (error: unknown) {
+      const fallbackError = error instanceof Error ? error.message : String(error);
+      fail(`Prisma migration failed. ${migrationError} SQLite fallback failed. ${fallbackError}`);
+    }
   }
 };
 
