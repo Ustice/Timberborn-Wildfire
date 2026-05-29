@@ -491,8 +491,20 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
 
         public void DeactivateAll()
         {
-            _coughingStatus.Deactivate();
-            _chokingStatus.Deactivate();
+            TryDeactivate(_coughingStatus);
+            TryDeactivate(_chokingStatus);
+        }
+
+        private static void TryDeactivate(StatusToggle statusToggle)
+        {
+            try
+            {
+                statusToggle.Deactivate();
+            }
+            catch (Exception exception) when (exception is NullReferenceException or InvalidOperationException)
+            {
+                // Timberborn may already be tearing down floating status renderers during exception-save unload.
+            }
         }
     }
 }

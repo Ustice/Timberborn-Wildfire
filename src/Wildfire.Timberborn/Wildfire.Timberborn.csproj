@@ -225,6 +225,10 @@
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TerrainSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.TerrainPhysics">
+      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TerrainPhysics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.SoilMoistureSystem">
       <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilMoistureSystem.dll</HintPath>
       <Private>false</Private>

@@ -478,6 +478,28 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
+    public void TreeKillTreatsMissingLivingNaturalResourceAsAlreadyTerminal()
+    {
+        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+
+        Assert.Contains("wildfire_timberborn_tree_kill_skipped", source, StringComparison.Ordinal);
+        Assert.Contains("reason=missing_living_natural_resource", source, StringComparison.Ordinal);
+        Assert.Contains("return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("throw MissingTreeComponent(consequence, \"LivingNaturalResource\")", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TreeBurnedLeftoverTreatsMissingCuttableAsAlreadyTerminal()
+    {
+        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+
+        Assert.Contains("wildfire_timberborn_tree_burned_leftover_skipped", source, StringComparison.Ordinal);
+        Assert.Contains("reason=missing_cuttable_already_terminal", source, StringComparison.Ordinal);
+        Assert.Contains("return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("throw MissingTreeComponent(consequence, \"Cuttable\")", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DeltaConsumerAndQaStatusExposeTreeBurnTelemetry()
     {
         FireGrid grid = new(1, 1, 1);

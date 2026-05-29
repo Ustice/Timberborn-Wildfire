@@ -630,6 +630,31 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(1, entry.Strength);
     }
 
+    [Fact]
+    public void SyncFromTransportFieldsCountsOnlyNewAshCells()
+    {
+        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+
+        TimberbornAshFieldSummary initial = SyncAsh(service, 10, (CellIndex: 20, Ash: 3, AshContamination: 0));
+        TimberbornAshFieldSummary repeated = SyncAsh(service, 11, (CellIndex: 20, Ash: 3, AshContamination: 0));
+
+        Assert.Equal(1, initial.NewAshCellCount);
+        Assert.Equal(0, repeated.NewAshCellCount);
+    }
+
+    [Fact]
+    public void DayDecaySkipsDuplicateGrowthScanWhenNothingChangedInSameTick()
+    {
+        RecordingAshGrowthAdapter growthAdapter = new();
+        TimberbornAshFieldService service = new(growthAdapter);
+
+        SyncAsh(service, 10, (CellIndex: 20, Ash: 3, AshContamination: 0));
+        TimberbornAshFieldSummary decay = service.ApplyDayDecay(10, dayNumber: 0);
+
+        Assert.Single(growthAdapter.Requests);
+        Assert.Equal(service.LastSummary, decay);
+    }
+
     private static TimberbornAshFieldSummary SyncAsh(
         TimberbornAshFieldService service,
         uint tick,

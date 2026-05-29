@@ -5,6 +5,17 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornExplosiveInfrastructureConsequenceTests
 {
     [Fact]
+    public void NativeBlastRadiusApiProcessesTimberbornRadiusBucketsAsReadOnlyTileSets()
+    {
+        string source = ReadTimberbornSource("TimberbornExplosiveInfrastructureConsequences.cs");
+
+        Assert.Contains("Dictionary<int, HashSet<Vector3Int>>", source, StringComparison.Ordinal);
+        Assert.Contains(".OrderBy(static radiusGroup => radiusGroup.Key)", source, StringComparison.Ordinal);
+        Assert.Contains("radiusGroup.Value.AsReadOnlyHashSet()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new[] { affectedTiles }", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SinkSkipsExposureWhenSettingDisabled()
     {
         RecordingExplosiveTargetApi targetApi = new(Target(depth: 1));
@@ -296,6 +307,32 @@ public sealed class TimberbornExplosiveInfrastructureConsequenceTests
     private static ushort Cell(int heat)
     {
         return PackedCell.Pack(fuel: 0, heat, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
+    }
+
+    private static string ReadTimberbornSource(string fileName)
+    {
+        string root = FindRepoRoot();
+        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
+        string path = Directory
+            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
+            .First();
+        return File.ReadAllText(path);
+    }
+
+    private static string FindRepoRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate repository root.");
     }
 
     private sealed class RecordingExplosiveTargetApi(

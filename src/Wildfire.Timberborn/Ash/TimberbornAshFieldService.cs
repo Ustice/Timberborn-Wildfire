@@ -205,6 +205,11 @@ public sealed class TimberbornAshFieldService
     {
         TimberbornAshFieldCollectionRemoval[] removals = CalculateDayDecayRemovals(dayNumber)
             .ToArray();
+        if (removals.Length == 0 && LastSummary.Tick == tick)
+        {
+            return LastSummary;
+        }
+
         removals
             .ToList()
             .ForEach(removal =>
@@ -296,6 +301,7 @@ public sealed class TimberbornAshFieldService
             static pair => pair.Key,
             static pair => pair.Value);
         _entries.Clear();
+        int newAshCells = 0;
         transportFields
             .Select(static (packed, index) => (State: WildfireTransportFieldState.Unpack(packed), CellIndex: index))
             .Where(static item => item.State.Ash > 0)
@@ -306,6 +312,11 @@ public sealed class TimberbornAshFieldService
                     ? WildfireAshQuality.Tainted
                     : WildfireAshQuality.Fertile;
                 bool hadExisting = existingEntries.TryGetValue(item.CellIndex, out TimberbornAshFieldEntry existing);
+                if (!hadExisting)
+                {
+                    newAshCells++;
+                }
+
                 int updatedDayNumber = _lastDecayDayByCell.TryGetValue(item.CellIndex, out int lastDecayDay)
                     ? lastDecayDay
                     : hadExisting
@@ -329,7 +340,7 @@ public sealed class TimberbornAshFieldService
             .ToList()
             .ForEach(cellIndex => _lastDecayDayByCell.Remove(cellIndex));
 
-        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells: _entries.Count, decayedAshCells: 0);
+        return UpdateAndApplyGrowth(tick, sourceEventCount: 0, newAshCells, decayedAshCells: 0);
     }
 
     public TimberbornAshFieldSummary SyncFromAtmosphericFields(

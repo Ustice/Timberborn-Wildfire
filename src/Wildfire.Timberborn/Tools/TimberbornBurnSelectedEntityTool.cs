@@ -106,9 +106,9 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
         bool selectionStarted,
         bool selectingArea)
     {
-        _blockObjectSelectionDrawer?.StopDrawing();
         try
         {
+            _blockObjectSelectionDrawer?.StopDrawing();
             TimberbornBurnSelectedEntityResult[] results = BurnBlockObjects(blockObjects, out int sustainedHeatDispatchTicks)
                 .ToArray();
             if (results.Length == 0)
@@ -147,6 +147,11 @@ public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, I
                 "wildfire_timberborn_burn_selected_entity_tool_failed " +
                 $"reason={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)} " +
                 $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+        }
+        finally
+        {
+            _blockObjectSelectionDrawer?.StopDrawing();
+            _areaBlockObjectPicker?.Reset();
         }
     }
 

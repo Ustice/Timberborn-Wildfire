@@ -118,7 +118,13 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
                 "LivingNaturalResource",
                 out LivingNaturalResource livingNaturalResource))
         {
-            throw MissingTreeComponent(consequence, "LivingNaturalResource");
+            _logSink.Warning(
+                "wildfire_timberborn_tree_kill_skipped " +
+                "reason=missing_living_natural_resource " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
+                $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
+            return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
         }
 
         if (!livingNaturalResource.IsDead)
@@ -165,7 +171,13 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
                 "Cuttable",
                 out Cuttable cuttable))
         {
-            throw MissingTreeComponent(consequence, "Cuttable");
+            _logSink.Warning(
+                "wildfire_timberborn_tree_burned_leftover_skipped " +
+                "reason=missing_cuttable_already_terminal " +
+                $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
+                $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
+                $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
+            return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
         }
 
         InvokeNoArgumentMethod(cuttable, "Cut");

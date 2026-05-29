@@ -603,6 +603,36 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiRebuildsStorageAndWaterTanksWithCachedRuntimeStateInsteadOfInPlaceRollback()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("TryRebuildStructureAsUnfinished", source, StringComparison.Ordinal);
+        Assert.Contains("CaptureRuntimeSettings(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("_entityService.Delete(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("_constructionFactory.CreateAsUnfinished(building.Spec, placement)", source, StringComparison.Ordinal);
+        Assert.Contains("runtimeSettingsSnapshot.ApplyTo(rebuiltBlockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("AllowedGoods: inventory.AllowedGoods.ToArray()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ShouldPreserveRuntimeStateDuringRollback", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryEnterConstructionPhaseInPlace", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryEnterUnfinishedState", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("wildfire_timberborn_structure_burn_entered_unfinished_in_place", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TargetApiDisablesRecoverableGoodProvidersFromAllComponentsBeforeRebuild()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("blockObject.AllComponents", source, StringComparison.Ordinal);
+        Assert.Contains("GetComponentsInChildren<Component>(includeInactive: true)", source, StringComparison.Ordinal);
+        Assert.Contains(".Cast<object>()", source, StringComparison.Ordinal);
+        Assert.Contains("RecoverableGoodProvider", source, StringComparison.Ordinal);
+        Assert.Contains("DisableGoodRecovery", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Cast<Component>()", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TargetApiRevertsOverlappingPathInfrastructureWhenStructureBurns()
     {
         string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
@@ -610,8 +640,46 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
         Assert.Contains("ResolveStructureBlockObject(coordinates)", source, StringComparison.Ordinal);
         Assert.Contains(".Where(static candidate => !IsInfrastructureLikeName(candidate.Name))", source, StringComparison.Ordinal);
         Assert.Contains("ResolveOverlappingPathInfrastructure(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveOverheadFootprintCoordinates", source, StringComparison.Ordinal);
+        Assert.Contains("GroupBy(static coordinates => (coordinates.x, coordinates.y))", source, StringComparison.Ordinal);
+        Assert.Contains("Math.Min(_grid.Depth - 1", source, StringComparison.Ordinal);
         Assert.Contains("RebuildOverlappingPathInfrastructureAsUnfinished", source, StringComparison.Ordinal);
         Assert.Contains("wildfire_timberborn_structure_overlapping_path_rebuilt_unfinished", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TargetApiUsesNativeTerrainPhysicsForStructuralCollapseCone()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+        string initializer = ReadTimberbornSource("TimberbornFireRuntimeInitializer.cs");
+
+        Assert.Contains("ITerrainPhysicsService", source, StringComparison.Ordinal);
+        Assert.Contains("TerrainDestroyer", source, StringComparison.Ordinal);
+        Assert.Contains("ApplyNativeStructuralCollapseDependents(blockObject, target)", source, StringComparison.Ordinal);
+        Assert.Contains("_terrainPhysicsService.GetTerrainAndBlockObjectStack", source, StringComparison.Ordinal);
+        Assert.Contains("HashSet<Vector3Int> terrainToDestroy", source, StringComparison.Ordinal);
+        Assert.Contains("HashSet<BlockObject> blockObjectsToCollapse", source, StringComparison.Ordinal);
+        Assert.Contains("RecreateStructuralCollapsePlan", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_structure_native_structural_collapse_applied", source, StringComparison.Ordinal);
+        Assert.Contains("wildfire_timberborn_structure_collapse_dependent_rebuilt_unfinished", source, StringComparison.Ordinal);
+        Assert.Contains("terrainPhysicsService: _terrainPhysicsService", initializer, StringComparison.Ordinal);
+        Assert.Contains("terrainDestroyer: _terrainDestroyer", initializer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TargetApiKeepsBurnedSupportAndCollapsedDependentsOnDifferentRecoveryPaths()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+        string initializer = ReadTimberbornSource("TimberbornFireRuntimeInitializer.cs");
+
+        Assert.Contains("DisableRecoverableGoodProviders(blockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("_entityService.Delete(snapshot.BlockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("snapshot.RuntimeSettings.ApplyTo(rebuiltBlockObject)", source, StringComparison.Ordinal);
+        Assert.Contains("structural_collapse_rebuilt_dependents", source, StringComparison.Ordinal);
+        Assert.Contains("structural_collapse_destroyed_terrain", source, StringComparison.Ordinal);
+        Assert.Contains("ComponentBlockObjects<GoodStack>", initializer, StringComparison.Ordinal);
+        Assert.Contains("recoverableGoodStackSources", initializer, StringComparison.Ordinal);
+        Assert.Contains(".Concat(recoverableGoodStackSources)", initializer, StringComparison.Ordinal);
     }
 
     [Fact]

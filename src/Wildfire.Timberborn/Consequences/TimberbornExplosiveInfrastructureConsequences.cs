@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Timberborn.BlockSystem;
+using Timberborn.Common;
 using Timberborn.Explosions;
 using UnityEngine;
 using Wildfire.Core;
@@ -168,12 +169,27 @@ public sealed class TimberbornExplosionServiceBlastRadiusApi : ITimberbornNative
 
     public TimberbornNativeBlastRadiusResult TriggerBlastRadius(Vector3Int center, int radius)
     {
-        object affectedTiles = _getAffectedTilesPerRadiusMethod.Invoke(
+        object affectedTilesPerRadius = _getAffectedTilesPerRadiusMethod.Invoke(
                 _outcomeGatherer,
                 new object[] { new Vector3(center.x, center.y, center.z), (float)Math.Max(0, radius) }) ??
             throw new InvalidOperationException("Timberborn explosion outcome gatherer returned no affected tiles.");
-        _processAffectedTilesMethod.Invoke(_explosionService, new[] { affectedTiles });
-        return new TimberbornNativeBlastRadiusResult(CountAffectedTiles(affectedTiles));
+        if (affectedTilesPerRadius is not Dictionary<int, HashSet<Vector3Int>> affectedTiles)
+        {
+            throw new InvalidOperationException(
+                $"Timberborn explosion outcome gatherer returned unsupported affected tiles type {affectedTilesPerRadius.GetType().FullName}.");
+        }
+
+        int affectedTileCount = affectedTiles
+            .OrderBy(static radiusGroup => radiusGroup.Key)
+            .Select(radiusGroup =>
+            {
+                _processAffectedTilesMethod.Invoke(
+                    _explosionService,
+                    new object[] { radiusGroup.Value.AsReadOnlyHashSet() });
+                return radiusGroup.Value.Count;
+            })
+            .Sum();
+        return new TimberbornNativeBlastRadiusResult(affectedTileCount);
     }
 
     private static MethodInfo ResolveGetAffectedTilesPerRadiusMethod(Type type)
@@ -204,13 +220,6 @@ public sealed class TimberbornExplosionServiceBlastRadiusApi : ITimberbornNative
             throw new MissingMethodException(type.FullName, "ProcessAffectedTiles(ReadOnlyHashSet<Vector3Int>)");
     }
 
-    private static int CountAffectedTiles(object affectedTiles)
-    {
-        PropertyInfo? countProperty = affectedTiles.GetType().GetProperty("Count", BindingFlags.Instance | BindingFlags.Public);
-        return countProperty?.GetValue(affectedTiles) is int count
-            ? count
-            : 0;
-    }
 }
 
 public sealed class TimberbornExplosiveInfrastructureConsequenceSink :
