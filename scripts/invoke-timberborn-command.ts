@@ -41,8 +41,8 @@ Commands:
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-ash-water-stimulus <clean|tainted>
                             Queue simulator-owned ash plus water contact on one imported burnable field target.
-  qa-delta-stimulus [burnable|tree|contaminated-tree|beaver-exposure|toxic-beaver-exposure|vegetation|crop|storage|building|district-center]
-                            Queue heat on an imported burnable field target.
+  qa-delta-stimulus [burnable|tree|contaminated-tree|beaver-exposure|toxic-beaver-exposure|vegetation|crop|storage|building|lodge|district-center]
+                            Queue heat on an imported burnable field target or allowlisted burn-damage target.
   qa-building-burnout-stimulus
                             Queue heat and fuel depletion on a real pausable building target.
   qa-burn-duration-stimulus <low|medium|high>

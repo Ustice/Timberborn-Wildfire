@@ -1214,6 +1214,7 @@ public static class TimberbornQaFieldTargetSelectors
     public const string Bush = "bush";
     public const string Storage = "storage";
     public const string Building = "building";
+    public const string Lodge = "lodge";
     public const string DistrictCenter = "district-center";
     public const string Infrastructure = "infrastructure";
     public const string Dynamite = "dynamite";
@@ -1238,6 +1239,7 @@ public static class TimberbornQaFieldTargetSelectors
         Bush,
         Storage,
         Building,
+        Lodge,
         DistrictCenter,
         Infrastructure,
         Dynamite,
@@ -1282,6 +1284,7 @@ public static class TimberbornQaFieldTargetSelectors
             Bush => materialClass is WildfireMaterialClass.Vegetation or WildfireMaterialClass.Crop,
             Storage => materialClass == WildfireMaterialClass.Storage,
             Building => materialClass == WildfireMaterialClass.Building,
+            Lodge => materialClass == WildfireMaterialClass.Building,
             DistrictCenter => materialClass == WildfireMaterialClass.Building,
             Infrastructure => materialClass == WildfireMaterialClass.Infrastructure,
             Dynamite => false,
@@ -1296,7 +1299,7 @@ public static class TimberbornQaFieldTargetSelectors
 
     public static bool IsBurnDamageProbeSelector(string selector)
     {
-        return Normalize(selector) is Building or Storage or DistrictCenter or Infrastructure or PathInfrastructure or
+        return Normalize(selector) is Building or Lodge or Storage or DistrictCenter or Infrastructure or PathInfrastructure or
             PowerInfrastructure or WaterInfrastructure;
     }
 

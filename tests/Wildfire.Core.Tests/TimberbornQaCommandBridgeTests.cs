@@ -880,6 +880,7 @@ public sealed class TimberbornQaCommandBridgeTests
     [InlineData("qa-delta-stimulus power-infrastructure", "power-infrastructure")]
     [InlineData("qa-delta-stimulus water-infrastructure", "water-infrastructure")]
     [InlineData("qa-delta-stimulus district-center", "district-center")]
+    [InlineData("qa-delta-stimulus lodge", "lodge")]
     [InlineData("qa-water-suppression-stimulus storage", "storage")]
     [InlineData("qa-water-suppression-stimulus contaminated-tree", "contaminated-tree")]
     public void ImportedFieldStimulusCommandsAcceptAllowlistedTargetSelectors(string command, string selector)
@@ -1571,6 +1572,100 @@ public sealed class TimberbornQaCommandBridgeTests
         FireSimChange spendChange = Assert.Single(simulator.RegisteredChanges.Skip(1));
         Assert.Equal(40, spendChange.CellIndex);
         Assert.Equal((byte)5, spendChange.SetFuel);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusLodgeProbeSelectsImportedLodgeOnly()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornBuildingAdapter().CreateBuildingSource(2, 3, 1, "Lodge.Folktails(Clone)", 77u),
+            new TimberbornBuildingAdapter().CreateBuildingSource(3, 3, 1, "LumberMill.Folktails(Clone)", 88u));
+        TimberbornBurnDamageTargetState lodgeState = CreateBurnDamageState(
+            "structure:lodge-folktails",
+            "Lodge.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 8,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 22,
+            ownedCellIndices: [38]);
+        TimberbornBurnDamageTargetState lumberMillState = CreateBurnDamageState(
+            "structure:lumber-mill",
+            "LumberMill.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 12,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 0,
+            ownedCellIndices: [39]);
+
+        TimberbornQaDeltaStimulusResult result = fireSystem.QueueQaDeltaStimulus(
+            TimberbornQaFieldTargetSelectors.Lodge,
+            new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+            {
+                [lodgeState.TargetKey] = lodgeState,
+                [lumberMillState.TargetKey] = lumberMillState,
+            });
+
+        Assert.Equal(TimberbornQaFieldTargetSelectors.Lodge, result.TargetSelector);
+        Assert.Equal(38, result.CellIndex);
+        Assert.Equal(WildfireMaterialClass.Building, result.MaterialClass);
+        Assert.Equal(77u, result.CompanionTargetId);
+        Assert.Equal("structure:lodge-folktails", result.BurnDamageTargetKey);
+        Assert.Equal("Lodge.Folktails(Clone)", result.BurnDamageSpecId);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Structure, result.BurnDamageTargetKind);
+        Assert.Equal(8, result.BurnDamageRemainingCapacity);
+        Assert.Equal((byte)8, result.BurnDamageProbeFuel);
+        Assert.Equal((byte)5, result.BurnDamageSpendFuel);
+        Assert.Equal(2, result.QueuedHeatChangeCount);
+
+        FireSimChange primeChange = Assert.Single(simulator.RegisteredChanges);
+        Assert.Equal(38, primeChange.CellIndex);
+        Assert.Equal((byte)8, primeChange.SetFuel);
+        Assert.Equal((byte)15, primeChange.SetHeat);
+        Assert.Equal((byte)2, primeChange.SetFlammability);
+    }
+
+    [Fact]
+    public void QueueQaDeltaStimulusLodgeProbeRequiresImportedLodgeTarget()
+    {
+        RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
+        TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
+            simulator,
+            new TimberbornBuildingAdapter().CreateBuildingSource(3, 3, 1, "LumberMill.Folktails(Clone)", 88u));
+        TimberbornBurnDamageTargetState lodgeState = CreateBurnDamageState(
+            "structure:lodge-folktails",
+            "Lodge.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 8,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 22,
+            ownedCellIndices: [38]);
+        TimberbornBurnDamageTargetState nonLodgeState = CreateBurnDamageState(
+            "structure:lumber-mill",
+            "LumberMill.Folktails(Clone)",
+            TimberbornBurnDamageTargetKind.Structure,
+            fuelValue: 12,
+            flammability: 2,
+            damageCapacity: 30,
+            damageTaken: 0,
+            ownedCellIndices: [39]);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            fireSystem.QueueQaDeltaStimulus(
+                TimberbornQaFieldTargetSelectors.Lodge,
+                new Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamageTargetState>
+                {
+                    [lodgeState.TargetKey] = lodgeState,
+                    [nonLodgeState.TargetKey] = nonLodgeState,
+                }));
+
+        Assert.Contains("No TWF-075 burn-damage owned target was found for QA selector 'lodge'", exception.Message);
+        Assert.Empty(simulator.RegisteredChanges);
+        Assert.Equal(0, fireSystem.RegisteredChangeCountSinceLastDispatch);
     }
 
     [Fact]

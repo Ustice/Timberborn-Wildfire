@@ -1421,6 +1421,8 @@ public sealed class TimberbornFireSystem : IDisposable
             .SelectMany(state => state.OwnedCellIndices
                 .Where(cellIndex => cellIndex >= 0 && cellIndex < grid.CellCount)
                 .OrderBy(static cellIndex => cellIndex)
+                .Where(cellIndex => !RequiresImportedBurnDamageProbeTarget(selector) ||
+                    _importedTargets.Any(importedTarget => importedTarget.CellIndex == cellIndex))
                 .Select(cellIndex => (TimberbornQaBurnDamageProbeTarget?)CreateBurnDamageProbeTarget(grid, state, cellIndex)))
             .FirstOrDefault();
 
@@ -1517,6 +1519,11 @@ public sealed class TimberbornFireSystem : IDisposable
             probeFlammability);
     }
 
+    private static bool RequiresImportedBurnDamageProbeTarget(string selector)
+    {
+        return TimberbornQaFieldTargetSelectors.Normalize(selector) == TimberbornQaFieldTargetSelectors.Lodge;
+    }
+
     private static int BurnDamageProbeSpendUnits(TimberbornBurnDamageTargetState state)
     {
         int remainingCapacity = Math.Max(0, state.RemainingCapacity);
@@ -1567,6 +1574,7 @@ public sealed class TimberbornFireSystem : IDisposable
         return TimberbornQaFieldTargetSelectors.Normalize(selector) switch
         {
             TimberbornQaFieldTargetSelectors.Building => targetKind == TimberbornBurnDamageTargetKind.Structure,
+            TimberbornQaFieldTargetSelectors.Lodge => targetKind == TimberbornBurnDamageTargetKind.Structure,
             TimberbornQaFieldTargetSelectors.DistrictCenter => targetKind == TimberbornBurnDamageTargetKind.Structure,
             TimberbornQaFieldTargetSelectors.Storage => targetKind is TimberbornBurnDamageTargetKind.Storage or
                 TimberbornBurnDamageTargetKind.Structure,
@@ -1591,6 +1599,11 @@ public sealed class TimberbornFireSystem : IDisposable
         if (normalizedSelector == TimberbornQaFieldTargetSelectors.Building && IsStorageBurnDamageState(state))
         {
             return false;
+        }
+
+        if (normalizedSelector == TimberbornQaFieldTargetSelectors.Lodge)
+        {
+            return IsLodgeBurnDamageState(state);
         }
 
         if (state.TargetKind != TimberbornBurnDamageTargetKind.Infrastructure)
@@ -1622,11 +1635,19 @@ public sealed class TimberbornFireSystem : IDisposable
             state.SpecId.Contains("Tank", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsLodgeBurnDamageState(TimberbornBurnDamageTargetState state)
+    {
+        return state.TargetKind == TimberbornBurnDamageTargetKind.Structure &&
+            (state.SpecId.Contains("Lodge", StringComparison.OrdinalIgnoreCase) ||
+                state.TargetKey.StableId.Contains("lodge", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool HasEnoughRemainingCapacityForBurnDamageProbe(
         string selector,
         TimberbornBurnDamageTargetState state)
     {
-        if (TimberbornQaFieldTargetSelectors.Normalize(selector) == TimberbornQaFieldTargetSelectors.Building &&
+        string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(selector);
+        if (normalizedSelector is TimberbornQaFieldTargetSelectors.Building or TimberbornQaFieldTargetSelectors.Lodge &&
             state.TargetKind == TimberbornBurnDamageTargetKind.Structure)
         {
             return state.RemainingCapacity >= QaStructureBurnDamageAcceptanceDamage;
@@ -1639,8 +1660,11 @@ public sealed class TimberbornFireSystem : IDisposable
         string selector,
         TimberbornBurnDamageTargetState state)
     {
-        return TimberbornQaFieldTargetSelectors.Normalize(selector) == TimberbornQaFieldTargetSelectors.Building &&
-            state.TargetKind == TimberbornBurnDamageTargetKind.Structure
+        string normalizedSelector = TimberbornQaFieldTargetSelectors.Normalize(selector);
+        bool prefersHighestCapacity = normalizedSelector is TimberbornQaFieldTargetSelectors.Building or
+            TimberbornQaFieldTargetSelectors.Lodge &&
+            state.TargetKind == TimberbornBurnDamageTargetKind.Structure;
+        return prefersHighestCapacity
             ? state.RemainingCapacity
             : 0;
     }
