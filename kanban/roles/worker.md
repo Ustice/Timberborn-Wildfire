@@ -33,6 +33,12 @@ Use these instructions for every Wildfire issue worker unless the issue says oth
 - Do not introduce Timberborn or Unity dependencies into core code.
 - Preserve deterministic simulation behavior.
 
+## Progress Updates
+
+- Before starting work that may take a while, update the coordinator with the issue number, the long-running step you are starting, why it may take time, and the next evidence or checkpoint you expect to report.
+- Use this for substantial implementation passes, broad refactors, dependency investigation, long test/build runs, live Timberborn validation, or any step where silence could make the coordinator think the worker is idle or blocked.
+- If the step runs longer than expected, send a brief coordinator update with current progress, blockers, and the next concrete action.
+
 ## Verification
 
 - Run `git diff --check`.
