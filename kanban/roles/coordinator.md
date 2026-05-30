@@ -46,6 +46,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Before dispatching live Timberborn QA, verify the coordinator has `caffeinate -disu` active or explicitly assign QA to start it and report the process state.
 - Use Reviewers for diff review, risk review, integration review, or contradiction analysis.
 - Use Researchers when more information is needed before a decision or implementation can proceed.
+- Use Process Reviewers during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
 - Use Process Reviewers at sprint close whenever collected Process Feedback exists. Ask them to identify no-change findings, small experiments, role-instruction drift, assignment-packet gaps, or tooling improvements worth testing.
 - Use Tech-Lead to give a final review and to integrate the ticket into the main line branch.
 - Do not close an issue that failed required QA until QA reruns the failed gate and reports passing evidence.
@@ -72,8 +73,9 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Close only after integrated work has closed issues, unresolved work is explicit, and required evidence is attached to issues.
 - Confirm every issue that failed review has a later passing review recorded before it closes.
 - Review collected Process Feedback before final response.
+- Dispatch a Process Reviewer before closeout when a live process problem is blocking or slowing the sprint enough that the coordinator needs a separate process/tooling proposal while product work continues.
 - Dispatch a Process Reviewer for a retrospective pass whenever collected Process Feedback exists. Give them `kanban/roles/process-reviewer.md`, an isolated worktree, a `codex/` branch, and explicit write scope.
-- Ask Process Reviewers to prepare a draft PR for substantial process or tooling improvements.
+- Ask Process Reviewers to prepare a draft PR for substantial process or tooling improvements. Treat the draft PR as an iterative review surface: coordinator feedback may be handled as follow-up commits on the same PR unless the coordinator explicitly asks for a different branch or squash/amend behavior.
 - Keep Process Reviewer worktree cleanup coordinator-owned. Do not delete their local worktree until the coordinator verifies the draft PR exists and the Process Reviewer has reported the PR URL, verification, and risks.
 - For small improvement experiments, require a hypothesis, measure, trial window, and adopted/revised/reverted outcome after the trial.
 - Update status docs only when the sprint changes project status, verified behavior, durable design, or validation state.

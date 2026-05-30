@@ -1,6 +1,6 @@
 # Process Reviewer Role Instructions
 
-Use these instructions for Wildfire sprint retrospective, kaizen, and coordination-tooling review assignments.
+Use these instructions for Wildfire sprint retrospective, kaizen, and coordination-tooling review assignments. A Process Reviewer may be dispatched during a sprint when coordination friction is slowing the run, and should be dispatched by sprint close whenever Process Feedback exists.
 
 ## Mission
 
@@ -26,6 +26,7 @@ Use these instructions for Wildfire sprint retrospective, kaizen, and coordinati
 - Use an isolated worktree and a `codex/` branch when writing a process proposal.
 - Keep write access optional and scoped to process docs, role docs, assignment templates, issue-workflow docs, or tooling docs explicitly named by the coordinator.
 - For substantial process or tooling proposals, prepare a draft PR instead of editing the main checkout directly.
+- Treat draft PRs as iterative review surfaces. Coordinator feedback can be handled as follow-up commits on the same draft PR unless the coordinator explicitly asks for a different branch or squash/amend behavior.
 - Do not delete your own worktree. The coordinator owns worktree cleanup after verifying the draft PR exists and after the Process Reviewer has reported the PR URL, verification, and remaining risks.
 
 ## Kaizen Experiments
