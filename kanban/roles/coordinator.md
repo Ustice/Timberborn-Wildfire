@@ -38,7 +38,10 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Assign one issue per Worker.
 - Give every sub-agent the relevant role instruction doc, ticket path, write scope, dependencies, and required verification.
 - Give every sub-agent the GitHub issue URL and tell them to report issue notes back to the coordinator unless direct issue updates are explicitly in scope.
-- Use `kanban/assignment-packet-template.md` for dispatches.
+- Allocate the branch and worktree before dispatch so sub-agent work uses a consistent naming scheme. Prefer `codex/<role>/<issue-or-sprint>-<short-slug>` for branches and a matching recognizable path under `~/repos` for worktrees unless an existing PR or branch should be reused.
+- Use `bun scripts/create-agent-worktree.ts` for fresh allocations when practical so the worktree, branch, and git-ignored `CONTEXT.md` base are created together.
+- Use `kanban/assignment-packet-template.md` for dispatches, and record the worktree path, branch, base branch, cleanup owner, and context file path.
+- Do not ask sub-agents to invent branch names or worktree paths unless the assignment explicitly gives them that setup task. If allocation fails, resolve it before dispatch.
 - Use rolling dispatch when dependencies are clear and write scopes do not conflict.
 - Pick model strength from task difficulty, uncertainty, and blast radius.
 - Use Workers for implementation.
@@ -46,6 +49,8 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Before dispatching live Timberborn QA, verify the coordinator has `caffeinate -disu` active or explicitly assign QA to start it and report the process state.
 - Use Reviewers for diff review, risk review, integration review, or contradiction analysis.
 - Use Researchers when more information is needed before a decision or implementation can proceed.
+- Use Process Reviewers during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
+- Use Process Reviewers at sprint close whenever collected Process Feedback exists. Ask them to report only `No change necessary.` when no action is warranted, or identify small experiments, role-instruction drift, assignment-packet gaps, or tooling improvements worth testing.
 - Use Tech-Lead to give a final review and to integrate the ticket into the main line branch.
 - Do not close an issue that failed required QA until QA reruns the failed gate and reports passing evidence.
 - Do not close an issue that failed review until the worker fix lands and a later review passes. The fix itself is not enough.
@@ -53,6 +58,8 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 ## Issue Ownership
 
 - Require sub-agents to update their assigned issues with notes, evidence, blockers, and results. They should be able to append their notes without having to reread the existing text.
+- Require every sub-agent final report to include Process Feedback: friction or issues encountered, reusable lessons from retries or pivots, what they would repeat or change next time, and suggested process or tooling improvements.
+- Collect Process Feedback during closeout. Document accepted follow-up work in GitHub Issues, and keep rejected or deferred suggestions explicit when they affect future coordination.
 - Prefer sub-agent final reports over worktree-local historical ticket edits. The coordinator owns accepted GitHub issue updates.
 - Link bulky runtime evidence through `kanban/evidence-manifest-template.md`-style manifests rather than copying long logs into tickets.
 - Do not ask sub-agents to update `docs/HANDOFF.md`, `docs/TODO.md`, `docs/DESIGN.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`, or `README.md` unless an issue explicitly assigns those files.
@@ -68,6 +75,14 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 
 - Close only after integrated work has closed issues, unresolved work is explicit, and required evidence is attached to issues.
 - Confirm every issue that failed review has a later passing review recorded before it closes.
+- Review collected Process Feedback before final response.
+- Dispatch a Process Reviewer before closeout when a live process problem is blocking or slowing the sprint enough that the coordinator needs a separate process/tooling proposal while product work continues.
+- Dispatch a Process Reviewer for a retrospective pass whenever collected Process Feedback exists. Give them `kanban/roles/process-reviewer.md`, an isolated worktree, a `codex/` branch, and explicit write scope.
+- Accept `No change necessary.` as the complete Process Reviewer report when the reviewed feedback does not justify a process or tooling change.
+- When feedback resembles earlier friction, ask the Process Reviewer to inspect the recent Worker, QA, Reviewer, Tech-Lead, and Process Reviewer reports needed to distinguish a repeated pattern from a one-off.
+- Ask Process Reviewers to prepare a draft PR for substantial process or tooling improvements. Treat the draft PR as an iterative review surface: coordinator feedback may be handled as follow-up commits on the same PR unless the coordinator explicitly asks for a different branch or squash/amend behavior.
+- Keep Process Reviewer worktree cleanup coordinator-owned. Do not delete their local worktree until the coordinator verifies the draft PR exists and the Process Reviewer has reported the PR URL, verification, and risks.
+- For small improvement experiments, require a hypothesis, measure, trial window, and adopted/revised/reverted outcome after the trial.
 - Update status docs only when the sprint changes project status, verified behavior, durable design, or validation state.
 - Final response should summarize outcome, verification, remaining blockers, and next action.
 

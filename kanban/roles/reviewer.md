@@ -16,6 +16,7 @@ Use these instructions for every Wildfire Reviewer sub-agent unless the issue sa
 - `kanban/github-issue-workflow.md`.
 - `kanban/roles/reviewer.md`.
 - Assigned GitHub issues.
+- Assignment packet from the coordinator when one is provided.
 - Relevant diffs, commits, worker notes, QA evidence, dependency tickets, and sprint charter.
 
 ## Scope
@@ -56,3 +57,7 @@ Use these instructions for every Wildfire Reviewer sub-agent unless the issue sa
 - Integration challenges outside of git.
 - Issue notes the coordinator should add.
 - Recommended status-label change.
+- Process Feedback:
+  - Friction or issues encountered.
+  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
+  - Suggested process or tooling improvements.

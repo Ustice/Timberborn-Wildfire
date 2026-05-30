@@ -55,3 +55,7 @@ Use these instructions for every Wildfire Tech-Lead sub-agent unless the issue s
 - Integration challenges, outside of git
 - Issue notes the coordinator should add
 - Any recommended status-label change
+- Process Feedback:
+  - Friction or issues encountered.
+  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
+  - Suggested process or tooling improvements.
