@@ -50,5 +50,5 @@ Report:
 - Issue notes the coordinator should add.
 - Process Feedback:
   - Friction or issues encountered.
-  - What worked well.
+  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
   - Suggested process or tooling improvements.

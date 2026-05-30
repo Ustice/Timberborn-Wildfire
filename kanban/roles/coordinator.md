@@ -58,7 +58,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 ## Issue Ownership
 
 - Require sub-agents to update their assigned issues with notes, evidence, blockers, and results. They should be able to append their notes without having to reread the existing text.
-- Require every sub-agent final report to include Process Feedback: friction or issues encountered, what worked well, and suggested process or tooling improvements.
+- Require every sub-agent final report to include Process Feedback: friction or issues encountered, reusable lessons from retries or pivots, what they would repeat or change next time, and suggested process or tooling improvements.
 - Collect Process Feedback during closeout. Document accepted follow-up work in GitHub Issues, and keep rejected or deferred suggestions explicit when they affect future coordination.
 - Prefer sub-agent final reports over worktree-local historical ticket edits. The coordinator owns accepted GitHub issue updates.
 - Link bulky runtime evidence through `kanban/evidence-manifest-template.md`-style manifests rather than copying long logs into tickets.

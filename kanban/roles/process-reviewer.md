@@ -79,5 +79,5 @@ Otherwise, report:
 - Recommended coordinator next action.
 - Process Feedback:
   - Friction or issues encountered.
-  - What worked well.
+  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
   - Suggested improvements to the process or tools.

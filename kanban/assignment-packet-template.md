@@ -55,5 +55,5 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Recommended status-label change:
 - Process Feedback:
   - Friction or issues encountered:
-  - What worked well:
+  - Reusable lessons from retries or pivots, including what you would repeat or change next time:
   - Suggested process or tooling improvements:
