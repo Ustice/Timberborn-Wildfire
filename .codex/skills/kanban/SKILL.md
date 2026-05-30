@@ -18,7 +18,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 3. Inspect GitHub Issues with `gh issue list --repo Ustice/Timberborn-Wildfire`.
 4. Treat GitHub issue labels as the active status backing.
 5. Use `kanban/github-issue-migration.md` only to map historical `TWF-*` ids to issue numbers.
-6. Use `kanban/assignment-packet-template.md` when dispatching sub-agents, including the coordinator-assigned worktree path, branch, base branch, and cleanup owner.
+6. Use `kanban/assignment-packet-template.md` when dispatching sub-agents, including the coordinator-assigned worktree path, branch, base branch, cleanup owner, and `CONTEXT.md` path.
 7. When resuming a broad issue sweep, start by delegating a Tech-Lead or Reviewer for a current-state pass.
 8. Link sub-agents to the relevant role doc.
 9. Use rolling dispatch when dependencies and write scopes allow it.
@@ -32,7 +32,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 - Delegate implementation, QA, review, and research through GitHub issues.
 - An issue that fails required QA must pass that QA gate in a later run before it can be closed.
 - Pick model strength (Low, Medium, High, Extra High) based on task difficulty, uncertainty, and blast radius.
-- Own branch and worktree allocation before dispatch. Do not rely on sub-agents to invent branch names or worktree paths unless the assignment explicitly gives them that setup task.
+- Own branch and worktree allocation before dispatch. Use `bun scripts/create-agent-worktree.ts` when creating a fresh allocation, and do not rely on sub-agents to invent branch names or worktree paths unless the assignment explicitly gives them that setup task.
 - Require sub-agents to update their assigned GitHub issues with notes, evidence, blockers, and results.
 - Require sub-agent final reports to include Process Feedback so coordination friction can be reviewed across sprints.
 - Keep GitHub issue status-label changes serialized.

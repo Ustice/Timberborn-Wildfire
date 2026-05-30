@@ -12,6 +12,7 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Branch:
 - Base branch:
 - Cleanup owner:
+- Context file:
 - Role instructions:
 - Sprint charter:
 
@@ -29,6 +30,7 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Read the GitHub issue before starting.
 - Work only in the assigned implementation worktree and branch unless the coordinator explicitly says otherwise.
 - Verify the assigned worktree path and branch with `git status --short --branch` before editing.
+- Read the assigned `CONTEXT.md` when it exists. Update it only when durable task state changes, and keep it compressed rather than append-only.
 - If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
 - Do not change GitHub issue status labels unless explicitly assigned.
 - Do not edit historical kanban ticket files unless this assignment explicitly includes migration-cleanup scope.

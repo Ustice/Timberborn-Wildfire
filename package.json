@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "agent:worktree": "bun scripts/create-agent-worktree.ts",
     "blueprints:check": "bun scripts/generate-wildfire-fuel-blueprints.ts --check",
     "blueprints:generate": "bun scripts/generate-wildfire-fuel-blueprints.ts",
     "qa:cleanup-media": "bun scripts/cleanup-wildfire-qa-media.ts",

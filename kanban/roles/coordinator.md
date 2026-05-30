@@ -39,7 +39,8 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Give every sub-agent the relevant role instruction doc, ticket path, write scope, dependencies, and required verification.
 - Give every sub-agent the GitHub issue URL and tell them to report issue notes back to the coordinator unless direct issue updates are explicitly in scope.
 - Allocate the branch and worktree before dispatch so sub-agent work uses a consistent naming scheme. Prefer `codex/<role>/<issue-or-sprint>-<short-slug>` for branches and a matching recognizable path under `~/repos` for worktrees unless an existing PR or branch should be reused.
-- Use `kanban/assignment-packet-template.md` for dispatches, and record the worktree path, branch, base branch, and cleanup owner.
+- Use `bun scripts/create-agent-worktree.ts` for fresh allocations when practical so the worktree, branch, and git-ignored `CONTEXT.md` base are created together.
+- Use `kanban/assignment-packet-template.md` for dispatches, and record the worktree path, branch, base branch, cleanup owner, and context file path.
 - Do not ask sub-agents to invent branch names or worktree paths unless the assignment explicitly gives them that setup task. If allocation fails, resolve it before dispatch.
 - Use rolling dispatch when dependencies are clear and write scopes do not conflict.
 - Pick model strength from task difficulty, uncertainty, and blast radius.
