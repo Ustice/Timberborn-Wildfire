@@ -22,7 +22,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 7. When resuming a broad issue sweep, start by delegating a Tech-Lead or Reviewer for a current-state pass.
 8. Link sub-agents to the relevant role doc.
 9. Use rolling dispatch when dependencies and write scopes allow it.
-10. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer when repeated friction or substantial workflow/tooling improvement opportunities appear.
+10. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer whenever feedback exists, even if the result is only a no-change retrospective note.
 
 ## Guardrails
 

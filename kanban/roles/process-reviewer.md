@@ -26,7 +26,7 @@ Use these instructions for Wildfire sprint retrospective, kaizen, and coordinati
 - Use an isolated worktree and a `codex/` branch when writing a process proposal.
 - Keep write access optional and scoped to process docs, role docs, assignment templates, issue-workflow docs, or tooling docs explicitly named by the coordinator.
 - For substantial process or tooling proposals, prepare a draft PR instead of editing the main checkout directly.
-- Delete the local worktree only after the draft PR exists and the Process Reviewer has reported the PR URL, verification, and remaining risks to the coordinator.
+- Do not delete your own worktree. The coordinator owns worktree cleanup after verifying the draft PR exists and after the Process Reviewer has reported the PR URL, verification, and remaining risks.
 
 ## Kaizen Experiments
 
