@@ -67,12 +67,15 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Do not treat historical ticket notes or status symlinks inside implementation worktrees as authoritative.
 - Use GitHub issue comments when Jason needs to read, decide, or approve before the next action.
 - For failed QA, keep the issue open and use `status:rework` when the next action is an implementation, documentation, fixture, test, or acceptance-criteria update.
-- Use `status:qa-needed` when the next action is a focused rerun with no rework required, or `status:blocked` when the next action needs evidence, environment access, an upstream fix, or a decision.
+- Use `status:qa-needed` when the next action is a focused rerun with no rework required.
+- Use `status:blocked-by-environment` when Timberborn cannot load, respond, or provide a fair runtime QA target; retry on the next run or once the game is responding again.
+- Use `status:waiting-for-dependency` when another GitHub issue or intra-ticket dependency must resolve first; reassess when that dependency resolves.
+- Use `status:needs-fixture` when QA lacks the tool, scenario data, capture support, or fixture needed to make a determination; create or dispatch the smallest QA-tool/fixture issue before asking for manual setup.
 - Treat `status:qa-needed` as an active focused-retry queue. Do not stop after moving an issue there if a bounded retry can be dispatched now.
 - Treat `status:rework` as an active implementation queue. Do not leave it as a passive failure bucket when a bounded worker update can be dispatched now.
 - When setting or leaving `status:qa-needed`, write the retry packet into the issue: exact target, fixture/save, commands or tool path, expected evidence, failure classification expectations, and pass/close criteria.
-- Convert `status:qa-needed` to `status:blocked` only when the coordinator cannot define or run the retry without a missing fixture, unreliable QA tool, environment access, upstream fix, or Jason decision.
-- When a blocker repeats because QA lacks setup, fixture, capture, command, or evidence tooling, create or dispatch the smallest QA tool that can remove the blocker before asking for manual setup. Document the tool path, command, expected evidence, and failure classification in the issue retry packet.
+- Convert `status:qa-needed` to one of the specific blocked labels only when the coordinator cannot define or run the retry because of environment failure, unresolved dependencies, or missing fixture/tooling.
+- When a blocker repeats because QA lacks setup, fixture, capture, command, or evidence tooling, move the issue to `status:needs-fixture` and create or dispatch the smallest QA tool that can remove the blocker before asking for manual setup. Document the tool path, command, expected evidence, and failure classification in the issue retry packet.
 - For failed review, keep the issue open for fixes and require a fresh review before closure.
 
 ## Sprint Close

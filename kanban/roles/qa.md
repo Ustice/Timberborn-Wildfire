@@ -67,7 +67,7 @@ For every assigned issue, report these fields to the coordinator for the GitHub 
 - Screenshots for visual claims.
 - Evidence manifest path when runtime artifacts are large.
 - Pass/fail result per acceptance criterion.
-- Exact failing evidence for any issue that should stay open, become `status:rework`, or become `status:blocked`.
+- Exact failing evidence for any issue that should stay open, become `status:rework`, `status:blocked-by-environment`, `status:waiting-for-dependency`, or `status:needs-fixture`.
 - Whether the same failed gate must be rerun before integration.
 
 ## Final Report
@@ -76,7 +76,7 @@ Report:
 
 - Issues validated.
 - Pass/fail result per issue.
-- For failed tickets, whether the next status should be `status:rework`, `status:qa-needed`, or `status:blocked`, plus the exact gate that must pass before integration.
+- For failed tickets, whether the next status should be `status:rework`, `status:qa-needed`, `status:blocked-by-environment`, `status:waiting-for-dependency`, or `status:needs-fixture`, plus the exact gate that must pass before integration.
 - For partial retries, the exact next retry to run if it is known and runnable.
 - Commands run.
 - Logs and screenshot paths.

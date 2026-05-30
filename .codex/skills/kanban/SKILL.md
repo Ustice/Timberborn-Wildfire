@@ -30,7 +30,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 - Do not end the coordination turn until the sprint is closed or the user explicitly tells you to stop.
 - Do not make code, content, script, runtime behavior, or test changes directly as the coordinator.
 - Delegate implementation, QA, review, and research through GitHub issues.
-- An issue that fails required QA must move to `status:rework` when updates are needed, or `status:qa-needed` when only a rerun is needed. It must pass that QA gate in a later run before it can be closed.
+- An issue that fails required QA must move to `status:rework` when updates are needed, `status:qa-needed` when only a rerun is needed, `status:blocked-by-environment` when Timberborn cannot load or respond, `status:waiting-for-dependency` when another issue must land first, or `status:needs-fixture` when QA needs new tooling or fixtures. It must pass that QA gate in a later run before it can be closed.
 - Pick model strength (Low, Medium, High, Extra High) based on task difficulty, uncertainty, and blast radius.
 - Own branch and worktree allocation before dispatch. Use `bun scripts/create-agent-worktree.ts` when creating a fresh allocation, and do not rely on sub-agents to invent branch names or worktree paths unless the assignment explicitly gives them that setup task.
 - Require sub-agents to update their assigned GitHub issues with notes, evidence, blockers, and results.

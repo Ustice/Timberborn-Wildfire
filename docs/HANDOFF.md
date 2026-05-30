@@ -27,7 +27,9 @@ Do not mirror GitHub issue status in this file. Start from GitHub every time:
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:ready
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:rework
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:qa-needed
-gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:blocked
+gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:blocked-by-environment
+gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:waiting-for-dependency
+gh issue list --repo Ustice/Timberborn-Wildfire --state open --label status:needs-fixture
 gh issue list --repo Ustice/Timberborn-Wildfire --state open --label source:kanban --limit 100
 ```
 
@@ -41,10 +43,10 @@ Treat that list as a migration snapshot only. Refresh from GitHub before assigni
 
 ## Current Cautions
 
-- Keep live-QA issues blocked until Timberborn is closed or restarted normally and `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` returns from a loaded save.
+- Keep live-QA issues `status:blocked-by-environment` until Timberborn is closed or restarted normally and `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick` returns from a loaded save.
 - Do not imply progress on behavior or real-field blockers until their GitHub issue has fresh command/status/log or visual evidence.
 - If shader behavior changes, use the opt-in Unity harness command documented in [TEST_PLAN.md](TEST_PLAN.md) before accepting the change.
-- If a ticket fails required QA, use `status:rework` when the next step is an update, `status:qa-needed` when the next step is only a focused rerun, or `status:blocked` when the next step needs missing evidence, access, or a decision. Keep the GitHub issue open and update labels/comments with the exact blocker.
+- If a ticket fails required QA, use `status:rework` when the next step is an update, `status:qa-needed` when the next step is only a focused rerun, `status:blocked-by-environment` when Timberborn cannot load or respond, `status:waiting-for-dependency` when another issue must land first, or `status:needs-fixture` when QA needs a new tool or fixture to determine pass/fail. Keep the GitHub issue open and update labels/comments with the exact blocker.
 - If a ticket fails review, keep the GitHub issue open and update labels/comments with the exact blocker.
 - Use `bun run typecheck` before accepting TypeScript script changes.
 - Before any real Steam Workshop upload or update, run `bun run workshop:package` and `bun run workshop:publish -- --dry-run --skip-preview --user <steam-account>`, then confirm Steam account permission, Steam Guard access, `steamcmd`, preview size, VDF metadata, and the final `publishedfileid`. The current planned Workshop item id is `3730392791`, but it remains a confirmation blocker until a real authenticated SteamCMD result or Workshop URL proves it.
