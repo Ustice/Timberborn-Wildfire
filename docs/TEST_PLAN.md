@@ -1277,6 +1277,8 @@ bun scripts/check-timberborn-startup.ts --launch --wait=120
 
 The harness serializes with deploy work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, captures a `Player.log` baseline before attach or launch work, activates `com.mechanistry.timberborn`, waits for required current-window `Player.log` tokens, and writes evidence under `/tmp/wildfire-qa/startup-harness/<timestamp>/` by default. Pass `--artifacts-dir` only when a run needs durable evidence outside temp storage.
 
+Startup helpers are idempotent by contract: `--launch` may call `open -b com.mechanistry.timberborn` only when no `Timberborn` process is running, already-running sessions may only use AppleScript activation/focus retries, and `--attach` must fail clearly instead of opening the app when Timberborn is absent.
+
 QA automation that affects issue status, release confidence, or tool reliability should also record a local tool run with `bun scripts/qa-log-tool-run.ts`. The ignored repo-local database lives at `qa/tool-runs.sqlite`; [qa-tooling.md](qa-tooling.md) owns the schema, failure classes, and reporting procedure. Use `bun scripts/qa-tool-report.ts` when repeated failures may indicate a QA-tooling issue instead of a product blocker.
 
 Default required startup tokens are:
@@ -1373,7 +1375,7 @@ Use `--attach` when Timberborn is already running:
 bun scripts/load-latest-save-and-unpause.ts --attach --wait=120
 ```
 
-The `--attach` route stays classifier-driven for already-running sessions. If `--launch` is used while Timberborn is already running, the utility also uses the classifier path instead of sending fast startup inputs into an unknown live state.
+The `--attach` route stays classifier-driven for already-running sessions. If `--launch` is used while Timberborn is already running, the utility also uses the classifier path instead of sending fast startup inputs into an unknown live state. Activation/focus retries may use `osascript` but must not re-open or relaunch the app.
 
 The utility serializes with deploy/startup work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, activates `com.mechanistry.timberborn`, captures screenshots for each identified transition under `/tmp/wildfire-qa/latest-save-startup/<timestamp>/` by default, and preserves classifier screenshots as fallback/debug aids.
 

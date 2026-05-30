@@ -4,6 +4,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync,
 import { dirname, join, resolve } from "path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 import { fileURLToPath } from "url";
+import { isTimberbornRunning, launchOrAttachTimberborn } from "./lib/timberborn-startup.ts";
 
 type Mode = "attach" | "launch";
 type ScreenKind = "experimental-mode" | "loaded-save" | "main-menu" | "startup-mods" | "unknown";
@@ -291,8 +292,6 @@ const run = (command: string, args: string[]): ShellResult => {
     stdout: result.stdout.toString(),
   };
 };
-
-const isTimberbornRunning = (): boolean => run("pgrep", ["-x", processName]).exitCode === 0;
 
 const getTimberbornPid = (): number | null => {
   const result = run("pgrep", ["-x", processName]);
@@ -710,46 +709,21 @@ const activateTimberborn = (label = "activate", timeoutMs = activationRetryTimeo
   );
 };
 
-const tryActivateTimberborn = (label = "activate", timeoutMs = activationRetryTimeoutMs): boolean => {
-  try {
-    activateTimberborn(label, timeoutMs);
-    return true;
-  } catch (error) {
-    log(`activation_pending label=${label} error=${compactLogToken(formatError(error))}`);
-    return false;
-  }
-};
-
 const launchOrAttach = async (options: Options): Promise<void> => {
-  if (options.mode === "attach") {
-    if (!isTimberbornRunning()) {
-      fail("Timberborn is not running. Start it first or pass --launch.");
-    }
-    activateTimberborn("attach");
-    return;
-  }
-
-  if (!isTimberbornRunning()) {
-    const openResult = run("open", ["-b", bundleId]);
-    if (openResult.exitCode !== 0) {
-      fail(`Could not launch Timberborn bundle ${bundleId}: ${commandFailureText(openResult)}`);
-    }
-  }
-
-  const startedAt = Date.now();
-  while (Date.now() - startedAt <= options.waitSeconds * 1000) {
-    if (isTimberbornRunning()) {
-      if (!tryActivateTimberborn("launch")) {
-        log("launch_activation_deferred=true reason=timberborn_running_but_not_foreground");
-      }
-      log("timberborn_running=true");
-      return;
-    }
-
-    await Bun.sleep(500);
-  }
-
-  fail(`Timed out waiting for ${processName} to start.`);
+  await launchOrAttachTimberborn({
+    activationPolicy: options.mode === "attach" ? "required" : "best-effort",
+    activationRetryIntervalMs,
+    activationRetryTimeoutMs,
+    bundleId,
+    getFrontmostBundleId,
+    log,
+    mode: options.mode,
+    processName,
+    run,
+    sleepMs: Bun.sleep,
+    sleepSyncMs: Bun.sleepSync,
+    waitSeconds: options.waitSeconds,
+  });
 };
 
 const createArtifactDir = (options: Options): string => {
@@ -1623,7 +1597,7 @@ const main = async (): Promise<void> => {
   const observedScreens: ScreenKind[] = [];
 
   try {
-    const wasRunningBeforeLaunch = isTimberbornRunning();
+    const wasRunningBeforeLaunch = isTimberbornRunning(run, processName);
     await launchOrAttach(options);
 
     if (options.mode === "launch" && !wasRunningBeforeLaunch) {

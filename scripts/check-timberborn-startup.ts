@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, resolve } from "path";
+import { launchOrAttachTimberborn } from "./lib/timberborn-startup.ts";
 
 type Mode = "attach" | "launch";
 type ScreenshotMode = "always" | "failure" | "never";
@@ -262,8 +263,6 @@ const run = (command: string, args: string[]): { exitCode: number; stderr: strin
   };
 };
 
-const isTimberbornRunning = (): boolean => run("pgrep", ["-x", processName]).exitCode === 0;
-
 const readLock = (): string => {
   try {
     return readFileSync(lockInfoPath, "utf8");
@@ -330,32 +329,6 @@ const assertResolution = (expectedResolution: string): void => {
   }
 
   log(`resolution_ok expected=${expectedResolution}`);
-};
-
-const launchTimberborn = async (waitSeconds: number): Promise<void> => {
-  const openResult = run("open", ["-b", bundleId]);
-  if (openResult.exitCode !== 0) {
-    fail(`Could not launch Timberborn bundle ${bundleId}: ${openResult.stderr.trim() || openResult.stdout.trim()}`);
-  }
-
-  const startedAt = Date.now();
-  while (Date.now() - startedAt <= waitSeconds * 1000) {
-    if (isTimberbornRunning()) {
-      log("timberborn_running=true");
-      return;
-    }
-
-    await Bun.sleep(500);
-  }
-
-  fail(`Timed out waiting for ${processName} to start.`);
-};
-
-const activateTimberborn = (): void => {
-  const result = run("osascript", ["-e", `tell application id "${bundleId}" to activate`]);
-  if (result.exitCode !== 0) {
-    fail(`Could not activate Timberborn bundle ${bundleId}: ${result.stderr.trim() || result.stdout.trim()}`);
-  }
 };
 
 const matchingLines = (text: string, tokens: string[]): string[] =>
@@ -567,13 +540,16 @@ const main = async (): Promise<void> => {
     const baseline = captureLogBaseline(options.playerLogPath);
     log(`player_log_baseline exists=${baseline.exists} size=${baseline.size} mtime_ms=${baseline.mtimeMs}`);
 
-    if (options.mode === "launch") {
-      await launchTimberborn(options.waitSeconds);
-    } else if (!isTimberbornRunning()) {
-      fail("Timberborn is not running. Start it first or pass --launch.");
-    }
-
-    activateTimberborn();
+    await launchOrAttachTimberborn({
+      activationPolicy: "required",
+      bundleId,
+      mode: options.mode,
+      processName,
+      run,
+      sleepMs: Bun.sleep,
+      sleepSyncMs: Bun.sleepSync,
+      waitSeconds: options.waitSeconds,
+    });
 
     const initialEvidence = await waitForEvidence(options, baseline);
     const hasInitialRequiredEvidence = initialEvidence.missingTokens.length === 0;
