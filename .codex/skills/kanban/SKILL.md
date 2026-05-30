@@ -23,7 +23,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 8. Link sub-agents to the relevant role doc.
 9. Use rolling dispatch when dependencies and write scopes allow it.
 10. Dispatch a Process Reviewer during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
-11. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer whenever feedback exists, even if the result is only a no-change retrospective note.
+11. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer whenever feedback exists. When no action is warranted, the Process Reviewer should report only `No change necessary.`
 
 ## Guardrails
 

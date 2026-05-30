@@ -18,6 +18,7 @@ Use these instructions for Wildfire sprint retrospective, kaizen, and coordinati
 - Read `kanban/assignment-packet-template.md`.
 - Read the role docs involved in the sprint.
 - Read relevant sub-agent final reports, GitHub issue comments, QA evidence summaries, and coordinator notes.
+- When the coordinator asks for pattern review, read the recent Worker, QA, Reviewer, Tech-Lead, and Process Reviewer reports named by the coordinator before recommending changes.
 
 ## Scope
 
@@ -40,9 +41,30 @@ When proposing a small process experiment, define:
 
 Prefer one or two small experiments per sprint so process changes remain observable.
 
+## Hygiene Questions
+
+Before recommending a process or tooling change, ask:
+
+- Is the feedback evidence-backed, or is it only a vague preference?
+- Is this a repeated pattern, a high-risk one-off, or normal sprint noise?
+- What breaks or slows down if nothing changes?
+- Would the change reduce coordination work, or add ceremony?
+- Is this product work, QA work, or issue triage disguised as process work?
+- Is the smallest useful change a doc edit, assignment-packet tweak, script/tooling change, GitHub issue, or no change?
+- What would make the experiment adopted, revised, or reverted?
+- Could this change encourage agents to skip evidence, skip QA, over-delegate, over-report, or avoid hard coordinator decisions?
+- Does an existing rule, role doc, script, or issue already cover this problem?
+- Have recent reports already surfaced the same problem, and did the earlier fix stick?
+
+If these questions do not identify an actionable improvement, report only `No change necessary.`
+
 ## Final Report
 
-Report:
+If no action is warranted after reviewing the assigned feedback, report exactly:
+
+`No change necessary.`
+
+Otherwise, report:
 
 - Changed files.
 - Branch name.

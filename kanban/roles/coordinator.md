@@ -47,7 +47,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Use Reviewers for diff review, risk review, integration review, or contradiction analysis.
 - Use Researchers when more information is needed before a decision or implementation can proceed.
 - Use Process Reviewers during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
-- Use Process Reviewers at sprint close whenever collected Process Feedback exists. Ask them to identify no-change findings, small experiments, role-instruction drift, assignment-packet gaps, or tooling improvements worth testing.
+- Use Process Reviewers at sprint close whenever collected Process Feedback exists. Ask them to report only `No change necessary.` when no action is warranted, or identify small experiments, role-instruction drift, assignment-packet gaps, or tooling improvements worth testing.
 - Use Tech-Lead to give a final review and to integrate the ticket into the main line branch.
 - Do not close an issue that failed required QA until QA reruns the failed gate and reports passing evidence.
 - Do not close an issue that failed review until the worker fix lands and a later review passes. The fix itself is not enough.
@@ -75,6 +75,8 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Review collected Process Feedback before final response.
 - Dispatch a Process Reviewer before closeout when a live process problem is blocking or slowing the sprint enough that the coordinator needs a separate process/tooling proposal while product work continues.
 - Dispatch a Process Reviewer for a retrospective pass whenever collected Process Feedback exists. Give them `kanban/roles/process-reviewer.md`, an isolated worktree, a `codex/` branch, and explicit write scope.
+- Accept `No change necessary.` as the complete Process Reviewer report when the reviewed feedback does not justify a process or tooling change.
+- When feedback resembles earlier friction, ask the Process Reviewer to inspect the recent Worker, QA, Reviewer, Tech-Lead, and Process Reviewer reports needed to distinguish a repeated pattern from a one-off.
 - Ask Process Reviewers to prepare a draft PR for substantial process or tooling improvements. Treat the draft PR as an iterative review surface: coordinator feedback may be handled as follow-up commits on the same PR unless the coordinator explicitly asks for a different branch or squash/amend behavior.
 - Keep Process Reviewer worktree cleanup coordinator-owned. Do not delete their local worktree until the coordinator verifies the draft PR exists and the Process Reviewer has reported the PR URL, verification, and risks.
 - For small improvement experiments, require a hypothesis, measure, trial window, and adopted/revised/reverted outcome after the trial.
