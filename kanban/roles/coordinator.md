@@ -36,7 +36,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 
 - Point the sub-agents at the role-specific instructions files.
 - Assign one issue per Worker.
-- Give every sub-agent the relevant role instruction doc, ticket path, write scope, dependencies, and required verification.
+- Give every sub-agent the relevant role instruction doc, GitHub issue number and URL, write scope, dependencies, and required verification.
 - Give every sub-agent the GitHub issue URL and tell them to report issue notes back to the coordinator unless direct issue updates are explicitly in scope.
 - Allocate the branch and worktree before dispatch so sub-agent work uses a consistent naming scheme. Prefer `codex/<role>/<issue-or-sprint>-<short-slug>` for branches and a matching recognizable path under `~/repos` for worktrees unless an existing PR or branch should be reused.
 - Use `bun scripts/create-agent-worktree.ts` for fresh allocations when practical so the worktree, branch, and git-ignored `CONTEXT.md` base are created together.
@@ -52,11 +52,12 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Use Process Reviewers during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
 - Use Process Reviewers at sprint close whenever collected Process Feedback exists. Ask them to report only `No change necessary.` when no action is warranted, or identify small experiments, role-instruction drift, assignment-packet gaps, or tooling improvements worth testing.
 - Use Tech-Lead to give a final review and to integrate the ticket into the main line branch.
-- Do not close an issue that failed required QA until QA reruns the failed gate and reports passing evidence.
+- Do not close an issue that failed required QA until rework, if any, lands and QA reruns the failed gate with passing evidence.
 - Do not close an issue that failed review until the worker fix lands and a later review passes. The fix itself is not enough.
 
 ## Issue Ownership
 
+- Use GitHub issue numbers as the durable ticket identifiers for new work. Do not create new `TWF-###` names; keep `TWF-*` only as historical references for migrated file-board tickets.
 - Require sub-agents to update their assigned issues with notes, evidence, blockers, and results. They should be able to append their notes without having to reread the existing text.
 - Require every sub-agent final report to include Process Feedback: friction or issues encountered, reusable lessons from retries or pivots, what they would repeat or change next time, and suggested process or tooling improvements.
 - Collect Process Feedback during closeout. Document accepted follow-up work in GitHub Issues, and keep rejected or deferred suggestions explicit when they affect future coordination.
@@ -65,8 +66,10 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Do not ask sub-agents to update `docs/HANDOFF.md`, `docs/TODO.md`, `docs/DESIGN.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`, or `README.md` unless an issue explicitly assigns those files.
 - Do not treat historical ticket notes or status symlinks inside implementation worktrees as authoritative.
 - Use GitHub issue comments when Jason needs to read, decide, or approve before the next action.
-- For failed QA, keep the issue open and use `status:qa-needed` when the next action is a rerun, or `status:blocked` when the next action needs evidence, environment access, an upstream fix, or a decision.
+- For failed QA, keep the issue open and use `status:rework` when the next action is an implementation, documentation, fixture, test, or acceptance-criteria update.
+- Use `status:qa-needed` when the next action is a focused rerun with no rework required, or `status:blocked` when the next action needs evidence, environment access, an upstream fix, or a decision.
 - Treat `status:qa-needed` as an active focused-retry queue. Do not stop after moving an issue there if a bounded retry can be dispatched now.
+- Treat `status:rework` as an active implementation queue. Do not leave it as a passive failure bucket when a bounded worker update can be dispatched now.
 - When setting or leaving `status:qa-needed`, write the retry packet into the issue: exact target, fixture/save, commands or tool path, expected evidence, failure classification expectations, and pass/close criteria.
 - Convert `status:qa-needed` to `status:blocked` only when the coordinator cannot define or run the retry without a missing fixture, unreliable QA tool, environment access, upstream fix, or Jason decision.
 - When a blocker repeats because QA lacks setup, fixture, capture, command, or evidence tooling, create or dispatch the smallest QA tool that can remove the blocker before asking for manual setup. Document the tool path, command, expected evidence, and failure classification in the issue retry packet.

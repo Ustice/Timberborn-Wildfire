@@ -4,8 +4,8 @@ Use this next to runtime artifacts, screenshots, logs, generated saves, or QA ou
 
 ## Issue
 
-- Issue:
-- Related `TWF-*` id:
+- GitHub issue:
+- Historical `TWF-*` id, if migrated:
 - Agent:
 - Date:
 

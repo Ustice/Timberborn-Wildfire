@@ -12,6 +12,7 @@ Use these instructions for every Wildfire QA sub-agent unless the issue says oth
 - Report evidence and results to the coordinator for GitHub issue updates unless direct issue updates are explicitly assigned.
 - A failed required QA gate blocks closure. The issue must pass that gate in a later QA run before the coordinator can close it.
 - Treat assignments from `status:qa-needed` as focused retries. Start from the latest failed or partial evidence, rerun the smallest gate that can change the issue state, and report whether the retry passed, needs another focused retry, or is truly blocked.
+- Recommend `status:rework` when QA fails because the issue needs implementation, documentation, fixture, test, or acceptance-criteria changes before the gate can be rerun fairly.
 
 ## Inputs
 
@@ -66,7 +67,7 @@ For every assigned issue, report these fields to the coordinator for the GitHub 
 - Screenshots for visual claims.
 - Evidence manifest path when runtime artifacts are large.
 - Pass/fail result per acceptance criterion.
-- Exact failing evidence for any issue that should stay open or become `status:blocked`.
+- Exact failing evidence for any issue that should stay open, become `status:rework`, or become `status:blocked`.
 - Whether the same failed gate must be rerun before integration.
 
 ## Final Report
@@ -75,7 +76,7 @@ Report:
 
 - Issues validated.
 - Pass/fail result per issue.
-- For failed tickets, the exact gate that must pass before integration.
+- For failed tickets, whether the next status should be `status:rework`, `status:qa-needed`, or `status:blocked`, plus the exact gate that must pass before integration.
 - For partial retries, the exact next retry to run if it is known and runnable.
 - Commands run.
 - Logs and screenshot paths.

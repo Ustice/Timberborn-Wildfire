@@ -8,6 +8,7 @@ Use these instructions for every Wildfire issue worker unless the issue says oth
 - Verify the assigned worktree path and branch with `git status --short --branch` before editing.
 - Read the assigned `CONTEXT.md` when it exists. Update it only when durable task state changes, and keep it compressed rather than append-only.
 - If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
+- Use a worktree name that includes the GitHub issue number. Include a `TWF-*` number only when the issue is a migrated historical ticket that already has one.
 - Do not touch historical ticket board status files unless the coordinator explicitly assigns migration cleanup.
 - Do not treat historical ticket notes or status symlinks inside your worktree as authoritative.
 - Read the assigned GitHub issue, then report notes and evidence back to the coordinator unless direct issue updates are explicitly assigned.
