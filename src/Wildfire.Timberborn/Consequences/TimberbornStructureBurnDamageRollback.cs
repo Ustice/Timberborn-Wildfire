@@ -708,6 +708,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
         return _blockService
             .GetObjectsWithComponentAt<BlockObject>(coordinates)
             .Where(static candidate => !IsInfrastructureLikeName(candidate.Name))
+            .Where(static candidate => !IsRecoverableGoodStackName(candidate.Name))
             .OrderBy(static candidate => RuntimeHelpers.GetHashCode(candidate))
             .FirstOrDefault();
     }
@@ -737,6 +738,14 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             name.Contains("Stockpile", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Pile", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Tank", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsRecoverableGoodStackName(string name)
+    {
+        return name.Contains("RecoveredGoodStack", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("RecoverableGoodStack", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("GoodStack", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("GoodStack(", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Accessible[] GetBuildingAccessibles(BlockObject blockObject)
@@ -835,7 +844,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
 
     private static bool CanEnterUnfinishedState(BlockObject blockObject)
     {
-        if (IsDistrictCenterName(blockObject.Name) || IsStorageLikeName(blockObject.Name))
+        if (IsDistrictCenterName(blockObject.Name) ||
+            IsStorageLikeName(blockObject.Name) ||
+            IsRecoverableGoodStackName(blockObject.Name))
         {
             return false;
         }

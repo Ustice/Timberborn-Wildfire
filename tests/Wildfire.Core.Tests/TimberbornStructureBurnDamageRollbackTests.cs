@@ -638,6 +638,16 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     }
 
     [Fact]
+    public void TargetApiKeepsRecoveredGoodStacksOutOfStructureRollbackResolution()
+    {
+        string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
+
+        Assert.Contains("IsRecoverableGoodStackName(candidate.Name)", source, StringComparison.Ordinal);
+        Assert.Contains("IsRecoverableGoodStackName(blockObject.Name)", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveStructureBlockObject(coordinates)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TargetApiDisablesRecoverableGoodProvidersFromAllComponentsBeforeRebuild()
     {
         string source = ReadTimberbornSource("TimberbornStructureBurnDamageRollback.cs");
@@ -821,6 +831,25 @@ public sealed class TimberbornStructureBurnDamageRollbackTests
     public void TargetApiDoesNotTreatOtherBuildingsAsStorageLikeRebuildTargets(string specId)
     {
         Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsStorageLikeName(specId));
+    }
+
+    [Theory]
+    [InlineData("RecoveredGoodStack(Clone)")]
+    [InlineData("RecoverableGoodStack(Clone)")]
+    [InlineData("GoodStack")]
+    [InlineData("GoodStack(Clone)")]
+    public void TargetApiRecognizesRecoverableGoodStacksAsNonStructureRollbackTargets(string specId)
+    {
+        Assert.True(TimberbornStructureBurnDamageRollbackTargetApi.IsRecoverableGoodStackName(specId));
+    }
+
+    [Theory]
+    [InlineData("SmallWarehouse.Folktails(Clone)")]
+    [InlineData("UndergroundPile.Folktails(Clone)")]
+    [InlineData("LumberMill.Folktails(Clone)")]
+    public void TargetApiDoesNotTreatBuildingsAsRecoverableGoodStacks(string specId)
+    {
+        Assert.False(TimberbornStructureBurnDamageRollbackTargetApi.IsRecoverableGoodStackName(specId));
     }
 
     [Fact]
