@@ -59,6 +59,9 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Do not treat historical ticket notes or status symlinks inside implementation worktrees as authoritative.
 - Use GitHub issue comments when Jason needs to read, decide, or approve before the next action.
 - For failed QA, keep the issue open and use `status:qa-needed` when the next action is a rerun, or `status:blocked` when the next action needs evidence, environment access, an upstream fix, or a decision.
+- Treat `status:qa-needed` as an active focused-retry queue. Do not stop after moving an issue there if a bounded retry can be dispatched now.
+- When setting or leaving `status:qa-needed`, write the retry packet into the issue: exact target, fixture/save, commands or tool path, expected evidence, failure classification expectations, and pass/close criteria.
+- Convert `status:qa-needed` to `status:blocked` only when the coordinator cannot define or run the retry without a missing fixture, unreliable QA tool, environment access, upstream fix, or Jason decision.
 - For failed review, keep the issue open for fixes and require a fresh review before closure.
 
 ## Sprint Close

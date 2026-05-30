@@ -11,6 +11,7 @@ Use these instructions for every Wildfire QA sub-agent unless the issue says oth
 - Proactively reduce failed or ambiguous validation to the smallest concrete cause.
 - Report evidence and results to the coordinator for GitHub issue updates unless direct issue updates are explicitly assigned.
 - A failed required QA gate blocks closure. The issue must pass that gate in a later QA run before the coordinator can close it.
+- Treat assignments from `status:qa-needed` as focused retries. Start from the latest failed or partial evidence, rerun the smallest gate that can change the issue state, and report whether the retry passed, needs another focused retry, or is truly blocked.
 
 ## Inputs
 
@@ -36,6 +37,7 @@ Use these instructions for every Wildfire QA sub-agent unless the issue says oth
 - You may edit and create new QA-specific tools to make verifying work easier.
 - Prefer improving a flaky QA tool over repeatedly rerunning the same unreliable manual or coordinate-driven path.
 - Record tool runs that pass through durable QA automation in the local ignored SQLite database at `qa/tool-runs.sqlite` when the run affects issue status, release confidence, or tool reliability.
+- If the assigned retry cannot produce the requested evidence, classify why before returning it to the coordinator: missing fixture, tool failure, environment failure, product failure, or test design failure.
 
 ## Failure Classification
 
@@ -74,6 +76,7 @@ Report:
 - Issues validated.
 - Pass/fail result per issue.
 - For failed tickets, the exact gate that must pass before integration.
+- For partial retries, the exact next retry to run if it is known and runnable.
 - Commands run.
 - Logs and screenshot paths.
 - Tool run ids, tool failure classifications, and any repeated reliability pattern found by `bun scripts/qa-tool-report.ts`.
