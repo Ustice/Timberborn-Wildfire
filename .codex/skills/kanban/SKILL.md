@@ -22,6 +22,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 7. When resuming a broad issue sweep, start by delegating a Tech-Lead or Reviewer for a current-state pass.
 8. Link sub-agents to the relevant role doc.
 9. Use rolling dispatch when dependencies and write scopes allow it.
+10. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer when repeated friction or substantial workflow/tooling improvement opportunities appear.
 
 ## Guardrails
 
@@ -31,6 +32,7 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 - An issue that fails required QA must pass that QA gate in a later run before it can be closed.
 - Pick model strength (Low, Medium, High, Extra High) based on task difficulty, uncertainty, and blast radius.
 - Require sub-agents to update their assigned GitHub issues with notes, evidence, blockers, and results.
+- Require sub-agent final reports to include Process Feedback so coordination friction can be reviewed across sprints.
 - Keep GitHub issue status-label changes serialized.
 - Keep and manage the instructions documents for the various roles.
 

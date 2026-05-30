@@ -83,3 +83,7 @@ Report:
 - Ticket updates made.
 - Issue notes the coordinator should add.
 - Any recommended status-label change.
+- Process Feedback:
+  - Friction or issues encountered.
+  - What worked well.
+  - Suggested process or tooling improvements.

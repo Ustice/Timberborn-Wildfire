@@ -32,6 +32,7 @@ Use this page as the startup map for humans and agents.
 - [../kanban/roles/qa.md](../kanban/roles/qa.md)
 - [../kanban/roles/tech-lead.md](../kanban/roles/tech-lead.md)
 - [../kanban/roles/researcher.md](../kanban/roles/researcher.md)
+- [../kanban/roles/process-reviewer.md](../kanban/roles/process-reviewer.md)
 
 ## Local Codex Skills
 

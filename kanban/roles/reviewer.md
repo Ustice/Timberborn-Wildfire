@@ -56,3 +56,7 @@ Use these instructions for every Wildfire Reviewer sub-agent unless the issue sa
 - Integration challenges outside of git.
 - Issue notes the coordinator should add.
 - Recommended status-label change.
+- Process Feedback:
+  - Friction or issues encountered.
+  - What worked well.
+  - Suggested process or tooling improvements.

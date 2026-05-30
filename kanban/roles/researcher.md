@@ -36,3 +36,7 @@ Report:
 - Confidence level.
 - Issue notes the coordinator should add.
 - Recommended next action.
+- Process Feedback:
+  - Friction or issues encountered.
+  - What worked well.
+  - Suggested process or tooling improvements.

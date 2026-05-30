@@ -47,3 +47,7 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Blockers:
 - Issue notes for coordinator:
 - Recommended status-label change:
+- Process Feedback:
+  - Friction or issues encountered:
+  - What worked well:
+  - Suggested process or tooling improvements:

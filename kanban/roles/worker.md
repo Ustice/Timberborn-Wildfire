@@ -46,3 +46,7 @@ Report:
 - Unresolved unknowns or blockers.
 - Short behavior or architecture summary.
 - Issue notes the coordinator should add.
+- Process Feedback:
+  - Friction or issues encountered.
+  - What worked well.
+  - Suggested process or tooling improvements.
