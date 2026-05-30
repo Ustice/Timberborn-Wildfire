@@ -21,6 +21,7 @@ public sealed class TimberbornQaCommandBridge
     public const string QaSoilMoistureRangeCommand = "qa-soil-moisture-range";
     public const string QaAshCellCommand = "qa-ash-cell";
     public const string QaAdjustInventoryCommand = "qa-adjust-inventory";
+    public const string QaStoredMaterialStimulusCommand = "qa-stored-material-stimulus";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
@@ -32,6 +33,7 @@ public sealed class TimberbornQaCommandBridge
     private readonly ITimberbornQaSoilMoistureMapProbe _soilMoistureMapProbe;
     private readonly ITimberbornQaAshCellProbe _ashCellProbe;
     private readonly ITimberbornQaInventoryAdjuster _inventoryAdjuster;
+    private readonly ITimberbornQaStoredMaterialStimulus _storedMaterialStimulus;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -197,7 +199,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaCommandLogSink logSink,
         ITimberbornQaAshCellProbe? ashCellProbe = null,
         ITimberbornQaAshWaterStimulus? ashWaterStimulus = null,
-        ITimberbornQaInventoryAdjuster? inventoryAdjuster = null)
+        ITimberbornQaInventoryAdjuster? inventoryAdjuster = null,
+        ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null)
     {
         if (stateProvider is null)
         {
@@ -249,6 +252,7 @@ public sealed class TimberbornQaCommandBridge
         _soilMoistureMapProbe = soilMoistureMapProbe;
         _ashCellProbe = ashCellProbe ?? NullTimberbornQaAshCellProbe.Instance;
         _inventoryAdjuster = inventoryAdjuster ?? NullTimberbornQaInventoryAdjuster.Instance;
+        _storedMaterialStimulus = storedMaterialStimulus ?? NullTimberbornQaStoredMaterialStimulus.Instance;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -300,6 +304,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(_inventoryAdjuster, NullTimberbornQaInventoryAdjuster.Instance))
         {
             commands[QaAdjustInventoryCommand] = () => ExecuteQaAdjustInventory(null);
+        }
+
+        if (!ReferenceEquals(_storedMaterialStimulus, NullTimberbornQaStoredMaterialStimulus.Instance))
+        {
+            commands[QaStoredMaterialStimulusCommand] = () => ExecuteQaStoredMaterialStimulus(null);
         }
 
         _commands = commands;
@@ -378,7 +387,9 @@ public sealed class TimberbornQaCommandBridge
                                         ? ExecuteQaAshCell(commandText)
                                         : StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand)
                                             ? ExecuteQaAdjustInventory(commandText)
-                                            : handler();
+                                            : StringComparer.OrdinalIgnoreCase.Equals(command, QaStoredMaterialStimulusCommand)
+                                                ? ExecuteQaStoredMaterialStimulus(commandText)
+                                                : handler();
             _logSink.Info(result.ResultToken);
             return result;
         }
@@ -583,6 +594,44 @@ public sealed class TimberbornQaCommandBridge
             $"beaver_exposure_target_skipped_bounded_sampling={FormatNumber(stimulusResult.BeaverExposureTargetSkippedBoundedSampling)}");
     }
 
+    private TimberbornQaCommandResult ExecuteQaStoredMaterialStimulus(string? commandText)
+    {
+        string? target = ParseStoredMaterialStimulusTarget(commandText);
+        if (target is null)
+        {
+            return TimberbornQaCommandResult.CreateFailure(
+                QaStoredMaterialStimulusCommand,
+                $"Command 'qa-stored-material-stimulus' requires one target: {string.Join(", ", TimberbornQaStoredMaterialStimulusTargets.All)}.",
+                _stateProvider.GetState(),
+                KnownCommands);
+        }
+
+        TimberbornQaStoredMaterialStimulusResult stimulusResult =
+            _storedMaterialStimulus.QueueStoredMaterialStimulus(target);
+        TimberbornQaCommandState state = _stateProvider.GetState();
+        TimberbornQaStoredMaterialStimulusQueuedTarget? primaryTarget = stimulusResult.Targets.FirstOrDefault();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaStoredMaterialStimulusCommand,
+            state,
+            KnownCommands,
+            "queued_stored_material_stimulus_" +
+            $"target={stimulusResult.Target}_" +
+            $"target_count={stimulusResult.Targets.Count}_" +
+            $"target_key={FormatToken(primaryTarget?.TargetKey)}_" +
+            $"target_spec_id={FormatToken(primaryTarget?.TargetSpecId)}_" +
+            $"target_good_id={FormatToken(primaryTarget?.GoodId)}_" +
+            $"target_stock_before={FormatNumber(primaryTarget?.StockBefore)}_" +
+            $"target_index={FormatNumber(primaryTarget?.CellIndex)}_" +
+            $"target_x={FormatNumber(primaryTarget?.X)}_" +
+            $"target_y={FormatNumber(primaryTarget?.Y)}_" +
+            $"target_z={FormatNumber(primaryTarget?.Z)}_" +
+            $"target_keys={FormatToken(string.Join("|", stimulusResult.Targets.Select(static item => item.TargetKey).Distinct(StringComparer.Ordinal)))}_" +
+            $"target_good_ids={FormatToken(string.Join("|", stimulusResult.Targets.Select(static item => item.GoodId).Distinct(StringComparer.Ordinal)))}_" +
+            $"set_heat={stimulusResult.SetHeat}_" +
+            $"queued_heat_changes={stimulusResult.QueuedHeatChangeCount}");
+    }
+
     private TimberbornQaCommandResult ExecuteQaBuildingBurnoutStimulus()
     {
         TimberbornQaBuildingBurnoutStimulusResult stimulusResult =
@@ -769,6 +818,8 @@ public sealed class TimberbornQaCommandBridge
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) &&
             ParseFirePresetName(commandText) is not null ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand) &&
+            HasSingleArgument(commandText) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaStoredMaterialStimulusCommand) &&
             HasSingleArgument(commandText);
     }
 
@@ -861,6 +912,21 @@ public sealed class TimberbornQaCommandBridge
         return TimberbornQaInventoryAdjustmentProfiles.IsKnown(profile) ? profile : null;
     }
 
+    private static string? ParseStoredMaterialStimulusTarget(string? commandText)
+    {
+        string[] tokens = (commandText ?? string.Empty)
+            .Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length != 2)
+        {
+            return null;
+        }
+
+        string target = tokens[1].Trim().ToLowerInvariant();
+        return TimberbornQaStoredMaterialStimulusTargets.IsKnown(target) ? target : null;
+    }
+
     private static int? ParseCellIndex(string? commandText)
     {
         string[] tokens = (commandText ?? string.Empty)
@@ -885,7 +951,8 @@ public sealed class TimberbornQaCommandBridge
             StringComparer.OrdinalIgnoreCase.Equals(command, QaAshWaterStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) ||
-            StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand);
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaStoredMaterialStimulusCommand);
     }
 
     internal static string FormatToken(string? value)
@@ -1017,6 +1084,72 @@ public sealed class NullTimberbornQaInventoryAdjuster : ITimberbornQaInventoryAd
     {
         throw new InvalidOperationException(
             "QA inventory adjustment is unavailable until the Timberborn fire runtime is initialized.");
+    }
+}
+
+public interface ITimberbornQaStoredMaterialStimulus
+{
+    TimberbornQaStoredMaterialStimulusResult QueueStoredMaterialStimulus(string target);
+}
+
+public sealed record TimberbornQaStoredMaterialStimulusResult(
+    string Target,
+    byte SetHeat,
+    int QueuedHeatChangeCount,
+    IReadOnlyList<TimberbornQaStoredMaterialStimulusQueuedTarget> Targets);
+
+public sealed record TimberbornQaStoredMaterialStimulusQueuedTarget(
+    string TargetKey,
+    string TargetSpecId,
+    string GoodId,
+    int StockBefore,
+    int CellIndex,
+    int X,
+    int Y,
+    int Z,
+    int QueuedHeatChangeCount);
+
+public static class TimberbornQaStoredMaterialStimulusTargets
+{
+    public const string Explosive = "explosive";
+    public const string Contaminated = "contaminated";
+    public const string AllTargets = "all";
+
+    public static readonly IReadOnlyList<string> All = new[]
+    {
+        Explosive,
+        Contaminated,
+        AllTargets,
+    };
+
+    public static bool IsKnown(string target)
+    {
+        return All.Contains(target, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static string Normalize(string target)
+    {
+        string normalized = target.Trim().ToLowerInvariant();
+        return IsKnown(normalized)
+            ? normalized
+            : throw new ArgumentException(
+                $"Stored-material QA target must be one of: {string.Join(", ", All)}.",
+                nameof(target));
+    }
+}
+
+public sealed class NullTimberbornQaStoredMaterialStimulus : ITimberbornQaStoredMaterialStimulus
+{
+    public static readonly NullTimberbornQaStoredMaterialStimulus Instance = new();
+
+    private NullTimberbornQaStoredMaterialStimulus()
+    {
+    }
+
+    public TimberbornQaStoredMaterialStimulusResult QueueStoredMaterialStimulus(string target)
+    {
+        throw new InvalidOperationException(
+            "QA stored-material stimulus is unavailable until the Timberborn fire runtime is initialized.");
     }
 }
 

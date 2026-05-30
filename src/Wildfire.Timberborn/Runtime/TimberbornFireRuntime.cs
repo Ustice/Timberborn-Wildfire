@@ -28,7 +28,8 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaBurnDurationStimulus,
     ITimberbornQaFireSimParameterPresetSelector,
     ITimberbornQaAshCellProbe,
-    ITimberbornQaInventoryAdjuster
+    ITimberbornQaInventoryAdjuster,
+    ITimberbornQaStoredMaterialStimulus
 {
     public const string FertileAshFieldGatherableTemplateName = "FertileAshField";
 
@@ -837,6 +838,80 @@ public sealed class TimberbornFireRuntime :
             $"badwater_added={result.BadwaterAdded} " +
             $"fertile_ash_added={result.FertileAshAdded} " +
             $"logs_added={result.LogsAdded}");
+
+        return result;
+    }
+
+    public TimberbornQaStoredMaterialStimulusResult QueueStoredMaterialStimulus(string target)
+    {
+        string normalizedTarget = TimberbornQaStoredMaterialStimulusTargets.Normalize(target);
+        TimberbornFireSystem fireSystem = RequireFireSystem();
+        FireGrid grid = fireSystem.RequireInitializedGrid();
+        TimberbornQaStoredMaterialInventoryTarget[] targets =
+            TimberbornQaInventoryAdjustmentApi.FindStoredMaterialTargets(_entityRegistry, grid, normalizedTarget);
+        if (targets.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"No stocked stored-material inventory targets were found for QA target '{normalizedTarget}'. Run qa-adjust-inventory stored-materials first and keep the loaded save command-responsive.");
+        }
+
+        int[] queuedCellIndices = targets
+            .SelectMany(static storedTarget => storedTarget.CellIndices)
+            .Distinct()
+            .OrderBy(static cellIndex => cellIndex)
+            .ToArray();
+        if (!TryAllowExternalChange("qa_stored_material_stimulus", queuedCellIndices.Length))
+        {
+            return new TimberbornQaStoredMaterialStimulusResult(
+                normalizedTarget,
+                SetHeat: 15,
+                QueuedHeatChangeCount: 0,
+                Targets: Array.Empty<TimberbornQaStoredMaterialStimulusQueuedTarget>());
+        }
+
+        queuedCellIndices
+            .Select(static cellIndex => new FireSimChange(CellIndex: cellIndex, SetHeat: 15))
+            .ToList()
+            .ForEach(change => fireSystem.RegisterChange(change));
+
+        TimberbornQaStoredMaterialStimulusQueuedTarget[] queuedTargets = targets
+            .Select(storedTarget =>
+            {
+                int cellIndex = storedTarget.CellIndices.First();
+                (int x, int y, int z) = grid.FromIndex(cellIndex);
+                return new TimberbornQaStoredMaterialStimulusQueuedTarget(
+                    storedTarget.TargetKey,
+                    storedTarget.TargetSpecId,
+                    storedTarget.GoodId,
+                    storedTarget.StockBefore,
+                    cellIndex,
+                    x,
+                    y,
+                    z,
+                    storedTarget.CellIndices.Count);
+            })
+            .ToArray();
+
+        TimberbornQaStoredMaterialStimulusResult result = new(
+            normalizedTarget,
+            SetHeat: 15,
+            QueuedHeatChangeCount: queuedCellIndices.Length,
+            queuedTargets);
+        TimberbornQaStoredMaterialStimulusQueuedTarget primaryTarget = queuedTargets[0];
+        _logSink.Info(
+            "wildfire_timberborn_qa_stored_material_stimulus_queued " +
+            $"target={TimberbornQaCommandBridge.FormatToken(result.Target)} " +
+            $"target_count={result.Targets.Count} " +
+            $"target_key={TimberbornQaCommandBridge.FormatToken(primaryTarget.TargetKey)} " +
+            $"target_spec_id={TimberbornQaCommandBridge.FormatToken(primaryTarget.TargetSpecId)} " +
+            $"target_good_id={TimberbornQaCommandBridge.FormatToken(primaryTarget.GoodId)} " +
+            $"target_stock_before={primaryTarget.StockBefore} " +
+            $"cell_index={primaryTarget.CellIndex} " +
+            $"x={primaryTarget.X} " +
+            $"y={primaryTarget.Y} " +
+            $"z={primaryTarget.Z} " +
+            $"set_heat={result.SetHeat} " +
+            $"queued_heat_changes={result.QueuedHeatChangeCount}");
 
         return result;
     }

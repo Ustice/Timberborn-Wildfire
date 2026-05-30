@@ -250,6 +250,97 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void StoredMaterialStimulusCommandQueuesStockedTargetAndReportsEvidenceFields()
+    {
+        TimberbornQaCommandState state = new(IsSimulatorIntegrated: true, TickCount: 12, QueuedChangeCount: 2);
+        RecordingStoredMaterialStimulus storedMaterialStimulus = new(new TimberbornQaStoredMaterialStimulusResult(
+            TimberbornQaStoredMaterialStimulusTargets.AllTargets,
+            SetHeat: 15,
+            QueuedHeatChangeCount: 4,
+            Targets:
+            [
+                new TimberbornQaStoredMaterialStimulusQueuedTarget(
+                    "stockpile:123",
+                    "UndergroundPile.Folktails(Clone)",
+                    "Explosives",
+                    StockBefore: 12,
+                    CellIndex: 91,
+                    X: 3,
+                    Y: 4,
+                    Z: 2,
+                    QueuedHeatChangeCount: 2),
+                new TimberbornQaStoredMaterialStimulusQueuedTarget(
+                    "stockpile:456",
+                    "SmallTank.Folktails(Clone)",
+                    "Badwater",
+                    StockBefore: 12,
+                    CellIndex: 92,
+                    X: 4,
+                    Y: 4,
+                    Z: 2,
+                    QueuedHeatChangeCount: 2),
+            ]));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(state),
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            new RecordingLogSink(),
+            storedMaterialStimulus: storedMaterialStimulus);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-stored-material-stimulus all");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-stored-material-stimulus", result.Command);
+        Assert.Equal(["help", "qa-readiness", "qa-stored-material-stimulus", "status"], result.KnownCommands);
+        Assert.Equal([TimberbornQaStoredMaterialStimulusTargets.AllTargets], storedMaterialStimulus.Targets);
+        Assert.Contains("target=all", result.Message);
+        Assert.Contains("target_count=2", result.Message);
+        Assert.Contains("target_key=stockpile:123", result.Message);
+        Assert.Contains("target_spec_id=UndergroundPile.Folktails(Clone)", result.Message);
+        Assert.Contains("target_good_id=Explosives", result.Message);
+        Assert.Contains("target_stock_before=12", result.Message);
+        Assert.Contains("target_index=91", result.Message);
+        Assert.Contains("target_x=3", result.Message);
+        Assert.Contains("target_y=4", result.Message);
+        Assert.Contains("target_z=2", result.Message);
+        Assert.Contains("target_keys=stockpile:123|stockpile:456", result.Message);
+        Assert.Contains("target_good_ids=Explosives|Badwater", result.Message);
+        Assert.Contains("set_heat=15", result.Message);
+        Assert.Contains("queued_heat_changes=4", result.Message);
+        Assert.Contains("queued_changes=2", result.ResultToken);
+    }
+
+    [Fact]
+    public void StoredMaterialStimulusCommandRejectsUnknownTargetWithoutQueuing()
+    {
+        RecordingStoredMaterialStimulus storedMaterialStimulus = new(new TimberbornQaStoredMaterialStimulusResult(
+            TimberbornQaStoredMaterialStimulusTargets.Explosive,
+            SetHeat: 15,
+            QueuedHeatChangeCount: 1,
+            Targets: []));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true)),
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            new RecordingLogSink(),
+            storedMaterialStimulus: storedMaterialStimulus);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-stored-material-stimulus ordinary-storage");
+
+        Assert.False(result.Success);
+        Assert.Empty(storedMaterialStimulus.Targets);
+        Assert.Contains("requires one target", result.Message);
+    }
+
+    [Fact]
     public void LiveStimulusBindingExpandsAllowlistAndHelpMessage()
     {
         TimberbornQaCommandBridge bridge = new(
@@ -3279,6 +3370,18 @@ public sealed class TimberbornQaCommandBridgeTests
         public TimberbornQaInventoryAdjustmentResult AdjustInventory(string profile)
         {
             Profiles.Add(profile);
+            return result;
+        }
+    }
+
+    private sealed class RecordingStoredMaterialStimulus(TimberbornQaStoredMaterialStimulusResult result)
+        : ITimberbornQaStoredMaterialStimulus
+    {
+        public List<string> Targets { get; } = [];
+
+        public TimberbornQaStoredMaterialStimulusResult QueueStoredMaterialStimulus(string target)
+        {
+            Targets.Add(target);
             return result;
         }
     }

@@ -141,6 +141,14 @@ bun scripts/invoke-timberborn-command.ts qa-adjust-inventory stored-materials --
 
 Supported profiles are `stored-materials`, `persistence-matrix`, and `all-consequences`. The command uses Timberborn inventory APIs and reports `targets_scanned`, `targets_adjusted`, and per-good added counts for `Explosives`, `Badwater`, `FertileAsh`, and `Log`. A zero target count is a tool/setup failure for the scenario template, not a product consequence failure.
 
+To burn the stocked explosive and contaminated stored-material targets, use the targeted stored-material stimulus instead of the generic storage selector:
+
+```bash
+bun scripts/invoke-timberborn-command.ts qa-stored-material-stimulus all --wait=6 --require-advanced-tick
+```
+
+Targets are `explosive`, `contaminated`, or `all`. The command scans live inventory surfaces for stocked `Explosives` or `Badwater`, queues heat on the matching target occupied cells, and reports `target_key`, `target_spec_id`, `target_good_id`, `target_stock_before`, `target_index`, `target_x`, `target_y`, `target_z`, and `queued_heat_changes`. If no stocked target exists, classify the run as `tool_failure` or fixture setup failure rather than product behavior.
+
 ## Ownership
 
 QA owns this reliability log and should update it during assigned validation work. Workers still own product implementation unless the assignment explicitly gives QA implementation scope.

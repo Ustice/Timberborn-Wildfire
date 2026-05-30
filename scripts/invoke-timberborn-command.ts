@@ -29,6 +29,7 @@ const knownCommands = [
   "qa-fire-preset",
   "qa-readiness",
   "qa-soil-moisture-range",
+  "qa-stored-material-stimulus",
   "qa-water-suppression-stimulus",
   "status",
 ];
@@ -44,6 +45,8 @@ Commands:
                             Queue simulator-owned ash plus water contact on one imported burnable field target.
   qa-adjust-inventory <stored-materials|persistence-matrix|all-consequences>
                             Stock allowlisted fixture goods into live Timberborn inventory targets.
+  qa-stored-material-stimulus <explosive|contaminated|all>
+                            Queue heat on stocked explosive or contaminated inventory target occupied cells.
   qa-delta-stimulus [burnable|tree|contaminated-tree|beaver-exposure|toxic-beaver-exposure|vegetation|crop|storage|building|lodge|district-center]
                             Queue heat on an imported burnable field target or allowlisted burn-damage target.
   qa-building-burnout-stimulus
