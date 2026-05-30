@@ -58,7 +58,7 @@ Before recommending a process or tooling change, ask:
 - Could this change encourage agents to skip evidence, skip QA, over-delegate, over-report, or avoid hard coordinator decisions?
 - Does an existing rule, role doc, script, or issue already cover this problem?
 - Have recent reports already surfaced the same problem, and did the earlier fix stick?
-- How could this problem be detected sooner or more reliably, or prevented?
+- What earlier signal, checklist item, assignment-packet field, or automated check would have detected or prevented this problem?
 
 If these questions do not identify an actionable improvement, report only `No change necessary.`
 
