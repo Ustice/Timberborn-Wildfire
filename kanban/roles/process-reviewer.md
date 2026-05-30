@@ -24,7 +24,9 @@ Use these instructions for Wildfire sprint retrospective, kaizen, and coordinati
 
 - Do not merge branches, close issues, or change active sprint status labels.
 - Do not make product implementation changes.
-- Use an isolated worktree and a `codex/` branch when writing a process proposal.
+- Use the coordinator-assigned isolated worktree and `codex/` branch when writing a process proposal.
+- Verify the assigned worktree path and branch with `git status --short --branch` before editing.
+- If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
 - Keep write access optional and scoped to process docs, role docs, assignment templates, issue-workflow docs, or tooling docs explicitly named by the coordinator.
 - For substantial process or tooling proposals, prepare a draft PR instead of editing the main checkout directly.
 - Treat draft PRs as iterative review surfaces. Coordinator feedback can be handled as follow-up commits on the same draft PR unless the coordinator explicitly asks for a different branch or squash/amend behavior.

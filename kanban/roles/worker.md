@@ -4,8 +4,9 @@ Use these instructions for every Wildfire issue worker unless the issue says oth
 
 ## Worktree
 
-- Work in your assigned ticket worktree only.
-- Use a worktree name that includes the issue or `TWF-*` number.
+- Work in your coordinator-assigned ticket worktree and branch only.
+- Verify the assigned worktree path and branch with `git status --short --branch` before editing.
+- If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
 - Do not touch historical ticket board status files unless the coordinator explicitly assigns migration cleanup.
 - Do not treat historical ticket notes or status symlinks inside your worktree as authoritative.
 - Read the assigned GitHub issue, then report notes and evidence back to the coordinator unless direct issue updates are explicitly assigned.

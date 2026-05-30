@@ -10,6 +10,8 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Historical ticket reference, if migrated: `archive/file-kanban-2026-05-23:kanban/all-tickets/TWF-000-example.md`
 - Worktree path:
 - Branch:
+- Base branch:
+- Cleanup owner:
 - Role instructions:
 - Sprint charter:
 
@@ -25,7 +27,9 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 ## Instructions
 
 - Read the GitHub issue before starting.
-- Work only in the assigned implementation worktree unless the coordinator explicitly says otherwise.
+- Work only in the assigned implementation worktree and branch unless the coordinator explicitly says otherwise.
+- Verify the assigned worktree path and branch with `git status --short --branch` before editing.
+- If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
 - Do not change GitHub issue status labels unless explicitly assigned.
 - Do not edit historical kanban ticket files unless this assignment explicitly includes migration-cleanup scope.
 - Report issue notes, evidence, blockers, and recommended status-label changes back to the coordinator.
