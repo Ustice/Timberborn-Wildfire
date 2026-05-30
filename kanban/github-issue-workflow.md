@@ -31,6 +31,7 @@ Repository: <https://github.com/Ustice/Timberborn-Wildfire/issues>
 - Move to `status:deferred` when the work is real but intentionally later.
 - Close the issue only after required review, tests, QA, and integration are complete.
 - If required QA fails but the next rerun is known and runnable, keep the issue open as `status:qa-needed` and dispatch that focused retry. Use `status:blocked` only when the retry cannot be run yet because it needs a missing fixture, unreliable tool, environment access, upstream fix, or decision.
+- If the blocker is missing setup, fixture, capture, command, or evidence tooling, prefer creating the smallest QA tool that removes that blocker before asking Jason to perform manual setup. The issue comment should name the new tool, command, expected evidence token, and whether failures should count as `tool_failure` or `product_failure`.
 - If review fails, keep the issue open, comment with findings, and require a fresh passing review after fixes.
 
 ## Useful Commands

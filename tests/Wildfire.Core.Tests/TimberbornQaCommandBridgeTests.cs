@@ -184,6 +184,72 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
+    public void InventoryAdjustCommandStocksKnownProfileAndReportsCounts()
+    {
+        TimberbornQaCommandState state = new(IsSimulatorIntegrated: true, TickCount: 12);
+        RecordingInventoryAdjuster inventoryAdjuster = new(new TimberbornQaInventoryAdjustmentResult(
+            Profile: TimberbornQaInventoryAdjustmentProfiles.AllConsequences,
+            TargetsScanned: 4,
+            TargetsAdjusted: 4,
+            ExplosivesAdded: 12,
+            BadwaterAdded: 12,
+            FertileAshAdded: 12,
+            LogsAdded: 12));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(state),
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            new RecordingLogSink(),
+            inventoryAdjuster: inventoryAdjuster);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-adjust-inventory all-consequences");
+
+        Assert.True(result.Success);
+        Assert.Equal("qa-adjust-inventory", result.Command);
+        Assert.Equal(["help", "qa-adjust-inventory", "qa-readiness", "status"], result.KnownCommands);
+        Assert.Equal([TimberbornQaInventoryAdjustmentProfiles.AllConsequences], inventoryAdjuster.Profiles);
+        Assert.Contains("adjusted_inventory_profile=all-consequences", result.Message);
+        Assert.Contains("targets_scanned=4", result.Message);
+        Assert.Contains("explosives_added=12", result.Message);
+        Assert.Contains("badwater_added=12", result.Message);
+        Assert.Contains("fertile_ash_added=12", result.Message);
+        Assert.Contains("logs_added=12", result.Message);
+    }
+
+    [Fact]
+    public void InventoryAdjustCommandRejectsUnknownProfileWithoutMutatingInventory()
+    {
+        RecordingInventoryAdjuster inventoryAdjuster = new(new TimberbornQaInventoryAdjustmentResult(
+            Profile: TimberbornQaInventoryAdjustmentProfiles.StoredMaterials,
+            TargetsScanned: 1,
+            TargetsAdjusted: 1,
+            ExplosivesAdded: 12,
+            BadwaterAdded: 0,
+            FertileAshAdded: 0,
+            LogsAdded: 0));
+        TimberbornQaCommandBridge bridge = new(
+            new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true)),
+            NullTimberbornQaDeltaStimulus.Instance,
+            NullTimberbornQaBuildingBurnoutStimulus.Instance,
+            NullTimberbornQaWaterSuppressionStimulus.Instance,
+            NullTimberbornQaBurnDurationStimulus.Instance,
+            NullTimberbornQaFireSimParameterPresetSelector.Instance,
+            NullTimberbornQaSoilMoistureMapProbe.Instance,
+            new RecordingLogSink(),
+            inventoryAdjuster: inventoryAdjuster);
+
+        TimberbornQaCommandResult result = bridge.Execute("qa-adjust-inventory unknown");
+
+        Assert.False(result.Success);
+        Assert.Empty(inventoryAdjuster.Profiles);
+        Assert.Contains("requires one profile", result.Message);
+    }
+
+    [Fact]
     public void LiveStimulusBindingExpandsAllowlistAndHelpMessage()
     {
         TimberbornQaCommandBridge bridge = new(
@@ -3201,6 +3267,18 @@ public sealed class TimberbornQaCommandBridgeTests
         public TimberbornQaAshCellProbeResult InspectAshCell(int cellIndex)
         {
             CellIndices.Add(cellIndex);
+            return result;
+        }
+    }
+
+    private sealed class RecordingInventoryAdjuster(TimberbornQaInventoryAdjustmentResult result)
+        : ITimberbornQaInventoryAdjuster
+    {
+        public List<string> Profiles { get; } = [];
+
+        public TimberbornQaInventoryAdjustmentResult AdjustInventory(string profile)
+        {
+            Profiles.Add(profile);
             return result;
         }
     }

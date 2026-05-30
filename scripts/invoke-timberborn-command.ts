@@ -22,6 +22,7 @@ const knownCommands = [
   "help",
   "qa-ash-cell",
   "qa-ash-water-stimulus",
+  "qa-adjust-inventory",
   "qa-building-burnout-stimulus",
   "qa-burn-duration-stimulus",
   "qa-delta-stimulus",
@@ -41,6 +42,8 @@ Commands:
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-ash-water-stimulus <clean|tainted>
                             Queue simulator-owned ash plus water contact on one imported burnable field target.
+  qa-adjust-inventory <stored-materials|persistence-matrix|all-consequences>
+                            Stock allowlisted fixture goods into live Timberborn inventory targets.
   qa-delta-stimulus [burnable|tree|contaminated-tree|beaver-exposure|toxic-beaver-exposure|vegetation|crop|storage|building|lodge|district-center]
                             Queue heat on an imported burnable field target or allowlisted burn-damage target.
   qa-building-burnout-stimulus

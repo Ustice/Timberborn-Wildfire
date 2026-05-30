@@ -27,7 +27,8 @@ public sealed class TimberbornFireRuntime :
     ITimberbornQaAshWaterStimulus,
     ITimberbornQaBurnDurationStimulus,
     ITimberbornQaFireSimParameterPresetSelector,
-    ITimberbornQaAshCellProbe
+    ITimberbornQaAshCellProbe,
+    ITimberbornQaInventoryAdjuster
 {
     public const string FertileAshFieldGatherableTemplateName = "FertileAshField";
 
@@ -59,6 +60,7 @@ public sealed class TimberbornFireRuntime :
     private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
     private ITimberbornStructureBurnDamageRollbackTargetApi? _structureBurnDamageRollbackTargetApi;
     private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
+    private ITimberbornQaInventoryAdjuster? _inventoryAdjuster;
     private ITimberbornNativeBlastRadiusApi? _storedGoodNativeBlastRadiusApi;
     private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
@@ -192,6 +194,7 @@ public sealed class TimberbornFireRuntime :
         _lastAshReadModelSyncTick = null;
         _initializingGrid = null;
         _burnDamageService = null;
+        _inventoryAdjuster = null;
         _autoDispatchDisabledReason = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
         _compatibilityProbesRan = false;
@@ -816,6 +819,28 @@ public sealed class TimberbornFireRuntime :
         return result;
     }
 
+    public TimberbornQaInventoryAdjustmentResult AdjustInventory(string profile)
+    {
+        if (_inventoryAdjuster is null)
+        {
+            throw new InvalidOperationException(
+                "QA inventory adjustment is unavailable until the Timberborn fire runtime is initialized.");
+        }
+
+        TimberbornQaInventoryAdjustmentResult result = _inventoryAdjuster.AdjustInventory(profile);
+        _logSink.Info(
+            "wildfire_timberborn_qa_inventory_adjusted " +
+            $"profile={TimberbornQaCommandBridge.FormatToken(result.Profile)} " +
+            $"targets_scanned={result.TargetsScanned} " +
+            $"targets_adjusted={result.TargetsAdjusted} " +
+            $"explosives_added={result.ExplosivesAdded} " +
+            $"badwater_added={result.BadwaterAdded} " +
+            $"fertile_ash_added={result.FertileAshAdded} " +
+            $"logs_added={result.LogsAdded}");
+
+        return result;
+    }
+
     public TimberbornQaCommandState GetState()
     {
         TimberbornFireSimParameterPreset currentPreset = _fireSimParameterPresetState.CurrentPreset;
@@ -1358,6 +1383,11 @@ public sealed class TimberbornFireRuntime :
     public void AttachStoredGoodBurnInventoryApi(ITimberbornStoredGoodBurnInventoryApi inventoryApi)
     {
         _storedGoodBurnInventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
+    }
+
+    public void AttachInventoryAdjuster(ITimberbornQaInventoryAdjuster inventoryAdjuster)
+    {
+        _inventoryAdjuster = inventoryAdjuster ?? throw new ArgumentNullException(nameof(inventoryAdjuster));
     }
 
     public void AttachStoredGoodNativeBlastRadiusApi(ITimberbornNativeBlastRadiusApi nativeBlastRadiusApi)

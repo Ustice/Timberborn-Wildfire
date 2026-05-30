@@ -20,6 +20,7 @@ public sealed class TimberbornQaCommandBridge
     public const string QaFirePresetCommand = "qa-fire-preset";
     public const string QaSoilMoistureRangeCommand = "qa-soil-moisture-range";
     public const string QaAshCellCommand = "qa-ash-cell";
+    public const string QaAdjustInventoryCommand = "qa-adjust-inventory";
 
     private readonly ITimberbornQaCommandStateProvider _stateProvider;
     private readonly ITimberbornQaDeltaStimulus _deltaStimulus;
@@ -30,6 +31,7 @@ public sealed class TimberbornQaCommandBridge
     private readonly ITimberbornQaFireSimParameterPresetSelector _fireSimParameterPresetSelector;
     private readonly ITimberbornQaSoilMoistureMapProbe _soilMoistureMapProbe;
     private readonly ITimberbornQaAshCellProbe _ashCellProbe;
+    private readonly ITimberbornQaInventoryAdjuster _inventoryAdjuster;
     private readonly ITimberbornQaCommandLogSink _logSink;
     private readonly IReadOnlyDictionary<string, Func<TimberbornQaCommandResult>> _commands;
 
@@ -194,7 +196,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
         ITimberbornQaCommandLogSink logSink,
         ITimberbornQaAshCellProbe? ashCellProbe = null,
-        ITimberbornQaAshWaterStimulus? ashWaterStimulus = null)
+        ITimberbornQaAshWaterStimulus? ashWaterStimulus = null,
+        ITimberbornQaInventoryAdjuster? inventoryAdjuster = null)
     {
         if (stateProvider is null)
         {
@@ -245,6 +248,7 @@ public sealed class TimberbornQaCommandBridge
         _fireSimParameterPresetSelector = fireSimParameterPresetSelector;
         _soilMoistureMapProbe = soilMoistureMapProbe;
         _ashCellProbe = ashCellProbe ?? NullTimberbornQaAshCellProbe.Instance;
+        _inventoryAdjuster = inventoryAdjuster ?? NullTimberbornQaInventoryAdjuster.Instance;
         _logSink = logSink;
         Dictionary<string, Func<TimberbornQaCommandResult>> commands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -291,6 +295,11 @@ public sealed class TimberbornQaCommandBridge
         if (!ReferenceEquals(_ashCellProbe, NullTimberbornQaAshCellProbe.Instance))
         {
             commands[QaAshCellCommand] = () => ExecuteQaAshCell(null);
+        }
+
+        if (!ReferenceEquals(_inventoryAdjuster, NullTimberbornQaInventoryAdjuster.Instance))
+        {
+            commands[QaAdjustInventoryCommand] = () => ExecuteQaAdjustInventory(null);
         }
 
         _commands = commands;
@@ -367,7 +376,9 @@ public sealed class TimberbornQaCommandBridge
                                     ? ExecuteQaAshWaterStimulus(commandText)
                                     : StringComparer.OrdinalIgnoreCase.Equals(command, QaAshCellCommand)
                                         ? ExecuteQaAshCell(commandText)
-                                        : handler();
+                                        : StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand)
+                                            ? ExecuteQaAdjustInventory(commandText)
+                                            : handler();
             _logSink.Info(result.ResultToken);
             return result;
         }
@@ -485,6 +496,36 @@ public sealed class TimberbornQaCommandBridge
             $"read_model_present={cell.ReadModelPresent.ToString().ToLowerInvariant()}_" +
             $"read_model_strength={FormatNumber(cell.ReadModelStrength)}_" +
             $"read_model_quality={FormatToken(cell.ReadModelQuality)}");
+    }
+
+    private TimberbornQaCommandResult ExecuteQaAdjustInventory(string? commandText)
+    {
+        string? profile = ParseInventoryAdjustmentProfile(commandText);
+        if (profile is null)
+        {
+            return TimberbornQaCommandResult.CreateFailure(
+                QaAdjustInventoryCommand,
+                $"Command 'qa-adjust-inventory' requires one profile: {string.Join(", ", TimberbornQaInventoryAdjustmentProfiles.All)}.",
+                _stateProvider.GetState(),
+                KnownCommands);
+        }
+
+        TimberbornQaInventoryAdjustmentResult adjustmentResult =
+            _inventoryAdjuster.AdjustInventory(profile);
+        TimberbornQaCommandState state = _stateProvider.GetState();
+
+        return TimberbornQaCommandResult.CreateSuccess(
+            QaAdjustInventoryCommand,
+            state,
+            KnownCommands,
+            "adjusted_inventory_" +
+            $"profile={adjustmentResult.Profile}_" +
+            $"targets_scanned={adjustmentResult.TargetsScanned}_" +
+            $"targets_adjusted={adjustmentResult.TargetsAdjusted}_" +
+            $"explosives_added={adjustmentResult.ExplosivesAdded}_" +
+            $"badwater_added={adjustmentResult.BadwaterAdded}_" +
+            $"fertile_ash_added={adjustmentResult.FertileAshAdded}_" +
+            $"logs_added={adjustmentResult.LogsAdded}");
     }
 
     private TimberbornQaCommandResult ExecuteQaDeltaStimulus(string? commandText)
@@ -726,7 +767,16 @@ public sealed class TimberbornQaCommandBridge
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) &&
             ParseBurnDurationTarget(commandText) is not null ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) &&
-            ParseFirePresetName(commandText) is not null;
+            ParseFirePresetName(commandText) is not null ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand) &&
+            HasSingleArgument(commandText);
+    }
+
+    private static bool HasSingleArgument(string commandText)
+    {
+        return commandText.Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Length == 2;
     }
 
     private static string? ParseFieldTargetSelector(string? commandText)
@@ -796,6 +846,21 @@ public sealed class TimberbornQaCommandBridge
             : null;
     }
 
+    private static string? ParseInventoryAdjustmentProfile(string? commandText)
+    {
+        string[] tokens = (commandText ?? string.Empty)
+            .Trim()
+            .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length != 2)
+        {
+            return null;
+        }
+
+        string profile = tokens[1].Trim().ToLowerInvariant();
+        return TimberbornQaInventoryAdjustmentProfiles.IsKnown(profile) ? profile : null;
+    }
+
     private static int? ParseCellIndex(string? commandText)
     {
         string[] tokens = (commandText ?? string.Empty)
@@ -819,7 +884,8 @@ public sealed class TimberbornQaCommandBridge
             StringComparer.OrdinalIgnoreCase.Equals(command, QaWaterSuppressionStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaAshWaterStimulusCommand) ||
             StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand) ||
-            StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand);
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand) ||
+            StringComparer.OrdinalIgnoreCase.Equals(command, QaAdjustInventoryCommand);
     }
 
     internal static string FormatToken(string? value)
@@ -903,6 +969,54 @@ public sealed class NullTimberbornQaAshCellProbe : ITimberbornQaAshCellProbe
             ReadModelPresent: false,
             ReadModelStrength: null,
             ReadModelQuality: null);
+    }
+}
+
+public interface ITimberbornQaInventoryAdjuster
+{
+    TimberbornQaInventoryAdjustmentResult AdjustInventory(string profile);
+}
+
+public sealed record TimberbornQaInventoryAdjustmentResult(
+    string Profile,
+    int TargetsScanned,
+    int TargetsAdjusted,
+    int ExplosivesAdded,
+    int BadwaterAdded,
+    int FertileAshAdded,
+    int LogsAdded);
+
+public static class TimberbornQaInventoryAdjustmentProfiles
+{
+    public const string StoredMaterials = "stored-materials";
+    public const string PersistenceMatrix = "persistence-matrix";
+    public const string AllConsequences = "all-consequences";
+
+    public static readonly IReadOnlyList<string> All = new[]
+    {
+        StoredMaterials,
+        PersistenceMatrix,
+        AllConsequences,
+    };
+
+    public static bool IsKnown(string profile)
+    {
+        return All.Contains(profile, StringComparer.OrdinalIgnoreCase);
+    }
+}
+
+public sealed class NullTimberbornQaInventoryAdjuster : ITimberbornQaInventoryAdjuster
+{
+    public static readonly NullTimberbornQaInventoryAdjuster Instance = new();
+
+    private NullTimberbornQaInventoryAdjuster()
+    {
+    }
+
+    public TimberbornQaInventoryAdjustmentResult AdjustInventory(string profile)
+    {
+        throw new InvalidOperationException(
+            "QA inventory adjustment is unavailable until the Timberborn fire runtime is initialized.");
     }
 }
 

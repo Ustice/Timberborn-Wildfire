@@ -215,4 +215,79 @@ describe("generate-wildfire-scenario-save placement validity", () => {
       "Path.Folktails",
     ]);
   });
+
+  test("stored-material profile requests explosive and contaminated storage pads", () => {
+    const world = {
+      Entities: [
+        ...Array.from({ length: 4 }, (_, index) => prototypeEntity("WaterSource", 90 + index, 80, 2)),
+        ...Array.from({ length: 5 }, (_, index) => prototypeEntity("BadwaterSource", 80 + index, 80, 2)),
+        ...["Pine", "Birch", "Oak"].flatMap((template, templateIndex) =>
+          Array.from({ length: 4 }, (_, index) => prototypeEntity(template, 80 + index, 81 + templateIndex, 2)),
+        ),
+        ...Array.from({ length: 4 }, (_, index) => prototypeEntity("Carrot", 80 + index, 85, 2)),
+        prototypeEntity("MediumWarehouse.Folktails", 80, 86, 2),
+        ...Array.from({ length: 3 }, (_, index) => prototypeEntity("LargePile.Folktails", 81 + index, 86, 2)),
+        ...Array.from({ length: 2 }, (_, index) => prototypeEntity("SmallTank.Folktails", 84 + index, 86, 2)),
+        ...Array.from({ length: 5 }, (_, index) => prototypeEntity("Path.Folktails", 80 + index, 87, 2)),
+      ],
+      Singletons: {
+        MapSize: {
+          Size: { X: 128, Y: 128 },
+        },
+        TerrainMap: {
+          Voxels: {
+            Array: "0 0 0 0",
+          },
+        },
+      },
+    };
+
+    const mutation = mutateWorldEntities(world, "stored-materials");
+
+    expect(mutation.blockers).toEqual([]);
+    expect(mutation.generated).toContainEqual({
+      category: "explosive-storage-pad",
+      coordinate: { x: 82, y: 86, z: 2 },
+      template: "LargePile.Folktails",
+    });
+    expect(mutation.generated).toContainEqual({
+      category: "contaminated-storage-pad",
+      coordinate: { x: 85, y: 86, z: 2 },
+      template: "SmallTank.Folktails",
+    });
+  });
+
+  test("persistence-matrix profile adds target classes for the remaining persistence blockers", () => {
+    const world = {
+      Entities: [
+        ...Array.from({ length: 4 }, (_, index) => prototypeEntity("WaterSource", 90 + index, 80, 2)),
+        ...Array.from({ length: 6 }, (_, index) => prototypeEntity("BadwaterSource", 80 + index, 80, 2)),
+        ...["Pine", "Birch", "Oak"].flatMap((template, templateIndex) =>
+          Array.from({ length: 5 }, (_, index) => prototypeEntity(template, 80 + index, 81 + templateIndex, 2)),
+        ),
+        ...Array.from({ length: 5 }, (_, index) => prototypeEntity("Carrot", 80 + index, 85, 2)),
+        prototypeEntity("MediumWarehouse.Folktails", 80, 86, 2),
+        ...Array.from({ length: 3 }, (_, index) => prototypeEntity("LargePile.Folktails", 81 + index, 86, 2)),
+        ...Array.from({ length: 2 }, (_, index) => prototypeEntity("SmallTank.Folktails", 84 + index, 86, 2)),
+        ...Array.from({ length: 6 }, (_, index) => prototypeEntity("Path.Folktails", 80 + index, 87, 2)),
+      ],
+      Singletons: {
+        MapSize: {
+          Size: { X: 128, Y: 128 },
+        },
+        TerrainMap: {
+          Voxels: {
+            Array: "0 0 0 0",
+          },
+        },
+      },
+    };
+
+    const mutation = mutateWorldEntities(world, "persistence-matrix");
+
+    expect(mutation.blockers).toEqual([]);
+    expect(mutation.generated.map((request) => request.category)).toEqual(
+      expect.arrayContaining(["fertile-ash-gatherer-pad", "tainted-washout-pad", "crop-counter-pad", "clean-burn-duration-pad"]),
+    );
+  });
 });

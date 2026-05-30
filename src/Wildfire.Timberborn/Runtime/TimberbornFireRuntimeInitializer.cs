@@ -204,6 +204,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
                 grid,
                 _blockService,
                 _entityRegistry));
+            _runtime.AttachInventoryAdjuster(new TimberbornQaInventoryAdjustmentApi(_entityRegistry));
             _runtime.AttachStoredGoodNativeBlastRadiusApi(
                 new TimberbornExplosionServiceBlastRadiusApi(_explosionOutcomeGatherer, _explosionService));
             _runtime.AttachExplosiveInfrastructureTargetApi(

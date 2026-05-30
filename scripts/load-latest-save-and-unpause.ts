@@ -97,7 +97,6 @@ const home = process.env.HOME ?? "";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bundleId = "com.mechanistry.timberborn";
 const processName = "Timberborn";
-const timberbornAppPath = join(home, "Applications", "Timberborn.app");
 const qaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timberborn", "WildfireQA");
 const qaTempRoot = join("/tmp", "wildfire-qa");
 const lockDir = join(home, "Library", "Application Support", "Timberborn", "WildfireQA", "locks", "build-deploy.lock");
@@ -110,7 +109,6 @@ const fastFrameIntervalMs = 1500;
 const activationRetryIntervalMs = 500;
 const activationRetryTimeoutMs = 20000;
 const continueLoadTimeoutMs = 20000;
-let timberbornAppOpenRequested = false;
 const inputReadyCpuThreshold = 75;
 const inputReadyRequiredStablePolls = 2;
 const inputReadyPollIntervalMs = 500;
@@ -686,14 +684,6 @@ const activateTimberborn = (label = "activate", timeoutMs = activationRetryTimeo
   let attempts = 0;
   let lastFailure = "(activation was not attempted)";
   let lastFrontmostBundleId = getFrontmostBundleId() ?? "unknown";
-
-  if (!timberbornAppOpenRequested) {
-    const openResult = run("open", [timberbornAppPath]);
-    timberbornAppOpenRequested = true;
-    if (openResult.exitCode !== 0) {
-      lastFailure = `open ${timberbornAppPath}: ${commandFailureText(openResult)}`;
-    }
-  }
 
   while (Date.now() - startedAt <= timeoutMs) {
     attempts += 1;

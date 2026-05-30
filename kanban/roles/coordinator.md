@@ -69,6 +69,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Treat `status:qa-needed` as an active focused-retry queue. Do not stop after moving an issue there if a bounded retry can be dispatched now.
 - When setting or leaving `status:qa-needed`, write the retry packet into the issue: exact target, fixture/save, commands or tool path, expected evidence, failure classification expectations, and pass/close criteria.
 - Convert `status:qa-needed` to `status:blocked` only when the coordinator cannot define or run the retry without a missing fixture, unreliable QA tool, environment access, upstream fix, or Jason decision.
+- When a blocker repeats because QA lacks setup, fixture, capture, command, or evidence tooling, create or dispatch the smallest QA tool that can remove the blocker before asking for manual setup. Document the tool path, command, expected evidence, and failure classification in the issue retry packet.
 - For failed review, keep the issue open for fixes and require a fresh review before closure.
 
 ## Sprint Close
