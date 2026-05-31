@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
+
 export type TimberbornStartupMode = "attach" | "launch";
 
 export type ShellResult = {
@@ -20,6 +23,11 @@ export type TimberbornStartupOptions = {
   activationRetryTimeoutMs?: number;
   bundleId: string;
   getFrontmostBundleId?: () => string | null;
+  launchIntentGuard?: {
+    dir: string;
+    nowMs?: () => number;
+    ttlMs: number;
+  };
   log?: (message: string) => void;
   mode: TimberbornStartupMode;
   processName: string;
@@ -32,6 +40,15 @@ export type TimberbornStartupOptions = {
 const defaultPollIntervalMs = 500;
 const defaultActivationRetryIntervalMs = 500;
 const defaultActivationRetryTimeoutMs = 20_000;
+
+type LaunchIntentMetadata = {
+  bundleId: string;
+  createdAt: string;
+  pid: number;
+  processName: string;
+  timestampMs: number;
+  ttlMs: number;
+};
 
 export const commandFailureText = (result: ShellResult): string =>
   result.stderr.trim() || result.stdout.trim() || "(no stderr/stdout)";
@@ -94,6 +111,103 @@ export const activateTimberbornBundle = (options: {
 
 const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
 
+const launchIntentMetadataPath = (dir: string): string => join(dir, "intent.json");
+
+const readLaunchIntentMetadata = (dir: string): LaunchIntentMetadata | null => {
+  try {
+    const parsed = JSON.parse(readFileSync(launchIntentMetadataPath(dir), "utf8")) as Partial<LaunchIntentMetadata>;
+    return typeof parsed.timestampMs === "number" &&
+      typeof parsed.ttlMs === "number" &&
+      typeof parsed.createdAt === "string"
+      ? {
+          bundleId: parsed.bundleId ?? "unknown",
+          createdAt: parsed.createdAt,
+          pid: parsed.pid ?? 0,
+          processName: parsed.processName ?? "unknown",
+          timestampMs: parsed.timestampMs,
+          ttlMs: parsed.ttlMs,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeLaunchIntentMetadata = (
+  options: TimberbornStartupOptions,
+  dir: string,
+  nowMs: number,
+  ttlMs: number,
+): void => {
+  writeFileSync(
+    launchIntentMetadataPath(dir),
+    `${JSON.stringify(
+      {
+        bundleId: options.bundleId,
+        createdAt: new Date(nowMs).toISOString(),
+        pid: process.pid,
+        processName: options.processName,
+        timestampMs: nowMs,
+        ttlMs,
+      } satisfies LaunchIntentMetadata,
+      null,
+      2,
+    )}\n`,
+  );
+};
+
+const launchIntentAgeMs = (dir: string, nowMs: number, metadata: LaunchIntentMetadata | null): number | null => {
+  if (metadata !== null) {
+    return Math.max(0, nowMs - metadata.timestampMs);
+  }
+
+  try {
+    return Math.max(0, nowMs - statSync(dir).mtimeMs);
+  } catch {
+    return null;
+  }
+};
+
+const acquireLaunchIntentGuard = (options: TimberbornStartupOptions): void => {
+  const guard = options.launchIntentGuard;
+  if (guard === undefined) {
+    return;
+  }
+
+  const nowMs = guard.nowMs?.() ?? Date.now();
+  mkdirSync(dirname(guard.dir), { recursive: true });
+
+  try {
+    mkdirSync(guard.dir);
+    writeLaunchIntentMetadata(options, guard.dir, nowMs, guard.ttlMs);
+    options.log?.(`launch_intent_recorded action=open_bundle path=${compactLogToken(guard.dir)} ttl_ms=${guard.ttlMs}`);
+    return;
+  } catch (error) {
+    if (!existsSync(guard.dir)) {
+      throw error;
+    }
+  }
+
+  const metadata = readLaunchIntentMetadata(guard.dir);
+  const ageMs = launchIntentAgeMs(guard.dir, nowMs, metadata);
+  const activeTtlMs = Math.max(metadata?.ttlMs ?? guard.ttlMs, guard.ttlMs);
+  if (ageMs === null || ageMs <= activeTtlMs) {
+    options.log?.(
+      `launch_intent_duplicate_refused action=open_bundle path=${compactLogToken(guard.dir)} age_ms=${ageMs ?? "unknown"} ttl_ms=${activeTtlMs} existing_pid=${metadata?.pid ?? "unknown"}`,
+    );
+    throw new Error(
+      `Refusing duplicate Timberborn launch intent: a recent open -b ${options.bundleId} was recorded ${ageMs ?? "unknown"}ms ago at ${guard.dir}. Wait for that startup attempt to settle or use --attach once Timberborn is running.`,
+    );
+  }
+
+  rmSync(guard.dir, { force: true, recursive: true });
+  mkdirSync(guard.dir);
+  writeLaunchIntentMetadata(options, guard.dir, nowMs, guard.ttlMs);
+  options.log?.(
+    `launch_intent_recorded action=open_bundle path=${compactLogToken(guard.dir)} ttl_ms=${guard.ttlMs} replaced_stale=true previous_age_ms=${ageMs ?? "unknown"}`,
+  );
+};
+
 const maybeActivateTimberborn = (
   options: TimberbornStartupOptions,
   label: string,
@@ -103,6 +217,7 @@ const maybeActivateTimberborn = (
   }
 
   try {
+    options.log?.(`activation_intent label=${label} action=activate_bundle`);
     activateTimberbornBundle({
       bundleId: options.bundleId,
       getFrontmostBundleId: options.getFrontmostBundleId,
@@ -112,6 +227,7 @@ const maybeActivateTimberborn = (
       sleepSyncMs: options.sleepSyncMs,
       timeoutMs: options.activationRetryTimeoutMs,
     });
+    options.log?.(`activation_result label=${label} status=activated`);
     return "activated";
   } catch (error) {
     if (options.activationPolicy === "required") {
@@ -137,6 +253,7 @@ export const launchOrAttachTimberborn = async (
       throw new Error("Timberborn is not running. Start it first or pass --launch.");
     }
 
+    options.log?.("startup_intent mode=attach timberborn_running=true action=activate");
     return {
       activationStatus: maybeActivateTimberborn(options, "attach"),
       launched: false,
@@ -146,11 +263,15 @@ export const launchOrAttachTimberborn = async (
 
   let launched = false;
   if (!wasRunningBeforeLaunch) {
+    acquireLaunchIntentGuard(options);
+    options.log?.("startup_intent mode=launch timberborn_running=false action=open_bundle");
     const openResult = options.run("open", ["-b", options.bundleId]);
     if (openResult.exitCode !== 0) {
       throw new Error(`Could not launch Timberborn bundle ${options.bundleId}: ${commandFailureText(openResult)}`);
     }
     launched = true;
+  } else {
+    options.log?.("startup_intent mode=launch timberborn_running=true action=attach");
   }
 
   for (const index of Array.from({ length: pollAttempts }).map((_, attempt) => attempt)) {
@@ -169,5 +290,8 @@ export const launchOrAttachTimberborn = async (
     }
   }
 
+  options.log?.(
+    `timberborn_startup_timeout process_running=false launched=${launched} was_running_before_launch=${wasRunningBeforeLaunch}`,
+  );
   throw new Error(`Timed out waiting for ${options.processName} to start.`);
 };

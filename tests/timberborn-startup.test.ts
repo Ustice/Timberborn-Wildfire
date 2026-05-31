@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { launchOrAttachTimberborn, type ShellResult } from "../scripts/lib/timberborn-startup.ts";
 
 type Call = {
@@ -35,6 +38,15 @@ const startupOptions = (run: (command: string, args: string[]) => ShellResult) =
   waitSeconds: 1,
 });
 
+const withTempDir = async <T>(callback: (dir: string) => Promise<T> | T): Promise<T> => {
+  const dir = mkdtempSync(join(tmpdir(), "wildfire-startup-"));
+  try {
+    return await callback(dir);
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+};
+
 describe("timberborn startup contract", () => {
   test("launch mode attaches to an already-running process without calling open", async () => {
     const runner = createRunner([success("123\n"), success("123\n"), success()]);
@@ -66,6 +78,178 @@ describe("timberborn startup contract", () => {
     expect(result.wasRunningBeforeLaunch).toBe(false);
     expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "open", "pgrep", "osascript"]);
     expect(runner.calls.filter((call) => call.command === "open")).toHaveLength(1);
+  });
+
+  test("launch mode records launch intent before opening Timberborn", async () => {
+    await withTempDir(async (dir) => {
+      const runner = createRunner([failure(), success(), success("123\n"), success()]);
+      const logs: string[] = [];
+
+      const result = await launchOrAttachTimberborn({
+        ...startupOptions(runner.run),
+        activationPolicy: "required",
+        launchIntentGuard: {
+          dir: join(dir, "timberborn-launch-intent"),
+          nowMs: () => 1_000,
+          ttlMs: 60_000,
+        },
+        log: (message) => logs.push(message),
+        mode: "launch",
+      });
+
+      expect(result.launched).toBe(true);
+      expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "open", "pgrep", "osascript"]);
+      expect(logs).toContain(
+        `launch_intent_recorded action=open_bundle path=${join(dir, "timberborn-launch-intent")} ttl_ms=60000`,
+      );
+      expect(logs).toContain("startup_intent mode=launch timberborn_running=false action=open_bundle");
+    });
+  });
+
+  test("launch mode refuses a recent duplicate launch intent before calling open", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      const runner = createRunner([failure()]);
+      const logs: string[] = [];
+
+      mkdirSync(guardDir);
+      writeFileSync(
+        join(guardDir, "intent.json"),
+        `${JSON.stringify({
+          bundleId: "com.mechanistry.timberborn",
+          createdAt: new Date(1_000).toISOString(),
+          pid: 123,
+          processName: "Timberborn",
+          timestampMs: 1_000,
+          ttlMs: 60_000,
+        })}\n`,
+      );
+
+      await expect(
+        launchOrAttachTimberborn({
+          ...startupOptions(runner.run),
+          activationPolicy: "required",
+          launchIntentGuard: {
+            dir: guardDir,
+            nowMs: () => 2_000,
+            ttlMs: 60_000,
+          },
+          log: (message) => logs.push(message),
+          mode: "launch",
+        }),
+      ).rejects.toThrow("Refusing duplicate Timberborn launch intent");
+
+      expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
+      expect(runner.calls.some((call) => call.command === "open")).toBe(false);
+      expect(logs).toContain(
+        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=1000 ttl_ms=60000 existing_pid=123`,
+      );
+    });
+  });
+
+  test("launch mode preserves a longer recorded launch intent TTL", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      const runner = createRunner([failure()]);
+      const logs: string[] = [];
+
+      mkdirSync(guardDir);
+      writeFileSync(
+        join(guardDir, "intent.json"),
+        `${JSON.stringify({
+          bundleId: "com.mechanistry.timberborn",
+          createdAt: new Date(1_000).toISOString(),
+          pid: 123,
+          processName: "Timberborn",
+          timestampMs: 1_000,
+          ttlMs: 240_000,
+        })}\n`,
+      );
+
+      await expect(
+        launchOrAttachTimberborn({
+          ...startupOptions(runner.run),
+          activationPolicy: "required",
+          launchIntentGuard: {
+            dir: guardDir,
+            nowMs: () => 92_000,
+            ttlMs: 90_000,
+          },
+          log: (message) => logs.push(message),
+          mode: "launch",
+        }),
+      ).rejects.toThrow("Refusing duplicate Timberborn launch intent");
+
+      expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
+      expect(runner.calls.some((call) => call.command === "open")).toBe(false);
+      expect(logs).toContain(
+        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=91000 ttl_ms=240000 existing_pid=123`,
+      );
+    });
+  });
+
+  test("launch mode treats missing guard metadata as an in-progress launch intent", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      const runner = createRunner([failure()]);
+
+      mkdirSync(guardDir);
+
+      await expect(
+        launchOrAttachTimberborn({
+          ...startupOptions(runner.run),
+          activationPolicy: "required",
+          launchIntentGuard: {
+            dir: guardDir,
+            nowMs: () => Date.now(),
+            ttlMs: 60_000,
+          },
+          mode: "launch",
+        }),
+      ).rejects.toThrow("Refusing duplicate Timberborn launch intent");
+
+      expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
+      expect(runner.calls.some((call) => call.command === "open")).toBe(false);
+    });
+  });
+
+  test("launch mode replaces stale launch intent before opening Timberborn", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      const runner = createRunner([failure(), success(), success("123\n"), success()]);
+      const logs: string[] = [];
+
+      mkdirSync(guardDir);
+      writeFileSync(
+        join(guardDir, "intent.json"),
+        `${JSON.stringify({
+          bundleId: "com.mechanistry.timberborn",
+          createdAt: new Date(1_000).toISOString(),
+          pid: 123,
+          processName: "Timberborn",
+          timestampMs: 1_000,
+          ttlMs: 60_000,
+        })}\n`,
+      );
+
+      const result = await launchOrAttachTimberborn({
+        ...startupOptions(runner.run),
+        activationPolicy: "required",
+        launchIntentGuard: {
+          dir: guardDir,
+          nowMs: () => 62_000,
+          ttlMs: 60_000,
+        },
+        log: (message) => logs.push(message),
+        mode: "launch",
+      });
+
+      expect(result.launched).toBe(true);
+      expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "open", "pgrep", "osascript"]);
+      expect(logs).toContain(
+        `launch_intent_recorded action=open_bundle path=${guardDir} ttl_ms=60000 replaced_stale=true previous_age_ms=61000`,
+      );
+    });
   });
 
   test("activation retries never call open when the process is already running", async () => {

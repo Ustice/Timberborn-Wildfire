@@ -102,6 +102,7 @@ const qaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timb
 const qaTempRoot = join("/tmp", "wildfire-qa");
 const lockDir = join(home, "Library", "Application Support", "Timberborn", "WildfireQA", "locks", "build-deploy.lock");
 const lockInfoPath = join(lockDir, "lock.json");
+const launchIntentGuardDir = join(dirname(lockDir), "timberborn-launch-intent");
 const playerLogDefault = join(home, "Library", "Logs", "Mechanistry", "Timberborn", "Player.log");
 const coordinateGuidePath = join(repoRoot, "docs", "timberborn-menu-coordinate-guide.md");
 const inboxFileName = "command-inbox.txt";
@@ -156,6 +157,7 @@ Examples:
 
 Default startup behavior:
   --launch uses the signal-driven cold-start path: sample frames, waits for Timberborn CPU to settle before each input, presses each startup gate once, clicks only the documented main.continue coordinate, then gives the game 20 seconds to reach the loaded-save HUD before failing.
+  --launch records a short-lived Timberborn launch intent before calling open -b, and refuses a second bundle-open request during the startup wait window. Use --attach once a controller already has Timberborn running.
   --attach uses the conservative classifier path for already-running Timberborn sessions.
 `;
 
@@ -716,6 +718,12 @@ const launchOrAttach = async (options: Options): Promise<void> => {
     activationRetryTimeoutMs,
     bundleId,
     getFrontmostBundleId,
+    launchIntentGuard: options.mode === "launch"
+      ? {
+          dir: launchIntentGuardDir,
+          ttlMs: Math.max(60_000, options.waitSeconds * 1000),
+        }
+      : undefined,
     log,
     mode: options.mode,
     processName,

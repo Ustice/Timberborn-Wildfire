@@ -56,6 +56,7 @@ const qaRoot = join(home, "Library", "Application Support", "Mechanistry", "Timb
 const qaTempRoot = join("/tmp", "wildfire-qa");
 const lockDir = join(home, "Library", "Application Support", "Timberborn", "WildfireQA", "locks", "build-deploy.lock");
 const lockInfoPath = join(lockDir, "lock.json");
+const launchIntentGuardDir = join(dirname(lockDir), "timberborn-launch-intent");
 const playerLogDefault = join(home, "Library", "Logs", "Mechanistry", "Timberborn", "Player.log");
 const commandOutboxFileName = "command-outbox.txt";
 const commandInboxFileName = "command-inbox.txt";
@@ -103,6 +104,9 @@ Examples:
   bun scripts/check-timberborn-startup.ts --attach --wait=30
   bun scripts/check-timberborn-startup.ts --launch --wait=120
   bun scripts/check-timberborn-startup.ts --attach --require-command-status --wait=10
+
+Launch guard:
+  --launch records a short-lived Timberborn launch intent before calling open -b, and refuses a second bundle-open request during the startup wait window. Use --attach once a controller already has Timberborn running.
 `;
 
 const log = (message: string): void => {
@@ -543,6 +547,13 @@ const main = async (): Promise<void> => {
     await launchOrAttachTimberborn({
       activationPolicy: "required",
       bundleId,
+      launchIntentGuard: options.mode === "launch"
+        ? {
+            dir: launchIntentGuardDir,
+            ttlMs: Math.max(60_000, options.waitSeconds * 1000),
+          }
+        : undefined,
+      log,
       mode: options.mode,
       processName,
       run,
