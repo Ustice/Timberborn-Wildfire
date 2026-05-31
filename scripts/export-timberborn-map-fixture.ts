@@ -106,7 +106,7 @@ type BlueprintFootprintBlock = {
   z: number;
 };
 
-const emptyCell = 0xe000;
+const emptyCell = 0x0000;
 const ashQualityValues = new Map([
   ["none", 0],
   ["fertile", 1],
@@ -382,16 +382,16 @@ const readWorldJson = (savePath: string): JsonObject => {
   return asObject(JSON.parse(worldEntry.data.toString("utf8")) as JsonValue) ?? fail("world.json root is not an object.");
 };
 
-const packCell = (fuel: number, heat: number, flammability: number, water: number, terrain: number, heatLoss: number): number =>
+const packCell = (fuel: number, heat: number, flammability: number, water: number, terrain: number, burningLevel: number): number =>
   ((fuel & 0b1111) << 0) |
   ((heat & 0b1111) << 4) |
   ((flammability & 0b11) << 8) |
   ((water & 0b11) << 10) |
   ((terrain & 0b1) << 12) |
-  ((heatLoss & 0b111) << 13);
+  ((burningLevel & 0b111) << 13);
 
 const cellFromProfile = (profile: MaterialFieldProfile, water: number): number =>
-  packCell(profile.fuel, 0, profile.flammability, Math.max(profile.water, water), profile.terrain, profile.heatLoss);
+  packCell(profile.fuel, 0, profile.flammability, Math.max(profile.water, water), profile.terrain, 0);
 
 const terrainCell = (): number => cellFromProfile(lookupMaterialProfile("terrain"), 0);
 

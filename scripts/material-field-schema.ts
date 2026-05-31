@@ -41,7 +41,6 @@ export type MaterialFieldProfile = {
   contaminationBehavior: ContaminationBehavior;
   flammability: number;
   fuel: number;
-  heatLoss: number;
   materialClass: MaterialClass;
   resourcePolicy: ResourcePolicy;
   terrain: number;
@@ -76,7 +75,6 @@ export const validateMaterialFieldSchema = (schema: MaterialFieldSchema): Materi
     seen.add(profile.materialClass);
     assertBand(profile.fuel, 15, "fuel", profile.materialClass);
     assertBand(profile.flammability, 3, "flammability", profile.materialClass);
-    assertBand(profile.heatLoss, 7, "heatLoss", profile.materialClass);
     assertBand(profile.terrain, 1, "terrain", profile.materialClass);
     assertBand(profile.water, 3, "water", profile.materialClass);
     assertBand(profile.burnCapacity, 15, "burnCapacity", profile.materialClass);
