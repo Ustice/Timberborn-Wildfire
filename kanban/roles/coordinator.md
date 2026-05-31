@@ -69,7 +69,8 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - For failed QA, keep the issue open and use `status:rework` when the next action is an implementation, documentation, fixture, test, or acceptance-criteria update.
 - Use `status:qa-needed` when the next action is a focused rerun with no rework required.
 - Use `status:blocked-by-environment` when Timberborn cannot load, respond, or provide a fair runtime QA target; retry on the next run or once the game is responding again.
-- Use `status:waiting-for-dependency` when another GitHub issue or intra-ticket dependency must resolve first; reassess when that dependency resolves.
+- Use `status:waiting-for-dependency` when another GitHub issue or intra-ticket dependency must resolve first because it changes whether this issue can be implemented, reviewed, or accepted; reassess when that dependency resolves.
+- Do not encode "be careful", shared-branch ordering, worktree allocation, or preferred serial dispatch as a dependency graph. If an issue can still make useful progress, keep it `status:ready` and document the coordination caution in the issue comment or assignment packet.
 - Use `status:needs-fixture` when QA lacks the tool, scenario data, capture support, or fixture needed to make a determination; create or dispatch the smallest QA-tool/fixture issue before asking for manual setup.
 - Treat `status:qa-needed` as an active focused-retry queue. Do not stop after moving an issue there if a bounded retry can be dispatched now.
 - Treat `status:rework` as an active implementation queue. Do not leave it as a passive failure bucket when a bounded worker update can be dispatched now.
