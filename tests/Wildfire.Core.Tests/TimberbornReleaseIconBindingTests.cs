@@ -3,30 +3,19 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornReleaseIconBindingTests
 {
     [Fact]
-    public void FertilizeToolbarButtonsUseWildfireOwnedEmbeddedIcons()
+    public void FertilizeToolbarButtonsRegisterWildfireOwnedEmbeddedIconResource()
     {
-        string root = FindRepoRoot();
-        string source = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "Wildfire.Timberborn",
-            "Tools",
-            "TimberbornFertilizeToolButtons.cs"));
-        string project = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "Wildfire.Timberborn",
-            "Wildfire.Timberborn.csproj"));
+        string[] resourceNames = typeof(TimberbornFertilizeDesignationRules)
+            .Assembly
+            .GetManifestResourceNames();
 
-        Assert.DoesNotContain("BurnToolImageName", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("_toolButtonFactory.Create(_tool, \"DemolishResourcesTool\"", source, StringComparison.Ordinal);
-        Assert.Contains("TimberbornFertilizeFieldsToolButton", source, StringComparison.Ordinal);
-        Assert.Contains("TimberbornFertilizeForestryToolButton", source, StringComparison.Ordinal);
-        Assert.Contains("\"FieldsPlantingToolGroupIcon\"", source, StringComparison.Ordinal);
-        Assert.Contains("\"ForestryPlantingToolGroupIcon\"", source, StringComparison.Ordinal);
-        Assert.Contains("WildfireFertilizeToolIcon.png", source, StringComparison.Ordinal);
-        Assert.Contains("ApplyToolIcon(", source, StringComparison.Ordinal);
-        Assert.Contains("Assets\\WildfireFertilizeToolIcon.png", project, StringComparison.Ordinal);
+        Assert.Contains(
+            TimberbornFertilizeToolButtonResources.FertilizeToolIconResourceName,
+            resourceNames);
+        Assert.Equal(["Fields", "Forestry"], TimberbornFertilizeToolButtonResources.ToolGroupIds);
+        Assert.Equal(
+            ["FieldsPlantingToolGroupIcon", "ForestryPlantingToolGroupIcon"],
+            TimberbornFertilizeToolButtonResources.FallbackImageNames);
     }
 
     [Fact]

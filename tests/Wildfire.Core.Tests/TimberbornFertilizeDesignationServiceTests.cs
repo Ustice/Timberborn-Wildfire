@@ -3,93 +3,163 @@ namespace Wildfire.Core.Tests;
 public sealed class TimberbornFertilizeDesignationServiceTests
 {
     [Fact]
-    public void FertileAshInventoryScanContainsNativeComponentCacheFailures()
+    public void FertileAshApplicationUsesResolvedSimulatorLandingCell()
     {
-        string source = ReadTimberbornSource("TimberbornFertilizeDesignationService.cs");
+        TimberbornFertilizeDesignationApplicationDecision decision =
+            TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex: 4,
+                cellCount: 16,
+                applicationCellIndex: 9,
+                applicationCellIsTainted: false,
+                hasNearbyUnreservedFertileAsh: true);
 
-        Assert.Contains(".Select(CreateInventoryTargetSafely)", source, StringComparison.Ordinal);
-        Assert.Contains("catch (Exception exception)", source, StringComparison.Ordinal);
-        Assert.Contains("wildfire_fertilize_inventory_scan_skipped", source, StringComparison.Ordinal);
-        Assert.Contains("return null;", source, StringComparison.Ordinal);
+        Assert.Equal(TimberbornFertilizeDesignationApplicationOutcome.Apply, decision.Outcome);
+        Assert.Equal(9, decision.ApplicationCellIndex);
+        Assert.True(decision.ShouldConsumeInventory);
+        Assert.True(decision.ShouldApplyFertileAsh);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(16)]
+    public void FertileAshApplicationSkipsDesignationsOutsideSimulatorGrid(int cellIndex)
+    {
+        TimberbornFertilizeDesignationApplicationDecision decision =
+            TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex,
+                cellCount: 16,
+                applicationCellIndex: null,
+                applicationCellIsTainted: false,
+                hasNearbyUnreservedFertileAsh: true);
+
+        Assert.Equal(TimberbornFertilizeDesignationApplicationOutcome.SkipInvalidCell, decision.Outcome);
+        Assert.False(decision.ShouldConsumeInventory);
+        Assert.False(decision.ShouldApplyFertileAsh);
     }
 
     [Fact]
-    public void FertileAshInventoryScanIncludesGathererFlagOutputs()
+    public void FertileAshApplicationSkipsWhenSimulatorCannotResolveLandingCell()
     {
-        string source = ReadTimberbornSource("TimberbornFertilizeDesignationService.cs");
+        TimberbornFertilizeDesignationApplicationDecision decision =
+            TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex: 4,
+                cellCount: 16,
+                applicationCellIndex: null,
+                applicationCellIsTainted: false,
+                hasNearbyUnreservedFertileAsh: true);
 
-        Assert.Contains("using Timberborn.SimpleOutputBuildings;", source, StringComparison.Ordinal);
-        Assert.Contains("entity.TryGetComponent(out SimpleOutputInventory simpleOutputInventory)", source, StringComparison.Ordinal);
-        Assert.Contains("inventory = simpleOutputInventory.Inventory;", source, StringComparison.Ordinal);
+        Assert.Equal(TimberbornFertilizeDesignationApplicationOutcome.SkipUnresolvedApplicationCell, decision.Outcome);
+        Assert.False(decision.ShouldConsumeInventory);
+        Assert.False(decision.ShouldApplyFertileAsh);
     }
 
     [Fact]
-    public void FertileAshApplicationResolvesDesignationToSimulatorLandingCellBeforeConsumingInventory()
+    public void FertileAshApplicationBlocksTaintedAshWithoutConsumingInventory()
     {
-        string source = ReadTimberbornSource("TimberbornFertilizeDesignationService.cs");
+        TimberbornFertilizeDesignationApplicationDecision decision =
+            TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex: 4,
+                cellCount: 16,
+                applicationCellIndex: 9,
+                applicationCellIsTainted: true,
+                hasNearbyUnreservedFertileAsh: true);
 
-        Assert.Contains(
-            "_fireRuntime.TryResolveFertileAshApplicationCell(cellIndex, out int applicationCellIndex)",
-            source,
-            StringComparison.Ordinal);
-        Assert.Contains("_fireRuntime.IsCellTaintedAsh(applicationCellIndex)", source, StringComparison.Ordinal);
-        Assert.Contains("grid.FromIndex(applicationCellIndex)", source, StringComparison.Ordinal);
-        Assert.Contains(
-            "_fireRuntime.ApplyPlayerFertileAshDesignation(applicationCellIndex, StrengthPerGood)",
-            source,
-            StringComparison.Ordinal);
+        Assert.Equal(TimberbornFertilizeDesignationApplicationOutcome.BlockTaintedAsh, decision.Outcome);
+        Assert.Equal(9, decision.ApplicationCellIndex);
+        Assert.False(decision.ShouldConsumeInventory);
+        Assert.False(decision.ShouldApplyFertileAsh);
     }
 
     [Fact]
-    public void FertileAshApplicationConsumesOnlyUnreservedInventory()
+    public void FertileAshApplicationWaitsWhenNoNearbyUnreservedInventoryExists()
     {
-        string source = ReadTimberbornSource("TimberbornFertilizeDesignationService.cs");
+        TimberbornFertilizeDesignationApplicationDecision decision =
+            TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex: 4,
+                cellCount: 16,
+                applicationCellIndex: 9,
+                applicationCellIsTainted: false,
+                hasNearbyUnreservedFertileAsh: false);
 
-        Assert.Contains("private static bool HasUnreservedFertileAsh(Inventory inventory)", source, StringComparison.Ordinal);
-        Assert.Contains("inventory.HasUnreservedStock(new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1))", source, StringComparison.Ordinal);
-        Assert.Contains("HasUnreservedFertileAsh(inv.Inventory)", source, StringComparison.Ordinal);
+        Assert.Equal(TimberbornFertilizeDesignationApplicationOutcome.WaitForInventory, decision.Outcome);
+        Assert.False(decision.ShouldConsumeInventory);
+        Assert.False(decision.ShouldApplyFertileAsh);
+    }
+
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public void FertileAshInventorySelectionRequiresStockAndUnreservedTakeableAsh(
+        bool hasFertileAshStock,
+        bool hasUnreservedFertileAsh,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            TimberbornFertilizeDesignationRules.ShouldUseInventory(
+                hasFertileAshStock,
+                hasUnreservedFertileAsh));
     }
 
     [Fact]
-    public void BurnedGoodStackClearingConsumesOnlyUnreservedTakeableStock()
+    public void FertileAshInventoryScanFailuresProduceQaVisibleSkippedWarning()
     {
-        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+        string warning = TimberbornFertilizeDesignationRules.FormatInventoryScanSkippedWarning(
+            new InvalidOperationException("native cache stale"));
 
-        Assert.Contains("goodStack.Inventory.UnreservedTakeableStock().ToArray()", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("goodStack.Inventory.Stock.ToArray()", source, StringComparison.Ordinal);
+        Assert.Contains(TimberbornFertilizeDesignationRules.InventoryScanSkippedLogToken, warning);
+        Assert.Contains("reason=InvalidOperationException", warning);
     }
 
     [Fact]
-    public void TreeBurnedLeftoverComponentProbesSkipStaleNativeObjects()
+    public void FertileAshInventoryScanIncludesGoodStacksAndSimpleOutputInventories()
     {
-        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+        Assert.Equal(
+            [
+                TimberbornFertilizeInventorySourceKind.GoodStack,
+                TimberbornFertilizeInventorySourceKind.SimpleOutputInventory,
+            ],
+            TimberbornFertilizeDesignationRules.SupportedInventorySourceKinds);
+    }
 
-        Assert.Contains("TryGetTreeComponent(", source, StringComparison.Ordinal);
-        Assert.Contains("wildfire_timberborn_tree_component_probe_failed", source, StringComparison.Ordinal);
-        Assert.Contains("exception is NullReferenceException or InvalidOperationException", source, StringComparison.Ordinal);
+    [Theory]
+    [InlineData(typeof(NullReferenceException), true)]
+    [InlineData(typeof(InvalidOperationException), true)]
+    [InlineData(typeof(MissingMethodException), false)]
+    public void TreeBurnedLeftoverComponentProbeSkipsOnlyStaleNativeFailures(
+        Type exceptionType,
+        bool expected)
+    {
+        Exception exception = (Exception)Activator.CreateInstance(exceptionType)!;
+
+        Assert.Equal(
+            expected,
+            TimberbornRuntimeBurnedTextureBehavior.ShouldSkipStaleTreeComponentProbe(exception));
     }
 
     [Fact]
-    public void CropBurnedLeftoverRefreshesNativeResourceModelAfterDeath()
+    public void TerminalTreeComponentSkipsRemainAppliedConsequences()
     {
-        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+        TimberbornTreeBurnConsequenceResult result =
+            TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
 
-        Assert.Contains("TryDeleteBurnedResource(blockObject, consequence, textureLabel)", source, StringComparison.Ordinal);
-        Assert.Contains("_entityService.Delete(blockObject);", source, StringComparison.Ordinal);
-        Assert.Contains("deleted=true reason=native_entity_service", source, StringComparison.Ordinal);
-        Assert.Contains("TryRefreshCropNaturalResourceModel(blockObject)", source, StringComparison.Ordinal);
-        Assert.Contains("NaturalResourceModel naturalResourceModel", source, StringComparison.Ordinal);
-        Assert.Contains("InvokeNoArgumentMethod(naturalResourceModel, \"ShowCurrentModel\")", source, StringComparison.Ordinal);
+        Assert.True(result.Applied);
+        Assert.False(result.Failed);
     }
 
     [Fact]
-    public void FertileAshLandingCellResolutionUsesCurrentSimulatorTerrainSnapshot()
+    public void NativeBurnedResourceDeletionReportsCompletedCropVisualState()
     {
-        string source = ReadTimberbornSource("TimberbornFireRuntime.cs");
+        TimberbornCropBurnConsequenceResult result =
+            TimberbornRuntimeBurnedTextureBehavior.DeletedBurnedResourceResult();
 
-        Assert.Contains("CapturePersistentFireSimState()", source, StringComparison.Ordinal);
-        Assert.Contains("PackedCell.Terrain(cells[candidate]) == 1", source, StringComparison.Ordinal);
-        Assert.Contains("applicationCellIndex = landingCellIndex.Value;", source, StringComparison.Ordinal);
+        Assert.True(result.MatchedCropTarget);
+        Assert.True(result.KilledCrop);
+        Assert.True(result.VisualStateUpdated);
+        Assert.False(result.FailedConsequence);
+        Assert.Equal("native_entity_service", TimberbornRuntimeBurnedTextureBehavior.CropBurnedResourceDeletedReason);
     }
 
     [Fact]
@@ -101,16 +171,6 @@ public sealed class TimberbornFertilizeDesignationServiceTests
         Assert.Contains("uint removeAsh = (change.AddFields >> 10) & 0x3u;", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Water(newCell) > 0u && ash > 0u && (Tick & 63u) == 0u", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Water(newCell) > 0u && ash > 0u)", source, StringComparison.Ordinal);
-    }
-
-    private static string ReadTimberbornSource(string fileName)
-    {
-        string root = FindRepoRoot();
-        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
-        string path = Directory
-            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
-            .First();
-        return File.ReadAllText(path);
     }
 
     private static string ReadUnitySource(string fileName)
