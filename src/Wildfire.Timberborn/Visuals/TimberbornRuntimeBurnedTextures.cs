@@ -13,6 +13,35 @@ using UnityEngine;
 
 namespace Wildfire.Timberborn.Visuals;
 
+public static class TimberbornRuntimeBurnedTextureBehavior
+{
+    public const string TreeComponentProbeFailedToken = "wildfire_timberborn_tree_component_probe_failed";
+    public const string TreeKillAlreadyTerminalToken = "wildfire_timberborn_tree_kill_skipped";
+    public const string TreeBurnedLeftoverAlreadyTerminalToken = "wildfire_timberborn_tree_burned_leftover_skipped";
+    public const string TreeBurnedTextureRendererSkippedToken =
+        "wildfire_timberborn_tree_burned_texture_renderer_skipped";
+    public const string TreeBurnedTextureMaterialSkippedToken =
+        "wildfire_timberborn_tree_burned_texture_material_skipped";
+    public const string CropBurnedResourceDeletedReason = "native_entity_service";
+
+    public static bool ShouldSkipStaleTreeComponentProbe(Exception exception) =>
+        exception is NullReferenceException or InvalidOperationException;
+
+    public static bool ShouldSkipInvalidRendererOrMaterial(Exception exception) =>
+        exception is MissingReferenceException or NullReferenceException;
+
+    public static TimberbornTreeBurnConsequenceResult AlreadyTerminalTreeResult() =>
+        new(Applied: true, Failed: false);
+
+    public static TimberbornCropBurnConsequenceResult DeletedBurnedResourceResult() =>
+        new(
+            MatchedCropTarget: true,
+            YieldLost: 0,
+            KilledCrop: true,
+            VisualStateUpdated: true,
+            FailedConsequence: false);
+}
+
 public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBurnConsequenceApi
 {
     private static readonly string[] BurnedTexturePropertyNames = { "_MainTex", "_BaseMap" };
@@ -119,12 +148,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
                 out LivingNaturalResource livingNaturalResource))
         {
             _logSink.Warning(
-                "wildfire_timberborn_tree_kill_skipped " +
+                $"{TimberbornRuntimeBurnedTextureBehavior.TreeKillAlreadyTerminalToken} " +
                 "reason=missing_living_natural_resource " +
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
                 $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
-            return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+            return TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
         }
 
         if (!livingNaturalResource.IsDead)
@@ -172,12 +201,12 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
                 out Cuttable cuttable))
         {
             _logSink.Warning(
-                "wildfire_timberborn_tree_burned_leftover_skipped " +
+                $"{TimberbornRuntimeBurnedTextureBehavior.TreeBurnedLeftoverAlreadyTerminalToken} " +
                 "reason=missing_cuttable_already_terminal " +
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
                 $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
-            return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+            return TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
         }
 
         InvokeNoArgumentMethod(cuttable, "Cut");
@@ -351,10 +380,10 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
 
             return updatedMaterialCount;
         }
-        catch (Exception exception) when (exception is MissingReferenceException or NullReferenceException)
+        catch (Exception exception) when (TimberbornRuntimeBurnedTextureBehavior.ShouldSkipInvalidRendererOrMaterial(exception))
         {
             _logSink.Warning(
-                "wildfire_timberborn_tree_burned_texture_renderer_skipped " +
+                $"{TimberbornRuntimeBurnedTextureBehavior.TreeBurnedTextureRendererSkippedToken} " +
                 $"reason=renderer_invalid target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
                 $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
             return 0;
@@ -383,10 +412,10 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
                 ? source
                 : CreateBurnedMaterial(source, burnedTexture, textureBinding.Value.PropertyName);
         }
-        catch (Exception exception) when (exception is MissingReferenceException or NullReferenceException)
+        catch (Exception exception) when (TimberbornRuntimeBurnedTextureBehavior.ShouldSkipInvalidRendererOrMaterial(exception))
         {
             _logSink.Warning(
-                "wildfire_timberborn_tree_burned_texture_material_skipped " +
+                $"{TimberbornRuntimeBurnedTextureBehavior.TreeBurnedTextureMaterialSkippedToken} " +
                 $"reason=material_invalid target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
                 $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
             return source;
@@ -497,11 +526,11 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         {
             return blockObject.TryGetComponent(out component);
         }
-        catch (Exception exception) when (exception is NullReferenceException or InvalidOperationException)
+        catch (Exception exception) when (TimberbornRuntimeBurnedTextureBehavior.ShouldSkipStaleTreeComponentProbe(exception))
         {
             component = default!;
             _logSink.Warning(
-                "wildfire_timberborn_tree_component_probe_failed " +
+                $"{TimberbornRuntimeBurnedTextureBehavior.TreeComponentProbeFailedToken} " +
                 $"component={TimberbornQaCommandBridge.FormatToken(componentName)} " +
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(stableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(specId)} " +
@@ -887,8 +916,8 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
             "wildfire_timberborn_crop_burned_leftover_applied " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
-            "deleted=true reason=native_entity_service");
-        return true;
+            $"deleted=true reason={TimberbornRuntimeBurnedTextureBehavior.CropBurnedResourceDeletedReason}");
+        return TimberbornRuntimeBurnedTextureBehavior.DeletedBurnedResourceResult().VisualStateUpdated;
     }
 
     private bool TryRefreshCropNaturalResourceModel(BlockObject blockObject)

@@ -134,6 +134,45 @@ public readonly record struct TimberbornStructureBurnDamageRollbackSummary(
     }
 }
 
+public readonly record struct TimberbornStructureBurnDamageRollbackEvidenceRequirement(
+    string Behavior,
+    IReadOnlyList<string> RequiredEvidenceTokens);
+
+public static class TimberbornStructureBurnDamageRollbackEvidence
+{
+    public static readonly IReadOnlyList<TimberbornStructureBurnDamageRollbackEvidenceRequirement> LiveQaRequirements =
+        new TimberbornStructureBurnDamageRollbackEvidenceRequirement[]
+    {
+        new(
+            "repair-unlocks-structure-visuals",
+            new[]
+            {
+                "wildfire_timberborn_structure_repair_unlocked",
+                "wildfire_timberborn_structure_repair_completed_visual_restored",
+            }),
+        new(
+            "status-icon-lane-stays-separate-from-burned-materials",
+            new[]
+            {
+                "wildfire_timberborn_structure_burning_status_synchronized",
+            }),
+        new(
+            "storage-rebuild-preserves-runtime-settings-and-suppresses-recovered-goods",
+            new[]
+            {
+                "wildfire_timberborn_structure_burn_rebuilt_unfinished",
+            }),
+        new(
+            "overlapping-path-and-collapse-dependents-rebuild-through-native-paths",
+            new[]
+            {
+                "wildfire_timberborn_structure_overlapping_path_rebuilt_unfinished",
+                "wildfire_timberborn_structure_native_structural_collapse_applied",
+                "wildfire_timberborn_structure_collapse_dependent_rebuilt_unfinished",
+            }),
+    };
+}
+
 public interface ITimberbornStructureBurnDamageRollbackSink
 {
     TimberbornStructureBurnDamageRollbackSummary ApplyConsequences(

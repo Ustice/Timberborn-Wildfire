@@ -7,6 +7,24 @@ using UnityEngine.UIElements;
 
 namespace Wildfire.Timberborn.Tools;
 
+public static class TimberbornFertilizeToolButtonResources
+{
+    public const string FertilizeToolIconResourceName =
+        "Wildfire.Timberborn.Assets.WildfireFertilizeToolIcon.png";
+
+    public static readonly IReadOnlyList<string> ToolGroupIds = new[]
+    {
+        "Fields",
+        "Forestry",
+    };
+
+    public static readonly IReadOnlyList<string> FallbackImageNames = new[]
+    {
+        "FieldsPlantingToolGroupIcon",
+        "ForestryPlantingToolGroupIcon",
+    };
+}
+
 public sealed class TimberbornFertilizeFieldsToolButton : TimberbornFertilizeToolButton
 {
     public TimberbornFertilizeFieldsToolButton(
@@ -19,8 +37,8 @@ public sealed class TimberbornFertilizeFieldsToolButton : TimberbornFertilizeToo
             toolButtonFactory,
             toolButtonService,
             toolGroupService,
-            "Fields",
-            "FieldsPlantingToolGroupIcon",
+            TimberbornFertilizeToolButtonResources.ToolGroupIds[0],
+            TimberbornFertilizeToolButtonResources.FallbackImageNames[0],
             "WildfireFertilizeFieldsTool")
     {
     }
@@ -38,8 +56,8 @@ public sealed class TimberbornFertilizeForestryToolButton : TimberbornFertilizeT
             toolButtonFactory,
             toolButtonService,
             toolGroupService,
-            "Forestry",
-            "ForestryPlantingToolGroupIcon",
+            TimberbornFertilizeToolButtonResources.ToolGroupIds[1],
+            TimberbornFertilizeToolButtonResources.FallbackImageNames[1],
             "WildfireFertilizeForestryTool")
     {
     }
@@ -47,8 +65,6 @@ public sealed class TimberbornFertilizeForestryToolButton : TimberbornFertilizeT
 
 public abstract class TimberbornFertilizeToolButton : IBottomBarElementsProvider
 {
-    private const string FertilizeToolIconResourceName =
-        "Wildfire.Timberborn.Assets.WildfireFertilizeToolIcon.png";
     private const string Tooltip = "Fertilize with fertile ash";
 
     private readonly TimberbornFertilizeTool _tool;
@@ -179,7 +195,7 @@ public abstract class TimberbornFertilizeToolButton : IBottomBarElementsProvider
         }
 
         _fertilizeToolIcon = TimberbornFertilizeToolButtonIcons.LoadToolIcon(
-            FertilizeToolIconResourceName,
+            TimberbornFertilizeToolButtonResources.FertilizeToolIconResourceName,
             "WildfireFertilizeToolIcon");
         return _fertilizeToolIcon;
     }

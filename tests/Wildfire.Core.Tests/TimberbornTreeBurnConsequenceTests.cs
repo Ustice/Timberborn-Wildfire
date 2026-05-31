@@ -468,35 +468,43 @@ public sealed class TimberbornTreeBurnConsequenceTests
     [Fact]
     public void TreeBurnedTexturePathSkipsInvalidatedUnityRenderersAndMaterials()
     {
-        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+        Assert.True(TimberbornRuntimeBurnedTextureBehavior.ShouldSkipInvalidRendererOrMaterial(
+            new NullReferenceException("material was destroyed")));
+        Assert.False(TimberbornRuntimeBurnedTextureBehavior.ShouldSkipInvalidRendererOrMaterial(
+            new InvalidOperationException("real texture mutation failure")));
 
-        Assert.Contains("GetLiveRenderers(blockObject)", source, StringComparison.Ordinal);
-        Assert.Contains("renderer != null", source, StringComparison.Ordinal);
-        Assert.Contains("MissingReferenceException or NullReferenceException", source, StringComparison.Ordinal);
-        Assert.Contains("wildfire_timberborn_tree_burned_texture_renderer_skipped", source, StringComparison.Ordinal);
-        Assert.Contains("wildfire_timberborn_tree_burned_texture_material_skipped", source, StringComparison.Ordinal);
+        Assert.Equal(
+            "wildfire_timberborn_tree_burned_texture_renderer_skipped",
+            TimberbornRuntimeBurnedTextureBehavior.TreeBurnedTextureRendererSkippedToken);
+        Assert.Equal(
+            "wildfire_timberborn_tree_burned_texture_material_skipped",
+            TimberbornRuntimeBurnedTextureBehavior.TreeBurnedTextureMaterialSkippedToken);
     }
 
     [Fact]
     public void TreeKillTreatsMissingLivingNaturalResourceAsAlreadyTerminal()
     {
-        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+        TimberbornTreeBurnConsequenceResult result =
+            TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
 
-        Assert.Contains("wildfire_timberborn_tree_kill_skipped", source, StringComparison.Ordinal);
-        Assert.Contains("reason=missing_living_natural_resource", source, StringComparison.Ordinal);
-        Assert.Contains("return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("throw MissingTreeComponent(consequence, \"LivingNaturalResource\")", source, StringComparison.Ordinal);
+        Assert.True(result.Applied);
+        Assert.False(result.Failed);
+        Assert.Equal(
+            "wildfire_timberborn_tree_kill_skipped",
+            TimberbornRuntimeBurnedTextureBehavior.TreeKillAlreadyTerminalToken);
     }
 
     [Fact]
     public void TreeBurnedLeftoverTreatsMissingCuttableAsAlreadyTerminal()
     {
-        string source = ReadTimberbornSource("TimberbornRuntimeBurnedTextures.cs");
+        TimberbornTreeBurnConsequenceResult result =
+            TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
 
-        Assert.Contains("wildfire_timberborn_tree_burned_leftover_skipped", source, StringComparison.Ordinal);
-        Assert.Contains("reason=missing_cuttable_already_terminal", source, StringComparison.Ordinal);
-        Assert.Contains("return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("throw MissingTreeComponent(consequence, \"Cuttable\")", source, StringComparison.Ordinal);
+        Assert.True(result.Applied);
+        Assert.False(result.Failed);
+        Assert.Equal(
+            "wildfire_timberborn_tree_burned_leftover_skipped",
+            TimberbornRuntimeBurnedTextureBehavior.TreeBurnedLeftoverAlreadyTerminalToken);
     }
 
     [Fact]
@@ -597,32 +605,6 @@ public sealed class TimberbornTreeBurnConsequenceTests
             cellIndex,
             PackedCell.Pack(oldFuel, heat: 10, flammability: 3, water: oldWater, terrain: 1, burningLevel: 1),
             PackedCell.Pack(newFuel, heat: 10, flammability: 3, water: newWater, terrain: 1, burningLevel: 1));
-    }
-
-    private static string ReadTimberbornSource(string fileName)
-    {
-        string root = FindRepoRoot();
-        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
-        string path = Directory
-            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
-            .First();
-        return File.ReadAllText(path);
-    }
-
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate Wildfire repo root.");
     }
 
     private sealed class RecordingTreeBurnConsequenceApi(

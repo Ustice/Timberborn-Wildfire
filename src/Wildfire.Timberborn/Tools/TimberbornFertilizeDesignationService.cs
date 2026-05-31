@@ -23,6 +23,98 @@ public readonly record struct TimberbornFertilizeDesignationSummary(
     int LastNoInventoryCount,
     int LastSkippedCount);
 
+public enum TimberbornFertilizeDesignationApplicationOutcome
+{
+    Apply,
+    SkipInvalidCell,
+    SkipUnresolvedApplicationCell,
+    BlockTaintedAsh,
+    WaitForInventory,
+}
+
+public enum TimberbornFertilizeInventorySourceKind
+{
+    GoodStack,
+    SimpleOutputInventory,
+}
+
+public readonly record struct TimberbornFertilizeDesignationApplicationDecision(
+    TimberbornFertilizeDesignationApplicationOutcome Outcome,
+    int? ApplicationCellIndex,
+    bool ShouldConsumeInventory,
+    bool ShouldApplyFertileAsh);
+
+public static class TimberbornFertilizeDesignationRules
+{
+    public const string InventoryScanSkippedLogToken = "wildfire_fertilize_inventory_scan_skipped";
+
+    public static readonly IReadOnlyList<TimberbornFertilizeInventorySourceKind> SupportedInventorySourceKinds =
+        new[]
+        {
+            TimberbornFertilizeInventorySourceKind.GoodStack,
+            TimberbornFertilizeInventorySourceKind.SimpleOutputInventory,
+        };
+
+    public static TimberbornFertilizeDesignationApplicationDecision DecideApplication(
+        int cellIndex,
+        int cellCount,
+        int? applicationCellIndex,
+        bool applicationCellIsTainted,
+        bool hasNearbyUnreservedFertileAsh)
+    {
+        if (cellIndex < 0 || cellIndex >= cellCount)
+        {
+            return new TimberbornFertilizeDesignationApplicationDecision(
+                TimberbornFertilizeDesignationApplicationOutcome.SkipInvalidCell,
+                ApplicationCellIndex: null,
+                ShouldConsumeInventory: false,
+                ShouldApplyFertileAsh: false);
+        }
+
+        if (!applicationCellIndex.HasValue)
+        {
+            return new TimberbornFertilizeDesignationApplicationDecision(
+                TimberbornFertilizeDesignationApplicationOutcome.SkipUnresolvedApplicationCell,
+                ApplicationCellIndex: null,
+                ShouldConsumeInventory: false,
+                ShouldApplyFertileAsh: false);
+        }
+
+        if (applicationCellIsTainted)
+        {
+            return new TimberbornFertilizeDesignationApplicationDecision(
+                TimberbornFertilizeDesignationApplicationOutcome.BlockTaintedAsh,
+                applicationCellIndex,
+                ShouldConsumeInventory: false,
+                ShouldApplyFertileAsh: false);
+        }
+
+        if (!hasNearbyUnreservedFertileAsh)
+        {
+            return new TimberbornFertilizeDesignationApplicationDecision(
+                TimberbornFertilizeDesignationApplicationOutcome.WaitForInventory,
+                applicationCellIndex,
+                ShouldConsumeInventory: false,
+                ShouldApplyFertileAsh: false);
+        }
+
+        return new TimberbornFertilizeDesignationApplicationDecision(
+            TimberbornFertilizeDesignationApplicationOutcome.Apply,
+            applicationCellIndex,
+            ShouldConsumeInventory: true,
+            ShouldApplyFertileAsh: true);
+    }
+
+    public static bool ShouldUseInventory(bool hasFertileAshStock, bool hasUnreservedFertileAsh) =>
+        hasFertileAshStock && hasUnreservedFertileAsh;
+
+    public static string FormatInventoryScanSkippedWarning(Exception exception)
+    {
+        return $"{InventoryScanSkippedLogToken} " +
+            $"reason={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}";
+    }
+}
+
 public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, ISaveableSingleton, IUpdatableSingleton
 {
     public const int StrengthPerGood = TimberbornFertileAshCollectionService.StrengthPerGood;
@@ -187,7 +279,14 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
     {
         foreach (int cellIndex in designations)
         {
-            if (cellIndex < 0 || cellIndex >= grid.CellCount)
+            TimberbornFertilizeDesignationApplicationDecision decision =
+                TimberbornFertilizeDesignationRules.DecideApplication(
+                    cellIndex,
+                    grid.CellCount,
+                    applicationCellIndex: null,
+                    applicationCellIsTainted: false,
+                    hasNearbyUnreservedFertileAsh: false);
+            if (decision.Outcome == TimberbornFertilizeDesignationApplicationOutcome.SkipInvalidCell)
             {
                 skipped++;
                 continue;
@@ -195,11 +294,23 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
 
             if (!_fireRuntime.TryResolveFertileAshApplicationCell(cellIndex, out int applicationCellIndex))
             {
+                decision = TimberbornFertilizeDesignationRules.DecideApplication(
+                    cellIndex,
+                    grid.CellCount,
+                    applicationCellIndex: null,
+                    applicationCellIsTainted: false,
+                    hasNearbyUnreservedFertileAsh: false);
                 skipped++;
                 continue;
             }
 
-            if (_fireRuntime.IsCellTaintedAsh(applicationCellIndex))
+            decision = TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex,
+                grid.CellCount,
+                applicationCellIndex,
+                applicationCellIsTainted: _fireRuntime.IsCellTaintedAsh(applicationCellIndex),
+                hasNearbyUnreservedFertileAsh: false);
+            if (decision.Outcome == TimberbornFertilizeDesignationApplicationOutcome.BlockTaintedAsh)
             {
                 taintedBlocked++;
                 continue;
@@ -207,7 +318,13 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
 
             (int cx, int cy, int cz) = grid.FromIndex(applicationCellIndex);
             InventoryTarget? source = FindNearbyInventoryWithFertileAsh(inventories, cx, cy, cz);
-            if (source is null)
+            decision = TimberbornFertilizeDesignationRules.DecideApplication(
+                cellIndex,
+                grid.CellCount,
+                applicationCellIndex,
+                applicationCellIsTainted: false,
+                hasNearbyUnreservedFertileAsh: source.HasValue);
+            if (decision.Outcome == TimberbornFertilizeDesignationApplicationOutcome.WaitForInventory)
             {
                 noInventory++;
                 continue;
@@ -215,8 +332,17 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
 
             try
             {
-                source.Value.Inventory.Take(new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1));
-                _fireRuntime.ApplyPlayerFertileAshDesignation(applicationCellIndex, StrengthPerGood);
+                InventoryTarget inventoryTarget = source!.Value;
+                if (decision.ShouldConsumeInventory)
+                {
+                    inventoryTarget.Inventory.Take(new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1));
+                }
+
+                if (decision.ShouldApplyFertileAsh)
+                {
+                    _fireRuntime.ApplyPlayerFertileAshDesignation(decision.ApplicationCellIndex!.Value, StrengthPerGood);
+                }
+
                 applied++;
                 consumed++;
             }
@@ -244,12 +370,16 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
     {
         Inventory? inventory = null;
         int stableId = 0;
-        if (entity.TryGetComponent(out GoodStack goodStack))
+        if (TimberbornFertilizeDesignationRules.SupportedInventorySourceKinds.Contains(
+                TimberbornFertilizeInventorySourceKind.GoodStack) &&
+            entity.TryGetComponent(out GoodStack goodStack))
         {
             inventory = goodStack.Inventory;
             stableId = RuntimeHelpers.GetHashCode(goodStack);
         }
-        else if (entity.TryGetComponent(out SimpleOutputInventory simpleOutputInventory))
+        else if (TimberbornFertilizeDesignationRules.SupportedInventorySourceKinds.Contains(
+                TimberbornFertilizeInventorySourceKind.SimpleOutputInventory) &&
+            entity.TryGetComponent(out SimpleOutputInventory simpleOutputInventory))
         {
             inventory = simpleOutputInventory.Inventory;
             stableId = RuntimeHelpers.GetHashCode(simpleOutputInventory);
@@ -297,9 +427,7 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
         }
         catch (Exception exception)
         {
-            Debug.LogWarning(
-                "wildfire_fertilize_inventory_scan_skipped " +
-                $"reason={TimberbornQaCommandBridge.FormatToken(exception.GetType().Name)}");
+            Debug.LogWarning(TimberbornFertilizeDesignationRules.FormatInventoryScanSkippedWarning(exception));
             return null;
         }
     }
@@ -319,9 +447,9 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
                 return (dx * dx) + (dy * dy) + (dz * dz) <=
                     ApplicationRangeCells * ApplicationRangeCells;
             })
-            .Where(inv => inv.Inventory.Stock
-                .Any(static ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0) &&
-                HasUnreservedFertileAsh(inv.Inventory))
+            .Where(inv => TimberbornFertilizeDesignationRules.ShouldUseInventory(
+                HasFertileAshStock(inv.Inventory),
+                HasUnreservedFertileAsh(inv.Inventory)))
             .OrderBy(inv =>
             {
                 int dx = inv.Center.x - cx;
@@ -332,6 +460,9 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
             .Select(static inv => (InventoryTarget?)inv)
             .FirstOrDefault();
     }
+
+    private static bool HasFertileAshStock(Inventory inventory) =>
+        inventory.Stock.Any(static ga => ga.GoodId == TimberbornAshFieldService.FertileAshGoodId && ga.Amount > 0);
 
     private static bool HasUnreservedFertileAsh(Inventory inventory)
     {
