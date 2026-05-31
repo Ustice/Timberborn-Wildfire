@@ -17,6 +17,13 @@ export type TimberbornStartupResult = {
   wasRunningBeforeLaunch: boolean;
 };
 
+export type TimberbornStartupFailureKind =
+  | "duplicate_launch_refusal"
+  | "steam_frontmost"
+  | "timberborn_process_exit"
+  | "timeout"
+  | "unknown";
+
 export type TimberbornStartupOptions = {
   activationPolicy: "best-effort" | "required" | "skip";
   activationRetryIntervalMs?: number;
@@ -25,6 +32,7 @@ export type TimberbornStartupOptions = {
   getFrontmostBundleId?: () => string | null;
   launchIntentGuard?: {
     dir: string;
+    failureCooldownMs?: number;
     nowMs?: () => number;
     ttlMs: number;
   };
@@ -44,8 +52,11 @@ const defaultActivationRetryTimeoutMs = 20_000;
 type LaunchIntentMetadata = {
   bundleId: string;
   createdAt: string;
+  failureDetail?: string;
+  failureKind?: TimberbornStartupFailureKind;
   pid: number;
   processName: string;
+  status: "open_bundle" | "startup_failure";
   timestampMs: number;
   ttlMs: number;
 };
@@ -122,8 +133,11 @@ const readLaunchIntentMetadata = (dir: string): LaunchIntentMetadata | null => {
       ? {
           bundleId: parsed.bundleId ?? "unknown",
           createdAt: parsed.createdAt,
+          failureDetail: typeof parsed.failureDetail === "string" ? parsed.failureDetail : undefined,
+          failureKind: isTimberbornStartupFailureKind(parsed.failureKind) ? parsed.failureKind : undefined,
           pid: parsed.pid ?? 0,
           processName: parsed.processName ?? "unknown",
+          status: parsed.status === "startup_failure" ? "startup_failure" : "open_bundle",
           timestampMs: parsed.timestampMs,
           ttlMs: parsed.ttlMs,
         }
@@ -138,6 +152,7 @@ const writeLaunchIntentMetadata = (
   dir: string,
   nowMs: number,
   ttlMs: number,
+  metadata?: Pick<LaunchIntentMetadata, "failureDetail" | "failureKind" | "status">,
 ): void => {
   writeFileSync(
     launchIntentMetadataPath(dir),
@@ -145,8 +160,11 @@ const writeLaunchIntentMetadata = (
       {
         bundleId: options.bundleId,
         createdAt: new Date(nowMs).toISOString(),
+        failureDetail: metadata?.failureDetail,
+        failureKind: metadata?.failureKind,
         pid: process.pid,
         processName: options.processName,
+        status: metadata?.status ?? "open_bundle",
         timestampMs: nowMs,
         ttlMs,
       } satisfies LaunchIntentMetadata,
@@ -166,6 +184,84 @@ const launchIntentAgeMs = (dir: string, nowMs: number, metadata: LaunchIntentMet
   } catch {
     return null;
   }
+};
+
+const isTimberbornStartupFailureKind = (value: unknown): value is TimberbornStartupFailureKind =>
+  value === "duplicate_launch_refusal" ||
+  value === "steam_frontmost" ||
+  value === "timberborn_process_exit" ||
+  value === "timeout" ||
+  value === "unknown";
+
+const classifyFromFrontmostBundleId = (
+  frontmostBundleId: string | null | undefined,
+): TimberbornStartupFailureKind | null =>
+  frontmostBundleId === "com.valvesoftware.steam" ? "steam_frontmost" : null;
+
+export const classifyTimberbornStartupFailure = (input: {
+  bundleId: string;
+  frontmostBundleId?: string | null;
+  message: string;
+  processRunning?: boolean;
+}): TimberbornStartupFailureKind => {
+  if (input.message.includes("Refusing duplicate Timberborn launch intent")) {
+    return "duplicate_launch_refusal";
+  }
+
+  if (input.message.includes("Timed out waiting for") && input.message.includes("to start")) {
+    return "timeout";
+  }
+
+  if (input.processRunning === false) {
+    return "timberborn_process_exit";
+  }
+
+  const frontmostClassification = classifyFromFrontmostBundleId(input.frontmostBundleId);
+  if (frontmostClassification !== null) {
+    return frontmostClassification;
+  }
+
+  if (
+    input.message.includes("frontmost_bundle_id=com.valvesoftware.steam") ||
+    input.message.includes("frontmost_bundle_id=com.valvesoftware.steam.")
+  ) {
+    return "steam_frontmost";
+  }
+
+  if (
+    input.message.includes(`Timed out waiting for`) ||
+    input.message.includes("missing Player.log evidence") ||
+    input.message.includes("Timed out waiting for command status outbox")
+  ) {
+    return "timeout";
+  }
+
+  return "unknown";
+};
+
+export const recordLaunchIntentFailure = (
+  options: TimberbornStartupOptions,
+  failureKind: TimberbornStartupFailureKind,
+  detail: string,
+): void => {
+  const guard = options.launchIntentGuard;
+  if (guard === undefined || failureKind === "duplicate_launch_refusal") {
+    return;
+  }
+
+  const nowMs = guard.nowMs?.() ?? Date.now();
+  const cooldownMs = Math.max(guard.failureCooldownMs ?? guard.ttlMs, guard.ttlMs);
+  mkdirSync(dirname(guard.dir), { recursive: true });
+  rmSync(guard.dir, { force: true, recursive: true });
+  mkdirSync(guard.dir);
+  writeLaunchIntentMetadata(options, guard.dir, nowMs, cooldownMs, {
+    failureDetail: compactLogToken(detail).slice(0, 240),
+    failureKind,
+    status: "startup_failure",
+  });
+  options.log?.(
+    `launch_intent_failure_recorded failure_kind=${failureKind} path=${compactLogToken(guard.dir)} cooldown_ms=${cooldownMs}`,
+  );
 };
 
 const acquireLaunchIntentGuard = (options: TimberbornStartupOptions): void => {
@@ -192,8 +288,9 @@ const acquireLaunchIntentGuard = (options: TimberbornStartupOptions): void => {
   const ageMs = launchIntentAgeMs(guard.dir, nowMs, metadata);
   const activeTtlMs = Math.max(metadata?.ttlMs ?? guard.ttlMs, guard.ttlMs);
   if (ageMs === null || ageMs <= activeTtlMs) {
+    const failureSuffix = metadata?.failureKind === undefined ? "" : ` existing_failure_kind=${metadata.failureKind}`;
     options.log?.(
-      `launch_intent_duplicate_refused action=open_bundle path=${compactLogToken(guard.dir)} age_ms=${ageMs ?? "unknown"} ttl_ms=${activeTtlMs} existing_pid=${metadata?.pid ?? "unknown"}`,
+      `launch_intent_duplicate_refused action=open_bundle path=${compactLogToken(guard.dir)} age_ms=${ageMs ?? "unknown"} ttl_ms=${activeTtlMs} existing_pid=${metadata?.pid ?? "unknown"}${failureSuffix}`,
     );
     throw new Error(
       `Refusing duplicate Timberborn launch intent: a recent open -b ${options.bundleId} was recorded ${ageMs ?? "unknown"}ms ago at ${guard.dir}. Wait for that startup attempt to settle or use --attach once Timberborn is running.`,
@@ -230,12 +327,22 @@ const maybeActivateTimberborn = (
     options.log?.(`activation_result label=${label} status=activated`);
     return "activated";
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const frontmostBundleId = message.match(/frontmost_bundle_id=([^\s]+)/u)?.[1]?.replace(/[.;,]+$/u, "");
+    const failureKind = classifyTimberbornStartupFailure({
+      bundleId: options.bundleId,
+      frontmostBundleId,
+      message,
+      processRunning: true,
+    });
     if (options.activationPolicy === "required") {
+      options.log?.(`activation_failed label=${label} failure_kind=${failureKind} error=${compactLogToken(message)}`);
+      recordLaunchIntentFailure(options, failureKind, message);
       throw error;
     }
 
-    const message = error instanceof Error ? error.message : String(error);
-    options.log?.(`activation_pending label=${label} error=${compactLogToken(message)}`);
+    options.log?.(`activation_pending label=${label} failure_kind=${failureKind} error=${compactLogToken(message)}`);
+    recordLaunchIntentFailure(options, failureKind, message);
     return "failed";
   }
 };
@@ -278,6 +385,9 @@ export const launchOrAttachTimberborn = async (
     if (isTimberbornRunning(options.run, options.processName)) {
       const activationStatus = maybeActivateTimberborn(options, "launch");
       options.log?.("timberborn_running=true");
+      options.log?.(
+        `startup_success process_running=true launched=${launched} was_running_before_launch=${wasRunningBeforeLaunch} activation_status=${activationStatus}`,
+      );
       return {
         activationStatus,
         launched,
@@ -293,5 +403,9 @@ export const launchOrAttachTimberborn = async (
   options.log?.(
     `timberborn_startup_timeout process_running=false launched=${launched} was_running_before_launch=${wasRunningBeforeLaunch}`,
   );
+  options.log?.(
+    `startup_failure failure_kind=timeout process_running=false launched=${launched} was_running_before_launch=${wasRunningBeforeLaunch}`,
+  );
+  recordLaunchIntentFailure(options, "timeout", `Timed out waiting for ${options.processName} to start.`);
   throw new Error(`Timed out waiting for ${options.processName} to start.`);
 };

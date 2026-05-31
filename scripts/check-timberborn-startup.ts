@@ -10,7 +10,12 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, resolve } from "path";
-import { launchOrAttachTimberborn } from "./lib/timberborn-startup.ts";
+import {
+  classifyTimberbornStartupFailure,
+  isTimberbornRunning,
+  launchOrAttachTimberborn,
+  recordLaunchIntentFailure,
+} from "./lib/timberborn-startup.ts";
 
 type Mode = "attach" | "launch";
 type ScreenshotMode = "always" | "failure" | "never";
@@ -265,6 +270,56 @@ const run = (command: string, args: string[]): { exitCode: number; stderr: strin
     stderr: result.stderr.toString(),
     stdout: result.stdout.toString(),
   };
+};
+
+const getFrontmostBundleId = (): string | null => {
+  const result = run("osascript", [
+    "-e",
+    'tell application "System Events" to get bundle identifier of first application process whose frontmost is true',
+  ]);
+
+  return result.exitCode === 0 ? result.stdout.trim() || null : null;
+};
+
+const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
+
+const launchIntentGuardFor = (options: StartupOptions) => ({
+  dir: launchIntentGuardDir,
+  failureCooldownMs: Math.max(120_000, options.waitSeconds * 1000),
+  ttlMs: Math.max(60_000, options.waitSeconds * 1000),
+});
+
+const recordStartupFailure = (options: StartupOptions, error: unknown): void => {
+  const message = error instanceof Error ? error.message : String(error);
+  const processRunning = isTimberbornRunning(run, processName);
+  const frontmostBundleId = getFrontmostBundleId() ?? "unknown";
+  const failureKind = classifyTimberbornStartupFailure({
+    bundleId,
+    frontmostBundleId,
+    message,
+    processRunning,
+  });
+
+  log(
+    `startup_failure failure_kind=${failureKind} process_running=${processRunning} frontmost_bundle_id=${frontmostBundleId} error=${compactLogToken(message)}`,
+  );
+
+  if (options.mode === "launch") {
+    recordLaunchIntentFailure(
+      {
+        activationPolicy: "required",
+        bundleId,
+        launchIntentGuard: launchIntentGuardFor(options),
+        log,
+        mode: options.mode,
+        processName,
+        run,
+        waitSeconds: options.waitSeconds,
+      },
+      failureKind,
+      message,
+    );
+  }
 };
 
 const readLock = (): string => {
@@ -547,12 +602,8 @@ const main = async (): Promise<void> => {
     await launchOrAttachTimberborn({
       activationPolicy: "required",
       bundleId,
-      launchIntentGuard: options.mode === "launch"
-        ? {
-            dir: launchIntentGuardDir,
-            ttlMs: Math.max(60_000, options.waitSeconds * 1000),
-          }
-        : undefined,
+      getFrontmostBundleId,
+      launchIntentGuard: options.mode === "launch" ? launchIntentGuardFor(options) : undefined,
       log,
       mode: options.mode,
       processName,
@@ -589,6 +640,7 @@ const main = async (): Promise<void> => {
 
     log("startup_evidence_complete");
   } catch (error) {
+    recordStartupFailure(options, error);
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   } finally {
