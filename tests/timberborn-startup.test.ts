@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { launchOrAttachTimberborn, type ShellResult } from "../scripts/lib/timberborn-startup.ts";
+import {
+  launchOrAttachTimberborn,
+  recordLaunchIntentFailure,
+  type ShellResult,
+  type TimberbornStartupOptions,
+} from "../scripts/lib/timberborn-startup.ts";
 
 type Call = {
   args: string[];
@@ -10,12 +15,17 @@ type Call = {
 };
 
 type ShellHandler = (call: Call) => ShellResult;
+type ShellStub = ShellHandler | ShellResult[];
 
 const success = (stdout = ""): ShellResult => ({ exitCode: 0, stderr: "", stdout });
 const failure = (stderr = ""): ShellResult => ({ exitCode: 1, stderr, stdout: "" });
 
-const createRunner = (handler: ShellHandler) => {
+const createRunner = (stub: ShellStub) => {
   const calls: Call[] = [];
+  const handler: ShellHandler = Array.isArray(stub)
+    ? () => stub[Math.min(calls.length - 1, stub.length - 1)] ?? success()
+    : stub;
+
   return {
     calls,
     run: (command: string, args: string[]): ShellResult => {
@@ -71,6 +81,22 @@ const startupOptions = (run: (command: string, args: string[]) => ShellResult) =
   sleepMs: async () => undefined,
   sleepSyncMs: () => undefined,
   waitSeconds: 1,
+});
+
+const guardedStartupOptions = (
+  run: (command: string, args: string[]) => ShellResult,
+  guardDir: string,
+  nowMs: () => number,
+): TimberbornStartupOptions => ({
+  ...startupOptions(run),
+  activationPolicy: "best-effort",
+  launchIntentGuard: {
+    dir: guardDir,
+    failureCooldownMs: 120_000,
+    nowMs,
+    ttlMs: 60_000,
+  },
+  mode: "launch",
 });
 
 const withTempDir = async <T>(callback: (dir: string) => Promise<T> | T): Promise<T> => {
@@ -317,6 +343,103 @@ describe("timberborn startup contract", () => {
     expect(result.launched).toBe(false);
     expect(commandCalls(runner.calls, "osascript").length).toBeGreaterThan(1);
     expect(commandCalls(runner.calls, "open")).toHaveLength(0);
+  });
+
+  test("Steam-frontmost activation failure records a launch cooldown", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      let nowMs = 1_000;
+      const runner = createRunner([failure(), success(), success("123\n"), success(), success()]);
+      const logs: string[] = [];
+
+      const result = await launchOrAttachTimberborn({
+        ...guardedStartupOptions(runner.run, guardDir, () => nowMs),
+        getFrontmostBundleId: () => "com.valvesoftware.steam",
+        log: (message) => logs.push(message),
+      });
+
+      expect(result.activationStatus).toBe("failed");
+      expect(logs).toContain(
+        `launch_intent_failure_recorded failure_kind=steam_frontmost path=${guardDir} cooldown_ms=120000`,
+      );
+
+      nowMs = 31_000;
+      const retry = createRunner([failure()]);
+      await expect(
+        launchOrAttachTimberborn({
+          ...guardedStartupOptions(retry.run, guardDir, () => nowMs),
+          log: (message) => logs.push(message),
+        }),
+      ).rejects.toThrow("Refusing duplicate Timberborn launch intent");
+
+      expect(retry.calls.map((call) => call.command)).toEqual(["pgrep"]);
+      expect(logs).toContain(
+        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=30000 ttl_ms=120000 existing_pid=${process.pid} existing_failure_kind=steam_frontmost`,
+      );
+    });
+  });
+
+  test("process-exit failure extends retry cadence from the failure time", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      let nowMs = 62_000;
+      const logs: string[] = [];
+      const runner = createRunner([failure()]);
+      const options = {
+        ...guardedStartupOptions(runner.run, guardDir, () => nowMs),
+        log: (message: string) => logs.push(message),
+      };
+
+      mkdirSync(guardDir);
+      writeFileSync(
+        join(guardDir, "intent.json"),
+        `${JSON.stringify({
+          bundleId: "com.mechanistry.timberborn",
+          createdAt: new Date(1_000).toISOString(),
+          pid: 123,
+          processName: "Timberborn",
+          status: "open_bundle",
+          timestampMs: 1_000,
+          ttlMs: 60_000,
+        })}\n`,
+      );
+
+      recordLaunchIntentFailure(options, "timberborn_process_exit", "process exited before startup completed");
+      expect(logs).toContain(
+        `launch_intent_failure_recorded failure_kind=timberborn_process_exit path=${guardDir} cooldown_ms=120000`,
+      );
+
+      nowMs = 121_000;
+      await expect(launchOrAttachTimberborn(options)).rejects.toThrow("Refusing duplicate Timberborn launch intent");
+
+      expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
+      expect(logs).toContain(
+        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=59000 ttl_ms=120000 existing_pid=${process.pid} existing_failure_kind=timberborn_process_exit`,
+      );
+    });
+  });
+
+  test("launch timeout records a distinct timeout failure", async () => {
+    await withTempDir(async (dir) => {
+      const guardDir = join(dir, "timberborn-launch-intent");
+      const runner = createRunner([failure(), success(), failure()]);
+      const logs: string[] = [];
+
+      await expect(
+        launchOrAttachTimberborn({
+          ...guardedStartupOptions(runner.run, guardDir, () => 1_000),
+          log: (message) => logs.push(message),
+          waitSeconds: 0,
+        }),
+      ).rejects.toThrow("Timed out waiting for Timberborn to start");
+
+      expect(logs).toContain(
+        "startup_failure failure_kind=timeout process_running=false launched=true was_running_before_launch=false",
+      );
+      expect(logs).toContain(
+        `launch_intent_failure_recorded failure_kind=timeout path=${guardDir} cooldown_ms=120000`,
+      );
+    });
   });
 
   test("attach mode fails clearly when Timberborn is absent", async () => {

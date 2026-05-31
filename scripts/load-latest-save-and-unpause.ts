@@ -4,7 +4,12 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync,
 import { dirname, join, resolve } from "path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 import { fileURLToPath } from "url";
-import { isTimberbornRunning, launchOrAttachTimberborn } from "./lib/timberborn-startup.ts";
+import {
+  classifyTimberbornStartupFailure,
+  isTimberbornRunning,
+  launchOrAttachTimberborn,
+  recordLaunchIntentFailure,
+} from "./lib/timberborn-startup.ts";
 
 type Mode = "attach" | "launch";
 type ScreenKind = "experimental-mode" | "loaded-save" | "main-menu" | "startup-mods" | "unknown";
@@ -573,6 +578,46 @@ const getFrontmostBundleId = (): string | null => {
   return result.exitCode === 0 ? result.stdout.trim() || null : null;
 };
 
+const launchIntentGuardFor = (options: Options) => ({
+  dir: launchIntentGuardDir,
+  failureCooldownMs: Math.max(120_000, options.waitSeconds * 1000),
+  ttlMs: Math.max(60_000, options.waitSeconds * 1000),
+});
+
+const recordStartupFailure = (options: Options, error: unknown): void => {
+  const message = error instanceof Error ? error.message : String(error);
+  const processRunning = isTimberbornRunning(run, processName);
+  const frontmostBundleId = getFrontmostBundleId() ?? "unknown";
+  const failureKind = classifyTimberbornStartupFailure({
+    bundleId,
+    frontmostBundleId,
+    message,
+    processRunning,
+  });
+
+  log(
+    `startup_failure failure_kind=${failureKind} process_running=${processRunning} frontmost_bundle_id=${frontmostBundleId} error=${compactLogToken(message)}`,
+  );
+
+  if (options.mode === "launch") {
+    recordLaunchIntentFailure(
+      {
+        activationPolicy: "best-effort",
+        bundleId,
+        getFrontmostBundleId,
+        launchIntentGuard: launchIntentGuardFor(options),
+        log,
+        mode: options.mode,
+        processName,
+        run,
+        waitSeconds: options.waitSeconds,
+      },
+      failureKind,
+      message,
+    );
+  }
+};
+
 const assertTimberbornForeground = (label: string): void => {
   const frontmostBundleId = getFrontmostBundleId() ?? "unknown";
   if (frontmostBundleId !== bundleId) {
@@ -718,12 +763,7 @@ const launchOrAttach = async (options: Options): Promise<void> => {
     activationRetryTimeoutMs,
     bundleId,
     getFrontmostBundleId,
-    launchIntentGuard: options.mode === "launch"
-      ? {
-          dir: launchIntentGuardDir,
-          ttlMs: Math.max(60_000, options.waitSeconds * 1000),
-        }
-      : undefined,
+    launchIntentGuard: options.mode === "launch" ? launchIntentGuardFor(options) : undefined,
     log,
     mode: options.mode,
     processName,
@@ -1620,6 +1660,9 @@ const main = async (): Promise<void> => {
       writeSummary(artifactDir, options, observedScreens, result.postStatus, "classifier");
     }
     log("latest_save_startup_complete");
+  } catch (error) {
+    recordStartupFailure(options, error);
+    throw error;
   } finally {
     releaseLock();
   }
