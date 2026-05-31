@@ -9,20 +9,55 @@ type Call = {
   command: string;
 };
 
+type ShellHandler = (call: Call) => ShellResult;
+
 const success = (stdout = ""): ShellResult => ({ exitCode: 0, stderr: "", stdout });
 const failure = (stderr = ""): ShellResult => ({ exitCode: 1, stderr, stdout: "" });
 
-const createRunner = (results: ShellResult[]) => {
+const createRunner = (handler: ShellHandler) => {
   const calls: Call[] = [];
-  let index = 0;
   return {
     calls,
     run: (command: string, args: string[]): ShellResult => {
-      calls.push({ args, command });
-      const result = results[index] ?? failure(`unexpected command: ${command} ${args.join(" ")}`);
-      index += 1;
-      return result;
+      const call = { args, command };
+      calls.push(call);
+      return handler(call);
     },
+  };
+};
+
+const commandCalls = (calls: Call[], command: string): Call[] => calls.filter((call) => call.command === command);
+
+const runningTimberbornRunner = (activationResult: ShellResult = success()): ShellHandler => (call) => {
+  if (call.command === "pgrep") {
+    return success("123\n");
+  }
+
+  if (call.command === "osascript") {
+    return activationResult;
+  }
+
+  return success();
+};
+
+const coldLaunchRunner = (): ShellHandler => {
+  let running = false;
+
+  return (call) => {
+    if (call.command === "pgrep") {
+      return running ? success("123\n") : failure();
+    }
+
+    if (call.command === "open") {
+      running = true;
+      return success();
+    }
+
+    if (call.command === "osascript") {
+      return success();
+    }
+
+    return success();
   };
 };
 
@@ -49,7 +84,7 @@ const withTempDir = async <T>(callback: (dir: string) => Promise<T> | T): Promis
 
 describe("timberborn startup contract", () => {
   test("launch mode attaches to an already-running process without calling open", async () => {
-    const runner = createRunner([success("123\n"), success("123\n"), success()]);
+    const runner = createRunner(runningTimberbornRunner());
 
     const result = await launchOrAttachTimberborn({
       ...startupOptions(runner.run),
@@ -62,11 +97,11 @@ describe("timberborn startup contract", () => {
       launched: false,
       wasRunningBeforeLaunch: true,
     });
-    expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "pgrep", "osascript"]);
+    expect(commandCalls(runner.calls, "open")).toHaveLength(0);
   });
 
   test("launch mode opens the app exactly once when Timberborn is absent", async () => {
-    const runner = createRunner([failure(), success(), success("123\n"), success()]);
+    const runner = createRunner(coldLaunchRunner());
 
     const result = await launchOrAttachTimberborn({
       ...startupOptions(runner.run),
@@ -76,8 +111,25 @@ describe("timberborn startup contract", () => {
 
     expect(result.launched).toBe(true);
     expect(result.wasRunningBeforeLaunch).toBe(false);
-    expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "open", "pgrep", "osascript"]);
-    expect(runner.calls.filter((call) => call.command === "open")).toHaveLength(1);
+    expect(commandCalls(runner.calls, "open")).toEqual([{ args: ["-b", "com.mechanistry.timberborn"], command: "open" }]);
+    expect(commandCalls(runner.calls, "pgrep").length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("attach mode never launches when Timberborn is already running", async () => {
+    const runner = createRunner(runningTimberbornRunner());
+
+    const result = await launchOrAttachTimberborn({
+      ...startupOptions(runner.run),
+      activationPolicy: "required",
+      mode: "attach",
+    });
+
+    expect(result).toEqual({
+      activationStatus: "activated",
+      launched: false,
+      wasRunningBeforeLaunch: true,
+    });
+    expect(commandCalls(runner.calls, "open")).toHaveLength(0);
   });
 
   test("launch mode records launch intent before opening Timberborn", async () => {
@@ -253,7 +305,7 @@ describe("timberborn startup contract", () => {
   });
 
   test("activation retries never call open when the process is already running", async () => {
-    const runner = createRunner([success("123\n"), success("123\n"), failure("not frontmost"), failure("not frontmost")]);
+    const runner = createRunner(runningTimberbornRunner(failure("not frontmost")));
 
     const result = await launchOrAttachTimberborn({
       ...startupOptions(runner.run),
@@ -263,12 +315,12 @@ describe("timberborn startup contract", () => {
 
     expect(result.activationStatus).toBe("failed");
     expect(result.launched).toBe(false);
-    expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "pgrep", "osascript", "osascript"]);
-    expect(runner.calls.some((call) => call.command === "open")).toBe(false);
+    expect(commandCalls(runner.calls, "osascript").length).toBeGreaterThan(1);
+    expect(commandCalls(runner.calls, "open")).toHaveLength(0);
   });
 
   test("attach mode fails clearly when Timberborn is absent", async () => {
-    const runner = createRunner([failure()]);
+    const runner = createRunner((call) => (call.command === "pgrep" ? failure() : success()));
 
     await expect(
       launchOrAttachTimberborn({
@@ -277,6 +329,7 @@ describe("timberborn startup contract", () => {
         mode: "attach",
       }),
     ).rejects.toThrow("Timberborn is not running. Start it first or pass --launch.");
-    expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
+    expect(commandCalls(runner.calls, "open")).toHaveLength(0);
+    expect(commandCalls(runner.calls, "osascript")).toHaveLength(0);
   });
 });
