@@ -65,9 +65,9 @@ type ScenarioCheckpoint = {
   coordinate: Coordinate;
   expectedCellMaterialClass: MaterialClass;
   expectedPackedCellBand: {
+    burningLevel: number;
     flammability: number;
     fuel: number;
-    heatLoss: number;
     terrain: number;
     water: number;
   };
@@ -619,9 +619,9 @@ const cellMaterialClassFor = (request: EntityRequest): MaterialClass =>
     : sourceMaterialClassByCategory[request.category] ?? "unknown";
 
 const expectedBandFor = (profile: MaterialFieldProfile): ScenarioCheckpoint["expectedPackedCellBand"] => ({
+  burningLevel: 0,
   flammability: profile.flammability,
   fuel: profile.fuel,
-  heatLoss: profile.heatLoss,
   terrain: profile.terrain,
   water: profile.water,
 });

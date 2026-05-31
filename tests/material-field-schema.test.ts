@@ -3,10 +3,12 @@ import { describe, expect, test } from "bun:test";
 import { loadMaterialFieldSchema, lookupMaterialProfile } from "../scripts/material-field-schema.ts";
 
 describe("material field schema", () => {
-  test("loads every v1 material class exactly once", () => {
+  test("loads every v1 material class exactly once without relying on profile order", () => {
     const schema = loadMaterialFieldSchema();
+    const materialClasses = schema.profiles.map((profile) => profile.materialClass);
 
-    expect(schema.profiles.map((profile) => profile.materialClass)).toEqual([
+    expect(schema.indexOrder).toBe("x + y * width + z * width * height");
+    expect(new Set(materialClasses)).toEqual(new Set([
       "empty",
       "terrain",
       "vegetation",
@@ -18,7 +20,8 @@ describe("material field schema", () => {
       "water",
       "badwater",
       "unknown",
-    ]);
+    ]));
+    expect(materialClasses.length).toBe(new Set(materialClasses).size);
   });
 
   test("keeps unknown material fail-closed", () => {
