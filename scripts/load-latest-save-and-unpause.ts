@@ -10,6 +10,11 @@ import {
   launchOrAttachTimberborn,
   recordLaunchIntentFailure,
 } from "./lib/timberborn-startup.ts";
+import {
+  errorReportInventory,
+  type ErrorReportInventoryEntry,
+  writeStartupExitDiagnosticsBundle,
+} from "./lib/timberborn-startup-diagnostics.ts";
 
 type Mode = "attach" | "launch";
 type ScreenKind = "experimental-mode" | "loaded-save" | "main-menu" | "startup-mods" | "unknown";
@@ -109,6 +114,7 @@ const lockDir = join(home, "Library", "Application Support", "Timberborn", "Wild
 const lockInfoPath = join(lockDir, "lock.json");
 const launchIntentGuardDir = join(dirname(lockDir), "timberborn-launch-intent");
 const playerLogDefault = join(home, "Library", "Logs", "Mechanistry", "Timberborn", "Player.log");
+const errorReportDir = join(home, "Documents", "Timberborn", "Error reports");
 const coordinateGuidePath = join(repoRoot, "docs", "timberborn-menu-coordinate-guide.md");
 const inboxFileName = "command-inbox.txt";
 const outboxFileName = "command-outbox.txt";
@@ -584,7 +590,12 @@ const launchIntentGuardFor = (options: Options) => ({
   ttlMs: Math.max(60_000, options.waitSeconds * 1000),
 });
 
-const recordStartupFailure = (options: Options, error: unknown): void => {
+const recordStartupFailure = (
+  options: Options,
+  artifactDir: string,
+  beforeErrorReports: ErrorReportInventoryEntry[],
+  error: unknown,
+): void => {
   const message = error instanceof Error ? error.message : String(error);
   const processRunning = isTimberbornRunning(run, processName);
   const frontmostBundleId = getFrontmostBundleId() ?? "unknown";
@@ -615,6 +626,26 @@ const recordStartupFailure = (options: Options, error: unknown): void => {
       failureKind,
       message,
     );
+  }
+
+  const diagnosticsBundle = writeStartupExitDiagnosticsBundle({
+    afterErrorReports: errorReportInventory(errorReportDir),
+    artifactDir,
+    beforeErrorReports,
+    errorReportDir,
+    failureKind,
+    frontmostBundleId,
+    launchIntentGuardDir,
+    message,
+    playerLogPath: options.playerLogPath,
+    processName,
+    processRunning,
+    run,
+  });
+  if (diagnosticsBundle !== null) {
+    log(`startup_exit_diagnostics_summary=${diagnosticsBundle.summaryPath}`);
+    log(`startup_exit_diagnostics_process_snapshot=${diagnosticsBundle.processSnapshotPath}`);
+    log(`startup_exit_diagnostics_player_log_scan=${diagnosticsBundle.playerLogScanPath}`);
   }
 };
 
@@ -1643,6 +1674,7 @@ const main = async (): Promise<void> => {
   const releaseLock = acquireLock(options);
   const artifactDir = createArtifactDir(options);
   const observedScreens: ScreenKind[] = [];
+  const beforeErrorReports = errorReportInventory(errorReportDir);
 
   try {
     const wasRunningBeforeLaunch = isTimberbornRunning(run, processName);
@@ -1661,7 +1693,7 @@ const main = async (): Promise<void> => {
     }
     log("latest_save_startup_complete");
   } catch (error) {
-    recordStartupFailure(options, error);
+    recordStartupFailure(options, artifactDir, beforeErrorReports, error);
     throw error;
   } finally {
     releaseLock();
