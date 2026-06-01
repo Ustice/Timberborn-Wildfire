@@ -140,7 +140,7 @@ const usage = `Usage:
   bun scripts/load-latest-save-and-unpause.ts [options]
 
 Modes:
-  --launch                  Launch Timberborn by bundle id if needed. Default.
+  --launch                  Launch Timberborn by app name if needed. Default.
   --attach                  Require Timberborn to already be running.
 
 Options:
@@ -168,7 +168,7 @@ Examples:
 
 Default startup behavior:
   --launch uses the signal-driven cold-start path: sample frames, waits for Timberborn CPU to settle before each input, presses each startup gate once, clicks only the documented main.continue coordinate, then gives the game 20 seconds to reach the loaded-save HUD before failing.
-  --launch records a short-lived Timberborn launch intent before calling open -b, and refuses a second bundle-open request during the startup wait window. Use --attach once a controller already has Timberborn running.
+  --launch records a short-lived Timberborn launch intent before calling open -a Timberborn, and refuses a second app-open request during the startup wait window. Use --attach once a controller already has Timberborn running.
   --attach uses the conservative classifier path for already-running Timberborn sessions.
 `;
 

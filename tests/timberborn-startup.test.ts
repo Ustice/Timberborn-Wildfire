@@ -141,7 +141,7 @@ describe("timberborn startup contract", () => {
 
     expect(result.launched).toBe(true);
     expect(result.wasRunningBeforeLaunch).toBe(false);
-    expect(commandCalls(runner.calls, "open")).toEqual([{ args: ["-b", "com.mechanistry.timberborn"], command: "open" }]);
+    expect(commandCalls(runner.calls, "open")).toEqual([{ args: ["-a", "Timberborn"], command: "open" }]);
     expect(commandCalls(runner.calls, "pgrep").length).toBeGreaterThanOrEqual(2);
   });
 
@@ -182,9 +182,9 @@ describe("timberborn startup contract", () => {
       expect(result.launched).toBe(true);
       expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "open", "pgrep", "osascript"]);
       expect(logs).toContain(
-        `launch_intent_recorded action=open_bundle path=${join(dir, "timberborn-launch-intent")} ttl_ms=60000`,
+        `launch_intent_recorded action=open_app path=${join(dir, "timberborn-launch-intent")} ttl_ms=60000`,
       );
-      expect(logs).toContain("startup_intent mode=launch timberborn_running=false action=open_bundle");
+      expect(logs).toContain("startup_intent mode=launch timberborn_running=false action=open_app");
     });
   });
 
@@ -224,7 +224,7 @@ describe("timberborn startup contract", () => {
       expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
       expect(runner.calls.some((call) => call.command === "open")).toBe(false);
       expect(logs).toContain(
-        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=1000 ttl_ms=60000 existing_pid=123`,
+        `launch_intent_duplicate_refused action=open_app path=${guardDir} age_ms=1000 ttl_ms=60000 existing_pid=123`,
       );
     });
   });
@@ -265,7 +265,7 @@ describe("timberborn startup contract", () => {
       expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
       expect(runner.calls.some((call) => call.command === "open")).toBe(false);
       expect(logs).toContain(
-        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=91000 ttl_ms=240000 existing_pid=123`,
+        `launch_intent_duplicate_refused action=open_app path=${guardDir} age_ms=91000 ttl_ms=240000 existing_pid=123`,
       );
     });
   });
@@ -329,7 +329,7 @@ describe("timberborn startup contract", () => {
       expect(result.launched).toBe(true);
       expect(runner.calls.map((call) => call.command)).toEqual(["pgrep", "open", "pgrep", "osascript"]);
       expect(logs).toContain(
-        `launch_intent_recorded action=open_bundle path=${guardDir} ttl_ms=60000 replaced_stale=true previous_age_ms=61000`,
+        `launch_intent_recorded action=open_app path=${guardDir} ttl_ms=60000 replaced_stale=true previous_age_ms=61000`,
       );
     });
   });
@@ -378,7 +378,7 @@ describe("timberborn startup contract", () => {
 
       expect(retry.calls.map((call) => call.command)).toEqual(["pgrep"]);
       expect(logs).toContain(
-        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=30000 ttl_ms=120000 existing_pid=${process.pid} existing_failure_kind=steam_frontmost`,
+        `launch_intent_duplicate_refused action=open_app path=${guardDir} age_ms=30000 ttl_ms=120000 existing_pid=${process.pid} existing_failure_kind=steam_frontmost`,
       );
     });
   });
@@ -402,7 +402,7 @@ describe("timberborn startup contract", () => {
           createdAt: new Date(1_000).toISOString(),
           pid: 123,
           processName: "Timberborn",
-          status: "open_bundle",
+          status: "open_app",
           timestampMs: 1_000,
           ttlMs: 60_000,
         })}\n`,
@@ -418,7 +418,7 @@ describe("timberborn startup contract", () => {
 
       expect(runner.calls.map((call) => call.command)).toEqual(["pgrep"]);
       expect(logs).toContain(
-        `launch_intent_duplicate_refused action=open_bundle path=${guardDir} age_ms=59000 ttl_ms=120000 existing_pid=${process.pid} existing_failure_kind=timberborn_process_exit`,
+        `launch_intent_duplicate_refused action=open_app path=${guardDir} age_ms=59000 ttl_ms=120000 existing_pid=${process.pid} existing_failure_kind=timberborn_process_exit`,
       );
     });
   });
@@ -498,7 +498,7 @@ describe("timberborn startup process-exit diagnostics", () => {
           createdAt: "2026-05-31T01:04:00.000Z",
           pid: 999,
           processName: "Timberborn",
-          status: "open_bundle",
+          status: "open_app",
           timestampMs: 1_000,
           ttlMs: 240_000,
         })}\n`,
@@ -544,7 +544,7 @@ describe("timberborn startup process-exit diagnostics", () => {
         failureKind?: string;
         status?: string;
       };
-      expect(launchIntent.status).toBe("open_bundle");
+      expect(launchIntent.status).toBe("open_app");
       expect(launchIntent.failureKind).toBeUndefined();
 
       const processSnapshot = readFileSync(bundle?.processSnapshotPath ?? "", "utf8");

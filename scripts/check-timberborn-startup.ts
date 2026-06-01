@@ -88,7 +88,7 @@ const usage = `Usage:
 
 Modes:
   --attach                  Require Timberborn to already be running. Default.
-  --launch                  Launch Timberborn by bundle id, then wait for startup evidence.
+  --launch                  Launch Timberborn by app name, then wait for startup evidence.
 
 Options:
   --wait <seconds>          Seconds to wait for required Player.log evidence. Default: 90.
@@ -111,7 +111,7 @@ Examples:
   bun scripts/check-timberborn-startup.ts --attach --require-command-status --wait=10
 
 Launch guard:
-  --launch records a short-lived Timberborn launch intent before calling open -b, and refuses a second bundle-open request during the startup wait window. Use --attach once a controller already has Timberborn running.
+  --launch records a short-lived Timberborn launch intent before calling open -a Timberborn, and refuses a second app-open request during the startup wait window. Use --attach once a controller already has Timberborn running.
 `;
 
 const log = (message: string): void => {

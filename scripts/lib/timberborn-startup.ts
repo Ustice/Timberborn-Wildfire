@@ -56,7 +56,7 @@ type LaunchIntentMetadata = {
   failureKind?: TimberbornStartupFailureKind;
   pid: number;
   processName: string;
-  status: "open_bundle" | "startup_failure";
+  status: "open_app" | "startup_failure";
   timestampMs: number;
   ttlMs: number;
 };
@@ -137,7 +137,7 @@ const readLaunchIntentMetadata = (dir: string): LaunchIntentMetadata | null => {
           failureKind: isTimberbornStartupFailureKind(parsed.failureKind) ? parsed.failureKind : undefined,
           pid: parsed.pid ?? 0,
           processName: parsed.processName ?? "unknown",
-          status: parsed.status === "startup_failure" ? "startup_failure" : "open_bundle",
+          status: parsed.status === "startup_failure" ? "startup_failure" : "open_app",
           timestampMs: parsed.timestampMs,
           ttlMs: parsed.ttlMs,
         }
@@ -164,7 +164,7 @@ const writeLaunchIntentMetadata = (
         failureKind: metadata?.failureKind,
         pid: process.pid,
         processName: options.processName,
-        status: metadata?.status ?? "open_bundle",
+        status: metadata?.status ?? "open_app",
         timestampMs: nowMs,
         ttlMs,
       } satisfies LaunchIntentMetadata,
@@ -276,7 +276,7 @@ const acquireLaunchIntentGuard = (options: TimberbornStartupOptions): void => {
   try {
     mkdirSync(guard.dir);
     writeLaunchIntentMetadata(options, guard.dir, nowMs, guard.ttlMs);
-    options.log?.(`launch_intent_recorded action=open_bundle path=${compactLogToken(guard.dir)} ttl_ms=${guard.ttlMs}`);
+    options.log?.(`launch_intent_recorded action=open_app path=${compactLogToken(guard.dir)} ttl_ms=${guard.ttlMs}`);
     return;
   } catch (error) {
     if (!existsSync(guard.dir)) {
@@ -290,10 +290,10 @@ const acquireLaunchIntentGuard = (options: TimberbornStartupOptions): void => {
   if (ageMs === null || ageMs <= activeTtlMs) {
     const failureSuffix = metadata?.failureKind === undefined ? "" : ` existing_failure_kind=${metadata.failureKind}`;
     options.log?.(
-      `launch_intent_duplicate_refused action=open_bundle path=${compactLogToken(guard.dir)} age_ms=${ageMs ?? "unknown"} ttl_ms=${activeTtlMs} existing_pid=${metadata?.pid ?? "unknown"}${failureSuffix}`,
+      `launch_intent_duplicate_refused action=open_app path=${compactLogToken(guard.dir)} age_ms=${ageMs ?? "unknown"} ttl_ms=${activeTtlMs} existing_pid=${metadata?.pid ?? "unknown"}${failureSuffix}`,
     );
     throw new Error(
-      `Refusing duplicate Timberborn launch intent: a recent open -b ${options.bundleId} was recorded ${ageMs ?? "unknown"}ms ago at ${guard.dir}. Wait for that startup attempt to settle or use --attach once Timberborn is running.`,
+      `Refusing duplicate Timberborn launch intent: a recent open -a Timberborn was recorded ${ageMs ?? "unknown"}ms ago at ${guard.dir}. Wait for that startup attempt to settle or use --attach once Timberborn is running.`,
     );
   }
 
@@ -301,7 +301,7 @@ const acquireLaunchIntentGuard = (options: TimberbornStartupOptions): void => {
   mkdirSync(guard.dir);
   writeLaunchIntentMetadata(options, guard.dir, nowMs, guard.ttlMs);
   options.log?.(
-    `launch_intent_recorded action=open_bundle path=${compactLogToken(guard.dir)} ttl_ms=${guard.ttlMs} replaced_stale=true previous_age_ms=${ageMs ?? "unknown"}`,
+    `launch_intent_recorded action=open_app path=${compactLogToken(guard.dir)} ttl_ms=${guard.ttlMs} replaced_stale=true previous_age_ms=${ageMs ?? "unknown"}`,
   );
 };
 
@@ -371,10 +371,10 @@ export const launchOrAttachTimberborn = async (
   let launched = false;
   if (!wasRunningBeforeLaunch) {
     acquireLaunchIntentGuard(options);
-    options.log?.("startup_intent mode=launch timberborn_running=false action=open_bundle");
-    const openResult = options.run("open", ["-b", options.bundleId]);
+    options.log?.("startup_intent mode=launch timberborn_running=false action=open_app");
+    const openResult = options.run("open", ["-a", "Timberborn"]);
     if (openResult.exitCode !== 0) {
-      throw new Error(`Could not launch Timberborn bundle ${options.bundleId}: ${commandFailureText(openResult)}`);
+      throw new Error(`Could not launch Timberborn app by name: ${commandFailureText(openResult)}`);
     }
     launched = true;
   } else {

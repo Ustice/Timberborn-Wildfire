@@ -1271,7 +1271,7 @@ Use the startup log harness when QA needs repeatable evidence that the deployed 
 bun scripts/check-timberborn-startup.ts --attach --wait=30
 ```
 
-Use `--launch` instead of `--attach` when Timberborn should be opened by bundle id:
+Use `--launch` instead of `--attach` when Timberborn should be opened by app name:
 
 ```bash
 bun scripts/check-timberborn-startup.ts --launch --wait=120
@@ -1279,7 +1279,7 @@ bun scripts/check-timberborn-startup.ts --launch --wait=120
 
 The harness serializes with deploy work through the shared QA lock at `~/Library/Application Support/Timberborn/WildfireQA/locks/build-deploy.lock`, validates the documented `1920x1080` display resolution by default, captures a `Player.log` baseline before attach or launch work, activates `com.mechanistry.timberborn`, waits for required current-window `Player.log` tokens, and writes evidence under `/tmp/wildfire-qa/startup-harness/<timestamp>/` by default. Pass `--artifacts-dir` only when a run needs durable evidence outside temp storage.
 
-Startup helpers are idempotent by contract: `--launch` may call `open -b com.mechanistry.timberborn` only when no `Timberborn` process is running, already-running sessions may only use AppleScript activation/focus retries, and `--attach` must fail clearly instead of opening the app when Timberborn is absent.
+Startup helpers are idempotent by contract: `--launch` may call `open -a Timberborn` only when no `Timberborn` process is running, already-running sessions may only use AppleScript activation/focus retries, and `--attach` must fail clearly instead of opening the app when Timberborn is absent.
 
 QA automation that affects issue status, release confidence, or tool reliability should also record a local tool run with `bun scripts/qa-log-tool-run.ts`. The ignored repo-local database lives at `qa/tool-runs.sqlite`; [qa-tooling.md](qa-tooling.md) owns the schema, failure classes, and reporting procedure. Use `bun scripts/qa-tool-report.ts` when repeated failures may indicate a QA-tooling issue instead of a product blocker.
 
@@ -1369,7 +1369,7 @@ Use the latest-save startup utility when live QA needs to get from closed Timber
 bun scripts/load-latest-save-and-unpause.ts --launch --wait=240
 ```
 
-The default `--launch` route is the guarded signal-driven cold-start path. It launches by bundle id, retries macOS activation while Timberborn finishes connecting to AppleEvents, samples screenshot frames while Timberborn loads, presses `Enter` only after the startup Mods or Experimental Mode gates are positively identified, retries those gates while they remain visible, clicks only the documented `main.continue` coordinate, then waits for top-HUD loaded-save classification before unpause/status proof. The frame evidence is saved as PNG samples plus `fast-frame-samples.csv` because true video recording from Bun is brittle across macOS screen-recording permissions and display-capture failures.
+The default `--launch` route is the guarded signal-driven cold-start path. It launches by app name with `open -a Timberborn`, retries macOS activation while Timberborn finishes connecting to AppleEvents, samples screenshot frames while Timberborn loads, presses `Enter` only after the startup Mods or Experimental Mode gates are positively identified, retries those gates while they remain visible, clicks only the documented `main.continue` coordinate, then waits for top-HUD loaded-save classification before unpause/status proof. The frame evidence is saved as PNG samples plus `fast-frame-samples.csv` because true video recording from Bun is brittle across macOS screen-recording permissions and display-capture failures.
 
 Use `--attach` when Timberborn is already running:
 
