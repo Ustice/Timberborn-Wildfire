@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import {
+  errorReportInventory,
+  writeStartupExitDiagnosticsBundle,
+} from "../scripts/lib/timberborn-startup-diagnostics.ts";
 import {
   launchOrAttachTimberborn,
   recordLaunchIntentFailure,
@@ -454,5 +458,127 @@ describe("timberborn startup contract", () => {
     ).rejects.toThrow("Timberborn is not running. Start it first or pass --launch.");
     expect(commandCalls(runner.calls, "open")).toHaveLength(0);
     expect(commandCalls(runner.calls, "osascript")).toHaveLength(0);
+  });
+});
+
+describe("timberborn startup process-exit diagnostics", () => {
+  test("writes a concise process-exit bundle with changed error reports and bounded Player.log evidence", async () => {
+    await withTempDir(async (dir) => {
+      const artifactDir = join(dir, "artifacts");
+      const errorReportDir = join(dir, "Error reports");
+      const guardDir = join(dir, "timberborn-launch-intent");
+      const playerLogPath = join(dir, "Player.log");
+      const beforeReport = join(errorReportDir, "error-report-2026-05-31-01h00m00s.zip");
+      const afterReport = join(errorReportDir, "error-report-2026-05-31-01h05m00s.zip");
+      const runner = createRunner((call) => {
+        if (call.command === "/bin/ps") {
+          return success(
+            [
+              "  11 rg Timberborn",
+              "  12 zsh /bin/ps -axo pid=,comm=,args= | rg Timberborn",
+              " 123 Timberborn /Applications/Timberborn.app/Contents/MacOS/Timberborn",
+            ].join("\n"),
+          );
+        }
+
+        return success();
+      });
+
+      mkdirSync(errorReportDir, { recursive: true });
+      mkdirSync(guardDir, { recursive: true });
+      writeFileSync(beforeReport, "old report");
+      utimesSync(beforeReport, new Date("2026-05-31T01:00:00Z"), new Date("2026-05-31T01:00:00Z"));
+      const beforeErrorReports = errorReportInventory(errorReportDir);
+      writeFileSync(afterReport, "new report");
+      utimesSync(afterReport, new Date("2026-05-31T01:05:00Z"), new Date("2026-05-31T01:05:00Z"));
+      writeFileSync(
+        join(guardDir, "intent.json"),
+        `${JSON.stringify({
+          bundleId: "com.mechanistry.timberborn",
+          createdAt: "2026-05-31T01:04:00.000Z",
+          pid: 999,
+          processName: "Timberborn",
+          status: "open_bundle",
+          timestampMs: 1_000,
+          ttlMs: 240_000,
+        })}\n`,
+      );
+      writeFileSync(
+        playerLogPath,
+        [
+          "ordinary startup line",
+          "Starting game version 1.0.13.1-b769e88-xsm",
+          "Input System module state changed to: ShutdownInProgress",
+          "Thread 9 may have been prematurely finalized",
+          "Input System module state changed to: Shutdown",
+        ].join("\n"),
+      );
+
+      const bundle = writeStartupExitDiagnosticsBundle({
+        afterErrorReports: errorReportInventory(errorReportDir),
+        artifactDir,
+        beforeErrorReports,
+        errorReportDir,
+        failureKind: "timberborn_process_exit",
+        frontmostBundleId: "com.valvesoftware.steam",
+        launchIntentGuardDir: guardDir,
+        message: "Expected Timberborn foreground, got frontmost_bundle_id=com.valvesoftware.steam.",
+        playerLogPath,
+        processName: "Timberborn",
+        processRunning: false,
+        run: runner.run,
+      });
+
+      expect(bundle).not.toBeNull();
+      expect(bundle?.copiedErrorReports).toEqual([
+        join(artifactDir, "startup-process-exit-diagnostics", "error-reports", "error-report-2026-05-31-01h05m00s.zip"),
+      ]);
+      expect(existsSync(bundle?.summaryPath ?? "")).toBe(true);
+      const summary = readFileSync(bundle?.summaryPath ?? "", "utf8");
+      expect(summary).toContain("wildfire_startup_exit_diagnostics=present");
+      expect(summary).toContain("failure_kind=timberborn_process_exit");
+      expect(summary).toContain("frontmost_bundle_id=com.valvesoftware.steam");
+      expect(summary).toContain("new_or_changed_error_reports=1");
+      expect(summary).toContain(`player_log=${bundle?.playerLogCopyPath}`);
+      const launchIntent = JSON.parse(readFileSync(bundle?.launchIntentCopyPath ?? "", "utf8")) as {
+        failureKind?: string;
+        status?: string;
+      };
+      expect(launchIntent.status).toBe("open_bundle");
+      expect(launchIntent.failureKind).toBeUndefined();
+
+      const processSnapshot = readFileSync(bundle?.processSnapshotPath ?? "", "utf8");
+      expect(processSnapshot).toContain("match_strategy=exact_comm_or_executable_basename");
+      expect(processSnapshot).toContain("123 Timberborn /Applications/Timberborn.app/Contents/MacOS/Timberborn");
+      expect(processSnapshot).not.toContain("rg Timberborn");
+      expect(runner.calls).toEqual([{ args: ["-axo", "pid=,comm=,args="], command: "/bin/ps" }]);
+
+      const playerLogScan = readFileSync(bundle?.playerLogScanPath ?? "", "utf8");
+      expect(playerLogScan).toContain("Starting game version 1.0.13.1-b769e88-xsm");
+      expect(playerLogScan).toContain("ShutdownInProgress");
+      expect(playerLogScan).toContain("prematurely finalized");
+    });
+  });
+
+  test("skips the forensic bundle for non process-exit failures", async () => {
+    await withTempDir(async (dir) => {
+      const bundle = writeStartupExitDiagnosticsBundle({
+        afterErrorReports: [],
+        artifactDir: join(dir, "artifacts"),
+        beforeErrorReports: [],
+        errorReportDir: join(dir, "Error reports"),
+        failureKind: "steam_frontmost",
+        frontmostBundleId: "com.valvesoftware.steam",
+        launchIntentGuardDir: join(dir, "timberborn-launch-intent"),
+        message: "frontmost_bundle_id=com.valvesoftware.steam",
+        playerLogPath: join(dir, "Player.log"),
+        processName: "Timberborn",
+        processRunning: true,
+        run: () => success(),
+      });
+
+      expect(bundle).toBeNull();
+      expect(existsSync(join(dir, "artifacts"))).toBe(false);
+    });
   });
 });
