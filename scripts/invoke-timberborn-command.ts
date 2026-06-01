@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 
 type InvokeOptions = {
@@ -181,6 +181,13 @@ const waitForOutbox = async (outboxPath: string, previousModified: number, waitS
   return null;
 };
 
+const writeCommandInbox = (inboxPath: string, command: string): void => {
+  mkdirSync(dirname(inboxPath), { recursive: true });
+  const tempPath = `${inboxPath}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(tempPath, `${command.trim()}\n`);
+  renameSync(tempPath, inboxPath);
+};
+
 const requireAdvancedTick = (result: string): void => {
   const tickMatch =
     result.match(/\btick_count=(\d+)\b/u) ??
@@ -244,8 +251,7 @@ const main = async (): Promise<void> => {
   const outboxPath = join(options.commandDir, outboxFileName);
   const previousModified = existsSync(outboxPath) ? statSync(outboxPath).mtimeMs : 0;
 
-  mkdirSync(dirname(inboxPath), { recursive: true });
-  writeFileSync(inboxPath, `${options.command.trim()}\n`);
+  writeCommandInbox(inboxPath, options.command);
   console.log(`[wildfire-command] wrote ${inboxPath}`);
 
   const result = await waitForOutbox(outboxPath, previousModified, options.waitSeconds);

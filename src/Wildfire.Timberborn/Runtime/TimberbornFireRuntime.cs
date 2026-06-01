@@ -416,8 +416,6 @@ public sealed class TimberbornFireRuntime :
             {
                 _gpuIndirectRenderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);
             }
-
-            _gpuIndirectRenderer.OnUpdate();
         }
 
         _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);

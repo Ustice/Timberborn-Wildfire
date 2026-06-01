@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -283,6 +284,13 @@ const getFrontmostBundleId = (): string | null => {
 
 const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
 
+const writeCommandInbox = (inboxPath: string, command: string): void => {
+  mkdirSync(dirname(inboxPath), { recursive: true });
+  const tempPath = `${inboxPath}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(tempPath, `${command.trim()}\n`);
+  renameSync(tempPath, inboxPath);
+};
+
 const launchIntentGuardFor = (options: StartupOptions) => ({
   dir: launchIntentGuardDir,
   failureCooldownMs: Math.max(120_000, options.waitSeconds * 1000),
@@ -459,8 +467,7 @@ const requireCommandStatus = async (options: StartupOptions): Promise<CommandSta
   const outboxPath = join(options.commandDir, commandOutboxFileName);
   const previousModified = existsSync(outboxPath) ? statSync(outboxPath).mtimeMs : 0;
 
-  mkdirSync(dirname(inboxPath), { recursive: true });
-  writeFileSync(inboxPath, "status\n");
+  writeCommandInbox(inboxPath, "status");
   log(`command_status_requested inbox=${inboxPath}`);
 
   const startedAt = Date.now();

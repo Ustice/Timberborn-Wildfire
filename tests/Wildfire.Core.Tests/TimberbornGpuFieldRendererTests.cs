@@ -152,6 +152,16 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);", runtimeSource, StringComparison.Ordinal);
         Assert.Contains("_gpuIndirectRenderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
         Assert.Contains("_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
+
+        int indirectRendererBlock = runtimeSource.IndexOf(
+            "if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)",
+            StringComparison.Ordinal);
+        int fieldRendererDispatch = runtimeSource.IndexOf(
+            "_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);",
+            StringComparison.Ordinal);
+        string initializationVisualBlock = runtimeSource.Substring(indirectRendererBlock, fieldRendererDispatch - indirectRendererBlock);
+
+        Assert.DoesNotContain("_gpuIndirectRenderer.OnUpdate();", initializationVisualBlock, StringComparison.Ordinal);
     }
 
     [Fact]

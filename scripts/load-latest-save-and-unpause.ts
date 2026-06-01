@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 import { fileURLToPath } from "url";
@@ -123,6 +123,7 @@ const activationRetryIntervalMs = 500;
 const activationRetryTimeoutMs = 20000;
 const continueLoadTimeoutMs = 20000;
 const inputReadyCpuThreshold = 75;
+const loadedSaveInputReadyCpuThreshold = 95;
 const inputReadyRequiredStablePolls = 2;
 const inputReadyPollIntervalMs = 500;
 const inputReadyTimeoutMs = 20000;
@@ -338,10 +339,11 @@ const waitForTimberbornInputReady = (label: string): void => {
   const startedAt = Date.now();
   let stablePolls = 0;
   let lastCpu: number | null = null;
+  const cpuThreshold = label.startsWith("press:loaded_save_") ? loadedSaveInputReadyCpuThreshold : inputReadyCpuThreshold;
 
   while (Date.now() - startedAt <= inputReadyTimeoutMs) {
     lastCpu = readTimberbornCpu();
-    if (lastCpu !== null && lastCpu <= inputReadyCpuThreshold) {
+    if (lastCpu !== null && lastCpu <= cpuThreshold) {
       stablePolls += 1;
       if (stablePolls >= inputReadyRequiredStablePolls) {
         if (Date.now() > startedAt) {
@@ -357,7 +359,7 @@ const waitForTimberbornInputReady = (label: string): void => {
   }
 
   fail(
-    `Timed out waiting for Timberborn to settle before ${label}: last_cpu=${lastCpu?.toFixed(1) ?? "unknown"} threshold=${inputReadyCpuThreshold}`,
+    `Timed out waiting for Timberborn to settle before ${label}: last_cpu=${lastCpu?.toFixed(1) ?? "unknown"} threshold=${cpuThreshold}`,
   );
 };
 
@@ -439,6 +441,13 @@ const formatError = (error: unknown): string => error instanceof Error ? error.m
 const compactLogToken = (value: string): string => value.replaceAll(/\s+/gu, "_").replaceAll('"', "'");
 
 const fileSafeToken = (value: string): string => value.replaceAll(/[^a-zA-Z0-9_-]+/gu, "-").replaceAll(/^-|-$/gu, "");
+
+const writeCommandInbox = (inboxPath: string, command: string): void => {
+  mkdirSync(dirname(inboxPath), { recursive: true });
+  const tempPath = `${inboxPath}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(tempPath, `${command.trim()}\n`);
+  renameSync(tempPath, inboxPath);
+};
 
 const defaultTimberbornGridDepth = 23;
 const maxContinueCellCount = 500_000;
@@ -1350,8 +1359,7 @@ const readStatus = async (commandDir: string, waitSeconds: number): Promise<Comm
   const outboxPath = join(commandDir, outboxFileName);
   const previousModified = existsSync(outboxPath) ? statSync(outboxPath).mtimeMs : 0;
 
-  mkdirSync(dirname(inboxPath), { recursive: true });
-  writeFileSync(inboxPath, "status\n");
+  writeCommandInbox(inboxPath, "status");
 
   const startedAt = Date.now();
   while (Date.now() - startedAt <= waitSeconds * 1000) {
