@@ -31,6 +31,7 @@ Use these instructions for every Wildfire QA sub-agent unless the issue says oth
 - Do not make product implementation changes unless the issue explicitly gives QA that write scope.
 - Do not change GitHub issue status labels unless the coordinator explicitly assigns that status update.
 - Coordinate all live Timberborn deploy, launch, and restart work through QA so one role owns the shared deploy/QA lock at a time.
+- When assigned as the live-QA controller for a sprint, reuse one Timberborn session whenever possible, serialize launch/restart decisions, and report the current ticket, fixture/save, and retry queue to the coordinator. Other agents should provide deterministic checks or issue-specific evidence requests instead of launching Timberborn independently.
 - Confirm `caffeinate -disu` is active before long live Timberborn runs, screenshots, or recordings; if it is not active, start it or report that the coordinator must start it before continuing.
 - If a stale deploy/QA lock is encountered, stop and report the lock path, owner metadata, running-process check, and smallest safe cleanup request to the coordinator.
 - Do not infer success from logs alone when the ticket requires visible runtime behavior.
@@ -39,6 +40,8 @@ Use these instructions for every Wildfire QA sub-agent unless the issue says oth
 - Prefer improving a flaky QA tool over repeatedly rerunning the same unreliable manual or coordinate-driven path.
 - Record tool runs that pass through durable QA automation in the local ignored SQLite database at `qa/tool-runs.sqlite` when the run affects issue status, release confidence, or tool reliability.
 - If the assigned retry cannot produce the requested evidence, classify why before returning it to the coordinator: missing fixture, tool failure, environment failure, product failure, or test design failure.
+- For startup failures, separate duplicate launch attempts from guarded launch followed by Steam activation/frontmost failure, early process exit, bridge timeout, or loaded-save readiness failure. Report the attempted launch count, process state, freshest log/error-report path, and diagnostic token that supports the classification.
+- For shell process checks, avoid commands that can match themselves, such as a bare `ps | rg <pattern>` loop. Prefer `pgrep`, exact executable names, bracketed regexes like `rg '[T]imberborn'`, or filtering out the current shell and search command before deciding a process is still alive.
 
 ## Failure Classification
 

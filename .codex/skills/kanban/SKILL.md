@@ -15,20 +15,23 @@ Use this skill only for the Wildfire repo at `~/repos/wildfire`.
 
 1. Start in `~/repos/wildfire`.
 2. Read `AGENTS.md`, `docs/INDEX.md`, `docs/HANDOFF.md`, `kanban/github-issue-workflow.md`, `kanban/github-issue-migration.md`, and `kanban/roles/coordinator.md` if you haven't already.
-3. Inspect GitHub Issues with `gh issue list --repo Ustice/Timberborn-Wildfire`.
-4. Treat GitHub issue labels as the active status backing.
-5. Use `kanban/github-issue-migration.md` only to map historical `TWF-*` ids to issue numbers.
-6. Use `kanban/assignment-packet-template.md` when dispatching sub-agents, including the coordinator-assigned worktree path, branch, base branch, cleanup owner, and `CONTEXT.md` path.
-7. When resuming a broad issue sweep, start by delegating a Tech-Lead or Reviewer for a current-state pass.
-8. Link sub-agents to the relevant role doc.
-9. Use rolling dispatch when dependencies and write scopes allow it.
-10. Dispatch a Process Reviewer during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
-11. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer whenever feedback exists. When no action is warranted, the Process Reviewer should report only `No change necessary.`
+3. For substantial kanban sessions, create or move into a dedicated coordinator worktree with `bun scripts/create-agent-worktree.ts --role coordinator --slug <session-slug>` unless Jason explicitly asks to stay in the current checkout.
+4. Use the coordinator worktree's git-ignored `CONTEXT.md` as compressed in-process state for current issues, dispatches, decisions, constraints, evidence pointers, next action, and process notes. GitHub Issues remain the durable backlog truth.
+5. Inspect GitHub Issues with `gh issue list --repo Ustice/Timberborn-Wildfire`.
+6. Treat GitHub issue labels as the active status backing.
+7. Use `kanban/github-issue-migration.md` only to map historical `TWF-*` ids to issue numbers.
+8. Use `kanban/assignment-packet-template.md` when dispatching sub-agents, including the coordinator-assigned worktree path, branch, base branch, cleanup owner, and `CONTEXT.md` path.
+9. When resuming a broad issue sweep, start by delegating a Tech-Lead or Reviewer for a current-state pass.
+10. Link sub-agents to the relevant role doc.
+11. Use rolling dispatch when dependencies and write scopes allow it.
+12. Dispatch a Process Reviewer during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
+13. At sprint close, collect sub-agent Process Feedback and dispatch a Process Reviewer whenever feedback exists. When no action is warranted, the Process Reviewer should report only `No change necessary.`
 
 ## Guardrails
 
 - Do not end the coordination turn until the sprint is closed or the user explicitly tells you to stop.
 - Do not make code, content, script, runtime behavior, or test changes directly as the coordinator.
+- Treat the coordinator worktree as an operations cockpit, not an implementation surface. Use its `CONTEXT.md` for live state; delegate implementation and verification changes to assigned role worktrees.
 - Delegate implementation, QA, review, and research through GitHub issues.
 - An issue that fails required QA must move to `status:rework` when updates are needed, `status:qa-needed` when only a rerun is needed, `status:blocked-by-environment` when Timberborn cannot load or respond, `status:waiting-for-dependency` when another issue must land first, or `status:needs-fixture` when QA needs new tooling or fixtures. It must pass that QA gate in a later run before it can be closed.
 - Pick model strength (Low, Medium, High, Extra High) based on task difficulty, uncertainty, and blast radius.

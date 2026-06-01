@@ -33,7 +33,7 @@ const usage = `Usage:
 
 Options:
   --issue <id>              Issue, PR, or sprint id to include in names.
-  --role <role>             Sub-agent role, such as worker, qa, reviewer, process.
+  --role <role>             Role, such as coordinator, worker, qa, reviewer, process.
   --slug <slug>             Short human-readable task slug.
   --base <branch>           Base branch or ref. Default: main.
   --branch <name>           Branch name. Default: codex/<role>/<issue-slug>.
@@ -45,6 +45,7 @@ Options:
 
 Examples:
   bun scripts/create-agent-worktree.ts --role worker --issue TWF-115 --slug storage-fire
+  bun scripts/create-agent-worktree.ts --role coordinator --slug sprint-2026-06-01
   bun scripts/create-agent-worktree.ts --role process --slug sprint-retro-kaizen --dry-run
 `;
 
@@ -232,6 +233,14 @@ updated: ${yamlValue(new Date().toISOString())}
 
 - Coordinator created this worktree context. Replace this bullet with the current task state.
 
+## Active Issues
+
+- None yet.
+
+## Dispatches
+
+- None yet.
+
 ## Decisions
 
 - None yet.
@@ -241,7 +250,7 @@ updated: ${yamlValue(new Date().toISOString())}
 - Work only in the assigned worktree and branch.
 - Keep this file short and update by compression, not accumulation.
 
-## Evidence
+## Evidence Pointers
 
 - None yet.
 

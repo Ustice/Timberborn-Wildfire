@@ -42,6 +42,7 @@ Use these instructions for every Wildfire issue worker unless the issue says oth
 ## Verification
 
 - Run `git diff --check`.
+- In fresh worktrees, run `bun install --frozen-lockfile` before `bun run typecheck` or TypeScript scripts when dependencies are missing. Treat missing Prisma, TypeScript, or package binaries as setup work, not as product failures.
 - Run `dotnet test` for code, content, script, or behavior changes.
 - Skip runtime verification for documentation-only issues marked `doc_only: true` when the diff only changes documentation.
 
