@@ -24,6 +24,9 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Dependencies still risky:
 - QA tooling allowed:
 - QA tool write scope:
+- Live QA controller:
+- Shared process or lock constraints:
+- Startup/process diagnostics required:
 
 ## Instructions
 
@@ -32,6 +35,7 @@ Use this when dispatching a sub-agent. Fill it in from the coordinator's main ch
 - Verify the assigned worktree path and branch with `git status --short --branch` before editing.
 - Read the assigned `CONTEXT.md` when it exists. Update it only when durable task state changes, and keep it compressed rather than append-only.
 - If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
+- In a fresh worktree, run `bun install --frozen-lockfile` before TypeScript checks or scripts if dependencies are not present.
 - Do not change GitHub issue status labels unless explicitly assigned.
 - Do not edit historical kanban ticket files unless this assignment explicitly includes migration-cleanup scope.
 - Report issue notes, evidence, blockers, and recommended status-label changes back to the coordinator.

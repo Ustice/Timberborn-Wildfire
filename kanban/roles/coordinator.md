@@ -19,6 +19,9 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Read `docs/HANDOFF.md`.
 - Read `kanban/github-issue-workflow.md`.
 - Read `kanban/github-issue-migration.md` when mapping migrated `TWF-*` ids.
+- For substantial kanban sessions, run from a dedicated coordinator worktree created with `bun scripts/create-agent-worktree.ts --role coordinator --slug <session-slug>`, unless Jason explicitly asks to stay in the current checkout.
+- Use the coordinator worktree's git-ignored `CONTEXT.md` as the in-process sprint state file. Record current issue state, dispatches, decisions, constraints, evidence pointers, next action, and process notes there.
+- Keep coordinator `CONTEXT.md` compressed. Replace stale state instead of appending a transcript, and keep durable backlog truth in GitHub Issues.
 - Review GitHub Issues with `gh issue list --repo Ustice/Timberborn-Wildfire`.
 - Reconcile issue status labels against Jason's current instruction before changing labels.
 - Start `caffeinate -disu` for live Timberborn QA sprint runs, and keep it active until live QA is complete or the sprint is handed off.
@@ -30,6 +33,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Do not make code, content, script, runtime behavior, or test changes yourself.
 - Delegate anything other than documentation, issue creation, issue updates, status-label changes, integration coordination, and final status cleanup.
 - Documentation changes are allowed when they improve sprint management, role instructions, ticket clarity, or final sprint status.
+- Treat the coordinator worktree as an operations cockpit, not an implementation surface. The coordinator's `CONTEXT.md` is for live state; implementation changes belong in assigned Worker, QA, Reviewer, Tech-Lead, or Process Reviewer worktrees.
 - Keep GitHub issue status-label changes serialized.
 
 ## Delegation
@@ -47,6 +51,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Use Workers for implementation.
 - Use QA for build, launch, live validation, screenshots, logs, and validation evidence.
 - Before dispatching live Timberborn QA, verify the coordinator has `caffeinate -disu` active or explicitly assign QA to start it and report the process state.
+- When several tickets need live Timberborn validation in the same sprint, assign one QA controller for the shared Timberborn session, deploy/QA lock, launch/restart decisions, and focused retry order. Route live-QA tickets through that controller instead of starting independent launch-capable agents.
 - Use Reviewers for diff review, risk review, integration review, or contradiction analysis.
 - Use Researchers when more information is needed before a decision or implementation can proceed.
 - Use Process Reviewers during the sprint whenever coordination friction, tooling friction, or repeated role confusion is slowing the run.
@@ -62,6 +67,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Require every sub-agent final report to include Process Feedback: friction or issues encountered, reusable lessons from retries or pivots, what they would repeat or change next time, and suggested process or tooling improvements.
 - Collect Process Feedback during closeout. Document accepted follow-up work in GitHub Issues, and keep rejected or deferred suggestions explicit when they affect future coordination.
 - Prefer sub-agent final reports over worktree-local historical ticket edits. The coordinator owns accepted GitHub issue updates.
+- If the GitHub connector is unavailable or its token expires, use the `gh` CLI as the fallback for issue reads and comments. When posting issue comments that contain code, commands, or Markdown backticks, pass the body through a file or quoted heredoc and review the resulting comment instead of interpolating the text directly through the shell.
 - Link bulky runtime evidence through `kanban/evidence-manifest-template.md`-style manifests rather than copying long logs into tickets.
 - Do not ask sub-agents to update `docs/HANDOFF.md`, `docs/TODO.md`, `docs/DESIGN.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`, or `README.md` unless an issue explicitly assigns those files.
 - Do not treat historical ticket notes or status symlinks inside implementation worktrees as authoritative.
@@ -100,6 +106,7 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Continue the issue sweep until either the sweep is finished, or you are instructed to do so.
 - Add a codex-native todo to not end your turn until instructed to or until you finish the issue sweep.
 - Keep the progress checklist current throughout the sweep, including dispatch, waiting, evidence review, label updates, integration, closeout, and hand-off steps.
+- Before nudging or reassigning a sub-agent, distinguish stalled work from active landing work. Check the latest issue comment, visible worktree changes or commits, and any reported long-running step; if files or evidence moved recently, ask for a concise checkpoint instead of assuming the agent is blocked.
 
 ## Hand-off
 
