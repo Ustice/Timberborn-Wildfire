@@ -1,6 +1,6 @@
 # Coordinator Role Instructions
 
-Historical note: the file kanban board was migrated to GitHub Issues on 2026-05-23. Use these instructions only for file-board archaeology, migration reconciliation, or explicit board cleanup. Use GitHub Issues as the active backlog for new work.
+Use GitHub Issues as the active backlog.
 
 Use these instructions for Wildfire GitHub issue coordination runs.
 
@@ -18,7 +18,6 @@ Use these instructions for Wildfire GitHub issue coordination runs.
 - Read `docs/INDEX.md`.
 - Read `docs/HANDOFF.md`.
 - Read `kanban/github-issue-workflow.md`.
-- Read `kanban/github-issue-migration.md` when mapping migrated `TWF-*` ids.
 - For substantial kanban sessions, run from a dedicated coordinator worktree created with `bun scripts/create-agent-worktree.ts --role coordinator --slug <session-slug>`, unless Jason explicitly asks to stay in the current checkout.
 - Use the coordinator worktree's git-ignored `CONTEXT.md` as the in-process sprint state file. Record current issue state, dispatches, decisions, constraints, evidence pointers, next action, and process notes there.
 - Keep coordinator `CONTEXT.md` compressed. Replace stale state instead of appending a transcript, and keep durable backlog truth in GitHub Issues.

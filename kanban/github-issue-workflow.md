@@ -14,9 +14,6 @@ Repository: <https://github.com/Ustice/Timberborn-Wildfire/issues>
 - `status:waiting-for-dependency`: the issue depends on another GitHub issue or intra-ticket dependency. Reassess once the dependent issue is resolved.
 - `status:needs-fixture`: QA cannot make a determination because tooling, scenario data, capture support, or a fixture is missing. Create or dispatch a new GitHub issue for the smallest QA tool or fixture that can unblock the gate.
 - `status:deferred`: valid future work that is intentionally out of the current milestone.
-- `source:kanban`: issue migrated from the historical file-board ticket system.
-
-Do not assign the legacy catch-all `status:blocked` label to new or updated issues. Reclassify it into one of the three specific blocked labels when touching an issue that still has it.
 
 ## Working An Issue
 
@@ -31,8 +28,6 @@ Do not assign the legacy catch-all `status:blocked` label to new or updated issu
 ## Creating Issues
 
 - Use the GitHub issue number as the durable ticket identifier for newly created work.
-- Do not assign new `TWF-###` names, titles, filenames, branch names, or worktree names.
-- If the issue was migrated from the historical file board, keep the existing `TWF-*` id only as a historical reference and link it through `kanban/github-issue-migration.md` or the archived ticket path.
 - New issue titles should describe the work directly, not start with a synthetic ticket id.
 
 ## Status Changes
@@ -63,11 +58,3 @@ gh issue view 40 --repo Ustice/Timberborn-Wildfire --comments
 gh issue comment 40 --repo Ustice/Timberborn-Wildfire --body "..."
 gh issue edit 40 --repo Ustice/Timberborn-Wildfire --remove-label status:ready --add-label status:waiting-for-dependency
 ```
-
-## Historical File Board
-
-- `archive/file-kanban-2026-05-23:kanban/all-tickets/` preserves migrated ticket bodies and evidence history.
-- `archive/file-kanban-2026-05-23:kanban/by-status/` preserves final migrated board state.
-- `archive/file-kanban-2026-05-23:kanban/sprints/` preserves historical sprint charters.
-- `archive/file-kanban-2026-05-23:kanban/evidence-manifests/` preserves historical evidence manifests.
-- `kanban/github-issue-migration.md` maps `TWF-*` ids to GitHub issue numbers.
