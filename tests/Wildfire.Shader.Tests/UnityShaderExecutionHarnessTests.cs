@@ -1,7 +1,8 @@
 using Wildfire.Core;
 using Wildfire.Unity;
+using static Wildfire.Shader.Tests.UnityShaderHarness;
 
-namespace Wildfire.Core.Tests;
+namespace Wildfire.Shader.Tests;
 
 public sealed class UnityShaderExecutionHarnessTests
 {
@@ -21,112 +22,14 @@ public sealed class UnityShaderExecutionHarnessTests
             "high-fuel-burn-down-seed89-5x5x1.fixture.json"),
     ];
 
-    [Fact]
-    public void UnityExecutorReportsMissingUnityAsEnvironmentFailure()
-    {
-        UnityBatchmodeShaderSnapshotExecutor executor = new(new UnityBatchmodeShaderSnapshotExecutorOptions(
-            UnityExecutablePath: "/missing/Unity",
-            ProjectPath: "src/Wildfire.Unity/UnityBatchmodeProject",
-            ComputeShaderPath: "src/Wildfire.Unity/FireSim.compute",
-            Timeout: TimeSpan.FromMilliseconds(1)));
-        ShaderSnapshotFixture fixture = new(
-            FormatVersion: 1,
-            Scenario: "single-ignition",
-            Seed: 1,
-            Grid: new ComputeGridDimensions(1, 1, 1),
-            SelectedLayer: new ShaderSnapshotLayer(0, 0, 1),
-            InitialCells: [0x1001]);
-
-        ShaderSnapshotExecutionFailedException exception = Assert.Throws<ShaderSnapshotExecutionFailedException>(
-            () => executor.Capture(fixture, tickCount: 1));
-
-        Assert.Equal("environment", exception.Phase);
-        Assert.Contains("Unity executable was not found", exception.Message);
-    }
-
-    [Fact]
-    public void SnapshotJsonLoadsUnityCaptureShape()
-    {
-        string json = """
-        {
-          "formatVersion": 1,
-          "scenario": "single-ignition",
-          "seed": 21,
-          "grid": {
-            "width": 2,
-            "height": 1,
-            "depth": 1
-          },
-          "tickCount": 1,
-          "finalPackedCells": [
-            4097,
-            4098
-          ],
-          "perTickDeltaCounts": [
-            1
-          ],
-          "perTickDeltas": [
-            {
-              "tick": 1,
-              "deltaCount": 1,
-              "deltas": [
-                {
-                  "cellIndex": 1,
-                  "oldCell": 4097,
-                  "newCell": 4098
-                }
-              ]
-            }
-          ],
-          "visual": {
-            "checksum": "visual-fnv1a32:00000001"
-          }
-        }
-        """;
-
-        ShaderSnapshotCapture capture = ShaderSnapshotJson.Load(json);
-
-        Assert.Equal("single-ignition", capture.Scenario);
-        Assert.Equal(21u, capture.Seed);
-        Assert.Equal(new ComputeGridDimensions(2, 1, 1), capture.Grid);
-        Assert.Equal([0x1001, 0x1002], capture.FinalPackedCells);
-        Assert.Equal(new ShaderSnapshotDelta(1, 0x1001, 0x1002), capture.Ticks[0].Deltas[0]);
-        Assert.Equal("visual-fnv1a32:00000001", capture.Visual?.Checksum);
-    }
-
-    [Fact]
-    public void FuelBurnDownFixturesKeepSingleBurningSourceCoverage()
-    {
-        foreach (FuelBurnDownScenario scenario in FuelBurnDownScenarios)
-        {
-            ShaderSnapshotFixture fixture = LoadFuelBurnDownFixture(scenario);
-            ShaderCellFields[] cells = fixture.InitialCells
-                .Select(ShaderCellFields.Create)
-                .ToArray();
-            ShaderCellFields[] fueledTerrainCells = cells
-                .Where(static cell => cell.Terrain == 1 && cell.Fuel > 0)
-                .ToArray();
-
-            Assert.Equal(scenario.Name, fixture.Scenario);
-            Assert.Equal(scenario.Seed, fixture.Seed);
-            Assert.Single(fueledTerrainCells);
-            Assert.True(fueledTerrainCells[0].IsBurning);
-        }
-    }
-
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessNoWindHeatKernelIsRadialWhenEnabled()
     {
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(CreateSingleHotSourceFixture(
+        ShaderSnapshotCapture capture = Capture(CreateSingleHotSourceFixture(
             "field-model-no-wind-radial",
             width: 9,
             height: 9,
             wind: FireSimWind.None));
-        if (capture is null)
-        {
-            return;
-        }
-
         Assert.Equal(HeatAt(capture, 5, 4), HeatAt(capture, 3, 4));
         Assert.Equal(HeatAt(capture, 4, 5), HeatAt(capture, 4, 3));
         Assert.Equal(HeatAt(capture, 5, 5), HeatAt(capture, 3, 5));
@@ -136,19 +39,14 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.Equal(0, HeatAt(capture, 7, 4));
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessWindStretchesHeatDownwindWhenEnabled()
     {
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(CreateSingleHotSourceFixture(
+        ShaderSnapshotCapture capture = Capture(CreateSingleHotSourceFixture(
             "field-model-wind-ellipse",
             width: 9,
             height: 9,
             wind: new FireSimWind(1f, 0f, 1f)));
-        if (capture is null)
-        {
-            return;
-        }
-
         int downwind = HeatAt(capture, 5, 4);
         int crosswind = HeatAt(capture, 4, 5);
         int upwind = HeatAt(capture, 3, 4);
@@ -158,7 +56,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(HeatAt(capture, 7, 4) > HeatAt(capture, 1, 4));
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessSingleIgnitionExpandsOverMultipleTicksWhenEnabled()
     {
         int width = 7;
@@ -175,12 +73,7 @@ public sealed class UnityShaderExecutionHarnessTests
             cells,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture, tickCount: 3);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture, tickCount: 3);
         int[] burningCounts = PackedCellsByTick(fixture, capture)
             .Select(cellsByTick => cellsByTick.Count(static cell => ShaderCellFields.Create(cell).IsBurning))
             .ToArray();
@@ -191,7 +84,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(burningCounts[0] < width * height / 2, $"Expected first tick not to fill the reachable area; burning count was {burningCounts[0]}.");
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessWaterMoistureSlowsIgnitionWhenEnabled()
     {
         int width = 9;
@@ -201,23 +94,18 @@ public sealed class UnityShaderExecutionHarnessTests
         cells[ToIndex(5, 2, width)] = PackedCell.Pack(fuel: 15, heat: 0, flammability: 3, water: 0, terrain: 1, burningLevel: 0);
         cells[ToIndex(3, 2, width)] = PackedCell.Pack(fuel: 15, heat: 0, flammability: 3, water: 3, terrain: 1, burningLevel: 0);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(CreateFixture(
+        ShaderSnapshotCapture capture = Capture(CreateFixture(
             "field-model-water-slows-ignition",
             width,
             height,
             cells,
             wind: FireSimWind.None));
-        if (capture is null)
-        {
-            return;
-        }
-
         Assert.True(ShaderCellFields.Create(capture.FinalPackedCells[ToIndex(5, 2, width)]).IsBurning);
         Assert.False(ShaderCellFields.Create(capture.FinalPackedCells[ToIndex(3, 2, width)]).IsBurning);
         Assert.True(HeatAt(capture, 3, 2) > 0);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessWaterDoesNotWashAshWithoutExternalMutationWhenEnabled()
     {
         ushort[] cells =
@@ -234,24 +122,19 @@ public sealed class UnityShaderExecutionHarnessTests
                 AshContamination: 7,
                 Source: false).Pack(),
         ];
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(CreateFixture(
+        ShaderSnapshotCapture capture = Capture(CreateFixture(
             "ash-water-no-inline-shader-washout",
             width: 1,
             height: 1,
             cells,
             initialAtmosphericFields: transportFields),
             tickCount: 64);
-        if (capture is null)
-        {
-            return;
-        }
-
         WildfireTransportFieldState finalState = AtmosphereAt(capture, 0, 0);
         Assert.Equal(1, finalState.Ash);
         Assert.Equal(7, finalState.AshContamination);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessAtmosphericFieldsUseDirectionalTransportWhenEnabled()
     {
         int width = 7;
@@ -273,12 +156,7 @@ public sealed class UnityShaderExecutionHarnessTests
             initialAtmosphericFields: atmosphericFields,
             wind: new FireSimWind(1f, 0f, 1f));
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState source = AtmosphereAt(capture, 0, 1);
         WildfireTransportFieldState downwind = AtmosphereAt(capture, 1, 1);
         WildfireTransportFieldState crosswind = AtmosphereAt(capture, 0, 2);
@@ -289,7 +167,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(source.Ash > source.Smoke, $"Expected ash {source.Ash} to persist longer than smoke {source.Smoke}.");
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessSmokeCanFallFromUpperLayerWhenEnabled()
     {
         int width = 3;
@@ -323,12 +201,7 @@ public sealed class UnityShaderExecutionHarnessTests
             initialAtmosphericFields: atmosphericFields,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState middleLayer = AtmosphereAt(capture, 1, 1, 1);
         WildfireTransportFieldState upperLayer = AtmosphereAt(capture, 1, 1, 2);
 
@@ -336,7 +209,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(upperLayer.Smoke < 7, $"Expected upper layer smoke to move or decay, got {upperLayer.Smoke}.");
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessSteamComesFromWetHotSimulatorStateWhenEnabled()
     {
         int width = 3;
@@ -356,19 +229,14 @@ public sealed class UnityShaderExecutionHarnessTests
             cells,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState wetHotCell = AtmosphereAt(capture, 1, 1);
 
         Assert.True(wetHotCell.Steam > 0, $"Expected wet hot simulator state to create steam, got {wetHotCell.Steam}.");
         Assert.Equal(0, wetHotCell.SmokeContamination);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessConvergingSteamTransportAccumulatesWhenEnabled()
     {
         int width = 7;
@@ -397,12 +265,7 @@ public sealed class UnityShaderExecutionHarnessTests
             initialAtmosphericFields: atmosphericFields,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState leftSource = AtmosphereAt(capture, 2, 6);
         WildfireTransportFieldState rightSource = AtmosphereAt(capture, 4, 6);
         WildfireTransportFieldState convergenceTarget = AtmosphereAt(capture, 3, 7);
@@ -412,7 +275,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.Equal(2, convergenceTarget.Steam);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessSmokeContaminationDilutesWhenCleanSmokeMixesWhenEnabled()
     {
         int width = 5;
@@ -441,19 +304,14 @@ public sealed class UnityShaderExecutionHarnessTests
             initialAtmosphericFields: atmosphericFields,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState mixedSmoke = AtmosphereAt(capture, 2, 1);
 
         Assert.True(mixedSmoke.Smoke > 0);
         Assert.InRange(mixedSmoke.SmokeContamination, 1, 6);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessContaminationRidesSmokeAndAshWhenEnabled()
     {
         int width = 11;
@@ -497,12 +355,7 @@ public sealed class UnityShaderExecutionHarnessTests
             companionFields: companionFields,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState contaminatedSmokeSource = AtmosphereAt(capture, 1, 1);
         WildfireTransportFieldState contaminatedSmokeDeposit = AtmosphereAt(capture, 5, 1);
         WildfireTransportFieldState taintedTransitCell = AtmosphereAt(capture, 3, 1);
@@ -520,7 +373,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.Equal(0, cleanSmokeDeposit.AshContamination);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessAshFallsToOakBaseInsteadOfUpperTreeBlocksWhenEnabled()
     {
         AssertAshFallsToStackBaseInsteadOfUpperBlocks(
@@ -528,7 +381,7 @@ public sealed class UnityShaderExecutionHarnessTests
             WildfireMaterialClass.Tree);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessAshFallsToBuildingBaseInsteadOfUpperBuildingBlocksWhenEnabled()
     {
         AssertAshFallsToStackBaseInsteadOfUpperBlocks(
@@ -564,12 +417,7 @@ public sealed class UnityShaderExecutionHarnessTests
             companionFields: companionFields,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture);
-        if (capture is null)
-        {
-            return;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture);
         WildfireMaterialFieldState baseTree = CompanionAt(capture, 0, 0, 0);
         WildfireMaterialFieldState middleTree = CompanionAt(capture, 0, 0, 1);
         WildfireMaterialFieldState topTree = CompanionAt(capture, 0, 0, 2);
@@ -582,18 +430,12 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.Equal(0, topTree.AshStrength & 0x3);
     }
 
-    [Fact]
+    [UnityShaderFact]
     public void UnityHarnessFuelBurnDownCoverageRunsFromFixturesWhenEnabled()
     {
         FuelBurnDownResult[] results = FuelBurnDownScenarios
-            .Select(CaptureFuelBurnDownResultWhenEnabled)
-            .OfType<FuelBurnDownResult>()
+            .Select(CaptureFuelBurnDownResult)
             .ToArray();
-
-        if (results.Length == 0)
-        {
-            return;
-        }
 
         Assert.Equal(FuelBurnDownScenarios.Length, results.Length);
         Assert.True(results[0].FuelTotals[0] < results[1].FuelTotals[0]);
@@ -603,36 +445,12 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(results[2].FuelTotals[^1] > 0, "Expected high fuel not to be consumed within five ticks.");
     }
 
-    private static FuelBurnDownResult? CaptureFuelBurnDownResultWhenEnabled(FuelBurnDownScenario scenario)
+    private static FuelBurnDownResult CaptureFuelBurnDownResult(FuelBurnDownScenario scenario)
     {
         ShaderSnapshotFixture fixture = LoadFuelBurnDownFixture(scenario);
-        ShaderSnapshotCapture? capture = CaptureWhenUnityHarnessEnabled(fixture, tickCount: 5);
-        if (capture is null)
-        {
-            return null;
-        }
-
+        ShaderSnapshotCapture capture = Capture(fixture, tickCount: 5);
         int[] fuelTotals = FuelTotalsByTick(fixture, capture);
         return new FuelBurnDownResult(scenario.Name, fuelTotals, Array.FindIndex(fuelTotals, static total => total == 0) + 1);
-    }
-
-    private static ShaderSnapshotCapture? CaptureWhenUnityHarnessEnabled(ShaderSnapshotFixture fixture, int tickCount = 1)
-    {
-        if (!string.Equals(Environment.GetEnvironmentVariable("WILDFIRE_RUN_UNITY_SHADER_HARNESS"), "1", StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        string repoRoot = FindRepoRoot();
-        string unityExecutable = Environment.GetEnvironmentVariable("WILDFIRE_UNITY_EXECUTABLE")
-            ?? "/Applications/Unity/Hub/Editor/6000.3.6f1/Unity.app/Contents/MacOS/Unity";
-        ShaderSnapshotHarness harness = new(new UnityBatchmodeShaderSnapshotExecutor(new UnityBatchmodeShaderSnapshotExecutorOptions(
-            UnityExecutablePath: unityExecutable,
-            ProjectPath: Path.Combine(repoRoot, "src/Wildfire.Unity/UnityBatchmodeProject"),
-            ComputeShaderPath: Path.Combine(repoRoot, "src/Wildfire.Unity/FireSim.compute"),
-            Timeout: TimeSpan.FromMinutes(5))));
-
-        return harness.Capture(fixture, tickCount);
     }
 
     private static ShaderSnapshotFixture CreateSingleHotSourceFixture(
@@ -786,22 +604,6 @@ public sealed class UnityShaderExecutionHarnessTests
             AshStrength: 0,
             WildfireAshQuality.Tainted,
             WildfireContaminationBehavior.TaintedSource).Pack();
-    }
-
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(Environment.CurrentDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate Wildfire.slnx from test working directory.");
     }
 
     private sealed record FuelBurnDownScenario(
