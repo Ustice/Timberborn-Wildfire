@@ -24,3 +24,19 @@ Portable tests exercise the shared protocol, queue, coordinator, and backend con
 The two new external-change shader regressions were enabled and attempted. Unity exited before shader compilation because no valid Editor license was available. Their actual GPU results remain unverified. Resume with the external-change test command in the Test Plan after license activation.
 
 No game deployment, game launch, player-save mutation, release publication, or Git push was performed for this refactor. Targeted validation on a disposable save remains necessary for native inventory accounting, construction reconstruction, rendering, and save/reload behavior. Native reconstruction can still fail after deletion; preparation is not rollback.
+
+## Follow-up After License Activation
+
+The user subsequently authorized publication to `main`, activated Unity, and authorized fixes for failures exposed by shader execution. GitHub CI passed for `f87de2d`. Unity CLI `1.0.0-beta.6` is installed; the shader harness continues to invoke Unity Editor `6000.3.6f1` directly.
+
+The two external-change regressions passed immediately after activation. The full suite then exposed ten older failures. Replaying five representative scenarios with the pre-refactor runner and unchanged shader at `625251f` produced identical packed cells, transport fields, material fields, and per-tick delta counts. The refactor had not introduced those reproduced failures.
+
+Corrections made during this follow-up:
+
+- Fixtures now serialize Core parameters rather than using independently hard-coded runner tuning (notably ignition 11 versus production 5). Explicit complete overrides remain supported.
+- Transport fixtures now provide open air, sufficient vertical space and time, and actual emission sources. Ash assertions read authoritative transport rather than deprecated material ash fields. Wind assertions measure directional heat bias without assuming adjacent four-bit samples cannot tie.
+- Fixed a real shader bug: ash generated from toxic smoke lost the smoke's contamination. Both local deposition and newly generated falling ash now retain it under the existing maximum-contamination rule. Two isolated GPU regressions failed before the fix and passed afterward.
+
+Final follow-up validation: **19 shader tests executed and passed**, **88 portable tests passed**, and **573 native tests passed**, with zero build warnings/errors. The shader execution log is `/tmp/wildfire-shader-corrected-full.log`; the .NET integration log is `/tmp/wildfire-shader-followup-dotnet.log`. Pre-fix provenance evidence is `/tmp/wildfire-smoke-ash-red.log`, and baseline comparison evidence is `/tmp/wildfire-shader-baseline-comparison/results.json`.
+
+The Unity licensing blocker is resolved. Native gameplay, rendering, and save/reload still require targeted validation in a disposable game save; this follow-up did not launch or deploy Timberborn.

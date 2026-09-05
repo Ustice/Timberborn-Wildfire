@@ -53,6 +53,8 @@ dotnet test tests/Wildfire.Shader.Tests/Wildfire.Shader.Tests.csproj
 
 The shader project has no Timberborn assembly dependency. Disabled cases report skipped with an opt-in reason; enabled cases must execute Unity and assert the capture. Check compile, buffer, dispatch, and readback results, and retain fixture/capture output. Snapshot changes need a behavioral explanation, not automatic acceptance of newly generated values.
 
+Fixture execution serializes the current Core simulation parameters instead of maintaining separate runner tuning. A fixture may supply a complete `parameters` override. Older files without that object receive Core defaults when loaded and serialized; CLI fixture exports include the parameters required by the direct Unity runner.
+
 For direct fixture execution independent of the test project:
 
 ```bash

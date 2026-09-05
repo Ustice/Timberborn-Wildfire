@@ -54,7 +54,7 @@ public sealed class UnityShaderExecutionHarnessTests
         Assert.True(downwind > upwind, $"Expected downwind {downwind} to exceed upwind {upwind}.");
         Assert.True(crosswind > upwind, $"Expected crosswind {crosswind} to exceed upwind {upwind}.");
         // Four-bit heat can round adjacent downwind and crosswind samples to
-        // the same value. Test the field's directional bias and lateral symmetry.
+        // the same value. Test the field's directional bias and lateral balance.
         int downwindMoment = capture.FinalPackedCells
             .Select((cell, index) => (index % 9 - 4) * ShaderCellFields.Create(cell).Heat)
             .Sum();
