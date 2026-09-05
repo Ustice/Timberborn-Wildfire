@@ -54,6 +54,6 @@ Failures should name the failing capability and preserve evidence. The appropria
 
 ## Validation boundaries
 
-The test project currently references all application projects, including Timberborn. Hosted CI therefore runs a generated Core-only smoke project instead of the full checked-in suite. Fake dispatcher tests verify orchestration expectations, while shader harness runs execute shader behavior. Neither alone proves the native game's protocol and consequence integration. See [TEST_PLAN.md](TEST_PLAN.md).
+The test projects separate portable contracts, Unity shader execution, and native Timberborn integration. Hosted CI runs the checked-in portable and script tests; shader cases explicitly report skipped when disabled. Fake dispatcher tests verify orchestration expectations, while enabled shader harness runs execute shader behavior. Native API and consequence behavior still requires the native suite and targeted game validation. See [TEST_PLAN.md](TEST_PLAN.md).
 
 This map describes the source reviewed on 2026-09-04. Keep it synchronized with changes to project dependencies and execution ownership. The [previous architecture record](history/2026-09-04/ARCHITECTURE.md) preserves superseded implementation plans.

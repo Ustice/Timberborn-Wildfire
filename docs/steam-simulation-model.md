@@ -11,6 +11,6 @@ Steam is a clean, transient simulator transport field produced when heat meets w
 
 ## Implementation anchors
 
-[WildfireTransportFieldState](../src/Wildfire.Core/WildfireTransportFieldState.cs) defines the packed lane. [FireSim.compute](../src/Wildfire.Unity/FireSim.compute) contains `SteamSourceFromMoistureAndHeat` and transport logic. [Shader execution tests](../tests/Wildfire.Core.Tests/UnityShaderExecutionHarnessTests.cs) include wet/hot steam generation and converging transport cases; see [validation](TEST_PLAN.md) to establish whether they actually execute.
+[WildfireTransportFieldState](../src/Wildfire.Core/WildfireTransportFieldState.cs) defines the packed lane. [FireSim.compute](../src/Wildfire.Unity/FireSim.compute) contains `SteamSourceFromMoistureAndHeat` and transport logic. [Shader execution tests](../tests/Wildfire.Shader.Tests/UnityShaderExecutionHarnessTests.cs) include wet/hot steam generation and converging transport cases; see [validation](TEST_PLAN.md) to establish whether they actually execute.
 
 The [earlier steam record](history/2026-09-04/steam-simulation-model.md) preserves the May 2026 rationale and proposed acceptance criteria. It does not establish present visual quality or issue status.

@@ -10,13 +10,14 @@ Install Bun dependencies and use .NET 10. From the repository root:
 bun install --frozen-lockfile
 bun run typecheck
 bun run blueprints:check
-bun scripts/run-hosted-dotnet-tests.ts
+bun run test:portable
+bun run test:scripts
 dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --layer=0
 ```
 
-[Hosted CI](../.github/workflows/ci.yml) runs typechecking, blueprint generation checks, the hosted .NET script, and a deploy plan. `typecheck` generates the Prisma client before TypeScript checking. The [hosted script](../scripts/run-hosted-dotnet-tests.ts) currently creates four smoke tests in a temporary project referencing only Core. It does not run all checked-in Core, Unity, or Timberborn tests.
+[Hosted CI](../.github/workflows/ci.yml) runs typechecking, blueprint generation checks, the checked-in portable .NET suite, script behavior tests, and a deploy plan. `typecheck` generates the Prisma client before TypeScript checking. [Wildfire.Portable.slnx](../Wildfire.Portable.slnx) includes Core/CLI/compute-contract tests and shader test discovery, with no native Timberborn dependency. The portable command explicitly disables Unity execution so unavailable shader checks are visible as skipped.
 
-Run relevant `bun test` files in [tests/](../tests/) for script behavior. Do not assume the typecheck command executes them. For a deployment-plan change, the hosted-safe command is:
+Run relevant `bun test` files in [tests/](../tests/) for focused script behavior checks, or `bun run test:scripts` for all of them. Typechecking and executing tests are separate checks. For a deployment-plan change, the hosted-safe command is:
 
 ```bash
 bun scripts/deploy-timberborn-mod.ts --plan-only --configuration Release --mods-dir /tmp/wildfire-mods-plan
@@ -28,9 +29,9 @@ bun scripts/deploy-timberborn-mod.ts --plan-only --configuration Release --mods-
 dotnet test Wildfire.slnx
 ```
 
-The [test project](../tests/Wildfire.Core.Tests/Wildfire.Core.Tests.csproj) references CLI, Core, Unity, and Timberborn. Consequently, even a filtered portable test can fail before execution when the native adapter cannot compile. The adapter resolves managed assemblies from the local macOS Timberborn Steam install through its project file. A working SDK alone is insufficient.
+The [native test project](../tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj) references Timberborn and is separate from the portable tests. The full solution builds both, so incompatible game assemblies can block native tests without preventing portable validation. The adapter resolves managed assemblies from the local macOS Timberborn Steam install by default. A working SDK alone is insufficient.
 
-Classify build/API incompatibility separately from failed assertions. Capture compiler errors and assembly/game versions when available. A four-test hosted pass does not compensate for an adapter compilation failure. See the [2026-09-04 review baseline](history/2026-09-04/review-baseline.md) for one dated instance, not a permanent environment rule.
+Classify build/API incompatibility separately from failed assertions. Capture compiler errors and assembly/game versions when available. A portable pass does not compensate for an adapter compilation failure. See the [2026-09-04 review baseline](history/2026-09-04/review-baseline.md) for the earlier test arrangement and one dated failure, not a permanent environment rule.
 
 ## Shader execution
 
@@ -39,10 +40,10 @@ Portable fake-dispatcher tests verify upload, dispatch, and readback contracts w
 ```bash
 WILDFIRE_RUN_UNITY_SHADER_HARNESS=1 \
 WILDFIRE_UNITY_EXECUTABLE=/path/to/Unity \
-dotnet test --filter FullyQualifiedName~UnityHarness
+dotnet test tests/Wildfire.Shader.Tests/Wildfire.Shader.Tests.csproj
 ```
 
-That test still inherits the full test project's native build dependencies. At the review baseline, disabled harness tests could return successfully without executing Unity; always establish whether the harness actually ran. Check compile, buffer, dispatch, and readback results, and retain fixture/capture output. Snapshot changes need a behavioral explanation, not automatic acceptance of newly generated values.
+The shader project has no Timberborn assembly dependency. Disabled cases report skipped with an opt-in reason; enabled cases must execute Unity and assert the capture. Check compile, buffer, dispatch, and readback results, and retain fixture/capture output. Snapshot changes need a behavioral explanation, not automatic acceptance of newly generated values.
 
 For direct fixture execution independent of the test project:
 

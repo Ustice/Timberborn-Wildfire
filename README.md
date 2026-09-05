@@ -22,8 +22,9 @@ Use Bun and .NET 10. The portable starting checks are:
 bun install --frozen-lockfile
 bun run typecheck
 bun run blueprints:check
-bun scripts/run-hosted-dotnet-tests.ts
+bun run test:portable
+bun run test:scripts
 dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --layer=0
 ```
 
-The hosted .NET command currently runs four generated Core smoke tests. The full `dotnet test Wildfire.slnx` suite additionally requires compatible installed Timberborn managed assemblies. Shader execution needs a licensed Unity Editor and compute-capable graphics. See the [validation runbook](docs/TEST_PLAN.md) for commands and the limits of each check.
+The portable suite runs the checked-in Core, CLI, and compute-contract tests without Timberborn. Shader tests are reported as skipped unless explicitly enabled. The full `dotnet test Wildfire.slnx` suite additionally requires compatible installed Timberborn managed assemblies. Shader execution needs a licensed Unity Editor and compute-capable graphics. See the [validation runbook](docs/TEST_PLAN.md) for commands and the limits of each check.

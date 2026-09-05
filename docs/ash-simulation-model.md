@@ -14,6 +14,6 @@ Ash amount and contamination belong to simulator transport state. Timberborn gam
 
 [WildfireTransportFieldState](../src/Wildfire.Core/WildfireTransportFieldState.cs) defines the packed ash lanes. [FireSim.compute](../src/Wildfire.Unity/FireSim.compute) implements ash production and transport. [TimberbornAshFieldService](../src/Wildfire.Timberborn/Ash/TimberbornAshFieldService.cs) maintains the derived read model used by gameplay consumers.
 
-The shader still has material ash metadata and historical `Atmospheric`/`Companion` names. Those names do not change the authority boundary. `CellDelta` alone cannot represent transport-only changes, so adapter synchronization must observe transport state explicitly.
+The shader still has material ash metadata and historical `Atmospheric`/`Companion` names. Those names do not change the authority boundary. `CellDelta` alone cannot represent transport-only changes. [TimberbornAshFieldSynchronizer](../src/Wildfire.Timberborn/Ash/TimberbornAshFieldSynchronizer.cs) reads the current transport buffer once per observed tick through a dedicated observation contract. It does not capture packed cells or build a persistence snapshot; save/load retains its separate snapshot path.
 
 The [May design discussion preserved in the September archive](history/2026-09-04/ash-simulation-model.md) includes earlier mismatches, naming alternatives, and intended follow-ups. Consult source and current issue evidence before treating any of those follow-ups as implemented. [DESIGN.md](DESIGN.md) owns the current field layout.
