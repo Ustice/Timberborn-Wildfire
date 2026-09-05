@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, resolve } from "path";
+import { releaseManifestIdentity } from "./release-manifest.ts";
 
 type DeployOptions = {
   allowOpenGame: boolean;
@@ -97,11 +98,8 @@ const assetBundleArtifacts: AssetBundleArtifact[] = [
   },
 ];
 const manifest = {
-  Name: "Wildfire",
-  Version: "0.1.0.0",
-  Id: "JasonKleinberg.Wildfire",
-  MinimumGameVersion: "1.0.0.0",
-  Description: "Wildfire cellular-automata fire simulation adapter scaffold.",
+  ...releaseManifestIdentity,
+  Description: "Wildfire cellular-automata fire simulation for Timberborn.",
   RequiredMods: [],
   OptionalMods: [],
 };

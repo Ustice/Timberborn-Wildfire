@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { releaseManifestIdentity } from "./release-manifest.ts";
 
 export type ReleaseManifest = {
   Id?: unknown;
@@ -31,12 +32,7 @@ export const workshopVersionFolderName = "version-1.0";
 const repoRoot = resolve(import.meta.dir, "..");
 const privateComputeShaderFolderName = "ComputeShaders";
 const requiredAssemblies = ["Wildfire.Timberborn.dll", "Wildfire.Core.dll"];
-const expectedManifest: ValidatedReleaseManifest = {
-  Id: "JasonKleinberg.Wildfire",
-  MinimumGameVersion: "1.0.0.0",
-  Name: "Wildfire",
-  Version: "0.1.0.0",
-};
+const expectedManifest = releaseManifestIdentity satisfies ValidatedReleaseManifest;
 const platformSupport = "macOS-only first release";
 const requiredBundles = [
   "wildfire_compute_mac",

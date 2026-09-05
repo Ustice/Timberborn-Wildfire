@@ -4,6 +4,8 @@ Ticket: `TWF-028`
 
 Date: 2026-05-01
 
+This is a historical research record. Its command inventory, tool limitations, and procedural references describe that date. Use the current [validation runbook](../TEST_PLAN.md) and freshly observed application state for present work.
+
 ## Conclusion
 
 QA cannot navigate Timberborn menus remotely without screen interaction using the current Wildfire repo surfaces.
