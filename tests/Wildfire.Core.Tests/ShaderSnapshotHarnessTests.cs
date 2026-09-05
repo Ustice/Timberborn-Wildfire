@@ -8,6 +8,45 @@ namespace Wildfire.Core.Tests;
 public sealed class ShaderSnapshotHarnessTests
 {
     [Fact]
+    public void ExternalChangeFixtureRoundTripsProductionEncodedWords()
+    {
+        ShaderSnapshotExternalChanges changes = ShaderSnapshotExternalChanges.Encode(
+            2, new FireSimChange(0, SetHeat: 15, SetSmoke: 5, SetSmokeContamination: 7));
+        ShaderSnapshotFixture fixture = new(
+            1, "external-changes", 89, new ComputeGridDimensions(1, 1, 1),
+            new ShaderSnapshotLayer(0, 0, 1), [0], ExternalChanges: [changes]);
+
+        ShaderSnapshotFixture roundTrip = ShaderSnapshotFixtureLoader.Load(ShaderSnapshotJson.SerializeFixture(fixture));
+
+        Assert.NotNull(roundTrip.ExternalChanges);
+        ShaderSnapshotExternalChanges batch = Assert.Single(roundTrip.ExternalChanges);
+        Assert.Equal(2, batch.Tick);
+        Assert.Equal(changes.Words, batch.Words);
+        Assert.Equal((1u << 3) | (1u << 9) | (1u << 10), batch.Words[1]);
+    }
+
+    [Fact]
+    public void ExternalChangeFixturesRejectMalformedOrOversizedUploads()
+    {
+        ShaderSnapshotFixture fixture = new(
+            1, "invalid-changes", 89, new ComputeGridDimensions(1, 1, 1),
+            new ShaderSnapshotLayer(0, 0, 1), [0]);
+        ShaderSnapshotExternalChanges[][] invalidBatches =
+        [
+            [new(1, [0u])],
+            [new(1, [0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u])],
+            [new(1, [1u, 0u, 0u, 0u])],
+            [new(0, [])],
+            [new(1, []), new(1, [])],
+        ];
+
+        foreach (ShaderSnapshotExternalChanges[] batches in invalidBatches)
+        {
+            Assert.Throws<InvalidDataException>(() => ShaderSnapshotJson.SerializeFixture(fixture with { ExternalChanges = batches }));
+        }
+    }
+
+    [Fact]
     public void FixtureLoaderReadsCliFixtureExportAndCreatesBufferGrid()
     {
         Scenario scenario = ScenarioCatalog.Build(CliOptions.Parse(

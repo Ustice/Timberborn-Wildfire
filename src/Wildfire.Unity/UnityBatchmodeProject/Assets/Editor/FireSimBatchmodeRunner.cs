@@ -87,7 +87,7 @@ namespace Wildfire.UnityBatchmode
                 currentCells = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 nextCells = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 externalChanges = new ComputeBuffer(Math.Max(1, cellCount), sizeof(uint) * 4, ComputeBufferType.Structured);
-                deltas = new ComputeBuffer(cellCount, sizeof(uint) * 4, ComputeBufferType.Append);
+                deltas = new ComputeBuffer(checked(cellCount + externalChanges.count), sizeof(uint) * 4, ComputeBufferType.Append);
                 visualFields = new ComputeBuffer(cellCount, sizeof(float) * 4, ComputeBufferType.Structured);
                 currentAtmosphericFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 nextAtmosphericFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
@@ -101,11 +101,26 @@ namespace Wildfire.UnityBatchmode
                 LogPhase("buffer", "ok", "allocated=current,next,external,deltas,visual,atmospheric,companion");
 
                 int kernel = shader.FindKernel("SimulateFullGrid");
+                int applyKernel = shader.FindKernel("ApplyExternalChanges");
+                fixture.ValidateExternalChanges(cellCount, tickCount);
                 TickSnapshot[] ticks = new TickSnapshot[tickCount];
                 for (int tick = 1; tick <= tickCount; tick += 1)
                 {
                     LogPhase("dispatch", "start", "tick=" + tick);
                     deltas.SetCounterValue(0);
+                    FireSimChangeGpu[] changes = fixture.ChangesForTick(tick);
+                    if (changes.Length > 0)
+                    {
+                        externalChanges.SetData(changes);
+                        Bind(
+                            shader, applyKernel, fixture, tick,
+                            currentCells, nextCells, externalChanges, deltas, visualFields,
+                            currentAtmosphericFields, nextAtmosphericFields, companionFields);
+                        shader.SetInt("ChangeCount", changes.Length);
+                        shader.Dispatch(applyKernel, 1, 1, 1);
+                        LogPhase("external-changes", "ok", "tick=" + tick + " count=" + changes.Length);
+                    }
+
                     Bind(
                         shader,
                         kernel,
@@ -127,7 +142,7 @@ namespace Wildfire.UnityBatchmode
                     LogPhase("dispatch", "ok", "tick=" + tick);
 
                     LogPhase("readback", "start", "tick=" + tick);
-                    DeltaSnapshot[] tickDeltas = ReadDeltas(deltas, deltaCounter, cellCount);
+                    DeltaSnapshot[] tickDeltas = ReadDeltas(deltas, deltaCounter, deltas.count);
                     ticks[tick - 1] = new TickSnapshot(tick, tickDeltas);
                     LogPhase("readback", "ok", "tick=" + tick + " deltas=" + tickDeltas.Length);
                     Swap(ref currentCells, ref nextCells);
@@ -381,6 +396,60 @@ namespace Wildfire.UnityBatchmode
         public uint[] initialAtmosphericFields;
         public uint[] companionFields;
         public FixtureWind wind;
+        public FixtureExternalChanges[] externalChanges;
+
+        public void ValidateExternalChanges(int cellCount, int tickCount)
+        {
+            var seenTicks = new System.Collections.Generic.HashSet<int>();
+            foreach (FixtureExternalChanges batch in externalChanges ?? new FixtureExternalChanges[0])
+            {
+                if (batch.tick <= 0 || batch.tick > tickCount || !seenTicks.Add(batch.tick))
+                {
+                    throw new InvalidOperationException("External changes require one batch per tick within the requested capture.");
+                }
+
+                if (batch.words == null || batch.words.Length % 4 != 0 || batch.words.Length / 4 > cellCount)
+                {
+                    throw new InvalidOperationException("External change words exceed upload capacity or contain a partial command.");
+                }
+
+                for (int offset = 0; offset < batch.words.Length; offset += 4)
+                {
+                    if (batch.words[offset] >= cellCount)
+                    {
+                        throw new InvalidOperationException("External change cell index is outside the fixture grid.");
+                    }
+                }
+            }
+        }
+
+        public FireSimChangeGpu[] ChangesForTick(int tick)
+        {
+            foreach (FixtureExternalChanges batch in externalChanges ?? new FixtureExternalChanges[0])
+            {
+                if (batch.tick != tick)
+                {
+                    continue;
+                }
+
+                FireSimChangeGpu[] changes = new FireSimChangeGpu[batch.words.Length / 4];
+                for (int index = 0; index < changes.Length; index++)
+                {
+                    int offset = index * 4;
+                    changes[index] = new FireSimChangeGpu
+                    {
+                        CellIndex = batch.words[offset],
+                        SetMask = batch.words[offset + 1],
+                        AddFields = batch.words[offset + 2],
+                        SetValues = batch.words[offset + 3],
+                    };
+                }
+
+                return changes;
+            }
+
+            return new FireSimChangeGpu[0];
+        }
 
         public static Fixture Load(string path)
         {
@@ -397,6 +466,22 @@ namespace Wildfire.UnityBatchmode
 
             return fixture;
         }
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    internal struct FireSimChangeGpu
+    {
+        public uint CellIndex;
+        public uint SetMask;
+        public uint AddFields;
+        public uint SetValues;
+    }
+
+    [Serializable]
+    internal sealed class FixtureExternalChanges
+    {
+        public int tick;
+        public uint[] words;
     }
 
     [Serializable]

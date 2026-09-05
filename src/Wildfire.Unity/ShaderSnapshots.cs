@@ -15,7 +15,8 @@ public sealed record ShaderSnapshotFixture(
     ushort[] InitialCells,
     uint[]? InitialAtmosphericFields = null,
     uint[]? CompanionFields = null,
-    FireSimWind? Wind = null)
+    FireSimWind? Wind = null,
+    ShaderSnapshotExternalChanges[]? ExternalChanges = null)
 {
     public const int CurrentFormatVersion = 1;
     public const string PackedCellValueType = "uint16";
@@ -182,7 +183,8 @@ public static class ShaderSnapshotFixtureLoader
             cells,
             atmosphericFields,
             materialFields,
-            wind);
+            wind,
+            ShaderSnapshotExternalChanges.Read(root, dimensions.CellCount));
     }
 
     private static ushort ReadPackedCell(JsonElement value, string sourceName)
@@ -384,6 +386,7 @@ public static class ShaderSnapshotJson
     public static string SerializeFixture(ShaderSnapshotFixture fixture)
     {
         ArgumentNullException.ThrowIfNull(fixture);
+        ShaderSnapshotExternalChanges.Validate(fixture.ExternalChanges, fixture.Grid.CellCount);
 
         ShaderSnapshotFixtureDocument document = new(
             FormatVersion: fixture.FormatVersion,
@@ -399,7 +402,8 @@ public static class ShaderSnapshotJson
             MaterialFields: fixture.CompanionFields,
             Wind: fixture.Wind is { } wind
                 ? new ShaderSnapshotWind(wind.DirectionX, wind.DirectionY, wind.Strength)
-                : null);
+                : null,
+            ExternalChanges: fixture.ExternalChanges);
 
         return JsonSerializer.Serialize(document, JsonOptions) + Environment.NewLine;
     }
@@ -536,7 +540,8 @@ public static class ShaderSnapshotJson
         uint[]? InitialAtmosphericFields,
         [property: JsonPropertyName("companionFields")]
         uint[]? MaterialFields,
-        ShaderSnapshotWind? Wind);
+        ShaderSnapshotWind? Wind,
+        ShaderSnapshotExternalChanges[]? ExternalChanges);
 
     private sealed record ShaderSnapshotPackedCellValues(string ValueType, string IndexOrder, ushort[] Values);
 
