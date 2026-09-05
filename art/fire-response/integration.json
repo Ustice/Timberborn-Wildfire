@@ -7,7 +7,8 @@
       "BaseMetal.Folktails",
       "BaseWood_Brown.Folktails",
       "BaseWood_LightBrown.Folktails",
-      "Dirt",
+      "DirtCommon",
+      "Paper.IronTeeth",
       "ThatchedRoof.Folktails"
     ],
     "footprint": [
@@ -24,7 +25,8 @@
     "materials": [
       "BaseMetal.IronTeeth",
       "BaseWood_DarkBrown.IronTeeth",
-      "PaintedMetal.IronTeeth"
+      "DirtCommon",
+      "RoofPlanks.IronTeeth"
     ],
     "footprint": [
       3,
@@ -55,7 +57,7 @@
     "materials": [
       "BaseMetal.IronTeeth",
       "BaseWood_DarkBrown.IronTeeth",
-      "PaintedMetal.IronTeeth"
+      "Paper.IronTeeth"
     ],
     "footprint": [
       1,
@@ -70,8 +72,7 @@
     "nodes": 1,
     "materials": [
       "BaseMetal.IronTeeth",
-      "BaseWood_DarkBrown.IronTeeth",
-      "PaintedMetal.IronTeeth"
+      "Paper.IronTeeth"
     ],
     "footprint": [
       1,
@@ -86,7 +87,8 @@
     "nodes": 1,
     "materials": [
       "BaseMetal.IronTeeth",
-      "BaseWood_DarkBrown.IronTeeth"
+      "BaseWood_DarkBrown.IronTeeth",
+      "Paper.IronTeeth"
     ],
     "footprint": [
       1,
@@ -102,7 +104,8 @@
     "materials": [
       "BaseMetal.IronTeeth",
       "BaseWood_DarkBrown.IronTeeth",
-      "PaintedMetal.IronTeeth"
+      "DirtCommon",
+      "RoofPlanks.IronTeeth"
     ],
     "footprint": [
       2,
@@ -116,7 +119,7 @@
     "triangles": 880,
     "nodes": 1,
     "materials": [
-      "BaseWood_DarkBrown.IronTeeth"
+      "DirtCommon"
     ],
     "footprint": [
       1,

@@ -12,14 +12,9 @@ sys.path.insert(0,str(PLUGIN))
 from timbermesh_exporter import Exporter, ExportSettings
 import model_pb2
 
-# Exact names observed in the shipped example blend and official ShantySpeaker mesh.
-FOLK={'wood':'BaseWood_Brown.Folktails','plank':'BaseWood_LightBrown.Folktails',
-'pale':'BaseWood_LightBrown.Folktails','edge':'BaseWood_Brown.Folktails','thatch':'ThatchedRoof.Folktails',
-'rope':'BaseWood_Brown.Folktails','brass':'BaseMetal.Folktails','metal':'BaseMetal.Folktails',
-'cloth':'BaseWood_Brown.Folktails','stone':'Dirt','earth':'Dirt'}
-IRON={key:'BaseWood_DarkBrown.IronTeeth' for key in ('wood','plank','darkwood','edge','canvas','cloth','rope','earth','stone')}
-IRON.update({key:'BaseMetal.IronTeeth' for key in ('metal','iron','brass','glass')})
-IRON.update({key:'PaintedMetal.IronTeeth' for key in ('red','rust','greenroof')})
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from native_materials import FOLK, IRON, assign_native_materials
+
 ASSETS=[('FireBell_Folktails',(2,2,3),'Fire Bell'),('WardenStation_Ironteeth',(3,3,3),'Warden Station'),
 ('BrigadeBucket',(1,1,1),'Brigade Bucket'),('WardenSprayer',(1,1,1),'Warden Sprayer'),
 ('WardenHelmet',(1,1,1),'Warden Helmet'),('WardenCoat',(1,1,1),'Warden Coat'),
@@ -35,13 +30,9 @@ for name,size,label in ASSETS:
     bpy.ops.import_scene.gltf(filepath=str(SOURCE/(name+'.glb')))
     meshes=[o for o in bpy.context.scene.objects if o.type=='MESH']
     mapping=FOLK if name in ('FireBell_Folktails','BrigadeBucket') else IRON
+    bpy.context.view_layer.update()
     for obj in meshes:
-        for slot in obj.material_slots:
-            source=slot.material.name
-            native=mapping.get(source)
-            if native is None: raise ValueError(f'Unmapped material {name}: {source}')
-            mat=bpy.data.materials.get(native) or bpy.data.materials.new(native)
-            slot.material=mat
+        assign_native_materials(obj, mapping)
     bpy.context.view_layer.update()
     points=[o.matrix_world@Vector(c) for o in meshes for c in o.bound_box]
     low=Vector(tuple(min(p[i] for p in points) for i in range(3)))

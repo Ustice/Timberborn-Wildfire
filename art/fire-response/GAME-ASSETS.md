@@ -5,14 +5,14 @@
 Clone the official exporter into `~/repos/timbermesh`. The tested source revision is `f768b573963d45b3b17f0334e0cdb64c17a8e794` (Mechanistry Timbermesh 1.2.0).
 
 ```sh
-blender --background --factory-startup --python scripts/art/export_fire_response.py
+blender --background --factory-startup --python-exit-code 1 --python scripts/art/export_fire_response.py
 ```
 
 This reads the individual GLBs and writes `game-mod/`: eight native Timbermeshes, placeable blueprint definitions, two native comparison references, localization and a standalone mod manifest. `integration.json` records exported triangle counts, materials and footprint dimensions. The exporter merges static parts into one node per asset while retaining material submeshes.
 
 ## Material and coordinate boundary
 
-The game exports intentionally use native material names verified in the installed 1.1 material inventory and faction material-collection blueprints. The preview appends the opposite faction's atlas material collection so both factions can render in one save. The original GLBs retain the authored colors and textures. Native materials can change the apparent color and texture placement; these need visual review in the game.
+The game exports intentionally use native material names verified in the installed 1.1 material inventory and faction material-collection blueprints. The preview appends the opposite faction's atlas material collection so both factions can render in one save. The original GLBs retain the authored colors and textures. `scripts/art/native_materials.py` assigns explicit atlas regions per component. Timber follows each component's long axis; metal excludes embossed atlas motifs; roof panels and battens use separate regions; canvas uses a plain Paper region; earth uses opaque DirtCommon. Every exported UV is checked to remain within 0–1, because out-of-range coordinates can sample neighboring textures in the game's combined atlas. The original GLBs are not rewritten by this pass.
 
 The official exporter converts Blender `(x,y,z)` into Unity `(-x,z,-y)`. Before export, each model is moved from its centered art origin into the positive footprint quadrant after conversion and raised to put its lowest point on the ground. The small gear displays use their original scale, not the enlarged overview scale.
 
@@ -39,9 +39,15 @@ The preview's first startup exposed a CSV header error, fixed to `ID,Text,Commen
 ### Comparison findings
 
 - Building silhouettes and overall scale are readable beside native faction models. The station is taller than the native Barrack and the bell taller than a single-storey Lodge; these proportions need art approval.
-- Native material substitution is visibly inadequate as a final texture solution: generic UV islands sample atlas details unintentionally, produce oversized grain and turn the station roof blue. Author atlas-specific UVs or supply dedicated game materials before calling the art finished.
-- The earth berm incorrectly looks wooden because the initial Iron Teeth mapping uses the dark-wood material for earth/stone. This is a visible material-authoring defect, not a geometry-load failure.
+- The first pass exposed generic UV islands sampling atlas details unintentionally. The refined pass replaces them with component projections and bounded atlas regions. The station now has consistent green roof planking, and wood/metal surfaces no longer sample arbitrary atlas motifs.
+- The berm now uses opaque DirtCommon for both packed earth and facing pieces. It reads as an earth barrier instead of timber; separate stone coloration remains an art refinement.
 - Gear renders at its actual export size and is small compared with buildings. It remains static ground-level equipment, not fitted or animated wearables.
 - Source-model ground centering and single merged mesh nodes work. Selection uses conservative box colliders; detailed collision and building construction behavior remain outside this preview.
 
-See `screenshots/` for native Steam screenshots. The close-up intentionally preserves the material problems for comparison.
+### Refined material review
+
+The updated eight meshes exported successfully and loaded through direct computer use. The review autosave retained the camera and paused state. Fire Berm and Smoke Fan selection were also checked. The Player log contains no exception or missing-material error, but reports `Too many atlases loaded (3)` for this combined-faction review setup. This preview is not a production atlas-budget validation.
+
+`screenshots/atlas-refined-comparison.jpg` shows the revised set with native references; `screenshots/station-atlas-refined.jpg` shows the corrected roof. Earlier screenshots remain as before-pass evidence. No native textures are redistributed. The current native palette makes the coat pale and helmet/sprayer gray; cloth shading, accent colors, stone differentiation and wearable fitting remain unfinished. Geometry is unchanged at 27,952 triangles across eight merged nodes.
+
+Wildfire simulation remains disabled because of the separate 1.1 compatibility error. The preview remains open and paused.
