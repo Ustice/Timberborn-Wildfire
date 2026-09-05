@@ -38,6 +38,10 @@ The [protocol](../src/Wildfire.Core/FireSimGpuProtocol.cs) encodes all supported
 
 [TimberbornFireRuntimeInitializer](../src/Wildfire.Timberborn/Runtime/TimberbornFireRuntimeInitializer.cs) supplies native readiness and import inputs. [TimberbornFireRuntime](../src/Wildfire.Timberborn/Runtime/TimberbornFireRuntime.cs) owns native lifecycle and service composition. [TimberbornFireSystem](../src/Wildfire.Timberborn/Runtime/TimberbornFireSystem.cs) owns its simulator, queued host changes, dispatch, delta consumption, and the shared sustained-input scheduler.
 
+Runtime composition builds a complete `TimberbornRuntimeBindings` value and prepares an unpublished simulator/renderer candidate. Import restoration, consequence restoration, and rendering setup complete before the live system, dispatcher, and bindings are assigned. Public dispatch remains gated by `Ready`. A preparation failure disposes candidate resources, clears transient effects, and leaves the original saved encoding available. Load and unload explicitly clear the previous session.
+
+`TimberbornRuntimePersistence` preserves the original saved payload until a ready runtime successfully captures and encodes replacement state. Before readiness, an existing payload is written back verbatim; absent state is not replaced with an empty snapshot. A payload that cannot be read blocks save. Corrupt or unsupported encoded state fails initialization before import while preserving its original bytes. These ownership guarantees do not make later native world consequences transactional.
+
 ## Gameplay and QA inputs
 
 [TimberbornSustainedIgnitionScheduler](../src/Wildfire.Timberborn/Runtime/TimberbornSustainedIgnitionScheduler.cs) repeats a finite input sequence and yields when other changes are already queued. It serves the player burn tool as well as QA. FireSystem advances and resets it directly.
@@ -60,7 +64,7 @@ Routine ash synchronization reads one transport buffer. Save capture separately 
 
 [TimberbornInventoryMutations](../src/Wildfire.Timberborn/Compatibility/TimberbornInventoryMutations.cs) distinguishes consuming goods, restoring existing stock, carrying uncountable harvest, and recording production at deposit. [TimberbornConstructionRebuild](../src/Wildfire.Timberborn/Compatibility/TimberbornConstructionRebuild.cs) captures a full blueprint and placement before deletion and validates the recreated construction state. Root, dependent, and overlapping-path requests are prepared before destructive rebuild operations. Native creation can still fail afterward; preflight is not rollback.
 
-[Compatibility probes](../src/Wildfire.Timberborn/Compatibility/) record runtime capabilities. Compile-time API changes may prevent probes from running. [Mapping](../src/Wildfire.Timberborn/Mapping/) translates world observations; [consequences](../src/Wildfire.Timberborn/Consequences/) performs native actions; [beaver services](../src/Wildfire.Timberborn/Beavers/) translates exposure; [visuals](../src/Wildfire.Timberborn/Visuals/) presents fields. Full Unity `EntityId` values identify cached native materials and textures.
+[Compatibility probes](../src/Wildfire.Timberborn/Compatibility/) record runtime capabilities. Compile-time API changes may prevent probes from running. [Mapping](../src/Wildfire.Timberborn/Mapping/) translates world observations; [consequences](../src/Wildfire.Timberborn/Consequences/) perform native actions; [beaver services](../src/Wildfire.Timberborn/Beavers/) translate exposure; [visuals](../src/Wildfire.Timberborn/Visuals/) present fields. Full Unity `EntityId` values identify cached native materials and textures.
 
 ## Validation boundaries
 

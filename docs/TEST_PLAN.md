@@ -95,7 +95,7 @@ If startup or transport fails, inspect process and log state before retrying. Di
 ## Focused regression boundaries
 
 - GPU protocol changes: encoding of every supported override, ordered/capacity-bounded batches, failure-stage queue consumption, delta capacity, and actual shader captures.
-- Runtime initialization: wait/retry, reject oversized worlds before import, fail once, reset on load/unload, and dispose an unpublished candidate if setup fails.
+- Runtime initialization: wait/retry, reject oversized worlds before import, fail once, reset on load/unload, and dispose an unpublished candidate if setup fails, and preserve original save encoding until readiness. Corrupt/unsupported saved state must fail initialization without silently replacing the payload.
 - Stimulus scheduling: user-tool and QA input timing, unrelated-change priority, reset, and successful-tick proof accounting. `sustained_ignition_dispatch_ticks` reports duration (default 12, slow preset 96), not fire simulation cadence.
 - Ash observation: read transport at most once per synchronized tick, preserve packed cells for persistence only, and verify transport-only changes reach gameplay consumers.
 - Native consequences: preserve consumed/produced/existing-stock accounting and validate entity rebuild outcomes on a disposable save. Unit tests and build success do not prove native rollback safety.
