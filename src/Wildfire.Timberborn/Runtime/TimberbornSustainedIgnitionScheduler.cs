@@ -8,9 +8,9 @@ public sealed class TimberbornSustainedIgnitionScheduler
     public const byte IgnitionHeat = 15;
     private readonly ITimberbornFireChangeQueue _changes;
     private readonly ITimberbornFireLogSink _logSink;
-    private FireSimChange[] _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
-    private int _qaIgnitionPegDispatchTicksRemaining;
-    private string _qaIgnitionPegSource = "placeholder";
+    private FireSimChange[] _changesToRepeat = Array.Empty<FireSimChange>();
+    private int _remainingDispatchTicks;
+    private string _source = "placeholder";
     public int DurationTicks { get; internal set; } = 12;
 
     internal TimberbornSustainedIgnitionScheduler(ITimberbornFireChangeQueue changes, ITimberbornFireLogSink logSink)
@@ -37,25 +37,24 @@ public sealed class TimberbornSustainedIgnitionScheduler
 
     internal void Start(FireSimChange[] changes, string source)
     {
-        _qaIgnitionPegChanges = changes.ToArray();
-        _qaIgnitionPegSource = source;
+        _changesToRepeat = changes.ToArray();
+        _source = source;
         int ignitionPegDispatchTicks = DurationTicks;
-        _qaIgnitionPegDispatchTicksRemaining = Math.Max(0, ignitionPegDispatchTicks - 1);
-        if (_qaIgnitionPegDispatchTicksRemaining > 0)
+        _remainingDispatchTicks = Math.Max(0, ignitionPegDispatchTicks - 1);
+        if (_remainingDispatchTicks > 0)
         {
             _logSink.Info(
                 "wildfire_timberborn_qa_ignition_heat_peg_started " +
                 $"source={source} " +
-                $"cell_count={_qaIgnitionPegChanges.Length} " +
+                $"cell_count={_changesToRepeat.Length} " +
                 $"requested_dispatch_ticks={ignitionPegDispatchTicks} " +
-                $"fire_step_interval_ticks={(DurationTicks / 12)} " +
-                $"remaining_dispatch_ticks={_qaIgnitionPegDispatchTicksRemaining}");
+                $"remaining_dispatch_ticks={_remainingDispatchTicks}");
         }
     }
 
     internal string? BeforeTick()
     {
-        if (_qaIgnitionPegDispatchTicksRemaining <= 0 || _qaIgnitionPegChanges.Length == 0)
+        if (_remainingDispatchTicks <= 0 || _changesToRepeat.Length == 0)
         {
             return null;
         }
@@ -65,14 +64,14 @@ public sealed class TimberbornSustainedIgnitionScheduler
             return null;
         }
 
-        _qaIgnitionPegChanges
+        _changesToRepeat
             .ToList()
             .ForEach(change => _changes.RegisterChange(change, "qa_ignition_heat_peg", shouldLog: false));
-        string source = _qaIgnitionPegSource;
+        string source = _source;
 
-        _qaIgnitionPegDispatchTicksRemaining--;
-        _changes.LogRegisteredChanges("qa_ignition_heat_peg", _qaIgnitionPegChanges.Length);
-        if (_qaIgnitionPegDispatchTicksRemaining == 0)
+        _remainingDispatchTicks--;
+        _changes.LogRegisteredChanges("qa_ignition_heat_peg", _changesToRepeat.Length);
+        if (_remainingDispatchTicks == 0)
         {
             Reset();
         }
@@ -82,9 +81,9 @@ public sealed class TimberbornSustainedIgnitionScheduler
 
     internal void Reset()
     {
-        _qaIgnitionPegChanges = Array.Empty<FireSimChange>();
-        _qaIgnitionPegDispatchTicksRemaining = 0;
-        _qaIgnitionPegSource = "placeholder";
+        _changesToRepeat = Array.Empty<FireSimChange>();
+        _remainingDispatchTicks = 0;
+        _source = "placeholder";
     }
 
 }

@@ -2015,7 +2015,7 @@ public sealed record TimberbornQaCommandState(
     uint? FireSimPresetFuelHeatWeight = null,
     uint? FireSimPresetFuelBurnDownNumerator = null,
     uint? FireSimPresetFuelBurnDownDenominator = null,
-    uint? FireSimPresetCellStepIntervalTicks = null,
+    int? SustainedIgnitionDispatchTicks = null,
     int? WorldImportTotalSources = null,
     int? WorldImportTerrainSources = null,
     int? WorldImportVegetationSources = null,
@@ -2399,7 +2399,7 @@ public sealed record TimberbornQaCommandResult(
         $"fire_water_ignition_penalty={FormatNumber(State.FireSimPresetWaterIgnitionPenalty)} " +
         $"fire_fuel_heat_weight={FormatNumber(State.FireSimPresetFuelHeatWeight)} " +
         $"fire_fuel_burn_down={FormatFraction(State.FireSimPresetFuelBurnDownNumerator, State.FireSimPresetFuelBurnDownDenominator)} " +
-        $"fire_step_interval_ticks={FormatNumber(State.FireSimPresetCellStepIntervalTicks)} " +
+        $"sustained_ignition_dispatch_ticks={FormatNumber(State.SustainedIgnitionDispatchTicks)} " +
         $"world_import_total_sources={FormatNumber(State.WorldImportTotalSources)} " +
         $"world_import_terrain_sources={FormatNumber(State.WorldImportTerrainSources)} " +
         $"world_import_vegetation_sources={FormatNumber(State.WorldImportVegetationSources)} " +

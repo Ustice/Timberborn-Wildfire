@@ -808,7 +808,7 @@ public sealed class TimberbornFireRuntime :
             $"water_ignition_penalty={result.Parameters.FireWaterIgnitionPenalty}");
         if (_fireSystem is not null)
         {
-            bool applied = _fireSystem.TryUpdateParameters(result.Parameters);
+            bool applied = _fireSystem.TryApplyPreset(_fireSimParameterPresetState.CurrentPreset);
             _logSink.Info(
                 "wildfire_timberborn_fire_sim_preset_live_update " +
                 $"preset={TimberbornQaCommandBridge.FormatToken(result.Name)} " +
@@ -942,7 +942,7 @@ public sealed class TimberbornFireRuntime :
                 FireSimPresetFuelHeatWeight: currentPreset.Parameters.FireFuelHeatWeight,
                 FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
                 FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
-                FireSimPresetCellStepIntervalTicks: currentPreset.Parameters.FireCellStepIntervalTicks,
+                SustainedIgnitionDispatchTicks: currentPreset.SustainedIgnitionDispatchTicks,
                 WorldImportTotalSources: _lastWorldImportSummary?.TotalSources,
                 WorldImportTerrainSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Terrain),
                 WorldImportVegetationSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Vegetation),
@@ -1337,7 +1337,7 @@ public sealed class TimberbornFireRuntime :
             FireSimPresetFuelHeatWeight: currentPreset.Parameters.FireFuelHeatWeight,
             FireSimPresetFuelBurnDownNumerator: currentPreset.Parameters.FireFuelBurnDownPressureNumerator,
             FireSimPresetFuelBurnDownDenominator: currentPreset.Parameters.FireFuelBurnDownPressureDenominator,
-            FireSimPresetCellStepIntervalTicks: currentPreset.Parameters.FireCellStepIntervalTicks,
+            SustainedIgnitionDispatchTicks: currentPreset.SustainedIgnitionDispatchTicks,
             WorldImportTotalSources: _lastWorldImportSummary?.TotalSources,
             WorldImportTerrainSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Terrain),
             WorldImportVegetationSources: _lastWorldImportSummary?.Count(WildfireMaterialClass.Vegetation),

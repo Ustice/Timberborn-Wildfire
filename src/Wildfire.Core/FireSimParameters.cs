@@ -18,8 +18,7 @@ public readonly record struct FireSimParameters(
     uint FireFuelHeatWeight,
     uint FireFuelBurnDownPressureNumerator,
     uint FireFuelBurnDownPressureDenominator,
-    uint FireFuelBurnDownRollSeed,
-    uint FireCellStepIntervalTicks)
+    uint FireFuelBurnDownRollSeed)
 {
     public static readonly FireSimParameters Default = new(
         VisualFireBaseIntensity: 0.45f,
@@ -39,8 +38,7 @@ public readonly record struct FireSimParameters(
         FireFuelHeatWeight: 5u,
         FireFuelBurnDownPressureNumerator: 1u,
         FireFuelBurnDownPressureDenominator: 2u,
-        FireFuelBurnDownRollSeed: 0x9E3779B9u,
-        FireCellStepIntervalTicks: 1u);
+        FireFuelBurnDownRollSeed: 0x9E3779B9u);
 
     public FireSimParameters WithFuelBurnDown(uint numerator, uint denominator)
     {

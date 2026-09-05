@@ -2211,16 +2211,14 @@ public sealed class TimberbornQaCommandBridgeTests
     }
 
     [Fact]
-    public void QueueQaSelectedTreeDeltaStimulusScalesHeatPegWithFireStepInterval()
+    public void QueueQaSelectedTreeDeltaStimulusUsesExplicitIgnitionDuration()
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(
             simulator,
             new TimberbornResourceAdapter().CreateTreeSource(2, 3, 1, materialTargetId: 77u));
-        Assert.True(fireSystem.TryUpdateParameters(FireSimParameters.Default with
-        {
-            FireCellStepIntervalTicks = 6u,
-        }));
+        Assert.True(fireSystem.TryApplyPreset(new TimberbornFireSimParameterPreset(
+            "custom-duration", FireSimParameters.Default, SustainedIgnitionDispatchTicks: 72)));
 
         fireSystem.Qa.QueueQaSelectedTreeDeltaStimulus(new RecordingSelectedTreeTargetProvider(38));
 
@@ -2974,7 +2972,7 @@ public sealed class TimberbornQaCommandBridgeTests
             FireSimPresetFuelHeatWeight: 2,
             FireSimPresetFuelBurnDownNumerator: 1,
             FireSimPresetFuelBurnDownDenominator: 2,
-            FireSimPresetCellStepIntervalTicks: 6,
+            SustainedIgnitionDispatchTicks: 72,
             WorldImportTotalSources: 50,
             WorldImportTerrainSources: 44,
             WorldImportVegetationSources: 3,
@@ -3204,7 +3202,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("fire_water_ignition_penalty=2", result.ResultToken);
         Assert.Contains("fire_fuel_heat_weight=2", result.ResultToken);
         Assert.Contains("fire_fuel_burn_down=1/2", result.ResultToken);
-        Assert.Contains("fire_step_interval_ticks=6", result.ResultToken);
+        Assert.Contains("sustained_ignition_dispatch_ticks=72", result.ResultToken);
         Assert.Contains("world_import_total_sources=50", result.ResultToken);
         Assert.Contains("world_import_terrain_sources=44", result.ResultToken);
         Assert.Contains("world_import_vegetation_sources=3", result.ResultToken);
@@ -3301,7 +3299,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Equal(5u, preset.Parameters.IgnitionPoint);
         Assert.Equal(1u, preset.Parameters.FireFuelBurnDownPressureNumerator);
         Assert.Equal(2u, preset.Parameters.FireFuelBurnDownPressureDenominator);
-        Assert.Equal(8u, preset.Parameters.FireCellStepIntervalTicks);
+        Assert.Equal(96, preset.SustainedIgnitionDispatchTicks);
         Assert.True(TimberbornFireSimParameterPresets.TryGet("high-threshold-high-bonus", out TimberbornFireSimParameterPreset? highPreset));
         Assert.Equal(5u, highPreset.Parameters.IgnitionPoint);
         Assert.Equal(6u, highPreset.Parameters.FireFuelHeatWeight);
@@ -3632,11 +3630,15 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Single(simulator.RegisteredChanges);
     }
 
-    [Fact]
-    public void UserIgnitionYieldsToExternalInputsAndStillCompletesItsDuration()
+    [Theory]
+    [InlineData("default", 12)]
+    [InlineData("slow-reactable", 96)]
+    public void UserIgnitionYieldsToExternalInputsAndStillCompletesItsDuration(string presetName, int expectedDuration)
     {
         RecordingFireSimulator simulator = new(width: 4, height: 6, depth: 2);
         TimberbornFireSystem fireSystem = CreateInitializedFireSystem(simulator);
+        Assert.True(TimberbornFireSimParameterPresets.TryGet(presetName, out TimberbornFireSimParameterPreset preset));
+        Assert.True(fireSystem.TryApplyPreset(preset));
         FireSimChange ignition = new(1, SetHeat: 15);
         int duration = fireSystem.RegisterSustainedIgnitionChanges(new[] { ignition }, "burn_tool");
         fireSystem.Tick();
@@ -3650,7 +3652,7 @@ public sealed class TimberbornQaCommandBridgeTests
         }
         fireSystem.Tick();
 
-        Assert.Equal(12, duration);
+        Assert.Equal(expectedDuration, duration);
         Assert.Equal(duration, simulator.RegisteredChanges.Count(change => change == ignition));
         Assert.Equal("placeholder", fireSystem.Qa.BurnDurationProofState.Status);
     }

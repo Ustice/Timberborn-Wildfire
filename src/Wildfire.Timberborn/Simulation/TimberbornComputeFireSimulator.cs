@@ -668,8 +668,7 @@ public sealed class TimberbornComputeFireSimulator :
             "wildfire_timberborn_gpu_parameters_updated " +
             $"ignition={parameters.IgnitionPoint} " +
             $"water_ignition_penalty={parameters.FireWaterIgnitionPenalty} " +
-            $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator} " +
-            $"fire_step_interval_ticks={parameters.FireCellStepIntervalTicks}");
+            $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator}");
     }
 
     public IReadOnlyList<uint> ReadTransportFields()
@@ -948,7 +947,6 @@ public sealed class TimberbornComputeFireSimulator :
         _shader.SetInt("FireFuelBurnDownPressureNumerator", unchecked((int)_parameters.FireFuelBurnDownPressureNumerator));
         _shader.SetInt("FireFuelBurnDownPressureDenominator", unchecked((int)_parameters.FireFuelBurnDownPressureDenominator));
         _shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)_parameters.FireFuelBurnDownRollSeed));
-        _shader.SetInt("FireCellStepIntervalTicks", unchecked((int)_parameters.FireCellStepIntervalTicks));
     }
 
     private CellDelta[] ReadDeltas()

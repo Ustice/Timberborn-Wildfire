@@ -151,15 +151,20 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
 
     public int LastPersistentRestoreNoLiveFuelCellsCleared { get; private set; }
 
-    public bool TryUpdateParameters(FireSimParameters parameters)
+    public bool TryApplyPreset(TimberbornFireSimParameterPreset preset)
     {
+        if (preset.SustainedIgnitionDispatchTicks <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(preset), "Sustained ignition duration must be positive.");
+        }
+
         if (_fireSimulator is not ITimberbornConfigurableFireSimParameters configurable)
         {
             return false;
         }
 
-        configurable.UpdateParameters(parameters);
-        SustainedIgnition.DurationTicks = checked(12 * (int)Math.Max(1u, parameters.FireCellStepIntervalTicks));
+        configurable.UpdateParameters(preset.Parameters);
+        SustainedIgnition.DurationTicks = preset.SustainedIgnitionDispatchTicks;
         return true;
     }
 
@@ -344,7 +349,9 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
     public GpuFireStepResult Tick()
     {
         IGpuFireSimulator fireSimulator = RequireSimulator();
-        Qa.BeforeTick();
+        Qa.PrepareTick();
+        string? sustainedInputSource = SustainedIgnition.BeforeTick();
+        Qa.CompleteTickPreparation(sustainedInputSource);
         int pendingChangeCount = _registeredChangeCountSinceLastDispatch;
 
         _logSink.Info($"wildfire_timberborn_dispatch_started pending_changes={pendingChangeCount}");
@@ -475,6 +482,7 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
         }
 
         _fireSimulator = null;
+        SustainedIgnition.Reset();
         Qa.Reset();
     }
 

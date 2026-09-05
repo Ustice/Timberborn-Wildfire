@@ -52,17 +52,20 @@ public sealed class TimberbornQaController
 
     internal void Reset()
     {
-        _ignition.Reset();
         ClearQaBurnDamageSpendProbe();
         _qaDeltaStimulusSustainedHeatState = null;
         _burnDurationSustainedHeatTicksPendingDispatch = 0;
         _burnDurationProofState = TimberbornQaBurnDurationProofState.Placeholder;
     }
 
-    internal void BeforeTick()
+    internal void PrepareTick()
     {
         RegisterPendingQaBurnDamageSpendChanges();
-        if (_ignition.BeforeTick() == "qa_burn_duration_stimulus")
+    }
+
+    internal void CompleteTickPreparation(string? sustainedInputSource)
+    {
+        if (sustainedInputSource == "qa_burn_duration_stimulus")
         {
             _burnDurationSustainedHeatTicksPendingDispatch++;
         }

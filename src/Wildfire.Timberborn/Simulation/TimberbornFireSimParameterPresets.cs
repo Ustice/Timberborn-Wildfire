@@ -2,7 +2,10 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Simulation;
 
-public sealed record TimberbornFireSimParameterPreset(string Name, FireSimParameters Parameters)
+public sealed record TimberbornFireSimParameterPreset(
+    string Name,
+    FireSimParameters Parameters,
+    int SustainedIgnitionDispatchTicks = 12)
 {
     public string StatusToken =>
         $"fire_sim_preset={TimberbornQaCommandBridge.FormatToken(Name)} " +
@@ -10,7 +13,7 @@ public sealed record TimberbornFireSimParameterPreset(string Name, FireSimParame
         $"fire_water_ignition_penalty={Parameters.FireWaterIgnitionPenalty} " +
         $"fire_fuel_heat_weight={Parameters.FireFuelHeatWeight} " +
         $"fire_fuel_burn_down={Parameters.FireFuelBurnDownPressureNumerator}/{Parameters.FireFuelBurnDownPressureDenominator} " +
-        $"fire_step_interval_ticks={Parameters.FireCellStepIntervalTicks}";
+        $"sustained_ignition_dispatch_ticks={SustainedIgnitionDispatchTicks}";
 }
 
 public static class TimberbornFireSimParameterPresets
@@ -31,9 +34,9 @@ public static class TimberbornFireSimParameterPresets
             {
                 FireFuelBurnDownPressureNumerator = 1u,
                 FireFuelBurnDownPressureDenominator = 2u,
-                FireCellStepIntervalTicks = 8u,
                 VisualSmokeFuelWeight = 0.6f,
-            }),
+            },
+            SustainedIgnitionDispatchTicks: 96),
         new(
             HarshName,
             FireSimParameters.Default with
