@@ -1,6 +1,6 @@
 # Wildfire
 
-Wildfire is a Timberborn mod project built around a reusable, deterministic cellular automata fire simulation.
+[Wildfire](https://steamcommunity.com/sharedfiles/filedetails/?id=3730392791) is a Timberborn mod project built around a reusable, deterministic cellular automata fire simulation.
 
 The simulation core is intentionally independent from Timberborn so packed scenario inputs, GPU simulator contracts, and host adapters can evolve without making Timberborn own fire rules.
 
