@@ -3,7 +3,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed class UnityComputeFireSimulator : IGpuFireSimulator
+public sealed class UnityComputeFireSimulator : IGpuFireSimulator, IFireSimStepBackend
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -12,13 +12,11 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     public const int ThreadGroupSizeZ = 4;
     public const string Status = "External change upload, full-grid shader dispatch, compact delta readback, and GPU visual field output baseline ready.";
 
-    private readonly FireSimChangeQueue _queuedChanges = new();
-    private readonly List<IFireSimListener> _listeners = [];
+    private readonly FireSimStepCoordinator _step;
     private readonly IFireSimComputeDispatcher? _dispatcher;
     private readonly IFireSimDiagnosticSink _diagnostics;
     private readonly FireSimParameters _parameters;
     private readonly uint _seed;
-    private uint _tick;
 
     public UnityComputeFireSimulator(int width, int height, int depth)
         : this(width, height, depth, NullFireSimDiagnosticSink.Instance)
@@ -28,6 +26,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     public UnityComputeFireSimulator(int width, int height, int depth, IFireSimDiagnosticSink diagnostics)
     {
         Dimensions = new ComputeGridDimensions(width, height, depth);
+        _step = new FireSimStepCoordinator(Dimensions.CellCount, Dimensions.CellCount);
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         LogInitialized();
     }
@@ -42,6 +41,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         ArgumentNullException.ThrowIfNull(grid);
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
+        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count);
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         LogInitialized();
     }
@@ -63,6 +63,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
 
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
+        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count);
         _dispatcher = dispatcher;
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _parameters = parameters ?? FireSimParameters.Default;
@@ -80,13 +81,13 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
 
     public int Depth => Dimensions.Depth;
 
-    public int PendingChangeCount => _queuedChanges.Count;
+    public int PendingChangeCount => _step.PendingChangeCount;
 
     public FireSimWind Wind { get; set; } = FireSimWind.None;
 
-    public int LastIgnoredChangeCount { get; private set; }
+    public int LastIgnoredChangeCount => _step.LastIgnoredChangeCount;
 
-    public int LastUploadedChangeCount { get; private set; }
+    public int LastUploadedChangeCount => _step.LastUploadedChangeCount;
 
     public static string Describe()
     {
@@ -95,7 +96,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
 
     public void RegisterChange(FireSimChange change)
     {
-        _queuedChanges.Add(change);
+        _step.RegisterChange(change);
     }
 
     public GpuFireStepResult Tick()
@@ -105,35 +106,33 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
         }
 
-        BufferGrid.Deltas.ResetAppendCounter();
-
-        FireSimChangeQueue.Batch changeBatch = _queuedChanges.PrepareBatch(Dimensions.CellCount, BufferGrid.QueuedChanges.Count);
-        uint dispatchTick = _tick + 1;
+        GpuFireStepResult result = _step.Tick(this);
         _diagnostics.Info(
-            $"wildfire_gpu_simulator_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={BufferGrid.QueuedChanges.Count} valid_changes={changeBatch.Changes.Length} ignored_changes={changeBatch.IgnoredCount}");
+            $"wildfire_gpu_simulator_listeners_notified tick={result.Tick} listener_count={_step.ListenerCount} delta_count={result.Deltas.Count}");
+        return result;
+    }
 
-        LastIgnoredChangeCount = changeBatch.IgnoredCount;
-        LastUploadedChangeCount = changeBatch.Changes.Length;
+    void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)
+    {
+        BufferGrid!.Deltas.ResetAppendCounter();
+        _diagnostics.Info(
+            $"wildfire_gpu_simulator_queued_changes tick={dispatchTick} queued_changes={_step.PendingChangeCount} upload_capacity={BufferGrid.QueuedChanges.Count} valid_changes={LastUploadedChangeCount} ignored_changes={LastIgnoredChangeCount}");
+    }
 
-        if (changeBatch.Changes.Length > 0)
-        {
-            BufferGrid.QueuedChanges.Upload(FireSimChangeUpload.Encode(changeBatch.Changes, BufferGrid.QueuedChanges.Count));
-        }
+    void IFireSimStepBackend.ApplyExternalChanges(uint dispatchTick, FireSimChange[] changes)
+    {
+        BufferGrid!.QueuedChanges.Upload(FireSimChangeUpload.Encode(changes, BufferGrid.QueuedChanges.Count));
+        DispatchWithDiagnostics(CreateApplyExternalChangesDispatch(changes.Length, dispatchTick));
+    }
 
-        if (changeBatch.Changes.Length > 0)
-        {
-            DispatchWithDiagnostics(CreateApplyExternalChangesDispatch(changeBatch.Changes.Length, dispatchTick));
-        }
-
-        _queuedChanges.Consume(changeBatch);
-        _tick = dispatchTick;
-
+    void IFireSimStepBackend.Simulate(uint dispatchTick)
+    {
         FireSimComputeDispatch dispatch = new(
             FullGridKernelName,
             Dimensions,
             dispatchTick,
             _seed,
-            BufferGrid.CurrentCells,
+            BufferGrid!.CurrentCells,
             BufferGrid.NextCells,
             BufferGrid.QueuedChanges,
             BufferGrid.Deltas,
@@ -149,26 +148,28 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             GetThreadGroups(Dimensions.Depth, ThreadGroupSizeZ));
 
         DispatchWithDiagnostics(dispatch);
+    }
 
+    CellDelta[] IFireSimStepBackend.ReadDeltas(uint dispatchTick)
+    {
         _diagnostics.Info($"wildfire_gpu_simulator_readback_started tick={dispatchTick}");
         Stopwatch readbackStopwatch = Stopwatch.StartNew();
-        CellDelta[] deltas = FireSimDeltaReadback.Read(BufferGrid.Deltas);
+        CellDelta[] deltas = FireSimDeltaReadback.Read(BufferGrid!.Deltas);
         readbackStopwatch.Stop();
-        BufferGrid.SwapCellBuffers();
         _diagnostics.Info(
             $"wildfire_gpu_simulator_readback_completed tick={dispatchTick} delta_count={deltas.Length} elapsed_ms={readbackStopwatch.Elapsed.TotalMilliseconds:F3}");
 
-        NotifyListeners(deltas);
+        return deltas;
+    }
 
-        return new GpuFireStepResult(deltas, dispatchTick);
+    void IFireSimStepBackend.SwapBuffers(uint tick)
+    {
+        BufferGrid!.SwapCellBuffers();
     }
 
     public IDisposable Subscribe(IFireSimListener listener)
     {
-        ArgumentNullException.ThrowIfNull(listener);
-
-        _listeners.Add(listener);
-        return new ListenerSubscription(_listeners, listener);
+        return _step.Subscribe(listener);
     }
 
     private static int GetThreadGroups(int dimension, int threadGroupSize)
@@ -199,19 +200,6 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             1);
     }
 
-    private void NotifyListeners(ReadOnlySpan<CellDelta> deltas)
-    {
-        IFireSimListener[] listeners = _listeners.ToArray();
-
-        foreach (IFireSimListener listener in listeners)
-        {
-            listener.OnFireSimDeltas(deltas);
-        }
-
-        _diagnostics.Info(
-            $"wildfire_gpu_simulator_listeners_notified tick={_tick} listener_count={listeners.Length} delta_count={deltas.Length}");
-    }
-
     private void DispatchWithDiagnostics(FireSimComputeDispatch dispatch)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -229,21 +217,6 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             $"wildfire_gpu_simulator_initialized width={Dimensions.Width} height={Dimensions.Height} depth={Dimensions.Depth} cell_count={Dimensions.CellCount}");
     }
 
-    private sealed class ListenerSubscription(List<IFireSimListener> listeners, IFireSimListener listener) : IDisposable
-    {
-        private bool _disposed;
-
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            listeners.Remove(listener);
-            _disposed = true;
-        }
-    }
 }
 
 public interface IFireSimDiagnosticSink

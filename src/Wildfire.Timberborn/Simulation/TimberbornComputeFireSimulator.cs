@@ -456,6 +456,7 @@ public sealed class TimberbornComputeFireSimulator :
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
     ITimberbornTransportFieldReader,
+    IFireSimStepBackend,
     IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
@@ -475,8 +476,7 @@ public sealed class TimberbornComputeFireSimulator :
     private readonly ComputeShader _shader;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
-    private readonly FireSimChangeQueue _queuedChanges = new();
-    private readonly List<IFireSimListener> _listeners = new List<IFireSimListener>();
+    private readonly FireSimStepCoordinator _step;
     private readonly ComputeBuffer _currentCells;
     private readonly ComputeBuffer _nextCells;
     private readonly ComputeBuffer _externalChanges;
@@ -496,7 +496,6 @@ public sealed class TimberbornComputeFireSimulator :
     private ComputeBuffer _writeCells;
     private ComputeBuffer _readTransportFields;
     private ComputeBuffer _writeTransportFields;
-    private uint _tick;
     private bool _disposed;
 
     public TimberbornComputeFireSimulator(
@@ -583,6 +582,7 @@ public sealed class TimberbornComputeFireSimulator :
         _parameters = parameters;
         _windProvider = windProvider ?? throw new ArgumentNullException(nameof(windProvider));
         Grid = grid;
+        _step = new FireSimStepCoordinator(grid.CellCount, grid.CellCount);
         _applyExternalChangesKernel = _shader.FindKernel(ApplyExternalChangesKernelName);
         _fullGridKernel = _shader.FindKernel(FullGridKernelName);
 
@@ -694,7 +694,7 @@ public sealed class TimberbornComputeFireSimulator :
             Width,
             Height,
             Depth,
-            _tick,
+            _step.CurrentTick,
             cells.Select(static cell => checked((ushort)(cell & 0xFFFFu))).ToArray(),
             transportFields);
     }
@@ -730,11 +730,11 @@ public sealed class TimberbornComputeFireSimulator :
             _visualFieldBindingLifecycle?.UpdateMaterialFieldsBuffer(_materialFields);
         }
 
-        _tick = snapshot.Tick;
-        _visualFieldBindingLifecycle?.MarkUpdated(_tick);
+        _step.RestoreTick(snapshot.Tick);
+        _visualFieldBindingLifecycle?.MarkUpdated(_step.CurrentTick);
         _logSink.Info(
             "wildfire_timberborn_gpu_simulator_state_restored " +
-            $"tick={_tick} " +
+            $"tick={_step.CurrentTick} " +
             $"cell_count={Grid.CellCount} " +
             $"atmospheric_fields={snapshot.TransportFields.Count}");
     }
@@ -790,57 +790,19 @@ public sealed class TimberbornComputeFireSimulator :
 
     public void RegisterChange(FireSimChange change)
     {
-        _queuedChanges.Add(change);
+        _step.RegisterChange(change);
     }
 
     public GpuFireStepResult Tick()
     {
         ThrowIfDisposed();
-
-        uint dispatchTick = _tick + 1;
-        FireSimChangeQueue.Batch changeBatch = _queuedChanges.PrepareBatch(Grid.CellCount, _externalChanges.count);
-        _logSink.Info(
-            $"wildfire_timberborn_gpu_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={Grid.CellCount} valid_changes={changeBatch.Changes.Length} ignored_changes={changeBatch.IgnoredCount}");
-
+        uint dispatchTick = _step.CurrentTick + 1;
         try
         {
-            _deltas.SetCounterValue(0);
-
-            if (changeBatch.Changes.Length > 0)
-            {
-                _externalChanges.SetData(FireSimGpuProtocol.EncodeChanges(changeBatch.Changes), 0, 0, changeBatch.Changes.Length);
-                BindKernel(_applyExternalChangesKernel, dispatchTick, checked((uint)changeBatch.Changes.Length));
-                DispatchKernel(
-                    _applyExternalChangesKernel,
-                    ApplyExternalChangesKernelName,
-                    dispatchTick,
-                    changeBatch.Changes.Length,
-                    1,
-                    1,
-                    1);
-            }
-
-            _queuedChanges.Consume(changeBatch);
-            _tick = dispatchTick;
-
-            BindKernel(_fullGridKernel, dispatchTick, 0u);
-            int groupsX = GetThreadGroups(Width, ThreadGroupSizeX);
-            int groupsY = GetThreadGroups(Height, ThreadGroupSizeY);
-            int groupsZ = GetThreadGroups(Depth, ThreadGroupSizeZ);
-            DispatchKernel(_fullGridKernel, FullGridKernelName, dispatchTick, 0, groupsX, groupsY, groupsZ);
-
-            _logSink.Info($"wildfire_timberborn_gpu_readback_started tick={dispatchTick}");
-            Stopwatch readbackStopwatch = Stopwatch.StartNew();
-            CellDelta[] deltas = ReadDeltas();
-            readbackStopwatch.Stop();
-            SwapCellBuffers();
-            _visualFieldBindingLifecycle?.UpdateTransportFieldsBuffer(_readTransportFields);
-            _visualFieldBindingLifecycle?.UpdateMaterialFieldsBuffer(_materialFields);
-            _visualFieldBindingLifecycle?.MarkUpdated(dispatchTick);
-            NotifyListeners(deltas);
+            GpuFireStepResult result = _step.Tick(this);
             _logSink.Info(
-                $"wildfire_timberborn_gpu_readback_completed tick={dispatchTick} delta_count={deltas.Length} elapsed_ms={readbackStopwatch.Elapsed.TotalMilliseconds:F3}");
-            return new GpuFireStepResult(deltas, dispatchTick);
+                $"wildfire_timberborn_gpu_listeners_notified tick={result.Tick} listener_count={_step.ListenerCount} delta_count={result.Deltas.Count}");
+            return result;
         }
         catch (Exception exception)
         {
@@ -850,15 +812,51 @@ public sealed class TimberbornComputeFireSimulator :
         }
     }
 
+    void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)
+    {
+        _logSink.Info(
+            $"wildfire_timberborn_gpu_queued_changes tick={dispatchTick} queued_changes={_step.PendingChangeCount} upload_capacity={_externalChanges.count} valid_changes={_step.LastUploadedChangeCount} ignored_changes={_step.LastIgnoredChangeCount}");
+        _deltas.SetCounterValue(0);
+    }
+
+    void IFireSimStepBackend.ApplyExternalChanges(uint dispatchTick, FireSimChange[] changes)
+    {
+        _externalChanges.SetData(FireSimGpuProtocol.EncodeChanges(changes), 0, 0, changes.Length);
+        BindKernel(_applyExternalChangesKernel, dispatchTick, checked((uint)changes.Length));
+        DispatchKernel(_applyExternalChangesKernel, ApplyExternalChangesKernelName, dispatchTick, changes.Length, 1, 1, 1);
+    }
+
+    void IFireSimStepBackend.Simulate(uint dispatchTick)
+    {
+        BindKernel(_fullGridKernel, dispatchTick, 0u);
+        int groupsX = GetThreadGroups(Width, ThreadGroupSizeX);
+        int groupsY = GetThreadGroups(Height, ThreadGroupSizeY);
+        int groupsZ = GetThreadGroups(Depth, ThreadGroupSizeZ);
+        DispatchKernel(_fullGridKernel, FullGridKernelName, dispatchTick, 0, groupsX, groupsY, groupsZ);
+    }
+
+    CellDelta[] IFireSimStepBackend.ReadDeltas(uint dispatchTick)
+    {
+        _logSink.Info($"wildfire_timberborn_gpu_readback_started tick={dispatchTick}");
+        Stopwatch readbackStopwatch = Stopwatch.StartNew();
+        CellDelta[] deltas = ReadDeltas();
+        readbackStopwatch.Stop();
+        _logSink.Info(
+            $"wildfire_timberborn_gpu_readback_completed tick={dispatchTick} delta_count={deltas.Length} elapsed_ms={readbackStopwatch.Elapsed.TotalMilliseconds:F3}");
+        return deltas;
+    }
+
+    void IFireSimStepBackend.SwapBuffers(uint dispatchTick)
+    {
+        SwapCellBuffers();
+        _visualFieldBindingLifecycle?.UpdateTransportFieldsBuffer(_readTransportFields);
+        _visualFieldBindingLifecycle?.UpdateMaterialFieldsBuffer(_materialFields);
+        _visualFieldBindingLifecycle?.MarkUpdated(dispatchTick);
+    }
+
     public IDisposable Subscribe(IFireSimListener listener)
     {
-        if (listener is null)
-        {
-            throw new ArgumentNullException(nameof(listener));
-        }
-
-        _listeners.Add(listener);
-        return new ListenerSubscription(_listeners, listener);
+        return _step.Subscribe(listener);
     }
 
     public void Dispose()
@@ -886,7 +884,7 @@ public sealed class TimberbornComputeFireSimulator :
             .ToList()
             .ForEach(static buffer => buffer.Release());
         _logSink.Info(
-            $"wildfire_timberborn_gpu_simulator_disposed tick={_tick} queued_changes={_queuedChanges.Count} listener_count={_listeners.Count}");
+            $"wildfire_timberborn_gpu_simulator_disposed tick={_step.CurrentTick} queued_changes={_step.PendingChangeCount} listener_count={_step.ListenerCount}");
         _disposed = true;
     }
 
@@ -967,7 +965,7 @@ public sealed class TimberbornComputeFireSimulator :
         }
 
         int deltaCount = checked((int)rawDeltaCount);
-        _logSink.Info($"wildfire_timberborn_gpu_readback_counter tick={_tick} delta_count={deltaCount}");
+        _logSink.Info($"wildfire_timberborn_gpu_readback_counter tick={_step.CurrentTick} delta_count={deltaCount}");
         if (deltaCount == 0)
         {
             return Array.Empty<CellDelta>();
@@ -981,16 +979,6 @@ public sealed class TimberbornComputeFireSimulator :
                 checked((ushort)(delta.OldCell & 0xFFFFu)),
                 checked((ushort)(delta.NewCell & 0xFFFFu))))
             .ToArray();
-    }
-
-    private void NotifyListeners(CellDelta[] deltas)
-    {
-        IFireSimListener[] listeners = _listeners.ToArray();
-        listeners
-            .ToList()
-            .ForEach(listener => listener.OnFireSimDeltas(deltas));
-        _logSink.Info(
-            $"wildfire_timberborn_gpu_listeners_notified tick={_tick} listener_count={listeners.Length} delta_count={deltas.Length}");
     }
 
     private void SwapCellBuffers()
@@ -1026,27 +1014,4 @@ public sealed class TimberbornComputeFireSimulator :
         public uint Reserved;
     }
 
-    private sealed class ListenerSubscription : IDisposable
-    {
-        private readonly List<IFireSimListener> _listeners;
-        private readonly IFireSimListener _listener;
-        private bool _disposed;
-
-        public ListenerSubscription(List<IFireSimListener> listeners, IFireSimListener listener)
-        {
-            _listeners = listeners;
-            _listener = listener;
-        }
-
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _listeners.Remove(_listener);
-            _disposed = true;
-        }
-    }
 }
