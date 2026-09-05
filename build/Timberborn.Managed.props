@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Override with -p:TimberbornManagedPath=/path/to/game/Managed for another install. -->
+    <TimberbornManagedPath Condition="'$(TimberbornManagedPath)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed</TimberbornManagedPath>
+  </PropertyGroup>
+  <Target Name="ValidateTimberbornManagedPath" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(TimberbornManagedPath)/Timberborn.EntitySystem.dll')"
+           Text="Timberborn managed assemblies were not found at '$(TimberbornManagedPath)'. Set TimberbornManagedPath to a compatible game's Managed directory." />
+  </Target>
+</Project>

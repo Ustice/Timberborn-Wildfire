@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../build/Timberborn.Managed.props" />
 
   <ItemGroup>
     <ProjectReference Include="..\Wildfire.Core\Wildfire.Core.csproj" />
@@ -6,259 +7,263 @@
 
   <ItemGroup>
     <Reference Include="Bindito.Core">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Bindito.Core.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Bindito.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SingletonSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SingletonSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SingletonSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SettingsSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SettingsSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SettingsSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.StatusSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.StatusSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.StatusSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BlueprintSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BlueprintSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BlueprintSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.MapStateSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.MapStateSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.MapStateSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Persistence">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Persistence.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Persistence.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.WorldPersistence">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WorldPersistence.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.WorldPersistence.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.TimeSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TimeSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.TimeSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.MapIndexSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.MapIndexSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.MapIndexSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BlockSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BlockSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BlockSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Buildings">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Buildings.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Buildings.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Navigation">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Navigation.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Navigation.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BehaviorSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BehaviorSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BehaviorSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Carrying">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Carrying.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Carrying.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Yielding">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Yielding.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Yielding.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Gathering">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Gathering.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Gathering.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Growing">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Growing.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Growing.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Cutting">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Cutting.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Cutting.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Forestry">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Forestry.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Forestry.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.NaturalResourcesLifecycle">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.NaturalResourcesLifecycle.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.NaturalResourcesLifecycle.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.NaturalResourcesMoisture">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.NaturalResourcesMoisture.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.NaturalResourcesMoisture.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.NaturalResourcesModelSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.NaturalResourcesModelSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.NaturalResourcesModelSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.EntitySystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.EntitySystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.EntitySystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Common">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Common.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Common.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Stockpiles">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Stockpiles.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Stockpiles.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SimpleOutputBuildings">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SimpleOutputBuildings.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SimpleOutputBuildings.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.InventorySystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.InventorySystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.InventorySystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Goods">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Goods.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Goods.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.GoodStackSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.GoodStackSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.GoodStackSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.ConstructionSites">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.ConstructionSites.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.ConstructionSites.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Explosions">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Explosions.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Explosions.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.AutomationBuildings">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.AutomationBuildings.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.AutomationBuildings.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.TickSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TickSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.TickSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.QuickNotificationSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.QuickNotificationSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.QuickNotificationSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.CameraSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.CameraSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.CameraSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Coordinates">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Coordinates.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Coordinates.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.TemplateSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TemplateSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.TemplateSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.TemplateInstantiation">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TemplateInstantiation.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.TemplateInstantiation.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.WalkingSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WalkingSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.WalkingSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.WorkSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WorkSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.WorkSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.EnterableSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.EnterableSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.EnterableSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.InputSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.InputSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.InputSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.AreaSelectionSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.AreaSelectionSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.AreaSelectionSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.AreaSelectionSystemUI">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.AreaSelectionSystemUI.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.AreaSelectionSystemUI.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BlockObjectPickingSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BlockObjectPickingSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BlockObjectPickingSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BottomBarSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BottomBarSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BottomBarSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.ToolButtonSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.ToolButtonSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.ToolButtonSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.ToolSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.ToolSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.ToolSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.ToolSystemUI">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.ToolSystemUI.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.ToolSystemUI.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.UILayoutSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.UILayoutSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.UILayoutSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BaseComponentSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.BaseComponentSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BaseComponentSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.Beavers">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.Beavers.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Beavers.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SelectionSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SelectionSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SelectionSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.TerrainSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TerrainSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.TerrainSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.TerrainPhysics">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.TerrainPhysics.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.TerrainPhysics.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SoilMoistureSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilMoistureSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SoilMoistureSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SoilContaminationSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.SoilContaminationSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SoilContaminationSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.WindSystem">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/Timberborn.WindSystem.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/Timberborn.WindSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.MathematicsModule">
+      <HintPath>$(TimberbornManagedPath)/UnityEngine.MathematicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.AssetBundleModule.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.ParticleSystemModule">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.ParticleSystemModule.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/UnityEngine.ParticleSystemModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UIElementsModule">
-      <HintPath>$(HOME)/Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/Managed/UnityEngine.UIElementsModule.dll</HintPath>
+      <HintPath>$(TimberbornManagedPath)/UnityEngine.UIElementsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
