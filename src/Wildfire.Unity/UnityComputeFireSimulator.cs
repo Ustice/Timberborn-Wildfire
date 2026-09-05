@@ -12,7 +12,7 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
     public const int ThreadGroupSizeZ = 4;
     public const string Status = "External change upload, full-grid shader dispatch, compact delta readback, and GPU visual field output baseline ready.";
 
-    private readonly List<FireSimChange> _queuedChanges = [];
+    private readonly FireSimChangeQueue _queuedChanges = new();
     private readonly List<IFireSimListener> _listeners = [];
     private readonly IFireSimComputeDispatcher? _dispatcher;
     private readonly IFireSimDiagnosticSink _diagnostics;
@@ -107,25 +107,25 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
 
         BufferGrid.Deltas.ResetAppendCounter();
 
-        QueuedChangeBatch changeBatch = CreateQueuedChangeBatch(BufferGrid.QueuedChanges.Count);
+        FireSimChangeQueue.Batch changeBatch = _queuedChanges.PrepareBatch(Dimensions.CellCount, BufferGrid.QueuedChanges.Count);
         uint dispatchTick = _tick + 1;
         _diagnostics.Info(
-            $"wildfire_gpu_simulator_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={BufferGrid.QueuedChanges.Count} valid_changes={changeBatch.ValidChanges.Length} ignored_changes={changeBatch.InvalidIndices.Count}");
+            $"wildfire_gpu_simulator_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={BufferGrid.QueuedChanges.Count} valid_changes={changeBatch.Changes.Length} ignored_changes={changeBatch.IgnoredCount}");
 
-        LastIgnoredChangeCount = changeBatch.InvalidIndices.Count;
-        LastUploadedChangeCount = changeBatch.ValidChanges.Length;
+        LastIgnoredChangeCount = changeBatch.IgnoredCount;
+        LastUploadedChangeCount = changeBatch.Changes.Length;
 
-        if (changeBatch.ValidChanges.Length > 0)
+        if (changeBatch.Changes.Length > 0)
         {
-            BufferGrid.QueuedChanges.Upload(FireSimChangeUpload.Encode(changeBatch.ValidChanges, BufferGrid.QueuedChanges.Count));
+            BufferGrid.QueuedChanges.Upload(FireSimChangeUpload.Encode(changeBatch.Changes, BufferGrid.QueuedChanges.Count));
         }
 
-        if (changeBatch.ValidChanges.Length > 0)
+        if (changeBatch.Changes.Length > 0)
         {
-            DispatchWithDiagnostics(CreateApplyExternalChangesDispatch(changeBatch.ValidChanges.Length, dispatchTick));
+            DispatchWithDiagnostics(CreateApplyExternalChangesDispatch(changeBatch.Changes.Length, dispatchTick));
         }
 
-        ConsumeQueuedChanges(changeBatch);
+        _queuedChanges.Consume(changeBatch);
         _tick = dispatchTick;
 
         FireSimComputeDispatch dispatch = new(
@@ -199,44 +199,6 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
             1);
     }
 
-    private bool IsValidCellIndex(int cellIndex)
-    {
-        return cellIndex >= 0 && cellIndex < Dimensions.CellCount;
-    }
-
-    private QueuedChangeBatch CreateQueuedChangeBatch(int uploadCapacity)
-    {
-        List<int> validIndices = [];
-        List<FireSimChange> validChanges = [];
-        List<int> invalidIndices = [];
-
-        for (int index = 0; index < _queuedChanges.Count; index++)
-        {
-            FireSimChange change = _queuedChanges[index];
-
-            if (!IsValidCellIndex(change.CellIndex))
-            {
-                invalidIndices.Add(index);
-            }
-            else if (validChanges.Count < uploadCapacity)
-            {
-                validIndices.Add(index);
-                validChanges.Add(change);
-            }
-        }
-
-        return new QueuedChangeBatch(validIndices, validChanges.ToArray(), invalidIndices);
-    }
-
-    private void ConsumeQueuedChanges(QueuedChangeBatch changeBatch)
-    {
-        changeBatch.ValidIndices
-            .Concat(changeBatch.InvalidIndices)
-            .OrderByDescending(static index => index)
-            .ToList()
-            .ForEach(index => _queuedChanges.RemoveAt(index));
-    }
-
     private void NotifyListeners(ReadOnlySpan<CellDelta> deltas)
     {
         IFireSimListener[] listeners = _listeners.ToArray();
@@ -266,11 +228,6 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator
         _diagnostics.Info(
             $"wildfire_gpu_simulator_initialized width={Dimensions.Width} height={Dimensions.Height} depth={Dimensions.Depth} cell_count={Dimensions.CellCount}");
     }
-
-    private sealed record QueuedChangeBatch(
-        IReadOnlyList<int> ValidIndices,
-        FireSimChange[] ValidChanges,
-        IReadOnlyList<int> InvalidIndices);
 
     private sealed class ListenerSubscription(List<IFireSimListener> listeners, IFireSimListener listener) : IDisposable
     {

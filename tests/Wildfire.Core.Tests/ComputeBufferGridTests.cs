@@ -71,7 +71,8 @@ public sealed class ComputeBufferGridTests
                 "wildfire.material_fields",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
-        Assert.All(allocator.Handles, static handle => Assert.Equal(2, handle.Count));
+        Assert.All(allocator.Handles.Where(handle => handle != grid.Deltas), static handle => Assert.Equal(2, handle.Count));
+        Assert.Equal(4, grid.Deltas.Count);
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.CurrentCells.StrideBytes);
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.NextCells.StrideBytes);
         Assert.Equal(ComputeBufferGrid.ChangeStrideBytes, grid.QueuedChanges.StrideBytes);

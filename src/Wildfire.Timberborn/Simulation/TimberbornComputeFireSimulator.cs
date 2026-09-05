@@ -465,8 +465,8 @@ public sealed class TimberbornComputeFireSimulator :
     public const int ThreadGroupSizeZ = 4;
 
     private const int PackedCellStrideBytes = sizeof(uint);
-    private const int ChangeStrideBytes = sizeof(uint) * 4;
-    private const int DeltaStrideBytes = sizeof(uint) * 4;
+    private const int ChangeStrideBytes = FireSimGpuProtocol.ChangeStrideBytes;
+    private const int DeltaStrideBytes = FireSimGpuProtocol.DeltaStrideBytes;
     private const int VisualFieldStrideBytes = sizeof(float) * 4;
     private const int TransportFieldStrideBytes = sizeof(uint);
     private const int MaterialTargetIdStrideBytes = sizeof(uint);
@@ -475,7 +475,7 @@ public sealed class TimberbornComputeFireSimulator :
     private readonly ComputeShader _shader;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
-    private readonly List<FireSimChange> _queuedChanges = new List<FireSimChange>();
+    private readonly FireSimChangeQueue _queuedChanges = new();
     private readonly List<IFireSimListener> _listeners = new List<IFireSimListener>();
     private readonly ComputeBuffer _currentCells;
     private readonly ComputeBuffer _nextCells;
@@ -591,7 +591,7 @@ public sealed class TimberbornComputeFireSimulator :
             _currentCells = CreateBuffer(grid.CellCount, PackedCellStrideBytes, ComputeBufferType.Structured);
             _nextCells = CreateBuffer(grid.CellCount, PackedCellStrideBytes, ComputeBufferType.Structured);
             _externalChanges = CreateBuffer(grid.CellCount, ChangeStrideBytes, ComputeBufferType.Structured);
-            _deltas = CreateBuffer(grid.CellCount, DeltaStrideBytes, ComputeBufferType.Append);
+            _deltas = CreateBuffer(FireSimGpuProtocol.GetDeltaCapacity(grid.CellCount, _externalChanges.count), DeltaStrideBytes, ComputeBufferType.Append);
             _visualFields = CreateBuffer(grid.CellCount, VisualFieldStrideBytes, ComputeBufferType.Structured);
             _currentTransportFields = CreateBuffer(grid.CellCount, TransportFieldStrideBytes, ComputeBufferType.Structured);
             _nextTransportFields = CreateBuffer(grid.CellCount, TransportFieldStrideBytes, ComputeBufferType.Structured);
@@ -798,29 +798,29 @@ public sealed class TimberbornComputeFireSimulator :
         ThrowIfDisposed();
 
         uint dispatchTick = _tick + 1;
-        QueuedChangeBatch changeBatch = CreateQueuedChangeBatch(Grid.CellCount);
+        FireSimChangeQueue.Batch changeBatch = _queuedChanges.PrepareBatch(Grid.CellCount, _externalChanges.count);
         _logSink.Info(
-            $"wildfire_timberborn_gpu_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={Grid.CellCount} valid_changes={changeBatch.ValidChanges.Length} ignored_changes={changeBatch.InvalidIndices.Count}");
+            $"wildfire_timberborn_gpu_queued_changes tick={dispatchTick} queued_changes={_queuedChanges.Count} upload_capacity={Grid.CellCount} valid_changes={changeBatch.Changes.Length} ignored_changes={changeBatch.IgnoredCount}");
 
         try
         {
             _deltas.SetCounterValue(0);
 
-            if (changeBatch.ValidChanges.Length > 0)
+            if (changeBatch.Changes.Length > 0)
             {
-                _externalChanges.SetData(ToGpuChanges(changeBatch.ValidChanges), 0, 0, changeBatch.ValidChanges.Length);
-                BindKernel(_applyExternalChangesKernel, dispatchTick, checked((uint)changeBatch.ValidChanges.Length));
+                _externalChanges.SetData(FireSimGpuProtocol.EncodeChanges(changeBatch.Changes), 0, 0, changeBatch.Changes.Length);
+                BindKernel(_applyExternalChangesKernel, dispatchTick, checked((uint)changeBatch.Changes.Length));
                 DispatchKernel(
                     _applyExternalChangesKernel,
                     ApplyExternalChangesKernelName,
                     dispatchTick,
-                    changeBatch.ValidChanges.Length,
+                    changeBatch.Changes.Length,
                     1,
                     1,
                     1);
             }
 
-            ConsumeQueuedChanges(changeBatch);
+            _queuedChanges.Consume(changeBatch);
             _tick = dispatchTick;
 
             BindKernel(_fullGridKernel, dispatchTick, 0u);
@@ -960,10 +960,10 @@ public sealed class TimberbornComputeFireSimulator :
         _deltaCounter.GetData(counter);
         uint rawDeltaCount = counter[0];
 
-        if (rawDeltaCount > Grid.CellCount)
+        if (rawDeltaCount > _deltas.count)
         {
             throw new InvalidOperationException(
-                $"GPU delta counter returned {rawDeltaCount}, but buffer capacity is {Grid.CellCount}.");
+                $"GPU delta counter returned {rawDeltaCount}, but buffer capacity is {_deltas.count}.");
         }
 
         int deltaCount = checked((int)rawDeltaCount);
@@ -981,97 +981,6 @@ public sealed class TimberbornComputeFireSimulator :
                 checked((ushort)(delta.OldCell & 0xFFFFu)),
                 checked((ushort)(delta.NewCell & 0xFFFFu))))
             .ToArray();
-    }
-
-    private QueuedChangeBatch CreateQueuedChangeBatch(int uploadCapacity)
-    {
-        IndexedChange[] indexedChanges = _queuedChanges
-            .Select(static (change, index) => new IndexedChange(index, change))
-            .ToArray();
-        IndexedChange[] validChanges = indexedChanges
-            .Where(change => IsValidCellIndex(change.Change.CellIndex))
-            .Take(uploadCapacity)
-            .ToArray();
-        int[] invalidIndices = indexedChanges
-            .Where(change => !IsValidCellIndex(change.Change.CellIndex))
-            .Select(static change => change.Index)
-            .ToArray();
-
-        return new QueuedChangeBatch(
-            validChanges.Select(static change => change.Index).ToArray(),
-            validChanges.Select(static change => change.Change).ToArray(),
-            invalidIndices);
-    }
-
-    private static GpuFireSimChange[] ToGpuChanges(FireSimChange[] changes)
-    {
-        return changes.Select(ToGpuChange).ToArray();
-    }
-
-    private static GpuFireSimChange ToGpuChange(FireSimChange change)
-    {
-        return new GpuFireSimChange
-        {
-            CellIndex = checked((uint)change.CellIndex),
-            SetMask = GetSetMask(change),
-            AddFields = GetAddFields(change),
-            SetValues = GetSetValues(change),
-        };
-    }
-
-    private static uint GetSetMask(FireSimChange change)
-    {
-        uint mask = 0u;
-        mask |= change.SetCell.HasValue ? 1u << 0 : 0u;
-        mask |= change.SetWater.HasValue ? 1u << 1 : 0u;
-        mask |= change.SetFuel.HasValue ? 1u << 2 : 0u;
-        mask |= change.SetHeat.HasValue ? 1u << 3 : 0u;
-        mask |= change.SetFlammability.HasValue ? 1u << 4 : 0u;
-        mask |= change.SetBurningLevel.HasValue ? 1u << 5 : 0u;
-        mask |= change.SetTerrain.HasValue ? 1u << 6 : 0u;
-        mask |= change.SetAsh.HasValue ? 1u << 7 : 0u;
-        mask |= change.SetAshContamination.HasValue ? 1u << 8 : 0u;
-        return mask;
-    }
-
-    private static uint GetAddFields(FireSimChange change)
-    {
-        return Clamp(change.AddHeat, 15u) |
-            (Clamp(change.AddFuel, 15u) << 4) |
-            (Clamp(change.AddAsh, 3u) << 8) |
-            (Clamp(change.RemoveAsh, 3u) << 10) |
-            (Clamp(change.SetAsh, 3u) << 12) |
-            (Clamp(change.SetAshContamination, 7u) << 14);
-    }
-
-    private static uint GetSetValues(FireSimChange change)
-    {
-        return ((uint)(change.SetCell ?? 0) & 0xFFFFu) |
-            (Clamp(change.SetWater, 3u) << 16) |
-            (Clamp(change.SetFuel, 15u) << 18) |
-            (Clamp(change.SetHeat, 15u) << 22) |
-            (Clamp(change.SetFlammability, 3u) << 26) |
-            (Clamp(change.SetBurningLevel, 7u) << 28) |
-            (Clamp(change.SetTerrain, 1u) << 31);
-    }
-
-    private static uint Clamp(byte? value, uint max)
-    {
-        return Math.Min((uint)(value ?? 0), max);
-    }
-
-    private bool IsValidCellIndex(int cellIndex)
-    {
-        return cellIndex >= 0 && cellIndex < Grid.CellCount;
-    }
-
-    private void ConsumeQueuedChanges(QueuedChangeBatch changeBatch)
-    {
-        changeBatch.ValidIndices
-            .Concat(changeBatch.InvalidIndices)
-            .OrderByDescending(static index => index)
-            .ToList()
-            .ForEach(index => _queuedChanges.RemoveAt(index));
     }
 
     private void NotifyListeners(CellDelta[] deltas)
@@ -1106,22 +1015,6 @@ public sealed class TimberbornComputeFireSimulator :
         {
             throw new ObjectDisposedException(nameof(TimberbornComputeFireSimulator));
         }
-    }
-
-    private sealed record QueuedChangeBatch(
-        IReadOnlyList<int> ValidIndices,
-        FireSimChange[] ValidChanges,
-        IReadOnlyList<int> InvalidIndices);
-
-    private readonly record struct IndexedChange(int Index, FireSimChange Change);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct GpuFireSimChange
-    {
-        public uint CellIndex;
-        public uint SetMask;
-        public uint AddFields;
-        public uint SetValues;
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -5,8 +5,8 @@ namespace Wildfire.Unity;
 public sealed class ComputeBufferGrid : IDisposable
 {
     public const int PackedCellStrideBytes = sizeof(uint);
-    public const int ChangeStrideBytes = sizeof(uint) * 4;
-    public const int DeltaStrideBytes = sizeof(uint) * 4;
+    public const int ChangeStrideBytes = FireSimGpuProtocol.ChangeStrideBytes;
+    public const int DeltaStrideBytes = FireSimGpuProtocol.DeltaStrideBytes;
     public const int GenerationStrideBytes = sizeof(uint);
     public const int VisualFieldStrideBytes = FireVisualField.StrideBytes;
     public const int TransportFieldStrideBytes = sizeof(uint);
@@ -49,7 +49,7 @@ public sealed class ComputeBufferGrid : IDisposable
             IComputeBufferHandle currentCells = AllocateTracked(allocator, ownedBuffers, "wildfire.current_cells", dimensions.CellCount, PackedCellStrideBytes);
             IComputeBufferHandle nextCells = AllocateTracked(allocator, ownedBuffers, "wildfire.next_cells", dimensions.CellCount, PackedCellStrideBytes);
             IComputeBufferHandle queuedChanges = AllocateTracked(allocator, ownedBuffers, "wildfire.queued_changes", dimensions.CellCount, ChangeStrideBytes);
-            IAppendComputeBufferHandle deltas = AllocateAppendTracked(allocator, ownedBuffers, "wildfire.deltas", dimensions.CellCount, DeltaStrideBytes);
+            IAppendComputeBufferHandle deltas = AllocateAppendTracked(allocator, ownedBuffers, "wildfire.deltas", FireSimGpuProtocol.GetDeltaCapacity(dimensions.CellCount, queuedChanges.Count), DeltaStrideBytes);
             IComputeBufferHandle generations = AllocateTracked(allocator, ownedBuffers, "wildfire.generations", dimensions.CellCount, GenerationStrideBytes);
             IComputeBufferHandle visualFields = AllocateTracked(allocator, ownedBuffers, "wildfire.visual_fields", dimensions.CellCount, VisualFieldStrideBytes);
             IComputeBufferHandle currentTransportFields = AllocateTracked(allocator, ownedBuffers, "wildfire.current_transport_fields", dimensions.CellCount, TransportFieldStrideBytes);

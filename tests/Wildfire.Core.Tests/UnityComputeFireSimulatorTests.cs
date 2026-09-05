@@ -306,6 +306,38 @@ public sealed class UnityComputeFireSimulatorTests
     }
 
     [Fact]
+    public void TickPreservesExternalAndSimulationTransitionsForTheSameCell()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(1, 1, 1, [0], allocator);
+        RecordingComputeBufferHandle deltas = (RecordingComputeBufferHandle)grid.Deltas;
+        RecordingFireSimComputeDispatcher dispatcher = new()
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName == UnityComputeFireSimulator.ApplyExternalChangesKernelName)
+                {
+                    deltas.AppendCounter = 1;
+                    deltas.AppendedData = [0, 0, 0x00F0, 0];
+                }
+                else
+                {
+                    Assert.Equal(1, deltas.AppendCounter);
+                    deltas.AppendCounter = 2;
+                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0, 0x00F0, 0x00E0, 0];
+                }
+            },
+        };
+        UnityComputeFireSimulator simulator = new(grid, dispatcher);
+        simulator.RegisterChange(new FireSimChange(0, SetHeat: 15));
+
+        GpuFireStepResult result = simulator.Tick();
+
+        Assert.Equal([new CellDelta(0, 0, 0x00F0), new CellDelta(0, 0x00F0, 0x00E0)], result.Deltas);
+        Assert.Equal(1, deltas.ResetAppendCounterCalls);
+    }
+
+    [Fact]
     public void TickRejectsDeltaCounterPastBufferCapacity()
     {
         RecordingComputeBufferAllocator allocator = new();
@@ -323,7 +355,7 @@ public sealed class UnityComputeFireSimulatorTests
             {
                 if (dispatch.KernelName == UnityComputeFireSimulator.FullGridKernelName)
                 {
-                    deltas.AppendCounter = 2;
+                    deltas.AppendCounter = 3;
                 }
             },
         };
@@ -331,7 +363,7 @@ public sealed class UnityComputeFireSimulatorTests
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
 
-        Assert.Equal("GPU delta counter returned 2, but buffer capacity is 1.", exception.Message);
+        Assert.Equal("GPU delta counter returned 3, but buffer capacity is 2.", exception.Message);
     }
 
     [Fact]
