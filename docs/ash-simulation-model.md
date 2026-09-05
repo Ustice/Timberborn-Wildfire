@@ -5,6 +5,7 @@ Ash amount and contamination belong to simulator transport state. Timberborn gam
 ## Decisions
 
 - Ash amount uses 0–3 units per cell. Contamination uses 0–7 and travels with ash.
+- Ash produced from smoke retains the smoke's contamination, including when that newly produced ash falls from an upper cell. Source contamination follows the existing maximum-contamination rule for ash; deposition does not cleanse toxic smoke.
 - Uncontaminated ash is fertile for gameplay. `FertileAsh` is the collected Timberborn good, not a second simulated ash species; one harvested unit corresponds to one good.
 - Rendered airborne or settled ash is a presentation of the field. A renderer does not own deposition or an independent ash ledger.
 - External collection, application, washing, and decay requests use the queued change path. They do not write native buffers directly.

@@ -365,7 +365,7 @@ uint AshSourceAmount(uint oldCell, uint newCell, uint oldAtmospheric)
     return min(3u, fuelDrop + (AtmosphericSmoke(oldAtmospheric) >= 4u ? 1u : 0u));
 }
 
-uint AshSourceContamination(uint companion)
+uint AshSourceContamination(uint companion, uint oldAtmospheric)
 {
     uint contaminationBehavior = CompanionContaminationBehavior(companion);
     uint sourceContamination = SourceContamination(companion);
@@ -374,7 +374,13 @@ uint AshSourceContamination(uint companion)
         sourceContamination = CompanionSoilContamination(companion);
     }
 
-    return CompanionAshQuality(companion) == 3u ? 7u : sourceContamination;
+    uint materialContamination = CompanionAshQuality(companion) == 3u ? 7u : sourceContamination;
+    // Smoke contributes ash at the same threshold as AshSourceAmount. Preserve
+    // its contamination through deposition, including the falling-source path.
+    uint smokeContamination = AtmosphericSmoke(oldAtmospheric) >= 4u
+        ? AtmosphericSmokeContamination(oldAtmospheric)
+        : 0u;
+    return max(materialContamination, smokeContamination);
 }
 
 uint FalloutAshLevel(uint atmospheric)
@@ -1081,7 +1087,7 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
     }
 
     uint localAshSource = AshSourceAmount(oldCell, newCell, oldAtmospheric);
-    uint ashContaminationSource = AshSourceContamination(companion);
+    uint ashContaminationSource = AshSourceContamination(companion, oldAtmospheric);
 
     uint steam = DecayBy(AtmosphericSteam(oldAtmospheric), 2u);
     uint movedOutSteam = SteamMovedOutAmount(coordinate);
@@ -1116,7 +1122,7 @@ uint BuildAtmosphericField(uint index, uint3 coordinate, uint oldCell, uint newC
             uint fallingAsh = max(AtmosphericAsh(aboveAtmospheric), aboveAshSource);
             uint fallingAshContamination = max(
                 AtmosphericAsh(aboveAtmospheric) == 0u ? 0u : AtmosphericAshContamination(aboveAtmospheric),
-                aboveAshSource == 0u ? 0u : AshSourceContamination(aboveCompanion));
+                aboveAshSource == 0u ? 0u : AshSourceContamination(aboveCompanion, aboveAtmospheric));
             ash = max(ash, fallingAsh);
             ashContamination = max(ashContamination, fallingAsh == 0u ? 0u : fallingAshContamination);
             fallingAshSource = max(fallingAshSource, aboveAshSource);
