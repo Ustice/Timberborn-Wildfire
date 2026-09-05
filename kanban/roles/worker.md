@@ -1,62 +1,11 @@
-# Worker Role Instructions
+# Worker
 
-Use these instructions for every Wildfire issue worker unless the issue says otherwise.
+Implement the assigned outcome using [AGENTS.md](../../AGENTS.md). Read the assignment and relevant code/design references; use the [issue workflow](../github-issue-workflow.md) when an issue is involved.
 
-## Worktree
+Verify branch/worktree and write ownership before editing. Preserve unrelated changes. If the allocation conflicts with another agent, resolve ownership with the coordinator while continuing independent work where possible.
 
-- Work in your coordinator-assigned ticket worktree and branch only.
-- Verify the assigned worktree path and branch with `git status --short --branch` before editing.
-- Read the assigned `CONTEXT.md` when it exists. Update it only when durable task state changes, and keep it compressed rather than append-only.
-- If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
-- Use a worktree name that includes the GitHub issue number. Include a `TWF-*` number only when the issue is a migrated historical ticket that already has one.
-- Do not touch historical ticket board status files unless the coordinator explicitly assigns migration cleanup.
-- Do not treat historical ticket notes or status symlinks inside your worktree as authoritative.
-- Read the assigned GitHub issue, then report notes and evidence back to the coordinator unless direct issue updates are explicitly assigned.
+Build a working draft, prove the relevant behavior, then improve structure where the evidence supports it. Commit coherent progress early and keep the final diff understandable. Update affected documentation within assigned ownership; coordinate documentation owned by another agent.
 
-## Inputs
+Choose checks for the changed behavior. Install missing development dependencies in a fresh worktree when necessary. Run TypeScript checks for TypeScript changes, relevant .NET tests for .NET changes, and shader/live gates when those environments determine correctness. Documentation-only changes normally require content/link review and `git diff --check`, not runtime tests.
 
-- Read `AGENTS.md`.
-- Read `docs/INDEX.md`.
-- Read `kanban/github-issue-workflow.md`.
-- Read `kanban/roles/worker.md`.
-- Read your assigned GitHub issue.
-- Read source docs only as needed for the assigned ticket.
-- Read the assignment packet from the coordinator if one is provided.
-
-## Scope
-
-- Stay inside the issue's explicit write scope.
-- Do not overlap another worker's write scope unless the coordinator approves it.
-- Do not update milestone/status docs unless the issue explicitly includes those files in `write_scope`.
-- Report worker notes, evidence, blockers, and completion details to the coordinator for GitHub issue updates.
-- Keep `Wildfire.Core` host-agnostic.
-- Do not introduce Timberborn or Unity dependencies into core code.
-- Preserve deterministic simulation behavior.
-
-## Progress Updates
-
-- Before starting work that may take a while, update the coordinator with the issue number, the long-running step you are starting, why it may take time, and the next evidence or checkpoint you expect to report.
-- Use this for substantial implementation passes, broad refactors, dependency investigation, long test/build runs, live Timberborn validation, or any step where silence could make the coordinator think the worker is idle or blocked.
-- If the step runs longer than expected, send a brief coordinator update with current progress, blockers, and the next concrete action.
-
-## Verification
-
-- Run `git diff --check`.
-- In fresh worktrees, run `bun install --frozen-lockfile` before `bun run typecheck` or TypeScript scripts when dependencies are missing. Treat missing Prisma, TypeScript, or package binaries as setup work, not as product failures.
-- Run `dotnet test` for code, content, script, or behavior changes.
-- Skip runtime verification for documentation-only issues marked `doc_only: true` when the diff only changes documentation.
-
-## Final Report
-
-Report:
-
-- Changed files.
-- Commit SHA if committed.
-- Tests and checks run, with outcomes.
-- Unresolved unknowns or blockers.
-- Short behavior or architecture summary.
-- Issue notes the coordinator should add.
-- Process Feedback:
-  - Friction or issues encountered.
-  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
-  - Suggested process or tooling improvements.
+Report findings that change the task promptly. At handoff, provide commits, behavior/architecture changes, checks and their actual outcomes, and remaining risks. The assignment determines who posts issue updates. Mention process friction when it warrants action.

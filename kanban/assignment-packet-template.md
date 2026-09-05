@@ -1,63 +1,22 @@
-# Assignment Packet Template
+# Assignment Template
 
-Use this when dispatching a sub-agent. Fill it in from the coordinator's main checkout and the active GitHub issue.
+Use the fields that clarify ownership and execution; omit irrelevant sections. A direct subtask does not need a new GitHub issue or a separate agent for each role.
 
-## Assignment
+## Outcome And Ownership
 
-- Role:
-- GitHub issue number:
-- GitHub issue URL:
-- Historical ticket reference, if migrated: `archive/file-kanban-2026-05-23:kanban/all-tickets/TWF-000-example.md`
-- Worktree path:
-- Branch:
-- Base branch:
-- Cleanup owner:
-- Context file:
-- Role instructions:
-- Sprint charter:
-
-## Scope
-
-- Write scope:
-- Explicitly out of scope:
-- Dependencies already accepted:
-- Dependencies still risky:
-- QA tooling allowed:
-- QA tool write scope:
-- Live QA controller:
-- Shared process or lock constraints:
-- Startup/process diagnostics required:
-
-## Instructions
-
-- Read the GitHub issue before starting.
-- Work only in the assigned implementation worktree and branch unless the coordinator explicitly says otherwise.
-- Verify the assigned worktree path and branch with `git status --short --branch` before editing.
-- Read the assigned `CONTEXT.md` when it exists. Update it only when durable task state changes, and keep it compressed rather than append-only.
-- If the worktree or branch is missing, wrong, detached unexpectedly, or dirty with unrelated changes, stop and report it to the coordinator instead of creating, renaming, or moving the allocation yourself.
-- In a fresh worktree, run `bun install --frozen-lockfile` before TypeScript checks or scripts if dependencies are not present.
-- Do not change GitHub issue status labels unless explicitly assigned.
-- Do not edit historical kanban ticket files unless this assignment explicitly includes migration-cleanup scope.
-- Report issue notes, evidence, blockers, and recommended status-label changes back to the coordinator.
+- Objective and completion condition:
+- Issue or source request, when relevant:
+- Owned files or responsibility:
+- Branch/worktree and starting commit:
+- Dependencies or shared-file constraints:
+- Coordinator/reporting owner:
 
 ## Verification
 
-- Required commands:
-- Live QA required:
-- Evidence required:
-- Tool-run logging required:
+- Behavior and required checks:
+- Evidence expected:
+- Live controller and fixture/save, if live work is involved:
 
-## Final Report Shape
+## Handoff
 
-- Changed files:
-- Tests and checks:
-- Evidence paths:
-- QA tool run ids:
-- Failure classification:
-- Blockers:
-- Issue notes for coordinator:
-- Recommended status-label change:
-- Process Feedback:
-  - Friction or issues encountered:
-  - Reusable lessons from retries or pivots, including what you would repeat or change next time:
-  - Suggested process or tooling improvements:
+Follow [AGENTS.md](../AGENTS.md). Preserve unrelated changes, coordinate overlapping writes, commit coherent progress, and keep compressed `CONTEXT.md` state when useful. Report commits, actual check outcomes, material decisions, and remaining risks. State who integrates, updates issues, and cleans up the allocation if those responsibilities differ from the coordinator.

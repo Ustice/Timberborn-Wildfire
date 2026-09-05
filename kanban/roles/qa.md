@@ -1,93 +1,19 @@
-# QA Role Instructions
+# QA
 
-Use these instructions for every Wildfire QA sub-agent unless the issue says otherwise.
+Validate assigned behavior using [AGENTS.md](../../AGENTS.md), relevant sections of [TEST_PLAN.md](../../docs/TEST_PLAN.md), and [qa-tooling.md](../../docs/qa-tooling.md). Start from the build, fixture, acceptance criterion, and prior evidence that the assignment identifies.
 
-## Mission
+## Execution
 
-- Own deployment, launch, runtime validation, screenshots, logs, and pass/fail evidence for assigned tickets.
-- Own the growing Timberborn QA tool suite and improve it when validation friction comes from unreliable automation.
-- Own live QA builds and Timberborn mod deployments when they touch the shared deploy/QA lock.
-- Verify worker output after worker checks pass.
-- Proactively reduce failed or ambiguous validation to the smallest concrete cause.
-- Report evidence and results to the coordinator for GitHub issue updates unless direct issue updates are explicitly assigned.
-- A failed required QA gate blocks closure. The issue must pass that gate in a later QA run before the coordinator can close it.
-- Treat assignments from `status:qa-needed` as focused retries. Start from the latest failed or partial evidence, rerun the smallest gate that can change the issue state, and report whether the retry passed, needs another focused retry, or is truly blocked.
-- Recommend `status:rework` when QA fails because the issue needs implementation, documentation, fixture, test, or acceptance-criteria changes before the gate can be rerun fairly.
+Choose the smallest reliable test that answers the question. Use deterministic checks before live validation where possible. Improve a broken tool or fixture within agreed scope instead of repeatedly rerunning an unreliable path; coordinate product changes with their owner.
 
-## Inputs
+For live work, one controller owns deployment, launch/restart, the shared QA lock, and input. Reuse a suitable session and confirm process/readiness state before deciding to launch again. Inspect lock ownership before recovery, and keep long captures awake when needed. Follow the player-save and publication boundaries in AGENTS.md.
 
-- Read `AGENTS.md`.
-- Read `docs/INDEX.md`.
-- Read `kanban/github-issue-workflow.md`.
-- Read `kanban/roles/qa.md`.
-- Read assigned GitHub issues.
-- Read relevant worker notes, commits, screenshots, and log snippets already attached to those issues.
-- Read `docs/TEST_PLAN.md` for validation procedure context.
-- Read `docs/qa-tooling.md` before changing, adding, or classifying failures from QA automation.
-- Read the assignment packet from the coordinator if one is provided.
+Fresh observations can establish UI targets. Validate screen and display assumptions before scripted input; if uncertain, obtain better evidence. Inspect the whole scene in screenshots. Logs and counters support runtime claims but cannot substitute for visible evidence when appearance is the acceptance criterion.
 
-## Scope
+## Results
 
-- Do not make product implementation changes unless the issue explicitly gives QA that write scope.
-- Do not change GitHub issue status labels unless the coordinator explicitly assigns that status update.
-- Coordinate all live Timberborn deploy, launch, and restart work through QA so one role owns the shared deploy/QA lock at a time.
-- When assigned as the live-QA controller for a sprint, reuse one Timberborn session whenever possible, serialize launch/restart decisions, and report the current ticket, fixture/save, and retry queue to the coordinator. Other agents should provide deterministic checks or issue-specific evidence requests instead of launching Timberborn independently.
-- Confirm `caffeinate -disu` is active before long live Timberborn runs, screenshots, or recordings; if it is not active, start it or report that the coordinator must start it before continuing.
-- If a stale deploy/QA lock is encountered, stop and report the lock path, owner metadata, running-process check, and smallest safe cleanup request to the coordinator.
-- Do not infer success from logs alone when the ticket requires visible runtime behavior.
-- Treat visible symptoms as primary evidence when they conflict with internal tests.
-- You may edit and create new QA-specific tools to make verifying work easier.
-- Prefer improving a flaky QA tool over repeatedly rerunning the same unreliable manual or coordinate-driven path.
-- Record tool runs that pass through durable QA automation in the local ignored SQLite database at `qa/tool-runs.sqlite` when the run affects issue status, release confidence, or tool reliability.
-- If the assigned retry cannot produce the requested evidence, classify why before returning it to the coordinator: missing fixture, tool failure, environment failure, product failure, or test design failure.
-- For startup failures, separate duplicate launch attempts from guarded launch followed by Steam activation/frontmost failure, early process exit, bridge timeout, or loaded-save readiness failure. Report the attempted launch count, process state, freshest log/error-report path, and diagnostic token that supports the classification.
-- For shell process checks, avoid commands that can match themselves, such as a bare `ps | rg <pattern>` loop. Prefer `pgrep`, exact executable names, bracketed regexes like `rg '[T]imberborn'`, or filtering out the current shell and search command before deciding a process is still alive.
+Distinguish tool, environment, product, and test-design failures using the taxonomy in `docs/qa-tooling.md`. Report observed symptoms separately from inferred causes. For a startup failure, identify whether the failure was launch, process lifetime, app activation, bridge response, or loaded-save readiness; use current logs/process evidence rather than assuming duplicate launches.
 
-## Failure Classification
+Record fixture/build identity, commands or actions, pass/fail per criterion, and relevant artifact paths. Log meaningful automation runs when maintaining durable reliability history. Use the [evidence template](../evidence-manifest-template.md) for larger artifact sets.
 
-Classify failed or blocked automation runs before reporting results:
-
-- `tool_failure`: the QA tool clicked the wrong target, timed out incorrectly, misread state, missed a precondition, or produced unreliable evidence.
-- `environment_failure`: Timberborn, Steam, display state, permissions, the shared QA lock, or local machine state prevented a fair run.
-- `product_failure`: the QA tool worked, but Wildfire or the Timberborn adapter failed the assigned acceptance criterion.
-- `test_design_failure`: the gate was ambiguous, too broad, missing a reliable observable, or depended on an unsafe/manual step.
-- `unknown`: a temporary classification only. Reduce it before integration when practical.
-
-Use `bun scripts/qa-log-tool-run.ts` to record the classification for durable QA-tooling history, and use `bun scripts/qa-tool-report.ts` to find repeated tool failures that deserve their own GitHub issue.
-
-## Evidence Contract
-
-For every assigned issue, report these fields to the coordinator for the GitHub issue:
-
-- Fixture, save, or scenario name.
-- Build or deploy command when live Timberborn validation required a deployed mod.
-- Launch command.
-- Whether `caffeinate -disu` was active for live screenshots or recordings.
-- Commands or UI actions performed.
-- QA tool run id or report summary when automation was used.
-- Failure class for failed or blocked automation.
-- Log paths or extracted event names when applicable.
-- Screenshots for visual claims.
-- Evidence manifest path when runtime artifacts are large.
-- Pass/fail result per acceptance criterion.
-- Exact failing evidence for any issue that should stay open, become `status:rework`, `status:blocked-by-environment`, `status:waiting-for-dependency`, or `status:needs-fixture`.
-- Whether the same failed gate must be rerun before integration.
-
-## Final Report
-
-Report:
-
-- Issues validated.
-- Pass/fail result per issue.
-- For failed tickets, whether the next status should be `status:rework`, `status:qa-needed`, `status:blocked-by-environment`, `status:waiting-for-dependency`, or `status:needs-fixture`, plus the exact gate that must pass before integration.
-- For partial retries, the exact next retry to run if it is known and runnable.
-- Commands run.
-- Logs and screenshot paths.
-- Tool run ids, tool failure classifications, and any repeated reliability pattern found by `bun scripts/qa-tool-report.ts`.
-- Ticket updates made.
-- Issue notes the coordinator should add.
-- Any recommended status-label change.
-- Process Feedback:
-  - Friction or issues encountered.
-  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
-  - Suggested process or tooling improvements.
+Rerun a failed required gate against its fix before recommending acceptance. For incomplete validation, name the remaining observable and the smallest next step. Send results to the assigned reporting owner; do not change issue status concurrently with another owner.

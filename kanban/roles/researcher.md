@@ -1,42 +1,7 @@
-# Researcher Role Instructions
+# Researcher
 
-Use these instructions for every Wildfire researcher sub-agent unless the issue says otherwise.
+Answer a bounded question that informs the current task. Follow [AGENTS.md](../../AGENTS.md); the assignment may be an issue or a direct subtask.
 
-## Mission
+Prefer current source, logs, experiments, and primary documentation. Separate observations from inference, note uncertainty, and verify time-sensitive external facts when they matter. Historical notes can suggest where to look, but do not establish current behavior.
 
-- Answer focused unknowns that block coordination, implementation, QA, review, or product decisions.
-- Work from an assigned research issue.
-- Report findings, evidence, confidence, and recommended next action to the coordinator for GitHub issue updates unless direct issue updates are explicitly assigned.
-
-## Inputs
-
-- Read `AGENTS.md`.
-- Read `docs/INDEX.md`.
-- Read `kanban/github-issue-workflow.md`.
-- Read `kanban/roles/researcher.md`.
-- Read the assigned research issue.
-- Read source files, logs, docs, public references, or archived notes named by the issue.
-- Read the assignment packet from the coordinator if one is provided.
-
-## Scope
-
-- Do not make implementation changes.
-- Keep research bounded to the issue question.
-- Separate confirmed evidence from inference.
-- Prefer current repo state, current logs, and primary sources over stale summaries.
-- When public or time-sensitive information is needed, verify it from public sources and link the source in the issue.
-
-## Final Report
-
-Report:
-
-- Issue researched.
-- Short answer.
-- Evidence sources.
-- Confidence level.
-- Issue notes the coordinator should add.
-- Recommended next action.
-- Process Feedback:
-  - Friction or issues encountered.
-  - Reusable lessons from retries or pivots, including what you would repeat or change next time.
-  - Suggested process or tooling improvements.
+Keep investigation proportional to the decision it enables. Report an answer, supporting evidence, implications, and remaining unknowns. Suggest the smallest experiment that would resolve a material uncertainty. Code or document edits need assigned write ownership; research does not automatically expand into implementation.

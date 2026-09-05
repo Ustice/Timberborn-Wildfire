@@ -1,44 +1,26 @@
 # Evidence Manifest Template
 
-Use this next to runtime artifacts, screenshots, logs, generated saves, or QA outputs. Link this manifest from the relevant GitHub issue instead of pasting long evidence into issue comments.
+Use alongside substantial runtime artifacts and link it from the task, issue, or PR. Include the fields needed to reproduce and assess the claim; omit irrelevant fields.
 
-## Issue
+## Claim And Provenance
 
-- GitHub issue:
-- Historical `TWF-*` id, if migrated:
-- Agent:
-- Date:
+- Task/issue and acceptance criterion:
+- Date and observer:
+- Commit/build identity:
+- Platform and Timberborn version:
+- Fixture/save/scenario:
 
-## Environment
+## Execution
 
-- Repo checkout:
-- Branch or commit:
-- Worktree:
-- Timberborn version:
-- Platform:
+- Commands or UI actions:
+- Result and relevant observations:
+- Log/screenshot/recording paths:
+- Artifact manifest/checksums, when relevant:
+- Automation run id, when recorded:
 
-## Commands
+## Assessment
 
-- Command:
-- Result:
-- Output summary:
-
-## Artifacts
-
-- Log:
-- Screenshot:
-- Recording:
-- Generated save or scenario:
-- Manifest or checksum:
-
-## Acceptance Results
-
-- Criterion:
-- Result:
-- Evidence:
-
-## Failure Notes
-
-- Symptom:
-- Suspected cause:
-- Smallest next action:
+- Criterion met, failed, or unverified:
+- Evidence supporting that conclusion:
+- Failure classification and inferred cause, if any:
+- Remaining uncertainty and next action:
