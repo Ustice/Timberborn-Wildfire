@@ -179,16 +179,18 @@ def berm():
     for x in (-.37,0,.37): box('Stone facing',(x,-.35,.15),(.31,.20,.26),'stone')
 
 ASSETS=[('FireBell_Folktails',bell),('WardenStation_Ironteeth',station),('BrigadeBucket',bucket),('WardenSprayer',sprayer),('WardenHelmet',helmet),('WardenCoat',coat),('SmokeFan',fan),('FireBerm',berm)]
+exec(compile((Path(__file__).with_name('refine_fire_response.py')).read_text(), 'refine_fire_response.py', 'exec'))
 manifest=[]
 for name,build in ASSETS:
     root=bpy.data.objects.new(name,None);bpy.context.collection.objects.link(root)
     build()
+    refine(name)
     bpy.ops.object.select_all(action='DESELECT')
     root.select_set(True)
     for obj in root.children: obj.select_set(True)
     bpy.context.view_layer.objects.active=root
     bpy.ops.export_scene.gltf(filepath=str(OUT/(name+'.glb')),use_selection=True,export_format='GLB',export_apply=True)
-    manifest.append({'name':name,'file':name+'.glb','mesh_objects':len(root.children),'triangles':sum(sum(len(p.vertices)-2 for p in obj.data.polygons) for obj in root.children),'status':'design-draft'})
+    manifest.append({'name':name,'file':name+'.glb','mesh_objects':len(root.children),'triangles':sum(sum(len(p.vertices)-2 for p in obj.data.polygons) for obj in root.children),'status':'faction-style-draft'})
 
 # Presentation scene; exported assets above retain their own local origin.
 for i,(name,_) in enumerate(ASSETS):
@@ -209,6 +211,7 @@ for pos,power,size in [((1,-5,11),2300,8),((10,6,10),1800,7)]:
     light.rotation_euler=(Vector((5,2,0))-light.location).to_track_quat('-Z','Y').to_euler()
 scene.render.resolution_x=1800;scene.render.resolution_y=1100;scene.render.resolution_percentage=100
 scene.render.image_settings.file_format='PNG';scene.render.filepath=str(OUT/'overview.png')
+bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'fire-response.blend'))
 (OUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 bpy.ops.render.render(write_still=True)

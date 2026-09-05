@@ -2,57 +2,57 @@
   {
     "name": "FireBell_Folktails",
     "file": "FireBell_Folktails.glb",
-    "mesh_objects": 29,
-    "triangles": 768,
-    "status": "design-draft"
+    "mesh_objects": 106,
+    "triangles": 2108,
+    "status": "faction-style-draft"
   },
   {
     "name": "WardenStation_Ironteeth",
     "file": "WardenStation_Ironteeth.glb",
-    "mesh_objects": 40,
-    "triangles": 1344,
-    "status": "design-draft"
+    "mesh_objects": 131,
+    "triangles": 3068,
+    "status": "faction-style-draft"
   },
   {
     "name": "BrigadeBucket",
     "file": "BrigadeBucket.glb",
-    "mesh_objects": 16,
-    "triangles": 1248,
-    "status": "design-draft"
+    "mesh_objects": 19,
+    "triangles": 1348,
+    "status": "faction-style-draft"
   },
   {
     "name": "WardenSprayer",
     "file": "WardenSprayer.glb",
-    "mesh_objects": 9,
-    "triangles": 1100,
-    "status": "design-draft"
+    "mesh_objects": 23,
+    "triangles": 1716,
+    "status": "faction-style-draft"
   },
   {
     "name": "WardenHelmet",
     "file": "WardenHelmet.glb",
-    "mesh_objects": 4,
-    "triangles": 292,
-    "status": "design-draft"
+    "mesh_objects": 15,
+    "triangles": 808,
+    "status": "faction-style-draft"
   },
   {
     "name": "WardenCoat",
     "file": "WardenCoat.glb",
-    "mesh_objects": 7,
-    "triangles": 88,
-    "status": "design-draft"
+    "mesh_objects": 13,
+    "triangles": 192,
+    "status": "faction-style-draft"
   },
   {
     "name": "SmokeFan",
     "file": "SmokeFan.glb",
-    "mesh_objects": 23,
-    "triangles": 308,
-    "status": "design-draft"
+    "mesh_objects": 37,
+    "triangles": 668,
+    "status": "faction-style-draft"
   },
   {
     "name": "FireBerm",
     "file": "FireBerm.glb",
-    "mesh_objects": 4,
-    "triangles": 48,
-    "status": "design-draft"
+    "mesh_objects": 20,
+    "triangles": 240,
+    "status": "faction-style-draft"
   }
 ]
