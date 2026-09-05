@@ -163,7 +163,7 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
-    public void PersistenceRestoreRepopulatesVisualFieldsBeforeSimulationTick()
+    public void SourceWiringRestoresVisualFieldsAndPublishesTheRestoredTick()
     {
         string simulatorSource = ReadTimberbornSource("TimberbornComputeFireSimulator.cs");
 
@@ -172,7 +172,8 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("float smoke = atmospheric.Smoke / 7f;", simulatorSource, StringComparison.Ordinal);
         Assert.Contains("float ash = atmospheric.Ash / 7f;", simulatorSource, StringComparison.Ordinal);
         Assert.Contains("return new Vector4(fire, smoke, ash, visibility);", simulatorSource, StringComparison.Ordinal);
-        Assert.Contains("_visualFieldBindingLifecycle?.MarkUpdated(_tick);", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("_step.RestoreTick(snapshot.Tick);", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("_visualFieldBindingLifecycle?.MarkUpdated(_step.CurrentTick);", simulatorSource, StringComparison.Ordinal);
     }
 
     [Fact]

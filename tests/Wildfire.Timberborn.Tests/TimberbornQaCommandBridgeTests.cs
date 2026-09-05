@@ -3644,7 +3644,7 @@ public sealed class TimberbornQaCommandBridgeTests
         fireSystem.Tick();
         fireSystem.RegisterChange(new FireSimChange(2, SetWater: 3));
         fireSystem.Tick();
-        Assert.Single(simulator.RegisteredChanges.Where(change => change == ignition));
+        Assert.Single(simulator.RegisteredChanges, change => change == ignition);
 
         for (int tick = 1; tick < duration; tick++)
         {
