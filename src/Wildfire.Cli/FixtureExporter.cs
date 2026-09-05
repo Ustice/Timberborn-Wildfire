@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Wildfire.Core;
 
 namespace Wildfire.Cli;
 
@@ -26,7 +27,8 @@ public static class FixtureExporter
             PackedCellValues: new PackedCellValues(
                 ValueType: "uint16",
                 IndexOrder: "x + y * width + z * width * height",
-                Values: scenario.Cells));
+                Values: scenario.Cells),
+            Parameters: FireSimParameters.Default);
 
         return JsonSerializer.Serialize(fixture, JsonOptions) + Environment.NewLine;
     }
@@ -55,7 +57,8 @@ public sealed record WildfireFixture(
     uint Seed,
     FixtureGrid Grid,
     FixtureLayer SelectedLayer,
-    PackedCellValues PackedCellValues);
+    PackedCellValues PackedCellValues,
+    FireSimParameters Parameters);
 
 public sealed record FixtureGrid(int Width, int Height, int Depth);
 

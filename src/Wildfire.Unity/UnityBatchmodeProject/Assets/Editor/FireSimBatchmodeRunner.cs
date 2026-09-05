@@ -204,7 +204,7 @@ namespace Wildfire.UnityBatchmode
             shader.SetFloat("WindDirectionX", wind.directionX);
             shader.SetFloat("WindDirectionY", wind.directionY);
             shader.SetFloat("WindStrength", wind.strength);
-            BindDefaultParameters(shader);
+            BindParameters(shader, fixture.parameters);
             shader.SetBuffer(kernel, "CurrentCells", currentCells);
             shader.SetBuffer(kernel, "NextCells", nextCells);
             shader.SetBuffer(kernel, "ExternalChanges", externalChanges);
@@ -215,31 +215,31 @@ namespace Wildfire.UnityBatchmode
             shader.SetBuffer(kernel, "CompanionFields", companionFields);
         }
 
-        private static void BindDefaultParameters(ComputeShader shader)
+        private static void BindParameters(ComputeShader shader, FixtureParameters parameters)
         {
-            shader.SetFloat("VisualFireBaseIntensity", 0.45f);
-            shader.SetFloat("VisualFireHeatWeight", 0.55f);
-            shader.SetFloat("VisualSmokeBaseIntensity", 0.12f);
-            shader.SetFloat("VisualSmokeFuelWeight", 0.52f);
-            shader.SetFloat("VisualSmokeHeatWeight", 0.24f);
-            shader.SetFloat("VisualAshBaseIntensity", 0.18f);
-            shader.SetFloat("VisualAshFuelWeight", 0.5f);
-            shader.SetFloat("VisualAshHeatWeight", 0.32f);
-            shader.SetFloat("VisualVisibilityHeatWeight", 0.55f);
-            shader.SetFloat("VisualVisibilitySmokeWeight", 0.9f);
-            shader.SetFloat("VisualVisibilityAshWeight", 0.8f);
-            shader.SetInt("FireIgnitionBaseHeat", 11);
-            shader.SetInt("FireWaterIgnitionPenalty", 2);
+            shader.SetFloat("VisualFireBaseIntensity", parameters.visualFireBaseIntensity);
+            shader.SetFloat("VisualFireHeatWeight", parameters.visualFireHeatWeight);
+            shader.SetFloat("VisualSmokeBaseIntensity", parameters.visualSmokeBaseIntensity);
+            shader.SetFloat("VisualSmokeFuelWeight", parameters.visualSmokeFuelWeight);
+            shader.SetFloat("VisualSmokeHeatWeight", parameters.visualSmokeHeatWeight);
+            shader.SetFloat("VisualAshBaseIntensity", parameters.ashPresentationBaseIntensity);
+            shader.SetFloat("VisualAshFuelWeight", parameters.ashPresentationFuelWeight);
+            shader.SetFloat("VisualAshHeatWeight", parameters.ashPresentationHeatWeight);
+            shader.SetFloat("VisualVisibilityHeatWeight", parameters.visualVisibilityHeatWeight);
+            shader.SetFloat("VisualVisibilitySmokeWeight", parameters.visualVisibilitySmokeWeight);
+            shader.SetFloat("VisualVisibilityAshWeight", parameters.ashPresentationVisibilityWeight);
+            shader.SetInt("FireIgnitionBaseHeat", unchecked((int)parameters.ignitionPoint));
+            shader.SetInt("FireWaterIgnitionPenalty", unchecked((int)parameters.fireWaterIgnitionPenalty));
             shader.SetInt("FireWaterFuelLock", 2);
             shader.SetInt("FireWaterEvaporationHeat", 2);
             shader.SetInt("FireFlammabilityBurnPressure", 2);
             shader.SetInt("FireWaterBurnPressurePenalty", 0);
-            shader.SetInt("FireBurnHeatBase", 1);
-            shader.SetInt("FireFuelHeatWeight", 5);
+            shader.SetInt("FireBurnHeatBase", unchecked((int)parameters.fireBurnHeatBase));
+            shader.SetInt("FireFuelHeatWeight", unchecked((int)parameters.fireFuelHeatWeight));
             shader.SetInt("FireCoolingBase", 0);
-            shader.SetInt("FireFuelBurnDownPressureNumerator", 3);
-            shader.SetInt("FireFuelBurnDownPressureDenominator", 4);
-            shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)0x9E3779B9u));
+            shader.SetInt("FireFuelBurnDownPressureNumerator", unchecked((int)parameters.fireFuelBurnDownPressureNumerator));
+            shader.SetInt("FireFuelBurnDownPressureDenominator", unchecked((int)parameters.fireFuelBurnDownPressureDenominator));
+            shader.SetInt("FireFuelBurnDownRollSeed", unchecked((int)parameters.fireFuelBurnDownRollSeed));
         }
 
         private static uint[] CellArrayOrZeros(uint[] values, int cellCount, string fieldName)
@@ -395,6 +395,7 @@ namespace Wildfire.UnityBatchmode
         public uint[] initialAtmosphericFields;
         public uint[] companionFields;
         public FixtureWind wind;
+        public FixtureParameters parameters;
         public FixtureExternalChanges[] externalChanges;
 
         public void ValidateExternalChanges(int cellCount, int tickCount)
@@ -458,9 +459,9 @@ namespace Wildfire.UnityBatchmode
             }
 
             Fixture fixture = JsonUtility.FromJson<Fixture>(File.ReadAllText(path, Encoding.UTF8));
-            if (fixture == null || fixture.formatVersion != 1 || fixture.grid == null || fixture.packedCellValues == null)
+            if (fixture == null || fixture.formatVersion != 1 || fixture.grid == null || fixture.packedCellValues == null || fixture.parameters == null)
             {
-                throw new InvalidOperationException("Fixture JSON is missing required shader snapshot fields.");
+                throw new InvalidOperationException("Fixture JSON is missing required shader snapshot fields or parameters; export it with the current fixture serializer.");
             }
 
             return fixture;
@@ -481,6 +482,29 @@ namespace Wildfire.UnityBatchmode
     {
         public int tick;
         public uint[] words;
+    }
+
+    [Serializable]
+    internal sealed class FixtureParameters
+    {
+        public float visualFireBaseIntensity;
+        public float visualFireHeatWeight;
+        public float visualSmokeBaseIntensity;
+        public float visualSmokeFuelWeight;
+        public float visualSmokeHeatWeight;
+        public float ashPresentationBaseIntensity;
+        public float ashPresentationFuelWeight;
+        public float ashPresentationHeatWeight;
+        public float visualVisibilityHeatWeight;
+        public float visualVisibilitySmokeWeight;
+        public float ashPresentationVisibilityWeight;
+        public uint ignitionPoint;
+        public uint fireWaterIgnitionPenalty;
+        public uint fireBurnHeatBase;
+        public uint fireFuelHeatWeight;
+        public uint fireFuelBurnDownPressureNumerator;
+        public uint fireFuelBurnDownPressureDenominator;
+        public uint fireFuelBurnDownRollSeed;
     }
 
     [Serializable]

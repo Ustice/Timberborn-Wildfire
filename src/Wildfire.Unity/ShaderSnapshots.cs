@@ -16,7 +16,8 @@ public sealed record ShaderSnapshotFixture(
     uint[]? InitialAtmosphericFields = null,
     uint[]? CompanionFields = null,
     FireSimWind? Wind = null,
-    ShaderSnapshotExternalChanges[]? ExternalChanges = null)
+    ShaderSnapshotExternalChanges[]? ExternalChanges = null,
+    FireSimParameters? Parameters = null)
 {
     public const int CurrentFormatVersion = 1;
     public const string PackedCellValueType = "uint16";
@@ -27,6 +28,8 @@ public sealed record ShaderSnapshotFixture(
     public uint[] EffectiveMaterialFields => CompanionFields ?? [];
 
     public FireSimWind EffectiveWind => Wind ?? FireSimWind.None;
+
+    public FireSimParameters EffectiveParameters => Parameters ?? FireSimParameters.Default;
 
     public ComputeBufferGrid CreateBufferGrid(IComputeBufferAllocator allocator)
     {
@@ -184,7 +187,8 @@ public static class ShaderSnapshotFixtureLoader
             atmosphericFields,
             materialFields,
             wind,
-            ShaderSnapshotExternalChanges.Read(root, dimensions.CellCount));
+            ShaderSnapshotExternalChanges.Read(root, dimensions.CellCount),
+            ShaderSnapshotParameters.Read(root));
     }
 
     private static ushort ReadPackedCell(JsonElement value, string sourceName)
@@ -403,7 +407,8 @@ public static class ShaderSnapshotJson
             Wind: fixture.Wind is { } wind
                 ? new ShaderSnapshotWind(wind.DirectionX, wind.DirectionY, wind.Strength)
                 : null,
-            ExternalChanges: fixture.ExternalChanges);
+            ExternalChanges: fixture.ExternalChanges,
+            Parameters: fixture.EffectiveParameters);
 
         return JsonSerializer.Serialize(document, JsonOptions) + Environment.NewLine;
     }
@@ -541,7 +546,8 @@ public static class ShaderSnapshotJson
         [property: JsonPropertyName("companionFields")]
         uint[]? MaterialFields,
         ShaderSnapshotWind? Wind,
-        ShaderSnapshotExternalChanges[]? ExternalChanges);
+        ShaderSnapshotExternalChanges[]? ExternalChanges,
+        FireSimParameters Parameters);
 
     private sealed record ShaderSnapshotPackedCellValues(string ValueType, string IndexOrder, ushort[] Values);
 
