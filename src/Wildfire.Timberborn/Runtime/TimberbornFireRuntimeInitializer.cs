@@ -160,46 +160,35 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             grid,
             burnDamageTargets.Registrations.Concat(cropBurnDamageTargets.Registrations),
             cropBurnDamageTargets.Descriptors);
-        _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
-        _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
-        _runtime.AttachBurnDamageService(burnDamageService);
-        _runtime.AttachTreeBurnConsequenceApi(
-            new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink));
-        _runtime.AttachCropBurnConsequenceApi(
-            new TimberbornTextureCropBurnConsequenceApi(
+        TimberbornRuntimeBindings bindings = new(
+            BuildingBurnout: buildingBurnoutApi,
+            BuildingBurnoutStimulus: buildingBurnoutApi,
+            BurnDamageService: burnDamageService,
+            TreeBurn: new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink),
+            CropBurn: new TimberbornTextureCropBurnConsequenceApi(
                 _entityRegistry,
                 _logSink,
                 blockService: _blockService,
                 entityService: _entityService,
-                registrations: cropBurnDamageTargets.Registrations));
-        _runtime.AttachStructureBurnDamageRollbackTargetApi(
-            new TimberbornStructureBurnDamageRollbackTargetApi(
+                registrations: cropBurnDamageTargets.Registrations),
+            StructureRollback: new TimberbornStructureBurnDamageRollbackTargetApi(
                 grid,
                 _blockService,
                 _logSink,
                 entityService: _entityService,
                 constructionFactory: _constructionFactory,
                 terrainPhysicsService: _terrainPhysicsService,
-                terrainDestroyer: _terrainDestroyer));
-        _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(
-            grid,
-            _blockService,
-            _entityRegistry));
-        _runtime.AttachInventoryAdjuster(new TimberbornQaInventoryAdjustmentApi(_entityRegistry));
-        _runtime.AttachStoredGoodNativeBlastRadiusApi(
-            new TimberbornExplosionServiceBlastRadiusApi(_explosionOutcomeGatherer, _explosionService));
-        _runtime.AttachExplosiveInfrastructureTargetApi(
-            new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));
-        _runtime.AttachDetonatorFireSafetyTargetApi(
-            new TimberbornDetonatorFireSafetyTargetApi(grid, _blockService));
-        _runtime.AttachTunnelFireTargetApi(new TimberbornTunnelFireTargetApi(grid, _blockService));
-        _runtime.AttachPathInfrastructureFireTargetApi(
-            new TimberbornPathInfrastructureFireTargetApi(grid, _blockService));
-        _runtime.AttachPowerInfrastructureFireTargetApi(
-            new TimberbornPowerInfrastructureFireTargetApi(grid, _blockService));
-        _runtime.AttachWaterInfrastructureFireTargetApi(
-            new TimberbornWaterInfrastructureFireTargetApi(grid, _blockService));
-        _runtime.Initialize(grid, sources, importResult.MaterialFields, importResult.Summary, _simulatorFactory);
+                terrainDestroyer: _terrainDestroyer),
+            StoredInventory: new TimberbornStockpileStoredGoodBurnInventoryApi(grid, _blockService, _entityRegistry),
+            InventoryAdjuster: new TimberbornQaInventoryAdjustmentApi(_entityRegistry),
+            BlastRadius: new TimberbornExplosionServiceBlastRadiusApi(_explosionOutcomeGatherer, _explosionService),
+            ExplosiveInfrastructure: new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService),
+            DetonatorSafety: new TimberbornDetonatorFireSafetyTargetApi(grid, _blockService),
+            TunnelFire: new TimberbornTunnelFireTargetApi(grid, _blockService),
+            PathFire: new TimberbornPathInfrastructureFireTargetApi(grid, _blockService),
+            PowerFire: new TimberbornPowerInfrastructureFireTargetApi(grid, _blockService),
+            WaterFire: new TimberbornWaterInfrastructureFireTargetApi(grid, _blockService));
+        _runtime.Initialize(grid, sources, importResult.MaterialFields, importResult.Summary, _simulatorFactory, bindings);
         _logSink.Info(
             $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
     }

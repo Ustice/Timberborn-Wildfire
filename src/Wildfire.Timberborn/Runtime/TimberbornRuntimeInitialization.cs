@@ -27,6 +27,12 @@ public sealed class TimberbornRuntimeInitialization
 
     public void Unload() => Reset(TimberbornRuntimeInitializationState.Unloaded);
 
+    public void Fail(Exception exception)
+    {
+        Failure = exception ?? throw new ArgumentNullException(nameof(exception));
+        State = TimberbornRuntimeInitializationState.Failed;
+    }
+
     public void Update(Func<FireGrid> readGrid, Func<bool> isWorldReady, Action<FireGrid> initialize)
     {
         if (State != TimberbornRuntimeInitializationState.WaitingForWorld)
@@ -65,8 +71,7 @@ public sealed class TimberbornRuntimeInitialization
         }
         catch (Exception exception)
         {
-            Failure = exception;
-            State = TimberbornRuntimeInitializationState.Failed;
+            Fail(exception);
         }
     }
 

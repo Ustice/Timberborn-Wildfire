@@ -53,25 +53,9 @@ public sealed class TimberbornFireRuntime :
     private readonly WildfireReleaseSettings _releaseSettings;
     private readonly TimberbornFireSimParameterPresetState _fireSimParameterPresetState;
     private readonly ITimberbornWindProvider _windProvider;
-    private ITimberbornCropBurnConsequenceApi _cropBurnConsequenceApi =
-        UnavailableTimberbornCropBurnConsequenceApi.Instance;
-    private ITimberbornTreeBurnConsequenceApi _treeBurnConsequenceApi =
-        UnavailableTimberbornTreeBurnConsequenceApi.Instance;
-    private ITimberbornBuildingBurnoutConsequenceApi? _buildingBurnoutConsequenceApi;
-    private ITimberbornQaBuildingBurnoutStimulusTargetProvider? _buildingBurnoutStimulusTargetProvider;
-    private ITimberbornStructureBurnDamageRollbackTargetApi? _structureBurnDamageRollbackTargetApi;
-    private ITimberbornStoredGoodBurnInventoryApi? _storedGoodBurnInventoryApi;
-    private ITimberbornQaInventoryAdjuster? _inventoryAdjuster;
-    private ITimberbornNativeBlastRadiusApi? _storedGoodNativeBlastRadiusApi;
-    private ITimberbornExplosiveInfrastructureTargetApi? _explosiveInfrastructureTargetApi;
+    private TimberbornRuntimeBindings? _bindings;
     private TimberbornQueuedFireSimHeatPulseSink? _explosiveInfrastructureHeatPulseSink;
     private TimberbornQueuedStoredGoodContaminationPulseSink? _storedGoodContaminationPulseSink;
-    private ITimberbornDetonatorFireSafetyTargetApi? _detonatorFireSafetyTargetApi;
-    private ITimberbornTunnelFireTargetApi? _tunnelFireTargetApi;
-    private ITimberbornPathInfrastructureFireTargetApi? _pathInfrastructureFireTargetApi;
-    private ITimberbornPowerInfrastructureFireTargetApi? _powerInfrastructureFireTargetApi;
-    private ITimberbornWaterInfrastructureFireTargetApi? _waterInfrastructureFireTargetApi;
-    private TimberbornBurnDamageService? _burnDamageService;
     private TimberbornFireSystem? _fireSystem;
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornGpuIndirectFireRenderer? _gpuIndirectRenderer;
@@ -79,11 +63,10 @@ public sealed class TimberbornFireRuntime :
     private readonly TimberbornAshFieldSynchronizer _ashFieldSynchronizer;
     private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
     private bool _compatibilityProbesRan;
-    private string? _autoDispatchDisabledReason;
     private FireGrid? _initializingGrid;
     private long _gameUpdateId;
     private bool _isLoaded;
-    private TimberbornWildfirePersistenceSnapshot? _pendingPersistenceSnapshot;
+    private readonly TimberbornRuntimePersistence _persistence = new();
     private readonly Dictionary<int, uint> _fertileAshHarvestWalkFailures = new();
 
     public TimberbornFireRuntime(
@@ -168,6 +151,7 @@ public sealed class TimberbornFireRuntime :
 
     public void Load()
     {
+        Initialization.Unload();
         ResetRuntimeSession();
         Initialization.Load();
         _isLoaded = true;
@@ -185,8 +169,8 @@ public sealed class TimberbornFireRuntime :
     {
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
-        ResetRuntimeSession();
         Initialization.Unload();
+        ResetRuntimeSession();
         _logSink.Info("wildfire_timberborn_adapter_stopped");
         _logSink.Info("wildfire_timberborn_runtime_unloaded");
     }
@@ -211,27 +195,12 @@ public sealed class TimberbornFireRuntime :
         _lastWorldImportSummary = null;
         _ashFieldSynchronizer.Clear();
         _initializingGrid = null;
-        _burnDamageService = null;
-        _buildingBurnoutConsequenceApi = null;
-        _buildingBurnoutStimulusTargetProvider = null;
-        _cropBurnConsequenceApi = UnavailableTimberbornCropBurnConsequenceApi.Instance;
-        _treeBurnConsequenceApi = UnavailableTimberbornTreeBurnConsequenceApi.Instance;
-        _structureBurnDamageRollbackTargetApi = null;
-        _storedGoodBurnInventoryApi = null;
-        _storedGoodNativeBlastRadiusApi = null;
-        _explosiveInfrastructureTargetApi = null;
+        _bindings = null;
         _explosiveInfrastructureHeatPulseSink = null;
         _storedGoodContaminationPulseSink = null;
-        _detonatorFireSafetyTargetApi = null;
-        _tunnelFireTargetApi = null;
-        _pathInfrastructureFireTargetApi = null;
-        _powerInfrastructureFireTargetApi = null;
-        _waterInfrastructureFireTargetApi = null;
-        _pendingPersistenceSnapshot = null;
+        _persistence.Reset();
         _fertileAshHarvestWalkFailures.Clear();
         _debugVisualSink.Clear();
-        _inventoryAdjuster = null;
-        _autoDispatchDisabledReason = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
         _compatibilityProbesRan = false;
         _gameUpdateId = 0;
@@ -245,18 +214,20 @@ public sealed class TimberbornFireRuntime :
             throw new ArgumentNullException(nameof(singletonSaver));
         }
 
-        TimberbornWildfirePersistenceSnapshot snapshot = CapturePersistentState();
-        string encoded = TimberbornWildfirePersistenceCodec.Encode(snapshot);
+        string? encoded = _persistence.EncodeForSave(InitializationState, CapturePersistentState);
+        if (encoded is null)
+        {
+            _logSink.Info($"wildfire_timberborn_persistence_save_skipped initialization_state={InitializationState}");
+            return;
+        }
+
         singletonSaver
             .GetSingleton(TimberbornWildfirePersistenceKeys.Singleton)
             .Set(TimberbornWildfirePersistenceKeys.Snapshot, encoded);
         _logSink.Info(
             "wildfire_timberborn_persistence_saved " +
-            $"version={snapshot.PersistenceVersion} " +
-            $"firesim_saved={(snapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
-            $"ash_entries={snapshot.AshField.Entries.Count} " +
-            $"beaver_behavior_entries={snapshot.BeaverBehavior.Entries.Count} " +
-            $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
+            $"initialization_state={InitializationState} " +
+            $"preserved_original={(InitializationState != TimberbornRuntimeInitializationState.Ready).ToString().ToLowerInvariant()}");
     }
 
     public void UpdateSingleton()
@@ -369,85 +340,139 @@ public sealed class TimberbornFireRuntime :
         _ashFieldSynchronizer.Sync(_fireSystem, tick, CurrentDayNumber());
     }
 
-    public void AttachSimulator(IGpuFireSimulator fireSimulator, TimberbornFireCadence? cadence = null)
-    {
-        if (fireSimulator is null)
-        {
-            throw new ArgumentNullException(nameof(fireSimulator));
-        }
-
-        Configure(
-            new TimberbornFireSystem(
-                fireSimulator,
-                new TimberbornFireCellMapper(),
-                _logSink,
-                CreateDeltaConsumerSinks()),
-            cadence);
-    }
-
-    public void Initialize(
+    internal void Initialize(
         FireGrid grid,
         IEnumerable<TimberbornCellSource> sources,
         ReadOnlySpan<WildfireMaterialField> companionFields,
         TimberbornWorldCellImportSummary worldImportSummary,
         ITimberbornFireSimulatorFactory simulatorFactory,
+        TimberbornRuntimeBindings bindings,
         TimberbornFireCadence? cadence = null)
     {
-        if (sources is null)
+        if (InitializationState != TimberbornRuntimeInitializationState.Initializing || _fireSystem is not null)
         {
-            throw new ArgumentNullException(nameof(sources));
-        }
-
-        if (simulatorFactory is null)
-        {
-            throw new ArgumentNullException(nameof(simulatorFactory));
+            throw new InvalidOperationException("Runtime initialization must prepare a new session before readiness is published.");
         }
 
         RunCompatibilityProbesIfNeeded();
         TimberbornCompatibilityRuntimeGate.ThrowIfRequiredProbesFailed(_compatibilityReport, _logSink);
-        _initializingGrid = grid;
-        _explosiveInfrastructureHeatPulseSink = new TimberbornQueuedFireSimHeatPulseSink(grid);
-        _storedGoodContaminationPulseSink = new TimberbornQueuedStoredGoodContaminationPulseSink(grid);
-        _ashFieldService.Clear();
+        TimberbornQueuedFireSimHeatPulseSink heatPulseSink = new(grid);
+        TimberbornQueuedStoredGoodContaminationPulseSink contaminationPulseSink = new(grid);
         TimberbornFireSystem fireSystem = new(
             simulatorFactory,
             new TimberbornFireCellMapper(),
             _logSink,
-            CreateDeltaConsumerSinks());
-        if (_pendingPersistenceSnapshot?.FireSim is { } fireSimSnapshot)
+            CreateDeltaConsumerSinks(bindings, grid, heatPulseSink, contaminationPulseSink));
+        TimberbornGpuIndirectFireRenderer? renderer = null;
+        _initializingGrid = grid;
+        try
         {
-            fireSystem.InitializeFromPersistentFireSimState(grid, sources, companionFields, fireSimSnapshot);
+            if (_persistence.LoadedSnapshot?.FireSim is { } fireSimSnapshot)
+            {
+                fireSystem.InitializeFromPersistentFireSimState(grid, sources, companionFields, fireSimSnapshot);
+            }
+            else
+            {
+                fireSystem.Initialize(grid, sources, companionFields);
+            }
+
+            RestorePersistentConsequenceAndAshState(_persistence.LoadedSnapshot, bindings);
+            renderer = PrepareRenderer(fireSystem, grid);
+            heatPulseSink.Attach(fireSystem);
+            contaminationPulseSink.Attach(fireSystem);
+            _playerFireAlertCameraFocus.ConfigureGrid(grid);
+            _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);
+            TimberbornFixedCadenceFireDispatcher dispatcher = new(
+                fireSystem, cadence ?? TimberbornFireCadence.Default, _logSink, IsAutoDispatchEnabled);
+            LogPreparedBindings(cadence ?? TimberbornFireCadence.Default);
+            _logSink.Info(
+                $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth} {worldImportSummary.StatusToken}");
+
+            // Commit only after every setup/restore operation has completed. All
+            // access and dispatch remain gated by lifecycle Ready until we return.
+            _bindings = bindings;
+            _fireSystem = fireSystem;
+            _gpuIndirectRenderer = renderer;
+            _explosiveInfrastructureHeatPulseSink = heatPulseSink;
+            _storedGoodContaminationPulseSink = contaminationPulseSink;
+            _lastWorldImportSummary = worldImportSummary;
+            _dispatcher = dispatcher;
+            _gameUpdateId = 0;
+            _persistence.ReleaseRestoredSnapshot();
         }
-        else
+        catch (Exception initializationFailure)
         {
-            fireSystem.Initialize(grid, sources, companionFields);
+            CleanupFailedPreparation(initializationFailure,
+                () => renderer?.Dispose(),
+                fireSystem.Dispose,
+                heatPulseSink.Detach,
+                contaminationPulseSink.Detach,
+                ClearPreparedWorldState);
+            throw;
+        }
+        finally
+        {
+            _initializingGrid = null;
+        }
+    }
+
+    private TimberbornGpuIndirectFireRenderer? PrepareRenderer(TimberbornFireSystem fireSystem, FireGrid grid)
+    {
+        if (fireSystem.Simulator is not TimberbornComputeFireSimulator computeSim)
+        {
+            return null;
         }
 
-        _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
-        Configure(fireSystem, cadence);
-        _initializingGrid = null;
-        RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);
-        if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)
+        WildfireReleaseVisualSettings visualSettings = WildfireReleaseVisualSettings.FromSnapshot(_releaseSettings.GetSnapshot());
+        TimberbornGpuIndirectFireRenderer renderer = new(
+            computeSim, grid, _logSink, _windProvider, visualSettings.ToGpuIndirectFireRendererOptions());
+        try
         {
-            WildfireReleaseVisualSettings visualSettings =
-                WildfireReleaseVisualSettings.FromSnapshot(_releaseSettings.GetSnapshot());
-            _gpuIndirectRenderer = new TimberbornGpuIndirectFireRenderer(
-                computeSim,
-                grid,
-                _logSink,
-                _windProvider,
-                visualSettings.ToGpuIndirectFireRendererOptions());
-            _gpuIndirectRenderer.Initialize();
-            if (_pendingPersistenceSnapshot?.FireSim is not null)
+            renderer.Initialize();
+            if (_persistence.LoadedSnapshot?.FireSim is not null)
             {
-                _gpuIndirectRenderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);
+                renderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);
+            }
+
+            return renderer;
+        }
+        catch (Exception preparationFailure)
+        {
+            CleanupFailedPreparation(preparationFailure, renderer.Dispose);
+            throw;
+        }
+    }
+
+    private static void CleanupFailedPreparation(Exception originalFailure, params Action[] cleanupSteps)
+    {
+        List<Exception> failures = new() { originalFailure };
+        foreach (Action cleanup in cleanupSteps)
+        {
+            try
+            {
+                cleanup();
+            }
+            catch (Exception cleanupFailure)
+            {
+                failures.Add(cleanupFailure);
             }
         }
 
-        _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);
-        _pendingPersistenceSnapshot = null;
-        _logSink.Info(
-            $"wildfire_timberborn_runtime_simulator_initialized width={fireSystem.Width} height={fireSystem.Height} depth={fireSystem.Depth} {_lastWorldImportSummary.StatusToken}");
+        if (failures.Count > 1)
+        {
+            throw new AggregateException("Runtime preparation and resource cleanup both failed.", failures);
+        }
+    }
+
+    private void ClearPreparedWorldState()
+    {
+        _debugVisualSink.Clear();
+        _gpuFieldRenderer.Clear();
+        _playerFireAlerts.Clear();
+        _playerFireAlertCameraFocus.Clear();
+        _beaverFieldBehaviorDispatcher.Clear();
+        _ashFieldService.Clear();
+        _ashFieldSynchronizer.Clear();
     }
 
     public void RegisterHeat(int cellIndex, byte heat)
@@ -610,10 +635,10 @@ public sealed class TimberbornFireRuntime :
             ? RequireFireSystem().Qa.QueueQaSelectedTreeDeltaStimulus(_selectedTreeTargetProvider)
             : RequireFireSystem().Qa.QueueQaDeltaStimulus(
                 normalizedSelector,
-                _burnDamageService?.States,
-                _explosiveInfrastructureTargetApi,
-                _detonatorFireSafetyTargetApi,
-                _tunnelFireTargetApi,
+                _bindings?.BurnDamageService?.States,
+                _bindings?.ExplosiveInfrastructure,
+                _bindings?.DetonatorSafety,
+                _bindings?.TunnelFire,
                 normalizedSelector is TimberbornQaFieldTargetSelectors.Default or
                     TimberbornQaFieldTargetSelectors.Crop or
                     TimberbornQaFieldTargetSelectors.Bush
@@ -672,16 +697,16 @@ public sealed class TimberbornFireRuntime :
 
     private TimberbornQaSelectedCropTarget? FindOrRegisterSelectedCropTarget(FireGrid grid)
     {
-        if (_burnDamageService is null)
+        if (_bindings?.BurnDamageService is not { } burnDamageService)
         {
             return null;
         }
 
         try
         {
-            return _selectedCropTargetProvider.FindSelectedTarget(grid, _burnDamageService.States);
+            return _selectedCropTargetProvider.FindSelectedTarget(grid, burnDamageService.States);
         }
-        catch (InvalidOperationException) when (_burnDamageService.States.Count == 0)
+        catch (InvalidOperationException) when (burnDamageService.States.Count == 0)
         {
             TimberbornLiveCropBurnDamageTargets selectedTargets =
                 _selectedCropTargetProvider.CollectSelectedTargets(grid);
@@ -690,7 +715,7 @@ public sealed class TimberbornFireRuntime :
                 throw;
             }
 
-            TimberbornBurnDamageRegistrationSummary registrationSummary = _burnDamageService.RegisterTargets(
+            TimberbornBurnDamageRegistrationSummary registrationSummary = burnDamageService.RegisterTargets(
                 grid,
                 selectedTargets.Registrations,
                 selectedTargets.Descriptors);
@@ -699,14 +724,14 @@ public sealed class TimberbornFireRuntime :
                 $"targets={registrationSummary.TargetCount} " +
                 $"owned_cells={registrationSummary.OwnedCellCount}");
 
-            return _selectedCropTargetProvider.FindSelectedTarget(grid, _burnDamageService.States);
+            return _selectedCropTargetProvider.FindSelectedTarget(grid, burnDamageService.States);
         }
     }
 
     public TimberbornQaBuildingBurnoutStimulusResult QueueBuildingBurnoutStimulus()
     {
         ITimberbornQaBuildingBurnoutStimulusTargetProvider targetProvider =
-            _buildingBurnoutStimulusTargetProvider ??
+            _bindings?.BuildingBurnoutStimulus ??
             throw new InvalidOperationException(
                 "QA building burnout stimulus requires a Timberborn pausable building target provider.");
         TimberbornQaBuildingBurnoutStimulusResult result =
@@ -820,13 +845,13 @@ public sealed class TimberbornFireRuntime :
 
     public TimberbornQaInventoryAdjustmentResult AdjustInventory(string profile)
     {
-        if (_inventoryAdjuster is null)
+        if (_bindings?.InventoryAdjuster is not { } inventoryAdjuster)
         {
             throw new InvalidOperationException(
                 "QA inventory adjustment is unavailable until the Timberborn fire runtime is initialized.");
         }
 
-        TimberbornQaInventoryAdjustmentResult result = _inventoryAdjuster.AdjustInventory(profile);
+        TimberbornQaInventoryAdjustmentResult result = inventoryAdjuster.AdjustInventory(profile);
         _logSink.Info(
             "wildfire_timberborn_qa_inventory_adjusted " +
             $"profile={TimberbornQaCommandBridge.FormatToken(result.Profile)} " +
@@ -978,13 +1003,13 @@ public sealed class TimberbornFireRuntime :
         TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.LastSnapshot;
         TimberbornBeaverFieldBehaviorCounters beaverFieldBehaviorCounters = _beaverFieldBehaviorDispatcher.Counters;
         TimberbornBurnDamageRegistrationSummary burnDamageRegistrationSummary =
-            _burnDamageService?.LastRegistrationSummary ?? TimberbornBurnDamageRegistrationSummary.Empty;
+            _bindings?.BurnDamageService?.LastRegistrationSummary ?? TimberbornBurnDamageRegistrationSummary.Empty;
         TimberbornCropBurnTargetRegistrationSummary cropBurnSummary =
             TimberbornCropBurnTargetClassifier.SummarizeRegisteredTargets(
-                _burnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
+                _bindings?.BurnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
         TimberbornTreeBurnTargetRegistrationSummary treeBurnSummary =
             TimberbornTreeBurnTargetClassifier.SummarizeRegisteredTargets(
-                _burnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
+                _bindings?.BurnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
         TimberbornQaDeltaStimulusSustainedHeatState? sustainedHeatState =
             fireSystem.Qa.QaDeltaStimulusSustainedHeatState;
         TimberbornSelectedCropTargetDiagnostics selectedCropDiagnostics =
@@ -1427,84 +1452,6 @@ public sealed class TimberbornFireRuntime :
             ReadModelQuality: null);
     }
 
-    public void AttachBuildingBurnoutConsequenceApi(ITimberbornBuildingBurnoutConsequenceApi consequenceApi)
-    {
-        _buildingBurnoutConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
-    }
-
-    public void AttachCropBurnConsequenceApi(ITimberbornCropBurnConsequenceApi consequenceApi)
-    {
-        _cropBurnConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
-    }
-
-    public void AttachTreeBurnConsequenceApi(ITimberbornTreeBurnConsequenceApi consequenceApi)
-    {
-        _treeBurnConsequenceApi = consequenceApi ?? throw new ArgumentNullException(nameof(consequenceApi));
-    }
-
-    public void AttachBuildingBurnoutStimulusTargetProvider(
-        ITimberbornQaBuildingBurnoutStimulusTargetProvider targetProvider)
-    {
-        _buildingBurnoutStimulusTargetProvider =
-            targetProvider ?? throw new ArgumentNullException(nameof(targetProvider));
-    }
-
-    public void AttachStructureBurnDamageRollbackTargetApi(ITimberbornStructureBurnDamageRollbackTargetApi targetApi)
-    {
-        _structureBurnDamageRollbackTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachStoredGoodBurnInventoryApi(ITimberbornStoredGoodBurnInventoryApi inventoryApi)
-    {
-        _storedGoodBurnInventoryApi = inventoryApi ?? throw new ArgumentNullException(nameof(inventoryApi));
-    }
-
-    public void AttachInventoryAdjuster(ITimberbornQaInventoryAdjuster inventoryAdjuster)
-    {
-        _inventoryAdjuster = inventoryAdjuster ?? throw new ArgumentNullException(nameof(inventoryAdjuster));
-    }
-
-    public void AttachStoredGoodNativeBlastRadiusApi(ITimberbornNativeBlastRadiusApi nativeBlastRadiusApi)
-    {
-        _storedGoodNativeBlastRadiusApi = nativeBlastRadiusApi ??
-            throw new ArgumentNullException(nameof(nativeBlastRadiusApi));
-    }
-
-    public void AttachExplosiveInfrastructureTargetApi(ITimberbornExplosiveInfrastructureTargetApi targetApi)
-    {
-        _explosiveInfrastructureTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachDetonatorFireSafetyTargetApi(ITimberbornDetonatorFireSafetyTargetApi targetApi)
-    {
-        _detonatorFireSafetyTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachTunnelFireTargetApi(ITimberbornTunnelFireTargetApi targetApi)
-    {
-        _tunnelFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachPathInfrastructureFireTargetApi(ITimberbornPathInfrastructureFireTargetApi targetApi)
-    {
-        _pathInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachPowerInfrastructureFireTargetApi(ITimberbornPowerInfrastructureFireTargetApi targetApi)
-    {
-        _powerInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachWaterInfrastructureFireTargetApi(ITimberbornWaterInfrastructureFireTargetApi targetApi)
-    {
-        _waterInfrastructureFireTargetApi = targetApi ?? throw new ArgumentNullException(nameof(targetApi));
-    }
-
-    public void AttachBurnDamageService(TimberbornBurnDamageService burnDamageService)
-    {
-        _burnDamageService = burnDamageService ?? throw new ArgumentNullException(nameof(burnDamageService));
-    }
-
     public bool ApplyPlayerFertileAshDesignation(int cellIndex, int strength)
     {
         byte ashAmount = StrengthToAshUnits(strength);
@@ -1642,102 +1589,29 @@ public sealed class TimberbornFireRuntime :
             entry.Quality == WildfireAshQuality.Tainted;
     }
 
-    private void Configure(TimberbornFireSystem fireSystem, TimberbornFireCadence? cadence)
+    private void LogPreparedBindings(TimberbornFireCadence cadence)
     {
-        _fireSystem?.Dispose();
-        _gpuIndirectRenderer?.Dispose();
-        _gpuIndirectRenderer = null;
-        _explosiveInfrastructureHeatPulseSink?.Attach(fireSystem);
-        _storedGoodContaminationPulseSink?.Attach(fireSystem);
-        _debugVisualSink.Clear();
-        _gpuFieldRenderer.Clear();
-        _playerFireAlerts.Clear();
-        _playerFireAlertCameraFocus.ConfigureGrid(
-            new FireGrid(
-                fireSystem.Width ?? throw new InvalidOperationException("Fire system width is unavailable."),
-                fireSystem.Height ?? throw new InvalidOperationException("Fire system height is unavailable."),
-                fireSystem.Depth ?? throw new InvalidOperationException("Fire system depth is unavailable.")));
-        _fireSystem = fireSystem;
-        int cellCount = checked(
-            (fireSystem.Width ?? throw new InvalidOperationException("Fire system width is unavailable.")) *
-            (fireSystem.Height ?? throw new InvalidOperationException("Fire system height is unavailable.")) *
-            (fireSystem.Depth ?? throw new InvalidOperationException("Fire system depth is unavailable.")));
-        _autoDispatchDisabledReason = TimberbornAutoDispatchPolicy.IsAllowedCellCount(cellCount)
-            ? null
-            : $"map_too_large:cell_count={cellCount}:limit={TimberbornAutoDispatchPolicy.CellLimit}";
-        if (_autoDispatchDisabledReason is not null)
+        _logSink.Info($"wildfire_timberborn_runtime_configured cadence_interval_ms={cadence.Interval.TotalMilliseconds:F0}");
+        foreach (string lane in new[]
         {
-            _logSink.Warning(
-                "wildfire_timberborn_auto_dispatch_disabled " +
-                "reason=map_too_large " +
-                $"cell_count={cellCount} " +
-                $"limit={TimberbornAutoDispatchPolicy.CellLimit}");
-        }
-
-        _dispatcher = new TimberbornFixedCadenceFireDispatcher(
-            fireSystem,
-            cadence ?? TimberbornFireCadence.Default,
-            _logSink,
-            IsAutoDispatchEnabled);
-        _gameUpdateId = 0;
-        _logSink.Info(
-            $"wildfire_timberborn_runtime_configured cadence_interval_ms={(cadence ?? TimberbornFireCadence.Default).Interval.TotalMilliseconds:F0}");
-        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=debug_visual_state");
-        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=gpu_field_renderer");
-        _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=player_fire_alert");
-        if (_buildingBurnoutConsequenceApi is not null)
+            "debug_visual_state",
+            "gpu_field_renderer",
+            "player_fire_alert",
+            "building_burnout_access_block",
+            "crop_burn_consequences",
+            "tree_burn_consequences",
+            "structure_burn_damage_rollback",
+            "stored_goods_burn",
+            "explosive_infrastructure",
+            "detonator_fire_safety",
+            "tunnel_fire",
+            "path_infrastructure_fire",
+            "power_infrastructure_fire",
+            "water_infrastructure_fire",
+            "ash_field",
+        })
         {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=building_burnout_access_block");
-        }
-        if (_burnDamageService is not null)
-        {
-            _logSink.Info(
-                "wildfire_timberborn_delta_consequence_sink_bound " +
-                "lane=crop_burn_consequences " +
-                $"unavailable_api={(_cropBurnConsequenceApi is UnavailableTimberbornCropBurnConsequenceApi).ToString().ToLowerInvariant()}");
-            _logSink.Info(
-                "wildfire_timberborn_delta_consequence_sink_bound " +
-                "lane=tree_burn_consequences " +
-                $"unavailable_api={(_treeBurnConsequenceApi is UnavailableTimberbornTreeBurnConsequenceApi).ToString().ToLowerInvariant()}");
-        }
-        if (_structureBurnDamageRollbackTargetApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=structure_burn_damage_rollback");
-        }
-        if (_storedGoodBurnInventoryApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=stored_goods_burn");
-        }
-        if (_explosiveInfrastructureTargetApi is not null && _explosiveInfrastructureHeatPulseSink is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=explosive_infrastructure");
-        }
-        if (_detonatorFireSafetyTargetApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=detonator_fire_safety");
-        }
-        if (_tunnelFireTargetApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=tunnel_fire");
-        }
-        if (_pathInfrastructureFireTargetApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=path_infrastructure_fire");
-        }
-        if (_powerInfrastructureFireTargetApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=power_infrastructure_fire");
-        }
-        if (_waterInfrastructureFireTargetApi is not null)
-        {
-            _logSink.Info("wildfire_timberborn_delta_consequence_sink_bound lane=water_infrastructure_fire");
-        }
-        if (_burnDamageService is not null)
-        {
-            _logSink.Info(
-                "wildfire_timberborn_delta_consequence_sink_bound " +
-                "lane=ash_field " +
-                "growth_api=growable_increase_progress");
+            _logSink.Info($"wildfire_timberborn_delta_consequence_sink_bound lane={lane}");
         }
     }
 
@@ -1758,48 +1632,51 @@ public sealed class TimberbornFireRuntime :
             _fireSystem?.CapturePersistentFireSimState(),
             _ashFieldService.SaveSnapshot(),
             _beaverFieldBehaviorDispatcher.CaptureState(),
-            TimberbornWildfirePersistenceCodec.CaptureConsequences(_burnDamageService));
+            TimberbornWildfirePersistenceCodec.CaptureConsequences(_bindings?.BurnDamageService));
     }
 
     private void LoadPersistentState()
     {
-        try
-        {
-            if (_singletonLoader.TryGetSingleton(TimberbornWildfirePersistenceKeys.Singleton, out var loader) &&
-                loader.Has(TimberbornWildfirePersistenceKeys.Snapshot))
-            {
-                _pendingPersistenceSnapshot = TimberbornWildfirePersistenceCodec.Decode(
-                    loader.Get(TimberbornWildfirePersistenceKeys.Snapshot));
-                _logSink.Info(
-                    "wildfire_timberborn_persistence_loaded " +
-                    $"version={_pendingPersistenceSnapshot.PersistenceVersion} " +
-                    $"firesim_saved={(_pendingPersistenceSnapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
-                    $"ash_entries={_pendingPersistenceSnapshot.AshField.Entries.Count} " +
-                    $"beaver_behavior_entries={_pendingPersistenceSnapshot.BeaverBehavior.Entries.Count} " +
-                    $"consequence_burn_damage_entries={_pendingPersistenceSnapshot.Consequences.BurnDamageStates.Count}");
-                return;
-            }
+        _persistence.Load(() =>
+            _singletonLoader.TryGetSingleton(TimberbornWildfirePersistenceKeys.Singleton, out var loader) &&
+                loader.Has(TimberbornWildfirePersistenceKeys.Snapshot)
+                ? loader.Get(TimberbornWildfirePersistenceKeys.Snapshot)
+                : null);
 
-            _pendingPersistenceSnapshot = null;
-            _logSink.Info("wildfire_timberborn_persistence_load_skipped reason=no_saved_state");
-        }
-        catch (Exception exception)
+        if (_persistence.LoadFailure is { } exception)
         {
-            _pendingPersistenceSnapshot = null;
+            Initialization.Fail(exception);
             _logSink.Warning(
                 "wildfire_timberborn_persistence_load_failed " +
-                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+                $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)} " +
+                $"details={TimberbornQaCommandBridge.FormatToken(exception.ToString())}");
+            return;
         }
+
+        if (_persistence.LoadedSnapshot is { } snapshot)
+        {
+            _logSink.Info(
+                "wildfire_timberborn_persistence_loaded " +
+                $"version={snapshot.PersistenceVersion} " +
+                $"firesim_saved={(snapshot.FireSim is not null).ToString().ToLowerInvariant()} " +
+                $"ash_entries={snapshot.AshField.Entries.Count} " +
+                $"beaver_behavior_entries={snapshot.BeaverBehavior.Entries.Count} " +
+                $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
+            return;
+        }
+
+        _logSink.Info("wildfire_timberborn_persistence_load_skipped reason=no_saved_state");
     }
 
-    private void RestorePersistentConsequenceAndAshState(TimberbornWildfirePersistenceSnapshot? snapshot)
+    private void RestorePersistentConsequenceAndAshState(
+        TimberbornWildfirePersistenceSnapshot? snapshot, TimberbornRuntimeBindings bindings)
     {
         if (snapshot is null)
         {
             return;
         }
 
-        TimberbornWildfirePersistenceCodec.RestoreConsequences(_burnDamageService, snapshot.Consequences);
+        TimberbornWildfirePersistenceCodec.RestoreConsequences(bindings.BurnDamageService, snapshot.Consequences);
         if (snapshot.FireSim?.TransportFields is { Count: > 0 } atmosphericFields &&
             atmosphericFields.Any(static packed => WildfireTransportFieldState.Unpack(packed).Ash > 0))
         {
@@ -1817,99 +1694,45 @@ public sealed class TimberbornFireRuntime :
             $"consequence_burn_damage_entries={snapshot.Consequences.BurnDamageStates.Count}");
     }
 
-    private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks()
+    private TimberbornFireDeltaConsumerSinks CreateDeltaConsumerSinks(
+        TimberbornRuntimeBindings bindings,
+        FireGrid grid,
+        TimberbornQueuedFireSimHeatPulseSink heatPulseSink,
+        TimberbornQueuedStoredGoodContaminationPulseSink contaminationPulseSink)
     {
-        return new TimberbornFireDeltaConsumerSinks(
-            debugVisualSink: _debugVisualSink,
-            visualEffectSink: new TimberbornCompositeFireVisualEffectSink(
-                _gpuFieldRenderer),
-            alertSink: _playerFireAlerts,
-            buildingBurnoutConsequenceSink: _buildingBurnoutConsequenceApi is null
-                ? null
-                : new TimberbornBuildingBurnoutConsequenceSink(_buildingBurnoutConsequenceApi),
-            structureBurnDamageRollbackSink: _structureBurnDamageRollbackTargetApi is null
-                ? null
-                : new TimberbornStructureBurnDamageRollbackSink(
-                    _structureBurnDamageRollbackTargetApi,
-                    logSink: _logSink,
-                    burnDamageTargets: _burnDamageService),
-            burnDamageSink: _burnDamageService,
-            cropBurnConsequenceSink: _burnDamageService is null
-                ? null
-                : new TimberbornCropBurnConsequenceSink(_burnDamageService, _cropBurnConsequenceApi),
-            treeBurnConsequenceSink: _burnDamageService is null
-                ? null
-                : new TimberbornTreeBurnConsequenceSink(_burnDamageService, _treeBurnConsequenceApi, _logSink),
-            storedGoodBurnConsequenceSink: _storedGoodBurnInventoryApi is null
-                ? null
-                : new TimberbornStoredGoodBurnConsequenceSink(
-                    _storedGoodBurnInventoryApi,
-                    CreateStoredGoodHazardConsequenceSink(),
-                    logSink: _logSink,
-                    burnDamageTargets: _burnDamageService),
-            explosiveInfrastructureConsequenceSink:
-                _explosiveInfrastructureTargetApi is null || _explosiveInfrastructureHeatPulseSink is null
-                    ? null
-                    : new TimberbornExplosiveInfrastructureConsequenceSink(
-                        () => TimberbornExplosiveInfrastructureConsequenceSettings.FromSnapshot(
-                            _releaseSettings.GetSnapshot()),
-                        _explosiveInfrastructureTargetApi,
-                        _explosiveInfrastructureHeatPulseSink,
-                        _logSink),
-            detonatorFireSafetySink: _detonatorFireSafetyTargetApi is null
-                ? null
-                : new TimberbornDetonatorFireSafetySink(
-                    () => _releaseSettings.GetSnapshot().IsDetonatorFireSafetyEnabled,
-                    _detonatorFireSafetyTargetApi,
-                    _logSink),
-            tunnelFireSink: _tunnelFireTargetApi is null
-                ? null
-                : new TimberbornTunnelFireSink(
-                    () => TimberbornTunnelFireSettings.FromSnapshot(_releaseSettings.GetSnapshot()),
-                    _tunnelFireTargetApi,
-                    _logSink),
-            pathInfrastructureFireSink: _pathInfrastructureFireTargetApi is null
-                ? null
-                : new TimberbornPathInfrastructureFireSink(
-                    _pathInfrastructureFireTargetApi,
-                    logSink: _logSink,
-                    burnDamageTargets: _burnDamageService),
-            powerInfrastructureFireSink: _powerInfrastructureFireTargetApi is null
-                ? null
-                : new TimberbornPowerInfrastructureFireSink(
-                    _powerInfrastructureFireTargetApi,
-                    logSink: _logSink,
-                    burnDamageTargets: _burnDamageService),
-            waterInfrastructureFireSink: _waterInfrastructureFireTargetApi is null
-                ? null
-                : new TimberbornWaterInfrastructureFireSink(
-                    _waterInfrastructureFireTargetApi,
-                    logSink: _logSink,
-                    burnDamageTargets: _burnDamageService),
-            ashFieldSink: _burnDamageService is null
-                ? null
-                : new TimberbornAshFieldSink(
-                    _burnDamageService,
-                    _ashFieldService,
-                    affectedCellContaminationProvider: IsAffectedCellContaminated));
-    }
-
-    private ITimberbornStoredGoodHazardConsequenceSink? CreateStoredGoodHazardConsequenceSink()
-    {
-        if (CurrentGrid() is not { } grid ||
-            _storedGoodNativeBlastRadiusApi is null ||
-            _explosiveInfrastructureHeatPulseSink is null ||
-            _storedGoodContaminationPulseSink is null)
-        {
-            return null;
-        }
-
-        return new TimberbornStoredGoodHazardConsequenceSink(
+        TimberbornStoredGoodHazardConsequenceSink storedHazards = new(
             grid,
             () => TimberbornExplosiveInfrastructureConsequenceSettings.FromSnapshot(_releaseSettings.GetSnapshot()),
-            _storedGoodNativeBlastRadiusApi,
-            _explosiveInfrastructureHeatPulseSink,
-            _storedGoodContaminationPulseSink);
+            bindings.BlastRadius,
+            heatPulseSink,
+            contaminationPulseSink);
+        return new TimberbornFireDeltaConsumerSinks(
+            debugVisualSink: _debugVisualSink,
+            visualEffectSink: new TimberbornCompositeFireVisualEffectSink(_gpuFieldRenderer),
+            alertSink: _playerFireAlerts,
+            buildingBurnoutConsequenceSink: new TimberbornBuildingBurnoutConsequenceSink(bindings.BuildingBurnout),
+            structureBurnDamageRollbackSink: new TimberbornStructureBurnDamageRollbackSink(
+                bindings.StructureRollback, logSink: _logSink, burnDamageTargets: bindings.BurnDamageService),
+            burnDamageSink: bindings.BurnDamageService,
+            cropBurnConsequenceSink: new TimberbornCropBurnConsequenceSink(bindings.BurnDamageService, bindings.CropBurn),
+            treeBurnConsequenceSink: new TimberbornTreeBurnConsequenceSink(bindings.BurnDamageService, bindings.TreeBurn, _logSink),
+            storedGoodBurnConsequenceSink: new TimberbornStoredGoodBurnConsequenceSink(
+                bindings.StoredInventory, storedHazards, logSink: _logSink, burnDamageTargets: bindings.BurnDamageService),
+            explosiveInfrastructureConsequenceSink: new TimberbornExplosiveInfrastructureConsequenceSink(
+                () => TimberbornExplosiveInfrastructureConsequenceSettings.FromSnapshot(_releaseSettings.GetSnapshot()),
+                bindings.ExplosiveInfrastructure, heatPulseSink, _logSink),
+            detonatorFireSafetySink: new TimberbornDetonatorFireSafetySink(
+                () => _releaseSettings.GetSnapshot().IsDetonatorFireSafetyEnabled, bindings.DetonatorSafety, _logSink),
+            tunnelFireSink: new TimberbornTunnelFireSink(
+                () => TimberbornTunnelFireSettings.FromSnapshot(_releaseSettings.GetSnapshot()), bindings.TunnelFire, _logSink),
+            pathInfrastructureFireSink: new TimberbornPathInfrastructureFireSink(
+                bindings.PathFire, logSink: _logSink, burnDamageTargets: bindings.BurnDamageService),
+            powerInfrastructureFireSink: new TimberbornPowerInfrastructureFireSink(
+                bindings.PowerFire, logSink: _logSink, burnDamageTargets: bindings.BurnDamageService),
+            waterInfrastructureFireSink: new TimberbornWaterInfrastructureFireSink(
+                bindings.WaterFire, logSink: _logSink, burnDamageTargets: bindings.BurnDamageService),
+            ashFieldSink: new TimberbornAshFieldSink(
+                bindings.BurnDamageService, _ashFieldService, affectedCellContaminationProvider: IsAffectedCellContaminated));
     }
 
     private bool IsAffectedCellContaminated(int cellIndex)
@@ -1942,7 +1765,7 @@ public sealed class TimberbornFireRuntime :
     private bool IsAutoDispatchEnabled()
     {
         return Initialization.State == TimberbornRuntimeInitializationState.Ready &&
-            IsWildfireEnabled() && _autoDispatchDisabledReason is null;
+            IsWildfireEnabled();
     }
 
     private static string FormatNumber(int? value)

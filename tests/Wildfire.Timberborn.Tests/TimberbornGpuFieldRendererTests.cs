@@ -145,23 +145,21 @@ public sealed class TimberbornGpuFieldRendererTests
     }
 
     [Fact]
-    public void RuntimeInitializesGpuFieldRendererPresentationAfterPersistenceRestore()
+    public void RuntimeSourcePreparesRestoredPresentationBeforePublishingSession()
     {
+        // Source wiring guard only; rendered appearance still requires Unity/game evidence.
         string runtimeSource = ReadTimberbornSource("TimberbornFireRuntime.cs");
+        int restore = runtimeSource.IndexOf(
+            "RestorePersistentConsequenceAndAshState(_persistence.LoadedSnapshot, bindings);", StringComparison.Ordinal);
+        int rendererPreparation = runtimeSource.IndexOf("renderer = PrepareRenderer(fireSystem, grid);", StringComparison.Ordinal);
+        int fieldPresentation = runtimeSource.IndexOf(
+            "_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);", StringComparison.Ordinal);
+        int publication = runtimeSource.IndexOf("_fireSystem = fireSystem;", StringComparison.Ordinal);
 
-        Assert.Contains("RestorePersistentConsequenceAndAshState(_pendingPersistenceSnapshot);", runtimeSource, StringComparison.Ordinal);
-        Assert.Contains("_gpuIndirectRenderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
-        Assert.Contains("_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
-
-        int indirectRendererBlock = runtimeSource.IndexOf(
-            "if (fireSystem.Simulator is TimberbornComputeFireSimulator computeSim)",
-            StringComparison.Ordinal);
-        int fieldRendererDispatch = runtimeSource.IndexOf(
-            "_gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);",
-            StringComparison.Ordinal);
-        string initializationVisualBlock = runtimeSource.Substring(indirectRendererBlock, fieldRendererDispatch - indirectRendererBlock);
-
-        Assert.DoesNotContain("_gpuIndirectRenderer.OnUpdate();", initializationVisualBlock, StringComparison.Ordinal);
+        Assert.True(restore >= 0 && restore < rendererPreparation);
+        Assert.True(rendererPreparation < fieldPresentation && fieldPresentation < publication);
+        Assert.Contains("renderer.SeedSmoothedFieldsFromRestoredBuffers(fireSystem.LastTick ?? 0);", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(".OnUpdate();", runtimeSource.Substring(restore, publication - restore), StringComparison.Ordinal);
     }
 
     [Fact]

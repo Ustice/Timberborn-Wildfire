@@ -133,7 +133,7 @@ public static class TimberbornWildfirePersistenceCodec
     {
         if (string.IsNullOrWhiteSpace(encoded))
         {
-            return TimberbornWildfirePersistenceSnapshot.Empty;
+            throw new FormatException("Wildfire persistence payload is empty.");
         }
 
         string[] lines = encoded
@@ -142,15 +142,15 @@ public static class TimberbornWildfirePersistenceCodec
             .ToArray();
         if (lines.Length == 0)
         {
-            return TimberbornWildfirePersistenceSnapshot.Empty;
+            throw new FormatException("Wildfire persistence payload has no header.");
         }
 
         string[] header = SplitLine(lines[0]);
-        if (header.Length < 2 ||
+        if (header.Length != 2 ||
             header[0] != HeaderRecord ||
             ParseInt(header[1]) != TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion)
         {
-            return TimberbornWildfirePersistenceSnapshot.Empty;
+            throw new FormatException("Wildfire persistence header or version is unsupported.");
         }
 
         TimberbornFireSimPersistenceSnapshot? fireSim = null;
@@ -170,21 +170,23 @@ public static class TimberbornWildfirePersistenceCodec
 
                 switch (parts[0])
                 {
-                    case FireSimRecord when parts.Length >= 7:
+                    case FireSimRecord when parts.Length == 7 && fireSim is null:
                         fireSim = DecodeFireSim(parts);
                         break;
-                    case AshRecord when parts.Length >= 8:
+                    case AshRecord when parts.Length is 8 or 10:
                         ashEntries.Add(DecodeAshEntry(parts));
                         break;
-                    case BeaverBehaviorRecord when parts.Length >= 7:
+                    case BeaverBehaviorRecord when parts.Length is 7 or 8 or 9:
                         beaverBehaviorEntries.Add(DecodeBeaverBehaviorEntry(parts));
                         break;
-                    case BurnDamageRecord when parts.Length >= 4:
+                    case BurnDamageRecord when parts.Length == 4:
                         burnDamageEntries.Add(new TimberbornBurnDamagePersistenceEntry(
                             DecodeString(parts[1]),
                             ParseInt(parts[2]),
                             ParseUInt(parts[3])));
                         break;
+                    default:
+                        throw new FormatException($"Wildfire persistence record '{parts[0]}' is unsupported or malformed.");
                 }
             });
 
@@ -255,6 +257,11 @@ public static class TimberbornWildfirePersistenceCodec
     private static TimberbornAshFieldEntry DecodeAshEntry(IReadOnlyList<string> parts)
     {
         int persistenceVersion = ParseInt(parts[7]);
+        if (persistenceVersion < 1 || persistenceVersion > TimberbornAshFieldEntry.CurrentPersistenceVersion)
+        {
+            throw new FormatException($"Wildfire ash persistence version {persistenceVersion} is unsupported.");
+        }
+
         return new TimberbornAshFieldEntry(
             ParseInt(parts[1]),
             (WildfireAshQuality)ParseInt(parts[2]),
@@ -280,8 +287,14 @@ public static class TimberbornWildfirePersistenceCodec
                 ? exposedSamples
                 : 0;
 
+        int persistenceVersion = ParseInt(hasFireHeatSamples ? parts[8] : hasLastAction ? parts[7] : parts[6]);
+        if (persistenceVersion != TimberbornBeaverFieldBehaviorStateEntry.CurrentPersistenceVersion)
+        {
+            throw new FormatException($"Wildfire beaver persistence version {persistenceVersion} is unsupported.");
+        }
+
         return new TimberbornBeaverFieldBehaviorStateEntry(
-            ParseInt(hasFireHeatSamples ? parts[8] : hasLastAction ? parts[7] : parts[6]),
+            persistenceVersion,
             DecodeString(parts[1]),
             variant,
             hasLastAction
@@ -319,6 +332,11 @@ public static class TimberbornWildfirePersistenceCodec
     private static ushort[] DecodeUInt16Array(string encoded)
     {
         byte[] bytes = Convert.FromBase64String(encoded);
+        if (bytes.Length % sizeof(ushort) != 0)
+        {
+            throw new FormatException("Wildfire packed-cell payload is truncated.");
+        }
+
         return Enumerable.Range(0, bytes.Length / sizeof(ushort))
             .Select(index => BitConverter.ToUInt16(bytes, index * sizeof(ushort)))
             .ToArray();
@@ -335,6 +353,11 @@ public static class TimberbornWildfirePersistenceCodec
     private static uint[] DecodeUInt32Array(string encoded)
     {
         byte[] bytes = Convert.FromBase64String(encoded);
+        if (bytes.Length % sizeof(uint) != 0)
+        {
+            throw new FormatException("Wildfire transport-field payload is truncated.");
+        }
+
         return Enumerable.Range(0, bytes.Length / sizeof(uint))
             .Select(index => BitConverter.ToUInt32(bytes, index * sizeof(uint)))
             .ToArray();
