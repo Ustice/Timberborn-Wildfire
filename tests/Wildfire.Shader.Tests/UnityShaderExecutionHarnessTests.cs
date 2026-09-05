@@ -139,32 +139,57 @@ public sealed class UnityShaderExecutionHarnessTests
     {
         int width = 7;
         int height = 5;
-        ushort[] cells = CreateAirCells(width, height);
+        int depth = 2;
+        ushort[] cells = CreateAirCells(width, height, depth);
         uint[] atmosphericFields = new uint[cells.Length];
-        atmosphericFields[ToIndex(0, 1, width)] = new WildfireTransportFieldState(
-            Steam: 5,
-            Smoke: 5,
+        atmosphericFields[ToIndex(2, 2, 0, width, height)] = new WildfireTransportFieldState(
+            Steam: 7,
+            Smoke: 7,
             SmokeContamination: 0,
-            Ash: 5,
+            Ash: 0,
             AshContamination: 0,
-            Source: true).Pack();
+            Source: false).Pack();
         ShaderSnapshotFixture fixture = CreateFixture(
             "field-model-atmospheric-transport",
             width,
             height,
             cells,
+            depth: depth,
             initialAtmosphericFields: atmosphericFields,
             wind: new FireSimWind(1f, 0f, 1f));
 
         ShaderSnapshotCapture capture = Capture(fixture);
-        WildfireTransportFieldState source = AtmosphereAt(capture, 0, 1);
-        WildfireTransportFieldState downwind = AtmosphereAt(capture, 1, 1);
-        WildfireTransportFieldState crosswind = AtmosphereAt(capture, 0, 2);
+        // Wind carries both fields horizontally while lifting them along the vertical z axis.
+        WildfireTransportFieldState downwind = AtmosphereAt(capture, 4, 2, 1);
+        WildfireTransportFieldState crosswind = AtmosphereAt(capture, 2, 4, 1);
 
         Assert.True(downwind.Smoke > crosswind.Smoke, $"Expected downwind smoke {downwind.Smoke} to exceed crosswind {crosswind.Smoke}.");
-        Assert.True(downwind.Steam > 0, $"Expected clean steam to move downwind, got {downwind.Steam}.");
-        Assert.True(source.Steam < source.Smoke, $"Expected source steam {source.Steam} to decay faster than smoke {source.Smoke}.");
-        Assert.True(source.Ash > source.Smoke, $"Expected ash {source.Ash} to persist longer than smoke {source.Smoke}.");
+        Assert.True(downwind.Steam > crosswind.Steam, $"Expected downwind steam {downwind.Steam} to exceed crosswind {crosswind.Steam}.");
+        Assert.Equal(0, downwind.SmokeContamination);
+    }
+
+    [UnityShaderFact]
+    public void UnityHarnessSteamDecaysBeforeSmokeAndDepositedAshPersistsWhenEnabled()
+    {
+        // A sealed landing surface separates local decay from wind and boundary transport.
+        uint[] atmosphericFields =
+        [
+            new WildfireTransportFieldState(
+                Steam: 7, Smoke: 7, SmokeContamination: 0,
+                Ash: 3, AshContamination: 0, Source: false).Pack(),
+        ];
+        ShaderSnapshotCapture capture = Capture(CreateFixture(
+            "field-model-atmospheric-decay",
+            1,
+            1,
+            CreateTerrainCells(1, 1),
+            initialAtmosphericFields: atmosphericFields,
+            wind: FireSimWind.None), tickCount: 5);
+        WildfireTransportFieldState source = AtmosphereAt(capture, 0, 0);
+
+        Assert.Equal(0, source.Steam);
+        Assert.Equal(2, source.Smoke);
+        Assert.Equal(3, source.Ash);
     }
 
     [UnityShaderFact]
@@ -239,36 +264,45 @@ public sealed class UnityShaderExecutionHarnessTests
     [UnityShaderFact]
     public void UnityHarnessConvergingSteamTransportAccumulatesWhenEnabled()
     {
-        int width = 7;
-        int height = 9;
-        ushort[] cells = CreateAirCells(width, height);
+        int width = 5;
+        int height = 5;
+        int depth = 3;
+        ushort[] cells = CreateTerrainCells(width, height, depth);
         uint[] atmosphericFields = new uint[cells.Length];
-        atmosphericFields[ToIndex(2, 6, width)] = new WildfireTransportFieldState(
-            Steam: 7,
-            Smoke: 0,
-            SmokeContamination: 0,
-            Ash: 0,
-            AshContamination: 0,
-            Source: false).Pack();
-        atmosphericFields[ToIndex(4, 6, width)] = new WildfireTransportFieldState(
-            Steam: 7,
-            Smoke: 0,
-            SmokeContamination: 0,
-            Ash: 0,
-            AshContamination: 0,
-            Source: false).Pack();
+        // Interior walls leave each source one open destination and prevent off-grid sinks.
+        foreach (int x in new[] { 1, 2, 3 })
+        {
+            cells[ToIndex(x, 2, 1, width, height)] = 0;
+        }
+
+        foreach (int x in new[] { 1, 3 })
+        {
+            atmosphericFields[ToIndex(x, 2, 1, width, height)] = new WildfireTransportFieldState(
+                Steam: 7,
+                Smoke: 0,
+                SmokeContamination: 0,
+                Ash: 0,
+                AshContamination: 0,
+                Source: false).Pack();
+        }
+
         ShaderSnapshotFixture fixture = CreateFixture(
             "field-model-clean-steam-convergence",
             width,
             height,
             cells,
+            depth: depth,
             initialAtmosphericFields: atmosphericFields,
-            wind: FireSimWind.None);
+            wind: FireSimWind.None) with
+        {
+            // Both sources emit on the first dispatch with this fixed stochastic fixture seed.
+            Seed = 140,
+        };
 
         ShaderSnapshotCapture capture = Capture(fixture);
-        WildfireTransportFieldState leftSource = AtmosphereAt(capture, 2, 6);
-        WildfireTransportFieldState rightSource = AtmosphereAt(capture, 4, 6);
-        WildfireTransportFieldState convergenceTarget = AtmosphereAt(capture, 3, 7);
+        WildfireTransportFieldState leftSource = AtmosphereAt(capture, 1, 2, 1);
+        WildfireTransportFieldState rightSource = AtmosphereAt(capture, 3, 2, 1);
+        WildfireTransportFieldState convergenceTarget = AtmosphereAt(capture, 2, 2, 1);
 
         Assert.Equal(4, leftSource.Steam);
         Assert.Equal(4, rightSource.Steam);
@@ -280,7 +314,7 @@ public sealed class UnityShaderExecutionHarnessTests
     {
         int width = 5;
         int height = 3;
-        ushort[] cells = CreateTerrainCells(width, height);
+        ushort[] cells = CreateAirCells(width, height);
         uint[] atmosphericFields = new uint[cells.Length];
         atmosphericFields[ToIndex(1, 1, width)] = new WildfireTransportFieldState(
             Steam: 0,
@@ -318,6 +352,8 @@ public sealed class UnityShaderExecutionHarnessTests
         int height = 3;
         ushort[] cells = CreateTerrainCells(width, height);
         cells[ToIndex(1, 1, width)] = PackedCell.Pack(fuel: 5, heat: 5, flammability: 0, water: 0, terrain: 1, burningLevel: 0);
+        // Fresh tainted emissions mix into existing clean smoke; static material alone is not smoke.
+        cells[ToIndex(3, 1, width)] = cells[ToIndex(1, 1, width)];
 
         uint[] atmosphericFields = new uint[cells.Length];
         atmosphericFields[ToIndex(5, 1, width)] = new WildfireTransportFieldState(
@@ -331,7 +367,7 @@ public sealed class UnityShaderExecutionHarnessTests
             Steam: 0,
             Smoke: 7,
             SmokeContamination: 0,
-            Ash: 7,
+            Ash: 3,
             AshContamination: 0,
             Source: false).Pack();
         atmosphericFields[ToIndex(9, 1, width)] = new WildfireTransportFieldState(
@@ -358,17 +394,17 @@ public sealed class UnityShaderExecutionHarnessTests
         ShaderSnapshotCapture capture = Capture(fixture);
         WildfireTransportFieldState contaminatedSmokeSource = AtmosphereAt(capture, 1, 1);
         WildfireTransportFieldState contaminatedSmokeDeposit = AtmosphereAt(capture, 5, 1);
-        WildfireTransportFieldState taintedTransitCell = AtmosphereAt(capture, 3, 1);
+        WildfireTransportFieldState taintedMixedSource = AtmosphereAt(capture, 3, 1);
         WildfireTransportFieldState cleanSmokeDeposit = AtmosphereAt(capture, 9, 1);
 
         Assert.True(contaminatedSmokeSource.Smoke > 0);
         Assert.True(contaminatedSmokeSource.SmokeContamination > 0);
         Assert.True(contaminatedSmokeDeposit.Ash > 0);
         Assert.True(contaminatedSmokeDeposit.AshContamination > 0);
-        Assert.True(taintedTransitCell.Smoke > 0);
-        Assert.True(taintedTransitCell.SmokeContamination > 0);
-        Assert.True(taintedTransitCell.Ash > 0);
-        Assert.True(taintedTransitCell.AshContamination > 0);
+        Assert.True(taintedMixedSource.Smoke > 0);
+        Assert.True(taintedMixedSource.SmokeContamination > 0);
+        Assert.True(taintedMixedSource.Ash > 0);
+        Assert.True(taintedMixedSource.AshContamination > 0);
         Assert.True(cleanSmokeDeposit.Ash > 0);
         Assert.Equal(0, cleanSmokeDeposit.AshContamination);
     }
@@ -401,7 +437,7 @@ public sealed class UnityShaderExecutionHarnessTests
             Steam: 0,
             Smoke: 0,
             SmokeContamination: 0,
-            Ash: 7,
+            Ash: 3,
             AshContamination: 0,
             Source: false).Pack();
         uint[] companionFields = Enumerable.Repeat(Companion(materialClass), cells.Length)
@@ -417,17 +453,19 @@ public sealed class UnityShaderExecutionHarnessTests
             companionFields: companionFields,
             wind: FireSimWind.None);
 
-        ShaderSnapshotCapture capture = Capture(fixture);
+        // Ash descends one z layer per dispatch before resting at the entity base.
+        ShaderSnapshotCapture capture = Capture(fixture, tickCount: 2);
         WildfireMaterialFieldState baseTree = CompanionAt(capture, 0, 0, 0);
         WildfireMaterialFieldState middleTree = CompanionAt(capture, 0, 0, 1);
         WildfireMaterialFieldState topTree = CompanionAt(capture, 0, 0, 2);
 
         Assert.Equal(materialClass, baseTree.MaterialClass);
-        Assert.Equal(3, baseTree.AshStrength & 0x3);
+        Assert.Equal(3, AtmosphereAt(capture, 0, 0, 0).Ash);
         Assert.Equal(materialClass, middleTree.MaterialClass);
-        Assert.Equal(0, middleTree.AshStrength & 0x3);
+        Assert.Equal(0, AtmosphereAt(capture, 0, 0, 1).Ash);
         Assert.Equal(materialClass, topTree.MaterialClass);
-        Assert.Equal(0, topTree.AshStrength & 0x3);
+        Assert.Equal(0, AtmosphereAt(capture, 0, 0, 2).Ash);
+        Assert.Equal(companionFields, capture.FinalCompanionFields);
     }
 
     [UnityShaderFact]
@@ -535,19 +573,19 @@ public sealed class UnityShaderExecutionHarnessTests
             Wind: wind);
     }
 
-    private static ushort[] CreateTerrainCells(int width, int height)
+    private static ushort[] CreateTerrainCells(int width, int height, int depth = 1)
     {
         return Enumerable.Repeat(
                 PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 1, burningLevel: 0),
-                width * height)
+                width * height * depth)
             .ToArray();
     }
 
-    private static ushort[] CreateAirCells(int width, int height)
+    private static ushort[] CreateAirCells(int width, int height, int depth = 1)
     {
         return Enumerable.Repeat(
                 PackedCell.Pack(fuel: 0, heat: 0, flammability: 0, water: 0, terrain: 0, burningLevel: 0),
-                width * height)
+                width * height * depth)
             .ToArray();
     }
 
