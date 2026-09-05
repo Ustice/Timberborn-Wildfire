@@ -381,6 +381,21 @@ public sealed class TimberbornFireSystem : IDisposable
             WildfireMaterialClass.Storage;
     }
 
+    public IReadOnlyList<uint>? ReadTransportFields()
+    {
+        if (_fireSimulator is null)
+        {
+            return null;
+        }
+
+        if (_fireSimulator is not ITimberbornTransportFieldReader transportReader)
+        {
+            throw new InvalidOperationException("The initialized fire simulator does not support transport field observations.");
+        }
+
+        return transportReader.ReadTransportFields();
+    }
+
     public TimberbornFireSimPersistenceSnapshot? CapturePersistentFireSimState()
     {
         return _fireSimulator is ITimberbornFireSimPersistenceState persistenceState

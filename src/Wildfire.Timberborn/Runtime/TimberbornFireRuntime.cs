@@ -76,7 +76,7 @@ public sealed class TimberbornFireRuntime :
     private TimberbornFixedCadenceFireDispatcher? _dispatcher;
     private TimberbornGpuIndirectFireRenderer? _gpuIndirectRenderer;
     private TimberbornWorldCellImportSummary? _lastWorldImportSummary;
-    private uint? _lastAshReadModelSyncTick;
+    private readonly TimberbornAshFieldSynchronizer _ashFieldSynchronizer;
     private TimberbornCompatibilityReport _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
     private bool _compatibilityProbesRan;
     private string? _autoDispatchDisabledReason;
@@ -139,6 +139,7 @@ public sealed class TimberbornFireRuntime :
                 CurrentGrid,
                 _logSink),
             _logSink);
+        _ashFieldSynchronizer = new TimberbornAshFieldSynchronizer(_ashFieldService);
         _taintedAshSoilPoisoningService = new TimberbornTaintedAshSoilPoisoningService(
             new TimberbornSoilContaminationAshPoisoningAdapter(
                 _soilContaminationService,
@@ -192,7 +193,7 @@ public sealed class TimberbornFireRuntime :
         _dispatcher = null;
         _fireSystem = null;
         _lastWorldImportSummary = null;
-        _lastAshReadModelSyncTick = null;
+        _ashFieldSynchronizer.Clear();
         _initializingGrid = null;
         _burnDamageService = null;
         _inventoryAdjuster = null;
@@ -328,19 +329,7 @@ public sealed class TimberbornFireRuntime :
 
     private void SyncAshReadModelFromSimulator(uint tick)
     {
-        if (_lastAshReadModelSyncTick == tick)
-        {
-            return;
-        }
-
-        TimberbornFireSimPersistenceSnapshot? fireSimSnapshot = _fireSystem?.CapturePersistentFireSimState();
-        if (fireSimSnapshot?.TransportFields is not { Count: > 0 } atmosphericFields)
-        {
-            return;
-        }
-
-        _ashFieldService.SyncFromTransportFields(tick, atmosphericFields, CurrentDayNumber());
-        _lastAshReadModelSyncTick = tick;
+        _ashFieldSynchronizer.Sync(_fireSystem, tick, CurrentDayNumber());
     }
 
     public void AttachSimulator(IGpuFireSimulator fireSimulator, TimberbornFireCadence? cadence = null)

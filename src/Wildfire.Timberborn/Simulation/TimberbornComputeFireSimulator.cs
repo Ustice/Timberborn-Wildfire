@@ -455,6 +455,7 @@ public sealed class TimberbornComputeFireSimulator :
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
+    ITimberbornTransportFieldReader,
     IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
@@ -669,6 +670,15 @@ public sealed class TimberbornComputeFireSimulator :
             $"water_ignition_penalty={parameters.FireWaterIgnitionPenalty} " +
             $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator} " +
             $"fire_step_interval_ticks={parameters.FireCellStepIntervalTicks}");
+    }
+
+    public IReadOnlyList<uint> ReadTransportFields()
+    {
+        ThrowIfDisposed();
+
+        uint[] transportFields = new uint[Grid.CellCount];
+        _readTransportFields.GetData(transportFields);
+        return transportFields;
     }
 
     public TimberbornFireSimPersistenceSnapshot CaptureFireSimState()
