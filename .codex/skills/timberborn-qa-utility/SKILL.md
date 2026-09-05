@@ -1,109 +1,33 @@
 ---
 name: timberborn-qa-utility
-description: Build Wildfire Timberborn QA utilities with Bun, TypeScript, and guarded cliclick-style UI automation.
+description: Build and verify Wildfire QA utilities using Bun and TypeScript, with observed UI state and explicit shared-session ownership.
 ---
 
-# Timberborn QA Utility
+# Timberborn QA Utilities
 
-Use this skill when creating or changing a Wildfire QA utility that launches Timberborn, inspects Timberborn state, stages or runs a QA script, or automates Timberborn UI interactions from the desktop.
+Use when creating or changing tools that deploy, launch, inspect, or automate Timberborn. For simulator changes that do not touch the game, use deterministic tests and scenarios first.
 
-Do not use this skill for simulation-core rules, shader behavior, or deterministic CLI scenarios that do not touch Timberborn. Keep those host-agnostic and covered by normal deterministic tests.
+Read `AGENTS.md` and the assignment. Consult the relevant sections of `docs/TEST_PLAN.md` and `docs/qa-tooling.md` for validation procedures and evidence classification. Use UI reference docs when the workflow touches those screens.
 
-## Required Inputs
+## Design
 
-Read these before designing the utility:
+- Use TypeScript with Bun and existing helpers where they fit. Keep process, file, and UI effects at explicit boundaries so decisions can be tested without the game.
+- Prefer command-bridge, log, and deterministic assertions when they provide the required observable. Use visual evidence for appearance and UI behavior.
+- Keep argument parsing, failure reporting, and artifact capture clear. Improve shared helpers when duplication or repeated failure warrants it, within agreed write ownership.
+- Make setup failures explicit and distinguish them from product failures. Preserve enough context to reproduce the problem.
 
-- `AGENTS.md`.
-- `docs/INDEX.md`.
-- `docs/TEST_PLAN.md`.
-- `docs/qa-tooling.md`.
-- `docs/timberborn-menu-coordinate-guide.md`.
-- The assigned ticket and role instructions.
+## Live Operation
 
-For UI automation, `docs/timberborn-menu-coordinate-guide.md` is the only approved source for Timberborn menu coordinates. Do not invent coordinates from memory, screenshots in chat, or approximate layout guesses. If the guide does not contain the target, stop and document the missing coordinate as a blocker or make coordinate capture the assigned task.
+One controller owns the shared game session, launch/restart decisions, deployment, and input. Check the QA lock and current process state before acting; do not assume a transport timeout means the game stopped.
 
-## Tooling Rules
+Before input, confirm the target app and current screen. Match resolution/scaling assumptions for scripted coordinates. Fresh screenshots or accessibility observations may establish a target; reference coordinates must be revalidated against the live screen. If a target is ambiguous, obtain a better observation before acting. For unattended repeatable workflows, encode screen/precondition assertions and stop with diagnostic evidence when they fail.
 
-- Write QA utilities in TypeScript and run them with `bun`.
-- Use `bun` commands instead of `npm`, `node`, or package-lock workflows.
-- Keep utility scripts local to the assigned ticket scope. If the ticket does not allow script changes, outline the utility in notes instead of adding files.
-- Prefer deterministic CLI or log checks before live UI automation.
-- Treat Timberborn as an adapter target. Do not move fire rules into Timberborn-facing code to make QA easier.
-- Record meaningful tool runs with `bun scripts/qa-log-tool-run.ts` when they affect issue status, release confidence, or tool reliability.
-- Use `tool_failure`, not `product_failure`, when the automation cannot fairly evaluate the Wildfire behavior.
+Use disposable/copied QA saves and follow existing authorization for loading or changing state. Obtain a user decision for an unapproved destructive action, upload, credential use, or publication. Keep launch and state changes within the assigned live session; other agents submit requests to its controller.
 
-## UI Automation Rules
+## Verification And Evidence
 
-Use `cliclick`-style automation only when the expected Timberborn screen is known and the target coordinate is documented in `docs/timberborn-menu-coordinate-guide.md`.
+Run help/dry-run and relevant automated tests before live operation when supported. Exercise failure preconditions when they protect the shared session or player data. Run TypeScript checks for TypeScript changes, plus focused behavior tests; documentation edits need link/content review rather than a game run.
 
-Before any click or keypress, the utility must verify:
+Record commands, fixture/build identity, observations, result, and artifact paths. Inspect the whole scene in visual captures. Log consequential automation runs with `scripts/qa-log-tool-run.ts` when maintaining durable tool reliability evidence; use `docs/qa-tooling.md` for classification and reports.
 
-- The target app is running or can be launched by the assigned workflow.
-- Timberborn can be activated by bundle id `com.mechanistry.timberborn`.
-- The display resolution and UI scaling match the coordinate guide, or the utility is explicitly running in a documented capture-refresh mode.
-- The expected screen is visible.
-- The target coordinate exists in the guide and is safe for the assigned task.
-
-The utility must fail loudly with a non-zero exit and a clear error when:
-
-- Timberborn is not running and the utility is not allowed to launch it.
-- The app activation command fails.
-- Screenshot capture fails.
-- The expected screen cannot be confirmed.
-- A coordinate is missing from the guide.
-- The coordinate guide's display assumptions do not match the current environment.
-- The target is destructive, opens an external app, exits the game, loads a save, deletes data, or changes persistent state without explicit ticket approval.
-
-Capture evidence around automation:
-
-- Record the command that was run.
-- Save or reference screenshots when the ticket asks for visual proof.
-- Log the before-screen, click target, after-screen, and pass/fail result.
-- Include searchable tokens in output when possible, such as `wildfire_qa_utility`, the utility name, and the target id from the coordinate guide.
-- Include enough output for a QA agent to log the run id, result, failure class, and artifact paths in `qa/tool-runs.sqlite`.
-
-## Screen Checks
-
-Screen checks should be conservative. Prefer a combination of:
-
-- Process and bundle-id checks.
-- `osascript` activation success.
-- Screenshot existence and dimensions.
-- Known text, pixel, or image-match assertions from the documented screen.
-- Player.log or Fire.log evidence when UI state has a corresponding log signal.
-
-If a screen cannot be confirmed, stop before clicking. A missed click is better evidence than a blind click that changes a running save.
-
-## Implementation Checklist
-
-Before writing the utility:
-
-- Confirm the ticket allows the files you plan to edit.
-- Identify the exact Timberborn state the utility expects.
-- Identify every coordinate target by id from `docs/timberborn-menu-coordinate-guide.md`.
-- Mark destructive or state-changing targets as out of scope unless the ticket explicitly allows them.
-- Decide whether a deterministic CLI or log assertion can cover part of the task before UI automation.
-
-While writing the utility:
-
-- Use TypeScript and `bun`.
-- Parse arguments explicitly and print help for unsupported options.
-- Validate the app, screen, display assumptions, and coordinate ids before acting.
-- Print clear stderr errors and exit non-zero on every missing precondition.
-- Keep reusable helpers small and ticket-scoped unless a shared helper is explicitly assigned.
-
-When testing the utility:
-
-- Run dry-run or help mode first with `bun`.
-- Confirm failure behavior by testing at least one missing or mismatched precondition when practical.
-- Log at least one representative run with `bun scripts/qa-log-tool-run.ts` when the utility is meant to become part of the durable QA workflow.
-- Run `git diff --check`.
-- Run any additional ticket-required tests.
-
-When documenting the utility:
-
-- Update the assigned ticket with commands, output summary, evidence paths, and unresolved blockers.
-- Link any new coordinate evidence back to `docs/timberborn-menu-coordinate-guide.md`.
-- Update `docs/TEST_PLAN.md` or a more specific doc when the utility changes durable QA workflow.
-- Update `docs/qa-tooling.md` when the utility changes the reliability taxonomy, database shape, or reporting procedure.
-- Recommend the next GitHub issue status-label change, but do not change labels unless explicitly assigned.
+Update affected usage/reference documentation and report verification limits. A successful tool exit, startup log, or readiness counter proves only its stated gate, not gameplay or rendered appearance.
