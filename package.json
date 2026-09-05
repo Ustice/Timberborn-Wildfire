@@ -12,7 +12,9 @@
     "release:package": "bun scripts/package-release.ts",
     "workshop:package": "bun scripts/package-steam-workshop.ts",
     "workshop:publish": "bun scripts/publish-steam-workshop.ts",
-    "typecheck": "bun run qa:db:generate && tsc --noEmit"
+    "typecheck": "bun run qa:db:generate && tsc --noEmit",
+    "test:portable": "WILDFIRE_RUN_UNITY_SHADER_HARNESS=0 dotnet test Wildfire.Portable.slnx --configuration Release",
+    "test:scripts": "bun test tests/*.test.ts"
   },
   "devDependencies": {
     "@prisma/adapter-libsql": "^7.8.0",

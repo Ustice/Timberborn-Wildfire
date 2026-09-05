@@ -35,7 +35,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
           restore-keys: |
             nuget-${{ runner.os }}-
 
@@ -48,15 +48,16 @@ jobs:
       - name: Check generated blueprints
         run: bun run blueprints:check
 
-      - name: Test host-agnostic .NET core
-        run: bun scripts/run-hosted-dotnet-tests.ts
+      - name: Test TypeScript utilities
+        run: bun run test:scripts
 
-      # Full solution `dotnet test`, Timberborn adapter builds, Unity AssetBundle
-      # generation, Steam packaging/publishing, and live Timberborn QA remain
-      # local or QA-only because hosted runners do not have Timberborn managed
-      # DLLs, Steam, Unity licensing, or GUI access. The step above creates a
-      # temporary xUnit project that references only Wildfire.Core, so it runs
-      # real hosted-safe .NET tests without hiding the adapter boundary.
+      - name: Test portable .NET projects
+        run: bun run test:portable
+
+      # Portable tests compile and discover the shader suite, but report it as
+      # skipped without opt-in. Native adapter tests require Timberborn managed
+      # DLLs; actual shader execution requires licensed Unity and compute support.
+      # Packaging and live-game validation run in their provisioned environments.
       - name: Check hosted-safe deploy plan
         run: >
           bun scripts/deploy-timberborn-mod.ts
