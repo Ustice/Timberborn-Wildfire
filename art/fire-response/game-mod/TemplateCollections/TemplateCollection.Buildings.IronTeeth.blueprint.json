@@ -1,0 +1,17 @@
+{
+  "TemplateCollectionSpec": {
+    "CollectionId": "Buildings.IronTeeth",
+    "Blueprints#append": [
+      "Buildings/WildfirePreview/FireBell_Folktails.blueprint",
+      "Buildings/WildfirePreview/WardenStation_Ironteeth.blueprint",
+      "Buildings/WildfirePreview/BrigadeBucket.blueprint",
+      "Buildings/WildfirePreview/WardenSprayer.blueprint",
+      "Buildings/WildfirePreview/WardenHelmet.blueprint",
+      "Buildings/WildfirePreview/WardenCoat.blueprint",
+      "Buildings/WildfirePreview/SmokeFan.blueprint",
+      "Buildings/WildfirePreview/FireBerm.blueprint",
+      "Buildings/WildfirePreview/NativeLodge.blueprint",
+      "Buildings/WildfirePreview/NativeBarrack.blueprint"
+    ]
+  }
+}

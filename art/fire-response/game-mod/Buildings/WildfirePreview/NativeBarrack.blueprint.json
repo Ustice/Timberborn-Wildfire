@@ -1,0 +1,124 @@
+{
+  "TemplateSpec": {
+    "TemplateName": "WildfirePreview.NativeBarrack"
+  },
+  "BuildingSpec": {
+    "BuildingCost": [],
+    "ScienceCost": 0,
+    "PlaceFinished": true
+  },
+  "BuildingModelSpec": {
+    "FinishedModelName": "#Finished",
+    "UnfinishedModelName": "",
+    "ConstructionModeModel": "Finished"
+  },
+  "BlockObjectSpec": {
+    "Size": {
+      "X": 3,
+      "Y": 2,
+      "Z": 2
+    },
+    "Blocks": [
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      }
+    ],
+    "Entrance": {
+      "HasEntrance": false
+    },
+    "BaseZ": 0,
+    "Flippable": false
+  },
+  "PlaceableBlockObjectSpec": {
+    "ToolGroupId": "Decoration",
+    "ToolOrder": 207,
+    "ToolShape": "Square",
+    "Layout": "Single",
+    "DevModeTool": false
+  },
+  "LabeledEntitySpec": {
+    "DisplayNameLocKey": "WildfirePreview.NativeBarrack",
+    "DescriptionLocKey": "WildfirePreview.Description",
+    "Icon": "Sprites/StatusIcons/BuildingNeedsWater"
+  },
+  "Children": {
+    "#Finished": {
+      "TimbermeshSpec": {
+        "Model": "Buildings/Housing/Barrack/Barrack.IronTeeth.Model"
+      },
+      "CollidersSpec": {
+        "BoxColliders": [
+          {
+            "Center": {
+              "X": 1.5,
+              "Y": 1.0,
+              "Z": 1.0
+            },
+            "Size": {
+              "X": 3,
+              "Y": 2,
+              "Z": 2
+            }
+          }
+        ]
+      }
+    }
+  }
+}

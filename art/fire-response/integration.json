@@ -1,0 +1,128 @@
+[
+  {
+    "asset": "FireBell_Folktails",
+    "triangles": 6812,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.Folktails",
+      "BaseWood_Brown.Folktails",
+      "BaseWood_LightBrown.Folktails",
+      "Dirt",
+      "ThatchedRoof.Folktails"
+    ],
+    "footprint": [
+      2,
+      2,
+      3
+    ],
+    "height": 2.43500018119812
+  },
+  {
+    "asset": "WardenStation_Ironteeth",
+    "triangles": 8652,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.IronTeeth",
+      "BaseWood_DarkBrown.IronTeeth",
+      "PaintedMetal.IronTeeth"
+    ],
+    "footprint": [
+      3,
+      3,
+      3
+    ],
+    "height": 2.305000066757202
+  },
+  {
+    "asset": "BrigadeBucket",
+    "triangles": 3076,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.Folktails",
+      "BaseWood_LightBrown.Folktails"
+    ],
+    "footprint": [
+      1,
+      1,
+      1
+    ],
+    "height": 0.5211649425327778
+  },
+  {
+    "asset": "WardenSprayer",
+    "triangles": 4208,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.IronTeeth",
+      "BaseWood_DarkBrown.IronTeeth",
+      "PaintedMetal.IronTeeth"
+    ],
+    "footprint": [
+      1,
+      1,
+      1
+    ],
+    "height": 0.8199999928474426
+  },
+  {
+    "asset": "WardenHelmet",
+    "triangles": 1568,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.IronTeeth",
+      "BaseWood_DarkBrown.IronTeeth",
+      "PaintedMetal.IronTeeth"
+    ],
+    "footprint": [
+      1,
+      1,
+      1
+    ],
+    "height": 0.4294454902410507
+  },
+  {
+    "asset": "WardenCoat",
+    "triangles": 792,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.IronTeeth",
+      "BaseWood_DarkBrown.IronTeeth"
+    ],
+    "footprint": [
+      1,
+      1,
+      1
+    ],
+    "height": 0.5402641161344945
+  },
+  {
+    "asset": "SmokeFan",
+    "triangles": 1964,
+    "nodes": 1,
+    "materials": [
+      "BaseMetal.IronTeeth",
+      "BaseWood_DarkBrown.IronTeeth",
+      "PaintedMetal.IronTeeth"
+    ],
+    "footprint": [
+      2,
+      2,
+      2
+    ],
+    "height": 1.7562222480773926
+  },
+  {
+    "asset": "FireBerm",
+    "triangles": 880,
+    "nodes": 1,
+    "materials": [
+      "BaseWood_DarkBrown.IronTeeth"
+    ],
+    "footprint": [
+      1,
+      1,
+      1
+    ],
+    "height": 0.6624999642372131
+  }
+]

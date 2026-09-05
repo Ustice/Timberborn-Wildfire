@@ -1,0 +1,8 @@
+{
+  "Name": "Wildfire Asset Preview",
+  "Version": "0.1.0",
+  "Id": "JasonKleinberg.Wildfire.AssetPreview",
+  "MinimumGameVersion": "1.0.7.0",
+  "Description": "Art review: placeable building models and static gear displays. No firefighting behavior. Use a disposable review save.",
+  "RequiredMods": []
+}

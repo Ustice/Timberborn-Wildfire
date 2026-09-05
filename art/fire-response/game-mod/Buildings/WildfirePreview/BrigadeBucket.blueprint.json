@@ -1,0 +1,69 @@
+{
+  "TemplateSpec": {
+    "TemplateName": "WildfirePreview.BrigadeBucket"
+  },
+  "BuildingSpec": {
+    "BuildingCost": [],
+    "ScienceCost": 0,
+    "PlaceFinished": true
+  },
+  "BuildingModelSpec": {
+    "FinishedModelName": "#Finished",
+    "UnfinishedModelName": "",
+    "ConstructionModeModel": "Finished"
+  },
+  "BlockObjectSpec": {
+    "Size": {
+      "X": 1,
+      "Y": 1,
+      "Z": 1
+    },
+    "Blocks": [
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      }
+    ],
+    "Entrance": {
+      "HasEntrance": false
+    },
+    "BaseZ": 0,
+    "Flippable": false
+  },
+  "PlaceableBlockObjectSpec": {
+    "ToolGroupId": "Decoration",
+    "ToolOrder": 202,
+    "ToolShape": "Square",
+    "Layout": "Single",
+    "DevModeTool": false
+  },
+  "LabeledEntitySpec": {
+    "DisplayNameLocKey": "WildfirePreview.BrigadeBucket",
+    "DescriptionLocKey": "WildfirePreview.Description",
+    "Icon": "Sprites/StatusIcons/BuildingNeedsWater"
+  },
+  "Children": {
+    "#Finished": {
+      "TimbermeshSpec": {
+        "Model": "Buildings/WildfirePreview/BrigadeBucket"
+      },
+      "CollidersSpec": {
+        "BoxColliders": [
+          {
+            "Center": {
+              "X": 0.5,
+              "Y": 0.2605824712663889,
+              "Z": 0.5
+            },
+            "Size": {
+              "X": 0.4259833097457886,
+              "Y": 0.5211649425327778,
+              "Z": 0.4107605218887329
+            }
+          }
+        ]
+      }
+    }
+  }
+}

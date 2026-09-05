@@ -1,0 +1,84 @@
+{
+  "TemplateSpec": {
+    "TemplateName": "WildfirePreview.NativeLodge"
+  },
+  "BuildingSpec": {
+    "BuildingCost": [],
+    "ScienceCost": 0,
+    "PlaceFinished": true
+  },
+  "BuildingModelSpec": {
+    "FinishedModelName": "#Finished",
+    "UnfinishedModelName": "",
+    "ConstructionModeModel": "Finished"
+  },
+  "BlockObjectSpec": {
+    "Size": {
+      "X": 2,
+      "Y": 2,
+      "Z": 1
+    },
+    "Blocks": [
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      }
+    ],
+    "Entrance": {
+      "HasEntrance": false
+    },
+    "BaseZ": 0,
+    "Flippable": false
+  },
+  "PlaceableBlockObjectSpec": {
+    "ToolGroupId": "Decoration",
+    "ToolOrder": 207,
+    "ToolShape": "Square",
+    "Layout": "Single",
+    "DevModeTool": false
+  },
+  "LabeledEntitySpec": {
+    "DisplayNameLocKey": "WildfirePreview.NativeLodge",
+    "DescriptionLocKey": "WildfirePreview.Description",
+    "Icon": "Sprites/StatusIcons/BuildingNeedsWater"
+  },
+  "Children": {
+    "#Finished": {
+      "TimbermeshSpec": {
+        "Model": "Buildings/Housing/Lodge/Lodge.Folktails.Model"
+      },
+      "CollidersSpec": {
+        "BoxColliders": [
+          {
+            "Center": {
+              "X": 1.0,
+              "Y": 0.5,
+              "Z": 1.0
+            },
+            "Size": {
+              "X": 2,
+              "Y": 1,
+              "Z": 2
+            }
+          }
+        ]
+      }
+    }
+  }
+}

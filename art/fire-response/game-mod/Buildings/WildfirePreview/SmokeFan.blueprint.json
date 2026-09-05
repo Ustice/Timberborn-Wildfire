@@ -1,0 +1,104 @@
+{
+  "TemplateSpec": {
+    "TemplateName": "WildfirePreview.SmokeFan"
+  },
+  "BuildingSpec": {
+    "BuildingCost": [],
+    "ScienceCost": 0,
+    "PlaceFinished": true
+  },
+  "BuildingModelSpec": {
+    "FinishedModelName": "#Finished",
+    "UnfinishedModelName": "",
+    "ConstructionModeModel": "Finished"
+  },
+  "BlockObjectSpec": {
+    "Size": {
+      "X": 2,
+      "Y": 2,
+      "Z": 2
+    },
+    "Blocks": [
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      },
+      {
+        "MatterBelow": "Any",
+        "Occupations": "All",
+        "Stackable": "None"
+      }
+    ],
+    "Entrance": {
+      "HasEntrance": false
+    },
+    "BaseZ": 0,
+    "Flippable": false
+  },
+  "PlaceableBlockObjectSpec": {
+    "ToolGroupId": "Decoration",
+    "ToolOrder": 206,
+    "ToolShape": "Square",
+    "Layout": "Single",
+    "DevModeTool": false
+  },
+  "LabeledEntitySpec": {
+    "DisplayNameLocKey": "WildfirePreview.SmokeFan",
+    "DescriptionLocKey": "WildfirePreview.Description",
+    "Icon": "Sprites/StatusIcons/BuildingNeedsWater"
+  },
+  "Children": {
+    "#Finished": {
+      "TimbermeshSpec": {
+        "Model": "Buildings/WildfirePreview/SmokeFan"
+      },
+      "CollidersSpec": {
+        "BoxColliders": [
+          {
+            "Center": {
+              "X": 1.0,
+              "Y": 0.8781111240386963,
+              "Z": 1.0
+            },
+            "Size": {
+              "X": 1.399999976158142,
+              "Y": 1.7562222480773926,
+              "Z": 1.100000023841858
+            }
+          }
+        ]
+      }
+    }
+  }
+}

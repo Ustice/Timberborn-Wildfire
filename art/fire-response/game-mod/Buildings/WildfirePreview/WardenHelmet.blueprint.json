@@ -1,0 +1,69 @@
+{
+  "TemplateSpec": {
+    "TemplateName": "WildfirePreview.WardenHelmet"
+  },
+  "BuildingSpec": {
+    "BuildingCost": [],
+    "ScienceCost": 0,
+    "PlaceFinished": true
+  },
+  "BuildingModelSpec": {
+    "FinishedModelName": "#Finished",
+    "UnfinishedModelName": "",
+    "ConstructionModeModel": "Finished"
+  },
+  "BlockObjectSpec": {
+    "Size": {
+      "X": 1,
+      "Y": 1,
+      "Z": 1
+    },
+    "Blocks": [
+      {
+        "MatterBelow": "GroundOrStackable",
+        "Occupations": "All",
+        "Stackable": "None"
+      }
+    ],
+    "Entrance": {
+      "HasEntrance": false
+    },
+    "BaseZ": 0,
+    "Flippable": false
+  },
+  "PlaceableBlockObjectSpec": {
+    "ToolGroupId": "Decoration",
+    "ToolOrder": 204,
+    "ToolShape": "Square",
+    "Layout": "Single",
+    "DevModeTool": false
+  },
+  "LabeledEntitySpec": {
+    "DisplayNameLocKey": "WildfirePreview.WardenHelmet",
+    "DescriptionLocKey": "WildfirePreview.Description",
+    "Icon": "Sprites/StatusIcons/BuildingNeedsWater"
+  },
+  "Children": {
+    "#Finished": {
+      "TimbermeshSpec": {
+        "Model": "Buildings/WildfirePreview/WardenHelmet"
+      },
+      "CollidersSpec": {
+        "BoxColliders": [
+          {
+            "Center": {
+              "X": 0.5,
+              "Y": 0.21472274512052536,
+              "Z": 0.5
+            },
+            "Size": {
+              "X": 0.5979294776916504,
+              "Y": 0.4294454902410507,
+              "Z": 0.5979294776916504
+            }
+          }
+        ]
+      }
+    }
+  }
+}
