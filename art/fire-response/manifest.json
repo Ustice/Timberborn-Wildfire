@@ -1,0 +1,58 @@
+[
+  {
+    "name": "FireBell_Folktails",
+    "file": "FireBell_Folktails.glb",
+    "mesh_objects": 29,
+    "triangles": 768,
+    "status": "design-draft"
+  },
+  {
+    "name": "WardenStation_Ironteeth",
+    "file": "WardenStation_Ironteeth.glb",
+    "mesh_objects": 40,
+    "triangles": 1344,
+    "status": "design-draft"
+  },
+  {
+    "name": "BrigadeBucket",
+    "file": "BrigadeBucket.glb",
+    "mesh_objects": 16,
+    "triangles": 1248,
+    "status": "design-draft"
+  },
+  {
+    "name": "WardenSprayer",
+    "file": "WardenSprayer.glb",
+    "mesh_objects": 9,
+    "triangles": 1100,
+    "status": "design-draft"
+  },
+  {
+    "name": "WardenHelmet",
+    "file": "WardenHelmet.glb",
+    "mesh_objects": 4,
+    "triangles": 292,
+    "status": "design-draft"
+  },
+  {
+    "name": "WardenCoat",
+    "file": "WardenCoat.glb",
+    "mesh_objects": 7,
+    "triangles": 88,
+    "status": "design-draft"
+  },
+  {
+    "name": "SmokeFan",
+    "file": "SmokeFan.glb",
+    "mesh_objects": 23,
+    "triangles": 308,
+    "status": "design-draft"
+  },
+  {
+    "name": "FireBerm",
+    "file": "FireBerm.glb",
+    "mesh_objects": 4,
+    "triangles": 48,
+    "status": "design-draft"
+  }
+]
