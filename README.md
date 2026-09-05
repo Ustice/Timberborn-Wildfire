@@ -1,31 +1,29 @@
 # Wildfire
 
-[Wildfire](https://steamcommunity.com/sharedfiles/filedetails/?id=3730392791) is a Timberborn mod project built around a reusable, deterministic cellular automata fire simulation.
+[Wildfire](https://steamcommunity.com/sharedfiles/filedetails/?id=3730392791) is a Timberborn mod built around a reusable cellular automata fire simulation. GPU shaders own fire rules; Timberborn supplies world observations and applies gameplay consequences.
 
-The simulation core is intentionally independent from Timberborn so packed scenario inputs, GPU simulator contracts, and host adapters can evolve without making Timberborn own fire rules.
+Start with the [documentation index](docs/INDEX.md), [source map](docs/source-map.md), or [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues). Read the document relevant to your change; the index distinguishes current contracts from historical plans and evidence.
 
-## Project Layout
+## Project layout
 
-- `src/Wildfire.Core/` contains the packed-cell model, grid helpers, GPU simulator contracts, deltas, and listener contracts.
-- `src/Wildfire.Cli/` contains the terminal preview for seeded scenarios.
-- `src/Wildfire.Unity/` contains compute-buffer, shader-dispatch, shader-snapshot, and visual-field code.
-- `src/Wildfire.Timberborn/` contains the Timberborn adapter layer, organized by runtime responsibility.
-- `tests/Wildfire.Core.Tests/` contains core, Unity, and Timberborn adapter tests.
-- `docs/` contains design, architecture, handoff, validation, and milestone status.
-- `kanban/` contains GitHub issue workflow notes, role guidance, migration notes, and archived file-board pointers.
+- `src/Wildfire.Core/`: packed cells, field formats, parameters, fixtures, and simulator contracts.
+- `src/Wildfire.Cli/`: seeded scenario preview and fixture export.
+- `src/Wildfire.Unity/`: compute abstractions, shaders, and the Unity batchmode harness.
+- `src/Wildfire.Timberborn/`: native compute binding, runtime, gameplay, visuals, persistence, and QA bridge.
+- `tests/`: .NET and TypeScript tests.
+- `scripts/`: development, packaging, deployment, and QA tooling.
+- `docs/`: design, architecture, validation, reference material, and dated history.
 
-## Start Here
+## Development
 
-- Read [docs/INDEX.md](docs/INDEX.md) for the document map.
-- Read [docs/source-map.md](docs/source-map.md) to find the code surface for a concept.
-- Read [docs/DESIGN.md](docs/DESIGN.md) for the product and simulation spec.
-- Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for durable ownership boundaries.
-- Read [kanban/github-issue-workflow.md](kanban/github-issue-workflow.md) before starting issue-backed work.
-
-## Commands
+Use Bun and .NET 10. The portable starting checks are:
 
 ```bash
+bun install --frozen-lockfile
 bun run typecheck
-dotnet test Wildfire.slnx --no-restore
+bun run blueprints:check
+bun scripts/run-hosted-dotnet-tests.ts
 dotnet run --project src/Wildfire.Cli -- --scenario=single-ignition --layer=0
 ```
+
+The hosted .NET command currently runs four generated Core smoke tests. The full `dotnet test Wildfire.slnx` suite additionally requires compatible installed Timberborn managed assemblies. Shader execution needs a licensed Unity Editor and compute-capable graphics. See the [validation runbook](docs/TEST_PLAN.md) for commands and the limits of each check.

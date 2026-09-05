@@ -24,7 +24,7 @@ qa/tool-runs.sqlite-*
 
 The Prisma schema is checked in at [../prisma/schema.prisma](../prisma/schema.prisma), the Prisma CLI config lives at [../prisma.config.ts](../prisma.config.ts), and migrations live under [../prisma/migrations/](../prisma/migrations/). Scripts apply migrations automatically when they create or open the local database.
 
-Do not commit the live database. When a result matters for durable project history, export the relevant summary into the GitHub issue, `docs/TEST_PLAN.md`, or a small evidence manifest.
+Do not commit the live database. When a result matters for durable project history, export the relevant summary into the GitHub issue, a dated evidence report, or a small evidence manifest.
 
 ## Failure Classes
 
@@ -99,7 +99,7 @@ Use the report to decide whether a repeated validation problem should become a Q
 
 ## Blocker Preflight
 
-Before dispatching another live QA run against the current loaded save, run the blocker preflight:
+For a gate covered by the blocker preflight, inspect its fixture requirements with:
 
 ```bash
 bun scripts/qa-blocker-preflight.ts
@@ -113,7 +113,7 @@ To evaluate captured evidence without touching Timberborn:
 bun scripts/qa-blocker-preflight.ts --from-file qa-evidence/<run>/status.txt
 ```
 
-Use this before retrying #17, #43, #44, #45, or #60. If the preflight says the loaded save lacks fixture proof, create or load a targeted scenario instead of running another generic QA pass.
+The preflight was introduced for #17, #43, #44, #45, and #60; these issue references identify its original scope, not their current status. If the preflight says the loaded save lacks fixture proof, create or load a targeted scenario instead of running another generic QA pass.
 
 ## Generated Scenario Profiles
 
@@ -151,6 +151,6 @@ Targets are `explosive`, `contaminated`, or `all`. The command scans live invent
 
 ## Ownership
 
-QA owns this reliability log and should update it during assigned validation work. Workers still own product implementation unless the assignment explicitly gives QA implementation scope.
+The agent running validation can use this log to investigate repeated tool failures. It is diagnostic tooling, not a required role handoff or a second acceptance ledger.
 
 When a repeated `tool_failure` blocks validation, QA should create or recommend a GitHub issue for the smallest tool improvement that would make the gate reliable.

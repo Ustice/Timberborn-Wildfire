@@ -1,47 +1,27 @@
-# Wildfire Documentation Index
+# Wildfire Documentation
 
-Use this page as the startup map for humans and agents.
+Use the entry point that matches the work. Source and fresh validation establish implemented behavior; design decisions explain intent; dated records preserve earlier evidence without defining current machine or backlog state.
 
-## Active Source Of Truth
+## Current guides
 
-- [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues) owns the active backlog after the 2026-05-23 file-board migration.
-- [DESIGN.md](DESIGN.md) owns the simulation and gameplay design.
-- [source-map.md](source-map.md) maps concepts to code surfaces, tests, commands, and validation docs.
-- [RELEASE_DESIGN.md](RELEASE_DESIGN.md) summarizes the release-facing behavior compared with `main`.
-- [ARCHITECTURE.md](ARCHITECTURE.md) owns durable code boundaries and data flow.
-- [ash-simulation-model.md](ash-simulation-model.md) owns the current ash authority, naming, and buffer-responsibility direction.
-- [steam-simulation-model.md](steam-simulation-model.md) owns the current steam authority, clean-field semantics, and smoke-like transport direction.
-- [fire-sim-field-model-plan.md](fire-sim-field-model-plan.md) owns the anisotropic heat, atmosphere, contamination field-model plan and its live-validation blocker notes.
-- [world-consequence-first-pass.md](world-consequence-first-pass.md) owns the current first-pass plan for stored-item consequences, generated scenario saves, and faction fire-response ideas.
-- [HANDOFF.md](HANDOFF.md) owns current status, blockers, and next exact action.
-- [TEST_PLAN.md](TEST_PLAN.md) owns validation strategy and evidence expectations.
-- [qa-tooling.md](qa-tooling.md) owns QA-tool reliability tracking, failure classification, and the local ignored SQLite run log.
-- [release/versioning.md](release/versioning.md) owns changelog, manifest version, package version, and tag consistency rules.
-- [reference/timberborn-ui.md](reference/timberborn-ui.md) owns Timberborn UI design-system notes for adapter-facing UI.
-- [reference/native-api-support-requests.md](reference/native-api-support-requests.md) catalogs Timberborn native non-public/reflection calls that should become supported modding APIs.
-- [timberborn-debug-panels.md](timberborn-debug-panels.md) owns the focused Timberborn debug/developer panel reference for QA.
-- [TODO.md](TODO.md) owns milestone-level status, not per-agent scratch work.
-- [../kanban/github-issue-migration.md](../kanban/github-issue-migration.md) maps migrated file-board tickets to GitHub issues.
-- [../kanban/github-issue-workflow.md](../kanban/github-issue-workflow.md) owns the active issue-backed workflow.
-- [../kanban/README.md](../kanban/README.md) explains how to search the archived file-kanban branch.
+- [Design](DESIGN.md): simulation model, packed formats, and gameplay boundaries.
+- [Architecture](ARCHITECTURE.md): project ownership, actual execution paths, and compatibility seams.
+- [Source map](source-map.md): concepts mapped to code and tests.
+- [Validation](TEST_PLAN.md): portable checks, shader execution, native game QA, and evidence.
+- [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues): active backlog and acceptance state.
+- [Issue workflow](../kanban/github-issue-workflow.md): coordinating issue-backed work.
 
-## Role Instructions
+## Focused references
 
-- [../kanban/roles/coordinator.md](../kanban/roles/coordinator.md)
-- [../kanban/roles/worker.md](../kanban/roles/worker.md)
-- [../kanban/roles/qa.md](../kanban/roles/qa.md)
-- [../kanban/roles/tech-lead.md](../kanban/roles/tech-lead.md)
-- [../kanban/roles/researcher.md](../kanban/roles/researcher.md)
-- [../kanban/roles/process-reviewer.md](../kanban/roles/process-reviewer.md)
+- [Ash decisions](ash-simulation-model.md) and [steam decisions](steam-simulation-model.md).
+- [QA tooling](qa-tooling.md) and [Timberborn deploy pipeline](reference/timberborn-deploy-pipeline.md).
+- [Versioning](release/versioning.md) and [Workshop packaging/publication](release/workshop.md).
+- [Native API reference](reference/timberborn-native-api-reference.md), [API support requests](reference/native-api-support-requests.md), and [blueprint reference](reference/blueprint-reference.md).
+- [Timberborn UI](reference/timberborn-ui.md), [status icon design](reference/status-icon-design-language.md), and [debug panels](timberborn-debug-panels.md).
+- [Menu reference](timberborn-menu-coordinate-guide.md) and [bottom-menu reference](timberborn-bottom-menu-guide.md). Captured coordinates describe their recorded scene, not a current window.
 
-## Local Codex Skills
+## Design records and history
 
-- [../.codex/skills/kanban/SKILL.md](../.codex/skills/kanban/SKILL.md) coordinates GitHub issue work.
-- [../.codex/skills/delegate/SKILL.md](../.codex/skills/delegate/SKILL.md) guides assigned issue agents.
-- [../.codex/skills/timberborn-qa-utility/SKILL.md](../.codex/skills/timberborn-qa-utility/SKILL.md) guides Timberborn QA utility scripts and guarded UI automation.
+The [2026-09-04 archive](history/2026-09-04/README.md) preserves earlier design plans, release descriptions, milestone lists, handoffs, and detailed validation evidence. Their original observation dates remain intact. Archive dates do not renew old test results or authorize old procedural instructions.
 
-## Historical Material
-
-Historical file-kanban tickets, status symlinks, sprint charters, and evidence manifests live on branch `archive/file-kanban-2026-05-23`.
-
-Session-only prompt and checklist docs should not be added to this index. Put active assignment state in GitHub Issues and keep durable rationale in the design/reference docs above.
+Earlier file-kanban tickets and evidence manifests live on branch `archive/file-kanban-2026-05-23`; see the [kanban archive guide](../kanban/README.md). Active task state belongs in the worktree's ignored `CONTEXT.md`, with durable results moved into issues, PRs, or dated reports.
