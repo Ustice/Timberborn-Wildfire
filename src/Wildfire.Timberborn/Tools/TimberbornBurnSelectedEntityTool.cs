@@ -14,7 +14,7 @@ namespace Wildfire.Timberborn.Tools;
 
 public sealed class TimberbornBurnSelectedEntityTool : ITool, IToolDescriptor, IInputProcessor, ILoadableSingleton
 {
-    private const byte IgnitionHeat = TimberbornFireSystem.QaIgnitionHeat;
+    private const byte IgnitionHeat = TimberbornSustainedIgnitionScheduler.IgnitionHeat;
     private const string CursorKey = "DemolishResourcesCursor";
     private const string LargeCursorResourceName = "Wildfire.Timberborn.Assets.WildfireIgniteToolCursorLarge.png";
     private const string SmallCursorResourceName = "Wildfire.Timberborn.Assets.WildfireIgniteToolCursorSmall.png";

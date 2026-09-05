@@ -607,8 +607,8 @@ public sealed class TimberbornFireRuntime :
                 ? _beaverFieldExposureTelemetry.SelectQaStimulusTarget(RequireFireSystem().RequireInitializedGrid())
                 : null;
         TimberbornQaDeltaStimulusResult result = normalizedSelector == TimberbornQaFieldTargetSelectors.SelectedTree
-            ? RequireFireSystem().QueueQaSelectedTreeDeltaStimulus(_selectedTreeTargetProvider)
-            : RequireFireSystem().QueueQaDeltaStimulus(
+            ? RequireFireSystem().Qa.QueueQaSelectedTreeDeltaStimulus(_selectedTreeTargetProvider)
+            : RequireFireSystem().Qa.QueueQaDeltaStimulus(
                 normalizedSelector,
                 _burnDamageService?.States,
                 _explosiveInfrastructureTargetApi,
@@ -710,7 +710,7 @@ public sealed class TimberbornFireRuntime :
             throw new InvalidOperationException(
                 "QA building burnout stimulus requires a Timberborn pausable building target provider.");
         TimberbornQaBuildingBurnoutStimulusResult result =
-            RequireFireSystem().QueueBuildingBurnoutQaStimulus(targetProvider);
+            RequireFireSystem().Qa.QueueBuildingBurnoutQaStimulus(targetProvider);
         _logSink.Info(
             "wildfire_timberborn_qa_building_burnout_stimulus_queued " +
             $"cell_index={result.CellIndex} " +
@@ -728,7 +728,7 @@ public sealed class TimberbornFireRuntime :
     public TimberbornQaWaterSuppressionStimulusResult QueueWaterSuppressionStimulus(string targetSelector)
     {
         TimberbornQaWaterSuppressionStimulusResult result =
-            RequireFireSystem().QueueWaterSuppressionQaStimulus(targetSelector);
+            RequireFireSystem().Qa.QueueWaterSuppressionQaStimulus(targetSelector);
         _logSink.Info(
             "wildfire_timberborn_qa_water_suppression_queued " +
             $"target_selector={result.TargetSelector} " +
@@ -752,7 +752,7 @@ public sealed class TimberbornFireRuntime :
     public TimberbornQaAshWaterStimulusResult QueueAshWaterStimulus(string target)
     {
         TimberbornQaAshWaterStimulusResult result =
-            RequireFireSystem().QueueAshWaterQaStimulus(target);
+            RequireFireSystem().Qa.QueueAshWaterQaStimulus(target);
         _logSink.Info(
             "wildfire_timberborn_qa_ash_water_stimulus_queued " +
             $"target={result.Target} " +
@@ -777,7 +777,7 @@ public sealed class TimberbornFireRuntime :
     public TimberbornQaBurnDurationStimulusResult QueueBurnDurationStimulus(string target)
     {
         TimberbornQaBurnDurationStimulusResult result =
-            RequireFireSystem().QueueBurnDurationQaStimulus(target);
+            RequireFireSystem().Qa.QueueBurnDurationQaStimulus(target);
         _logSink.Info(
             "wildfire_timberborn_qa_burn_duration_stimulus_queued " +
             $"target={result.Target} " +
@@ -974,7 +974,7 @@ public sealed class TimberbornFireRuntime :
             visualFieldSurfaceState.SmokeHeightTelemetry ?? TimberbornSmokeHeightTelemetry.Empty;
         TimberbornGpuFieldRendererCounters gpuFieldRendererCounters = _gpuFieldRenderer.Counters;
         TimberbornPlayerFireAlertCounters alertCounters = _playerFireAlerts.Counters;
-        TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.BurnDurationProofState;
+        TimberbornQaBurnDurationProofState burnDurationProof = fireSystem.Qa.BurnDurationProofState;
         TimberbornBeaverFieldExposureSnapshot beaverExposure = _beaverFieldExposureTelemetry.LastSnapshot;
         TimberbornBeaverFieldBehaviorCounters beaverFieldBehaviorCounters = _beaverFieldBehaviorDispatcher.Counters;
         TimberbornBurnDamageRegistrationSummary burnDamageRegistrationSummary =
@@ -986,7 +986,7 @@ public sealed class TimberbornFireRuntime :
             TimberbornTreeBurnTargetClassifier.SummarizeRegisteredTargets(
                 _burnDamageService?.States.Values ?? Array.Empty<TimberbornBurnDamageTargetState>());
         TimberbornQaDeltaStimulusSustainedHeatState? sustainedHeatState =
-            fireSystem.QaDeltaStimulusSustainedHeatState;
+            fireSystem.Qa.QaDeltaStimulusSustainedHeatState;
         TimberbornSelectedCropTargetDiagnostics selectedCropDiagnostics =
             _selectedCropTargetProvider.LastDiagnostics;
         SyncAshReadModelFromSimulator(fireSystem.LastTick ?? 0);
