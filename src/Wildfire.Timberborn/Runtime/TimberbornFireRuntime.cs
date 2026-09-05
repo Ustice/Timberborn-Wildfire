@@ -160,8 +160,16 @@ public sealed class TimberbornFireRuntime :
         _selectedCropTargetProvider = new TimberbornSelectedCropTargetProvider(selectionService);
     }
 
+    internal TimberbornRuntimeInitialization Initialization { get; } = new();
+
+    public TimberbornRuntimeInitializationState InitializationState => Initialization.State;
+
+    public Exception? InitializationFailure => Initialization.Failure;
+
     public void Load()
     {
+        ResetRuntimeSession();
+        Initialization.Load();
         _isLoaded = true;
         LoadPersistentState();
         RunCompatibilityProbesIfNeeded();
@@ -177,6 +185,14 @@ public sealed class TimberbornFireRuntime :
     {
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
+        ResetRuntimeSession();
+        Initialization.Unload();
+        _logSink.Info("wildfire_timberborn_adapter_stopped");
+        _logSink.Info("wildfire_timberborn_runtime_unloaded");
+    }
+
+    private void ResetRuntimeSession()
+    {
         _fireSystem?.Dispose();
         _gpuIndirectRenderer?.Dispose();
         _gpuIndirectRenderer = null;
@@ -196,14 +212,30 @@ public sealed class TimberbornFireRuntime :
         _ashFieldSynchronizer.Clear();
         _initializingGrid = null;
         _burnDamageService = null;
+        _buildingBurnoutConsequenceApi = null;
+        _buildingBurnoutStimulusTargetProvider = null;
+        _cropBurnConsequenceApi = UnavailableTimberbornCropBurnConsequenceApi.Instance;
+        _treeBurnConsequenceApi = UnavailableTimberbornTreeBurnConsequenceApi.Instance;
+        _structureBurnDamageRollbackTargetApi = null;
+        _storedGoodBurnInventoryApi = null;
+        _storedGoodNativeBlastRadiusApi = null;
+        _explosiveInfrastructureTargetApi = null;
+        _explosiveInfrastructureHeatPulseSink = null;
+        _storedGoodContaminationPulseSink = null;
+        _detonatorFireSafetyTargetApi = null;
+        _tunnelFireTargetApi = null;
+        _pathInfrastructureFireTargetApi = null;
+        _powerInfrastructureFireTargetApi = null;
+        _waterInfrastructureFireTargetApi = null;
+        _pendingPersistenceSnapshot = null;
+        _fertileAshHarvestWalkFailures.Clear();
+        _debugVisualSink.Clear();
         _inventoryAdjuster = null;
         _autoDispatchDisabledReason = null;
         _compatibilityReport = TimberbornCompatibilityReport.Placeholder;
         _compatibilityProbesRan = false;
         _gameUpdateId = 0;
         _isLoaded = false;
-        _logSink.Info("wildfire_timberborn_adapter_stopped");
-        _logSink.Info("wildfire_timberborn_runtime_unloaded");
     }
 
     public void Save(ISingletonSaver singletonSaver)
@@ -229,6 +261,11 @@ public sealed class TimberbornFireRuntime :
 
     public void UpdateSingleton()
     {
+        if (InitializationState != TimberbornRuntimeInitializationState.Ready)
+        {
+            return;
+        }
+
         if (_dispatcher is null)
         {
             _gpuIndirectRenderer?.OnUpdate();
@@ -549,32 +586,6 @@ public sealed class TimberbornFireRuntime :
         }
 
         return RequireFireSystem().RegisterSustainedIgnitionChanges(ignitionChanges, source);
-    }
-
-    public void SkipInitializeForOversizedGrid(FireGrid grid, TimberbornWorldCellImportSummary worldImportSummary)
-    {
-        if (grid.CellCount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(grid), grid, "Fire grid cell count cannot be negative.");
-        }
-
-        _fireSystem?.Dispose();
-        _gpuIndirectRenderer?.Dispose();
-        _gpuIndirectRenderer = null;
-        _dispatcher = null;
-        _fireSystem = null;
-        _lastWorldImportSummary = worldImportSummary ?? throw new ArgumentNullException(nameof(worldImportSummary));
-        _autoDispatchDisabledReason =
-            $"map_too_large:cell_count={grid.CellCount}:limit={TimberbornAutoDispatchPolicy.CellLimit}";
-        _logSink.Warning(
-            "wildfire_timberborn_runtime_initialize_skipped " +
-            "reason=map_too_large " +
-            $"width={grid.Width} " +
-            $"height={grid.Height} " +
-            $"depth={grid.Depth} " +
-            $"cell_count={grid.CellCount} " +
-            $"limit={TimberbornAutoDispatchPolicy.CellLimit} " +
-            $"{_lastWorldImportSummary.StatusToken}");
     }
 
     public void RegisterMappedCellChanges(IEnumerable<TimberbornCellSource> sources)
@@ -908,7 +919,8 @@ public sealed class TimberbornFireRuntime :
         TimberbornFireSimParameterPreset currentPreset = _fireSimParameterPresetState.CurrentPreset;
         WildfireReleaseSettingsSnapshot releaseSnapshot = _releaseSettings.GetSnapshot();
 
-        if (_fireSystem is not { IsInitialized: true } fireSystem)
+        if (InitializationState != TimberbornRuntimeInitializationState.Ready ||
+            _fireSystem is not { IsInitialized: true } fireSystem)
         {
             return new TimberbornQaCommandState(
                 IsSimulatorIntegrated: false,
@@ -1929,7 +1941,8 @@ public sealed class TimberbornFireRuntime :
 
     private bool IsAutoDispatchEnabled()
     {
-        return IsWildfireEnabled() && _autoDispatchDisabledReason is null;
+        return Initialization.State == TimberbornRuntimeInitializationState.Ready &&
+            IsWildfireEnabled() && _autoDispatchDisabledReason is null;
     }
 
     private static string FormatNumber(int? value)

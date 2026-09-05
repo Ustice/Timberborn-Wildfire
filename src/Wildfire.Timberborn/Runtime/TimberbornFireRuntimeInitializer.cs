@@ -23,8 +23,6 @@ namespace Wildfire.Timberborn.Runtime;
 
 public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpdatableSingleton
 {
-    private const int RequiredStableEntitySnapshotCount = 1;
-
     private readonly TimberbornFireRuntime _runtime;
     private readonly ITimberbornFireSimulatorFactory _simulatorFactory;
     private readonly MapSize _mapSize;
@@ -41,10 +39,6 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     private readonly ExplosionOutcomeGatherer _explosionOutcomeGatherer;
     private readonly ExplosionService _explosionService;
     private readonly ITimberbornFireLogSink _logSink;
-    private bool _initialized;
-    private int _initializationAttempt;
-    private int _lastEntityCount;
-    private int _stableEntitySnapshotCount;
 
     public TimberbornFireRuntimeInitializer(
         TimberbornFireRuntime runtime,
@@ -84,152 +78,130 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
 
     public void Load()
     {
-        _initializationAttempt = 0;
-        _lastEntityCount = 0;
-        _stableEntitySnapshotCount = 0;
         _logSink.Info("wildfire_timberborn_runtime_initialize_deferred_until_update");
     }
 
     public void UpdateSingleton()
     {
-        if (_initialized)
+        TimberbornRuntimeInitialization initialization = _runtime.Initialization;
+        TimberbornRuntimeInitializationState previous = initialization.State;
+        initialization.Update(ReadGrid, IsWorldReady, InitializeRuntime);
+        if (initialization.State == previous)
         {
             return;
         }
 
-        _initializationAttempt++;
-        TryInitializeRuntime();
-    }
-
-    private void TryInitializeRuntime()
-    {
-        try
+        if (initialization.State == TimberbornRuntimeInitializationState.Unsupported)
         {
-            int entityCount = TimberbornEntityComponentCells.EntityCount(_entityRegistry);
-            if (entityCount == 0)
-            {
-                if (_initializationAttempt is 0 || _initializationAttempt % 30 == 0)
-                {
-                    _logSink.Info(
-                        "wildfire_timberborn_runtime_initialize_waiting_for_entities " +
-                        $"attempt={_initializationAttempt} " +
-                        $"entity_count={entityCount}");
-                }
-
-                return;
-            }
-            if (entityCount > 0)
-            {
-                _stableEntitySnapshotCount = entityCount == _lastEntityCount
-                    ? _stableEntitySnapshotCount + 1
-                    : 1;
-                _lastEntityCount = entityCount;
-                if (_stableEntitySnapshotCount < RequiredStableEntitySnapshotCount)
-                {
-                    _logSink.Info(
-                        "wildfire_timberborn_runtime_initialize_waiting_for_stable_entities " +
-                        $"attempt={_initializationAttempt} " +
-                        $"entity_count={entityCount} " +
-                        $"stable_snapshots={_stableEntitySnapshotCount} " +
-                        $"required_stable_snapshots={RequiredStableEntitySnapshotCount}");
-                    return;
-                }
-            }
-
-            Vector3Int terrainSize = _mapSize.TerrainSize;
-            FireGrid grid = new(terrainSize.x, terrainSize.y, terrainSize.z);
-            BlockObject[] blockObjects = TimberbornEntityComponentCells.BlockObjects(_entityRegistry).ToArray();
-            _logSink.Info(
-                "wildfire_timberborn_world_import_entity_snapshot " +
-                $"attempt={_initializationAttempt} " +
-                $"entity_count={entityCount} " +
-                $"block_object_count={blockObjects.Length} " +
-                $"sample_block_objects={TimberbornQaCommandBridge.FormatToken(TimberbornEntityComponentCells.FormatSampleBlockObjectNames(blockObjects))}");
-            TimberbornWorldCellImporter importer = new(CreateLiveWorldCellSourceProviders());
-            TimberbornWorldCellImportResult importResult = importer.Import(grid);
-            TimberbornCellSource[] sources = importResult.Sources.ToArray();
-
-            _logSink.Info(
-                $"wildfire_timberborn_runtime_initialize_started width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
-            if (!TimberbornAutoDispatchPolicy.IsAllowedCellCount(grid.CellCount))
-            {
-                _runtime.SkipInitializeForOversizedGrid(grid, importResult.Summary);
-                _logSink.Warning(
-                    "wildfire_timberborn_runtime_initialize_completed " +
-                    "status=skipped " +
-                    "reason=map_too_large " +
-                    $"width={grid.Width} " +
-                    $"height={grid.Height} " +
-                    $"depth={grid.Depth} " +
-                    $"cell_count={grid.CellCount} " +
-                    $"limit={TimberbornAutoDispatchPolicy.CellLimit} " +
-                    $"{importResult.Summary.StatusToken}");
-                return;
-            }
-
-            TimberbornPausableBuildingBurnoutConsequenceApi buildingBurnoutApi =
-                new(grid, _blockService);
-            TimberbornLiveBurnDamageTargets burnDamageTargets =
-                TimberbornLiveBurnDamageTargetCollector.Collect(_entityRegistry, grid);
-            TimberbornLiveCropBurnDamageTargets cropBurnDamageTargets =
-                TimberbornLiveCropBurnDamageTargetCollector.Collect(_entityRegistry, grid);
-            TimberbornBurnDamageService burnDamageService =
-                new(burnDamageTargets.DescriptorCatalog, logSink: _logSink);
-            burnDamageService.RegisterTargets(
-                grid,
-                burnDamageTargets.Registrations.Concat(cropBurnDamageTargets.Registrations),
-                cropBurnDamageTargets.Descriptors);
-            _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
-            _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
-            _runtime.AttachBurnDamageService(burnDamageService);
-            _runtime.AttachTreeBurnConsequenceApi(
-                new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink));
-            _runtime.AttachCropBurnConsequenceApi(
-                new TimberbornTextureCropBurnConsequenceApi(
-                    _entityRegistry,
-                    _logSink,
-                    blockService: _blockService,
-                    entityService: _entityService,
-                    registrations: cropBurnDamageTargets.Registrations));
-            _runtime.AttachStructureBurnDamageRollbackTargetApi(
-                new TimberbornStructureBurnDamageRollbackTargetApi(
-                    grid,
-                    _blockService,
-                    _logSink,
-                    entityService: _entityService,
-                    constructionFactory: _constructionFactory,
-                    terrainPhysicsService: _terrainPhysicsService,
-                    terrainDestroyer: _terrainDestroyer));
-            _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(
-                grid,
-                _blockService,
-                _entityRegistry));
-            _runtime.AttachInventoryAdjuster(new TimberbornQaInventoryAdjustmentApi(_entityRegistry));
-            _runtime.AttachStoredGoodNativeBlastRadiusApi(
-                new TimberbornExplosionServiceBlastRadiusApi(_explosionOutcomeGatherer, _explosionService));
-            _runtime.AttachExplosiveInfrastructureTargetApi(
-                new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));
-            _runtime.AttachDetonatorFireSafetyTargetApi(
-                new TimberbornDetonatorFireSafetyTargetApi(grid, _blockService));
-            _runtime.AttachTunnelFireTargetApi(new TimberbornTunnelFireTargetApi(grid, _blockService));
-            _runtime.AttachPathInfrastructureFireTargetApi(
-                new TimberbornPathInfrastructureFireTargetApi(grid, _blockService));
-            _runtime.AttachPowerInfrastructureFireTargetApi(
-                new TimberbornPowerInfrastructureFireTargetApi(grid, _blockService));
-            _runtime.AttachWaterInfrastructureFireTargetApi(
-                new TimberbornWaterInfrastructureFireTargetApi(grid, _blockService));
-            _runtime.Initialize(grid, sources, importResult.MaterialFields, importResult.Summary, _simulatorFactory);
-            _initialized = true;
-            _logSink.Info(
-                $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
+            FireGrid grid = initialization.Grid!.Value;
+            _logSink.Warning(
+                "wildfire_timberborn_runtime_initialize_completed status=unsupported reason=map_too_large " +
+                $"width={grid.Width} height={grid.Height} depth={grid.Depth} " +
+                $"limit={TimberbornAutoDispatchPolicy.CellLimit}");
         }
-        catch (Exception exception)
+        else if (initialization.Failure is { } exception)
         {
             _logSink.Warning(
                 "wildfire_timberborn_runtime_initialize_failed " +
                 $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)} " +
                 $"details={TimberbornQaCommandBridge.FormatToken(exception.ToString())}");
         }
+    }
+
+    private FireGrid ReadGrid()
+    {
+        Vector3Int terrainSize = _mapSize.TerrainSize;
+        return new FireGrid(terrainSize.x, terrainSize.y, terrainSize.z);
+    }
+
+    private bool IsWorldReady()
+    {
+        int entityCount = TimberbornEntityComponentCells.EntityCount(_entityRegistry);
+        if (entityCount > 0)
+        {
+            return true;
+        }
+
+        int checks = _runtime.Initialization.ReadinessChecks;
+        if (checks == 1 || checks % 30 == 0)
+        {
+            _logSink.Info(
+                "wildfire_timberborn_runtime_initialize_waiting_for_entities " +
+                $"attempt={checks} entity_count={entityCount}");
+        }
+
+        return false;
+    }
+
+    private void InitializeRuntime(FireGrid grid)
+    {
+        BlockObject[] blockObjects = TimberbornEntityComponentCells.BlockObjects(_entityRegistry).ToArray();
+        _logSink.Info(
+            "wildfire_timberborn_world_import_entity_snapshot " +
+            $"attempt={_runtime.Initialization.ReadinessChecks} " +
+            $"entity_count={TimberbornEntityComponentCells.EntityCount(_entityRegistry)} " +
+            $"block_object_count={blockObjects.Length} " +
+            $"sample_block_objects={TimberbornQaCommandBridge.FormatToken(TimberbornEntityComponentCells.FormatSampleBlockObjectNames(blockObjects))}");
+        TimberbornWorldCellImporter importer = new(CreateLiveWorldCellSourceProviders());
+        TimberbornWorldCellImportResult importResult = importer.Import(grid);
+        TimberbornCellSource[] sources = importResult.Sources.ToArray();
+
+        _logSink.Info(
+            $"wildfire_timberborn_runtime_initialize_started width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
+        TimberbornPausableBuildingBurnoutConsequenceApi buildingBurnoutApi =
+            new(grid, _blockService);
+        TimberbornLiveBurnDamageTargets burnDamageTargets =
+            TimberbornLiveBurnDamageTargetCollector.Collect(_entityRegistry, grid);
+        TimberbornLiveCropBurnDamageTargets cropBurnDamageTargets =
+            TimberbornLiveCropBurnDamageTargetCollector.Collect(_entityRegistry, grid);
+        TimberbornBurnDamageService burnDamageService =
+            new(burnDamageTargets.DescriptorCatalog, logSink: _logSink);
+        burnDamageService.RegisterTargets(
+            grid,
+            burnDamageTargets.Registrations.Concat(cropBurnDamageTargets.Registrations),
+            cropBurnDamageTargets.Descriptors);
+        _runtime.AttachBuildingBurnoutConsequenceApi(buildingBurnoutApi);
+        _runtime.AttachBuildingBurnoutStimulusTargetProvider(buildingBurnoutApi);
+        _runtime.AttachBurnDamageService(burnDamageService);
+        _runtime.AttachTreeBurnConsequenceApi(
+            new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink));
+        _runtime.AttachCropBurnConsequenceApi(
+            new TimberbornTextureCropBurnConsequenceApi(
+                _entityRegistry,
+                _logSink,
+                blockService: _blockService,
+                entityService: _entityService,
+                registrations: cropBurnDamageTargets.Registrations));
+        _runtime.AttachStructureBurnDamageRollbackTargetApi(
+            new TimberbornStructureBurnDamageRollbackTargetApi(
+                grid,
+                _blockService,
+                _logSink,
+                entityService: _entityService,
+                constructionFactory: _constructionFactory,
+                terrainPhysicsService: _terrainPhysicsService,
+                terrainDestroyer: _terrainDestroyer));
+        _runtime.AttachStoredGoodBurnInventoryApi(new TimberbornStockpileStoredGoodBurnInventoryApi(
+            grid,
+            _blockService,
+            _entityRegistry));
+        _runtime.AttachInventoryAdjuster(new TimberbornQaInventoryAdjustmentApi(_entityRegistry));
+        _runtime.AttachStoredGoodNativeBlastRadiusApi(
+            new TimberbornExplosionServiceBlastRadiusApi(_explosionOutcomeGatherer, _explosionService));
+        _runtime.AttachExplosiveInfrastructureTargetApi(
+            new TimberbornDynamiteExplosiveInfrastructureTargetApi(grid, _blockService));
+        _runtime.AttachDetonatorFireSafetyTargetApi(
+            new TimberbornDetonatorFireSafetyTargetApi(grid, _blockService));
+        _runtime.AttachTunnelFireTargetApi(new TimberbornTunnelFireTargetApi(grid, _blockService));
+        _runtime.AttachPathInfrastructureFireTargetApi(
+            new TimberbornPathInfrastructureFireTargetApi(grid, _blockService));
+        _runtime.AttachPowerInfrastructureFireTargetApi(
+            new TimberbornPowerInfrastructureFireTargetApi(grid, _blockService));
+        _runtime.AttachWaterInfrastructureFireTargetApi(
+            new TimberbornWaterInfrastructureFireTargetApi(grid, _blockService));
+        _runtime.Initialize(grid, sources, importResult.MaterialFields, importResult.Summary, _simulatorFactory);
+        _logSink.Info(
+            $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
     }
 
     private IEnumerable<ITimberbornWorldCellSourceProvider> CreateLiveWorldCellSourceProviders()
