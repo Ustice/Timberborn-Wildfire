@@ -376,6 +376,11 @@ public sealed class TimberbornFireRuntime :
                 fireSystem.Initialize(grid, sources, companionFields);
             }
 
+            if (!fireSystem.TryApplyPreset(_fireSimParameterPresetState.CurrentPreset))
+            {
+                throw new InvalidOperationException("The simulator cannot apply the selected fire preset.");
+            }
+
             RestorePersistentConsequenceAndAshState(_persistence.LoadedSnapshot, bindings);
             renderer = PrepareRenderer(fireSystem, grid);
             heatPulseSink.Attach(fireSystem);

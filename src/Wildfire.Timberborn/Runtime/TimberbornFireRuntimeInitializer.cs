@@ -91,7 +91,14 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             return;
         }
 
-        if (initialization.State == TimberbornRuntimeInitializationState.Unsupported)
+        if (initialization.State == TimberbornRuntimeInitializationState.Ready)
+        {
+            FireGrid grid = initialization.Grid!.Value;
+            _logSink.Info(
+                "wildfire_timberborn_runtime_initialize_completed status=ready " +
+                $"width={grid.Width} height={grid.Height} depth={grid.Depth}");
+        }
+        else if (initialization.State == TimberbornRuntimeInitializationState.Unsupported)
         {
             FireGrid grid = initialization.Grid!.Value;
             _logSink.Warning(
@@ -189,8 +196,6 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             PowerFire: new TimberbornPowerInfrastructureFireTargetApi(grid, _blockService),
             WaterFire: new TimberbornWaterInfrastructureFireTargetApi(grid, _blockService));
         _runtime.Initialize(grid, sources, importResult.MaterialFields, importResult.Summary, _simulatorFactory, bindings);
-        _logSink.Info(
-            $"wildfire_timberborn_runtime_initialize_completed width={grid.Width} height={grid.Height} depth={grid.Depth} {importResult.Summary.StatusToken}");
     }
 
     private IEnumerable<ITimberbornWorldCellSourceProvider> CreateLiveWorldCellSourceProviders()
