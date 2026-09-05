@@ -48,9 +48,9 @@ Some shader bindings retain `AtmosphericFields` and `CompanionFields` names for 
 
 ## Host interaction
 
-[FireSimContracts](../src/Wildfire.Core/FireSimContracts.cs) defines queued `FireSimChange` inputs and `CellDelta` outputs. Changes can replace a cell or modify selected cell and transport fields. The tick applies queued inputs, simulates, reads results, and notifies listeners. Changes registered by listeners wait for a subsequent tick.
+[FireSimContracts](../src/Wildfire.Core/FireSimContracts.cs) defines queued `FireSimChange` inputs and `CellDelta` outputs. Changes can replace a cell or modify selected cell and transport fields. The shared Core coordinator applies queued inputs, simulates, reads results, swaps buffers, and notifies listeners. Changes registered by listeners wait for a subsequent tick.
 
-A `CellDelta` contains an index and old/new packed cell values. It is not a complete transport snapshot. Consumers needing ash, smoke, or steam read the corresponding simulation fields. Renderers may smooth or aggregate these fields for presentation without authoring gameplay state.
+The GPU output reserves capacity for both external-change and simulation records. A cell can appear more than once in a tick. A `CellDelta` contains an index and old/new packed cell values. It is not a complete transport snapshot. Consumers needing ash, smoke, or steam read the corresponding simulation fields. Renderers may smooth or aggregate these fields for presentation without authoring gameplay state.
 
 ## Gameplay ownership
 

@@ -26,10 +26,18 @@ bun scripts/deploy-timberborn-mod.ts --plan-only --configuration Release --mods-
 ## Full .NET suite and native adapter build
 
 ```bash
+dotnet test tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj
 dotnet test Wildfire.slnx
 ```
 
-The [native test project](../tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj) references Timberborn and is separate from the portable tests. The full solution builds both, so incompatible game assemblies can block native tests without preventing portable validation. The adapter resolves managed assemblies from the local macOS Timberborn Steam install by default. A working SDK alone is insufficient.
+The [native test project](../tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj) references Timberborn and is separate from the portable tests. The full solution builds both, so incompatible game assemblies can block native tests without preventing portable validation. The adapter and native tests share [Timberborn.Managed.props](../build/Timberborn.Managed.props), defaulting to the local macOS Steam install. Override the managed assembly directory explicitly when needed:
+
+```bash
+dotnet test tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj \
+  -p:TimberbornManagedPath=/path/to/Timberborn/Managed
+```
+
+A working SDK alone is insufficient. Selecting another assembly directory does not establish platform support.
 
 Classify build/API incompatibility separately from failed assertions. Capture compiler errors and assembly/game versions when available. A portable pass does not compensate for an adapter compilation failure. See the [2026-09-04 review baseline](history/2026-09-04/review-baseline.md) for the earlier test arrangement and one dated failure, not a permanent environment rule.
 
@@ -61,7 +69,7 @@ dotnet run --project src/Wildfire.Cli -- \
   --output /tmp/wildfire-shader-review/output.capture.json --ticks 2
 ```
 
-The batchmode runner is another binding of the shader protocol. Shader success must be paired with native-path checks when the change affects the game upload layout, buffer capacity, or bindings.
+Core's checked-in tests exercise the shared GPU encoder, queue, and tick coordinator used by both simulator backends. The batchmode runner is another binding of the shader protocol. Shader success must be paired with native-path checks when the change affects the game upload layout, buffer capacity, or bindings.
 
 ## Live Timberborn validation
 
@@ -80,9 +88,17 @@ bun scripts/invoke-timberborn-command.ts qa-water-suppression-stimulus --wait=6 
 bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick --require-water-changed
 ```
 
-Correlate command response, advancing tick, fresh `Player.log`, and the specific world effect. Capture and inspect the whole scene for visual work. Counters establish execution; they do not establish rendering quality. For persistence changes, exercise save, reload, and the affected state rather than relying on serializer round trips alone.
+Correlate command response, advancing tick, fresh `Player.log`, and the specific world effect. Runtime initialization distinguishes waiting, ready, unsupported, and failed states; unsupported/failed worlds do not repeatedly import on every update. Reset/load deliberately when retesting changed initialization prerequisites. Capture and inspect the whole scene for visual work. Counters establish execution; they do not establish rendering quality. For persistence changes, exercise save, reload, and the affected state rather than relying on serializer round trips alone.
 
 If startup or transport fails, inspect process and log state before retrying. Distinguish game failure, tool failure, and a missing prerequisite. [QA tooling](qa-tooling.md) documents automation commands and optional reliability analysis; [UI references](reference/timberborn-ui.md) and [debug panels](timberborn-debug-panels.md) support targeted inspection. Old screenshots provide landmarks, not current coordinates.
+
+## Focused regression boundaries
+
+- GPU protocol changes: encoding of every supported override, ordered/capacity-bounded batches, failure-stage queue consumption, delta capacity, and actual shader captures.
+- Runtime initialization: wait/retry, reject oversized worlds before import, fail once, reset on load/unload, and dispose an unpublished candidate if setup fails.
+- Stimulus scheduling: user-tool and QA input timing, unrelated-change priority, reset, and successful-tick proof accounting. `sustained_ignition_dispatch_ticks` reports duration (default 12, slow preset 96), not fire simulation cadence.
+- Ash observation: read transport at most once per synchronized tick, preserve packed cells for persistence only, and verify transport-only changes reach gameplay consumers.
+- Native consequences: preserve consumed/produced/existing-stock accounting and validate entity rebuild outcomes on a disposable save. Unit tests and build success do not prove native rollback safety.
 
 ## Release validation
 
