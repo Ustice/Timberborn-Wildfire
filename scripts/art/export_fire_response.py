@@ -2,6 +2,7 @@
 Requires ~/repos/timbermesh at the revision recorded in integration.json.
 """
 import bpy, sys, json, math, zlib, struct
+sys.dont_write_bytecode = True
 from pathlib import Path
 from mathutils import Vector
 REPO=Path(__file__).resolve().parents[2]

@@ -7,8 +7,8 @@
       "BaseMetal.Folktails",
       "BaseWood_Brown.Folktails",
       "BaseWood_LightBrown.Folktails",
-      "DirtCommon",
       "Paper.IronTeeth",
+      "Plaster_White.IronTeeth",
       "ThatchedRoof.Folktails"
     ],
     "footprint": [
@@ -23,9 +23,11 @@
     "triangles": 8652,
     "nodes": 1,
     "materials": [
+      "BaseMetal.Folktails",
       "BaseMetal.IronTeeth",
       "BaseWood_DarkBrown.IronTeeth",
-      "DirtCommon",
+      "Plaster_Orange.IronTeeth",
+      "Plaster_White.IronTeeth",
       "RoofPlanks.IronTeeth"
     ],
     "footprint": [
@@ -55,9 +57,11 @@
     "triangles": 4208,
     "nodes": 1,
     "materials": [
+      "BaseMetal.Folktails",
       "BaseMetal.IronTeeth",
       "BaseWood_DarkBrown.IronTeeth",
-      "Paper.IronTeeth"
+      "Details.IronTeeth",
+      "Plaster_Orange.IronTeeth"
     ],
     "footprint": [
       1,
@@ -68,11 +72,13 @@
   },
   {
     "asset": "WardenHelmet",
-    "triangles": 1568,
+    "triangles": 1812,
     "nodes": 1,
     "materials": [
+      "BaseMetal.Folktails",
       "BaseMetal.IronTeeth",
-      "Paper.IronTeeth"
+      "Details.IronTeeth",
+      "Plaster_Orange.IronTeeth"
     ],
     "footprint": [
       1,
@@ -83,11 +89,11 @@
   },
   {
     "asset": "WardenCoat",
-    "triangles": 792,
+    "triangles": 2344,
     "nodes": 1,
     "materials": [
       "BaseMetal.IronTeeth",
-      "BaseWood_DarkBrown.IronTeeth",
+      "Details.IronTeeth",
       "Paper.IronTeeth"
     ],
     "footprint": [
@@ -95,16 +101,18 @@
       1,
       1
     ],
-    "height": 0.5402641161344945
+    "height": 0.6484993554186076
   },
   {
     "asset": "SmokeFan",
     "triangles": 1964,
     "nodes": 1,
     "materials": [
+      "BaseMetal.Folktails",
       "BaseMetal.IronTeeth",
       "BaseWood_DarkBrown.IronTeeth",
-      "DirtCommon",
+      "Plaster_Orange.IronTeeth",
+      "Plaster_White.IronTeeth",
       "RoofPlanks.IronTeeth"
     ],
     "footprint": [
@@ -119,7 +127,8 @@
     "triangles": 880,
     "nodes": 1,
     "materials": [
-      "DirtCommon"
+      "DirtCommon",
+      "Plaster_White.IronTeeth"
     ],
     "footprint": [
       1,

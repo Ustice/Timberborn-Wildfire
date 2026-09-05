@@ -10,12 +10,14 @@ FOLK = {
     'pale': 'BaseWood_LightBrown.Folktails', 'edge': 'BaseWood_Brown.Folktails',
     'thatch': 'ThatchedRoof.Folktails', 'rope': 'Paper.IronTeeth',
     'brass': 'BaseMetal.Folktails', 'metal': 'BaseMetal.Folktails',
-    'cloth': 'Paper.IronTeeth', 'stone': 'DirtCommon', 'earth': 'DirtCommon',
+    'cloth': 'Paper.IronTeeth', 'stone': 'Plaster_White.IronTeeth', 'earth': 'DirtCommon',
 }
 IRON = {key: 'BaseWood_DarkBrown.IronTeeth' for key in ('wood', 'plank', 'darkwood', 'edge')}
-IRON.update({key: 'BaseMetal.IronTeeth' for key in ('metal', 'iron', 'brass', 'glass', 'red', 'rust')})
-IRON.update({key: 'Paper.IronTeeth' for key in ('canvas', 'cloth', 'rope')})
-IRON.update(earth='DirtCommon', stone='DirtCommon', greenroof='RoofPlanks.IronTeeth')
+IRON.update({key: 'BaseMetal.IronTeeth' for key in ('metal', 'iron', 'glass')})
+IRON.update({key: 'Paper.IronTeeth' for key in ('rope',)})
+IRON.update(earth='DirtCommon', stone='Plaster_White.IronTeeth', greenroof='RoofPlanks.IronTeeth',
+            canvas='Details.IronTeeth', cloth='Details.IronTeeth', uniform='Details.IronTeeth',
+            red='Plaster_Orange.IronTeeth', rust='Plaster_Orange.IronTeeth', brass='BaseMetal.Folktails')
 
 
 def assign_native_materials(obj, mapping):
@@ -45,6 +47,16 @@ def assign_native_materials(obj, mapping):
             elif native.startswith('BaseMetal'):
                 # Flat sheet interior: exclude embossed circles, strips and borders.
                 u, v = .06 + a * .36, .57 + b * .36
+            elif native.startswith('Details'):
+                if source == 'uniform':
+                    # Plain navy fabric beside the faction banner emblem.
+                    u, v = .018 + a * .05, .59 + b * .33
+                else:
+                    # Sack cloth interior, excluding ties, folds and outline.
+                    u, v = .57 + a * .12, .56 + b * .18
+            elif native == 'Plaster_Orange.IronTeeth':
+                # Fine worn finish, avoiding large plaster pockmarks.
+                u, v = .12 + a * .10, .75 + b * .10
             elif native.startswith('Paper'):
                 # Plain canvas-like paper interior; avoids illustrated sheet seams.
                 u, v = .58 + a * .32, .08 + b * .32
@@ -58,7 +70,7 @@ def assign_native_materials(obj, mapping):
             elif native == 'DirtCommon':
                 u, v = .05 + a * .90, .05 + b * .90
             else:
-                # Thatch is a repeating field, so retain metric density.
+                # Full-field thatch and plaster, inset from the atlas boundary.
                 u, v = .05 + a * .90, .05 + b * .90
             assert 0 <= u <= 1 and 0 <= v <= 1, (obj.name, native, u, v)
             uv.data[index].uv = (u, v)

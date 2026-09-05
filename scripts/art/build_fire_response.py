@@ -139,24 +139,56 @@ def sprayer():
 
 def helmet():
     # Ear clearances are visual proposals pending native character fitting.
-    cylinder('Helmet brim',(0,0,.05),.30,.045,'brass')
+    # Annular brim and open hemisphere: a head can enter from below.
+    verts=[]
+    for z in (.028,.072):
+        for radius in (.205,.30):
+            verts += [(radius*math.cos(i*math.tau/16),radius*math.sin(i*math.tau/16),z) for i in range(16)]
+    faces=[]
+    for i in range(16):
+        j=(i+1)%16
+        faces += [(i,j,16+j,16+i),(32+i,48+i,48+j,32+j),
+                  (16+i,16+j,48+j,48+i),(i,32+i,32+j,j)]
+    mesh=bpy.data.meshes.new('Open helmet brim');mesh.from_pydata(verts,[],faces);mesh.update()
+    obj=bpy.data.objects.new('Helmet brim',mesh);bpy.context.collection.objects.link(obj);finish(obj,'Helmet brim','brass')
     bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=1,location=(0,0,.07))
-    obj=bpy.context.object; obj.scale=(.235,.25,.16); finish(obj,'Helmet crown','metal')
+    obj=bpy.context.object
+    import bmesh
+    bm=bmesh.new();bm.from_mesh(obj.data)
+    bmesh.ops.delete(bm,geom=[v for v in bm.verts if v.co.z < -1e-5],context='VERTS')
+    bm.to_mesh(obj.data);bm.free()
+    obj.scale=(.235,.25,.16);finish(obj,'Helmet crown','metal')
+    shell=obj.modifiers.new('Crown thickness','SOLIDIFY');shell.thickness=.055
     box('Crest',(0,0,.22),(.055,.35,.05),'brass')
     box('Front badge',(0,-.246,.13),(.10,.025,.10),'red')
 
 def coat():
-    # Hollow sleeveless shell; arm openings and rigging are separate integration work.
+    # Rounded, open garment with a flared hem, waist, shoulders and neck opening.
+    # Side faces stop below the shoulder yoke to leave real armholes.
+    levels=((0,.32,.215),(.26,.285,.21),(.43,.27,.19),(.55,.275,.175),(.62,.13,.12))
     verts=[]
-    for z,w,d in ((0,.32,.21),(.48,.24,.17),(.54,.13,.13)):
-        verts += [(-w,-d,z),(w,-d,z),(w,d,z),(-w,d,z)]
-    faces=[(k*4+i,k*4+(i+1)%4,(k+1)*4+(i+1)%4,(k+1)*4+i) for k in range(2) for i in range(4)]
-    mesh=bpy.data.meshes.new('Coat shell'); mesh.from_pydata(verts,[],faces); mesh.update()
-    obj=bpy.data.objects.new('Protective coat',mesh); bpy.context.collection.objects.link(obj); finish(obj,'Protective coat','cloth')
-    mod=obj.modifiers.new('Fabric thickness','SOLIDIFY'); mod.thickness=.018
-    box('Front placket',(0,-.205,.24),(.045,.025,.45),'edge')
-    for z in (.12,.24,.36): box('Fastener',(0,-.224,z),(.07,.025,.035),'brass')
-    for x in (-.18,.18): box('Utility pocket',(x,-.215,.15),(.12,.04,.14),'cloth')
+    for z,w,d in levels:
+        verts += [(x*w,y*d,z) for x,y in ((-.72,-1),(.72,-1),(1,-.6),(1,.6),(.72,1),(-.72,1),(-1,.6),(-1,-.6))]
+    faces=[]
+    for k in range(len(levels)-1):
+        for i in range(8):
+            if k>=2 and i in (2,6): continue
+            faces.append((k*8+i,k*8+(i+1)%8,(k+1)*8+(i+1)%8,(k+1)*8+i))
+    mesh=bpy.data.meshes.new('Tailored coat shell');mesh.from_pydata(verts,[],faces);mesh.update()
+    obj=bpy.data.objects.new('Protective coat',mesh);bpy.context.collection.objects.link(obj);finish(obj,'Protective coat','uniform')
+    mod=obj.modifiers.new('Fabric thickness','SOLIDIFY');mod.thickness=.012
+    tube('Front placket',[(0,-.225,0),(0,-.22,.26),(0,-.20,.43),(0,-.185,.54)],.018,'canvas')
+    for z,y in ((.13,-.232),(.27,-.224),(.40,-.207),(.51,-.195)):
+        box('Fastener',(0,y,z),(.065,.022,.022),'metal')
+    for x in (-.15,.15):
+        box('Utility pocket',(x,-.218,.18),(.13,.028,.12),'canvas')
+        box('Pocket flap',(x,-.238,.245),(.15,.023,.035),'canvas')
+    collar=[(x*.14,y*.13,.625) for x,y in ((-.72,-1),(.72,-1),(1,-.6),(1,.6),(.72,1),(-.72,1),(-1,.6),(-1,-.6),(-.72,-1))]
+    tube('Raised collar',collar,.024,'canvas')
+    for side in (-1,1):
+        tube('Armhole binding',[(side*.27,-.114,.43),(side*.275,-.105,.55),(side*.13,-.072,.62),(side*.13,.072,.62),(side*.275,.105,.55),(side*.27,.114,.43)],.012,'canvas')
+    for z in (.035,.06):
+        tube('Hem stitching',[(-.23,-.218,z),(0,-.223,z),(.23,-.218,z)],.006,'rope')
 
 def fan():
     box('Fan base',(0,0,.10),(1.4,1.1,.2),'stone')

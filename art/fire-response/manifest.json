@@ -31,14 +31,14 @@
     "name": "WardenHelmet",
     "file": "WardenHelmet.glb",
     "mesh_objects": 15,
-    "triangles": 808,
+    "triangles": 780,
     "status": "faction-style-draft"
   },
   {
     "name": "WardenCoat",
     "file": "WardenCoat.glb",
-    "mesh_objects": 13,
-    "triangles": 192,
+    "mesh_objects": 15,
+    "triangles": 624,
     "status": "faction-style-draft"
   },
   {

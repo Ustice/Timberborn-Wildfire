@@ -12,7 +12,7 @@ This reads the individual GLBs and writes `game-mod/`: eight native Timbermeshes
 
 ## Material and coordinate boundary
 
-The game exports intentionally use native material names verified in the installed 1.1 material inventory and faction material-collection blueprints. The preview appends the opposite faction's atlas material collection so both factions can render in one save. The original GLBs retain the authored colors and textures. `scripts/art/native_materials.py` assigns explicit atlas regions per component. Timber follows each component's long axis; metal excludes embossed atlas motifs; roof panels and battens use separate regions; canvas uses a plain Paper region; earth uses opaque DirtCommon. Every exported UV is checked to remain within 0–1, because out-of-range coordinates can sample neighboring textures in the game's combined atlas. The original GLBs are not rewritten by this pass.
+The game exports intentionally use native material names verified in the installed 1.1 material inventory and faction material-collection blueprints. The preview appends the opposite faction's atlas material collection so both factions can render in one save. The original GLBs retain the authored colors and textures. `scripts/art/native_materials.py` assigns explicit atlas regions per component. Timber follows each component's long axis; metal excludes embossed atlas motifs; roof panels and battens use separate regions; navy cloth and canvas use clean Details regions; orange equipment uses a fine Plaster_Orange region; stone uses Plaster_White; earth uses opaque DirtCommon. Every exported UV is checked to remain within 0–1, because out-of-range coordinates can sample neighboring textures in the game's combined atlas. The original GLBs are not rewritten by this pass.
 
 The official exporter converts Blender `(x,y,z)` into Unity `(-x,z,-y)`. Before export, each model is moved from its centered art origin into the positive footprint quadrant after conversion and raised to put its lowest point on the ground. The small gear displays use their original scale, not the enlarged overview scale.
 
@@ -40,7 +40,7 @@ The preview's first startup exposed a CSV header error, fixed to `ID,Text,Commen
 
 - Building silhouettes and overall scale are readable beside native faction models. The station is taller than the native Barrack and the bell taller than a single-storey Lodge; these proportions need art approval.
 - The first pass exposed generic UV islands sampling atlas details unintentionally. The refined pass replaces them with component projections and bounded atlas regions. The station now has consistent green roof planking, and wood/metal surfaces no longer sample arbitrary atlas motifs.
-- The berm now uses opaque DirtCommon for both packed earth and facing pieces. It reads as an earth barrier instead of timber; separate stone coloration remains an art refinement.
+- The berm uses opaque DirtCommon for packed earth and Plaster_White for facing pieces. Stone is visibly separate from the earth, and foundations share the same stone finish.
 - Gear renders at its actual export size and is small compared with buildings. It remains static ground-level equipment, not fitted or animated wearables.
 - Source-model ground centering and single merged mesh nodes work. Selection uses conservative box colliders; detailed collision and building construction behavior remain outside this preview.
 
@@ -48,6 +48,11 @@ The preview's first startup exposed a CSV header error, fixed to `ID,Text,Commen
 
 The updated eight meshes exported successfully and loaded through direct computer use. The review autosave retained the camera and paused state. Fire Berm and Smoke Fan selection were also checked. The Player log contains no exception or missing-material error, but reports `Too many atlases loaded (3)` for this combined-faction review setup. This preview is not a production atlas-budget validation.
 
-`screenshots/atlas-refined-comparison.jpg` shows the revised set with native references; `screenshots/station-atlas-refined.jpg` shows the corrected roof. Earlier screenshots remain as before-pass evidence. No native textures are redistributed. The current native palette makes the coat pale and helmet/sprayer gray; cloth shading, accent colors, stone differentiation and wearable fitting remain unfinished. Geometry is unchanged at 27,952 triangles across eight merged nodes.
+`screenshots/atlas-refined-comparison.jpg` shows the revised set with native references; `screenshots/station-atlas-refined.jpg` shows the corrected roof. Earlier screenshots remain as before-pass evidence. No native textures are redistributed. The completed art pass uses a tailored navy coat, canvas bindings, muted orange equipment, warm metal fittings and distinct pale stone. The helmet now has an annular brim and an open, thickened dome. Final export: 29,748 triangles across eight merged nodes. The additional geometry is concentrated in the coat and helmet; building geometry is unchanged. Wearable fitting remains unverified.
 
 Wildfire simulation remains disabled because of the separate 1.1 compatibility error. The preview remains open and paused.
+
+
+## Final art acceptance
+
+The complete set was regenerated, converted, reloaded and reviewed in the game from several angles. The final coat selection and close-up render were verified. `screenshots/final-art-comparison.jpg` records all eight assets and both native references; `screenshots/final-equipment-closeup.jpg` records the gear. The final Player log has no exception or missing-material error; the combined-faction atlas warning remains. The final visual pass is accepted for static presentation, with character fitting, animation and gameplay still outside this art preview.

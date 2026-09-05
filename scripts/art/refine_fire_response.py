@@ -10,7 +10,7 @@ def palette(name, color):
 
 for n,c in {'pale':(.58,.43,.24),'darkwood':(.14,.095,.052),'greenroof':(.17,.24,.16),
             'thatch':(.48,.39,.16),'iron':(.105,.13,.12),'rust':(.38,.12,.045),
-            'canvas':(.29,.27,.18),'rope':(.40,.30,.14),'glass':(.12,.23,.24)}.items(): palette(n,c)
+            'uniform':(.075,.105,.16),'canvas':(.29,.27,.18),'rope':(.40,.30,.14),'glass':(.12,.23,.24)}.items(): palette(n,c)
 
 # Original grain textures, embedded in GLBs; the native game textures stay untouched.
 for name in ('pale','darkwood','wood','plank','edge','thatch','greenroof'):
@@ -45,7 +45,6 @@ def refine(name):
     for obj in objs:
         mat=obj.data.materials[0].name
         if mat in ('wood','plank'): recolor(obj,'pale' if folk else 'darkwood')
-        if mat=='brass' and not folk: recolor(obj,'metal')
         if mat=='cloth' and not folk: recolor(obj,'canvas')
     if name=='FireBell_Folktails':
         for obj in objs:
@@ -63,6 +62,8 @@ def refine(name):
         # A working bell reads from the path through the rope and striker wheel.
         o=cylinder('Bell suspension axle',(0,0,1.72),.045,.56,'metal');o.rotation_euler[1]=math.pi/2
     elif name=='WardenStation_Ironteeth':
+        for obj in objs:
+            if obj.name.startswith('Steel post'): recolor(obj,'darkwood')
         for obj in objs:
             if obj.name.startswith(('Warden sign','Sign stripe')): obj.location.z-=.25
         for obj in objs:
@@ -115,19 +116,6 @@ def refine(name):
             a=i*math.tau/10
             cylinder('Helmet rivet',(.265*math.cos(a),.265*math.sin(a),.079),.012,.014,'metal')
         tube('Chin strap',[(-.24,0,.06),(-.16,-.02,-.12),(0,-.03,-.17),(.16,-.02,-.12),(.24,0,.06)],.016,'canvas')
-    elif name=='WardenCoat':
-        # Open arm holes cut in upper side panels; static garment still needs fitting.
-        shell=next(o for o in objs if o.name.startswith('Protective coat'))
-        import bmesh
-        bm=bmesh.new();bm.from_mesh(shell.data)
-        for face in list(bm.faces):
-            if abs(face.normal.x)>.6 and face.calc_center_median().z>.48: bm.faces.remove(face)
-        bm.to_mesh(shell.data);bm.free()
-        for x in (-.22,.22):
-            beam('Shoulder seam',(x,-.16,.47),(x,.16,.47),.027,'edge')
-            box('Pocket flap',(x*.82,-.244,.215),(.14,.03,.045),'edge')
-        for z in (.045,.075):
-            tube('Hem stitching',[(-.3,-.218,z),(.3,-.218,z)],.008,'rope')
     elif name=='SmokeFan':
         for obj in objs:
             if obj.name.startswith('Rotor blade'): recolor(obj,'greenroof')
