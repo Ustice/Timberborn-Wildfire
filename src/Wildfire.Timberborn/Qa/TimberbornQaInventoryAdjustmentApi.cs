@@ -217,7 +217,7 @@ public sealed class TimberbornQaInventoryAdjustmentApi : ITimberbornQaInventoryA
             int addedAmount = Math.Max(0, DesiredAmount - currentAmount);
             if (addedAmount > 0)
             {
-                Target.Inventory.GiveIgnoringCapacity(new GoodAmount(GoodId, addedAmount));
+                TimberbornInventoryMutations.RestoreExisting(Target.Inventory, new GoodAmount(GoodId, addedAmount));
             }
 
             return new QaInventoryAdjustmentResult(Target.TargetKey, GoodId, addedAmount);

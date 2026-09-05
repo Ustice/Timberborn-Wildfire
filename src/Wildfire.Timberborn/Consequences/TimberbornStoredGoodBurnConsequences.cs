@@ -729,7 +729,7 @@ public sealed class TimberbornStockpileStoredGoodBurnInventoryApi :
                 int amountToDestroy = Math.Min(availableAmount, stack.Amount);
                 if (amountToDestroy > 0)
                 {
-                    inventory.Take(new GoodAmount(stack.ResourceId, amountToDestroy));
+                    TimberbornInventoryMutations.Consume(inventory, new GoodAmount(stack.ResourceId, amountToDestroy));
                     destroyedItemCount += amountToDestroy;
                 }
             });

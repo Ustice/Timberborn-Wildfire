@@ -1157,7 +1157,7 @@ internal sealed class TimberbornFertileAshFieldHarvestExecutor : IExecutor
         }
 
         _removal = removal;
-        _goodCarrier.PutGoodsInHands(_target.GoodAmount, countAsAvailable: false);
+        TimberbornInventoryMutations.CarryHarvest(_goodCarrier, _target.GoodAmount);
         _carryingHarvest = true;
         _returningToFlag = true;
         _walkedHours = 0f;
@@ -1203,7 +1203,7 @@ internal sealed class TimberbornFertileAshFieldHarvestExecutor : IExecutor
         }
 
         TimberbornAshFieldCollectionRemoval removal = _removal.Value;
-        _inventory.GiveIgnoringCapacity(_target.GoodAmount);
+        TimberbornInventoryMutations.DepositHarvest(_inventory, _target.GoodAmount);
         _goodCarrier.EmptyHands();
         _completed = true;
         _logSink.Info(

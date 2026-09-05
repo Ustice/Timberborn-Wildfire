@@ -335,7 +335,7 @@ public sealed class TimberbornFertilizeDesignationService : ILoadableSingleton, 
                 InventoryTarget inventoryTarget = source!.Value;
                 if (decision.ShouldConsumeInventory)
                 {
-                    inventoryTarget.Inventory.Take(new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1));
+                    TimberbornInventoryMutations.Consume(inventoryTarget.Inventory, new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, 1));
                 }
 
                 if (decision.ShouldApplyFertileAsh)

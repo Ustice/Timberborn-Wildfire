@@ -219,7 +219,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornTreeBur
         {
             foreach (GoodAmount goodAmount in goodStack.Inventory.UnreservedTakeableStock().ToArray())
             {
-                goodStack.Inventory.Take(goodAmount);
+                TimberbornInventoryMutations.Consume(goodStack.Inventory, goodAmount);
             }
 
             TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
@@ -940,7 +940,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 
         foreach (GoodAmount goodAmount in goodStack.Inventory.UnreservedTakeableStock().ToArray())
         {
-            goodStack.Inventory.Take(goodAmount);
+            TimberbornInventoryMutations.Consume(goodStack.Inventory, goodAmount);
         }
 
         TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
@@ -1198,7 +1198,7 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornCropBur
 public sealed class TimberbornRuntimeBurnedTextureDeriver
 {
     private readonly ITimberbornFireLogSink _logSink;
-    private readonly Dictionary<int, Texture2D> _burnedTexturesBySourceId = new();
+    private readonly Dictionary<EntityId, Texture2D> _burnedTexturesBySourceId = new();
 
     public TimberbornRuntimeBurnedTextureDeriver(ITimberbornFireLogSink? logSink = null)
     {
@@ -1207,7 +1207,7 @@ public sealed class TimberbornRuntimeBurnedTextureDeriver
 
     public Texture2D? DeriveBurnedTexture(Texture sourceTexture, string textureLabel)
     {
-        int sourceId = sourceTexture.GetInstanceID();
+        EntityId sourceId = sourceTexture.GetEntityId();
         if (_burnedTexturesBySourceId.TryGetValue(sourceId, out Texture2D? cachedTexture))
         {
             return cachedTexture;

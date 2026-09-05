@@ -3,7 +3,6 @@ using System.Reflection;
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
 using Timberborn.ConstructionSites;
-using Timberborn.Coordinates;
 using Timberborn.EnterableSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Goods;
@@ -468,7 +467,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
     private readonly TerrainDestroyer? _terrainDestroyer;
     private readonly ITimberbornFireLogSink _logSink;
     private readonly TimberbornRuntimeBurnedTextureDeriver _textureDeriver;
-    private readonly Dictionary<int, Material> _originalStructureMaterialsByBurnedInstanceId = new();
+    private readonly Dictionary<EntityId, Material> _originalStructureMaterialsByBurnedInstanceId = new();
     private readonly Dictionary<string, Material> _originalStructureMaterialsByBurnedName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _burnedStructureCellIndexByStableId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _lastConstructionMaterialStockByStableId = new(StringComparer.Ordinal);
@@ -948,31 +947,31 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
                 throw new InvalidOperationException("Native construction rebuild requires Timberborn entity and construction services.");
             }
 
-            StructuralCollapseResult structuralCollapse = ApplyNativeStructuralCollapseDependents(blockObject, target);
-            BlockObject[] overlappingPathInfrastructure = structuralCollapse.RebuiltBlockObjectCount == 0
-                ? ResolveOverlappingPathInfrastructure(blockObject).ToArray()
-                : Array.Empty<BlockObject>();
-            if (!blockObject.TryGetComponent(out Building building) || building.Spec is null)
-            {
-                throw new InvalidOperationException($"Native construction rebuild cannot resolve building spec for {blockObject.Name}.");
-            }
-
+            TimberbornConstructionRebuild rebuild = TimberbornConstructionRebuild.Prepare(blockObject);
             StructureRuntimeSettingsSnapshot runtimeSettingsSnapshot = CaptureRuntimeSettings(blockObject);
-            int disabledRecoverableGoodProviders = DisableRecoverableGoodProviders(blockObject);
+            StructuralCollapsePlan collapsePlan = PrepareNativeStructuralCollapseDependents(blockObject);
+            OverlappingPathRebuild[] overlappingPathInfrastructure = collapsePlan.Dependents.Length == 0
+                ? ResolveOverlappingPathInfrastructure(blockObject)
+                    .Select(path => new OverlappingPathRebuild(path, TimberbornConstructionRebuild.Prepare(path)))
+                    .ToArray()
+                : Array.Empty<OverlappingPathRebuild>();
             bool isDistrictCenter = IsDistrictCenterName(blockObject.Name) || IsDistrictCenterName(target.SpecId);
             object? districtUpdater = isDistrictCenter
                 ? ResolveDistrictUpdater(ResolveDistrictService(blockObject))
                 : null;
-            Placement placement = blockObject.Placement;
 
+            // Resolve every creation request and required service before mutating the world.
+            // Native creation itself can still fail; this is preflight, not a transaction.
+            int disabledRecoverableGoodProviders = DisableRecoverableGoodProviders(blockObject);
+            StructuralCollapseResult structuralCollapse = ApplyNativeStructuralCollapseDependents(collapsePlan, target);
             _entityService.Delete(blockObject);
             if (districtUpdater is not null)
             {
                 FlushDistrictRemoval(districtUpdater);
             }
 
-            rebuiltConstructionSite = _constructionFactory.CreateAsUnfinished(building.Spec, placement);
-            rebuiltBlockObject = rebuiltConstructionSite.GetComponent<BlockObject>();
+            rebuiltBlockObject = rebuild.CreateUnfinished(_constructionFactory);
+            rebuiltConstructionSite = TryGetConstructionSite(rebuiltBlockObject, rebuiltBlockObject.Coordinates);
             overlappingPathConstructionPhaseCount = structuralCollapse.RebuiltBlockObjectCount +
                 RebuildOverlappingPathInfrastructureAsUnfinished(
                 target,
@@ -1001,13 +1000,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
         }
     }
 
-    private StructuralCollapseResult ApplyNativeStructuralCollapseDependents(
-        BlockObject compromisedBlockObject,
-        TimberbornStructureBurnDamageTarget target)
+    private StructuralCollapsePlan PrepareNativeStructuralCollapseDependents(BlockObject compromisedBlockObject)
     {
         if (_terrainPhysicsService is null)
         {
-            return StructuralCollapseResult.Empty;
+            return new StructuralCollapsePlan(Array.Empty<StructuralCollapseBlockObjectSnapshot>(), Array.Empty<Vector3Int>());
         }
 
         if (_entityService is null || _constructionFactory is null)
@@ -1036,33 +1033,40 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             .ThenBy(static coordinates => coordinates.y)
             .ToArray();
 
-        if (dependentSnapshots.Length == 0 && terrain.Length == 0)
-        {
-            return StructuralCollapseResult.Empty;
-        }
-
         if (terrain.Length > 0 && _terrainDestroyer is null)
         {
             throw new InvalidOperationException("Native structural collapse found terrain but TerrainDestroyer is unavailable.");
         }
 
-        int deletedBlockObjects = dependentSnapshots
+        return new StructuralCollapsePlan(dependentSnapshots, terrain);
+    }
+
+    private StructuralCollapseResult ApplyNativeStructuralCollapseDependents(
+        StructuralCollapsePlan plan,
+        TimberbornStructureBurnDamageTarget target)
+    {
+        if (plan.Dependents.Length == 0 && plan.Terrain.Length == 0)
+        {
+            return StructuralCollapseResult.Empty;
+        }
+
+        int deletedBlockObjects = plan.Dependents
             .OrderByDescending(static snapshot => snapshot.BaseZ)
             .ThenBy(static snapshot => snapshot.StableHash)
             .Select(snapshot =>
             {
-                _entityService.Delete(snapshot.BlockObject);
+                _entityService!.Delete(snapshot.BlockObject);
                 return 1;
             })
             .Sum();
-        int destroyedTerrain = terrain
+        int destroyedTerrain = plan.Terrain
             .Select(coordinates =>
             {
-                _terrainDestroyer?.DestroyTerrain(coordinates);
+                _terrainDestroyer!.DestroyTerrain(coordinates);
                 return 1;
             })
             .Sum();
-        int rebuiltBlockObjects = dependentSnapshots
+        int rebuiltBlockObjects = plan.Dependents
             .OrderBy(static snapshot => snapshot.BaseZ)
             .ThenBy(static snapshot => snapshot.StableHash)
             .Select(snapshot => RecreateStructuralCollapsePlan(target, snapshot) ? 1 : 0)
@@ -1090,8 +1094,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             RuntimeHelpers.GetHashCode(blockObject),
             blockObject.Name,
             blockObject,
-            building.Spec,
-            blockObject.Placement,
+            TimberbornConstructionRebuild.Prepare(blockObject),
             blockObject.BaseZ,
             CaptureRuntimeSettings(blockObject));
     }
@@ -1100,8 +1103,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
         TimberbornStructureBurnDamageTarget target,
         StructuralCollapseBlockObjectSnapshot snapshot)
     {
-        ConstructionSite constructionSite = _constructionFactory!.CreateAsUnfinished(snapshot.Spec, snapshot.Placement);
-        BlockObject rebuiltBlockObject = constructionSite.GetComponent<BlockObject>();
+        BlockObject rebuiltBlockObject = snapshot.Rebuild.CreateUnfinished(_constructionFactory!);
         snapshot.RuntimeSettings.ApplyTo(rebuiltBlockObject);
         if (!rebuiltBlockObject.IsUnfinished)
         {
@@ -1154,7 +1156,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
 
     private int RebuildOverlappingPathInfrastructureAsUnfinished(
         TimberbornStructureBurnDamageTarget structureTarget,
-        IReadOnlyList<BlockObject> pathInfrastructure)
+        IReadOnlyList<OverlappingPathRebuild> pathInfrastructure)
     {
         if (pathInfrastructure.Count == 0)
         {
@@ -1173,8 +1175,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
 
     private bool TryRebuildOverlappingPathInfrastructureAsUnfinished(
         TimberbornStructureBurnDamageTarget structureTarget,
-        BlockObject pathBlockObject)
+        OverlappingPathRebuild path)
     {
+        BlockObject pathBlockObject = path.BlockObject;
         if (pathBlockObject.IsUnfinished)
         {
             return true;
@@ -1185,16 +1188,9 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             return false;
         }
 
-        if (!pathBlockObject.TryGetComponent(out Building pathBuilding) || pathBuilding.Spec is null)
-        {
-            throw new InvalidOperationException($"Overlapping path construction rollback cannot resolve building spec for {pathBlockObject.Name}.");
-        }
-
         string pathSpecId = pathBlockObject.Name;
-        Placement placement = pathBlockObject.Placement;
         _entityService!.Delete(pathBlockObject);
-        ConstructionSite constructionSite = _constructionFactory!.CreateAsUnfinished(pathBuilding.Spec, placement);
-        BlockObject rebuiltPathBlockObject = constructionSite.GetComponent<BlockObject>();
+        BlockObject rebuiltPathBlockObject = path.Rebuild.CreateUnfinished(_constructionFactory!);
         if (!rebuiltPathBlockObject.IsUnfinished)
         {
             throw new InvalidOperationException($"Overlapping path construction rollback recreated {pathSpecId} outside unfinished state.");
@@ -1302,11 +1298,11 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
 
         if (delta > 0)
         {
-            constructionSite.Inventory.Take(new GoodAmount(resourceId, delta));
+            TimberbornInventoryMutations.Consume(constructionSite.Inventory, new GoodAmount(resourceId, delta));
         }
         else
         {
-            constructionSite.Inventory.GiveIgnoringCapacity(new GoodAmount(resourceId, -delta));
+            TimberbornInventoryMutations.RestoreExisting(constructionSite.Inventory, new GoodAmount(resourceId, -delta));
         }
 
         _logSink.Info(
@@ -1494,7 +1490,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             mainTexture = burnedTexture,
             hideFlags = HideFlags.HideAndDontSave,
         };
-        _originalStructureMaterialsByBurnedInstanceId[material.GetInstanceID()] = source;
+        _originalStructureMaterialsByBurnedInstanceId[material.GetEntityId()] = source;
         _originalStructureMaterialsByBurnedName[material.name] = source;
         return material;
     }
@@ -1508,7 +1504,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
         };
         SetColorIfPresent(material, "_BaseColor", new Color(0.18f, 0.16f, 0.14f, 1f));
         SetColorIfPresent(material, "_Color", new Color(0.18f, 0.16f, 0.14f, 1f));
-        _originalStructureMaterialsByBurnedInstanceId[material.GetInstanceID()] = source;
+        _originalStructureMaterialsByBurnedInstanceId[material.GetEntityId()] = source;
         _originalStructureMaterialsByBurnedName[material.name] = source;
         return material;
     }
@@ -1545,7 +1541,7 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             return material;
         }
 
-        if (_originalStructureMaterialsByBurnedInstanceId.TryGetValue(material.GetInstanceID(), out Material? original))
+        if (_originalStructureMaterialsByBurnedInstanceId.TryGetValue(material.GetEntityId(), out Material? original))
         {
             return original;
         }
@@ -1893,12 +1889,17 @@ public sealed class TimberbornStructureBurnDamageRollbackTargetApi :
             DestroyedTerrainCount: 0);
     }
 
+    private sealed record StructuralCollapsePlan(
+        StructuralCollapseBlockObjectSnapshot[] Dependents,
+        Vector3Int[] Terrain);
+
+    private sealed record OverlappingPathRebuild(BlockObject BlockObject, TimberbornConstructionRebuild Rebuild);
+
     private sealed record StructuralCollapseBlockObjectSnapshot(
         int StableHash,
         string SpecId,
         BlockObject BlockObject,
-        BuildingSpec Spec,
-        Placement Placement,
+        TimberbornConstructionRebuild Rebuild,
         int BaseZ,
         StructureRuntimeSettingsSnapshot RuntimeSettings);
 
