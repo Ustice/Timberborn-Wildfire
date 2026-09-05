@@ -227,3 +227,9 @@ Refresh this guide whenever Timberborn version, monitor, display resolution, UI 
 5. Manually verify at least `pause.load_game -> load_dialog`.
 6. Stop before destructive targets such as delete buttons, save overwrite actions, exiting to desktop, or loading a save unless explicitly assigned.
 7. Update this guide and the assigned ticket notes with screenshot paths, commands, pass/fail results, and boundaries.
+
+## Asset review capture refresh — 2026-09-04
+
+During the 1.1.2.4 experimental asset review, the screen-capture helper still produced 1920×1080 images and `main.continue` remained at (960,324). The old classifier incorrectly reported this main menu as unknown. Native CUA app snapshots use a different capture coordinate surface; do not mix their coordinates with the screen-capture helper.
+
+Jason explicitly directed this review toward direct computer use instead of the launch scripts. Fresh CUA screenshots successfully guided startup, the missing-mod confirmation for the disposable copy, mod selection, and camera inspection. Window activation changed the CUA capture geometry, so do not persist or reuse its pixel coordinates. Read the current screenshot before each action. Full-display evidence of the classifier mismatch: `/tmp/wildfire-qa/asset-preview-startup-fixed/2026-09-05T01-51-23-068Z/fast-frame-10.png`.

@@ -1,0 +1,26 @@
+{
+  "MaterialCollectionSpec": {
+    "CollectionId": "IronTeeth",
+    "Materials#append": [
+      "Materials/UberAtlas/Materials/Folktails/BaseMetal.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/BaseWood_Brown.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/BaseWood_LightBrown.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/BaseWood_White.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/BaseWood_Yellow.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/Details.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/IrregularPlanks_Brown.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/IrregularPlanks_LightBrown.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/IrregularPlanks_Mossy.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/IrregularPlanks_White.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/IrregularPlanks_Yellow.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/Moss.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/PaintedMetal.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/Paper.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/Plaster_White.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/PlasteredWood_White.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/Sand.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/ThatchedRoof.Folktails",
+      "Materials/UberAtlas/Materials/Folktails/WindowsAtlas.Folktails"
+    ]
+  }
+}

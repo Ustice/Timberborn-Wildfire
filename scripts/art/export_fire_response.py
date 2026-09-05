@@ -89,3 +89,12 @@ for faction in ('Folktails','IronTeeth'):
     (OUT/'TemplateCollections'/f'TemplateCollection.Buildings.{faction}.blueprint.json').write_text(json.dumps({'TemplateCollectionSpec':{'CollectionId':'Buildings.'+faction,'Blueprints#append':paths}},indent=2)+'\n')
 (SOURCE/'integration.json').write_text(json.dumps(report,indent=2)+'\n')
 print('WILDFIRE_TIMBERMESH_EXPORT_OK',len(report))
+
+# The preview intentionally renders both factions in one save. Load opposite-faction
+# atlas materials as well, including the native comparison models' materials.
+game=Path.home()/'Library/Application Support/Steam/steamapps/common/Timberborn/Timberborn.app/Contents/Resources/Data/StreamingAssets/Modding/Blueprints'
+(OUT/'MaterialCollections').mkdir(exist_ok=True)
+for faction,other in [('Folktails','IronTeeth'),('IronTeeth','Folktails')]:
+    collection=json.loads((game/'MaterialCollections'/f'MaterialCollection.{other}.blueprint.json').read_text())
+    paths=[p for p in collection['MaterialCollectionSpec']['Materials'] if p.startswith('Materials/UberAtlas/')]
+    (OUT/'MaterialCollections'/f'MaterialCollection.{faction}.blueprint.json').write_text(json.dumps({'MaterialCollectionSpec':{'CollectionId':faction,'Materials#append':paths}},indent=2)+'\n')
