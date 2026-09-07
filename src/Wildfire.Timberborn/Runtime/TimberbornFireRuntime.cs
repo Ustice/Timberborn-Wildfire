@@ -1694,7 +1694,11 @@ public sealed partial class TimberbornFireRuntime :
             return;
         }
 
-        TimberbornWildfirePersistenceCodec.RestoreConsequences(bindings.BurnDamageService, snapshot.Consequences);
+        var consequenceRestore = TimberbornWildfirePersistenceCodec.RestoreConsequences(bindings.BurnDamageService, snapshot.Consequences);
+        if (consequenceRestore.LegacyUnmatchedDamagedTargets > 0)
+            _logSink.Warning("wildfire_legacy_damage_identity_unrestorable " +
+                $"targets={consequenceRestore.LegacyUnmatchedDamagedTargets} policy=skip_unmatched_damage " +
+                "reason=runtime_object_hashes_cannot_identify_reloaded_entities");
         if (snapshot.FireSim?.TransportFields is { Count: > 0 } atmosphericFields &&
             atmosphericFields.Any(static packed => WildfireTransportFieldState.Unpack(packed).Ash > 0))
         {

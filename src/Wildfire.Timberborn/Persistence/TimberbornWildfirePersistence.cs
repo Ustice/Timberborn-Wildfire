@@ -25,6 +25,9 @@ public sealed record TimberbornBurnDamagePersistenceEntry(
     int DamageTaken,
     uint LastDamagedTick);
 
+public readonly record struct TimberbornConsequenceRestoreSummary(
+    int MatchedTargets, int UnmatchedTargets, int LegacyUnmatchedDamagedTargets);
+
 public sealed record TimberbornWildfirePersistenceSnapshot(
     int PersistenceVersion,
     TimberbornFireSimPersistenceSnapshot? FireSim,
@@ -216,13 +219,13 @@ public static class TimberbornWildfirePersistenceCodec
                     .ToArray());
     }
 
-    public static void RestoreConsequences(
+    public static TimberbornConsequenceRestoreSummary RestoreConsequences(
         TimberbornBurnDamageService? burnDamageService,
         TimberbornConsequencePersistenceSnapshot snapshot)
     {
         if (burnDamageService is null || snapshot is null)
         {
-            return;
+            return default;
         }
 
         Dictionary<TimberbornBurnDamageTargetKey, TimberbornBurnDamagePersistenceEntry> savedStates =
@@ -241,6 +244,10 @@ public static class TimberbornWildfirePersistenceCodec
                 : current)
             .ToArray();
         burnDamageService.RestoreState(restoredSnapshots);
+        var currentKeys = restoredSnapshots.Select(static current => current.TargetKey).ToHashSet();
+        var unmatched = savedStates.Where(pair => !currentKeys.Contains(pair.Key)).Select(static pair => pair.Value).ToArray();
+        return new TimberbornConsequenceRestoreSummary(savedStates.Count - unmatched.Length, unmatched.Length,
+            unmatched.Count(static entry => entry.DamageTaken > 0 && TimberbornBurnDamageIdentity.IsLegacyRuntimeHash(entry.TargetKey)));
     }
 
     private static TimberbornFireSimPersistenceSnapshot DecodeFireSim(IReadOnlyList<string> parts)

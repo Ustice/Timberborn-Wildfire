@@ -124,8 +124,8 @@ public static class TimberbornLiveBurnDamageTargetCollector
     private static IEnumerable<TargetBuildResult> CollectTargets(EntityRegistry entityRegistry, FireGrid grid)
     {
         IEnumerable<TargetBuildResult> storage = TimberbornEntityComponentCells.ComponentBlockObjects<Stockpile>(entityRegistry)
-            .Select((item, index) => BuildTarget(
-                $"stockpile:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.Component)}",
+            .Select(item => BuildTarget(
+                TimberbornBurnDamageIdentity.ForEntity(item.Component.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Stockpile),
                 item.BlockObject.Name,
                 TimberbornBurnDamageTargetKind.Structure,
                 TimberbornBurnMaterialKind.Constructed,
@@ -138,7 +138,7 @@ public static class TimberbornLiveBurnDamageTargetCollector
             .Where(static item => !TimberbornEntityComponentCells.IsInfrastructureName(item.BlockObject.Name))
             .Where(static item => !item.Component.TryGetComponent(out Stockpile _))
             .Select(item => BuildTarget(
-                $"structure:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject)}",
+                TimberbornBurnDamageIdentity.ForEntity(item.BlockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Structure),
                 item.BlockObject.Name,
                 TimberbornBurnDamageTargetKind.Structure,
                 TimberbornBurnMaterialKind.Constructed,
@@ -171,12 +171,12 @@ public static class TimberbornLiveBurnDamageTargetCollector
             TimberbornEntityComponentCells.ComponentBlockObjects<Cuttable>(entityRegistry)
                 .Where(static item => TimberbornEntityComponentCells.IsTreeFuelSource(item.BlockObject))
                 .ToArray();
-        HashSet<int> cuttableBlockHashes = cuttableTrees
-            .Select(static item => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject))
+        HashSet<Guid> cuttableEntityIds = cuttableTrees
+            .Select(static item => item.BlockObject.GetComponent<EntityComponent>().EntityId)
             .ToHashSet();
         IEnumerable<TargetBuildResult> cuttableTargets = cuttableTrees
             .Select(item => BuildResourceYieldTarget(
-                $"tree_cuttable:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item.BlockObject)}",
+                TimberbornBurnDamageIdentity.ForEntity(item.BlockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Tree),
                 item.BlockObject.Name,
                 TimberbornBurnDamageTargetKind.Tree,
                 TimberbornBurnMaterialKind.Wood,
@@ -186,10 +186,10 @@ public static class TimberbornLiveBurnDamageTargetCollector
                 ownershipPriority: 90));
         IEnumerable<TargetBuildResult> fallbackTargets = TimberbornEntityComponentCells.BlockObjects(entityRegistry)
             .Where(TimberbornEntityComponentCells.IsTreeFuelSource)
-            .Where(blockObject => !cuttableBlockHashes.Contains(
-                System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)))
+            .Where(blockObject => !cuttableEntityIds.Contains(
+                blockObject.GetComponent<EntityComponent>().EntityId))
             .Select(blockObject => BuildResourceYieldTarget(
-                $"tree_cuttable:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)}",
+                TimberbornBurnDamageIdentity.ForEntity(blockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Tree),
                 blockObject.Name,
                 TimberbornBurnDamageTargetKind.Tree,
                 TimberbornBurnMaterialKind.Wood,
@@ -304,19 +304,19 @@ public static class TimberbornLiveBurnDamageTargetCollector
 
     private static string StableInfrastructureId(BlockObject blockObject)
     {
-        int hash = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject);
+        Guid entityId = blockObject.GetComponent<EntityComponent>().EntityId;
         string name = blockObject.Name;
         if (IsPowerInfrastructureName(name))
         {
-            return $"power_infrastructure:{hash}";
+            return TimberbornBurnDamageIdentity.ForEntity(entityId, NativeBurnTargetFamily.PowerInfrastructure);
         }
 
         if (IsWaterInfrastructureName(name))
         {
-            return $"water_infrastructure:{hash}";
+            return TimberbornBurnDamageIdentity.ForEntity(entityId, NativeBurnTargetFamily.WaterInfrastructure);
         }
 
-        return $"path_infrastructure:{hash}";
+        return TimberbornBurnDamageIdentity.ForEntity(entityId, NativeBurnTargetFamily.PathInfrastructure);
     }
 
     private static IReadOnlyList<TimberbornBurnDamageResourceStack> InfrastructureResources(string name)

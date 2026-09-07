@@ -15,6 +15,7 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Ash decisions](ash-simulation-model.md) and [steam decisions](steam-simulation-model.md).
 - [Conditional ash receipts](reference/ash-collection-receipts.md): simulator-owned removal and host commit evidence.
 - [Native owned-walk stopping](reference/native-owned-walker-stop.md): path callbacks, scheduler timing and restored executor ownership.
+- [Persistent burn-damage identity](reference/burn-damage-identity.md): native entity keys, legacy saves and restoration evidence.
 - [QA tooling](qa-tooling.md) and [Timberborn deploy pipeline](reference/timberborn-deploy-pipeline.md).
 - [Versioning](release/versioning.md) and [Workshop packaging/publication](release/workshop.md).
 - [Native API reference](reference/timberborn-native-api-reference.md), [API support requests](reference/native-api-support-requests.md), and [blueprint reference](reference/blueprint-reference.md).
