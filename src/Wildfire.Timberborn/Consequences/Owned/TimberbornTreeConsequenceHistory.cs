@@ -11,6 +11,11 @@ public sealed partial class TimberbornTreeBurnConsequenceSink
         return new(owner.EntityId, _appliedYieldLossByTarget.GetValueOrDefault(key), _driedTargets.Contains(key),
             _killedTargets.Contains(key), _leftoverTargets.Contains(key), presentation);
     }
+    internal void RecordRehydratedPresentation(OwnedConsequenceOwner owner, OwnedPresentationResult result)
+    {
+        if (result is OwnedPresentationResult.Applied or OwnedPresentationResult.AlreadySatisfied)
+            _burnedVisualTargets.Add(owner.TargetKey);
+    }
     internal void RestoreProgress(OwnedConsequenceOwner owner, OwnedNaturalProgress progress)
     {
         var key = owner.TargetKey;

@@ -215,7 +215,8 @@ public static class TimberbornWildfirePersistenceCodec
                 TimberbornBeaverFieldBehaviorSnapshot.CurrentPersistenceVersion,
                 beaverBehaviorEntries),
             new TimberbornConsequencePersistenceSnapshot(burnDamageEntries), owned);
-        ValidateFirePayload(snapshot);
+        try { ValidateFirePayload(snapshot); }
+        catch (ArgumentException exception) { throw new FormatException("Inconsistent complete owned-world association.", exception); }
         return snapshot;
     }
 

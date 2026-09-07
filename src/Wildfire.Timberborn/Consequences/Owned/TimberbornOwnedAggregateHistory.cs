@@ -23,9 +23,12 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         var consumer = new TimberbornOwnedDeltaConsumer(registry, damage, effects, guard, Array.Empty<TimberbornOwnedBodyRegistration>(), catalog);
         foreach (var owner in history.Owners)
         {
-            if (owner.Retention == OwnedBodyRetention.RetiredNativeOwner && effects.Bodies.IsLive(owner.EntityId))
-                throw new ArgumentException("A retired saved owner cannot authorize a live native body.");
-            consumer._origins.Register(owner.EntityId, owner.Family, owner.TargetKey);
+            if (owner.Retention == OwnedBodyRetention.RetiredNativeOwner)
+            {
+                if (effects.Bodies.IsLive(owner.EntityId)) throw new ArgumentException("A retired saved owner cannot authorize a live native body.");
+                consumer._origins.Register(owner.EntityId, owner.Family, owner.TargetKey);
+            }
+            else consumer.Register(new(owner.EntityId, owner.Family));
         }
         var owners = history.Owners.ToDictionary(owner => owner.EntityId);
         foreach (var progress in history.Natural)

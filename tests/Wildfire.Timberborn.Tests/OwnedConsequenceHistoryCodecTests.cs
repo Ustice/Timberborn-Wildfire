@@ -57,6 +57,37 @@ public sealed class OwnedConsequenceHistoryCodecTests
         Assert.Throws<ArgumentException>(() => new OwnedConsequenceOwner(owner.EntityId, owner.Family, OwnedBodyRetention.RetainedBody, null));
         Assert.Throws<ArgumentException>(() => new OwnedConsequenceOwner(owner.EntityId, owner.Family, OwnedBodyRetention.RetiredNativeOwner, owner.Profile));
     }
+    [Fact]
+    public void NaturalProgressAndAllDefinitionFieldsRoundtripWithoutRendererAppliedState()
+    {
+        var source = Fixture(); var material=source.OwnedMaterial!; var id=material.History!.Owners.Single().EntityId;
+        var profile = new OwnedBodyAccountingProfile("Pine",TimberbornBurnDamageTargetKind.Tree,TimberbornBurnMaterialKind.Wood,
+            120,12,3,["Unknown"],["Log"],new("Pine","tree",12,120,3,true,true,true),[new("Log",10)],[new("Plank",2)]);
+        var history=new TimberbornOwnedConsequenceSnapshot([new(id,NativeBurnTargetFamily.Tree,OwnedBodyRetention.RetainedBody,profile)],
+            [new(id,2,true,true,true,OwnedCharredPresentation.BurnedLeftover)],[]);
+        source=source with { OwnedMaterial=new(material.CaptureSimulation(),material.Bindings,history),
+            Consequences=new([new(history.Owners.Single().TargetKey.StableId,36,35)]) };
+        var restored=TimberbornWildfirePersistenceCodec.Decode(TimberbornWildfirePersistenceCodec.Encode(source)).OwnedMaterial!.History!;
+        Assert.Equivalent(profile,restored.Owners.Single().Profile!,strict:true);
+        var progress=restored.Natural.Single();
+        Assert.Equal(2,progress.AppliedYieldLoss); Assert.True(progress.DryRequestSatisfied);
+        Assert.True(progress.DeathRequestSatisfied); Assert.True(progress.LeftoverRequestSatisfied);
+        Assert.Equal(OwnedCharredPresentation.BurnedLeftover,progress.DesiredPresentation);
+    }
+    [Theory]
+    [InlineData("truncated")][InlineData("fraction")][InlineData("trailing")]
+    public void MalformedNewHistoryPreservesOriginalEncoding(string mode)
+    {
+        var encoded=TimberbornWildfirePersistenceCodec.Encode(Fixture()); var lines=encoded.Split('\n');
+        var bytes=Convert.FromBase64String(lines[1].Split('\t')[1]);
+        if(mode=="truncated") bytes=bytes[..^1];
+        else if(mode=="fraction") BitConverter.GetBytes(2).CopyTo(bytes,bytes.Length-5);
+        else bytes=bytes.Concat(new byte[]{0}).ToArray();
+        lines[1]="OWNED\t"+Convert.ToBase64String(bytes); var malformed=string.Join("\n",lines);
+        Assert.Throws<FormatException>(()=>TimberbornWildfirePersistenceCodec.Decode(malformed));
+        var runtime=new TimberbornRuntimePersistence(); runtime.Load(()=>malformed);
+        Assert.Equal(malformed,runtime.EncodeForSave(TimberbornRuntimeInitializationState.Ready,()=>throw new Exception("not invoked")));
+    }
     internal static TimberbornWildfirePersistenceSnapshot Fixture()
     {
         var source = OwnedMaterialPersistenceTests.Fixture(); var material = source.OwnedMaterial!;

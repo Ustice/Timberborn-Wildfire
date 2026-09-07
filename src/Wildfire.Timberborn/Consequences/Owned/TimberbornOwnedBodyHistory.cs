@@ -10,7 +10,25 @@ public sealed partial class TimberbornBurnDamageService
             descriptor.ResourceYields, descriptor.ConstructionResources);
     }
 
-    internal void RestoreOwnedBodyHistory(TimberbornOwnedConsequenceSnapshot history, TimberbornConsequencePersistenceSnapshot damage)
+    internal TimberbornBurnDamageService CreateOwnedRestoredCopy(TimberbornOwnedConsequenceSnapshot history,
+        TimberbornConsequencePersistenceSnapshot damage)
+    {
+        var copy = new TimberbornBurnDamageService(_descriptorCatalog, _capacityCalculator, _logSink);
+        copy._dynamicDescriptorsBySpecId = new(_dynamicDescriptorsBySpecId, StringComparer.Ordinal);
+        var states = _states.ToDictionary(pair => pair.Key, pair => pair.Value with
+        {
+            OwnedCellIndices = pair.Value.OwnedCellIndices.ToArray(),
+            MissingResourceIds = pair.Value.MissingResourceIds.ToArray(),
+            AccountedResourceIds = pair.Value.AccountedResourceIds.ToArray(),
+        });
+        var registrations = new Dictionary<TimberbornBurnDamageTargetKey, RegisteredTarget>(_registrations);
+        if (_grid is { } grid) copy.PublishRegistration(grid, registrations, states,
+            Array.Empty<TimberbornBurnDamageTargetKey>(), reset: true);
+        copy.RestoreOwnedBodyHistory(history, damage);
+        return copy;
+    }
+
+    private void RestoreOwnedBodyHistory(TimberbornOwnedConsequenceSnapshot history, TimberbornConsequencePersistenceSnapshot damage)
     {
         var retained = history.Owners.Where(owner => owner.Retention == OwnedBodyRetention.RetainedBody).ToArray();
         if (_states.Count != retained.Length || retained.Any(owner => !_states.ContainsKey(owner.TargetKey) ||

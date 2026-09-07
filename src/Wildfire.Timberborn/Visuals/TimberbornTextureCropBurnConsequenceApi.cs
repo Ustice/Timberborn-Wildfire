@@ -14,7 +14,7 @@ using UnityEngine;
 namespace Wildfire.Timberborn.Visuals;
 
 /// <summary>Exact native crop actions. Calls that mutate resources require the shared outer resource guard.</summary>
-public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornLiveCropBurnConsequenceApi
+public sealed partial class TimberbornTextureCropBurnConsequenceApi : ITimberbornLiveCropBurnConsequenceApi
 {
     private readonly EntityRegistry _entities;
     private readonly EntityService _entityService;

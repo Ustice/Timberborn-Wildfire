@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace Wildfire.Timberborn.Visuals;
 
-public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTreeBurnConsequenceApi
+public sealed partial class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTreeBurnConsequenceApi
 {
     private static readonly string[] BurnedTexturePropertyNames = { "_MainTex", "_BaseMap" };
     private static readonly string[] TintPropertyNames = { "_Color", "_BaseColor" };
@@ -26,10 +26,19 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
         EntityRegistry entityRegistry,
         ITimberbornFireLogSink? logSink = null,
         TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null)
+        : this(entityRegistry, logSink, textureDeriver, restoreLegacyLeftovers: true) { }
+
+    public static TimberbornTextureTreeBurnConsequenceApi CreateOwned(EntityRegistry entityRegistry,
+        ITimberbornFireLogSink? logSink = null, TimberbornRuntimeBurnedTextureDeriver? textureDeriver = null) =>
+        new(entityRegistry, logSink, textureDeriver, restoreLegacyLeftovers: false);
+
+    private TimberbornTextureTreeBurnConsequenceApi(EntityRegistry entityRegistry, ITimberbornFireLogSink? logSink,
+        TimberbornRuntimeBurnedTextureDeriver? textureDeriver, bool restoreLegacyLeftovers)
     {
         _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
         _textureDeriver = textureDeriver ?? new TimberbornRuntimeBurnedTextureDeriver(_logSink);
         _entities = entityRegistry ?? throw new ArgumentNullException(nameof(entityRegistry));
+        if (!restoreLegacyLeftovers) return;
         // Restore visual presentation only. This scan is never an authorization cache for future actions.
         foreach (BlockObject blockObject in TimberbornEntityComponentCells.BlockObjects(_entities)
             .Where(blockObject => TimberbornEntityComponentCells.IsTreeName(blockObject.Name)))

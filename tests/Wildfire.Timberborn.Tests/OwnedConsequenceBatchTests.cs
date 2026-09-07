@@ -145,7 +145,7 @@ public sealed class OwnedConsequenceBatchTests
 
     private static TimberbornBurnDamageTargetKey Key(Guid id) => new(TimberbornBurnDamageIdentity.ForEntity(id,
         Families[Array.IndexOf(Ids, id)]));
-    private sealed class Fixture
+    internal sealed class Fixture
     {
         internal readonly TimberbornNativeMaterialRegistry Registry = new(Grid, []);
         internal readonly NativeResourceTransaction Guard = new();
@@ -176,7 +176,7 @@ public sealed class OwnedConsequenceBatchTests
             PackedCell.Pack(15, 10, 3, 0, 0, 1), PackedCell.Pack(15 - loss, 10, 3, 0, 0, 1),
             Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId);
     }
-    private sealed class NativeFake : ITimberbornOwnedBodyLiveness, ITimberbornLiveTreeBurnConsequenceApi,
+    internal sealed class NativeFake : ITimberbornOwnedBodyLiveness, ITimberbornLiveTreeBurnConsequenceApi,
         ITimberbornLiveCropBurnConsequenceApi, ITimberbornOwnedStorageInventoryApi, ITimberbornStoredGoodHazardConsequenceSink, ITimberbornFireLogSink
     {
         internal readonly HashSet<Guid> Live = [.. Ids];
@@ -188,13 +188,15 @@ public sealed class OwnedConsequenceBatchTests
         internal Action? AfterTree;
         internal int DamagePasses;
         internal int TreeMutations;
+        internal int TreeYieldReceipt;
         internal readonly List<TimberbornCropBurnConsequenceStatus> CropResults = [];
         public bool IsLive(Guid id) => Live.Contains(id);
         public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence call)
         {
             TreeCalls.Add(call);
             if (!IsLive(call.EntityId)) return new(TimberbornTreeBurnConsequenceStatus.NotLive);
-            if (call.Kind == TimberbornTreeBurnConsequenceKind.ReduceYield) return new(TimberbornTreeBurnConsequenceStatus.Unavailable);
+            if (call.Kind == TimberbornTreeBurnConsequenceKind.ReduceYield) return TreeYieldReceipt > 0 ?
+                new(TimberbornTreeBurnConsequenceStatus.Applied, YieldLost: Math.Min(TreeYieldReceipt, call.YieldLost)) : new(TimberbornTreeBurnConsequenceStatus.Unavailable);
             TreeMutations++;
             AfterTree?.Invoke();
             return new(TimberbornTreeBurnConsequenceStatus.Applied);

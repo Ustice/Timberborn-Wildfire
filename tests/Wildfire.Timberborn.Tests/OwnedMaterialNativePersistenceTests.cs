@@ -4,8 +4,10 @@ namespace Wildfire.Timberborn.Tests;
 
 public sealed class OwnedMaterialNativePersistenceTests
 {
-    [Fact]
-    public void ActualNativeSingletonSaverAndObjectLoaderPreserveTheSinglePairedPayload()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActualNativeSingletonSaverAndObjectLoaderPreserveTheSinglePairedPayload(bool completeHistory)
     {
         using var native = new NativeManagedTestContext();
         Type Type(string assembly, string name) => native.LoadNative(assembly).GetType(assembly + "." + name)!;
@@ -17,7 +19,7 @@ public sealed class OwnedMaterialNativePersistenceTests
         var saver = NativeInjuryFixture.Call(singletonSaver, "GetSingleton", singletonKey)!;
         var propertyType = Type("Timberborn.Persistence", "PropertyKey`1").MakeGenericType(typeof(string));
         var property = Activator.CreateInstance(propertyType, "Snapshot")!;
-        string encoded = TimberbornWildfirePersistenceCodec.Encode(OwnedMaterialPersistenceTests.Fixture());
+        string encoded = TimberbornWildfirePersistenceCodec.Encode(completeHistory ? OwnedConsequenceHistoryCodecTests.Fixture() : OwnedMaterialPersistenceTests.Fixture());
         NativeInjuryFixture.Call(saver, "Set", property, encoded);
         var serialized = NativeInjuryFixture.Call(world, "GetSingleton", "WildfireRuntime")!;
         var loader = New("Timberborn.Persistence", "ObjectLoader", serialized);
@@ -26,6 +28,8 @@ public sealed class OwnedMaterialNativePersistenceTests
         var restored = TimberbornWildfirePersistenceCodec.Decode(loaded).OwnedMaterial!;
         Assert.Equal((uint)7, restored.CaptureSimulation().MaterialAuthority.Archives.Single().Identity.TargetId);
         Assert.Equal(3, restored.Bindings.Entities.Single().Slots.Count);
+        Assert.Equal(completeHistory, restored.HistoryCapability == OwnedConsequenceHistoryCapability.Complete);
+        if (completeHistory) Assert.Equal(1, restored.History!.StorageCredits.Single().FractionalBudget);
         // This executes native managed serialization, not world file creation or GPU/native world publication.
     }
 }
