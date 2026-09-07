@@ -3,7 +3,7 @@ using Wildfire.Core;
 namespace Wildfire.Timberborn.Resources;
 
 /// <summary>Session safety around the synchronous simulator/stock commit. No inventory is duplicated here.</summary>
-public sealed class NativeResourceTransaction
+public sealed class NativeResourceTransaction : INativeResourceMutationGuard
 {
     private bool _delivering;
     public bool IsIndeterminate { get; private set; }

@@ -4,7 +4,7 @@ using Wildfire.Core;
 namespace Wildfire.Timberborn.Resources;
 
 /// <summary>Pending jobs remain in native executors. Only one resource conversion enters an owned synchronous GPU step.</summary>
-public sealed class NativeResourceCoordinator
+public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
 {
     private readonly List<WardenExecutor> _wardens = new();
     private IFireSimAshCollectionSimulator? _simulator;
