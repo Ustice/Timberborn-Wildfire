@@ -677,16 +677,9 @@ public sealed class UnityComputeFireSimulatorTests
             dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
 
         dispatcher.ThrowOnKernelName = null;
-        simulator.Tick();
+        Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        Assert.Equal(2, dispatcher.Dispatches.Count);
 
-        Assert.Equal(
-            [
-                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
-                UnityComputeFireSimulator.FullGridKernelName,
-                UnityComputeFireSimulator.FullGridKernelName,
-            ],
-            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
-        Assert.Equal(2u, dispatcher.Dispatches[^1].Tick);
     }
 
     [Fact]

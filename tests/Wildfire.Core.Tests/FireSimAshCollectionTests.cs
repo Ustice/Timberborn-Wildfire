@@ -100,6 +100,8 @@ public sealed class FireSimAshCollectionTests
             step.TryCollectAsh(new Backend(), new(0, 1), _ => throw failure));
         Assert.Equal(FireSimStepInputOutcome.Indeterminate, error.Outcome);
         Assert.Same(failure, error.InnerException);
+        Assert.Throws<InvalidOperationException>(() => step.Tick(new Backend()));
+        step = new FireSimStepCoordinator(1, 1);
         step.Subscribe(new Listener(() => throw failure));
         int goods = 0;
         error = Assert.Throws<FireSimStepInputException>(() =>

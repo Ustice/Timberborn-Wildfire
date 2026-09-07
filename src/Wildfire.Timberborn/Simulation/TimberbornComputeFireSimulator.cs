@@ -450,7 +450,7 @@ public interface ITimberbornConfigurableFireSimParameters
     void UpdateParameters(FireSimParameters parameters);
 }
 
-public sealed class TimberbornComputeFireSimulator :
+public sealed partial class TimberbornComputeFireSimulator :
     IFireSimAshCollectionSimulator,
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
@@ -477,6 +477,7 @@ public sealed class TimberbornComputeFireSimulator :
     private readonly ITimberbornFireLogSink _logSink;
     private readonly ITimberbornGpuVisualFieldSurface _visualFieldSurface;
     private readonly FireSimStepCoordinator _step;
+    private readonly uint _seed;
     private readonly ComputeBuffer _currentCells;
     private readonly ComputeBuffer _nextCells;
     private readonly ComputeBuffer _externalChanges;
@@ -557,6 +558,14 @@ public sealed class TimberbornComputeFireSimulator :
         FireSimParameters parameters,
         ReadOnlySpan<WildfireMaterialField> materialFields,
         ITimberbornWindProvider windProvider)
+        : this(grid, initialCells, shader, logSink, visualFieldSurface, parameters, materialFields, windProvider, null)
+    {
+    }
+
+    private TimberbornComputeFireSimulator(
+        FireGrid grid, ReadOnlySpan<ushort> initialCells, ComputeShader shader, ITimberbornFireLogSink logSink,
+        ITimberbornGpuVisualFieldSurface visualFieldSurface, FireSimParameters parameters,
+        ReadOnlySpan<WildfireMaterialField> materialFields, ITimberbornWindProvider windProvider, FireSimSnapshot? restored)
     {
         if (grid.CellCount <= 0)
         {
@@ -587,8 +596,9 @@ public sealed class TimberbornComputeFireSimulator :
             ? Enumerable.Repeat(WildfireMaterialField.Empty, grid.CellCount).ToArray()
             : materialFields.ToArray();
         FireSimMaterialIdentity[] initialMaterial = materialValues.Select((field, cell) =>
-            new FireSimMaterialIdentity(field.TargetId, field.TargetId == 0 ? 0u : checked((uint)cell + 1))).ToArray();
-        _step = new FireSimStepCoordinator(grid.CellCount, grid.CellCount, initialMaterial);
+            new FireSimMaterialIdentity(field.TargetId, restored?.SlotIds[cell] ?? (field.TargetId == 0 ? 0u : checked((uint)cell + 1)))).ToArray();
+        _step = restored is null ? new FireSimStepCoordinator(grid.CellCount, grid.CellCount, initialMaterial) : new FireSimStepCoordinator(restored, grid.CellCount);
+        _seed = restored?.Seed ?? 0;
         _applyExternalChangesKernel = _shader.FindKernel(ApplyExternalChangesKernelName);
         _fullGridKernel = _shader.FindKernel(FullGridKernelName);
 
@@ -609,10 +619,11 @@ public sealed class TimberbornComputeFireSimulator :
             _materialHandoff = new TimberbornMaterialHandoffBuffers(initialMaterial);
             _currentCells.SetData(packedCells);
             _nextCells.SetData(packedCells);
-            _currentTransportFields.SetData(Enumerable.Repeat(0u, grid.CellCount).ToArray());
-            _nextTransportFields.SetData(Enumerable.Repeat(0u, grid.CellCount).ToArray());
+            _currentTransportFields.SetData(restored?.TransportFields ?? new uint[grid.CellCount]);
+            _nextTransportFields.SetData(restored?.TransportFields ?? new uint[grid.CellCount]);
             _materialTargetIds.SetData(materialValues.Select(static field => field.TargetId).ToArray());
             _materialFields.SetData(materialValues.Select(static field => field.State.Pack()).ToArray());
+            if (restored is not null) _visualFields.SetData(CreateRestoredVisualFields(packedCells, restored.TransportFields, parameters));
             _readCells = _currentCells;
             _writeCells = _nextCells;
             _readTransportFields = _currentTransportFields;
@@ -667,6 +678,7 @@ public sealed class TimberbornComputeFireSimulator :
 
     public void UpdateParameters(FireSimParameters parameters)
     {
+        _step.ThrowIfSnapshotInProgress();
         _parameters = parameters;
         _logSink.Info(
             "wildfire_timberborn_gpu_parameters_updated " +
@@ -694,24 +706,14 @@ public sealed class TimberbornComputeFireSimulator :
 
     public TimberbornFireSimPersistenceSnapshot CaptureFireSimState()
     {
-        ThrowIfDisposed();
-
-        uint[] cells = new uint[Grid.CellCount];
-        uint[] transportFields = new uint[Grid.CellCount];
-        _readCells.GetData(cells);
-        _readTransportFields.GetData(transportFields);
-
-        return new TimberbornFireSimPersistenceSnapshot(
-            Width,
-            Height,
-            Depth,
-            _step.CurrentTick,
-            cells.Select(static cell => checked((ushort)(cell & 0xFFFFu))).ToArray(),
-            transportFields);
+        // Keep the legacy shape, but use the same quiescent/known-state boundary as complete saves.
+        var complete = CaptureSnapshot();
+        return new(Width, Height, Depth, complete.Tick, complete.Cells, complete.TransportFields);
     }
 
     public void RestoreFireSimState(TimberbornFireSimPersistenceSnapshot snapshot)
     {
+        _step.ThrowIfSnapshotInProgress();
         if (snapshot is null)
         {
             throw new ArgumentNullException(nameof(snapshot));
@@ -727,22 +729,19 @@ public sealed class TimberbornComputeFireSimulator :
         }
 
         uint[] cells = snapshot.Cells.Select(static cell => (uint)cell).ToArray();
-        _readCells.SetData(cells);
-        _writeCells.SetData(cells);
         uint[] transportFields = snapshot.TransportFields.Count == Grid.CellCount
-            ? snapshot.TransportFields.ToArray()
-            : Enumerable.Repeat(0u, Grid.CellCount).ToArray();
-        _visualFields.SetData(CreateRestoredVisualFields(cells, transportFields, _parameters));
-        if (snapshot.TransportFields.Count == Grid.CellCount)
+            ? snapshot.TransportFields.ToArray() : new uint[Grid.CellCount];
+        _step.InitializeLegacyBuffers(snapshot.Tick, () =>
         {
+            _readCells.SetData(cells);
+            _writeCells.SetData(cells);
             _readTransportFields.SetData(transportFields);
             _writeTransportFields.SetData(transportFields);
+            _visualFields.SetData(CreateRestoredVisualFields(cells, transportFields, _parameters));
             _visualFieldBindingLifecycle?.UpdateTransportFieldsBuffer(_readTransportFields);
             _visualFieldBindingLifecycle?.UpdateMaterialFieldsBuffer(_materialFields);
-        }
-
-        _step.RestoreTick(snapshot.Tick);
-        _visualFieldBindingLifecycle?.MarkUpdated(_step.CurrentTick);
+            _visualFieldBindingLifecycle?.MarkUpdated(snapshot.Tick);
+        });
         _logSink.Info(
             "wildfire_timberborn_gpu_simulator_state_restored " +
             $"tick={_step.CurrentTick} " +
@@ -905,6 +904,7 @@ public sealed class TimberbornComputeFireSimulator :
 
     public void Dispose()
     {
+        _step.ThrowIfSnapshotInProgress();
         if (_disposed)
         {
             return;
@@ -951,7 +951,7 @@ public sealed class TimberbornComputeFireSimulator :
         _shader.SetInt("Depth", Depth);
         _shader.SetInt("CellCount", Grid.CellCount);
         _shader.SetInt("Tick", unchecked((int)tick));
-        _shader.SetInt("Seed", 0);
+        _shader.SetInt("Seed", unchecked((int)_seed));
         _shader.SetInt("ChangeCount", unchecked((int)changeCount));
         FireSimWind wind = _windProvider.CurrentWind.Normalized();
         _shader.SetFloat("WindDirectionX", wind.DirectionX);

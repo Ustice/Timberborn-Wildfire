@@ -104,8 +104,9 @@ public sealed class FireSimStepInputTests
         int uploadCount = backend.Uploads.Count;
         listener.Dispose();
         backend.FailingStage = null;
-        // Test queue ownership only: the production host must stop after Indeterminate.
-        step.Tick(backend);
+        if (expected == FireSimStepInputOutcome.Indeterminate)
+            Assert.Throws<InvalidOperationException>(() => step.Tick(backend));
+        else step.Tick(backend);
         Assert.Equal(uploadCount, backend.Uploads.Count);
     }
 
@@ -132,9 +133,9 @@ public sealed class FireSimStepInputTests
         Assert.Equal(1, hostStock);
         Assert.False(hostPhaseAdvanced);
         Assert.Equal(0, step.PendingChangeCount);
-        // Core does not guess a refund or retain a callback for replay. Production must freeze.
+        // Core does not guess a refund and now enforces the stop after unknown host publication.
         backend.FailingStage = null;
-        step.Tick(backend);
+        Assert.Throws<InvalidOperationException>(() => step.Tick(backend));
         Assert.Single(backend.Uploads);
         Assert.Equal(1, callbackCalls);
         Assert.Equal(1, hostStock);

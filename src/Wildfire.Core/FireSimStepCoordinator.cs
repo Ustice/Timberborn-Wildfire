@@ -9,13 +9,16 @@ public interface IFireSimStepBackend
     void SwapBuffers(uint tick);
 }
 
-public sealed class FireSimStepCoordinator
+public sealed partial class FireSimStepCoordinator
 {
     private readonly int _cellCount;
     private readonly int _changeCapacity;
     private readonly FireSimChangeQueue _changes = new();
     private readonly List<IFireSimListener> _listeners = new();
     private bool _isTicking;
+    private bool _isCapturingSnapshot;
+    private bool _stateUncertain;
+    private bool _hasStarted;
     private readonly FireSimMaterialHandoffSession _material;
 
     public FireSimStepCoordinator(int cellCount, int changeCapacity, IReadOnlyList<FireSimMaterialIdentity>? initialMaterial = null)
@@ -38,12 +41,14 @@ public sealed class FireSimStepCoordinator
 
     public void RegisterChange(FireSimChange change)
     {
+        ThrowIfSnapshotInProgress();
         RejectUnacknowledgedCollection(change);
         _changes.Add(change);
     }
 
     public void RestoreTick(uint tick)
     {
+        ThrowIfSnapshotInProgress();
         CurrentTick = tick;
     }
 
@@ -81,25 +86,17 @@ public sealed class FireSimStepCoordinator
         ValidateBackend(backend);
         if (commit is null) throw new ArgumentNullException(nameof(commit));
         if (!_material.Prepare(batch, backend.MaterialHandoffCapacity)) return null;
-        try
+        return TryTickWithInputCore(backend, new FireSimChange(0, MaterialHandoff: batch), () =>
         {
-            return TryTickWithInputCore(backend, new FireSimChange(0, MaterialHandoff: batch), () =>
-            {
-                FireSimMaterialHandoffReceipt receipt = FireSimMaterialHandoffProtocol.DecodeReceipt(batch,
-                    backend.ReadMaterialHandoffHeader(), backend.ReadMaterialHandoffReceipts(batch.Requests.Count));
-                _material.Commit(batch, receipt);
-                commit(receipt);
-            }, () =>
-            {
-                _material.BeginAttempt(batch.Token);
-                backend.UploadMaterialHandoff(batch);
-            });
-        }
-        catch (FireSimStepInputException exception) when (exception.Outcome == FireSimStepInputOutcome.Indeterminate)
+            FireSimMaterialHandoffReceipt receipt = FireSimMaterialHandoffProtocol.DecodeReceipt(batch,
+                backend.ReadMaterialHandoffHeader(), backend.ReadMaterialHandoffReceipts(batch.Requests.Count));
+            _material.Commit(batch, receipt);
+            commit(receipt);
+        }, () =>
         {
-            _material.Faulted = true;
-            throw;
-        }
+            _material.BeginAttempt(batch.Token);
+            backend.UploadMaterialHandoff(batch);
+        });
     }
 
     private static void RejectUnacknowledgedCollection(FireSimChange change)
@@ -142,7 +139,8 @@ public sealed class FireSimStepCoordinator
             throw new ArgumentNullException(nameof(backend));
         }
 
-        if (_material.Faulted) throw new InvalidOperationException("Material handoff is indeterminate; reconcile before further simulation.");
+        ThrowIfSnapshotInProgress();
+        if (_stateUncertain) throw new InvalidOperationException("Simulator state is indeterminate; load a complete snapshot before further simulation.");
         if (_isTicking)
         {
             throw new InvalidOperationException("A simulator step cannot reenter another step.");
@@ -153,6 +151,7 @@ public sealed class FireSimStepCoordinator
         IFireSimStepBackend backend, FireSimChangeQueue.Batch batch, FireSimChange[] changes, Action? commitInput, Action? prepareInput = null)
     {
         _isTicking = true;
+        _hasStarted = true;
         FireSimStepInputOutcome outcome = FireSimStepInputOutcome.NotApplied;
         try
         {
@@ -171,6 +170,7 @@ public sealed class FireSimStepCoordinator
             // Once external changes reached the GPU, later failures must not replay queued inputs.
             _changes.Consume(batch);
             CurrentTick = dispatchTick;
+            outcome = FireSimStepInputOutcome.Indeterminate;
             backend.Simulate(dispatchTick);
             CellDelta[] deltas = backend.ReadDeltas(dispatchTick);
             backend.SwapBuffers(dispatchTick);
@@ -183,9 +183,11 @@ public sealed class FireSimStepCoordinator
 
             return new GpuFireStepResult(deltas, dispatchTick);
         }
-        catch (Exception exception) when (commitInput is not null)
+        catch (Exception exception)
         {
-            throw new FireSimStepInputException(outcome, exception);
+            if (outcome == FireSimStepInputOutcome.Indeterminate) _stateUncertain = true;
+            if (commitInput is not null) throw new FireSimStepInputException(outcome, exception);
+            throw;
         }
         finally
         {

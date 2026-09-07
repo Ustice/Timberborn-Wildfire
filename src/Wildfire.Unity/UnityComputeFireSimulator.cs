@@ -3,7 +3,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshCollectionBackend, IFireSimMaterialHandoffSimulator, IFireSimMaterialHandoffBackend
+public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshCollectionBackend, IFireSimMaterialHandoffSimulator, IFireSimMaterialHandoffBackend
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -57,16 +57,22 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
         IFireSimDiagnosticSink diagnostics,
         uint seed = 0,
         FireSimParameters? parameters = null)
+        : this(grid, dispatcher, diagnostics, seed, parameters ?? FireSimParameters.Default, null)
+    {
+    }
+
+    private UnityComputeFireSimulator(ComputeBufferGrid grid, IFireSimComputeDispatcher dispatcher,
+        IFireSimDiagnosticSink diagnostics, uint seed, FireSimParameters parameters, FireSimSnapshot? restored)
     {
         ArgumentNullException.ThrowIfNull(grid);
         ArgumentNullException.ThrowIfNull(dispatcher);
 
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
-        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count, grid.InitialMaterialIdentities);
+        _step = restored is null ? new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count, grid.InitialMaterialIdentities) : new FireSimStepCoordinator(restored, grid.QueuedChanges.Count);
         _dispatcher = dispatcher;
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
-        _parameters = parameters ?? FireSimParameters.Default;
+        _parameters = parameters;
         _seed = seed;
         LogInitialized();
     }
@@ -96,11 +102,13 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
 
     public void RegisterChange(FireSimChange change)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         _step.RegisterChange(change);
     }
 
     public GpuFireStepResult Tick()
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (BufferGrid is null || _dispatcher is null)
         {
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
@@ -114,6 +122,7 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
 
     public GpuFireStepResult? TryTickWithInput(FireSimChange input, Action commitInput)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (BufferGrid is null || _dispatcher is null)
         {
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
@@ -124,6 +133,7 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
 
     public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commitCollection)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (BufferGrid is null || _dispatcher is null)
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
         return _step.TryCollectAsh(this, input, commitCollection);
@@ -134,6 +144,7 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
 
     public GpuFireStepResult? TryHandoffMaterial(FireSimMaterialHandoffBatch batch, Action<FireSimMaterialHandoffReceipt> commit)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (BufferGrid is null || _dispatcher is null)
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
         return _step.TryHandoffMaterial(this, batch, commit);

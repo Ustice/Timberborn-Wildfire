@@ -43,6 +43,12 @@ public sealed class FireSimStepCoordinatorTests
         backend.FailingStage = null;
         backend.Events.Clear();
 
+        if (failingStage == "apply")
+        {
+            Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+            Assert.Empty(backend.Events);
+            return;
+        }
         coordinator.Tick(backend);
 
         Assert.Equal([change], backend.AppliedChanges);
@@ -74,9 +80,8 @@ public sealed class FireSimStepCoordinatorTests
 
         backend.FailingStage = null;
         backend.Events.Clear();
-        coordinator.Tick(backend);
-
-        Assert.Equal(["reset:2", "simulate:2", "read:2", "swap:2", "notify"], backend.Events);
+        Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+        Assert.Empty(backend.Events);
     }
 
     [Fact]

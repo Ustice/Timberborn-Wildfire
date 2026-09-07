@@ -34,7 +34,34 @@ internal sealed class FireSimMaterialHandoffSession
         if (_known.Count != _active.Count) throw new ArgumentException("Initial material slots must be unique.");
     }
 
-    public bool Faulted { get; set; }
+    internal FireSimMaterialHandoffSession(FireSimSnapshot snapshot)
+        : this(snapshot.Cells.Length, snapshot.TargetIds.Select((target, cell) =>
+            new FireSimMaterialIdentity(target, snapshot.SlotIds[cell])).ToArray())
+    {
+        _known = new(snapshot.MaterialAuthority.KnownSlots);
+        _lastAttemptToken = snapshot.MaterialAuthority.LastAttemptToken;
+        _archives = snapshot.MaterialAuthority.Archives.ToDictionary(static entry => entry.Identity,
+            static entry => new FireSimMaterialArchive(entry.CaptureToken, entry.SourceCellIndex,
+                entry.Identity, entry.PackedCell, entry.Companion));
+    }
+
+    internal FireSimMaterialAuthoritySnapshot CaptureAuthority() => new(_lastAttemptToken,
+        _known.OrderBy(static id => id.TargetId).ThenBy(static id => id.SlotId).ToArray(),
+        _archives.Values.OrderBy(static entry => entry.Identity.TargetId).ThenBy(static entry => entry.Identity.SlotId)
+            .Select(static entry => new FireSimMaterialArchiveSnapshot(entry.Identity, entry.CaptureToken,
+                entry.SourceCellIndex, entry.PackedCell, entry.Companion)).ToArray());
+
+    internal bool MatchesActive(uint[] targets, uint[] slots)
+    {
+        if (targets.Length != _cellCount || slots.Length != _cellCount) return false;
+        for (int cell = 0; cell < _cellCount; cell++)
+        {
+            _active.TryGetValue(cell, out var owner);
+            if (owner.TargetId != targets[cell] || owner.SlotId != slots[cell]) return false;
+        }
+        return true;
+    }
+
     public bool TryGetArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) => _archives.TryGetValue(identity, out archive!);
 
     public bool Prepare(FireSimMaterialHandoffBatch batch, int capacity)
