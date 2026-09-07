@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Beavers.Emergency;
 using Bindito.Core;
 using Timberborn.EntityPanelSystem;
 using Wildfire.Timberborn.FireResponse;
@@ -39,6 +40,11 @@ public sealed class WildfireConfigurator : Configurator
         Bind<WardenStationFragment>().AsSingleton();
         Bind<WardenRecoveryNotification>().AsSingleton();
         MultiBind<EntityPanelModule>().ToProvider<WardenPanelModuleProvider>().AsSingleton();
+        Bind<CarryEmergencyFragment>().AsSingleton();
+        MultiBind<EntityPanelModule>().ToProvider<CarryEmergencyPanelModuleProvider>().AsSingleton();
+        Bind<CarryEmergencySession>().AsSingleton();
+        Bind<WildfireCarryEmergencyExecutor>().AsTransient();
+        Bind<CarryEmergencyInterrupter>().AsTransient();
         Bind<WardenDeliveryService>().AsSingleton();
         Bind<WardenFireField>().AsSingleton();
         Bind<WardenStation>().AsTransient();
@@ -47,6 +53,18 @@ public sealed class WildfireConfigurator : Configurator
         Bind<WardenStationInventoryInitializer>().AsSingleton();
         Bind<WardenEquipmentInventoryInitializer>().AsSingleton();
         MultiBind<TemplateModule>().ToProvider<WardenTemplateModuleProvider>().AsSingleton();
+    }
+
+    private sealed class CarryEmergencyPanelModuleProvider : IProvider<EntityPanelModule>
+    {
+        private readonly CarryEmergencyFragment _fragment;
+        public CarryEmergencyPanelModuleProvider(CarryEmergencyFragment fragment) => _fragment = fragment;
+        public EntityPanelModule Get()
+        {
+            EntityPanelModule.Builder builder = new();
+            builder.AddMiddleFragment(_fragment, 1);
+            return builder.Build();
+        }
     }
 
     private sealed class WardenPanelModuleProvider : IProvider<EntityPanelModule>
@@ -75,6 +93,8 @@ public sealed class WildfireConfigurator : Configurator
             builder.AddDecorator<AdultSpec, WardenEquipment>();
             builder.AddDedicatedDecorator<WardenEquipment, Inventory>(_equipment);
             builder.AddDecorator<AdultSpec, WardenExecutor>();
+            builder.AddDecorator<AdultSpec, WildfireCarryEmergencyExecutor>();
+            builder.AddDecorator<AdultSpec, CarryEmergencyInterrupter>();
             return builder.Build();
         }
     }

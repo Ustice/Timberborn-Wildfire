@@ -282,6 +282,8 @@
     <Reference Include="Timberborn.CharacterMovementSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterMovementSystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.CharacterNavigation"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterNavigation.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.NeedSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.NeedSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.CharacterControlSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterControlSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Characters"><HintPath>$(TimberbornManagedPath)/Timberborn.Characters.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.MortalSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.MortalSystem.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
   <ItemGroup>
