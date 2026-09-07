@@ -16,10 +16,10 @@ public sealed class MaterialHandoffShaderTests
         [FireSimMaterialHandoffRequest.Fresh(0, A0, B0, Definition(9)), FireSimMaterialHandoffRequest.Fresh(1, A1, B1, Definition(9))]);
 
     [UnityShaderFact]
-    public void WholeCompositeOwnerReplacementCapturesDistinctBurnedSlotsAndPreservesEnvironment()
+    public void WholeOwnerReplacementCapturesDistinctBurnedSlotsAndPreservesEnvironment()
     {
         var batch = Replace();
-        var fixture = Fixture("material-fresh-composite", batch);
+        var fixture = Fixture("material-fresh-owner", batch);
         var capture = Capture(fixture);
         var receipt = Receipt(capture, batch);
         Assert.True(receipt.Accepted);
