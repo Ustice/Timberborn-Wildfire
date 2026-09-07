@@ -49,7 +49,8 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             fireRuntime,
             fireRuntime,
             fireRuntime,
-            fireRuntime);
+            fireRuntime,
+            access: TimberbornQaCommandPolicy.FromProcessArguments(Environment.GetCommandLineArgs()));
     }
 
     public void Load()
@@ -57,6 +58,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
         Directory.CreateDirectory(Path.GetDirectoryName(_inboxPath) ?? Application.persistentDataPath);
         Debug.Log(
             "wildfire_command_bridge_ready " +
+            $"command_access={_commandBridge.AccessMode} " +
             $"inbox={TimberbornQaCommandBridge.FormatToken(_inboxPath)} " +
             $"outbox={TimberbornQaCommandBridge.FormatToken(_outboxPath)} " +
             $"known_commands={TimberbornQaCommandBridge.FormatToken(string.Join(",", _commandBridge.KnownCommands))}");

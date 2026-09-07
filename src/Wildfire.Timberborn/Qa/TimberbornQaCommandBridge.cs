@@ -52,7 +52,8 @@ public sealed class TimberbornQaCommandBridge
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
@@ -61,14 +62,16 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -77,7 +80,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -85,7 +89,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -94,7 +99,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -103,7 +109,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -112,7 +119,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -122,7 +130,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaBurnDurationStimulus burnDurationStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -131,7 +140,8 @@ public sealed class TimberbornQaCommandBridge
             burnDurationStimulus,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -142,7 +152,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaBurnDurationStimulus burnDurationStimulus,
         ITimberbornQaFireSimParameterPresetSelector fireSimParameterPresetSelector,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -151,14 +162,16 @@ public sealed class TimberbornQaCommandBridge
             burnDurationStimulus,
             fireSimParameterPresetSelector,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
@@ -167,14 +180,16 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             soilMoistureMapProbe,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaAshCellProbe ashCellProbe,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
@@ -184,7 +199,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink,
-            ashCellProbe)
+            ashCellProbe,
+            access: access)
     {
     }
 
@@ -200,7 +216,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaAshCellProbe? ashCellProbe = null,
         ITimberbornQaAshWaterStimulus? ashWaterStimulus = null,
         ITimberbornQaInventoryAdjuster? inventoryAdjuster = null,
-        ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null)
+        ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
     {
         if (stateProvider is null)
         {
@@ -242,6 +259,7 @@ public sealed class TimberbornQaCommandBridge
             throw new ArgumentNullException(nameof(logSink));
         }
 
+        Access = access;
         _stateProvider = stateProvider;
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
@@ -344,6 +362,17 @@ public sealed class TimberbornQaCommandBridge
             return failure;
         }
 
+        if (!TimberbornQaCommandPolicy.CanExecute(Access, command))
+        {
+            TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                command,
+                "qa_mutations_disabled",
+                TimberbornQaCommandState.Placeholder,
+                KnownCommands);
+            _logSink.Warning(failure.ResultToken);
+            return failure;
+        }
+
         if (IsSimulatorChangeCommand(command) && !CanAcceptArguments(command, commandText) && HasArguments(commandText))
         {
             TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
@@ -415,7 +444,14 @@ public sealed class TimberbornQaCommandBridge
         }
     }
 
-    public IReadOnlyList<string> KnownCommands => _commands.Keys.OrderBy(command => command, StringComparer.OrdinalIgnoreCase).ToArray();
+    public TimberbornQaCommandAccess Access { get; }
+
+    public string AccessMode => TimberbornQaCommandPolicy.Mode(Access);
+
+    public IReadOnlyList<string> KnownCommands => _commands.Keys
+        .Where(command => TimberbornQaCommandPolicy.CanExecute(Access, command))
+        .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     private TimberbornQaCommandResult ExecuteStatus()
     {
@@ -428,7 +464,7 @@ public sealed class TimberbornQaCommandBridge
             ",",
             KnownCommands.Where(IsSimulatorChangeCommand));
         string message = string.IsNullOrEmpty(writableCommands)
-            ? "Supported commands are read-only: help, qa-readiness, status."
+            ? $"Supported commands are read-only: {string.Join(", ", KnownCommands)}."
             : "Supported commands: " +
             $"{string.Join(",", KnownCommands)}. " +
             $"QA-only simulator change commands: {writableCommands}.";
@@ -437,7 +473,7 @@ public sealed class TimberbornQaCommandBridge
             HelpCommand,
             _stateProvider.GetState(),
             KnownCommands,
-            message);
+            $"command_access={AccessMode}. {message}");
     }
 
     private TimberbornQaCommandResult ExecuteQaReadiness()

@@ -83,6 +83,8 @@ The [deploy runbook](reference/timberborn-deploy-pipeline.md) describes build, s
 bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advanced-tick
 ```
 
+The bridge defaults to diagnostics, including in Debug builds. Forced stimuli, inventory changes, and preset changes require the exact process argument `--wildfire-enable-qa-mutations` when starting Timberborn on a copied/disposable save. Confirm `command_access=development` in the fresh bridge startup log first. Relaunch without the argument for a release rejection check: a mutation request must return `message=qa_mutations_disabled`. See [command access and the complete inventory](release/qa-command-access.md) for the launch route and file transport boundary.
+
 Choose stimuli from the bridge's supported commands and the relevant issue's acceptance criteria. One suppression example is:
 
 ```bash
