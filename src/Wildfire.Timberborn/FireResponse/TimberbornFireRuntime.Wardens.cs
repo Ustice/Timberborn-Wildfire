@@ -10,6 +10,7 @@ public sealed partial class TimberbornFireRuntime
     private WardenFieldObservation? _wardenField;
     private ITimberbornCellFieldReader? _wardenCells;
     private ITimberbornTransportFieldReader? _wardenTransport;
+    internal long WardenFieldRevision => _wardenDelivery.FieldRevision;
     internal bool WardenResponseEnabled => IsAutoDispatchEnabled() && !_wardenDelivery.IsIndeterminate;
 
     internal bool TryObserveWardenField(out WardenFieldObservation field)

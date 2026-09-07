@@ -44,6 +44,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private WardenTarget _target;
     private Vector3 _destination;
     private bool _restoreWalk;
+    private bool _installedRouteUnsafe;
+    private long _routeFieldRevision = -1;
+    private Transform _transform = null!;
     private Guid _entityId;
     private string _status = "Ready";
     public string Status
@@ -64,7 +67,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     public void Awake()
     {
         _entityId = GetComponent<EntityComponent>().EntityId;
+        _transform = GetComponent<Transform>();
         _walker = GetComponent<Walker>();
+        _walker.StartedNewPath += OnStartedNewPath;
         _walk = GetComponent<WalkToPositionExecutor>();
         _navigator = GetComponent<Navigator>();
         _equipment = GetComponent<WardenEquipment>();
@@ -76,7 +81,12 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         _delivery.Register(this);
     }
 
-    public void DeleteEntity() { ReleaseReservation(); _delivery.Unregister(this); }
+    public void DeleteEntity()
+    {
+        ReleaseReservation();
+        _walker.StartedNewPath -= OnStartedNewPath;
+        _delivery.Unregister(this);
+    }
 
     public bool TryLaunch(WardenStation station)
     {
@@ -129,8 +139,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             Status = _sortie.AwaitingApplication ? "Applying water" : "Preparing spray";
             return ExecutorStatus.Running;
         }
-        // Query the remaining route afresh. Walker.PathCorners can include already-traversed corners.
-        if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), _destination, _sortie.Phase == WardenPhase.Returning)) return Retreat("Route became unsafe");
+        // Regenerate on field changes, then inspect the path Walker actually installed (including its prefix).
+        if (_routeFieldRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
+        if (_installedRouteUnsafe) return Retreat("Installed route became unsafe");
         var walkStatus = _walk.Tick(deltaTimeInHours);
         if (walkStatus == ExecutorStatus.Running) return ExecutorStatus.Running;
         if (walkStatus == ExecutorStatus.Failure || !At(_destination)) return Retreat("Route interrupted before arrival");
@@ -197,8 +208,23 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     {
         if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination, _sortie.Phase == WardenPhase.Returning)) return false;
         _destination = destination;
-        return _walk.Launch(destination) != ExecutorStatus.Failure;
+        _installedRouteUnsafe = false;
+        var status = _walk.Launch(destination);
+        return status != ExecutorStatus.Failure && !_installedRouteUnsafe;
     }
+    private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
+    {
+        if (_sortie.Phase is not (WardenPhase.Fetching or WardenPhase.Approaching or WardenPhase.Returning)) return;
+        _routeFieldRevision = _field.Revision;
+        _installedRouteUnsafe = !_field.SafeInstalledPath(_transform.position, _walker.PathCorners,
+            _sortie.Phase == WardenPhase.Returning);
+        if (_installedRouteUnsafe)
+        {
+            _walker.PathFollower.StopMoving();
+            _walker.StopNextTick();
+        }
+    }
+
     private bool At(Vector3 destination) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), destination);
     private bool AtStation() => _station is not null && _station.Access.Accesses.Any(At);
     private bool Refuse(string reason) { Status = reason; return false; }

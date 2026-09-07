@@ -21,6 +21,7 @@ public sealed class WardenFireField
     public WardenFireField(TimberbornFireRuntime runtime, INavigationService navigation)
     { _runtime = runtime; _navigation = navigation; }
 
+    public long Revision => _runtime.WardenFieldRevision;
     public bool Ready => _runtime.WardenResponseEnabled && ObservationAvailable;
     public bool ObservationAvailable => _runtime.TryObserveWardenField(out _);
 
@@ -64,9 +65,14 @@ public sealed class WardenFireField
         if (!SafePosition(end)) return false;
         _path.Clear();
         if (!_navigation.FindPath(start, end, _path)) return false;
+        return SafeInstalledPath(start, _path, escaping);
+    }
+
+    public bool SafeInstalledPath(Vector3 start, IEnumerable<PathCorner> path, bool escaping)
+    {
         var samples = new List<WardenRouteSample> { new(0, RiskAt(start)) };
         float distance = 0;
-        foreach (var corner in _path)
+        foreach (var corner in path)
         {
             float segment = Vector3.Distance(start, corner.Position);
             var steps = Math.Max(1, (int)Math.Ceiling(segment * 4));
