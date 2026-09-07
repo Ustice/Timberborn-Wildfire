@@ -10,6 +10,7 @@ using Timberborn.SimpleOutputBuildings;
 using Timberborn.Stockpiles;
 using Timberborn.Yielding;
 using Wildfire.Core;
+using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.Runtime;
 
@@ -20,11 +21,21 @@ namespace Wildfire.Timberborn.Runtime;
 public sealed class TimberbornInitialWorldProjectionProvider
 {
     private readonly EntityRegistry _entities;
-    public TimberbornInitialWorldProjectionProvider(EntityRegistry entities) =>
-        _entities = entities ?? throw new ArgumentNullException(nameof(entities));
-
-    public TimberbornInitialWorldCapture Capture(FireGrid grid)
+    private readonly TimberbornInitialEnvironmentCaptureProvider _environment;
+    private readonly INativeResourceMutationGuard _guard;
+    public TimberbornInitialWorldProjectionProvider(EntityRegistry entities,
+        TimberbornInitialEnvironmentCaptureProvider environment, INativeResourceMutationGuard guard)
     {
+        _entities = entities ?? throw new ArgumentNullException(nameof(entities));
+        _environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        _guard = guard ?? throw new ArgumentNullException(nameof(guard));
+    }
+
+    public TimberbornInitialWorldCapture Capture(FireGrid grid) => _guard.CaptureAtRest(() => CaptureAtRest(grid));
+
+    private TimberbornInitialWorldCapture CaptureAtRest(FireGrid grid)
+    {
+        var environment = _environment.Capture(grid);
         var entities = _entities.Entities.ToArray(); // Native property is a view of a mutable instantiation list.
         var bodies = new List<TimberbornInitialMaterialBody>();
         var excluded = new List<TimberbornInitialExcludedEntity>();
@@ -32,7 +43,15 @@ public sealed class TimberbornInitialWorldProjectionProvider
         var validate = new List<Action>();
         foreach (var entity in entities)
         {
-            if (!entity.TryGetComponent<BlockObject>(out var block)) continue;
+            if (!entity.TryGetComponent<BlockObject>(out var block))
+            {
+                validate.Add(() =>
+                {
+                    if (entity.TryGetComponent<BlockObject>(out _))
+                        throw new InvalidOperationException("Native entity acquired a block during initial capture.");
+                });
+                continue;
+            }
             var id = entity.EntityId;
             if (id == Guid.Empty) throw new InvalidOperationException("Native material has no settled Guid.");
             if (!ReferenceEquals(block.GetComponent<EntityComponent>(), entity))
@@ -54,29 +73,64 @@ public sealed class TimberbornInitialWorldProjectionProvider
                 });
                 continue;
             }
-            if (reason is { } omission) { excluded.Add(new(id, block.Name, omission)); continue; }
+            if (reason is { } omission)
+            {
+                var excludedName = block.Name;
+                excluded.Add(new(id, excludedName, omission));
+                validate.Add(() =>
+                {
+                    if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id ||
+                        !entity.TryGetComponent<BlockObject>(out var currentBlock) || !ReferenceEquals(currentBlock, block) ||
+                        block.Name != excludedName || Exclusion(entity, block) != omission)
+                        throw new InvalidOperationException("Excluded native body eligibility changed during initial capture.");
+                });
+                continue;
+            }
             var placement = block.Placement;
             var blocks = block.Blocks;
             var footprint = TimberbornNativeMaterialFootprint.Project(blocks, placement, grid);
             var yields = CaptureYields(entity);
             var inventories = CaptureInventories(entity);
-            var body = new TimberbornInitialMaterialBody(id, block.Name, Shape(entity, block.Name), footprint, yields, inventories);
+            var construction = CaptureConstruction(entity);
+            var body = new TimberbornInitialMaterialBody(id, block.Name, Shape(entity, block.Name), footprint, yields, inventories, construction);
             bodies.Add(body);
             validate.Add(() =>
             {
                 if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id ||
                     Exclusion(entity, block) is not null || !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) ||
                     block.Name != body.SpecId || Shape(entity, block.Name) != body.Shape || !CaptureYields(entity).SequenceEqual(yields) ||
-                    !SameInventories(inventories, CaptureInventories(entity)))
+                    !SameInventories(inventories, CaptureInventories(entity)) ||
+                    !SameConstruction(construction, CaptureConstruction(entity)))
                     throw new InvalidOperationException("Native body changed during initial capture; no projection was published.");
             });
         }
+        _environment.RequireUnchanged(environment);
         foreach (var check in validate) check();
         var current = _entities.Entities;
         if (current.Count != entities.Length || current.Where((entity, index) => !ReferenceEquals(entity, entities[index])).Any())
             throw new InvalidOperationException("Native entity membership changed during initial capture.");
-        return new TimberbornInitialWorldCapture(grid, bodies, excluded, waterSources);
+        return new TimberbornInitialWorldCapture(grid, bodies, excluded, waterSources, environment);
     }
+
+    private static IReadOnlyList<TimberbornBurnDamageResourceStack>? CaptureConstruction(EntityComponent entity)
+    {
+        if (!entity.TryGetComponent<Building>(out var building)) return null;
+        if (!ReferenceEquals(building.GetComponent<EntityComponent>(), entity))
+            throw new InvalidOperationException("Construction definition belongs to another native entity.");
+        return CaptureBuildingCost(building.Spec);
+    }
+
+    private static IReadOnlyList<TimberbornBurnDamageResourceStack> CaptureBuildingCost(BuildingSpec spec)
+    {
+        if (spec is null || spec.BuildingCost.IsDefault)
+            throw new InvalidOperationException("Native building has no settled construction definition.");
+        return spec.BuildingCost.Select(cost => new TimberbornBurnDamageResourceStack(cost.Id, cost.Amount))
+            .OrderBy(cost => cost.ResourceId, StringComparer.Ordinal).ToArray();
+    }
+
+    private static bool SameConstruction(IReadOnlyList<TimberbornBurnDamageResourceStack>? left,
+        IReadOnlyList<TimberbornBurnDamageResourceStack>? right) =>
+        left is null ? right is null : right is not null && left.SequenceEqual(right);
 
     private static bool SameInventories(IReadOnlyList<TimberbornInventoryMaterial> left, IReadOnlyList<TimberbornInventoryMaterial> right) =>
         left.Count == right.Count && left.Select((inventory, index) => inventory.Role == right[index].Role &&

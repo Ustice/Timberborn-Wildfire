@@ -66,10 +66,13 @@ public sealed class TimberbornInitialMaterialBody
 {
     public TimberbornInitialMaterialBody(Guid entityId, string specId, TimberbornInitialBodyShape shape,
         IEnumerable<TimberbornMaterialFootprintSlot> footprint, IEnumerable<TimberbornNamedYieldMaterial> yields,
-        IEnumerable<TimberbornInventoryMaterial> inventories)
+        IEnumerable<TimberbornInventoryMaterial> inventories, IEnumerable<TimberbornBurnDamageResourceStack>? constructionResources)
     {
         if (entityId == Guid.Empty || string.IsNullOrWhiteSpace(specId) || !Enum.IsDefined(typeof(TimberbornInitialBodyShape), shape))
             throw new ArgumentException("Initial material capture requires an exact native body identity.");
+        if (constructionResources is null && shape is TimberbornInitialBodyShape.Structure or TimberbornInitialBodyShape.Stockpile)
+            throw new ArgumentException("A native building requires captured construction costs, including an explicitly empty cost.");
+        ConstructionResources = constructionResources is null ? null : CopyConstruction(constructionResources);
         var slots = footprint.ToArray(); var yieldParts = yields.OrderBy(yield => yield.ComponentName, StringComparer.Ordinal).ToArray();
         var inventoryParts = inventories.OrderBy(inventory => inventory.Role).ToArray();
         if (slots.Length == 0 || slots.Any(slot => slot.CellIndex < 0 || slot.LocalCoordinates.X < 0 || slot.LocalCoordinates.Y < 0 || slot.LocalCoordinates.Z < 0) ||
@@ -104,6 +107,16 @@ public sealed class TimberbornInitialMaterialBody
     public IReadOnlyList<TimberbornNamedYieldMaterial> Yields { get; }
     public IReadOnlyList<TimberbornInventoryMaterial> Inventories { get; }
     public IReadOnlyList<TimberbornInitialCompositionGap> CompositionGaps { get; }
+    public IReadOnlyList<TimberbornBurnDamageResourceStack>? ConstructionResources { get; }
+
+    private static IReadOnlyList<TimberbornBurnDamageResourceStack> CopyConstruction(IEnumerable<TimberbornBurnDamageResourceStack> values)
+    {
+        var costs = values.OrderBy(value => value.ResourceId, StringComparer.Ordinal).ToArray();
+        if (costs.Any(value => string.IsNullOrWhiteSpace(value.ResourceId) || value.Amount < 0) ||
+            costs.Select(value => value.ResourceId).Distinct(StringComparer.Ordinal).Count() != costs.Length)
+            throw new ArgumentException("Native building costs require unique valid goods.");
+        return Array.AsReadOnly(costs);
+    }
 
     private IEnumerable<TimberbornInitialCompositionGap> FindGaps()
     {
@@ -145,8 +158,11 @@ public sealed record TimberbornInitialExcludedEntity(Guid EntityId, string SpecI
 public sealed class TimberbornInitialWorldCapture
 {
     public TimberbornInitialWorldCapture(FireGrid grid, IEnumerable<TimberbornInitialMaterialBody> bodies,
-        IEnumerable<TimberbornInitialExcludedEntity> excluded, IEnumerable<TimberbornInitialWaterSource> waterSources)
+        IEnumerable<TimberbornInitialExcludedEntity> excluded, IEnumerable<TimberbornInitialWaterSource> waterSources,
+        TimberbornInitialEnvironmentCapture environment)
     {
+        Environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        if (environment.Grid != grid) throw new ArgumentException("Body and environmental captures must share a grid.");
         var captured = bodies.OrderBy(body => body.EntityId).ToArray(); var omitted = excluded.OrderBy(entity => entity.EntityId).ToArray();
         var water = waterSources.OrderBy(source => source.EntityId).ToArray();
         if (captured.Select(body => body.EntityId).Concat(omitted.Select(entity => entity.EntityId)).Concat(water.Select(source => source.EntityId)).Distinct().Count() != captured.Length + omitted.Length + water.Length)
@@ -159,4 +175,5 @@ public sealed class TimberbornInitialWorldCapture
     public IReadOnlyList<TimberbornInitialMaterialBody> Bodies { get; }
     public IReadOnlyList<TimberbornInitialExcludedEntity> Excluded { get; }
     public IReadOnlyList<TimberbornInitialWaterSource> WaterSources { get; }
+    public TimberbornInitialEnvironmentCapture Environment { get; }
 }

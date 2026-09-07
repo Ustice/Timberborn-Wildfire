@@ -6,6 +6,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(TimberbornManagedPath)/System.Collections.Immutable.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.WaterSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.WaterSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Bindito.Core">
       <HintPath>$(TimberbornManagedPath)/Bindito.Core.dll</HintPath>
       <Private>false</Private>

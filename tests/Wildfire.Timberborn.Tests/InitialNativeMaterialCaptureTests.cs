@@ -103,14 +103,14 @@ public sealed class InitialNativeMaterialCaptureTests
         using var native = new NativeMaterialFootprintTests.NativeFootprintFixture();
         var grid = new FireGrid(20, 20, 5);
         var footprint = native.Project("Cw90", true, grid);
-        var tree = new TimberbornInitialMaterialBody(Id, "Pine", TimberbornInitialBodyShape.Tree, footprint, [], []);
-        var structure = new TimberbornInitialMaterialBody(Guid.NewGuid(), "LumberMill.Folktails", TimberbornInitialBodyShape.Structure, footprint.Reverse(), [], []);
-        var capture = new TimberbornInitialWorldCapture(grid, [structure, tree], [], []);
+        var tree = new TimberbornInitialMaterialBody(Id, "Pine", TimberbornInitialBodyShape.Tree, footprint, [], [], null);
+        var structure = new TimberbornInitialMaterialBody(Guid.NewGuid(), "LumberMill.Folktails", TimberbornInitialBodyShape.Structure, footprint.Reverse(), [], [], []);
+        var capture = new TimberbornInitialWorldCapture(grid, [structure, tree], [], [], EmptyEnvironment(grid));
         Assert.Equal(2, capture.Bodies.Count);
         Assert.All(capture.Bodies, body => Assert.Equal(4, body.Footprint.Count));
         Assert.Equal(tree.Footprint, structure.Footprint);
-        Assert.Throws<ArgumentException>(() => new TimberbornInitialWorldCapture(grid, [tree, tree], [], []));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new TimberbornInitialWorldCapture(new FireGrid(1, 1, 1), [tree], [], []));
+        Assert.Throws<ArgumentException>(() => new TimberbornInitialWorldCapture(grid, [tree, tree], [], [], EmptyEnvironment(grid)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TimberbornInitialWorldCapture(new FireGrid(1, 1, 1), [tree], [], [], EmptyEnvironment(new(1, 1, 1))));
     }
 
     [Fact]
@@ -134,16 +134,19 @@ public sealed class InitialNativeMaterialCaptureTests
     public void WaterSourceFootprintRemainsSeparateFromOwnedBodiesAndCannotAliasTheirGuid()
     {
         var source = new TimberbornInitialWaterSource(Id, "BadwaterSource", true, Cell);
-        var capture = new TimberbornInitialWorldCapture(new FireGrid(1, 1, 1), [], [], [source]);
+        var capture = new TimberbornInitialWorldCapture(new FireGrid(1, 1, 1), [], [], [source], EmptyEnvironment(new(1, 1, 1)));
         Assert.Empty(capture.Bodies);
         Assert.True(capture.WaterSources.Single().Badwater);
         Assert.Equal(0, capture.WaterSources.Single().Footprint.Single().CellIndex);
         Assert.Throws<ArgumentException>(() => new TimberbornInitialWorldCapture(new FireGrid(1, 1, 1),
-            [Body("Pine", TimberbornInitialBodyShape.Tree, [], [])], [], [source]));
+            [Body("Pine", TimberbornInitialBodyShape.Tree, [], [])], [], [source], EmptyEnvironment(new(1, 1, 1))));
     }
 
     private static TimberbornInitialMaterialBody Body(string spec, TimberbornInitialBodyShape shape,
-        IEnumerable<TimberbornNamedYieldMaterial> yields, IEnumerable<TimberbornInventoryMaterial> inventories) => new(Id, spec, shape, Cell, yields, inventories);
+        IEnumerable<TimberbornNamedYieldMaterial> yields, IEnumerable<TimberbornInventoryMaterial> inventories) => new(Id, spec, shape, Cell, yields, inventories,
+            shape is TimberbornInitialBodyShape.Structure or TimberbornInitialBodyShape.Stockpile ? [] : null);
+
+    private static TimberbornInitialEnvironmentCapture EmptyEnvironment(FireGrid grid) => new(grid, [], [], []);
 
     private static JsonDocument NativeBlueprint(string entry)
     {
