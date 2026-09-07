@@ -10,6 +10,8 @@
       <HintPath>$(TimberbornManagedPath)/System.Collections.Immutable.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.Workshops"><HintPath>$(TimberbornManagedPath)/Timberborn.Workshops.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.RecoveredGoodSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.RecoveredGoodSystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.WaterSystem">
       <HintPath>$(TimberbornManagedPath)/Timberborn.WaterSystem.dll</HintPath>
       <Private>false</Private>
