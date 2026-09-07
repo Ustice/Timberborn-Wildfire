@@ -18,6 +18,7 @@ public sealed class TimberbornNativeMaterialRegistry
     private readonly HashSet<int> _solidTerrain;
     private Dictionary<Guid, Entry> _entries = new();
     private Dictionary<uint, Guid> _origins = new();
+    private HashSet<FireSimMaterialIdentity> _boundSlots = new();
     private Dictionary<int, TimberbornResolvedMaterialCell> _cells = new();
     private uint _nextTargetId = 1;
 
@@ -32,6 +33,12 @@ public sealed class TimberbornNativeMaterialRegistry
 
     /// <summary>Resolve retained origin identity, including hidden/removed projections. Never resolve through the current cell.</summary>
     public bool TryResolveOrigin(uint targetId, out Guid entityId) => _origins.TryGetValue(targetId, out entityId);
+
+    /// <summary>Retained footprint identity, including hidden and removed slots; independent of current location.</summary>
+    public bool IsSlotBound(uint targetId, uint slotId) => targetId != 0 && slotId != 0 &&
+        _boundSlots.Contains(new FireSimMaterialIdentity(targetId, slotId));
+
+    internal void ValidateOriginCellIndex(int cellIndex) => _grid.FromIndex(cellIndex);
 
     public TimberbornResolvedMaterialCell ResolveCell(int cellIndex)
     {
@@ -97,7 +104,10 @@ public sealed class TimberbornNativeMaterialRegistry
         }
         var cells = ResolveAll(staged); // Validate all overlaps before any token, removal or movement is published.
         var origins = staged.ToDictionary(pair => pair.Value.TargetId, pair => pair.Key);
+        var boundSlots = staged.Values.SelectMany(entry => entry.Slots.Values.Select(slot =>
+            new FireSimMaterialIdentity(entry.TargetId, slot))).ToHashSet();
         _entries = staged;
+        _boundSlots = boundSlots;
         _origins = origins;
         _cells = cells;
         _nextTargetId = nextTarget;
@@ -133,7 +143,10 @@ public sealed class TimberbornNativeMaterialRegistry
             if (!staged.TryAdd(binding.EntityId, entry)) throw new ArgumentException("Duplicate native entity binding.");
         }
         var origins = staged.ToDictionary(pair => pair.Value.TargetId, pair => pair.Key);
+        var boundSlots = staged.Values.SelectMany(entry => entry.Slots.Values.Select(slot =>
+            new FireSimMaterialIdentity(entry.TargetId, slot))).ToHashSet();
         _entries = staged;
+        _boundSlots = boundSlots;
         _origins = origins;
         _nextTargetId = snapshot.NextTargetId;
     }

@@ -56,7 +56,7 @@ public sealed class TimberbornOwnedTreeDeltaConsumer
             var live = resolved.Where(item => _native.IsLive(item.EntityId)).ToArray();
             if (live.Any(item => !_damage.TryGetState(item.TargetKey, out _)))
                 throw new InvalidOperationException("Live tree origin has no registered damage state.");
-            var damage = _damage.ApplyOwnedDamage(tick, live);
+            var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
             var trees = _trees.ApplyOwnedConsequences(tick, live);
             return new TimberbornOwnedTreeBatchResult(batch.UnownedCount, resolved.Length - live.Length, damage, trees);
         }

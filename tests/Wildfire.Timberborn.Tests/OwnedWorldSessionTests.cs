@@ -5,7 +5,7 @@ using F = Wildfire.Timberborn.Tests.OwnedConsequenceBatchTests.Fixture;
 
 namespace Wildfire.Timberborn.Tests;
 
-public sealed class OwnedWorldSessionTests
+public sealed partial class OwnedWorldSessionTests
 {
     [Fact]
     public void ActualReceiptAndCreditSurviveNewSessionWithoutReplayingNativeEffects()

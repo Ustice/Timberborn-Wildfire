@@ -4,7 +4,7 @@ using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.Tests;
 
-public sealed class OwnedStorageDeltaConsumerTests
+public sealed partial class OwnedStorageDeltaConsumerTests
 {
     private static readonly Guid A = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private static readonly Guid B = Guid.Parse("00000000-0000-0000-0000-000000000002");
@@ -19,9 +19,9 @@ public sealed class OwnedStorageDeltaConsumerTests
         Assert.Equal(2, f.Damage.States[Registration(B).TargetKey].DamageTaken);
         Assert.Equal(2, result.Damage.DamageAppliedTargetCount);
         Assert.Equal(0, result.Damage.DuplicateCellSuppressedCount);
-        Assert.Equal(8, f.Inventory.Stock[A]["Log"]); // Raw storage sink still has its separate per-owner budget rule.
+        Assert.Equal(7, f.Inventory.Stock[A]["Log"]);
         Assert.Equal(9, f.Inventory.Stock[B]["Log"]);
-        Assert.Equal(3, result.DestroyedItems);
+        Assert.Equal(4, result.DestroyedItems);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public sealed class OwnedStorageDeltaConsumerTests
             _registerB ? [Registration(A), Registration(B)] : [Registration(A)], Catalog);
         internal CellDelta Delta(Guid id, int budget, int cell = 0) => new(cell,
             PackedCell.Pack(15, 10, 3, 0, 0, 1), PackedCell.Pack(15 - budget, 10, 3, 0, 0, 1),
-            Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId);
+            Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId, (uint)cell + 1);
     }
     private sealed class InventoryFake(List<string> events) : ITimberbornOwnedStorageInventoryApi
     {
@@ -231,10 +231,12 @@ public sealed class OwnedStorageDeltaConsumerTests
     {
         internal Action? Callback;
         internal int LastCell;
+        internal readonly List<int> Cells = [];
         public TimberbornStoredGoodHazardConsequenceResult ApplyHazards(TimberbornStoredGoodBurnTarget target,
             TimberbornStoredGoodBurnConsequence consequence, IReadOnlyList<TimberbornStoredGoodHazardStack> stacks)
         {
             LastCell = consequence.CellIndex;
+            Cells.Add(LastCell);
             events.Add($"hazard:{stacks.Sum(stack => stack.Amount)}");
             Callback?.Invoke();
             return new(stacks.Sum(stack => stack.Amount), 1, 0, 0, 0);

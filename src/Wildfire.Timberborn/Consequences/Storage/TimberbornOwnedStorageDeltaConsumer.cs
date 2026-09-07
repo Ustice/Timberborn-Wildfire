@@ -59,7 +59,7 @@ public sealed class TimberbornOwnedStorageDeltaConsumer
             TimberbornOwnedStorageBatchResult result = default;
             _resources.TransferInventory(() =>
             {
-                var damage = _damage.ApplyOwnedDamage(tick, live);
+                var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
                 var effects = _storage.ApplyOwnedConsequences(tick, live);
                 result = new(batch.UnownedCount, isLive.Count(pair => !pair.Value) + effects.NotLive, effects.Unavailable,
                     damage, effects.Removed, effects.Hazardous, effects.Blasts, effects.Pulses, effects.Unknown, effects.NonBurnable);

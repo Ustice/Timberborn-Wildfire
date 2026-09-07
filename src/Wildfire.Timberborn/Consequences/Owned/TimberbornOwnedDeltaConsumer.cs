@@ -65,7 +65,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
             TimberbornOwnedConsequenceBatchResult result = default;
             _guard.TransferInventory(() =>
             {
-                var damage = _damage.ApplyOwnedDamage(tick, live);
+                var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
                 var trees = _trees.ApplyOwnedConsequences(tick, live.Where(item => item.Family == NativeBurnTargetFamily.Tree).ToArray());
                 var crops = _crops.ApplyOwnedConsequences(tick, live.Where(item => item.Family == NativeBurnTargetFamily.Crop).ToArray());
                 var storage = _storage.ApplyOwnedConsequences(tick, live.Where(item =>

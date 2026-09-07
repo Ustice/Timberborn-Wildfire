@@ -21,9 +21,10 @@ internal sealed class TimberbornOwnedStorageBurnSink
 
     internal TimberbornOwnedStorageEffects ApplyOwnedConsequences(uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions)
     {
-        var results = decisions.GroupBy(item => item.EntityId).Select(group => group.OrderByDescending(item =>
-            Math.Max(0, item.Decision.OldFuel - item.Decision.NewFuel)).ThenByDescending(item => item.Decision.NewHeat)
-            .ThenBy(item => item.Decision.CellIndex).First()).Select(item => ApplyOwner(tick, item)).ToArray();
+        // Stable spatial order, retaining emission order within a cell. Each completion spends
+        // actual current stock and attributes its hazards to this contribution's originating cell.
+        var results = decisions.OrderBy(item => item.Decision.CellIndex)
+            .Select(item => ApplyOwner(tick, item)).ToArray();
         return new(results.Sum(r => r.NotLive), results.Sum(r => r.Unavailable), results.Sum(r => r.Removed),
             results.Sum(r => r.Hazardous), results.Sum(r => r.Blasts), results.Sum(r => r.Pulses),
             results.Sum(r => r.Unknown), results.Sum(r => r.NonBurnable));

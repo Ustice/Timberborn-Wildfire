@@ -47,7 +47,7 @@ public sealed class TimberbornOwnedCropDeltaConsumer
             TimberbornOwnedCropBatchResult result = default;
             _guard.TransferInventory(() =>
             {
-                var damage = _damage.ApplyOwnedDamage(tick, live);
+                var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
                 var crops = _crops.ApplyOwnedConsequences(tick, live);
                 result = new(batch.UnownedCount, batch.Decisions.Length - live.Length, damage, crops);
             });

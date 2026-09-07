@@ -171,7 +171,7 @@ public sealed class OwnedCropDeltaConsumerTests
 
     private static TimberbornBurnDamageTargetKey Key(Guid id) => new(TimberbornBurnDamageIdentity.ForEntity(id, NativeBurnTargetFamily.Crop));
     private static CellDelta Delta(uint id, int cell, int oldFuel, int newFuel) => new(cell,
-        PackedCell.Pack(oldFuel, 10, 3, 0, 0, 1), PackedCell.Pack(newFuel, 10, 3, 0, 0, 1), id);
+        PackedCell.Pack(oldFuel, 10, 3, 0, 0, 1), PackedCell.Pack(newFuel, 10, 3, 0, 0, 1), id, id == 0 ? 0 : (uint)cell + 1);
     private sealed class Fixture
     {
         internal readonly TimberbornNativeMaterialRegistry Registry = new(Grid, []);
@@ -184,7 +184,7 @@ public sealed class OwnedCropDeltaConsumerTests
             Damage = new(new TimberbornBurnDamageDescriptorCatalog([new("Crop.Carrot", TimberbornBurnDamageTargetKind.Crop,
                 TimberbornBurnMaterialKind.Organic, resourceYields: [new("Carrot", amount)])]));
             Registry.Reconcile(new[] { A, B }.Select(id => new TimberbornMaterialProjection(id,
-                [new(new(0, 0, 0), 0)], [TimberbornMaterialPart.Crop("Carrot")])), []);
+                [new(new(0, 0, 0), 0), new(new(1, 0, 0), 1)], [TimberbornMaterialPart.Crop("Carrot")])), []);
             Damage.RegisterTargets(Grid, [new(Key(A), "Crop.Carrot", [new(0, 0, 0), new(1, 0, 0)], 20),
                 new(Key(B), "Crop.Carrot", [new(0, 0, 0)], 10)]);
             Consumer = new(Registry, Damage, Api, Guard, registerB ? [A, B] : [A]);

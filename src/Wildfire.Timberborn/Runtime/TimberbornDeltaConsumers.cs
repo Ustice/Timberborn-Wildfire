@@ -518,7 +518,8 @@ public readonly record struct TimberbornFireCellDeltaDecision(
     bool WasBurning,
     bool IsBurning,
     bool FuelDepleted,
-    uint TargetId = 0)
+    uint TargetId = 0,
+    uint SlotId = 0)
 {
     public bool StartedBurning => !WasBurning && IsBurning;
 
@@ -566,7 +567,8 @@ public readonly record struct TimberbornFireCellDeltaDecision(
             PackedCell.BurningLevel(delta.OldCell) > 0,
             PackedCell.BurningLevel(delta.NewCell) > 0,
             FuelDepleted: oldFuel > 0 && newFuel == 0,
-            TargetId: delta.TargetId);
+            TargetId: delta.TargetId,
+            SlotId: delta.SlotId);
     }
 }
 

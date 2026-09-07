@@ -274,32 +274,29 @@ public sealed partial class TimberbornBurnDamageService : ITimberbornBurnDamageS
             .Where(hit => _targetKeyByCellIndex.ContainsKey(hit.CellIndex))
             .Select(hit => hit with { TargetKey = _targetKeyByCellIndex[hit.CellIndex] })
             .ToArray();
-        return ApplyHits(tick, decisions.Count, candidateHits.Length, resolvedHits);
+        // Legacy cell-routed reports lack durable slot provenance. Retain their historical per-cell
+        // maximum policy explicitly; complete owned batches use ordered transition normalization.
+        var distinct = resolvedHits.GroupBy(hit => (hit.TargetKey, hit.CellIndex))
+            .Select(group => group.OrderByDescending(hit => hit.DamageUnits).ThenByDescending(hit => hit.Heat).First()).ToArray();
+        return ApplyHits(tick, decisions.Count, candidateHits.Length, resolvedHits.Length, distinct,
+            resolvedHits.Length - distinct.Length);
     }
 
     /// <summary>Applies preflighted original-owner decisions. Never resolves a current cell occupant.</summary>
     internal TimberbornBurnDamageApplySummary ApplyOwnedDamage(
-        uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions)
+        uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions, int replaySuppressedCount)
     {
         var hits = decisions.Select(item => CreateHit(item.Decision) with { TargetKey = item.TargetKey })
             .Where(hit => hit.DamageUnits > 0).ToArray();
         if (hits.Any(hit => !_states.ContainsKey(hit.TargetKey)))
             throw new InvalidOperationException("An owned burn registration disappeared after batch preflight.");
-        return ApplyHits(tick, decisions.Count, hits.Length, hits);
+        return ApplyHits(tick, decisions.Count + replaySuppressedCount, hits.Length, hits.Length, hits, replaySuppressedCount);
     }
 
     private TimberbornBurnDamageApplySummary ApplyHits(uint tick, int consideredCount, int candidateCount,
-        TimberbornBurnDamageCellHit[] resolvedHits)
+        int resolvedCount, TimberbornBurnDamageCellHit[] contributions, int replaySuppressedCount)
     {
-        // A coherent GPU step has one local material slot per cell. Repeated reports of
-        // that cell are duplicates; different cells of the same body are independent burns.
-        var distinctCells = resolvedHits.GroupBy(static hit => (hit.TargetKey, hit.CellIndex))
-            .Select(static group => group
-                .OrderByDescending(static hit => hit.DamageUnits)
-                .ThenByDescending(static hit => hit.Heat)
-                .First())
-            .ToArray();
-        TimberbornBurnDamageAppliedEvent[] appliedEvents = distinctCells
+        TimberbornBurnDamageAppliedEvent[] appliedEvents = contributions
             .GroupBy(static hit => hit.TargetKey)
             .Select(static group =>
             {
@@ -317,9 +314,9 @@ public sealed partial class TimberbornBurnDamageService : ITimberbornBurnDamageS
             Tick: tick,
             ConsideredCellCount: consideredCount,
             DamageCandidateCellCount: candidateCount,
-            ResolvedTargetCellCount: resolvedHits.Length,
-            UnresolvedCellCount: candidateCount - resolvedHits.Length,
-            DuplicateCellSuppressedCount: resolvedHits.Length - distinctCells.Length,
+            ResolvedTargetCellCount: resolvedCount,
+            UnresolvedCellCount: candidateCount - resolvedCount,
+            DuplicateCellSuppressedCount: replaySuppressedCount,
             DamageAppliedTargetCount: appliedEvents.Length,
             TotalDamageApplied: appliedEvents.Sum(static appliedEvent => appliedEvent.DamageApplied),
             PersistenceWriteCount: appliedEvents.Length);

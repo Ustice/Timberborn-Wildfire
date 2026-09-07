@@ -212,7 +212,7 @@ public sealed class OwnedTreeDeltaConsumerTests
     private static TimberbornMaterialProjection Projection(Guid id) => new(id,
         [new(new(0, 0, 0), 0), new(new(1, 0, 0), 1)], [TimberbornMaterialPart.Tree("Pine")]);
     private static CellDelta Delta(uint id, int cell, int oldFuel, int newFuel) => new(cell,
-        PackedCell.Pack(oldFuel, 10, 3, 0, 0, 1), PackedCell.Pack(newFuel, 10, 3, 0, 0, 1), id);
+        PackedCell.Pack(oldFuel, 10, 3, 0, 0, 1), PackedCell.Pack(newFuel, 10, 3, 0, 0, 1), id, id == 0 ? 0 : (uint)cell + 1);
 
     private sealed class Fixture
     {

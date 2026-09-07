@@ -28,7 +28,7 @@ public sealed class OwnedConsequenceBatchTests
         Assert.Equal(0, result.Crops.CoalescedCellCount);
         Assert.Equal(2, f.Damage.States[Key(Structure)].DamageTaken); // Body+inventory share one damage state.
         Assert.Equal(6, f.Damage.States[Key(Stock)].DamageTaken);
-        Assert.Equal(3, result.Storage.DestroyedItems); // Storage budget aggregation is a separate boundary.
+        Assert.Equal(4, result.Storage.DestroyedItems);
         Assert.NotEmpty(f.Native.TreeCalls);
         Assert.NotEmpty(f.Native.CropCalls);
         Assert.Equal(2, result.StructureRollbackUnavailableOwners);
@@ -58,7 +58,7 @@ public sealed class OwnedConsequenceBatchTests
     {
         var f = new Fixture();
         Assert.Throws<InvalidOperationException>(() => f.Consumer.Consume(3,
-            [f.Delta(Tree, 15), f.Delta(Crop, 15), f.Delta(Stock, 15), new CellDelta(0, 0xffff, 0, 999)]));
+            [f.Delta(Tree, 15), f.Delta(Crop, 15), f.Delta(Stock, 15), new CellDelta(0, 0xffff, 0, 999, 1)]));
         Assert.Equal(0, f.Native.DamagePasses);
         Assert.Empty(f.Native.TreeCalls);
         Assert.Empty(f.Native.CropCalls);
@@ -178,7 +178,7 @@ public sealed class OwnedConsequenceBatchTests
         }
         internal CellDelta Delta(Guid id, int loss, int? cell = null) => new(cell ?? Array.IndexOf(Ids, id),
             PackedCell.Pack(15, 10, 3, 0, 0, 1), PackedCell.Pack(15 - loss, 10, 3, 0, 0, 1),
-            Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId);
+            Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId, cell >= 4 ? 2u : 1u);
     }
     internal sealed class NativeFake : ITimberbornOwnedBodyLiveness, ITimberbornLiveTreeBurnConsequenceApi,
         ITimberbornLiveCropBurnConsequenceApi, ITimberbornOwnedStorageInventoryApi, ITimberbornStoredGoodHazardConsequenceSink, ITimberbornFireLogSink
