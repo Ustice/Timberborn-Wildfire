@@ -36,6 +36,7 @@ public sealed class FireSimStepCoordinator
 
     public void RegisterChange(FireSimChange change)
     {
+        RejectUnacknowledgedCollection(change);
         _changes.Add(change);
     }
 
@@ -52,6 +53,28 @@ public sealed class FireSimStepCoordinator
     }
 
     public GpuFireStepResult? TryTickWithInput(IFireSimStepBackend backend, FireSimChange input, Action commitInput)
+    {
+        RejectUnacknowledgedCollection(input);
+        return TryTickWithInputCore(backend, input, commitInput);
+    }
+
+    public GpuFireStepResult? TryCollectAsh(IFireSimAshCollectionBackend backend, FireSimAshCollectionInput input,
+        Action<FireSimAshCollectionReceipt> commitCollection)
+    {
+        if (commitCollection is null) throw new ArgumentNullException(nameof(commitCollection));
+        var change = new FireSimChange(input.CellIndex, CollectCleanAsh: input.Requested);
+        FireSimGpuProtocol.EncodeChange(change); // Reject range errors before admission.
+        return TryTickWithInputCore(backend, change, () => commitCollection(
+            FireSimGpuProtocol.DecodeCollectionReceipt(backend.ReadAppliedChange(LastUploadedChangeCount - 1), input)));
+    }
+
+    private static void RejectUnacknowledgedCollection(FireSimChange change)
+    {
+        if (change.CollectCleanAsh.HasValue)
+            throw new ArgumentException("Clean ash collection requires TryCollectAsh and its GPU receipt.", nameof(change));
+    }
+
+    private GpuFireStepResult? TryTickWithInputCore(IFireSimStepBackend backend, FireSimChange input, Action commitInput)
     {
         ValidateBackend(backend);
         if (commitInput is null)

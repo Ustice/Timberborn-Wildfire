@@ -32,12 +32,19 @@ public static class FireSimGpuProtocol
 
     public static FireSimGpuChange EncodeChange(FireSimChange change)
     {
+        ValidateCollection(change);
         return new FireSimGpuChange(
             checked((uint)change.CellIndex),
             GetSetMask(change),
             GetAddFields(change),
             GetSetValues(change));
     }
+
+    public const uint CollectCleanAshMask = 1u << 11;
+    public const int CollectionRequestedShift = 25;
+    public const int CollectionRemovedShift = 27;
+    public const uint CollectionReceiptValidMask = 1u << 29;
+    public const uint CollectionReceiptMask = (3u << CollectionRemovedShift) | CollectionReceiptValidMask;
 
     private const uint SetCellMask = 1u << 0;
     private const uint SetWaterMask = 1u << 1;
@@ -80,7 +87,7 @@ public static class FireSimGpuProtocol
 
     private static uint GetSetMask(FireSimChange change)
     {
-        uint mask = 0u;
+        uint mask = change.CollectCleanAsh.HasValue ? CollectCleanAshMask : 0u;
         mask |= change.SetCell.HasValue ? SetCellMask : 0u;
         mask |= change.SetWater.HasValue ? SetWaterMask : 0u;
         mask |= change.SetFuel.HasValue ? SetFuelMask : 0u;
@@ -105,7 +112,8 @@ public static class FireSimGpuProtocol
             (Clamp(change.SetAshContamination, 7u) << 14) |
             (Clamp(change.SetSmoke, 7u) << 17) |
             (Clamp(change.SetSmokeContamination, 7u) << 20) |
-            (Clamp(change.AddWater, 3u) << 23);
+            (Clamp(change.AddWater, 3u) << 23) |
+            (Clamp(change.CollectCleanAsh, 3u) << CollectionRequestedShift);
     }
 
     private static uint GetSetValues(FireSimChange change)
@@ -117,6 +125,27 @@ public static class FireSimGpuProtocol
             (Clamp(change.SetFlammability, 3u) << 26) |
             (Clamp(change.SetBurningLevel, 7u) << 28) |
             (Clamp(change.SetTerrain, 1u) << 31);
+    }
+
+    private static void ValidateCollection(FireSimChange change)
+    {
+        if (!change.CollectCleanAsh.HasValue) return;
+        if (change.CollectCleanAsh.Value > 3)
+            throw new ArgumentOutOfRangeException(nameof(change), "Clean ash request must be between zero and three.");
+        if (change with { CollectCleanAsh = null } != new FireSimChange(change.CellIndex))
+            throw new ArgumentException("Clean ash collection cannot share a command with another mutation.", nameof(change));
+    }
+
+    public static FireSimAshCollectionReceipt DecodeCollectionReceipt(FireSimGpuChange applied, FireSimAshCollectionInput input)
+    {
+        var expected = EncodeChange(new FireSimChange(input.CellIndex, CollectCleanAsh: input.Requested));
+        uint removed = (applied.AddFields >> CollectionRemovedShift) & 3u;
+        if ((applied.AddFields & CollectionReceiptValidMask) == 0 ||
+            applied.CellIndex != expected.CellIndex || applied.SetMask != expected.SetMask ||
+            applied.SetValues != expected.SetValues ||
+            (applied.AddFields & ~CollectionReceiptMask) != expected.AddFields || removed > input.Requested)
+            throw new InvalidOperationException("Missing or invalid GPU ash collection receipt.");
+        return new FireSimAshCollectionReceipt(input.CellIndex, input.Requested, (byte)removed);
     }
 
     private static uint Clamp(byte? value, uint max)

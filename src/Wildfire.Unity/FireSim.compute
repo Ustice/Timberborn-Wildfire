@@ -5,6 +5,9 @@
 #define THREAD_GROUP_SIZE_Y 8
 #define THREAD_GROUP_SIZE_Z 4
 
+#define CHANGE_COLLECT_CLEAN_ASH 2048u
+#define COLLECTION_RECEIPT_VALID (1u << 29)
+#define COLLECTION_RECEIPT_MASK ((3u << 27) | COLLECTION_RECEIPT_VALID)
 #define CHANGE_SET_CELL 1u
 #define CHANGE_SET_WATER 2u
 #define CHANGE_SET_FUEL 4u
@@ -63,7 +66,7 @@ RWStructuredBuffer<uint> NextCells;
 RWStructuredBuffer<uint> CurrentAtmosphericFields;
 RWStructuredBuffer<uint> NextAtmosphericFields;
 RWStructuredBuffer<uint> CompanionFields;
-StructuredBuffer<FireSimChangeGpu> ExternalChanges;
+RWStructuredBuffer<FireSimChangeGpu> ExternalChanges;
 AppendStructuredBuffer<CellDeltaGpu> Deltas;
 RWStructuredBuffer<float4> VisualFields;
 
@@ -1565,6 +1568,28 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
 
         if (change.CellIndex >= CellCount)
         {
+            continue;
+        }
+
+        if ((change.SetMask & CHANGE_COLLECT_CLEAN_ASH) != 0u)
+        {
+            // Exclusive ordered resource conversion. Its receipt is authored here, not inferred
+            // from a later field difference (simulation may add, move, contaminate or decay ash).
+            uint requested = (change.AddFields >> 25) & 3u;
+            bool validRequest = change.SetMask == CHANGE_COLLECT_CLEAN_ASH &&
+                change.AddFields == (requested << 25) && change.SetValues == 0u;
+            change.AddFields &= ~COLLECTION_RECEIPT_MASK;
+            if (validRequest)
+            {
+                uint atmospheric = CurrentAtmosphericFields[change.CellIndex];
+                uint ash = AtmosphericAsh(atmospheric);
+                uint removed = AtmosphericAshContamination(atmospheric) == 0u ? min(requested, ash) : 0u;
+                CurrentAtmosphericFields[change.CellIndex] = PackAtmospheric(
+                    AtmosphericSteam(atmospheric), AtmosphericSmoke(atmospheric), AtmosphericSmokeContamination(atmospheric),
+                    ash - removed, AtmosphericAshContamination(atmospheric), (atmospheric & 0x8000u) != 0u);
+                change.AddFields |= (removed << 27) | COLLECTION_RECEIPT_VALID;
+            }
+            ExternalChanges[changeIndex] = change;
             continue;
         }
 
