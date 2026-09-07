@@ -23,6 +23,7 @@ public sealed class TimberbornNativeMaterialRegistry
     public TimberbornNativeMaterialRegistry(FireGrid grid, IEnumerable<int> solidTerrainCells)
     {
         if (grid.Width <= 0 || grid.Height <= 0 || grid.Depth <= 0) throw new ArgumentOutOfRangeException(nameof(grid));
+        _ = checked(grid.Width * grid.Height * grid.Depth);
         _grid = grid;
         _solidTerrain = solidTerrainCells.ToHashSet();
         foreach (int cell in _solidTerrain) _grid.FromIndex(cell);

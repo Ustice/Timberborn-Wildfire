@@ -30,6 +30,55 @@ public sealed class NativeMaterialRegistryTests
         registry.Reconcile(Array.Empty<TimberbornMaterialProjection>(), new[] { TreeId });
         Assert.Null(registry.ResolveCell(10).Owner);
         Assert.Equal(1, PackedCell.Terrain(registry.ResolveCell(10).PackedDefinition));
+        Assert.Equal(WildfireMaterialClass.Terrain, registry.ResolveCell(10).Profile.MaterialClass);
+        Assert.Equal(WildfireMaterialClass.Empty, registry.ResolveCell(11).Profile.MaterialClass);
+        Assert.Equal(0, PackedCell.Terrain(registry.ResolveCell(11).PackedDefinition));
+    }
+
+    [Fact]
+    public void CompositePreservesInitialStorageAdditionWithoutChangingStructureProfile()
+    {
+        var registry = new TimberbornNativeMaterialRegistry(Grid, Array.Empty<int>());
+        var infrastructure = TimberbornMaterialPart.Infrastructure();
+        var stock = TimberbornMaterialPart.StoredGood("Log");
+        registry.Reconcile(new[] { Project(BuildingId, 10, infrastructure, stock) }, Array.Empty<Guid>());
+        var resolved = registry.ResolveCell(10);
+        Assert.True(stock.InitialFuel > 0);
+        Assert.Equal(stock.InitialFuel, PackedCell.Fuel(resolved.PackedDefinition));
+        Assert.Equal(infrastructure.MaterialClass, resolved.Profile.MaterialClass);
+        Assert.True(resolved.HasSameEntityStorageComposite);
+    }
+
+    [Fact]
+    public void MaterialClassComesFromSameFuelWinnerInsteadOfLargestTargetToken()
+    {
+        var registry = new TimberbornNativeMaterialRegistry(Grid, Array.Empty<int>());
+        var tree = TimberbornMaterialPart.Tree("Pine");
+        var crop = TimberbornMaterialPart.Crop("Carrot");
+        Assert.True(tree.InitialFuel > crop.InitialFuel);
+        registry.Reconcile(new[] { Project(TreeId, 10, tree), Project(BuildingId, 10, crop) }, Array.Empty<Guid>());
+        var resolved = registry.ResolveCell(10);
+        Assert.Equal(TreeId, resolved.Owner!.Value.EntityId);
+        Assert.Equal(tree.InitialFuel, PackedCell.Fuel(resolved.PackedDefinition));
+        Assert.Equal(tree.MaterialClass, resolved.Profile.MaterialClass);
+        Assert.True(resolved.Contributors.Single(contributor => contributor.Owner.EntityId == BuildingId).Owner.TargetId > resolved.Owner.Value.TargetId);
+    }
+
+    [Fact]
+    public void AddingOrHidingLocalFootprintSlotsDoesNotRenumberKnownSlots()
+    {
+        var registry = new TimberbornNativeMaterialRegistry(Grid, Array.Empty<int>());
+        var parts = new[] { TimberbornMaterialPart.Tree("Pine") };
+        registry.Reconcile(new[] { new TimberbornMaterialProjection(TreeId, new[] { Slot(1, 10) }, parts) }, Array.Empty<Guid>());
+        var known = registry.ResolveCell(10).Owner!.Value;
+        registry.Reconcile(new[] { new TimberbornMaterialProjection(TreeId, new[] { Slot(0, 11), Slot(1, 12) }, parts) }, Array.Empty<Guid>());
+        Assert.Equal(known, registry.ResolveCell(12).Owner);
+        var added = registry.ResolveCell(11).Owner!.Value;
+        Assert.Equal(known.TargetId, added.TargetId);
+        Assert.NotEqual(known.SlotId, added.SlotId);
+        registry.Reconcile(new[] { new TimberbornMaterialProjection(TreeId, new[] { Slot(0, 11) }, parts) }, Array.Empty<Guid>());
+        Assert.Equal(2, registry.CaptureBindings().Entities.Single().Slots.Count);
+        // New binding is NOT proof of a Fresh GPU activation for this previously known target.
     }
 
     [Fact]
