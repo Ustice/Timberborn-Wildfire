@@ -20,6 +20,15 @@ public sealed record TimberbornMaterialPart
     public static TimberbornMaterialPart Crop(string specId) => From("crop", new TimberbornResourceAdapter().CreateCropSource(0, 0, 0, specId));
     public static TimberbornMaterialPart StoredGood(string goodId) => From("stored:" + goodId, new TimberbornResourceAdapter().CreateStockpileResourceSource(0, 0, 0, goodId));
 
+    public static TimberbornMaterialPart Vegetation(string specId)
+    {
+        var profile = TimberbornBurnableCatalog.Default.Lookup(specId);
+        if (!profile.Known || profile.Type != "bush")
+            throw new ArgumentException("Vegetation requires a known native bush material profile.", nameof(specId));
+        return new TimberbornMaterialPart("vegetation", 2, profile.FuelValue, profile.Flammability,
+            WildfireMaterialClass.Vegetation);
+    }
+
     private static TimberbornMaterialPart From(string key, TimberbornCellSource source)
     {
         if (source.Building is { } building)

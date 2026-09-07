@@ -62,6 +62,7 @@ internal static class TimberbornInitialBodyCompiler
         {
             TimberbornInitialBodyShape.Tree => TimberbornMaterialPart.Tree(body.SpecId),
             TimberbornInitialBodyShape.Crop => TimberbornMaterialPart.Crop(body.SpecId),
+            TimberbornInitialBodyShape.Vegetation => TimberbornMaterialPart.Vegetation(body.SpecId),
             TimberbornInitialBodyShape.Structure or TimberbornInitialBodyShape.Stockpile => TimberbornMaterialPart.Building(body.SpecId),
             _ => throw new NotSupportedException("Initial body family has no complete owned consequence route."),
         };

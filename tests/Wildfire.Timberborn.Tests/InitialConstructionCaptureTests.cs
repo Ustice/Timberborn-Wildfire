@@ -11,6 +11,10 @@ public sealed class InitialConstructionCaptureTests
     [Theory]
     [InlineData("Buildings/Storage/SmallWarehouse/SmallWarehouse.Folktails.blueprint.json", "Log", 3)]
     [InlineData("Buildings/Wood/LumberMill/LumberMill.Folktails.blueprint.json", "Log", 15)]
+    [InlineData("Buildings/Wood/GearWorkshop/GearWorkshop.Folktails.blueprint.json", "Plank", 25)]
+    [InlineData("Buildings/Water/WaterPump/WaterPump.Folktails.blueprint.json", "Log", 12)]
+    [InlineData("Buildings/Power/PowerShaft/PowerShaft.Folktails.blueprint.json", "Log", 1)]
+    [InlineData("Buildings/Power/PowerShaft/PowerShaft.IronTeeth.blueprint.json", "Log", 1)]
     public void ActualBuildingSpecGetterCapturesInstalledBlueprintCosts(string entry, string expectedGood, int expectedAmount)
     {
         using var native = new NativeManagedTestContext();

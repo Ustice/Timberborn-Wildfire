@@ -71,7 +71,7 @@ public sealed class InitialNativeMaterialCaptureTests
         Assert.Equal("Berries", bush.Yields.Single().DeclaredGoodId);
         Assert.Equal(1, bush.BodyProfile.FuelValue);
         Assert.Equal(10, TimberbornResourceAdapter.VegetationFuel);
-        Assert.Contains(TimberbornInitialCompositionGap.VegetationProfileMismatch, bush.CompositionGaps);
+        Assert.DoesNotContain(TimberbornInitialCompositionGap.VegetationProfileMismatch, bush.CompositionGaps);
     }
 
     [Fact]

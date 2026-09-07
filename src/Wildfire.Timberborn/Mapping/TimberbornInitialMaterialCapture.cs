@@ -139,7 +139,8 @@ public sealed class TimberbornInitialMaterialBody
         if (Yields.Any(yield => yield.Role == TimberbornCapturedYieldRole.Unclassified)) yield return TimberbornInitialCompositionGap.UnclassifiedYield;
         if (Yields.Any(yield => !yield.GoodProfile.Known) || Inventories.SelectMany(inventory => inventory.Goods).Any(good => !good.Known))
             yield return TimberbornInitialCompositionGap.UnknownGoodProfile;
-        if (Shape == TimberbornInitialBodyShape.Vegetation) yield return TimberbornInitialCompositionGap.VegetationProfileMismatch;
+        if (Shape == TimberbornInitialBodyShape.Vegetation && BodyProfile.Type != "bush")
+            yield return TimberbornInitialCompositionGap.VegetationProfileMismatch;
         if (Inventories.Any(inventory => !inventory.Enabled)) yield return TimberbornInitialCompositionGap.InventoryUnavailable;
         if (PhysicalBodyKind == TimberbornBurnDamageTargetKind.Structure) yield return TimberbornInitialCompositionGap.PhysicalReconstructionUnavailable;
     }

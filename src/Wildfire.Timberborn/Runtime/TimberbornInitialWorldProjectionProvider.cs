@@ -198,8 +198,9 @@ public sealed class TimberbornInitialWorldProjectionProvider
     private static TimberbornInitialBodyShape Shape(EntityComponent entity, string name)
     {
         if (entity.TryGetComponent<Stockpile>(out _)) return TimberbornInitialBodyShape.Stockpile;
-        if (TimberbornEntityComponentCells.IsInfrastructureName(name)) return TimberbornInitialBodyShape.Infrastructure;
+        // Physical construction determines the body; a name may describe its function.
         if (entity.TryGetComponent<Building>(out _)) return TimberbornInitialBodyShape.Structure;
+        if (TimberbornEntityComponentCells.IsInfrastructureName(name)) return TimberbornInitialBodyShape.Infrastructure;
         if (entity.TryGetComponent<TreeComponent>(out _) || TimberbornEntityComponentCells.IsTreeName(name)) return TimberbornInitialBodyShape.Tree;
         var profile = TimberbornBurnableCatalog.Default.Lookup(name);
         if (profile.Known && profile.Type == "crop") return TimberbornInitialBodyShape.Crop;
