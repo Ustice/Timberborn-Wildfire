@@ -17,10 +17,10 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         {
             bool changed = _guard.CaptureAtRest(() =>
             {
-                bool retained = _origins.PreflightRetirement(entityId, _damage);
+                _origins.PreflightRetirement(entityId, _damage);
                 if (_bodies.ObservePresence(entityId) != TimberbornOwnedBodyPresence.Absent)
                     throw new InvalidOperationException("Retirement requires exact native registry absence, not death or incomplete deletion.");
-                return retained;
+                return _origins.PreflightRetirement(entityId, _damage); // Presence providers must not invalidate the first read.
             });
             if (!changed) return false;
             _guard.TransferInventory(() =>
@@ -28,6 +28,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
                 _origins.CommitRetirement(entityId, _damage);
                 if (_bodies.ObservePresence(entityId) != TimberbornOwnedBodyPresence.Absent)
                     throw new InvalidOperationException("Native owner reappeared during retirement publication.");
+                _origins.PreflightRetirement(entityId, _damage); // Recheck after the final presence observation too.
             });
             return true;
         }

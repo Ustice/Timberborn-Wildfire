@@ -53,6 +53,7 @@ internal sealed class TimberbornOwnedBurnOrigins
         _origins.Reconcile(Array.Empty<TimberbornMaterialProjection>(), new[] { entityId });
         if (!damage.RemoveTarget(binding.Key)) throw new InvalidOperationException("Retiring body state disappeared after preflight.");
         _bindings[entityId] = binding with { Retention = OwnedBodyRetention.RetiredNativeOwner };
+        ValidateBodyState(_bindings[entityId], damage); // RemoveTarget observers may have reinserted a body.
     }
 
     private static void ValidateBodyState(Binding binding, TimberbornBurnDamageService damage)

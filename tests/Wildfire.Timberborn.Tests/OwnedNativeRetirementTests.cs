@@ -106,6 +106,58 @@ public sealed class OwnedNativeRetirementTests
         Assert.Throws<InvalidOperationException>(() => f.Consumer.CaptureHistory());
     }
 
+    [Fact]
+    public void BodyReinsertedByRemovalCallbackPoisonsBeforeRetirementCanReportSuccess()
+    {
+        var f = new F(); var owner = f.Registrations[0];
+        f.Native.Live.Remove(owner.EntityId);
+        f.Native.DuringRegistration = () =>
+        {
+            f.Native.DuringRegistration = null; // Only the removal callback inserts; avoid recursive registration.
+            f.Damage.UpsertTarget(new(4, 2, 1), new(Key(owner), "Pine", [new(0, 0, 0)], 10));
+        };
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.RetireNativeOwner(owner.EntityId));
+        Assert.True(f.Damage.States.ContainsKey(Key(owner)));
+        Assert.True(f.Guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.RetireNativeOwner(owner.EntityId));
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.CaptureHistory());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PresenceCallbackCannotInvalidateRetirementPreflightOrIdempotentResult(bool alreadyRetired)
+    {
+        var f = new F(); var owner = f.Registrations[0];
+        f.Native.Live.Remove(owner.EntityId);
+        if (alreadyRetired) f.Consumer.RetireNativeOwner(owner.EntityId);
+        f.Native.DuringIsLive = () =>
+        {
+            f.Native.DuringIsLive = null;
+            if (alreadyRetired) f.Damage.UpsertTarget(new(4, 2, 1), new(Key(owner), "Pine", [new(0, 0, 0)], 10));
+            else f.Damage.RemoveTarget(Key(owner));
+        };
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.RetireNativeOwner(owner.EntityId));
+        // No retirement publication was admitted; inconsistent body state remains visibly unsaveable.
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.CaptureHistory());
+    }
+
+    [Fact]
+    public void BodyReinsertedByFinalPresenceCallbackPoisonsInsideMutationGuard()
+    {
+        var f = new F(); var owner = f.Registrations[0];
+        f.Native.Live.Remove(owner.EntityId);
+        int observations = 0;
+        f.Native.DuringIsLive = () =>
+        {
+            if (++observations == 2)
+                f.Damage.UpsertTarget(new(4, 2, 1), new(Key(owner), "Pine", [new(0, 0, 0)], 10));
+        };
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.RetireNativeOwner(owner.EntityId));
+        Assert.True(f.Guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.RetireNativeOwner(owner.EntityId));
+    }
+
     private static object NaturalValues(OwnedNaturalProgress value) => (value.EntityId, value.AppliedYieldLoss,
         value.DryRequestSatisfied, value.DeathRequestSatisfied, value.LeftoverRequestSatisfied, value.DesiredPresentation);
 

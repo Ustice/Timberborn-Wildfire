@@ -12,7 +12,7 @@ The binding's existing persisted retention enum is now explicit authority. Captu
 
 Native Guid/TargetId/local-slot bindings, natural actual-yield receipts and terminal/presentation intent, and fractional storage credit remain intact. Delayed old-owner deltas still resolve to that owner and report NotLive. The operation never touches simulator material, creates goods, restores yield or copies fuel from a body definition. Existing GPU archives are outside this method and remain simulator-owned.
 
-A registration observer exception after publication, or same-Guid native reappearance during that callback, poisons the existing shared guard. There is no speculative rollback, refund or retry. Ordinary completed native deletion itself is not a resource failure. Retirement is explicitly rejected inside an active consequence/capture transaction; a future event adapter must defer its hint until the outer operation finishes rather than nesting another guard.
+A registration observer exception after publication, or same-Guid native reappearance during that callback, poisons the existing shared guard. Body/retention consistency is checked after the removal observer and again after the final presence observation, so a callback that directly reinserts BURN also fails inside the guard. Preflight rechecks consistency after its presence read before returning even an idempotent no-op; inconsistent read-side callback state remains unsaveable. There is no speculative rollback, refund or retry. Ordinary completed native deletion itself is not a resource failure. Retirement is explicitly rejected inside an active consequence/capture transaction; a future event adapter must defer its hint until the outer operation finishes rather than nesting another guard.
 
 ## Exact native deletion evidence
 
@@ -31,6 +31,8 @@ The IDeletableEntity callback is a managed proxy. Successful completion invokes 
 The owned tests cover retained native yield receipts/storage credits, exact old-origin lookup, deliberate two-cell projection removal, idempotence, unknown owner, every non-absent status including an invalid enum, missing BURN rejection, same-Guid resurrection rejection after direct upsert, nested-guard exclusion, and failure/reappearance after body publication without replay.
 
 At `05eb1fb` (with baseline native proxy-context fix `8ec1f14`): focused **25 passed**; full native suite **981 passed**, zero failures/skips. Logs are `/tmp/wildfire-native-origin-retirement/retirement-focused.txt` and `retirement-full.txt`. The companion witnessed-capture/restore work requires exact Absent for retired owners and Live for retained owners; preserve those stricter checks when integrating the one-line RegisterRetired restore change.
+
+The postcondition follow-up adds four callback regressions: BURN reinserted during removal, invalidation during either first-retirement or already-retired presence preflight, and BURN reinserted during the final presence observation. Focused retirement tests **15 passed**; full native suite **985 passed**, zero failures/skips. Logs: `/tmp/wildfire-native-origin-retirement/postcondition-focused.txt` and `postcondition-full.txt`.
 
 ## Required activation work remains
 
