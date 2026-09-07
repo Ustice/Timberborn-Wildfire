@@ -23,6 +23,27 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
         Assert.Equal(1, backend.Uploads);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public void MaterialControlFollowsEveryOlderInputEvenWhenOrdinaryUploadBudgetIsFull(int pending)
+    {
+        var step = Coordinator(changeCapacity: 1);
+        var backend = new Backend();
+        var ordinary = Enumerable.Range(0, pending).Select(index => new FireSimChange(0, SetHeat: (byte)(index + 1))).ToArray();
+        foreach (var change in ordinary) step.RegisterChange(change);
+        int commits = 0;
+        var result = step.TryHandoffMaterial(backend, Replace(), _ => commits++);
+        Assert.NotNull(result); // A ghost owner cannot be simulated merely to drain this queue.
+        Assert.Equal(ordinary, backend.Changes.Take(pending));
+        Assert.Equal(pending + 1, backend.Changes.Length);
+        Assert.NotNull(backend.Changes[^1].MaterialHandoff);
+        Assert.Equal(0, step.PendingChangeCount);
+        Assert.Equal(1u, step.CurrentTick);
+        Assert.Equal(1, commits);
+        Assert.Equal(1, backend.Uploads);
+    }
+
     [Fact]
     public void WholeMaterialCapacityRejectsBeforeUpload()
     {
