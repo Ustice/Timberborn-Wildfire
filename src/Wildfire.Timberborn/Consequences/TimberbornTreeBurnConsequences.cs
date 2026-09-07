@@ -38,7 +38,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             .Where(static hit => hit.HasValue)
             .Select(static hit => hit!.Value)
             .ToArray();
-        return ApplyTreeHits(tick, treeHits);
+        return ApplyTreeHits(tick, treeHits, _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
+            _burnDamageService.LastApplySummary.UnresolvedCellCount);
     }
 
     internal TimberbornTreeBurnConsequenceSummary ApplyOwnedConsequences(
@@ -46,10 +47,11 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
     {
         var hits = decisions.Select(item => CreateTreeCandidateHit(item.Decision, item.TargetKey))
             .Where(hit => hit.HasValue).Select(hit => hit!.Value).ToArray();
-        return ApplyTreeHits(tick, hits);
+        return ApplyTreeHits(tick, hits, hits.Length - hits.Select(hit => hit.State.TargetKey).Distinct().Count(), 0);
     }
 
-    private TimberbornTreeBurnConsequenceSummary ApplyTreeHits(uint tick, TreeCandidateHit[] treeHits)
+    private TimberbornTreeBurnConsequenceSummary ApplyTreeHits(uint tick, TreeCandidateHit[] treeHits,
+        int duplicateCells, int unmappedTargets)
     {
         TreeCandidateTarget[] consideredTreeTargets = treeHits
             .GroupBy(static hit => hit.State.TargetKey)
@@ -79,8 +81,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             YieldLost: outcomes.Sum(static outcome => outcome.YieldLost),
             KilledTreeCount: outcomes.Count(static outcome => outcome.Killed),
             VisualStateUpdateCount: outcomes.Count(static outcome => outcome.VisualUpdated),
-            DuplicateCellSuppressedCount: _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
-            UnmappedTargetCount: _burnDamageService.LastApplySummary.UnresolvedCellCount,
+            DuplicateCellSuppressedCount: duplicateCells,
+            UnmappedTargetCount: unmappedTargets,
             UnknownCuttableResourceCount: consideredTreeTargetStates.Count(static state => state.MissingResourceIds.Count > 0),
             NonBurnableTreeTargetCount: consideredTreeTargetStates.Count(static state =>
                 state.MaterialKind is TimberbornBurnMaterialKind.NonBurnable ||

@@ -37,7 +37,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             .Where(static hit => hit.HasValue)
             .Select(static hit => hit!.Value)
             .ToArray();
-        return ApplyCropHits(tick, cropHits);
+        return ApplyCropHits(tick, cropHits, _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
+            _burnDamageService.LastApplySummary.UnresolvedCellCount);
     }
 
     internal TimberbornCropBurnConsequenceSummary ApplyOwnedConsequences(uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions)
@@ -46,10 +47,11 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             throw new ArgumentException("Owned crop sink accepts only canonical crop origins.");
         var hits = decisions.Select(item => CreateCropCandidateHit(item.Decision, item.TargetKey))
             .Where(item => item.HasValue).Select(item => item!.Value).ToArray();
-        return ApplyCropHits(tick, hits);
+        return ApplyCropHits(tick, hits, hits.Length - hits.Select(hit => hit.State.TargetKey).Distinct().Count(), 0);
     }
 
-    private TimberbornCropBurnConsequenceSummary ApplyCropHits(uint tick, CropCandidateHit[] cropHits)
+    private TimberbornCropBurnConsequenceSummary ApplyCropHits(uint tick, CropCandidateHit[] cropHits,
+        int duplicateCells, int unmappedTargets)
     {
         TimberbornBurnDamageTargetState[] consideredCropTargets = cropHits
             .Select(static hit => hit.State)
@@ -70,8 +72,8 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             YieldLost: outcomes.Sum(static outcome => outcome.YieldLost),
             KilledCropCount: outcomes.Count(static outcome => outcome.Killed),
             VisualStateUpdateCount: outcomes.Count(static outcome => outcome.VisualUpdated),
-            DuplicateCellSuppressedCount: _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
-            UnmappedTargetCount: _burnDamageService.LastApplySummary.UnresolvedCellCount,
+            DuplicateCellSuppressedCount: duplicateCells,
+            UnmappedTargetCount: unmappedTargets,
             UnknownHarvestResourceCount: consideredCropTargets.Count(static state => state.MissingResourceIds.Count > 0),
             NonBurnableCropTargetCount: consideredCropTargets.Count(static state =>
                 state.MaterialKind is TimberbornBurnMaterialKind.NonBurnable ||
