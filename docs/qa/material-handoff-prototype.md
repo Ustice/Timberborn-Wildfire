@@ -77,3 +77,9 @@ On 2026-09-07, isolated runtime/source `a1e64ff` passed all 34 licensed Unity sh
 Unity/game controller returned idle with no engine process; build lock released. No game launch, deployment, loaded-world, persistence, or native lifecycle activation is claimed.
 
 The checkpoint capture label `material-fresh-composite` was subsequently renamed `material-fresh-owner`: it exercises one Tree profile across two slots, not structure/storage composite construction. This naming correction changes no fixture values, shader, or runtime behavior.
+
+## Writable-buffer limit regression
+
+At `d497c47`, the complete licensed suite passes 34/34 cases with zero skips and 39 captures, including all unchanged ash-collection cases. Every captured Metal log is free of UAV-limit and shader-loop warnings. The actual production native factory also passes its serialized hide/restore/re-exposure lifecycle and independently burns fuel 3 to zero before saving; re-exposure remains exhausted. Core passes 166 tests and the native suite passes 780 tests on this revision's integration base.
+
+The device reports `supportedRandomWriteTargetCount=8` and `maxComputeBufferInputsCompute=31` (Apple M2 Pro, Metal, Unity 6000.3.6f1). These are separate limits. The shader now uses eight writable resources; the request buffer is read-only. No warning suppression or platform-specific alternate fire rules were added. This is GPU and native-simulator evidence, not live world activation.
