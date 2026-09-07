@@ -31,7 +31,8 @@ public sealed class ComputeBufferGrid : IDisposable
         ComputeGridDimensions dimensions,
         ReadOnlySpan<ushort> initialCells,
         ReadOnlySpan<WildfireMaterialField> initialMaterialFields,
-        IComputeBufferAllocator allocator)
+        IComputeBufferAllocator allocator,
+        ReadOnlySpan<uint> initialSlotIds = default)
     {
         ArgumentNullException.ThrowIfNull(allocator);
         Dimensions = dimensions;
@@ -55,12 +56,20 @@ public sealed class ComputeBufferGrid : IDisposable
             IComputeBufferHandle currentTransportFields = AllocateTracked(allocator, ownedBuffers, "wildfire.current_transport_fields", dimensions.CellCount, TransportFieldStrideBytes);
             IComputeBufferHandle nextTransportFields = AllocateTracked(allocator, ownedBuffers, "wildfire.next_transport_fields", dimensions.CellCount, TransportFieldStrideBytes);
             IComputeBufferHandle materialTargetIds = AllocateTracked(allocator, ownedBuffers, "wildfire.material_target_ids", dimensions.CellCount, MaterialTargetIdStrideBytes);
+            IComputeBufferHandle materialSlots = AllocateTracked(allocator, ownedBuffers, "wildfire.material_slot_ids", dimensions.CellCount, sizeof(uint));
             IComputeBufferHandle materialFields = AllocateTracked(allocator, ownedBuffers, "wildfire.material_fields", dimensions.CellCount, MaterialFieldStrideBytes);
 
             uint[] packedCells = initialCells.ToArray().Select(static cell => (uint)cell).ToArray();
             WildfireMaterialField[] materialValues = initialMaterialFields.IsEmpty
                 ? Enumerable.Repeat(WildfireMaterialField.Empty, dimensions.CellCount).ToArray()
                 : initialMaterialFields.ToArray();
+            if (!initialSlotIds.IsEmpty && initialSlotIds.Length != dimensions.CellCount)
+                throw new ArgumentException("Initial slot IDs must match the grid.", nameof(initialSlotIds));
+            uint[] slotIds = initialSlotIds.IsEmpty
+                ? materialValues.Select((field, cell) => field.TargetId == 0 ? 0u : checked((uint)cell + 1)).ToArray()
+                : initialSlotIds.ToArray();
+            InitialMaterialIdentities = Array.AsReadOnly(materialValues.Select((field, cell) => new FireSimMaterialIdentity(field.TargetId, slotIds[cell])).ToArray());
+            materialSlots.Upload(slotIds);
             currentCells.Upload(packedCells);
             nextCells.Upload(packedCells);
             currentTransportFields.Upload(Enumerable.Repeat(0u, dimensions.CellCount).ToArray());
@@ -78,6 +87,8 @@ public sealed class ComputeBufferGrid : IDisposable
             NextTransportFields = nextTransportFields;
             MaterialTargetIds = materialTargetIds;
             MaterialFields = materialFields;
+            MaterialSlotIds = materialSlots;
+            MaterialHandoff = new MaterialHandoffBuffers(allocator, dimensions.CellCount);
             _ownedBuffers = ownedBuffers;
         }
         catch
@@ -116,6 +127,9 @@ public sealed class ComputeBufferGrid : IDisposable
     public IComputeBufferHandle MaterialTargetIds { get; }
 
     public IComputeBufferHandle MaterialFields { get; }
+    public IComputeBufferHandle MaterialSlotIds { get; }
+    public IReadOnlyList<FireSimMaterialIdentity> InitialMaterialIdentities { get; }
+    public MaterialHandoffBuffers MaterialHandoff { get; }
 
     public IComputeBufferHandle CurrentAtmosphericFields => CurrentTransportFields;
 
@@ -163,6 +177,7 @@ public sealed class ComputeBufferGrid : IDisposable
             return;
         }
 
+        MaterialHandoff.Dispose();
         _ownedBuffers.ForEach(static buffer => buffer.Dispose());
         _disposed = true;
     }

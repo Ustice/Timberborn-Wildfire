@@ -81,9 +81,11 @@ namespace Wildfire.UnityBatchmode
             ComputeBuffer nextAtmosphericFields = null;
             ComputeBuffer companionFields = null;
             ComputeBuffer deltaCounter = null;
+            MaterialHandoffFixtureBuffers material = null;
 
             try
             {
+                material = new MaterialHandoffFixtureBuffers(fixture, cellCount, tickCount);
                 currentCells = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 nextCells = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 externalChanges = new ComputeBuffer(Math.Max(1, cellCount), sizeof(uint) * 4, ComputeBufferType.Structured);
@@ -108,6 +110,7 @@ namespace Wildfire.UnityBatchmode
                 {
                     LogPhase("dispatch", "start", "tick=" + tick);
                     deltas.SetCounterValue(0);
+                    material.Upload(tick);
                     FireSimChangeGpu[] changes = fixture.ChangesForTick(tick);
                     uint[] appliedWords = new uint[changes.Length * 4];
                     if (changes.Length > 0)
@@ -117,6 +120,7 @@ namespace Wildfire.UnityBatchmode
                             shader, applyKernel, fixture, tick,
                             currentCells, nextCells, externalChanges, deltas, visualFields,
                             currentAtmosphericFields, nextAtmosphericFields, companionFields);
+                        material.Bind(shader, applyKernel);
                         shader.SetInt("ChangeCount", changes.Length);
                         shader.Dispatch(applyKernel, 1, 1, 1);
                         var applied = new FireSimChangeGpu[changes.Length];
@@ -131,6 +135,8 @@ namespace Wildfire.UnityBatchmode
                         LogPhase("external-changes", "ok", "tick=" + tick + " count=" + changes.Length);
                     }
 
+                    uint[] materialHeader = material.ReadHeader();
+                    uint[] materialReceipts = material.ReadReceipts();
                     Bind(
                         shader,
                         kernel,
@@ -144,6 +150,7 @@ namespace Wildfire.UnityBatchmode
                         currentAtmosphericFields,
                         nextAtmosphericFields,
                         companionFields);
+                    material.Bind(shader, kernel);
                     shader.Dispatch(
                         kernel,
                         Groups(fixture.grid.width, ThreadGroupSizeX),
@@ -153,7 +160,7 @@ namespace Wildfire.UnityBatchmode
 
                     LogPhase("readback", "start", "tick=" + tick);
                     DeltaSnapshot[] tickDeltas = ReadDeltas(deltas, deltaCounter, deltas.count);
-                    ticks[tick - 1] = new TickSnapshot(tick, tickDeltas, appliedWords);
+                    ticks[tick - 1] = new TickSnapshot(tick, tickDeltas, appliedWords, materialHeader, materialReceipts);
                     LogPhase("readback", "ok", "tick=" + tick + " deltas=" + tickDeltas.Length);
                     Swap(ref currentCells, ref nextCells);
                     Swap(ref currentAtmosphericFields, ref nextAtmosphericFields);
@@ -172,7 +179,7 @@ namespace Wildfire.UnityBatchmode
                     finalAtmosphericFields,
                     finalCompanionFields,
                     ticks,
-                    VisualChecksum(visualSamples));
+                    VisualChecksum(visualSamples), material.ReadTargets(), material.ReadSlots());
             }
             finally
             {
@@ -185,6 +192,7 @@ namespace Wildfire.UnityBatchmode
                 Release(nextAtmosphericFields);
                 Release(companionFields);
                 Release(deltaCounter);
+                material?.Dispose();
             }
         }
 
@@ -292,7 +300,7 @@ namespace Wildfire.UnityBatchmode
                 snapshots[index] = new DeltaSnapshot(
                     checked((int)raw[index].Index),
                     (ushort)(raw[index].OldCell & 0xFFFFu),
-                    (ushort)(raw[index].NewCell & 0xFFFFu));
+                    (ushort)(raw[index].NewCell & 0xFFFFu), raw[index].Reserved);
             }
 
             return snapshots;
@@ -404,6 +412,9 @@ namespace Wildfire.UnityBatchmode
         public PackedCellValues packedCellValues;
         public uint[] initialAtmosphericFields;
         public uint[] companionFields;
+        public uint[] initialTargetIds;
+        public uint[] initialSlotIds;
+        public FixtureMaterialHandoff[] materialHandoffs;
         public FixtureWind wind;
         public FixtureParameters parameters;
         public FixtureExternalChanges[] externalChanges;
@@ -563,14 +574,17 @@ namespace Wildfire.UnityBatchmode
         private readonly uint[] finalCompanionFields;
         private readonly TickSnapshot[] ticks;
         private readonly string visualChecksum;
+        private readonly uint[] finalTargetIds, finalSlotIds;
 
-        public Snapshot(ushort[] finalPackedCells, uint[] finalAtmosphericFields, uint[] finalCompanionFields, TickSnapshot[] ticks, string visualChecksum)
+        public Snapshot(ushort[] finalPackedCells, uint[] finalAtmosphericFields, uint[] finalCompanionFields, TickSnapshot[] ticks, string visualChecksum, uint[] finalTargetIds, uint[] finalSlotIds)
         {
             this.finalPackedCells = finalPackedCells;
             this.finalAtmosphericFields = finalAtmosphericFields;
             this.finalCompanionFields = finalCompanionFields;
             this.ticks = ticks;
             this.visualChecksum = visualChecksum;
+            this.finalTargetIds = finalTargetIds;
+            this.finalSlotIds = finalSlotIds;
         }
 
         public void Write(string path, Fixture fixture, int tickCount)
@@ -597,6 +611,10 @@ namespace Wildfire.UnityBatchmode
             AppendUintArray(builder, "finalAtmosphericFields", finalAtmosphericFields, indent: "  ");
             builder.AppendLine(",");
             AppendUintArray(builder, "finalCompanionFields", finalCompanionFields, indent: "  ");
+            builder.AppendLine(",");
+            AppendUintArray(builder, "finalTargetIds", finalTargetIds, indent: "  ");
+            builder.AppendLine(",");
+            AppendUintArray(builder, "finalSlotIds", finalSlotIds, indent: "  ");
             builder.AppendLine(",");
             builder.AppendLine("  \"perTickDeltaCounts\": [");
             for (int index = 0; index < ticks.Length; index += 1)
@@ -633,7 +651,7 @@ namespace Wildfire.UnityBatchmode
             builder.Append(indent + "]");
         }
 
-        private static void AppendUintArray(StringBuilder builder, string name, uint[] values, string indent)
+        internal static void AppendUintArray(StringBuilder builder, string name, uint[] values, string indent)
         {
             builder.AppendLine(indent + "\"" + name + "\": [");
             for (int index = 0; index < values.Length; index += 1)
@@ -656,12 +674,15 @@ namespace Wildfire.UnityBatchmode
         public readonly int Tick;
         public readonly DeltaSnapshot[] Deltas;
         public readonly uint[] AppliedChangeWords;
+        public readonly uint[] MaterialHeader, MaterialReceipts;
 
-        public TickSnapshot(int tick, DeltaSnapshot[] deltas, uint[] appliedChangeWords)
+        public TickSnapshot(int tick, DeltaSnapshot[] deltas, uint[] appliedChangeWords, uint[] materialHeader, uint[] materialReceipts)
         {
             Tick = tick;
             Deltas = deltas;
             AppliedChangeWords = appliedChangeWords;
+            MaterialHeader = materialHeader;
+            MaterialReceipts = materialReceipts;
         }
 
         public void AppendJson(StringBuilder builder, string indent)
@@ -676,6 +697,10 @@ namespace Wildfire.UnityBatchmode
                 builder.Append(AppliedChangeWords[i].ToString(CultureInfo.InvariantCulture));
             }
             builder.AppendLine("],");
+            Snapshot.AppendUintArray(builder, "materialHeader", MaterialHeader, indent + "  ");
+            builder.AppendLine(",");
+            Snapshot.AppendUintArray(builder, "materialReceipts", MaterialReceipts, indent + "  ");
+            builder.AppendLine(",");
             builder.AppendLine(indent + "  \"deltas\": [");
             for (int index = 0; index < Deltas.Length; index += 1)
             {
@@ -693,12 +718,14 @@ namespace Wildfire.UnityBatchmode
         private readonly int cellIndex;
         private readonly ushort oldCell;
         private readonly ushort newCell;
+        private readonly uint targetId;
 
-        public DeltaSnapshot(int cellIndex, ushort oldCell, ushort newCell)
+        public DeltaSnapshot(int cellIndex, ushort oldCell, ushort newCell, uint targetId)
         {
             this.cellIndex = cellIndex;
             this.oldCell = oldCell;
             this.newCell = newCell;
+            this.targetId = targetId;
         }
 
         public void AppendJson(StringBuilder builder, string indent)
@@ -706,7 +733,8 @@ namespace Wildfire.UnityBatchmode
             builder.AppendLine(indent + "{");
             builder.AppendLine(indent + "  \"cellIndex\": " + cellIndex.ToString(CultureInfo.InvariantCulture) + ",");
             builder.AppendLine(indent + "  \"oldCell\": " + oldCell.ToString(CultureInfo.InvariantCulture) + ",");
-            builder.AppendLine(indent + "  \"newCell\": " + newCell.ToString(CultureInfo.InvariantCulture));
+            builder.AppendLine(indent + "  \"newCell\": " + newCell.ToString(CultureInfo.InvariantCulture) + ",");
+            builder.AppendLine(indent + "  \"targetId\": " + targetId.ToString(CultureInfo.InvariantCulture));
             builder.Append(indent + "}");
         }
     }

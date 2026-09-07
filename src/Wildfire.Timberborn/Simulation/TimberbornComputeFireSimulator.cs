@@ -456,7 +456,7 @@ public sealed class TimberbornComputeFireSimulator :
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
     ITimberbornTransportFieldReader, ITimberbornCellFieldReader,
-    IFireSimAshCollectionBackend,
+    IFireSimAshCollectionBackend, IFireSimMaterialHandoffSimulator, IFireSimMaterialHandoffBackend,
     IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
@@ -486,6 +486,7 @@ public sealed class TimberbornComputeFireSimulator :
     private readonly ComputeBuffer _nextTransportFields;
     private readonly ComputeBuffer _materialTargetIds;
     private readonly ComputeBuffer _materialFields;
+    private readonly TimberbornMaterialHandoffBuffers? _materialHandoff;
     private readonly ComputeBuffer _deltaCounter;
     private FireSimParameters _parameters;
     private readonly ITimberbornWindProvider _windProvider;
@@ -582,7 +583,12 @@ public sealed class TimberbornComputeFireSimulator :
         _parameters = parameters;
         _windProvider = windProvider ?? throw new ArgumentNullException(nameof(windProvider));
         Grid = grid;
-        _step = new FireSimStepCoordinator(grid.CellCount, grid.CellCount);
+        WildfireMaterialField[] materialValues = materialFields.IsEmpty
+            ? Enumerable.Repeat(WildfireMaterialField.Empty, grid.CellCount).ToArray()
+            : materialFields.ToArray();
+        FireSimMaterialIdentity[] initialMaterial = materialValues.Select((field, cell) =>
+            new FireSimMaterialIdentity(field.TargetId, field.TargetId == 0 ? 0u : checked((uint)cell + 1))).ToArray();
+        _step = new FireSimStepCoordinator(grid.CellCount, grid.CellCount, initialMaterial);
         _applyExternalChangesKernel = _shader.FindKernel(ApplyExternalChangesKernelName);
         _fullGridKernel = _shader.FindKernel(FullGridKernelName);
 
@@ -600,9 +606,7 @@ public sealed class TimberbornComputeFireSimulator :
             _deltaCounter = CreateBuffer(1, sizeof(uint), ComputeBufferType.Raw);
 
             uint[] packedCells = initialCells.ToArray().Select(static cell => (uint)cell).ToArray();
-            WildfireMaterialField[] materialValues = materialFields.IsEmpty
-                ? Enumerable.Repeat(WildfireMaterialField.Empty, grid.CellCount).ToArray()
-                : materialFields.ToArray();
+            _materialHandoff = new TimberbornMaterialHandoffBuffers(initialMaterial);
             _currentCells.SetData(packedCells);
             _nextCells.SetData(packedCells);
             _currentTransportFields.SetData(Enumerable.Repeat(0u, grid.CellCount).ToArray());
@@ -831,6 +835,20 @@ public sealed class TimberbornComputeFireSimulator :
         return _step.TryCollectAsh(this, input, commitCollection);
     }
 
+    public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) =>
+        _step.TryGetMaterialArchive(identity, out archive);
+
+    public GpuFireStepResult? TryHandoffMaterial(FireSimMaterialHandoffBatch batch, Action<FireSimMaterialHandoffReceipt> commit)
+    {
+        ThrowIfDisposed();
+        return _step.TryHandoffMaterial(this, batch, commit);
+    }
+
+    int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Grid.CellCount;
+    void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => _materialHandoff!.Upload(batch);
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => _materialHandoff!.ReadHeader();
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => _materialHandoff!.ReadReceipts(count);
+
     FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
     {
         var applied = new FireSimGpuChange[1];
@@ -893,6 +911,7 @@ public sealed class TimberbornComputeFireSimulator :
         }
 
         _visualFieldBindingLifecycle?.Unbind();
+        _materialHandoff?.Dispose();
         new[]
         {
             _currentCells,
@@ -947,6 +966,8 @@ public sealed class TimberbornComputeFireSimulator :
         _shader.SetBuffer(kernel, "CurrentAtmosphericFields", _readTransportFields);
         _shader.SetBuffer(kernel, "NextAtmosphericFields", _writeTransportFields);
         _shader.SetBuffer(kernel, "CompanionFields", _materialFields);
+        _shader.SetBuffer(kernel, "MaterialTargetIds", _materialTargetIds);
+        _materialHandoff!.Bind(_shader, kernel);
     }
 
     private void BindParameters()
@@ -1002,7 +1023,7 @@ public sealed class TimberbornComputeFireSimulator :
             .Select(static delta => new CellDelta(
                 checked((int)delta.Index),
                 checked((ushort)(delta.OldCell & 0xFFFFu)),
-                checked((ushort)(delta.NewCell & 0xFFFFu))))
+                checked((ushort)(delta.NewCell & 0xFFFFu)), delta.Reserved))
             .ToArray();
     }
 

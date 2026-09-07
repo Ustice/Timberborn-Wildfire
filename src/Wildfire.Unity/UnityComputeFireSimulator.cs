@@ -3,7 +3,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshCollectionBackend
+public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshCollectionBackend, IFireSimMaterialHandoffSimulator, IFireSimMaterialHandoffBackend
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -41,7 +41,7 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
         ArgumentNullException.ThrowIfNull(grid);
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
-        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count);
+        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count, grid.InitialMaterialIdentities);
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         LogInitialized();
     }
@@ -63,7 +63,7 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
 
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
-        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count);
+        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count, grid.InitialMaterialIdentities);
         _dispatcher = dispatcher;
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _parameters = parameters ?? FireSimParameters.Default;
@@ -129,6 +129,21 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
         return _step.TryCollectAsh(this, input, commitCollection);
     }
 
+    public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) =>
+        _step.TryGetMaterialArchive(identity, out archive);
+
+    public GpuFireStepResult? TryHandoffMaterial(FireSimMaterialHandoffBatch batch, Action<FireSimMaterialHandoffReceipt> commit)
+    {
+        if (BufferGrid is null || _dispatcher is null)
+            throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
+        return _step.TryHandoffMaterial(this, batch, commit);
+    }
+
+    int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Dimensions.CellCount;
+    void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => BufferGrid!.MaterialHandoff.Upload(batch);
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => BufferGrid!.MaterialHandoff.Header.ReadElements(0, 1);
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => BufferGrid!.MaterialHandoff.Receipts.ReadElements(0, count);
+
     FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
     {
         uint[] words = BufferGrid!.QueuedChanges.ReadElements(changeIndex, 1);
@@ -165,6 +180,11 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
             BufferGrid.CurrentTransportFields,
             BufferGrid.NextTransportFields,
             BufferGrid.MaterialFields,
+            BufferGrid.MaterialTargetIds,
+            BufferGrid.MaterialSlotIds,
+            BufferGrid.MaterialHandoff.Requests,
+            BufferGrid.MaterialHandoff.Receipts,
+            BufferGrid.MaterialHandoff.Header,
             _parameters,
             Wind.Normalized(),
             0u,
@@ -217,6 +237,11 @@ public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, 
             BufferGrid.CurrentTransportFields,
             BufferGrid.NextTransportFields,
             BufferGrid.MaterialFields,
+            BufferGrid.MaterialTargetIds,
+            BufferGrid.MaterialSlotIds,
+            BufferGrid.MaterialHandoff.Requests,
+            BufferGrid.MaterialHandoff.Receipts,
+            BufferGrid.MaterialHandoff.Header,
             _parameters,
             Wind.Normalized(),
             checked((uint)changeCount),

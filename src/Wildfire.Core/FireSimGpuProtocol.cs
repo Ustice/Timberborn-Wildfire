@@ -32,6 +32,12 @@ public static class FireSimGpuProtocol
 
     public static FireSimGpuChange EncodeChange(FireSimChange change)
     {
+        if (change.MaterialHandoff is { } material)
+        {
+            if (change.CellIndex != 0 || change with { MaterialHandoff = null } != new FireSimChange(0))
+                throw new ArgumentException("Material batch marker cannot share an ordinary command.", nameof(change));
+            return FireSimMaterialHandoffProtocol.EncodeMarker(material);
+        }
         ValidateCollection(change);
         return new FireSimGpuChange(
             checked((uint)change.CellIndex),

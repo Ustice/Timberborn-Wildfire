@@ -17,7 +17,10 @@ public sealed record ShaderSnapshotFixture(
     uint[]? CompanionFields = null,
     FireSimWind? Wind = null,
     ShaderSnapshotExternalChanges[]? ExternalChanges = null,
-    FireSimParameters? Parameters = null)
+    FireSimParameters? Parameters = null,
+    uint[]? InitialTargetIds = null,
+    uint[]? InitialSlotIds = null,
+    ShaderSnapshotMaterialHandoff[]? MaterialHandoffs = null)
 {
     public const int CurrentFormatVersion = 1;
     public const string PackedCellValueType = "uint16";
@@ -33,19 +36,12 @@ public sealed record ShaderSnapshotFixture(
 
     public ComputeBufferGrid CreateBufferGrid(IComputeBufferAllocator allocator)
     {
-        ComputeBufferGrid grid = CompanionFields is { Length: > 0 } materialFields
-            ? ComputeBufferGrid.FromCells(
-                Grid.Width,
-                Grid.Height,
-                Grid.Depth,
-                InitialCells,
-                materialFields
-                    .Select(static material => new WildfireMaterialField(
-                        TargetId: 0,
-                        WildfireMaterialFieldState.Unpack(material)))
-                    .ToArray(),
-                allocator)
-            : ComputeBufferGrid.FromCells(Grid.Width, Grid.Height, Grid.Depth, InitialCells, allocator);
+        ShaderSnapshotMaterialHandoff.Validate(this);
+        var materials = Enumerable.Range(0, Grid.CellCount)
+            .Select(index => new WildfireMaterialField(
+                InitialTargetIds?[index] ?? 0,
+                WildfireMaterialFieldState.Unpack(CompanionFields?[index] ?? 0))).ToArray();
+        ComputeBufferGrid grid = new(Grid, InitialCells, materials, allocator, InitialSlotIds ?? []);
 
         if (InitialAtmosphericFields is { Length: > 0 } atmosphericFields)
         {
@@ -67,18 +63,23 @@ public sealed record ShaderSnapshotCapture(
     ShaderSnapshotTick[] Ticks,
     uint[]? FinalAtmosphericFields = null,
     uint[]? FinalCompanionFields = null,
-    ShaderSnapshotVisual? Visual = null);
+    ShaderSnapshotVisual? Visual = null,
+    uint[]? FinalTargetIds = null,
+    uint[]? FinalSlotIds = null);
 
 public sealed record ShaderSnapshotTick(
     int Tick,
     int DeltaCount,
     ShaderSnapshotDelta[] Deltas,
-    uint[]? AppliedChangeWords = null);
+    uint[]? AppliedChangeWords = null,
+    uint[]? MaterialHeader = null,
+    uint[]? MaterialReceipts = null);
 
 public readonly record struct ShaderSnapshotDelta(
     int CellIndex,
     ushort OldCell,
-    ushort NewCell);
+    ushort NewCell,
+    uint TargetId = 0);
 
 public sealed record ShaderSnapshotVisual(
     string? Checksum = null,
@@ -189,7 +190,10 @@ public static class ShaderSnapshotFixtureLoader
             materialFields,
             wind,
             ShaderSnapshotExternalChanges.Read(root, dimensions.CellCount),
-            ShaderSnapshotParameters.Read(root));
+            ShaderSnapshotParameters.Read(root),
+            ReadOptionalUInt32CellArray(root, "initialTargetIds", dimensions, sourceName),
+            ReadOptionalUInt32CellArray(root, "initialSlotIds", dimensions, sourceName),
+            ShaderSnapshotMaterialHandoff.Read(root));
     }
 
     private static ushort ReadPackedCell(JsonElement value, string sourceName)
@@ -385,13 +389,16 @@ public static class ShaderSnapshotJson
             ticks,
             finalAtmosphericFields,
             finalMaterialFields,
-            visual);
+            visual,
+            ReadOptionalUInt32CellArray(root, "finalTargetIds", dimensions, sourceName),
+            ReadOptionalUInt32CellArray(root, "finalSlotIds", dimensions, sourceName));
     }
 
     public static string SerializeFixture(ShaderSnapshotFixture fixture)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         ShaderSnapshotExternalChanges.Validate(fixture.ExternalChanges, fixture.Grid.CellCount);
+        ShaderSnapshotMaterialHandoff.Validate(fixture);
 
         ShaderSnapshotFixtureDocument document = new(
             FormatVersion: fixture.FormatVersion,
@@ -409,7 +416,10 @@ public static class ShaderSnapshotJson
                 ? new ShaderSnapshotWind(wind.DirectionX, wind.DirectionY, wind.Strength)
                 : null,
             ExternalChanges: fixture.ExternalChanges,
-            Parameters: fixture.EffectiveParameters);
+            Parameters: fixture.EffectiveParameters,
+            InitialTargetIds: fixture.InitialTargetIds,
+            InitialSlotIds: fixture.InitialSlotIds,
+            MaterialHandoffs: fixture.MaterialHandoffs);
 
         return JsonSerializer.Serialize(document, JsonOptions) + Environment.NewLine;
     }
@@ -444,7 +454,9 @@ public static class ShaderSnapshotJson
             FinalCompanionFields: capture.FinalCompanionFields,
             PerTickDeltaCounts: capture.Ticks.Select(static tick => tick.DeltaCount).ToArray(),
             PerTickDeltas: capture.Ticks,
-            Visual: capture.Visual);
+            Visual: capture.Visual,
+            FinalTargetIds: capture.FinalTargetIds,
+            FinalSlotIds: capture.FinalSlotIds);
     }
 
     private static ShaderSnapshotTick ReadTick(JsonElement tick, string sourceName)
@@ -465,7 +477,9 @@ public static class ShaderSnapshotJson
             ? words.EnumerateArray().Select(word => word.GetUInt32()).ToArray() : null;
         if (appliedWords is not null && appliedWords.Length % FireSimGpuProtocol.UInt32WordsPerChange != 0)
             throw new InvalidDataException($"{sourceName}: appliedChangeWords must contain complete commands.");
-        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas, appliedWords);
+        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas, appliedWords,
+            ShaderSnapshotMaterialHandoff.ReadWords(tick, "materialHeader"),
+            ShaderSnapshotMaterialHandoff.ReadWords(tick, "materialReceipts"));
     }
 
     private static ShaderSnapshotDelta ReadDelta(JsonElement delta, string sourceName)
@@ -473,7 +487,8 @@ public static class ShaderSnapshotJson
         return new ShaderSnapshotDelta(
             GetRequiredProperty(delta, "cellIndex", sourceName).GetInt32(),
             ReadUInt16(GetRequiredProperty(delta, "oldCell", sourceName), sourceName, "oldCell"),
-            ReadUInt16(GetRequiredProperty(delta, "newCell", sourceName), sourceName, "newCell"));
+            ReadUInt16(GetRequiredProperty(delta, "newCell", sourceName), sourceName, "newCell"),
+            delta.TryGetProperty("targetId", out var targetId) ? targetId.GetUInt32() : 0);
     }
 
     private static ushort ReadUInt16(JsonElement value, string sourceName, string propertyName)
@@ -536,7 +551,9 @@ public static class ShaderSnapshotJson
         uint[]? FinalCompanionFields,
         int[] PerTickDeltaCounts,
         ShaderSnapshotTick[] PerTickDeltas,
-        ShaderSnapshotVisual? Visual);
+        ShaderSnapshotVisual? Visual,
+        uint[]? FinalTargetIds,
+        uint[]? FinalSlotIds);
 
     private sealed record ShaderSnapshotGrid(int Width, int Height, int Depth);
 
@@ -552,7 +569,10 @@ public static class ShaderSnapshotJson
         uint[]? MaterialFields,
         ShaderSnapshotWind? Wind,
         ShaderSnapshotExternalChanges[]? ExternalChanges,
-        FireSimParameters Parameters);
+        FireSimParameters Parameters,
+        uint[]? InitialTargetIds,
+        uint[]? InitialSlotIds,
+        ShaderSnapshotMaterialHandoff[]? MaterialHandoffs);
 
     private sealed record ShaderSnapshotPackedCellValues(string ValueType, string IndexOrder, ushort[] Values);
 

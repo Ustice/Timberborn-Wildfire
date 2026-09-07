@@ -61,6 +61,23 @@ struct FireSimChangeGpu
     uint SetValues;
 };
 
+struct MaterialRequestGpu
+{
+    uint CellIndex; uint ExpectedTarget; uint ExpectedSlot; uint IncomingTarget; uint IncomingSlot;
+    uint Mode; uint Material; uint Companion; uint SourceIndex; uint Reserved;
+};
+struct MaterialReceiptGpu
+{
+    uint CellIndex; uint PriorTarget; uint PriorSlot; uint PriorCell; uint PriorCompanion;
+    uint AppliedTarget; uint AppliedSlot; uint AppliedCell; uint AppliedCompanion; uint Status;
+};
+RWStructuredBuffer<uint> MaterialTargetIds;
+RWStructuredBuffer<uint> MaterialSlotIds;
+RWStructuredBuffer<MaterialRequestGpu> MaterialRequests;
+RWStructuredBuffer<MaterialReceiptGpu> MaterialReceipts;
+RWStructuredBuffer<uint4> MaterialHeader;
+uint MaterialRequestCapacity;
+
 RWStructuredBuffer<uint> CurrentCells;
 RWStructuredBuffer<uint> NextCells;
 RWStructuredBuffer<uint> CurrentAtmosphericFields;
@@ -173,7 +190,7 @@ void AppendDelta(uint index, uint oldCell, uint newCell)
     delta.Index = index;
     delta.OldCell = oldCell;
     delta.NewCell = newCell;
-    delta.Reserved = 0u;
+    delta.Reserved = MaterialTargetIds[index];
     Deltas.Append(delta);
 }
 
@@ -1552,6 +1569,135 @@ uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric)
     return Pack(fuel, heat, flammability, water, terrain, burningLevel);
 }
 
+// Material transactions use dedicated captures, never burn-damage deltas.
+#define MATERIAL_BATCH 0x80000000u
+#define MATERIAL_CELL_MASK 0x130fu
+#define MATERIAL_COMPANION_MASK 0x01f0ffffu
+#define MATERIAL_SOURCE_USED 0x80000000u
+
+bool MaterialIdentityEqual(uint targetA, uint slotA, uint targetB, uint slotB)
+{
+    return targetA == targetB && slotA == slotB;
+}
+
+uint ValidateMaterialRequest(uint index, uint count)
+{
+    MaterialRequestGpu request = MaterialRequests[index];
+    MaterialReceiptGpu prior = MaterialReceipts[index];
+    if (request.CellIndex >= CellCount || (index > 0u && request.CellIndex <= MaterialRequests[index - 1u].CellIndex)) return 7u;
+    if (!MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, prior.PriorTarget, prior.PriorSlot)) return 2u;
+    if ((request.ExpectedTarget == 0u) != (request.ExpectedSlot == 0u) ||
+        (request.IncomingTarget == 0u) != (request.IncomingSlot == 0u)) return 2u;
+    if (request.Reserved != 0u || (request.Material & ~MATERIAL_CELL_MASK) != 0u ||
+        (request.Companion & ~MATERIAL_COMPANION_MASK) != 0u ||
+        (request.Companion & 255u) > 10u || ((request.Companion >> 22u) & 7u) > 4u) return 4u;
+    if (request.Mode > 4u) return 8u;
+    if (request.Mode != 3u && request.SourceIndex != 0xffffffffu) return 5u;
+    if (request.Mode == 0u)
+    {
+        if (request.IncomingTarget == 0u || !MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot) ||
+            (request.Material & 15u) != 0u || (request.Companion & 0xf000u) != 0u ||
+            (prior.PriorCell & (MATERIAL_CELL_MASK & ~15u)) != request.Material ||
+            (prior.PriorCompanion & (MATERIAL_COMPANION_MASK & ~0xf000u)) != request.Companion) return 3u;
+    }
+    else if (request.Mode == 4u)
+    {
+        if (request.ExpectedTarget == 0u || request.IncomingTarget != 0u ||
+            !((request.Material == 0u && request.Companion == 0u) || (request.Material == 0x1000u && request.Companion == 1u))) return 4u;
+    }
+    else
+    {
+        if (request.IncomingTarget == 0u) return 2u;
+        if (request.Mode == 1u && (request.IncomingTarget == request.ExpectedTarget || (request.Companion & 0xf000u) != 0u)) return 3u;
+        if (request.Mode == 2u && MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot)) return 3u;
+        if (request.Mode == 3u)
+        {
+            if (request.SourceIndex >= count || request.SourceIndex == index || request.Material != 0u || request.Companion != 0u) return 5u;
+            MaterialReceiptGpu source = MaterialReceipts[request.SourceIndex];
+            if (!MaterialIdentityEqual(source.PriorTarget, source.PriorSlot, request.IncomingTarget, request.IncomingSlot) ||
+                MaterialRequests[request.SourceIndex].Mode == 0u) return 5u;
+            if ((source.Status & MATERIAL_SOURCE_USED) != 0u) return 6u;
+            source.Status |= MATERIAL_SOURCE_USED;
+            MaterialReceipts[request.SourceIndex] = source;
+        }
+    }
+    return 1u;
+}
+
+void ApplyMaterialBatch(FireSimChangeGpu marker)
+{
+    uint count = marker.AddFields;
+    if (marker.CellIndex != 0u || marker.SetMask != MATERIAL_BATCH || marker.SetValues == 0u || count == 0u || count > MaterialRequestCapacity)
+    {
+        MaterialHeader[0] = uint4(marker.SetValues, 2u, count, 0u);
+        return;
+    }
+    // Capture the entire table before validation/apply. Sources may be overwritten by any later row.
+    for (uint i = 0u; i < count; i++)
+    {
+        MaterialRequestGpu request = MaterialRequests[i];
+        MaterialReceiptGpu receipt;
+        receipt.CellIndex = request.CellIndex;
+        bool validCell = request.CellIndex < CellCount;
+        receipt.PriorTarget = validCell ? MaterialTargetIds[request.CellIndex] : 0u;
+        receipt.PriorSlot = validCell ? MaterialSlotIds[request.CellIndex] : 0u;
+        receipt.PriorCell = validCell ? CurrentCells[request.CellIndex] : 0u;
+        receipt.PriorCompanion = validCell ? CompanionFields[request.CellIndex] : 0u;
+        receipt.AppliedTarget = receipt.PriorTarget;
+        receipt.AppliedSlot = receipt.PriorSlot;
+        receipt.AppliedCell = receipt.PriorCell;
+        receipt.AppliedCompanion = receipt.PriorCompanion;
+        receipt.Status = 1u;
+        MaterialReceipts[i] = receipt;
+    }
+    uint rejected = 0xffffffffu;
+    for (uint i = 0u; i < count; i++)
+    {
+        uint status = ValidateMaterialRequest(i, count);
+        MaterialReceiptGpu receipt = MaterialReceipts[i];
+        receipt.Status = (receipt.Status & MATERIAL_SOURCE_USED) | status;
+        MaterialReceipts[i] = receipt;
+        if (status != 1u && rejected == 0xffffffffu) rejected = i;
+    }
+    for (uint i = 0u; i < count; i++)
+    {
+        MaterialReceiptGpu receipt = MaterialReceipts[i];
+        receipt.Status &= ~MATERIAL_SOURCE_USED;
+        MaterialReceipts[i] = receipt;
+    }
+    if (rejected != 0xffffffffu)
+    {
+        MaterialHeader[0] = uint4(marker.SetValues, 2u, count, rejected);
+        return;
+    }
+    for (uint i = 0u; i < count; i++)
+    {
+        MaterialRequestGpu request = MaterialRequests[i];
+        MaterialReceiptGpu receipt = MaterialReceipts[i];
+        uint material = request.Material;
+        uint companion = request.Companion;
+        if (request.Mode == 3u)
+        {
+            MaterialReceiptGpu source = MaterialReceipts[request.SourceIndex];
+            material = source.PriorCell & MATERIAL_CELL_MASK;
+            companion = source.PriorCompanion & MATERIAL_COMPANION_MASK;
+        }
+        if (request.Mode != 0u)
+        {
+            receipt.AppliedCell = (receipt.PriorCell & 0x0cf0u) | material;
+            receipt.AppliedCompanion = (receipt.PriorCompanion & ~MATERIAL_COMPANION_MASK) | companion;
+        }
+        receipt.AppliedTarget = request.IncomingTarget;
+        receipt.AppliedSlot = request.IncomingSlot;
+        CurrentCells[request.CellIndex] = receipt.AppliedCell;
+        CompanionFields[request.CellIndex] = receipt.AppliedCompanion;
+        MaterialTargetIds[request.CellIndex] = receipt.AppliedTarget;
+        MaterialSlotIds[request.CellIndex] = receipt.AppliedSlot;
+        MaterialReceipts[i] = receipt;
+    }
+    MaterialHeader[0] = uint4(marker.SetValues, 1u, count, 0xffffffffu);
+}
+
 // Baseline apply is intentionally single-threaded so repeated changes to one cell
 // remain in registration order until a later ordered parallel apply pass exists.
 [numthreads(1, 1, 1)]
@@ -1566,6 +1712,11 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
     {
         FireSimChangeGpu change = ExternalChanges[changeIndex];
 
+        if ((change.SetMask & MATERIAL_BATCH) != 0u)
+        {
+            ApplyMaterialBatch(change);
+            continue;
+        }
         if (change.CellIndex >= CellCount)
         {
             continue;

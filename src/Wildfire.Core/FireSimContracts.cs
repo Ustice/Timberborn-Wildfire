@@ -17,7 +17,7 @@ public interface IGpuFireSimulator
 
 public readonly record struct GpuFireStepResult(IReadOnlyList<CellDelta> Deltas, uint Tick);
 
-public readonly record struct CellDelta(int CellIndex, ushort OldCell, ushort NewCell);
+public readonly record struct CellDelta(int CellIndex, ushort OldCell, ushort NewCell, uint TargetId = 0);
 
 public interface IFireSimListener
 {
@@ -48,4 +48,5 @@ public readonly record struct FireSimChange(
     byte? SetSmoke = null,
     byte? SetSmokeContamination = null,
     byte? AddWater = null,
-    byte? CollectCleanAsh = null);
+    byte? CollectCleanAsh = null,
+    FireSimMaterialHandoffBatch? MaterialHandoff = null);
