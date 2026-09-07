@@ -44,5 +44,8 @@ packed loss/heat/loss, genuine loss/gain/repeated loss, replay suppression, same
 relocation, whole-batch malformed/unknown-slot rejection, retained binding rollback, three-slot body
 aggregation/clamping, representative source, fractional credit conservation, completion-cell hazards,
 callback disappearance/failure and real OWNED2 codec/new-session continuation. These managed tests are
-not a game session. Licensed GPU/native factory proof is separately controller-owned. No production
+not a game session. A counterfactual run restoring the previous owned max-per-cell body and max-per-owner
+storage aggregation failed all four selected regressions: body losses5/6 became3, and both fractional
+storage completions removed0 instead of1. Restoring the committed implementation returned the full929
+tests to green. Licensed GPU/native factory proof is separately controller-owned. No production
 owned-world activation, generation-aware yield policy, legacy replay ledger, or cargo policy is added.
