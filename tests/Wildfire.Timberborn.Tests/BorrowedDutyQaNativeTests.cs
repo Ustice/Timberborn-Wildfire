@@ -54,7 +54,10 @@ public sealed class BorrowedDutyQaNativeTests
         var progress = Field(executorType, "_progress").GetValue(executor)!;
         progress.GetType().GetMethod("Restore")!.Invoke(progress, new object[] { 3, .5f, false });
         var id = Guid.NewGuid();
-        Field(executorType, "<EntityId>k__BackingField").SetValue(executor, id);
+        var entityType = native.LoadNative("Timberborn.EntitySystem").GetType("Timberborn.EntitySystem.EntityComponent")!;
+        var entity = RuntimeHelpers.GetUninitializedObject(entityType);
+        Field(entityType, "<EntityId>k__BackingField").SetValue(entity, id);
+        Field(executorType, "_entity").SetValue(executor, entity);
         fixtureType.GetMethod("Register", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(fixture, new[] { executor });
         string Detail() { var status = fixtureType.GetMethod("CaptureQaStatus")!.Invoke(fixture, null)!; return (string)status.GetType().GetProperty("Detail")!.GetValue(status)!; }
         Assert.Contains("active_count=1 running_count=0", Detail());
@@ -67,6 +70,9 @@ public sealed class BorrowedDutyQaNativeTests
         fixtureType.GetMethod("Cancel")!.Invoke(fixture, null);
         Assert.Contains("cancel_true:owned_true", Detail());
         Assert.Contains("admissions_enabled=false", Detail());
+        var restoredId = Guid.NewGuid();
+        Field(entityType, "<EntityId>k__BackingField").SetValue(entity, restoredId);
+        Assert.Contains(restoredId.ToString("D") + ":Returning", Detail()); // Read current native identity, not Awake timing.
     }
     private static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!;
 }

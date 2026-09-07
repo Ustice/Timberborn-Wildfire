@@ -8,11 +8,13 @@ The native file bridge defaults to diagnostics in every build configuration. Deb
 |---|---|---|
 | Diagnostics | `help`, `status`, `qa-readiness` | Report registered commands, runtime state, and loaded-world readiness. `qa-readiness` does not prepare a fixture. |
 | Diagnostics | `qa-soil-moisture-range`, `qa-ash-cell <index>` | Inspect native soil moisture or one simulator ash cell without changing the world. |
+| Diagnostics | `qa-borrowed-duty-status` | Report an explicit development offer and current borrowed executor ownership; no recruitment. |
+| Development | `qa-borrowed-duty-arm <donor-guid> <x> <y> <z>`, `qa-borrowed-duty-cancel` | Arm one explicit workplace offer or request its cancellation. Arm also requires `--wildfire-enable-borrowed-duty`; [controller semantics](../qa/borrowed-duty-native-prototype.md). |
 | Development | `qa-delta-stimulus`, `qa-building-burnout-stimulus`, `qa-burn-duration-stimulus`, `qa-stored-material-stimulus` | Force heat, burn, or stored-material consequence scenarios. |
 | Development | `qa-water-suppression-stimulus`, `qa-ash-water-stimulus` | Force water/ash suppression or washout inputs. |
 | Development | `qa-fire-preset`, `qa-adjust-inventory` | Change simulator tuning or native inventories. |
 
-Only the five diagnostic commands are allowlisted. Newly registered commands require development access unless their read-only behavior is explicitly reviewed and added to the allowlist. The historical `qa-fixture-readiness` command is not implemented or registered in the current bridge; it must not be treated as safe merely because of its name.
+Only the six diagnostic commands are allowlisted. Newly registered commands require development access unless their read-only behavior is explicitly reviewed and added to the allowlist. The historical `qa-fixture-readiness` command is not implemented or registered in the current bridge; it must not be treated as safe merely because of its name.
 
 Disabled mutation requests return `status=failure` and `message=qa_mutations_disabled` before querying runtime state or invoking a handler. They are omitted from `help` and `known_commands`. Unknown commands still return an unknown-command failure. `help` and the `wildfire_command_bridge_ready` startup log disclose `command_access=diagnostics` or `command_access=development`.
 

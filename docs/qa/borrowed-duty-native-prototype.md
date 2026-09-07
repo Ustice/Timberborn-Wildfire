@@ -26,7 +26,23 @@ Additional checks cover native workplace neighbor restoration without repeated l
 
 ## Controller follow-up when game access returns
 
-Use a copied Folktails save and the single controller. This fixture has **no console command or UI hook**: a deliberately scoped temporary QA adapter must obtain the injected `BorrowedDutyFixture`, resolve a live ordinary donor `Workplace`, and call `Arm(donor, destination)` with a reachable safe point within sixteen cells. Do not infer that adding the process switch alone starts a trip. `Cancel()` disarms pending offers and requests active return; `Disarm()` only stops new offers.
+Use a copied Folktails save and the single controller. The existing file bridge now exposes these development commands through the controller script:
+
+```text
+bun scripts/invoke-timberborn-command.ts qa-borrowed-duty-status
+bun scripts/invoke-timberborn-command.ts qa-borrowed-duty-arm <donor-guid> <x> <y> <z>
+bun scripts/invoke-timberborn-command.ts qa-borrowed-duty-cancel
+```
+
+Arm and cancel require the existing `--wildfire-enable-qa-mutations` process argument. Arm additionally requires `--wildfire-enable-borrowed-duty`; no inbox request can enable either switch. Status remains read-only with neither flag, including a restored active actor. A nonnative bridge without the capability reports `borrowed_duty_unsupported` rather than pretending to accept an offer.
+
+Coordinates are finite invariant-culture Unity world positions: **x/z horizontal, y vertical**. The native adapter validates map bounds and resolves exactly the supplied nonempty dashed native Guid through `EntityRegistry.GetEntity`, rejecting missing/deleted entities and nonworkplace/disabled donors. It never chooses a fallback or searches for a donor. Supply a known ordinary workplace identity from the controller's copied-save/entity evidence; this command does not add a donor picker. The chosen worker's existing sixteen-cell and real route checks remain authoritative; the adapter imposes no substitute donor-to-point range rule.
+
+Arming reports `offer=armed`, donor identity and `offer_point`; it is an offer, not proof that a worker has started. A second offer is rejected until cancellation or acceptance. `active_count` counts nonidle executor phases; `running_count` separately counts actual native BehaviorManager ownership. Per-actor details include the current native EntityComponent Guid, phase, cancellation request and ownership flag. Status reads current identity rather than caching an ID during Awake. Once accepted, `offer=none` and a running actor distinguish execution from a still-pending offer. Cancellation disarms pending offers and requests return for active actors; it does not mean the return has already completed.
+
+Production wiring is `BorrowedDutyConfigurator` binding the native QA adapter, injected into `TimberbornQaCommandFileBridge`, whose existing synchronous `UpdateSingleton` reads the file and calls the command bridge. No background thread, player UI or console bypass is added. Parser/access tests execute the command bridge with a fake native capability. Actual managed fixtures prove missing/deleted exact registry lookup, the separate admission switch, current native identity, and actual manager ownership/status cancellation. Three CLI subprocess tests use temporary inboxes and fake outboxes to prove transport only. Live scene liveness, nonworkplace component lookup, native file-bridge invocation and the full job trip remain controller proof.
+
+QA-command validation: **722 native tests passed, zero failures/skips; 50 script tests passed; TypeScript typecheck passed**. This adds fifteen native/managed QA cases and three CLI cases to the earlier prototype evidence. No actual game inbox was written and no game/Steam/Unity/deployment action was performed.
 
 1. Observe an ordinary worker finish its current job, accept one duty, and keep the same workplace throughout. Verify its native job production flag is false during duty and normal work resumes after release.
 2. Save/reload Outbound, AtPoint and Returning, including a load without the admission switch. Confirm no duplicate offer, no outbound excursion from restored AtPoint, and bounded elapsed duty.
