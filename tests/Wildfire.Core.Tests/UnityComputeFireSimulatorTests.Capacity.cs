@@ -6,6 +6,21 @@ namespace Wildfire.Core.Tests;
 public sealed partial class UnityComputeFireSimulatorTests
 {
     [Fact]
+    public void SimulatorConstructedAroundAlreadyGrownGridKeepsOriginalOrdinaryBudget()
+    {
+        using var grid = ComputeBufferGrid.FromCells(1, 1, 1, [0], new RecordingComputeBufferAllocator());
+        grid.ReserveStepCapacity(4);
+        var dispatcher = new RecordingFireSimComputeDispatcher();
+        var simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        simulator.RegisterChange(new(0, AddWater: 1));
+        simulator.RegisterChange(new(0, SetHeat: 2));
+        Assert.Null(simulator.TryCollectAsh(new(0, 1), _ => throw new Exception()));
+        simulator.Tick();
+        Assert.Equal(1, simulator.PendingChangeCount);
+        Assert.Equal(1u, dispatcher.Dispatches[0].ChangeCount);
+    }
+
+    [Fact]
     public void RealGenericPreparationFailureLeavesSnapshotQueueAndAuthorityUntouchedBeforeDispatch()
     {
         var allocator = new FailingMaterialAllocator();
