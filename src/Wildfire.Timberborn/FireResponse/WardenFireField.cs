@@ -13,6 +13,8 @@ public sealed class WardenFireField
     private readonly TimberbornFireRuntime _runtime;
     private readonly INavigationService _navigation;
     private readonly List<PathCorner> _path = new();
+    private IReadOnlyList<ushort>? _observedCells;
+    private readonly List<(int Index, Vector3 Position)> _burning = new();
     public WardenFireField(TimberbornFireRuntime runtime, INavigationService navigation)
     { _runtime = runtime; _navigation = navigation; }
 
@@ -22,11 +24,8 @@ public sealed class WardenFireField
     {
         target = default;
         if (!_runtime.TryObserveWardenField(out var field)) return false;
-        var grid = new FireGrid(field.Width, field.Height, field.Depth);
-        var burning = Enumerable.Range(0, grid.CellCount)
-            .Where(index => PackedCell.BurningLevel(field.Cells[index]) > 0)
-            .Select(index => (Index: index, Coordinates: grid.FromIndex(index)))
-            .Select(item => (item.Index, Position: new Vector3(item.Coordinates.X + .5f, item.Coordinates.Z, item.Coordinates.Y + .5f)))
+        RefreshFireTargets(field);
+        var burning = _burning
             .Where(item => (item.Position - station).sqrMagnitude <= 400)
             .OrderBy(item => (item.Position - start).sqrMagnitude).Take(32);
         foreach (var fire in burning)
@@ -37,6 +36,20 @@ public sealed class WardenFireField
             { target = new WardenTarget(fire.Index, approach); return true; }
         }
         return false;
+    }
+
+    private void RefreshFireTargets(TimberbornFireSimPersistenceSnapshot field)
+    {
+        if (ReferenceEquals(_observedCells, field.Cells)) return;
+        _observedCells = field.Cells;
+        _burning.Clear();
+        var grid = new FireGrid(field.Width, field.Height, field.Depth);
+        for (var index = 0; index < field.Cells.Count; index++)
+        {
+            if (PackedCell.BurningLevel(field.Cells[index]) == 0) continue;
+            var coordinates = grid.FromIndex(index);
+            _burning.Add((index, new Vector3(coordinates.X + .5f, coordinates.Z, coordinates.Y + .5f)));
+        }
     }
 
     public bool IsBurning(int cellIndex) => _runtime.TryObserveWardenField(out var field) &&

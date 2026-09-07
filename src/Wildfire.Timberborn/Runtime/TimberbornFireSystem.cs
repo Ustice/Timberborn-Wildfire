@@ -13,6 +13,7 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
     private FireGrid? _grid;
     private TimberbornImportedFieldTarget[] _importedTargets = Array.Empty<TimberbornImportedFieldTarget>();
     private int _registeredChangeCountSinceLastDispatch;
+    internal Func<GpuFireStepResult>? StepWithHostInput { get; set; }
     public TimberbornQaController Qa { get; }
 
     public TimberbornSustainedIgnitionScheduler SustainedIgnition { get; }
@@ -358,7 +359,7 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
         try
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            GpuFireStepResult result = fireSimulator.Tick();
+            GpuFireStepResult result = StepWithHostInput is null ? fireSimulator.Tick() : StepWithHostInput();
             stopwatch.Stop();
             _registeredChangeCountSinceLastDispatch = 0;
             LastTick = result.Tick;

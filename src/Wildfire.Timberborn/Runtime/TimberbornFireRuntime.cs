@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireResponse;
 using Timberborn.SingletonSystem;
 using Timberborn.QuickNotificationSystem;
 using Timberborn.BlockSystem;
@@ -84,8 +85,10 @@ public sealed partial class TimberbornFireRuntime :
         ISoilContaminationService soilContaminationService,
         MapIndexService mapIndexService,
         IDayNightCycle dayNightCycle,
-        ISingletonLoader singletonLoader)
+        ISingletonLoader singletonLoader,
+        WardenDeliveryService wardenDelivery)
     {
+        _wardenDelivery = wardenDelivery;
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
             throw new ArgumentNullException(nameof(fireSimParameterPresetState));
@@ -151,6 +154,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void Load()
     {
+        _wardenDelivery.ResetForWorldLoad();
         Initialization.Unload();
         ResetRuntimeSession();
         Initialization.Load();
@@ -167,6 +171,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void Unload()
     {
+        _wardenDelivery.ResetForWorldLoad();
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         Initialization.Unload();
@@ -209,6 +214,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void Save(ISingletonSaver singletonSaver)
     {
+        _wardenDelivery.ThrowIfSaveUnsafe();
         if (singletonSaver is null)
         {
             throw new ArgumentNullException(nameof(singletonSaver));
@@ -232,6 +238,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void UpdateSingleton()
     {
+        if (_wardenDelivery.IsIndeterminate) return;
         if (InitializationState != TimberbornRuntimeInitializationState.Ready)
         {
             return;
@@ -385,6 +392,8 @@ public sealed partial class TimberbornFireRuntime :
             renderer = PrepareRenderer(fireSystem, grid);
             heatPulseSink.Attach(fireSystem);
             contaminationPulseSink.Attach(fireSystem);
+            _wardenDelivery.Attach(fireSystem.Simulator!);
+            fireSystem.StepWithHostInput = _wardenDelivery.Tick;
             _playerFireAlertCameraFocus.ConfigureGrid(grid);
             _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);
             TimberbornFixedCadenceFireDispatcher dispatcher = new(

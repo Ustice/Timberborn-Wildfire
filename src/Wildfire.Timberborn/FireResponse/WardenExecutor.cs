@@ -44,7 +44,18 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private WardenTarget _target;
     private Vector3 _destination;
     private bool _restoreWalk;
-    public string Status { get; private set; } = "Ready";
+    private Guid _entityId;
+    private string _status = "Ready";
+    public string Status
+    {
+        get => _status;
+        private set
+        {
+            if (_status == value) return;
+            _status = value;
+            Debug.Log($"wildfire_warden beaver={_entityId} phase={_sortie.Phase} cell={_target.CellIndex} status=\"{value}\"");
+        }
+    }
 
     public WardenExecutor(WardenFireField field, WardenDeliveryService delivery,
         ReferenceSerializer references, INavigationService navigation)
@@ -52,6 +63,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
 
     public void Awake()
     {
+        _entityId = GetComponent<EntityComponent>().EntityId;
         _walker = GetComponent<Walker>();
         _walk = GetComponent<WalkToPositionExecutor>();
         _navigator = GetComponent<Navigator>();
@@ -102,6 +114,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat("Returning after application"); }
         if (_restoreWalk)
         {
+            if (!_walker.Stopped()) return ExecutorStatus.Running;
             _restoreWalk = false;
             if (_sortie.Phase is WardenPhase.Fetching or WardenPhase.Approaching or WardenPhase.Returning)
                 if (!LaunchWalk(_destination)) return Retreat("Saved route no longer safe");
@@ -220,6 +233,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (state.Has(StationKey)) state.GetObsoletable(StationKey, _references.Of<WardenStation>(), out _station);
         _target = new WardenTarget(state.Get(CellKey), state.Get(ApproachKey));
         _destination = state.Get(DestinationKey);
+        _walker.StopNextTick();
         _restoreWalk = true;
         _needsReturnRoute = _sortie.Phase == WardenPhase.Returning;
     }
