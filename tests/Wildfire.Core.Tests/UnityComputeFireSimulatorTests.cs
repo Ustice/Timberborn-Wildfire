@@ -6,6 +6,30 @@ namespace Wildfire.Core.Tests;
 public sealed class UnityComputeFireSimulatorTests
 {
     [Fact]
+    public void StepInputUsesProductionUploadAndCommitsAfterBufferSwap()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(1, 1, 1, [0], allocator);
+        IComputeBufferHandle originalNext = grid.NextCells;
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        IFireSimStepInputSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        int commits = 0;
+
+        GpuFireStepResult? result = simulator.TryTickWithInput(new(0, AddWater: 2), () =>
+        {
+            Assert.Same(originalNext, grid.CurrentCells);
+            Assert.Equal(2, dispatcher.Dispatches.Count);
+            commits++;
+        });
+
+        Assert.Equal(1u, result!.Value.Tick);
+        Assert.Equal([0u, 0u, 2u << 23, 0u], ((RecordingComputeBufferHandle)grid.QueuedChanges).UploadedValues);
+        simulator.Tick();
+        Assert.Equal(1, commits);
+        Assert.Equal(UnityComputeFireSimulator.FullGridKernelName, dispatcher.Dispatches[2].KernelName);
+    }
+
+    [Fact]
     public void TickDispatchesFullGridKernelAndSwapsCellBuffers()
     {
         RecordingComputeBufferAllocator allocator = new();

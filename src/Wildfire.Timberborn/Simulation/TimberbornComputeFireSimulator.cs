@@ -451,7 +451,7 @@ public interface ITimberbornConfigurableFireSimParameters
 }
 
 public sealed class TimberbornComputeFireSimulator :
-    IGpuFireSimulator,
+    IFireSimStepInputSimulator,
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
@@ -809,6 +809,12 @@ public sealed class TimberbornComputeFireSimulator :
                 $"wildfire_timberborn_gpu_dispatch_failed tick={dispatchTick} message=\"{exception.Message}\"");
             throw;
         }
+    }
+
+    public GpuFireStepResult? TryTickWithInput(FireSimChange input, Action commitInput)
+    {
+        ThrowIfDisposed();
+        return _step.TryTickWithInput(this, input, commitInput);
     }
 
     void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)

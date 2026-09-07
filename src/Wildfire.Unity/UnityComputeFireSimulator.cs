@@ -3,7 +3,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed class UnityComputeFireSimulator : IGpuFireSimulator, IFireSimStepBackend
+public sealed class UnityComputeFireSimulator : IFireSimStepInputSimulator, IFireSimStepBackend
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -110,6 +110,16 @@ public sealed class UnityComputeFireSimulator : IGpuFireSimulator, IFireSimStepB
         _diagnostics.Info(
             $"wildfire_gpu_simulator_listeners_notified tick={result.Tick} listener_count={_step.ListenerCount} delta_count={result.Deltas.Count}");
         return result;
+    }
+
+    public GpuFireStepResult? TryTickWithInput(FireSimChange input, Action commitInput)
+    {
+        if (BufferGrid is null || _dispatcher is null)
+        {
+            throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
+        }
+
+        return _step.TryTickWithInput(this, input, commitInput);
     }
 
     void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)
