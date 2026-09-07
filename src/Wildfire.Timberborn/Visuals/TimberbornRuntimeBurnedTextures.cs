@@ -30,9 +30,6 @@ public static class TimberbornRuntimeBurnedTextureBehavior
     public static bool ShouldSkipInvalidRendererOrMaterial(Exception exception) =>
         exception is MissingReferenceException or NullReferenceException;
 
-    public static TimberbornTreeBurnConsequenceResult AlreadyTerminalTreeResult() =>
-        new(Applied: true, Failed: false);
-
     public static TimberbornCropBurnConsequenceResult DeletedBurnedResourceResult() =>
         new(
             MatchedCropTarget: true,

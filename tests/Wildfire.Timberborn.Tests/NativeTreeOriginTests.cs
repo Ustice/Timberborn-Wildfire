@@ -67,5 +67,50 @@ public sealed class NativeTreeOriginTests
             Assert.Contains("exact Guid family binding", error.InnerException!.Message);
         }
     }
+    [Fact]
+    public void InstalledNativeDeathCountsOnlyFirstMutationAndPreservesCallbackFailure()
+    {
+        using var native = new NativeManagedTestContext();
+        var mod = native.LoadMod();
+        var resourceType = native.LoadNative("Timberborn.NaturalResourcesLifecycle")
+            .GetType("Timberborn.NaturalResourcesLifecycle.LivingNaturalResource")!;
+        var apply = mod.GetType("Wildfire.Timberborn.Visuals.TimberbornTextureTreeBurnConsequenceApi")!
+            .GetMethod("ApplyNativeDeath", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var resource = RuntimeHelpers.GetUninitializedObject(resourceType);
+        int callbacks = 0;
+        EventHandler died = (_, _) => callbacks++;
+        resourceType.GetEvent("Died")!.AddEventHandler(resource, died);
+        string Status(object result) => result.GetType().GetProperty("Status")!.GetValue(result)!.ToString()!;
+        Assert.Equal("Applied", Status(apply.Invoke(null, [resource])!));
+        Assert.Equal(true, resourceType.GetProperty("IsDead")!.GetValue(resource));
+        Assert.Equal("AlreadySatisfied", Status(apply.Invoke(null, [resource])!));
+        Assert.Equal(1, callbacks);
+
+        var interrupted = RuntimeHelpers.GetUninitializedObject(resourceType);
+        var cause = new ApplicationException("native Died callback failed after state mutation");
+        EventHandler fail = (_, _) => throw cause;
+        resourceType.GetEvent("Died")!.AddEventHandler(interrupted, fail);
+        var error = Assert.Throws<TargetInvocationException>(() => apply.Invoke(null, [interrupted]));
+        Assert.Same(cause, error.InnerException);
+        Assert.Equal(true, resourceType.GetProperty("IsDead")!.GetValue(interrupted));
+        // Actual installed Die/InternalDie/get_IsDead and callback invocation; no Unity object exists.
+    }
+
+    [Fact]
+    public void NativeYieldPathIsExplicitlyUnavailableWithoutCallingCutOrChangingGoods()
+    {
+        using var native = new NativeManagedTestContext();
+        var mod = native.LoadMod();
+        var type = mod.GetType("Wildfire.Timberborn.Visuals.TimberbornTextureTreeBurnConsequenceApi")!;
+        var api = RuntimeHelpers.GetUninitializedObject(type);
+        Field(type, "_logSink").SetValue(api, mod.GetType("Wildfire.Timberborn.Runtime.NullTimberbornFireLogSink")!
+            .GetField("Instance")!.GetValue(null));
+        var consequence = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Consequences.TimberbornTreeBurnConsequence")!)!;
+        var result = type.GetMethod("ApplyYieldLoss", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(api, [consequence])!;
+        Assert.Equal("Unavailable", result.GetType().GetProperty("Status")!.GetValue(result)!.ToString());
+        Assert.Equal(false, result.GetType().GetProperty("Applied")!.GetValue(result));
+        Assert.Equal(false, result.GetType().GetProperty("Satisfied")!.GetValue(result));
+    }
+
     private static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!;
 }

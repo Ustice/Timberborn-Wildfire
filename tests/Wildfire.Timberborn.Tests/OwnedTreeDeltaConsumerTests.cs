@@ -171,6 +171,43 @@ public sealed class OwnedTreeDeltaConsumerTests
             Assert.False(TimberbornBurnDamageIdentity.TryGetEntity(key, NativeBurnTargetFamily.Tree, out _));
     }
 
+    [Fact]
+    public void UnavailableYieldNeverAdvancesGoodsLedgerOrUsesVisualCompletionAsReceipt()
+    {
+        var fixture = new Fixture();
+        fixture.Native.StatusForKind = kind => kind == TimberbornTreeBurnConsequenceKind.ReduceYield
+            ? TimberbornTreeBurnConsequenceStatus.Unavailable : TimberbornTreeBurnConsequenceStatus.AlreadySatisfied;
+        var first = fixture.Consumer.Consume(20, [Delta(fixture.Token(A), 0, 15, 0)]);
+        Assert.Equal(0, first.Trees.YieldLost);
+        Assert.Equal(0, first.Trees.KilledTreeCount);
+        Assert.Equal(0, first.Trees.VisualStateUpdateCount);
+        Assert.Equal(1, first.Trees.UnavailableConsequenceCount);
+        int requested = fixture.Native.Calls.First(call => call.Kind == TimberbornTreeBurnConsequenceKind.ReduceYield).YieldLost;
+        fixture.Native.Calls.Clear();
+        fixture.Consumer.Consume(21, [Delta(fixture.Token(A), 0, 15, 0)]);
+        var retry = Assert.Single(fixture.Native.Calls);
+        Assert.Equal(TimberbornTreeBurnConsequenceKind.ReduceYield, retry.Kind);
+        Assert.True(retry.YieldLost >= requested); // Neither terminal visual nor unsupported yield advanced applied goods.
+    }
+
+    [Fact]
+    public void AlreadyDeadSuppressesAnotherKillButOutstandingVisualCanRetry()
+    {
+        var fixture = new Fixture();
+        fixture.Native.StatusForKind = kind => kind == TimberbornTreeBurnConsequenceKind.MarkBurnedVisual
+            ? TimberbornTreeBurnConsequenceStatus.Unavailable : TimberbornTreeBurnConsequenceStatus.AlreadySatisfied;
+        var first = fixture.Consumer.Consume(22, [Delta(fixture.Token(A), 0, 15, 9)]);
+        Assert.Equal(0, first.Trees.KilledTreeCount);
+        Assert.Equal(1, first.Trees.UnavailableConsequenceCount);
+        fixture.Native.Calls.Clear();
+        fixture.Native.StatusForKind = kind => kind == TimberbornTreeBurnConsequenceKind.MarkBurnedVisual
+            ? TimberbornTreeBurnConsequenceStatus.Applied : TimberbornTreeBurnConsequenceStatus.AlreadySatisfied;
+        var second = fixture.Consumer.Consume(23, [Delta(fixture.Token(A), 0, 9, 8)]);
+        Assert.DoesNotContain(fixture.Native.Calls, call => call.Kind == TimberbornTreeBurnConsequenceKind.KillTree);
+        Assert.Equal(0, second.Trees.KilledTreeCount);
+        Assert.Equal(1, second.Trees.VisualStateUpdateCount);
+    }
+
     private static TimberbornBurnDamageTargetKey Key(Guid id) => new(TimberbornBurnDamageIdentity.ForEntity(id, NativeBurnTargetFamily.Tree));
     private static TimberbornMaterialProjection Projection(Guid id) => new(id,
         [new(new(0, 0, 0), 0), new(new(1, 0, 0), 1)], [TimberbornMaterialPart.Tree("Pine")]);
@@ -201,17 +238,22 @@ public sealed class OwnedTreeDeltaConsumerTests
         internal readonly List<TimberbornTreeBurnConsequence> Calls = [];
         internal readonly List<TimberbornTreeBurnConsequence> Applied = [];
         internal Action<TimberbornTreeBurnConsequence>? AfterApply;
+        internal Func<TimberbornTreeBurnConsequenceKind, TimberbornTreeBurnConsequenceStatus>? StatusForKind;
         internal bool Fail;
         internal TimberbornTreeBurnConsequenceKind? FailKind;
         public bool IsLive(Guid id) => Live.Contains(id);
         public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence consequence)
         {
             Calls.Add(consequence);
-            if (!IsLive(consequence.EntityId)) return new(false, false);
-            if (Fail || consequence.Kind == FailKind) return new(false, true);
-            Applied.Add(consequence);
-            AfterApply?.Invoke(consequence);
-            return new(true, false);
+            if (!IsLive(consequence.EntityId)) return new(TimberbornTreeBurnConsequenceStatus.NotLive);
+            if (Fail || consequence.Kind == FailKind) return new(TimberbornTreeBurnConsequenceStatus.Failed);
+            var status = StatusForKind?.Invoke(consequence.Kind) ?? TimberbornTreeBurnConsequenceStatus.Applied;
+            if (status == TimberbornTreeBurnConsequenceStatus.Applied)
+            {
+                Applied.Add(consequence);
+                AfterApply?.Invoke(consequence);
+            }
+            return new(status);
         }
     }
 }

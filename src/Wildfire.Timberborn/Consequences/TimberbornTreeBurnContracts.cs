@@ -23,9 +23,18 @@ public readonly record struct TimberbornTreeBurnConsequence(
     int DamageCapacity,
     Guid EntityId = default);
 
-public readonly record struct TimberbornTreeBurnConsequenceResult(
-    bool Applied,
-    bool Failed);
+public enum TimberbornTreeBurnConsequenceStatus
+{
+    NotLive, Applied, AlreadySatisfied, Unavailable, Failed,
+}
+
+public readonly record struct TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus Status)
+{
+    public bool Applied => Status == TimberbornTreeBurnConsequenceStatus.Applied;
+    public bool Failed => Status == TimberbornTreeBurnConsequenceStatus.Failed;
+    public bool Satisfied => Applied || Status == TimberbornTreeBurnConsequenceStatus.AlreadySatisfied;
+    public bool Unavailable => Status == TimberbornTreeBurnConsequenceStatus.Unavailable;
+}
 
 public readonly record struct TimberbornTreeBurnConsequenceSummary(
     uint Tick,
@@ -38,7 +47,8 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
     int UnmappedTargetCount,
     int UnknownCuttableResourceCount,
     int NonBurnableTreeTargetCount,
-    int FailedConsequenceCount)
+    int FailedConsequenceCount,
+    int UnavailableConsequenceCount = 0)
 {
     public static readonly TimberbornTreeBurnConsequenceSummary Empty = new(
         Tick: 0,
@@ -65,7 +75,8 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
             $"duplicate_cells_suppressed={DuplicateCellSuppressedCount} " +
             $"unmapped_targets={UnmappedTargetCount} " +
             $"unknown_cuttable_resources={UnknownCuttableResourceCount} " +
-            $"non_burnable_tree_targets={NonBurnableTreeTargetCount}";
+            $"non_burnable_tree_targets={NonBurnableTreeTargetCount} " +
+            $"unavailable_consequences={UnavailableConsequenceCount}";
     }
 }
 

@@ -57,7 +57,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
             consequence.TargetKey.StableId != TimberbornBurnDamageIdentity.ForEntity(consequence.EntityId, NativeBurnTargetFamily.Tree))
             throw new InvalidOperationException("Native tree consequence requires an exact Guid family binding.");
         if (!TryResolveTree(consequence.EntityId, out BlockObject blockObject))
-            return new TimberbornTreeBurnConsequenceResult(Applied: false, Failed: false);
+            return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.NotLive);
         return consequence.Kind switch
         {
             TimberbornTreeBurnConsequenceKind.DryTree => ApplyDryTree(consequence, blockObject),
@@ -91,7 +91,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(TextureLabel(consequence, blockObject))} " +
             $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
-        return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+        return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied);
     }
 
     private TimberbornTreeBurnConsequenceResult ApplyYieldLoss(TimberbornTreeBurnConsequence consequence)
@@ -101,8 +101,8 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
             "reason=native_cuttable_yield_decrease_triggers_cut " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
-            $"yield_lost={consequence.YieldLost} remaining_yield={consequence.RemainingYield}");
-        return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+            $"requested_yield_loss={consequence.YieldLost} remaining_yield={consequence.RemainingYield}");
+        return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Unavailable);
     }
 
     private TimberbornTreeBurnConsequenceResult ApplyKillTree(TimberbornTreeBurnConsequence consequence, BlockObject blockObject)
@@ -121,20 +121,24 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
                 $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
-            return TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
+            return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Unavailable);
         }
 
-        if (!livingNaturalResource.IsDead)
-        {
-            livingNaturalResource.Die();
-        }
-
+        var result = ApplyNativeDeath(livingNaturalResource);
+        if (!result.Applied) return result;
         _logSink.Info(
             "wildfire_timberborn_tree_killed_by_fire " +
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(TextureLabel(consequence, blockObject))} " +
             $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
-        return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+        return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied);
+    }
+
+    internal static TimberbornTreeBurnConsequenceResult ApplyNativeDeath(LivingNaturalResource resource)
+    {
+        if (resource.IsDead) return new(TimberbornTreeBurnConsequenceStatus.AlreadySatisfied);
+        resource.Die(); // Native state changes before Died callbacks; exceptions must propagate unchanged.
+        return new(TimberbornTreeBurnConsequenceStatus.Applied);
     }
 
     private TimberbornTreeBurnConsequenceResult ApplyBurnedVisual(TimberbornTreeBurnConsequence consequence, BlockObject blockObject)
@@ -153,7 +157,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
             $"materials={updatedMaterialCount}");
-        return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+        return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied);
     }
 
     private TimberbornTreeBurnConsequenceResult ApplyBurnedLeftover(TimberbornTreeBurnConsequence consequence, BlockObject blockObject)
@@ -168,14 +172,15 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
         {
             _logSink.Warning(
                 $"{TimberbornRuntimeBurnedTextureBehavior.TreeBurnedLeftoverAlreadyTerminalToken} " +
-                "reason=missing_cuttable_already_terminal " +
+                "reason=missing_cuttable_unavailable " +
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(consequence.SpecId)} " +
                 $"damage_taken={consequence.DamageTaken} damage_capacity={consequence.DamageCapacity}");
-            return TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
+            return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Unavailable);
         }
 
         InvokeNoArgumentMethod(cuttable, "Cut");
+        RequireCompoundOrigin(consequence, blockObject);
         if (TryGetTreeComponent(
                 blockObject,
                 consequence.TargetKey.StableId,
@@ -185,14 +190,19 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
         {
             foreach (GoodAmount goodAmount in goodStack.Inventory.UnreservedTakeableStock().ToArray())
             {
+                RequireCompoundComponent(consequence, blockObject, goodStack);
                 TimberbornInventoryMutations.Consume(goodStack.Inventory, goodAmount);
             }
 
-            TryInvokeNoArgumentMethod(goodStack, "DisableGoodStack");
+            RequireCompoundComponent(consequence, blockObject, goodStack);
+            InvokeNoArgumentMethod(goodStack, "DisableGoodStack");
         }
         string textureLabel = TextureLabel(consequence, blockObject);
+        RequireCompoundOrigin(consequence, blockObject);
         bool modelRefreshed = TryRefreshNaturalResourceModel(blockObject, consequence, out string modelRefreshReason);
+        RequireCompoundComponent(consequence, blockObject, cuttable);
         InvokeNoArgumentMethod(cuttable, "ShowLeftoverModel");
+        RequireCompoundOrigin(consequence, blockObject);
         bool leftoverModelActive = IsInLeftoverState(cuttable);
         int updatedMaterialCount = modelRefreshed && leftoverModelActive
             ? ApplyBurnedTextures(blockObject, textureLabel)
@@ -208,6 +218,7 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
 
         if (updatedMaterialCount == 0)
         {
+            RequireCompoundOrigin(consequence, blockObject);
             updatedMaterialCount = ApplyCharredTintToActive(blockObject);
             if (updatedMaterialCount == 0 && !HasBurnedMaterial(blockObject))
             {
@@ -221,7 +232,21 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
             $"stable_id={TimberbornQaCommandBridge.FormatToken(consequence.TargetKey.StableId)} " +
             $"target={TimberbornQaCommandBridge.FormatToken(textureLabel)} " +
             $"materials={updatedMaterialCount} model_refreshed=true leftover_model_active=true");
-        return new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false);
+        return new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied);
+    }
+
+    private void RequireCompoundOrigin(TimberbornTreeBurnConsequence consequence, BlockObject expected)
+    {
+        if (!TryResolveTree(consequence.EntityId, out var current) || !ReferenceEquals(current, expected))
+            throw new InvalidOperationException("Native tree origin disappeared during a compound leftover action; completion is unknown.");
+    }
+
+    private void RequireCompoundComponent<T>(TimberbornTreeBurnConsequence consequence, BlockObject owner, T expected)
+        where T : class
+    {
+        RequireCompoundOrigin(consequence, owner);
+        if (!owner.TryGetComponent(out T current) || !ReferenceEquals(current, expected))
+            throw new InvalidOperationException("Native tree component changed during a compound leftover action; completion is unknown.");
     }
 
     private static bool HasBurnedMaterial(BlockObject blockObject)
@@ -488,32 +513,6 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
                 $"stable_id={TimberbornQaCommandBridge.FormatToken(stableId)} " +
                 $"spec_id={TimberbornQaCommandBridge.FormatToken(specId)} " +
                 $"message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
-            return false;
-        }
-    }
-
-    private static bool TryInvokeNoArgumentMethod(object target, string methodName)
-    {
-        try
-        {
-            System.Reflection.MethodInfo? method = target.GetType().GetMethod(
-                methodName,
-                System.Reflection.BindingFlags.Instance |
-                System.Reflection.BindingFlags.Public |
-                System.Reflection.BindingFlags.NonPublic,
-                binder: null,
-                Type.EmptyTypes,
-                modifiers: null);
-            if (method is null)
-            {
-                return false;
-            }
-
-            method.Invoke(target, null);
-            return true;
-        }
-        catch
-        {
             return false;
         }
     }

@@ -140,12 +140,13 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     }
 
     [Fact]
-    public void TerminalTreeComponentSkipsRemainAppliedConsequences()
+    public void SatisfiedTreeStateDoesNotReportAnotherMutation()
     {
         TimberbornTreeBurnConsequenceResult result =
-            TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
+            new(TimberbornTreeBurnConsequenceStatus.AlreadySatisfied);
 
-        Assert.True(result.Applied);
+        Assert.False(result.Applied);
+        Assert.True(result.Satisfied);
         Assert.False(result.Failed);
     }
 

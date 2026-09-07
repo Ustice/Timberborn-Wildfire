@@ -8,6 +8,7 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
     private readonly Dictionary<TimberbornBurnDamageTargetKey, int> _appliedYieldLossByTarget = new();
     private readonly HashSet<TimberbornBurnDamageTargetKey> _driedTargets = new();
     private readonly HashSet<TimberbornBurnDamageTargetKey> _killedTargets = new();
+    private readonly HashSet<TimberbornBurnDamageTargetKey> _burnedVisualTargets = new();
     private readonly HashSet<TimberbornBurnDamageTargetKey> _leftoverTargets = new();
     private const int BurnedDeadFuelThreshold = 12;
     private const int BurnedLeftoverFuelThreshold = 0;
@@ -84,7 +85,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             NonBurnableTreeTargetCount: consideredTreeTargetStates.Count(static state =>
                 state.MaterialKind is TimberbornBurnMaterialKind.NonBurnable ||
                 (state.DamageCapacity == 0 && state.MissingResourceIds.Count == 0)),
-            FailedConsequenceCount: outcomes.Sum(static outcome => outcome.FailedConsequenceCount));
+            FailedConsequenceCount: outcomes.Sum(static outcome => outcome.FailedConsequenceCount),
+            UnavailableConsequenceCount: outcomes.Sum(static outcome => outcome.UnavailableConsequenceCount));
 
         if (summary.ConsideredTreeTargetCount > 0 ||
             summary.YieldLost > 0 ||
@@ -199,10 +201,10 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             targetYieldLost,
             Math.Max(0, initialYield - targetYieldLost)));
 
-        if (!result.Applied)
+        if (!result.Satisfied)
         {
             ThrowIfFailed(result, TimberbornTreeBurnConsequenceKind.DryTree, state);
-            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+            return Unapplied(result);
         }
 
         _driedTargets.Add(state.TargetKey);
@@ -226,7 +228,7 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         if (!result.Applied)
         {
             ThrowIfFailed(result, TimberbornTreeBurnConsequenceKind.ReduceYield, state);
-            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+            return Unapplied(result);
         }
 
         _appliedYieldLossByTarget[state.TargetKey] = targetYieldLost;
@@ -246,31 +248,29 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         int targetYieldLost,
         bool markBurnedDeadVisual)
     {
-        if (_killedTargets.Contains(state.TargetKey))
-        {
-            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
-        }
-
         TimberbornTreeBurnConsequence killConsequence = CreateConsequence(
             tick,
             state,
             TimberbornTreeBurnConsequenceKind.KillTree,
             targetYieldLost,
             remainingYield: 0);
-        TimberbornTreeBurnConsequenceResult killResult = _consequenceApi.ApplyConsequence(killConsequence);
+        TimberbornTreeBurnConsequenceResult killResult = _killedTargets.Contains(state.TargetKey)
+            ? new(TimberbornTreeBurnConsequenceStatus.AlreadySatisfied)
+            : _consequenceApi.ApplyConsequence(killConsequence);
         ThrowIfFailed(killResult, TimberbornTreeBurnConsequenceKind.KillTree, state);
-        TimberbornTreeBurnConsequenceResult visualResult = markBurnedDeadVisual
+        TimberbornTreeBurnConsequenceResult visualResult = markBurnedDeadVisual && !_burnedVisualTargets.Contains(state.TargetKey)
             ? _consequenceApi.ApplyConsequence(killConsequence with
             {
                 Kind = TimberbornTreeBurnConsequenceKind.MarkBurnedVisual,
             })
-            : new TimberbornTreeBurnConsequenceResult(Applied: false, Failed: false);
+            : new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.NotLive);
 
-        if (killResult.Applied)
+        if (killResult.Satisfied)
         {
             _killedTargets.Add(state.TargetKey);
         }
         ThrowIfFailed(visualResult, TimberbornTreeBurnConsequenceKind.MarkBurnedVisual, state);
+        if (visualResult.Satisfied) _burnedVisualTargets.Add(state.TargetKey);
 
         return new TimberbornTreeBurnTargetOutcome(
             Burnable: true,
@@ -278,7 +278,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             Killed: killResult.Applied,
             VisualUpdated: visualResult.Applied,
             IsUnknownResource: false,
-            FailedConsequenceCount: CountUnavailable(killResult) + CountUnavailable(visualResult));
+            FailedConsequenceCount: 0,
+            UnavailableConsequenceCount: (killResult.Unavailable ? 1 : 0) + (visualResult.Unavailable ? 1 : 0));
     }
 
     private TimberbornTreeBurnTargetOutcome ApplyBurnedLeftoverConsequences(
@@ -299,19 +300,18 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             targetYieldLost,
             remainingYield: 0));
 
-        if (!result.Applied)
+        if (!result.Satisfied)
         {
             ThrowIfFailed(result, TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover, state);
-            return TimberbornTreeBurnTargetOutcome.BurnableNoChange;
+            return Unapplied(result);
         }
 
         _leftoverTargets.Add(state.TargetKey);
-        _appliedYieldLossByTarget[state.TargetKey] = initialYield;
         return new TimberbornTreeBurnTargetOutcome(
             Burnable: true,
             YieldLost: 0,
             Killed: false,
-            VisualUpdated: true,
+            VisualUpdated: result.Applied,
             IsUnknownResource: false,
             FailedConsequenceCount: 0);
     }
@@ -383,10 +383,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         return currentFuel <= BurnedLeftoverFuelThreshold;
     }
 
-    private static int CountUnavailable(TimberbornTreeBurnConsequenceResult result)
-    {
-        return 0;
-    }
+    private static TimberbornTreeBurnTargetOutcome Unapplied(TimberbornTreeBurnConsequenceResult result) =>
+        TimberbornTreeBurnTargetOutcome.BurnableNoChange with { UnavailableConsequenceCount = result.Unavailable ? 1 : 0 };
 
     private static void ThrowIfFailed(
         TimberbornTreeBurnConsequenceResult result,
@@ -419,7 +417,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         bool Killed,
         bool VisualUpdated,
         bool IsUnknownResource,
-        int FailedConsequenceCount)
+        int FailedConsequenceCount,
+        int UnavailableConsequenceCount = 0)
     {
         public static readonly TimberbornTreeBurnTargetOutcome NoOp = new(
             Burnable: false,
@@ -454,7 +453,8 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
                 Killed: first.Killed || second.Killed,
                 VisualUpdated: first.VisualUpdated || second.VisualUpdated,
                 IsUnknownResource: first.IsUnknownResource || second.IsUnknownResource,
-                FailedConsequenceCount: first.FailedConsequenceCount + second.FailedConsequenceCount);
+                FailedConsequenceCount: first.FailedConsequenceCount + second.FailedConsequenceCount,
+                UnavailableConsequenceCount: first.UnavailableConsequenceCount + second.UnavailableConsequenceCount);
         }
     }
 }

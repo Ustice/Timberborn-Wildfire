@@ -440,8 +440,8 @@ public sealed class TimberbornTreeBurnConsequenceTests
             [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
         RecordingTreeBurnConsequenceApi treeApi = new(static consequence =>
             consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover
-                ? new TimberbornTreeBurnConsequenceResult(Applied: false, Failed: true)
-                : new TimberbornTreeBurnConsequenceResult(Applied: true, Failed: false));
+                ? new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Failed)
+                : new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied));
         TimberbornTreeBurnConsequenceSink treeSink = new(burnDamageService, treeApi);
         TimberbornFireCellDeltaDecision burnStep = Decision(0, oldFuel: 15, newFuel: 3);
         TimberbornFireCellDeltaDecision spentFuel = Decision(0, oldFuel: 3, newFuel: 0);
@@ -482,12 +482,13 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
-    public void TreeKillTreatsMissingLivingNaturalResourceAsAlreadyTerminal()
+    public void TreeUnavailableResultDoesNotClaimMutationOrTerminalSatisfaction()
     {
         TimberbornTreeBurnConsequenceResult result =
-            TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
+            new(TimberbornTreeBurnConsequenceStatus.Unavailable);
 
-        Assert.True(result.Applied);
+        Assert.False(result.Applied);
+        Assert.False(result.Satisfied);
         Assert.False(result.Failed);
         Assert.Equal(
             "wildfire_timberborn_tree_kill_skipped",
@@ -495,12 +496,13 @@ public sealed class TimberbornTreeBurnConsequenceTests
     }
 
     [Fact]
-    public void TreeBurnedLeftoverTreatsMissingCuttableAsAlreadyTerminal()
+    public void TreeAlreadySatisfiedResultStopsRetriesWithoutClaimingMutation()
     {
         TimberbornTreeBurnConsequenceResult result =
-            TimberbornRuntimeBurnedTextureBehavior.AlreadyTerminalTreeResult();
+            new(TimberbornTreeBurnConsequenceStatus.AlreadySatisfied);
 
-        Assert.True(result.Applied);
+        Assert.False(result.Applied);
+        Assert.True(result.Satisfied);
         Assert.False(result.Failed);
         Assert.Equal(
             "wildfire_timberborn_tree_burned_leftover_skipped",
@@ -616,9 +618,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
         public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence consequence)
         {
             Consequences.Add(consequence);
-            return apply?.Invoke(consequence) ?? new TimberbornTreeBurnConsequenceResult(
-                Applied: true,
-                Failed: false);
+            return apply?.Invoke(consequence) ?? new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied);
         }
     }
 
