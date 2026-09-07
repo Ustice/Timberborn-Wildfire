@@ -218,7 +218,7 @@ public sealed class TimberbornSelectedCropTargetProvider : ITimberbornQaSelected
 
         return TimberbornLiveCropBurnDamageTargetCollector.CollectSelectedObject(
             grid,
-            TimberbornBurnDamageIdentity.ForEntity(blockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.SelectedCrop),
+            TimberbornBurnDamageIdentity.ForEntity(blockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Crop),
             blockObject.Name,
             selectedObject.AllComponents,
             OccupiedCoordinates(blockObject)

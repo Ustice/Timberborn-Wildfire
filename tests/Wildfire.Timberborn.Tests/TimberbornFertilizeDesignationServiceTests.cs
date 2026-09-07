@@ -151,14 +151,15 @@ public sealed class TimberbornFertilizeDesignationServiceTests
     }
 
     [Fact]
-    public void NativeBurnedResourceDeletionReportsCompletedCropVisualState()
+    public void NativeBurnedResourceDeletionDoesNotFabricateKillOrTextureMutation()
     {
         TimberbornCropBurnConsequenceResult result =
-            TimberbornRuntimeBurnedTextureBehavior.DeletedBurnedResourceResult();
+            new(TimberbornCropBurnConsequenceStatus.Applied, Deleted: true);
 
         Assert.True(result.MatchedCropTarget);
-        Assert.True(result.KilledCrop);
-        Assert.True(result.VisualStateUpdated);
+        Assert.False(result.KilledCrop);
+        Assert.True(result.Deleted);
+        Assert.False(result.VisualStateUpdated);
         Assert.False(result.FailedConsequence);
         Assert.Equal("native_entity_service", TimberbornRuntimeBurnedTextureBehavior.CropBurnedResourceDeletedReason);
     }

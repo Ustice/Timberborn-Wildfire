@@ -45,16 +45,11 @@ public sealed class TimberbornCropBurnConsequenceTests
             grid,
             [Registration("crop-carrot-1", "Crop.Carrot", [new TimberbornCellCoordinates(0, 0, 0)])]);
         RecordingCropBurnConsequenceApi cropApi = new(static consequence =>
-            new TimberbornCropBurnConsequenceResult(
-                MatchedCropTarget: true,
-                YieldLost: consequence.Kind == TimberbornCropBurnConsequenceKind.ReduceYield
+            new TimberbornCropBurnConsequenceResult(TimberbornCropBurnConsequenceStatus.Applied, YieldLost: consequence.Kind == TimberbornCropBurnConsequenceKind.ReduceYield
                     ? consequence.YieldLost
-                    : 0,
-                KilledCrop: consequence.Kind is TimberbornCropBurnConsequenceKind.KillCrop
-                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-                VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
-                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-                FailedConsequence: false));
+                    : 0, KilledCrop: consequence.Kind is TimberbornCropBurnConsequenceKind.KillCrop
+                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover, VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
+                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover));
         TimberbornCropBurnConsequenceSink cropSink = new(burnDamageService, cropApi);
 
         burnDamageService.ApplyDamage(22, [Decision(0, oldFuel: 3, newFuel: 0)]);
@@ -67,7 +62,7 @@ public sealed class TimberbornCropBurnConsequenceTests
             ],
             cropApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
         Assert.All(cropApi.Consequences, static consequence => Assert.True(consequence.IsFullyBurned));
-        Assert.Equal(1, summary.YieldLost);
+        Assert.Equal(0, summary.YieldLost);
         Assert.Equal(1, summary.KilledCropCount);
         Assert.Equal(1, summary.VisualStateUpdateCount);
     }
@@ -260,11 +255,11 @@ public sealed class TimberbornCropBurnConsequenceTests
             ["help", "qa-readiness", "status"]);
 
         Assert.Equal(1, summary.CropBurnConsideredTargetCount);
-        Assert.Equal(1, summary.CropBurnYieldLost);
+        Assert.Equal(0, summary.CropBurnYieldLost);
         Assert.Equal(1, summary.CropBurnKilledCropCount);
-        Assert.Contains("crop_burn_yield_lost=1", summary.ToLogToken());
+        Assert.Contains("crop_burn_yield_lost=0", summary.ToLogToken());
         Assert.Contains("last_delta_consumer_crop_burn_considered_targets=1", result.ResultToken);
-        Assert.Contains("last_delta_consumer_crop_burn_yield_lost=1", result.ResultToken);
+        Assert.Contains("last_delta_consumer_crop_burn_yield_lost=0", result.ResultToken);
     }
 
     private static TimberbornBurnDamageService CreateService(params TimberbornBurnDamageDescriptor[] descriptors)
@@ -325,16 +320,11 @@ public sealed class TimberbornCropBurnConsequenceTests
         public TimberbornCropBurnConsequenceResult ApplyConsequence(TimberbornCropBurnConsequence consequence)
         {
             Consequences.Add(consequence);
-            return apply?.Invoke(consequence) ?? new TimberbornCropBurnConsequenceResult(
-                MatchedCropTarget: true,
-                YieldLost: consequence.Kind == TimberbornCropBurnConsequenceKind.ReduceYield
+            return apply?.Invoke(consequence) ?? new TimberbornCropBurnConsequenceResult(TimberbornCropBurnConsequenceStatus.Applied, YieldLost: consequence.Kind == TimberbornCropBurnConsequenceKind.ReduceYield
                     ? consequence.YieldLost
-                    : 0,
-                KilledCrop: consequence.Kind is TimberbornCropBurnConsequenceKind.KillCrop
-                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-                VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
-                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover,
-                FailedConsequence: false);
+                    : 0, KilledCrop: consequence.Kind is TimberbornCropBurnConsequenceKind.KillCrop
+                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover, VisualStateUpdated: consequence.Kind is TimberbornCropBurnConsequenceKind.MarkBurnedVisual
+                    or TimberbornCropBurnConsequenceKind.MarkBurnedLeftover);
         }
     }
 

@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Resources;
 using Timberborn.BlockSystem;
 using Timberborn.Buildings;
 using Timberborn.BaseComponentSystem;
@@ -39,6 +40,7 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
     private readonly ExplosionOutcomeGatherer _explosionOutcomeGatherer;
     private readonly ExplosionService _explosionService;
     private readonly ITimberbornFireLogSink _logSink;
+    private readonly NativeResourceCoordinator _resources;
 
     public TimberbornFireRuntimeInitializer(
         TimberbornFireRuntime runtime,
@@ -55,8 +57,10 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
         ITerrainPhysicsService terrainPhysicsService,
         TerrainDestroyer terrainDestroyer,
         ExplosionOutcomeGatherer explosionOutcomeGatherer,
-        ExplosionService explosionService)
+        ExplosionService explosionService,
+        NativeResourceCoordinator resources)
     {
+        _resources = resources ?? throw new ArgumentNullException(nameof(resources));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _simulatorFactory = simulatorFactory ?? throw new ArgumentNullException(nameof(simulatorFactory));
         _mapSize = mapSize ?? throw new ArgumentNullException(nameof(mapSize));
@@ -171,13 +175,10 @@ public sealed class TimberbornFireRuntimeInitializer : ILoadableSingleton, IUpda
             BuildingBurnout: buildingBurnoutApi,
             BuildingBurnoutStimulus: buildingBurnoutApi,
             BurnDamageService: burnDamageService,
-            TreeBurn: new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink),
-            CropBurn: new TimberbornTextureCropBurnConsequenceApi(
-                _entityRegistry,
-                _logSink,
-                blockService: _blockService,
-                entityService: _entityService,
-                registrations: cropBurnDamageTargets.Registrations),
+            TreeBurn: new TimberbornLegacyTreeMutationGuard(_resources,
+                new TimberbornTextureTreeBurnConsequenceApi(_entityRegistry, _logSink)),
+            CropBurn: new TimberbornLegacyCropMutationGuard(_resources,
+                new TimberbornTextureCropBurnConsequenceApi(_entityRegistry, _entityService, _logSink)),
             StructureRollback: new TimberbornStructureBurnDamageRollbackTargetApi(
                 grid,
                 _blockService,
