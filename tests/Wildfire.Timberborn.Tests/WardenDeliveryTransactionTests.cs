@@ -60,6 +60,40 @@ public sealed class WardenDeliveryTransactionTests
         transaction.ThrowIfSaveUnsafe();
     }
 
+    [Fact]
+    public void PairedTransferFailureAfterSourceMutationIsNotRefundedOrSaveable()
+    {
+        var transaction = new WardenDeliveryTransaction();
+        int source = 1, destination = 0;
+        var failure = new InvalidOperationException("inventory event failed after take");
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => transaction.TransferInventory(() =>
+        {
+            Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+            source--;
+            throw failure;
+        })));
+        Assert.Equal(0, source);
+        Assert.Equal(0, destination);
+        Assert.True(transaction.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+    }
+
+    [Fact]
+    public void SuccessfulTransferAllowsSavingOnlyAfterBothMutations()
+    {
+        var transaction = new WardenDeliveryTransaction();
+        int source = 1, destination = 0;
+        transaction.TransferInventory(() =>
+        {
+            source--;
+            Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+            destination++;
+        });
+        Assert.Equal(0, source);
+        Assert.Equal(1, destination);
+        transaction.ThrowIfSaveUnsafe();
+    }
+
     private sealed class StepSimulator : IFireSimStepInputSimulator
     {
         public bool Reject { get; init; }

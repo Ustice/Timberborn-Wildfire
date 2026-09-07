@@ -40,6 +40,8 @@ public sealed class WardenDeliveryService
         return simulator.Tick();
     }
 
+    public void TransferInventory(Action transfer) => _transaction.TransferInventory(transfer);
+
     public void ThrowIfSaveUnsafe() => _transaction.ThrowIfSaveUnsafe();
 
     // Called only by actual world load/unload. Disabling/reinitializing fire must never clear poison.

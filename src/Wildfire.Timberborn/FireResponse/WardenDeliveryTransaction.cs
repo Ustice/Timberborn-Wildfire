@@ -21,6 +21,20 @@ public sealed class WardenDeliveryTransaction
         finally { _delivering = false; }
     }
 
+    public void TransferInventory(Action transfer)
+    {
+        ThrowIfSaveUnsafe();
+        _delivering = true;
+        try { transfer(); }
+        catch
+        {
+            // Native inventory calls mutate before raising events. No rollback is inferred from an exception.
+            IsIndeterminate = true;
+            throw;
+        }
+        finally { _delivering = false; }
+    }
+
     public void ThrowIfSaveUnsafe()
     {
         if (_delivering || IsIndeterminate)

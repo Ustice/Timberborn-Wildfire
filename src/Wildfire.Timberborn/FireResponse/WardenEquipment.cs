@@ -15,6 +15,8 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
 {
     public const string WaterId = "Water";
     public static readonly GoodAmount Bucket = new(WaterId, 1);
+    private readonly WardenDeliveryService _delivery;
+    public WardenEquipment(WardenDeliveryService delivery) => _delivery = delivery;
     private Citizen _citizen = null!;
     private DistrictInventoryRegistry? _registry;
     private DistrictResourceCounter? _counter;
@@ -64,18 +66,26 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
     {
         if (Loaded || !reserver.HasReservedStock || reserver.StockReservation.Inventory != source ||
             !source.Enabled || !Inventory.HasUnreservedCapacity(Bucket)) return false;
-        reserver.UnreserveStock();
-        if (!source.HasUnreservedStock(Bucket)) return false;
-        source.TakeExisting(Bucket);
-        Inventory.GiveExisting(Bucket);
-        return true;
+        var filled = false;
+        _delivery.TransferInventory(() =>
+        {
+            reserver.UnreserveStock();
+            if (!source.HasUnreservedStock(Bucket)) return;
+            source.TakeExisting(Bucket);
+            Inventory.GiveExisting(Bucket);
+            filled = true;
+        });
+        return filled;
     }
 
     public bool TryReturn(Inventory destination)
     {
         if (!Loaded || !destination.Enabled || !destination.HasUnreservedCapacity(Bucket)) return false;
-        Inventory.TakeExisting(Bucket);
-        destination.GiveExisting(Bucket);
+        _delivery.TransferInventory(() =>
+        {
+            Inventory.TakeExisting(Bucket);
+            destination.GiveExisting(Bucket);
+        });
         return true;
     }
 
