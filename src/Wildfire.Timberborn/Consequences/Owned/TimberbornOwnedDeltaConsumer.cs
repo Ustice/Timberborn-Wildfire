@@ -57,30 +57,42 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         _consuming = true;
         try
         {
-            var batch = _origins.Resolve(deltas);
-            var bodyLive = batch.Decisions.Select(item => item.EntityId).Distinct().ToDictionary(id => id, _bodies.IsLive);
-            var live = batch.Decisions.Where(item => bodyLive[item.EntityId]).ToArray();
-            // Revalidate every required state before ANY body mutation, including zero-damage rows.
-            if (live.Any(item => _origins.IsRetired(item.EntityId) || !_damage.TryGetState(item.TargetKey, out var state) || !MatchesFamily(item.Family, state)))
-                throw new InvalidOperationException("A live owned body lost its supported canonical registration after preflight.");
+            var batch = PrepareDelivery(deltas);
             TimberbornOwnedConsequenceBatchResult result = default;
-            _guard.TransferInventory(() =>
-            {
-                var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
-                var trees = _trees.ApplyOwnedConsequences(tick, live.Where(item => item.Family == NativeBurnTargetFamily.Tree).ToArray());
-                var crops = _crops.ApplyOwnedConsequences(tick, live.Where(item => item.Family == NativeBurnTargetFamily.Crop).ToArray());
-                var storage = _storage.ApplyOwnedConsequences(tick, live.Where(item =>
-                    item.Family is NativeBurnTargetFamily.Stockpile or NativeBurnTargetFamily.Structure).ToArray());
-                result = new(batch.UnownedCount, bodyLive.Count(pair => !pair.Value), damage, trees, crops,
-                    new(storage.NotLive, storage.Unavailable, storage.Removed, storage.Hazardous, storage.Blasts,
-                        storage.Pulses, storage.Unknown, storage.NonBurnable),
-                    live.Where(item => item.Family is NativeBurnTargetFamily.Structure or NativeBurnTargetFamily.Stockpile).Select(item => item.EntityId).Distinct().Count(),
-                    Capabilities);
-            });
+            _guard.TransferInventory(() => result = ApplyDelivery(tick, batch));
             return result;
         }
         finally { _consuming = false; }
     }
+
+    private PreparedDelivery PrepareDelivery(ReadOnlySpan<CellDelta> deltas)
+    {
+        var batch = _origins.Resolve(deltas);
+        var bodyLive = batch.Decisions.Select(item => item.EntityId).Distinct().ToDictionary(id => id, _bodies.IsLive);
+        var live = batch.Decisions.Where(item => bodyLive[item.EntityId]).ToArray();
+        // Revalidate every required state before ANY body mutation, including zero-damage rows.
+        if (live.Any(item => _origins.IsRetired(item.EntityId) || !_damage.TryGetState(item.TargetKey, out var state) || !MatchesFamily(item.Family, state)))
+            throw new InvalidOperationException("A live owned body lost its supported canonical registration after preflight.");
+        return new(batch.UnownedCount, batch.ReplaySuppressedCount, bodyLive.Count(pair => !pair.Value), live);
+    }
+
+    private TimberbornOwnedConsequenceBatchResult ApplyDelivery(uint tick, PreparedDelivery batch)
+    {
+        var live = batch.Live;
+        var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
+        var trees = _trees.ApplyOwnedConsequences(tick, live.Where(item => item.Family == NativeBurnTargetFamily.Tree).ToArray());
+        var crops = _crops.ApplyOwnedConsequences(tick, live.Where(item => item.Family == NativeBurnTargetFamily.Crop).ToArray());
+        var storage = _storage.ApplyOwnedConsequences(tick, live.Where(item =>
+            item.Family is NativeBurnTargetFamily.Stockpile or NativeBurnTargetFamily.Structure).ToArray());
+        return new(batch.UnownedCount, batch.NotLiveOwners, damage, trees, crops,
+            new(storage.NotLive, storage.Unavailable, storage.Removed, storage.Hazardous, storage.Blasts,
+                storage.Pulses, storage.Unknown, storage.NonBurnable),
+            live.Where(item => item.Family is NativeBurnTargetFamily.Structure or NativeBurnTargetFamily.Stockpile).Select(item => item.EntityId).Distinct().Count(),
+            Capabilities);
+    }
+
+    private sealed record PreparedDelivery(int UnownedCount, int ReplaySuppressedCount, int NotLiveOwners,
+        TimberbornOwnedBurnDecision[] Live);
 
     private static bool MatchesFamily(NativeBurnTargetFamily family, TimberbornBurnDamageTargetState state) => family switch
     {
