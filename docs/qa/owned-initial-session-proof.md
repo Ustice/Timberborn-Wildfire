@@ -20,6 +20,8 @@ Twelve initial-session cases plus eight scope/equality cases: **20 passed**. Ful
 
 The session cases execute the real compiler, fixed projector, registry, damage calculator, witnessed consumer, complete snapshot validation and OWNED3 capture/new restore against a supplied in-memory snapshot backend. They verify actual3 versus declared5 accounting under the same native spec, no native yield/stock effects, hidden binding-only contributors, exact initial fields/authority, producer reentry exclusion, late native quantity/placement/membership/environment/exclusion changes, late liveness-callback mutation, invalid selections before allocation, backend-input mutation and cleanup/retry after factory failure.
 
+The round trip conserves the GPU snapshot and body/history state, but current PrepareRestore rebuilds retained bindings without Registry.Reconcile desired projections or rich baseline. It is not a ready-to-tick restored world; historical desired material needs its separate lifecycle reconciliation. The initial compiler must not be used to invent that missing restored state.
+
 This is not GPU or real game initialization proof. The backend simply retains the supplied snapshot; native bodies/effects in these tests are supplied facts and callback fakes. The sole controller has been asked for the next bounded fixture: supplied actual native GameObjects/components and capture, fixed environment, explicit selections, actual complete-snapshot factory, OWNED3 capture/new restore and unchanged native quantities. That fixture must remain distinct from full-colony provider/load proof.
 
 ## Remaining gates
