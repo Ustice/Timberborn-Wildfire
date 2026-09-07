@@ -194,6 +194,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     }
     private bool TryOtherDistrictInventories(Inventory? rejected)
     {
+        if (!_citizen.HasAssignedDistrict) return false;
         var start = _navigator.CurrentAccessOrPosition();
         var district = _citizen.AssignedDistrict;
         var registry = district.GetComponent<DistrictInventoryRegistry>();
