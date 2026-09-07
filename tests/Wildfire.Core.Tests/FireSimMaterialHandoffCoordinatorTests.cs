@@ -36,7 +36,15 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
     {
         var step = Coordinator();
         var backend = new Backend();
-        step.TryHandoffMaterial(backend, Replace(), receipt => Assert.True(receipt.Accepted));
+        Assert.True(step.IsSlotKnown(A));
+        Assert.False(step.IsSlotKnown(B));
+        step.TryHandoffMaterial(backend, Replace(), receipt =>
+        {
+            Assert.True(receipt.Accepted);
+            Assert.Throws<InvalidOperationException>(() => step.IsSlotKnown(B)); // Authority is still inside commit.
+        });
+        Assert.True(step.IsSlotKnown(A));
+        Assert.True(step.IsSlotKnown(B));
         Assert.True(step.TryGetMaterialArchive(A, out var archive));
         Assert.Equal(3u, archive.PackedCell & 15u);
         var restore = new FireSimMaterialHandoffBatch(2, [FireSimMaterialHandoffRequest.RestoreArchived(0, B, archive)]);

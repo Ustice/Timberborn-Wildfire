@@ -78,7 +78,7 @@ public sealed class NativeMaterialRegistryTests
         Assert.NotEqual(known.SlotId, added.SlotId);
         registry.Reconcile(new[] { new TimberbornMaterialProjection(TreeId, new[] { Slot(0, 11) }, parts) }, Array.Empty<Guid>());
         Assert.Equal(2, registry.CaptureBindings().Entities.Single().Slots.Count);
-        // New binding is NOT proof of a Fresh GPU activation for this previously known target.
+        // A binding alone is not GPU history; first activation also checks exact pair membership.
     }
 
     [Fact]

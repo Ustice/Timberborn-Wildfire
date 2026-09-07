@@ -40,6 +40,26 @@ public sealed class TimberbornNativeMaterialRegistry
             TimberbornMaterialResolver.Resolve(cellIndex, _solidTerrain.Contains(cellIndex), Array.Empty<TimberbornMaterialContributor>());
     }
 
+    /// <summary>
+    /// First activation only, using the current resolved native projection. This never allocates a binding
+    /// or accepts a caller-supplied incoming identity/definition. Known slots need their GPU-retained state.
+    /// </summary>
+    public FireSimMaterialHandoffRequest CreateFirstActivationRequest(int cellIndex,
+        FireSimMaterialIdentity expectedGpuOwner, IFireSimMaterialHandoffSimulator simulator)
+    {
+        if (simulator is null) throw new ArgumentNullException(nameof(simulator));
+        var resolved = ResolveCell(cellIndex);
+        var owner = resolved.Owner ?? throw new InvalidOperationException("First activation requires a current native material projection.");
+        var identity = new FireSimMaterialIdentity(owner.TargetId, owner.SlotId);
+        if (simulator.IsSlotKnown(identity))
+            throw new InvalidOperationException("Previously activated native slots require retained GPU material.");
+        var profile = resolved.Profile;
+        var definition = new FireSimMaterialDefinition(profile.MaterialClass, profile.BurnCapacity,
+            profile.AshQuality, profile.ContaminationBehavior, (byte)PackedCell.Fuel(resolved.PackedDefinition),
+            (byte)PackedCell.Flammability(resolved.PackedDefinition), (byte)PackedCell.Terrain(resolved.PackedDefinition));
+        return FireSimMaterialHandoffRequest.Fresh(cellIndex, expectedGpuOwner, identity, definition);
+    }
+
     public void Reconcile(IEnumerable<TimberbornMaterialProjection> projections, IEnumerable<Guid> removals)
     {
         var incoming = projections.ToArray();

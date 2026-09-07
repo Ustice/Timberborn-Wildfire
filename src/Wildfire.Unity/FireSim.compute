@@ -1607,7 +1607,7 @@ uint ValidateMaterialRequest(uint index, uint count)
     else
     {
         if (request.IncomingTarget == 0u) return 2u;
-        if (request.Mode == 1u && (request.IncomingTarget == request.ExpectedTarget || (request.Companion & 0xf000u) != 0u)) return 3u;
+        if (request.Mode == 1u && (MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot) || (request.Companion & 0xf000u) != 0u)) return 3u;
         if (request.Mode == 2u && MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot)) return 3u;
         if (request.Mode == 3u)
         {

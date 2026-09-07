@@ -43,7 +43,7 @@ def main():
         cmd=[unity,'-disable-assembly-updater','-batchmode','-quit','-projectPath',str(project),'-executeMethod','MaterialSnapshotProbe.Run','-logFile',str(output/'unity.log')]
         with (output/'stdout.log').open('w') as log:
             subprocess.run(cmd,env=dict(os.environ,WILDFIRE_SNAPSHOT_PROBE_OUTPUT=str(output),WILDFIRE_SNAPSHOT_PROBE_NATIVE=str(native)),stdout=log,stderr=subprocess.STDOUT,timeout=300,check=True)
-        for marker in ['WILDFIRE_MATERIAL_SNAPSHOT_PROBE_PASS','WILDFIRE_GPU_EXHAUSTION_RESTORE_PASS']:
+        for marker in ['WILDFIRE_MATERIAL_SNAPSHOT_PROBE_PASS','WILDFIRE_GPU_EXHAUSTION_RESTORE_PASS','WILDFIRE_FIRST_SLOT_ACTIVATION_PASS']:
             if marker not in (output/'unity.log').read_text(): raise RuntimeError('Missing actual probe pass marker: '+marker)
         print('PASS '+str(output))
     finally: shutil.rmtree(lock)

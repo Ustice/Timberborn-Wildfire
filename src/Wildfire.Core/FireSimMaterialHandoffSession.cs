@@ -3,6 +3,8 @@ namespace Wildfire.Core;
 public interface IFireSimMaterialHandoffSimulator : IFireSimStepInputSimulator
 {
     GpuFireStepResult? TryHandoffMaterial(FireSimMaterialHandoffBatch batch, Action<FireSimMaterialHandoffReceipt> commit);
+    /// <summary>Exact pair membership, including active and archived slots. Unavailable authority throws.</summary>
+    bool IsSlotKnown(FireSimMaterialIdentity identity);
     bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive);
 }
 
@@ -61,6 +63,8 @@ internal sealed class FireSimMaterialHandoffSession
         }
         return true;
     }
+
+    public bool IsSlotKnown(FireSimMaterialIdentity identity) => _known.Contains(identity);
 
     public bool TryGetArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) => _archives.TryGetValue(identity, out archive!);
 

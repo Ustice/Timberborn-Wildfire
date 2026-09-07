@@ -92,6 +92,7 @@ public static class MaterialSnapshotProbe
                 File.WriteAllText(Path.Combine(output, "recaptured.json"), JsonConvert.SerializeObject(final, Formatting.Indented));
             }
             ProveGpuExhaustion(shader, output);
+            ProveFirstSlotActivation(shader, output);
             Debug.Log("WILDFIRE_MATERIAL_SNAPSHOT_PROBE_PASS backend=native new_simulator=true serialized=true archived_slots=2 restored_fuel=3,0 restored_history=5,9 pending_water_once=true stale_token_rejected=true malformed_alias_rejected=true");
             EditorApplication.Exit(0);
         }
@@ -140,6 +141,50 @@ public static class MaterialSnapshotProbe
         }
         Debug.Log("WILDFIRE_GPU_EXHAUSTION_RESTORE_PASS initial_fuel=3 final_fuel=0 burn_ticks=" + burnTicks + " owner_delta=true new_simulator=true reexposed_fuel=0");
     }
+    private static void ProveFirstSlotActivation(ComputeShader shader, string output)
+    {
+        var first = new FireSimMaterialIdentity(70, 701);
+        var second = new FireSimMaterialIdentity(70, 702);
+        var third = new FireSimMaterialIdentity(70, 703);
+        var profile = new FireSimMaterialDefinition(WildfireMaterialClass.Tree, 9,
+            WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 3, 2, 1);
+        var snapshot = new FireSimSnapshot(1, new FireGrid(2, 1, 1), 0, FireSimParameters.Default, 89,
+            new[] { PackedCell.Pack(0, 0, 2, 2, 1, 0), PackedCell.Pack(0, 0, 0, 2, 0, 0) },
+            new uint[2], new[] { Companion(9), 0u }, new uint[] { 70, 0 }, new uint[] { 701, 0 },
+            new FireSimMaterialAuthoritySnapshot(0, new[] { first }, new FireSimMaterialArchiveSnapshot[0]), new FireSimChange[0]);
+        FireSimSnapshot saved;
+        using (var original = NativeSimulator.Create(snapshot, shader))
+        {
+            Require(original.IsSlotKnown(first) && !original.IsSlotKnown(second), "wrong initial slot authority");
+            original.TryHandoffMaterial(new FireSimMaterialHandoffBatch(1, new[] {
+                FireSimMaterialHandoffRequest.Fresh(1, default, second, profile) }), receipt =>
+                Require(receipt.Accepted && (receipt.Cells[0].AppliedCell & 15) == 3, "first hidden slot activation rejected"));
+            Require(original.IsSlotKnown(second), "accepted new slot did not publish authority");
+            original.TryHandoffMaterial(new FireSimMaterialHandoffBatch(2, new[] {
+                FireSimMaterialHandoffRequest.Fresh(1, second, third, profile) }), receipt => {
+                Require(receipt.Accepted, "same target different slot rejected by GPU");
+                File.WriteAllText(Path.Combine(output, "first-slot-receipt.json"), JsonConvert.SerializeObject(receipt, Formatting.Indented));
+            });
+            saved = original.CaptureSnapshot();
+            Require((saved.Cells[0] & 15) == 0 && saved.CompanionFields[0] == snapshot.CompanionFields[0], "known exhausted sibling changed");
+        }
+        File.WriteAllText(Path.Combine(output, "first-slot-snapshot.json"), JsonConvert.SerializeObject(saved, Formatting.Indented));
+        using (var restored = NativeSimulator.Create(JsonConvert.DeserializeObject<FireSimSnapshot>(JsonConvert.SerializeObject(saved)), shader))
+        {
+            Require(restored.IsSlotKnown(first) && restored.IsSlotKnown(second) && restored.IsSlotKnown(third), "saved known pair authority changed");
+            bool rejected = false;
+            try { restored.TryHandoffMaterial(new FireSimMaterialHandoffBatch(3, new[] {
+                FireSimMaterialHandoffRequest.Fresh(1, third, second, profile) }), _ => { }); }
+            catch (ArgumentException) { rejected = true; }
+            Require(rejected, "previously active pair accepted as fresh");
+            Require(restored.TryGetMaterialArchive(second, out var archive) && (archive.PackedCell & 15) == 3, "saved same-owner archive missing");
+            restored.TryHandoffMaterial(new FireSimMaterialHandoffBatch(3, new[] {
+                FireSimMaterialHandoffRequest.RestoreArchived(1, third, archive) }), receipt =>
+                Require(receipt.Accepted && (receipt.Cells[0].AppliedCell & 15) == 3, "retained same-owner slot rejected"));
+            Require((restored.CaptureSnapshot().Cells[0] & 15) == 0, "exhausted sibling refilled after restore");
+        }
+        Debug.Log("WILDFIRE_FIRST_SLOT_ACTIVATION_PASS backend=native same_target_new_slot=true same_target_handoff=true known_pair_fresh_rejected=true archived_pair_restored=true exhausted_sibling_fuel=0 serialized=true");
+    }
     private static uint Companion(byte history) => new WildfireMaterialFieldState(WildfireMaterialClass.Tree, 9, history, 3,
         WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 6).Pack();
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
@@ -161,6 +206,7 @@ internal sealed class NativeSimulator : IDisposable
     public void RegisterChange(FireSimChange change) => ((IGpuFireSimulator)_native).RegisterChange(change);
     public GpuFireStepResult Tick() => ((IGpuFireSimulator)_native).Tick();
     public FireSimSnapshot CaptureSnapshot() => ((IFireSimSnapshotSimulator)_native).CaptureSnapshot();
+    public bool IsSlotKnown(FireSimMaterialIdentity identity) => ((IFireSimMaterialHandoffSimulator)_native).IsSlotKnown(identity);
     public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive)
         => ((IFireSimMaterialHandoffSimulator)_native).TryGetMaterialArchive(identity, out archive);
     public GpuFireStepResult? TryHandoffMaterial(FireSimMaterialHandoffBatch batch, Action<FireSimMaterialHandoffReceipt> commit)

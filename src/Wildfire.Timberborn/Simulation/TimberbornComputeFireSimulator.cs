@@ -835,6 +835,12 @@ public sealed partial class TimberbornComputeFireSimulator :
         return _step.TryCollectAsh(this, input, commitCollection);
     }
 
+    public bool IsSlotKnown(FireSimMaterialIdentity identity)
+    {
+        ThrowIfDisposed();
+        return _step.IsSlotKnown(identity);
+    }
+
     public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) =>
         _step.TryGetMaterialArchive(identity, out archive);
 

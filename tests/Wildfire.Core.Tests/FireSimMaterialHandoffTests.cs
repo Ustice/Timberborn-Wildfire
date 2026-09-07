@@ -8,13 +8,27 @@ public sealed class FireSimMaterialHandoffTests
     private static readonly FireSimMaterialIdentity B1 = new(2, 22);
 
     [Fact]
-    public void WholeFootprintAdmissionRejectsPartialCapacityAndPreviouslyKnownFreshOwner()
+    public void WholeFootprintAdmissionRejectsPartialCapacityAndPreviouslyKnownFreshSlot()
     {
         FireSimMaterialHandoffBatch batch = Replacement();
         Assert.False(batch.ValidateAdmission(2, 1, [A0, A1], []));
         Assert.True(batch.ValidateAdmission(2, 2, [A0, A1], []));
         Assert.Throws<ArgumentException>(() => batch.ValidateAdmission(2, 2, [A0, A1, B0], []));
         Assert.Throws<ArgumentOutOfRangeException>(() => batch.ValidateAdmission(1, 2, [A0, A1], []));
+    }
+
+    [Fact]
+    public void FreshAdmissionAllowsOnlyNeverActivatedPairsEvenWhenTheirTargetIsAlreadyKnown()
+    {
+        var newSlot = new FireSimMaterialIdentity(1, 13);
+        var batch = new FireSimMaterialHandoffBatch(1,
+            [FireSimMaterialHandoffRequest.Fresh(0, A0, A1, Definition()),
+             FireSimMaterialHandoffRequest.Fresh(1, default, newSlot, Definition())]);
+        Assert.True(batch.ValidateAdmission(2, 2, [A0], []));
+        Assert.Throws<ArgumentException>(() => batch.ValidateAdmission(2, 2, [A0, A1], []));
+        Assert.Throws<ArgumentException>(() => new FireSimMaterialHandoffBatch(1,
+            [FireSimMaterialHandoffRequest.Fresh(0, A0, A1, Definition()),
+             FireSimMaterialHandoffRequest.Fresh(1, default, A1, Definition())]));
     }
 
     [Fact]

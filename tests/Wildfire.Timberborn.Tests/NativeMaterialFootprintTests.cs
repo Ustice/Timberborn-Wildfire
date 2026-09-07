@@ -42,7 +42,7 @@ public sealed class NativeMaterialFootprintTests
         Assert.IsType<ArgumentOutOfRangeException>(failure.InnerException);
     }
 
-    private sealed class NativeFootprintFixture : IDisposable
+    internal sealed class NativeFootprintFixture : IDisposable
     {
         private readonly NativeManagedTestContext _native = new();
         private readonly object _blocks;

@@ -133,8 +133,8 @@ public sealed class FireSimMaterialHandoffRequest
 }
 
 /// <summary>
-/// Whole transition, sorted by destination cell. Prototype admission requires session-known owners;
-/// returning owners need a known archive or a captured source, never a fresh activation shortcut.
+/// Whole transition, sorted by destination cell. Previously activated target/slot pairs require retained
+/// state; a never-activated local slot may initialize from its current host-validated definition.
 /// </summary>
 public sealed class FireSimMaterialHandoffBatch
 {
@@ -178,14 +178,13 @@ public sealed class FireSimMaterialHandoffBatch
         if (knownSlots is null) throw new ArgumentNullException(nameof(knownSlots));
         if (availableArchives is null) throw new ArgumentNullException(nameof(availableArchives));
         HashSet<FireSimMaterialIdentity> known = new(knownSlots);
-        HashSet<uint> knownOwners = new(known.Select(static identity => identity.TargetId));
         foreach (FireSimMaterialHandoffRequest request in Requests)
         {
             if (request.CellIndex >= cellCount) throw new ArgumentOutOfRangeException(nameof(cellCount), "Handoff cell is outside the grid.");
             if (request.Expected.IsOwned && !known.Contains(request.Expected))
                 throw new ArgumentException("Expected owner is not known to this simulator session.");
-            if (request.Mode == FireSimMaterialHandoffMode.Fresh && knownOwners.Contains(request.Incoming.TargetId))
-                throw new ArgumentException("Previously known owners require retained state, not fresh fuel.");
+            if (request.Mode == FireSimMaterialHandoffMode.Fresh && known.Contains(request.Incoming))
+                throw new ArgumentException("Previously activated slots require retained state, not fresh fuel.");
             if (request.Mode is FireSimMaterialHandoffMode.Archived or FireSimMaterialHandoffMode.CapturedSource && !known.Contains(request.Incoming))
                 throw new ArgumentException("Retained owner is not known to this simulator session.");
             if (request.Archive is { } archive && !availableArchives.Contains(archive))

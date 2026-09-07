@@ -139,6 +139,14 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
         return _step.TryCollectAsh(this, input, commitCollection);
     }
 
+    public bool IsSlotKnown(FireSimMaterialIdentity identity)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (BufferGrid is null || _dispatcher is null)
+            throw new InvalidOperationException("Material authority requires an initialized compute backend.");
+        return _step.IsSlotKnown(identity);
+    }
+
     public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) =>
         _step.TryGetMaterialArchive(identity, out archive);
 

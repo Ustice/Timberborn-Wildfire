@@ -16,6 +16,25 @@ public sealed class MaterialHandoffShaderTests
         [FireSimMaterialHandoffRequest.Fresh(0, A0, B0, Definition(9)), FireSimMaterialHandoffRequest.Fresh(1, A1, B1, Definition(9))]);
 
     [UnityShaderFact]
+    public void FreshDifferentSlotsOfSameTargetAreAcceptedWithoutResettingOutgoingHistory()
+    {
+        var batch = new FireSimMaterialHandoffBatch(1,
+            [FireSimMaterialHandoffRequest.Fresh(0, A0, new(1, 13), Definition(6)),
+             FireSimMaterialHandoffRequest.Fresh(1, A1, new(1, 14), Definition(4))]);
+        var capture = Capture(Fixture("material-first-slots-known-target", batch));
+        var receipt = Receipt(capture, batch);
+        Assert.True(receipt.Accepted);
+        Assert.Equal(new uint[] { 1, 1 }, capture.FinalTargetIds);
+        Assert.Equal(new uint[] { 13, 14 }, capture.FinalSlotIds);
+        Assert.Equal(6u, receipt.Cells[0].AppliedCell & 15u);
+        Assert.Equal(4u, receipt.Cells[1].AppliedCell & 15u);
+        Assert.Equal(3u, receipt.ArchiveOutgoing(0).PackedCell & 15u);
+        Assert.Equal(0u, receipt.ArchiveOutgoing(1).PackedCell & 15u);
+        Assert.Equal(5u, (receipt.ArchiveOutgoing(0).Companion >> 12) & 15u);
+        Assert.Equal(9u, (receipt.ArchiveOutgoing(1).Companion >> 12) & 15u);
+    }
+
+    [UnityShaderFact]
     public void WholeOwnerReplacementCapturesDistinctBurnedSlotsAndPreservesEnvironment()
     {
         var batch = Replace();

@@ -77,6 +77,14 @@ public sealed partial class FireSimStepCoordinator
             FireSimGpuProtocol.DecodeCollectionReceipt(backend.ReadAppliedChange(LastUploadedChangeCount - 1), input)));
     }
 
+    public bool IsSlotKnown(FireSimMaterialIdentity identity)
+    {
+        ThrowIfSnapshotInProgress();
+        if (_isTicking || _stateUncertain || !_completeMaterialHistory)
+            throw new InvalidOperationException("Material authority is unavailable, changing, or indeterminate.");
+        return _material.IsSlotKnown(identity);
+    }
+
     public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) =>
         _material.TryGetArchive(identity, out archive);
 
