@@ -60,7 +60,7 @@ Use production encoded request words, and read prior/applied receipts before sim
 - **One stale slot in a multi-cell transition:** valid rejected header; all material cells unchanged, including the first otherwise-valid request. Reject malformed headers/partial or tampered receipts in the host without publishing state.
 - **Unchanged refresh:** exhausted fuel/burning/history unchanged; incompatible profile rejected, no refill, no inactive archive minted.
 - **Queued old-owner delta plus new-owner simulation:** earlier ordinary SetFuel/AddHeat and then handoff; verify each delta's originating ID through actual shader output and both readback paths. Administrative removal adds no damage delta. The managed listener fixture retains those IDs; native consequence routing remains explicitly unproven.
-- **Removal and invalid mode:** terrain/air baselines clear ownership and archive prior state; unknown mode rejects the whole table before material writes.
+- **Removal and invalid mode:** original terrain/air cases clear ownership and archive prior state; unknown mode rejects the whole table before material writes. The later [typed baseline extension](typed-material-baseline.md) adds open soil/Water/Badwater and unowned updates with unchanged masks and authority.
 - **Normal input compatibility:** previous water and ash receipt fixtures remain byte-identical and pass; full shader suite follows focused proof because shared apply/delta layouts change.
 - **Failure boundaries:** upload/preflight/readback/commit/listener failures preserve admission outcomes; full capacity returns not-admitted, no partial transition; active/archive ownership transfers once only.
 
