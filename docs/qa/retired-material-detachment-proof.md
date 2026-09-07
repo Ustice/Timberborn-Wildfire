@@ -16,7 +16,7 @@ The algorithm:
 4. Reject retired/unknown projected owners, a known slot lacking retained authority, duplicate incoming slots or a source that remains at its original cell. The existing batch validates capture single-use and source identity.
 5. Derive the next attempt token from the captured simulator cursor. A no-admission result does not consume it; a failed upload may consume an attempt without applying, requiring a recaptured cursor before retry.
 
-The current Remove request carries only a terrain boolean. This prototype can reveal only its existing class-0 nonterrain or class-1 terrain baseline; it cannot represent richer open-soil/water environment classes. Do not approximate those baselines with the boolean. A separate typed environment admission protocol is required before activating such registry composition. Material reveal must preserve current destination heat/water/ash/soil instead of replaying initial environment arrays.
+The planner now uses Registry.CreateBaselineRequest for uncovered cells. The typed baseline preserves Empty, SolidTerrain, OpenSoil, Water and Badwater definitions, including the distinction between OpenSoil material class and packed solid terrain. Scripted-backend regressions cover richer baseline and lower-owner reveal without replaying profile default wetness or resetting current soil contamination. Initial environmental projection and runtime admission remain separate gates.
 
 No per-cell fuel estimates, lifecycle phase journal or archive reconstruction are introduced. Whole-footprint detachment preserves old target/slot/Guid bindings and leaves exact GPU outgoing archives in Core. Revealed known material retains its old fuel/history; it does not restart from its declaration.
 
