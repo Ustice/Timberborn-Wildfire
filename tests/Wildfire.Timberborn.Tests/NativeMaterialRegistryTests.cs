@@ -92,6 +92,12 @@ public sealed class NativeMaterialRegistryTests
             Project(BuildingId, 20, TimberbornMaterialPart.Building("LumberMill.Folktails")),
             Project(Guid.NewGuid(), 20, TimberbornMaterialPart.StoredGood("Log")) }, new[] { TreeId }));
         Assert.Equal(before, JsonSerializer.Serialize(registry.CaptureBindings()));
+        foreach (var binding in registry.CaptureBindings().Entities)
+        {
+            Assert.True(registry.TryResolveOrigin(binding.TargetId, out Guid origin));
+            Assert.Equal(binding.EntityId, origin);
+        }
+        Assert.False(registry.TryResolveOrigin(registry.CaptureBindings().NextTargetId, out _));
         Assert.Equal(BuildingId, registry.ResolveCell(10).Owner!.Value.EntityId);
         Assert.Equal(TreeId, registry.ResolveCell(11).Owner!.Value.EntityId);
         Assert.Null(registry.ResolveCell(20).Owner);
@@ -152,6 +158,7 @@ public sealed class NativeMaterialRegistryTests
         Assert.Throws<ArgumentException>(() => registry.RestoreBindings(new TimberbornMaterialBindingSnapshot(1, 2,
             new[] { new TimberbornMaterialEntityBinding(TreeId, 1, 2, slots), new TimberbornMaterialEntityBinding(BuildingId, 1, 2, slots) })));
         Assert.Empty(registry.CaptureBindings().Entities);
+        Assert.False(registry.TryResolveOrigin(1, out _));
     }
 
     [Fact]

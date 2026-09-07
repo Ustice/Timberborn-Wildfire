@@ -17,6 +17,7 @@ public sealed class TimberbornNativeMaterialRegistry
     private readonly FireGrid _grid;
     private readonly HashSet<int> _solidTerrain;
     private Dictionary<Guid, Entry> _entries = new();
+    private Dictionary<uint, Guid> _origins = new();
     private Dictionary<int, TimberbornResolvedMaterialCell> _cells = new();
     private uint _nextTargetId = 1;
 
@@ -30,13 +31,7 @@ public sealed class TimberbornNativeMaterialRegistry
     }
 
     /// <summary>Resolve retained origin identity, including hidden/removed projections. Never resolve through the current cell.</summary>
-    public bool TryResolveOrigin(uint targetId, out Guid entityId)
-    {
-        foreach (var pair in _entries)
-            if (pair.Value.TargetId == targetId) { entityId = pair.Key; return true; }
-        entityId = default;
-        return false;
-    }
+    public bool TryResolveOrigin(uint targetId, out Guid entityId) => _origins.TryGetValue(targetId, out entityId);
 
     public TimberbornResolvedMaterialCell ResolveCell(int cellIndex)
     {
@@ -81,7 +76,9 @@ public sealed class TimberbornNativeMaterialRegistry
             entry.Projection = projection;
         }
         var cells = ResolveAll(staged); // Validate all overlaps before any token, removal or movement is published.
+        var origins = staged.ToDictionary(pair => pair.Value.TargetId, pair => pair.Key);
         _entries = staged;
+        _origins = origins;
         _cells = cells;
         _nextTargetId = nextTarget;
     }
@@ -115,7 +112,9 @@ public sealed class TimberbornNativeMaterialRegistry
             }
             if (!staged.TryAdd(binding.EntityId, entry)) throw new ArgumentException("Duplicate native entity binding.");
         }
+        var origins = staged.ToDictionary(pair => pair.Value.TargetId, pair => pair.Key);
         _entries = staged;
+        _origins = origins;
         _nextTargetId = snapshot.NextTargetId;
     }
 
