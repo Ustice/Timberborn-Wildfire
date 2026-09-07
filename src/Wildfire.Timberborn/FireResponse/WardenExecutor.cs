@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Compatibility;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
 using Timberborn.Carrying;
@@ -32,6 +33,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private readonly INavigationService _navigation;
     private readonly WardenSortie _sortie = new();
     private Walker _walker = null!;
+    private TimberbornOwnedWalker _movement = null!;
     private WalkToPositionExecutor _walk = null!;
     private Navigator _navigator = null!;
     private WardenEquipment _equipment = null!;
@@ -71,6 +73,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         _entityId = GetComponent<EntityComponent>().EntityId;
         _transform = GetComponent<Transform>();
         _walker = GetComponent<Walker>();
+        _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
         _walker.StartedNewPath += OnStartedNewPath;
         _walk = GetComponent<WalkToPositionExecutor>();
         _navigator = GetComponent<Navigator>();
@@ -92,6 +95,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
 
     public bool TryLaunch(WardenStation station)
     {
+        TimberbornOwnedWalker.Verify();
         if (!_field.Ready || _delivery.IsIndeterminate) return Refuse(WardenResponseReason.Unavailable, "Fire simulation unavailable");
         if (_carrier.IsCarrying || _reserver.HasReservedStock || _reserver.HasReservedCapacity)
             return Refuse(WardenResponseReason.OtherWork, "Finishing previous work");
@@ -105,9 +109,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (!_equipment.Loaded)
         {
             _reserver.ReserveExactStockAmount(station.Inventory, WardenEquipment.Bucket);
-            if (!TryWalkToStation()) { ReleaseReservation(); _sortie.Finish(); return Refuse(WardenResponseReason.UnsafeRoute, "Water access unsafe"); }
+            if (!TryWalkToStation()) { ReleaseReservation(); _sortie.Finish(); _movement.ReleasePause(); return Refuse(WardenResponseReason.UnsafeRoute, "Water access unsafe"); }
         }
-        else if (!LaunchWalk(_target.Approach)) { _sortie.Finish(); return Refuse(WardenResponseReason.UnsafeRoute, "Fire approach unsafe"); }
+        else if (!LaunchWalk(_target.Approach)) { _sortie.Finish(); _movement.ReleasePause(); return Refuse(WardenResponseReason.UnsafeRoute, "Fire approach unsafe"); }
         ResponseReason = WardenResponseReason.None;
         Status = "Responding";
         return true;
@@ -116,7 +120,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     public ExecutorStatus Tick(float deltaTimeInHours)
     {
         if (_mortal.Dead || _mortal.ShouldDie)
-        { ReleaseReservation(); _walker.StopNextTick(); _sortie.Finish(); return ExecutorStatus.Failure; }
+        { ReleaseReservation(); _movement.Stop(); _sortie.Finish(); return ExecutorStatus.Failure; }
         if (_delivery.IsIndeterminate) return ExecutorStatus.Running;
         if (!_field.ObservationAvailable) return Finish(WardenResponseReason.Unavailable, "Fire observations unavailable; water retained");
         if (!_field.Ready && _sortie.Phase != WardenPhase.Returning) return Retreat(WardenResponseReason.Disabled, "Wildfire disabled");
@@ -194,12 +198,12 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         // Set the phase first: a stopped native walk reports Success, not cancellation.
         _sortie.Cancel();
         ReleaseReservation();
-        _walker.StopNextTick();
+        _movement.Stop();
         var accesses = _station is not null && _station ? _station.Access.Accesses : Enumerable.Empty<Vector3>();
         if (!_field.TryRetreat(_navigator.CurrentAccessOrPosition(), accesses, out var safe))
             return Finish(WardenResponseReason.NoSafeReturn, reason + "; no safe route, water retained");
         _destination = safe;
-        _restoreWalk = true; // Walker's pending StopNextTick must run before relaunching.
+        _restoreWalk = true; // Replan on the next executor tick after the synchronous native stop.
         ResponseReason = responseReason;
         Status = reason + "; withdrawing";
         return ExecutorStatus.Running;
@@ -217,7 +221,10 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         _destination = destination;
         _installedRouteUnsafe = false;
         var status = _walk.Launch(destination);
-        return status != ExecutorStatus.Failure && !_installedRouteUnsafe;
+        if (status == ExecutorStatus.Failure || _installedRouteUnsafe)
+        { _movement.Stop(); return false; }
+        _movement.ReleasePause();
+        return true;
     }
     private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
     {
@@ -227,8 +234,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             _sortie.Phase == WardenPhase.Returning);
         if (_installedRouteUnsafe)
         {
-            _walker.PathFollower.StopMoving();
-            _walker.StopNextTick();
+            // FindPath still uses this path after the event. Its late WalkerMover is disabled now,
+            // then our Tick/Launch caller synchronously stops the walker after FindPath returns.
+            _movement.RejectRoute();
         }
     }
 
@@ -238,8 +246,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private ExecutorStatus Finish(WardenResponseReason responseReason, string reason)
     {
         ReleaseReservation();
-        _walker.StopNextTick();
+        _movement.Stop();
         _sortie.Finish();
+        _movement.ReleasePause();
         ResponseReason = responseReason;
         Status = reason;
         return ExecutorStatus.Success;
@@ -268,7 +277,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (state.Has(StationKey)) state.GetObsoletable(StationKey, _references.Of<WardenStation>(), out _station);
         _target = new WardenTarget(state.Get(CellKey), state.Get(ApproachKey));
         _destination = state.Get(DestinationKey);
-        _walker.StopNextTick();
+        _movement.Stop();
         _restoreWalk = true;
         _needsReturnRoute = _sortie.Phase == WardenPhase.Returning;
     }

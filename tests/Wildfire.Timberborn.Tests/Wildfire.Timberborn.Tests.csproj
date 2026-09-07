@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../../build/Timberborn.Managed.props" />
   <ItemGroup>
+    <AssemblyMetadata Include="TimberbornManagedPath" Value="$(TimberbornManagedPath)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/Wildfire.Core/Wildfire.Core.csproj" />
     <ProjectReference Include="../../src/Wildfire.Timberborn/Wildfire.Timberborn.csproj" />
     <ProjectReference Include="../../src/Wildfire.Unity/Wildfire.Unity.csproj" />
