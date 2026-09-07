@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
-using System.Linq.Expressions;
 using System.IO.Compression;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -29,7 +29,9 @@ internal sealed class NativeInjuryFixture : IDisposable
         SetProperty(Spec, "Wastable", InstalledSpec.GetProperty("Wastable").GetBoolean());
         SetProperty(Spec, "BackwardCompatibleIds", ImmutableArray<string>.Empty);
         var critical = New("Timberborn.NeedSpecs", "CriticalNeedSpec");
-        SetProperty(critical, "CriticalNeedType", Enum.Parse(critical.GetType().GetProperty("CriticalNeedType")!.PropertyType, "StateWithAlert"));
+        SetProperty(critical, "CriticalNeedType", Enum.Parse(critical.GetType().GetProperty("CriticalNeedType")!.PropertyType,
+            document.RootElement.GetProperty("CriticalNeedSpec").GetProperty("CriticalNeedType").GetString()!));
+        _ = document.RootElement.GetProperty("NeedPreventingWorkSpec");
         var refusal = New("Timberborn.WorkSystem", "NeedPreventingWorkSpec");
         var blueprintType = Type("Timberborn.BlueprintSystem", "Blueprint");
         var components = Array.CreateInstance(Type("Timberborn.BlueprintSystem", "ComponentSpec"), 3);

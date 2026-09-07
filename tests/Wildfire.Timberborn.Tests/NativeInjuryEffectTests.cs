@@ -47,6 +47,18 @@ public sealed class NativeInjuryEffectTests
     }
 
     [Fact]
+    public void SaturatedInjuryDoesNotEmitAnotherCriticalTransition()
+    {
+        using var fixture = new NativeInjuryFixture();
+        int transitions = 0;
+        fixture.On("NeedChangedCriticalState", () => transitions++);
+        fixture.Apply(-1f);
+        fixture.Apply(-.25f);
+        Assert.Equal(-1f, fixture.Points);
+        Assert.Equal(1, transitions);
+    }
+
+    [Fact]
     public void DisabledInjuryHasNoPointEffectButRemainsARegisteredNeed()
     {
         using var fixture = new NativeInjuryFixture();
