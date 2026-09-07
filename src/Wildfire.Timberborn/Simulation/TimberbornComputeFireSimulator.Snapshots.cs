@@ -16,6 +16,8 @@ public sealed partial class TimberbornComputeFireSimulator : IFireSimSnapshotSim
             validated.Parameters, materials, windProvider ?? NullTimberbornWindProvider.Instance, validated);
     }
 
+    public FireSimSnapshotCapability SnapshotCapability => _step.SnapshotCapability;
+
     public FireSimSnapshot CaptureSnapshot()
     {
         ThrowIfDisposed();

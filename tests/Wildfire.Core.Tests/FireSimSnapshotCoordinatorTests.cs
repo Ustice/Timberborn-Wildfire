@@ -78,11 +78,14 @@ public sealed class FireSimSnapshotCoordinatorTests
         var backend = new Backend(empty);
         step.InitializeLegacyBuffers(0, () => { });
         Assert.Throws<InvalidOperationException>(() => step.InitializeLegacyBuffers(0, () => { }));
-        Assert.NotNull(step.CaptureSnapshot(backend));
+        Assert.Equal(FireSimSnapshotCapability.LegacyMaterialHistoryUnavailable, step.SnapshotCapability);
+        Assert.Throws<InvalidOperationException>(() => step.CaptureSnapshot(backend));
+        Assert.NotNull(step.CaptureLegacySnapshot(backend));
         var failed = new FireSimStepCoordinator(2, 2);
         Assert.Throws<InvalidOperationException>(() => failed.InitializeLegacyBuffers(4, () => throw new InvalidOperationException("upload failed")));
         Assert.Throws<InvalidOperationException>(() => failed.InitializeLegacyBuffers(4, () => { }));
         Assert.Throws<InvalidOperationException>(() => failed.CaptureSnapshot(backend));
+        Assert.Throws<InvalidOperationException>(() => failed.CaptureLegacySnapshot(backend));
         Assert.Throws<InvalidOperationException>(() => failed.Tick(backend));
     }
 

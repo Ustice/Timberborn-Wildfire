@@ -2,6 +2,9 @@ namespace Wildfire.Core;
 
 public sealed partial class FireSimStepCoordinator
 {
+    private bool _completeMaterialHistory = true;
+    public FireSimSnapshotCapability SnapshotCapability => _completeMaterialHistory
+        ? FireSimSnapshotCapability.CompleteMaterialHistory : FireSimSnapshotCapability.LegacyMaterialHistoryUnavailable;
     /// <summary>Restore only into a new unpublished coordinator, never independently over live GPU state.</summary>
     public FireSimStepCoordinator(FireSimSnapshot snapshot, int changeCapacity)
     {
@@ -16,6 +19,18 @@ public sealed partial class FireSimStepCoordinator
     }
 
     public FireSimSnapshot CaptureSnapshot(IFireSimSnapshotBackend backend)
+    {
+        if (!_completeMaterialHistory) throw new InvalidOperationException("Complete material history is unavailable after legacy restore.");
+        return CaptureSnapshotCore(backend);
+    }
+
+    public FireSimLegacySnapshot CaptureLegacySnapshot(IFireSimSnapshotBackend backend)
+    {
+        var snapshot = CaptureSnapshotCore(backend);
+        return new(snapshot.Tick, snapshot.Cells, snapshot.TransportFields);
+    }
+
+    private FireSimSnapshot CaptureSnapshotCore(IFireSimSnapshotBackend backend)
     {
         ValidateBackend(backend);
         _isCapturingSnapshot = true;
@@ -45,6 +60,7 @@ public sealed partial class FireSimStepCoordinator
         if (_stateUncertain || _isTicking || _hasStarted || CurrentTick != 0 || PendingChangeCount != 0)
             throw new InvalidOperationException("Legacy restore is initialization-only; construct a new simulator.");
         _hasStarted = true;
+        _completeMaterialHistory = false;
         _stateUncertain = true;
         _isCapturingSnapshot = true; // Blocks input/step/capture reentry through backend callbacks.
         try

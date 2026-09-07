@@ -21,6 +21,9 @@ public sealed class FireSimSnapshotBackendTests
         Assert.Equal(snapshot.Seed, restored.Seed);
         Assert.Equal(snapshot.MaterialAuthority.Archives, restored.MaterialAuthority.Archives);
         Assert.Equal(snapshot.TransportFields, ((Buffer)simulator.BufferGrid!.NextTransportFields).Values);
+        var visual = ((Buffer)simulator.BufferGrid.VisualFields).Values.Select(BitConverter.UInt32BitsToSingle).ToArray();
+        Assert.Equal(4f / 7f, visual[1]);
+        Assert.Equal(1f / 7f, visual[6]);
         snapshot.Cells[0] = 15;
         Assert.Equal((ushort)3, simulator.CaptureSnapshot().Cells[0]);
         simulator.Dispose();

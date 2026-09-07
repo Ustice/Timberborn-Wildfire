@@ -707,8 +707,9 @@ public sealed partial class TimberbornComputeFireSimulator :
     public TimberbornFireSimPersistenceSnapshot CaptureFireSimState()
     {
         // Keep the legacy shape, but use the same quiescent/known-state boundary as complete saves.
-        var complete = CaptureSnapshot();
-        return new(Width, Height, Depth, complete.Tick, complete.Cells, complete.TransportFields);
+        ThrowIfDisposed();
+        var legacy = _step.CaptureLegacySnapshot(this);
+        return new(Width, Height, Depth, legacy.Tick, legacy.Cells, legacy.TransportFields);
     }
 
     public void RestoreFireSimState(TimberbornFireSimPersistenceSnapshot snapshot)

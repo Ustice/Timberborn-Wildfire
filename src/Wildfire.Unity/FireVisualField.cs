@@ -37,6 +37,18 @@ public static class FireVisualField
         return new FireVisualSample(fire, smoke, ash, visibility);
     }
 
+    public static FireVisualSample FromSnapshotCell(ushort cell, uint transport, FireSimParameters parameters)
+    {
+        var packed = FromPackedCell(cell, parameters);
+        var atmospheric = WildfireTransportFieldState.Unpack(transport);
+        float smoke = atmospheric.Smoke / 7f;
+        float ash = atmospheric.Ash / 7f;
+        float cellVisibility = MathF.Max(PackedCell.Heat(cell) / 15f * parameters.VisualVisibilityHeatWeight,
+            MathF.Max(packed.Fire, packed.Ash * parameters.AshPresentationVisibilityWeight));
+        return new(packed.Fire, smoke, ash, MathF.Max(cellVisibility,
+            MathF.Max(smoke * parameters.VisualVisibilitySmokeWeight, ash * parameters.AshPresentationVisibilityWeight)));
+    }
+
     private static float Saturate(float value)
     {
         return Math.Clamp(value, 0f, 1f);

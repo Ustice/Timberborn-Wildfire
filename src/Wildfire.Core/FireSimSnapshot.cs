@@ -27,8 +27,13 @@ public sealed record FireSimMaterialAuthoritySnapshot(
 public sealed record FireSimMaterialArchiveSnapshot(
     FireSimMaterialIdentity Identity, uint CaptureToken, int SourceCellIndex, uint PackedCell, uint Companion);
 
+public enum FireSimSnapshotCapability { CompleteMaterialHistory, LegacyMaterialHistoryUnavailable }
+
+public sealed record FireSimLegacySnapshot(uint Tick, ushort[] Cells, uint[] TransportFields);
+
 public interface IFireSimSnapshotSimulator
 {
+    FireSimSnapshotCapability SnapshotCapability { get; }
     FireSimSnapshot CaptureSnapshot();
 }
 

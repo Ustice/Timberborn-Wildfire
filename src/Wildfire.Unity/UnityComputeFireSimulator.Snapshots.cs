@@ -20,9 +20,9 @@ public sealed partial class UnityComputeFireSimulator : IFireSimSnapshotSimulato
         {
             grid.CurrentTransportFields.Upload(validated.TransportFields);
             grid.NextTransportFields.Upload(validated.TransportFields);
-            var visual = validated.Cells.SelectMany(cell =>
+            var visual = validated.Cells.SelectMany((cell, index) =>
             {
-                var sample = FireVisualField.FromPackedCell(cell, validated.Parameters);
+                var sample = FireVisualField.FromSnapshotCell(cell, validated.TransportFields[index], validated.Parameters);
                 return new[] { sample.Fire, sample.Smoke, sample.Ash, sample.Visibility }.Select(BitConverter.SingleToUInt32Bits);
             }).ToArray();
             grid.VisualFields.Upload(visual);
@@ -31,6 +31,8 @@ public sealed partial class UnityComputeFireSimulator : IFireSimSnapshotSimulato
         }
         catch { grid.Dispose(); throw; }
     }
+
+    public FireSimSnapshotCapability SnapshotCapability => _step.SnapshotCapability;
 
     public FireSimSnapshot CaptureSnapshot()
     {
