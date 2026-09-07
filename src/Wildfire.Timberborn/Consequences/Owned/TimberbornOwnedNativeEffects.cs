@@ -1,9 +1,13 @@
 namespace Wildfire.Timberborn.Consequences;
 
+/// <summary>Registry absence is distinct from an entity that native persistence may still serialize.</summary>
+public enum TimberbornOwnedBodyPresence { Absent, Live, Uninitialized, Deleted, InvalidNativeReference }
+
 /// <summary>Physical body existence is independent of whether its inventory or other effect is currently available.</summary>
 public interface ITimberbornOwnedBodyLiveness
 {
     bool IsLive(Guid entityId);
+    TimberbornOwnedBodyPresence ObservePresence(Guid entityId);
 }
 
 public sealed record TimberbornOwnedNativeEffects(ITimberbornOwnedBodyLiveness Bodies,

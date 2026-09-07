@@ -196,6 +196,13 @@ public sealed class OwnedConsequenceBatchTests
         internal int TreeYieldReceipt;
         internal readonly List<TimberbornCropBurnConsequenceStatus> CropResults = [];
         public bool IsLive(Guid id) { DuringIsLive?.Invoke(); return Live.Contains(id); }
+        internal readonly Dictionary<Guid, TimberbornOwnedBodyPresence> PresenceOverrides = new();
+        public TimberbornOwnedBodyPresence ObservePresence(Guid id)
+        {
+            DuringIsLive?.Invoke();
+            return PresenceOverrides.TryGetValue(id, out var presence) ? presence :
+                Live.Contains(id) ? TimberbornOwnedBodyPresence.Live : TimberbornOwnedBodyPresence.Absent;
+        }
         public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence call)
         {
             TreeCalls.Add(call);
