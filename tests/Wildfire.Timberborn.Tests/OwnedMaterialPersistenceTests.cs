@@ -17,6 +17,9 @@ public sealed class OwnedMaterialPersistenceTests
         Assert.StartsWith("WF\t2\nOWNED\t", encoded);
         Assert.DoesNotContain("\nFIRE\t", encoded);
         Assert.Null(restored.FireSim);
+        Assert.Equal(source.AshField.Entries, restored.AshField.Entries);
+        Assert.Equal(source.BeaverBehavior.Entries, restored.BeaverBehavior.Entries);
+        Assert.Equal(source.Consequences.BurnDamageStates, restored.Consequences.BurnDamageStates);
         var simulation = restored.OwnedMaterial!.CaptureSimulation();
         Assert.Equal(new FireSimMaterialIdentity(7, 11), simulation.MaterialAuthority.KnownSlots[0]);
         Assert.Equal(new FireSimMaterialIdentity(7, 12), simulation.MaterialAuthority.Archives.Single().Identity);
@@ -144,7 +147,13 @@ public sealed class OwnedMaterialPersistenceTests
         var bindings = new TimberbornMaterialBindingSnapshot(1, 8, new[] { new TimberbornMaterialEntityBinding(Owner, 7, 14,
             new[] { new TimberbornMaterialSlotBinding(new(0, 0, 0), 11), new TimberbornMaterialSlotBinding(new(1, 0, 0), 12),
                 new TimberbornMaterialSlotBinding(new(2, 0, 0), 13) }) });
-        return TimberbornWildfirePersistenceSnapshot.Empty with { PersistenceVersion = 2,
+        var ancillary = TimberbornWildfirePersistenceCodec.Decode(
+            "WF\t1\nASH\t0\t1\t5\t0\t1\t2\t1\nBEAVER\tYmVhdmVyOjE=\t0\t2\t3\t1\t1") with
+        {
+            Consequences = new TimberbornConsequencePersistenceSnapshot(
+                new[] { new TimberbornBurnDamagePersistenceEntry("tree:" + Owner, 9, 35) }),
+        };
+        return ancillary with { PersistenceVersion = 2,
             OwnedMaterial = new TimberbornOwnedMaterialSnapshot(simulation, bindings) };
     }
 
