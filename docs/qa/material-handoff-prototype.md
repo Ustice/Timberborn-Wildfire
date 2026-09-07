@@ -1,6 +1,6 @@
 # GPU material handoff prototype
 
-Isolated work only. The initial commit adds typed whole-batch validation and receipt/archive decoding; it does not admit material operations into either simulator or run a shader. Synthetic records in Core tests are protocol evidence only.
+Isolated vertical prototype: typed whole-batch validation, shared coordinator authority, both simulator backends, dedicated GPU buffers, ordered shader apply and actual licensed shader fixtures. No native lifecycle caller is wired. Synthetic records in Core tests are protocol evidence only; engine fixtures read actual pre-simulation GPU receipts.
 
 ## Required behavior
 
@@ -16,7 +16,7 @@ Handoff resets burning level but retains destination heat/water, all atmospheric
 
 `FireSimMaterialArchive` has no public raw-history constructor. Accepted validated GPU receipt data creates it. Refresh/still-active moved slots cannot also yield inactive archives. Outgoing archive access returns the same immutable object, not independent clones. Archive identity includes owner and local slot; capture token/cell identify its authoritative version.
 
-The initial pure validation API takes known slots and available archives as arguments solely to test the contract. **The coordinator must own those collections when wired**, seeded from actual initial ownership. Callers must not be allowed to assert arbitrary authority collections. Accepted transactions consume incoming archives, archive outgoing inactive slots, update active slots/known identities, and advance the committed token exactly once. Rejected/failed/not-admitted transactions do not publish those changes. True native deletion/retirement remains outside this prototype and must not be inferred from a material removal alone.
+The pure validation API accepts known slots and available archives to test the contract. Production admission goes through `FireSimStepCoordinator`, which owns those collections and the active-cell map, seeded from explicit initial ownership. Accepted transactions consume incoming archives, archive outgoing inactive slots and update active/known identities atomically. Rejected/failed/not-admitted transactions do not publish those changes. Attempt tokens are monotonically increasing and consumed immediately before upload, including an upload failure; a proven NotApplied failure may retry only with a new token. Missing/tampered receipts or later indeterminate failures block further ticks until a future reconciliation/reload boundary exists. True native deletion/retirement remains outside this prototype and must not be inferred from a material removal alone.
 
 ## Explicit buffer layouts
 
@@ -35,32 +35,35 @@ A request is 10 uints/40 bytes:
 | 8 | Pre-write source receipt index, or uint.MaxValue |
 | 9 | Reserved zero |
 
-A receipt is 10 uints/40 bytes: CellIndex, prior TargetId, prior SlotId, prior raw cell, prior raw companion, applied TargetId, applied SlotId, applied raw cell, applied raw companion, validation status. Header is 4 uints: token, Accepted 1/Rejected 2, count, first rejected index (uint.MaxValue on acceptance). Status 1 marks a valid row; rejected rows use explicitly assigned validation codes 2–8 when shader wiring lands. Pending/missing status 0 is never a receipt.
+A receipt is 10 uints/40 bytes: CellIndex, prior TargetId, prior SlotId, prior raw cell, prior raw companion, applied TargetId, applied SlotId, applied raw cell, applied raw companion, validation status. Header is 4 uints: token, Accepted 1/Rejected 2, count, first rejected index (uint.MaxValue on acceptance). Status 1 marks a valid row; 2 identity mismatch, 3 profile/refresh mismatch, 4 invalid material shape, 5 invalid captured source, 6 repeated source consumption, 7 destination bounds/order, 8 unknown mode. Pending/missing status 0 is never a receipt.
 
-Dedicated request/receipt/header buffers and a per-cell slot-ID buffer are required, alongside the currently allocated-but-unbound target-ID buffer. Capacities are explicit and bounded. A material batch cannot be split into partial entity updates because a buffer is full.
+Dedicated request/receipt/header buffers and a per-cell slot-ID buffer are required, alongside the now-bound target-ID buffer. Request/receipt buffers start at one row and grow together to the admitted batch size, bounded by grid capacity; no permanent full-grid 80-byte table is allocated just to run ordinary ticks. A material batch cannot be split into partial entity updates because a buffer is full.
 
-## Ordered execution after first-commit review
+## Ordered execution
 
 1. Admit one marker plus complete material table after earlier queued ordinary inputs. Keep existing NotApplied/Indeterminate/Committed outcome semantics.
 2. At the marker, capture all affected cells/owners/slots first. Validate every request and captured-source reference before any material write. Sorted unique destination cells and source consumption checks prevent double application.
 3. Any validation rejection leaves every material cell unchanged; earlier ordinary inputs and later normal simulation can still run. A GPU failure during writes is indeterminate and stops/reconciles instead of replaying.
 4. On acceptance apply the complete table from pre-write captures/known archives, then acknowledge. Capture prior/applied state before normal simulation; read receipts alongside deltas and swap before host commit.
 5. Validate all header/row identities, field masks and environmental preservation before a single host ownership/archive commit. New live material may have simulated once; do not write the handoff receipt back as a CPU state mirror.
-6. Fill the existing GPU delta Reserved word with originating TargetId and carry it through both readbacks. Queued old-owner fuel deltas and new-owner simulation deltas remain distinguishable. A native consumer must resolve that original ID, never the replacement cell occupant; native routing itself is not implemented by the first commit.
+6. Fill the existing GPU delta Reserved word with originating TargetId and carry it through both readbacks. Queued old-owner fuel deltas and new-owner simulation deltas remain distinguishable. A native consumer must resolve that original ID, never the replacement cell occupant; native routing itself is not implemented by this prototype. `TimberbornDeltaConsumers.FromDelta` still discards TargetId and native decisions still resolve by current cell; readback identity alone does not fix this.
 
-## Concrete shader fixture plan
+## Engine fixtures
 
 Use production encoded request words, and read prior/applied receipts before simulation. Preserve existing fixture JSON compatibility with optional material inputs/owner-slot fields. Actual tests must inspect both receipts and final simulator fields; they must not fabricate successful receipts.
 
-- **Fresh composite owner, two slots:** old owner 1 slots 11/12 with fuel 3/0, raw history 5/9, nonzero heat/water/deposited ash/soil and atmospheric fields; replace with owner 2 slots 21/22. Verify complete prior capture, full identities, preserved destination environment, burning reset and fresh input only for the genuinely new owner. Use an explicit one-owner composite profile, not inferred decomposition of current mixed storage fuel.
+- **Fresh composite owner, two slots:** old owner 1 slots 11/12 with fuel 3/0, raw history 5/9, nonzero heat/water/deposited ash/soil ; replace with owner 2 slots 21/22. Verify complete prior capture, full identities, preserved destination environment, burning reset and fresh input only for the genuinely new owner. Use an explicit one-owner composite profile, not inferred decomposition of current mixed storage fuel.
 - **Hide then restore from actual receipt:** decode outgoing archives from the first real GPU capture, encode a second restore batch, preserve fuel 3/0 and history 5/9. Repeat a cycle; exhausted material remains zero. Consumed archive replay is rejected before admission.
 - **Same-owner two-slot swap/rotation:** source receipts captured before writes transfer distinct fuel/history to opposite destinations while preserving each destination's environment. Neither moved slot appears in the inactive archive.
 - **One stale slot in a multi-cell transition:** valid rejected header; all material cells unchanged, including the first otherwise-valid request. Reject malformed headers/partial or tampered receipts in the host without publishing state.
 - **Unchanged refresh:** exhausted fuel/burning/history unchanged; incompatible profile rejected, no refill, no inactive archive minted.
-- **Queued old-owner delta plus new-owner simulation:** earlier ordinary SetFuel/AddHeat and then handoff; verify each delta's originating ID through actual shader output and both readback paths. Administrative removal adds no damage delta. Host routing test demonstrates no old ID is interpreted as the replacement owner.
+- **Queued old-owner delta plus new-owner simulation:** earlier ordinary SetFuel/AddHeat and then handoff; verify each delta's originating ID through actual shader output and both readback paths. Administrative removal adds no damage delta. The managed listener fixture retains those IDs; native consequence routing remains explicitly unproven.
+- **Removal and invalid mode:** terrain/air baselines clear ownership and archive prior state; unknown mode rejects the whole table before material writes.
 - **Normal input compatibility:** previous water and ash receipt fixtures remain byte-identical and pass; full shader suite follows focused proof because shared apply/delta layouts change.
 - **Failure boundaries:** upload/preflight/readback/commit/listener failures preserve admission outcomes; full capacity returns not-admitted, no partial transition; active/archive ownership transfers once only.
 
 ## Intentionally unresolved
 
 No native event registry, placement mapping, save/legacy migration, dynamic resource/profile changes, or exact splitting of existing cross-owner mixed storage fuel. Archives require explicit known ownership. Wrong/missing retained state is rejected, never reconstructed from full initial fuel or aggregate entity damage. No game/deployment actions are needed for this prototype.
+
+The shader trusts the typed host admission for global identity/alias/known-archive authority, while independently checking live expected identities, static profiles, sorted bounds and captured-source references. Raw fixture words intentionally bypass selected host checks to test GPU rejection; they are not a public native material-input API. Current native constructor fallback slot IDs are `cellIndex + 1` only to seed the unactivated session prototype. Existing importer TargetIds collide across providers: a durable native Guid/local-slot registry, coherent initial material projection, ledger persistence and original-owner consequence routing are required before live activation. Snapshot restore of an evolved handoff ledger is not implemented.

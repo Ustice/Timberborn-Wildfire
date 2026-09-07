@@ -10,7 +10,7 @@ public sealed class MaterialHandoffShaderTests
     private static FireSimMaterialDefinition Definition(byte fuel) => new(WildfireMaterialClass.Tree, 7,
         WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, fuel, 2, 1);
     private static uint Companion(byte history, byte ashStrength = 3) => new WildfireMaterialFieldState(
-        WildfireMaterialClass.Tree, 7, history, ashStrength, WildfireAshQuality.Fertile, WildfireContaminationBehavior.None).Pack();
+        WildfireMaterialClass.Tree, 7, history, ashStrength, WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 6).Pack();
     private static ushort Cell(byte fuel, byte heat = 9, byte water = 2) => PackedCell.Pack(fuel, heat, 2, water, 1, 7);
     private static FireSimMaterialHandoffBatch Replace(uint token = 1) => new(token,
         [FireSimMaterialHandoffRequest.Fresh(0, A0, B0, Definition(9)), FireSimMaterialHandoffRequest.Fresh(1, A1, B1, Definition(9))]);
@@ -129,6 +129,37 @@ public sealed class MaterialHandoffShaderTests
         Assert.Contains(deltas.Skip(1), delta => delta.TargetId == 2);
         Assert.DoesNotContain(deltas, delta => delta.OldCell == receipt.Cells[0].PriorCell && delta.NewCell == receipt.Cells[0].AppliedCell);
         // This proves readback identity only: production native consequence decisions still discard metadata.
+    }
+
+    [UnityShaderFact]
+    public void RemovingBothSlotsLeavesExplicitTerrainOrAirAndArchivesExactPriorMaterial()
+    {
+        var batch = new FireSimMaterialHandoffBatch(1,
+            [FireSimMaterialHandoffRequest.Remove(0, A0, true), FireSimMaterialHandoffRequest.Remove(1, A1, false)]);
+        var capture = Capture(Fixture("material-remove-terrain-air", batch));
+        var receipt = Receipt(capture, batch);
+        Assert.True(receipt.Accepted);
+        Assert.Equal(0x1000u, receipt.Cells[0].AppliedCell & FireSimMaterialHandoffProtocol.PackedMaterialMask);
+        Assert.Equal(0u, receipt.Cells[1].AppliedCell & FireSimMaterialHandoffProtocol.PackedMaterialMask);
+        Assert.Equal(1u, receipt.Cells[0].AppliedCompanion & FireSimMaterialHandoffProtocol.CompanionMaterialMask);
+        Assert.Equal(0u, receipt.Cells[1].AppliedCompanion & FireSimMaterialHandoffProtocol.CompanionMaterialMask);
+        Assert.Equal(new uint[] { 0, 0 }, capture.FinalTargetIds);
+        Assert.Equal(new uint[] { 0, 0 }, capture.FinalSlotIds);
+        Assert.Equal(A0, receipt.ArchiveOutgoing(0).Identity);
+        Assert.Equal(A1, receipt.ArchiveOutgoing(1).Identity);
+        Assert.All(Assert.Single(capture.Ticks).Deltas, delta => Assert.Equal(0u, delta.TargetId));
+    }
+
+    [UnityShaderFact]
+    public void UnknownModeRejectsWholeBatchWithoutInterpretingMaterialAsOrdinaryMasks()
+    {
+        var batch = Replace();
+        var fixture = Fixture("material-unknown-mode", batch);
+        fixture.MaterialHandoffs![0].Requests[15] = 99;
+        var receipt = Receipt(Capture(fixture), batch);
+        Assert.False(receipt.Accepted);
+        Assert.Equal(8u, receipt.Cells[1].Status);
+        Assert.All(receipt.Cells, cell => Assert.Equal(cell.PriorCell, cell.AppliedCell));
     }
 
     private static FireSimMaterialHandoffReceipt Receipt(ShaderSnapshotCapture capture, FireSimMaterialHandoffBatch batch)

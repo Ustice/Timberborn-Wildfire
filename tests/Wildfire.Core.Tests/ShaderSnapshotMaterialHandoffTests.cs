@@ -14,7 +14,7 @@ public sealed class ShaderSnapshotMaterialHandoffTests
         var restored = ShaderSnapshotFixtureLoader.Load(ShaderSnapshotJson.SerializeFixture(fixture));
         Assert.Equal(fixture.InitialTargetIds, restored.InitialTargetIds);
         Assert.Equal(fixture.InitialSlotIds, restored.InitialSlotIds);
-        Assert.Equal(fixture.MaterialHandoffs[0].Requests, restored.MaterialHandoffs![0].Requests);
+        Assert.Equal(fixture.MaterialHandoffs![0].Requests, restored.MaterialHandoffs![0].Requests);
         Assert.Throws<InvalidDataException>(() => ShaderSnapshotJson.SerializeFixture(fixture with { InitialSlotIds = null }));
     }
 
@@ -27,7 +27,7 @@ public sealed class ShaderSnapshotMaterialHandoffTests
         Assert.True(ShaderSnapshotComparison.Create(expected, restored).Matches);
         foreach (var modified in new[]
         {
-            restored with { FinalTargetIds = [2] },
+            restored with { FinalTargetIds = [3] },
             restored with { FinalSlotIds = [12] },
             restored with { Ticks = [restored.Ticks[0] with { MaterialHeader = [2, 1, 1, uint.MaxValue] }] },
             restored with { Ticks = [restored.Ticks[0] with { MaterialReceipts = [9] }] },

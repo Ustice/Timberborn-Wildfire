@@ -118,6 +118,49 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
         Assert.Equal(new uint[] { 1, 2 }, listener.Deltas.Select(delta => delta.TargetId));
     }
 
+    [Fact]
+    public void HostCallbackFailureAfterAuthorityCommitIsIndeterminateAndCannotReplay()
+    {
+        var step = Coordinator();
+        var backend = new Backend();
+        var exception = Assert.Throws<FireSimStepInputException>(() => step.TryHandoffMaterial(backend, Replace(), receipt =>
+        {
+            Assert.True(step.TryGetMaterialArchive(A, out _));
+            throw new InvalidOperationException("native publication failed");
+        }));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, exception.Outcome);
+        Assert.True(step.TryGetMaterialArchive(A, out var archive));
+        Assert.Equal(3u, archive.PackedCell & 15u);
+        Assert.Throws<InvalidOperationException>(() => step.Tick(backend));
+        Assert.Throws<InvalidOperationException>(() => step.TryHandoffMaterial(backend, Replace(2), _ => { }));
+        Assert.Equal(1, backend.Uploads);
+    }
+
+    [Fact]
+    public void ListenerFailureAfterHostCallbackIsCommittedAndAuthorityPublishesOnce()
+    {
+        var step = Coordinator();
+        var backend = new Backend();
+        using var subscription = step.Subscribe(new ThrowingListener());
+        int callbacks = 0;
+        var exception = Assert.Throws<FireSimStepInputException>(() =>
+            step.TryHandoffMaterial(backend, Replace(), _ => callbacks++));
+        Assert.Equal(FireSimStepInputOutcome.Committed, exception.Outcome);
+        Assert.True(step.TryGetMaterialArchive(A, out var archive));
+        Assert.Equal(1, callbacks);
+        Assert.Throws<ArgumentException>(() => step.TryHandoffMaterial(backend, Replace(), _ => callbacks++));
+        subscription.Dispose();
+        step.Tick(backend); // Committed listener errors do not poison material authority.
+        Assert.True(step.TryGetMaterialArchive(A, out var sameArchive));
+        Assert.Same(archive, sameArchive);
+        Assert.Equal(1, backend.Uploads);
+    }
+
+    private sealed class ThrowingListener : IFireSimListener
+    {
+        public void OnFireSimDeltas(ReadOnlySpan<CellDelta> deltas) => throw new InvalidOperationException("listener failed");
+    }
+
     private sealed class Listener : IFireSimListener
     {
         public CellDelta[] Deltas = [];

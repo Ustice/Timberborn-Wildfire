@@ -6,6 +6,44 @@ namespace Wildfire.Core.Tests;
 public sealed class UnityComputeFireSimulatorTests
 {
     [Fact]
+    public void MaterialBatchResizesDedicatedBuffersBindsEveryKernelAndReadsCompleteRows()
+    {
+        using var grid = ComputeBufferGrid.FromCells(2, 1, 1, [0, 0], new RecordingComputeBufferAllocator());
+        var initialRequests = grid.MaterialHandoff.Requests;
+        var definition = new FireSimMaterialDefinition(WildfireMaterialClass.Tree, 7,
+            WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 9, 2, 1);
+        var batch = new FireSimMaterialHandoffBatch(1,
+            [FireSimMaterialHandoffRequest.Fresh(0, default, new(2, 21), definition),
+             FireSimMaterialHandoffRequest.Fresh(1, default, new(2, 22), definition)]);
+        var dispatcher = new RecordingFireSimComputeDispatcher
+        {
+            AfterDispatch = dispatch =>
+            {
+                Assert.Same(grid.MaterialTargetIds, dispatch.MaterialTargetIds);
+                Assert.Same(grid.MaterialSlotIds, dispatch.MaterialSlotIds);
+                Assert.Same(grid.MaterialHandoff.Requests, dispatch.MaterialRequests);
+                Assert.Same(grid.MaterialHandoff.Receipts, dispatch.MaterialReceipts);
+                Assert.Same(grid.MaterialHandoff.Header, dispatch.MaterialHeader);
+                if (dispatch.KernelName != UnityComputeFireSimulator.ApplyExternalChangesKernelName) return;
+                Assert.Equal(new uint[4], ((RecordingComputeBufferHandle)dispatch.MaterialHeader).UploadedValues);
+                Assert.Equal(FireSimMaterialHandoffProtocol.EncodeRequests(batch), ((RecordingComputeBufferHandle)dispatch.MaterialRequests).UploadedValues);
+                dispatch.MaterialHeader.Upload(new uint[] { 1, 1, 2, uint.MaxValue });
+                dispatch.MaterialReceipts.Upload(new uint[]
+                {
+                    0, 0, 0, 0, 0, 2, 21, definition.PackedMaterial, definition.CompanionMaterial, 1,
+                    1, 0, 0, 0, 0, 2, 22, definition.PackedMaterial, definition.CompanionMaterial, 1,
+                });
+            }
+        };
+        IFireSimMaterialHandoffSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        simulator.TryHandoffMaterial(batch, receipt => Assert.Equal(2, receipt.Cells.Count));
+        Assert.NotSame(initialRequests, grid.MaterialHandoff.Requests);
+        Assert.Equal(2, grid.MaterialHandoff.Requests.Count);
+        Assert.Equal(2, dispatcher.Dispatches.Count);
+        Assert.False(simulator.TryGetMaterialArchive(new(2, 21), out _));
+    }
+
+    [Fact]
     public void AshCollectionReadsTheAppendedGpuCommandAfterTheFullStep()
     {
         using var grid = ComputeBufferGrid.FromCells(2, 1, 1, [0, 0], new RecordingComputeBufferAllocator());
