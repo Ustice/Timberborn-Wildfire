@@ -121,12 +121,14 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
 
     public ExecutorStatus Tick(float deltaTimeInHours)
     {
+        if (_sortie.Phase == WardenPhase.Idle) return ExecutorStatus.Success;
+        if (!_behaviorManager.IsRunningExecutor<WardenExecutor>())
+            throw new InvalidOperationException("Active warden does not own BehaviorManager's executor.");
         if (_mortal.Dead || _mortal.ShouldDie)
         { ReleaseReservation(); _movement.Stop(); _sortie.Finish(); return ExecutorStatus.Failure; }
         if (_delivery.IsIndeterminate) return ExecutorStatus.Running;
         if (!_field.ObservationAvailable) return Finish(WardenResponseReason.Unavailable, "Fire observations unavailable; water retained");
         if (!_field.Ready && _sortie.Phase != WardenPhase.Returning) return Retreat(WardenResponseReason.Disabled, "Wildfire disabled");
-        if (_sortie.Phase == WardenPhase.Idle) return ExecutorStatus.Success;
         if (_sortie.Phase != WardenPhase.Returning &&
             (_station is null || !_station || !_station.Operational || !_station.Enabled ||
              !_worker.Employed || _worker.Workplace != _station.Workplace || _needs.AnyNeedIsInCriticalState()))
@@ -281,13 +283,10 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         _restoreWalk = false;
         _needsReturnRoute = false;
         if (_sortie.Phase == WardenPhase.Idle) return; // Never stop or pause somebody else's saved walk.
-        if (!_behaviorManager.IsRunningExecutor<WardenExecutor>())
-            throw new InvalidOperationException("Active saved warden does not own BehaviorManager's executor.");
         if (state.Has(StationKey)) state.GetObsoletable(StationKey, _references.Of<WardenStation>(), out _station);
         _target = new WardenTarget(state.Get(CellKey), state.Get(ApproachKey));
         _destination = state.Get(DestinationKey);
-        _movement.Stop();
-        _restoreWalk = true;
+        _restoreWalk = true; // Physical stop is deferred until our first owned tick after world loading.
         _needsReturnRoute = _sortie.Phase == WardenPhase.Returning;
     }
 }
