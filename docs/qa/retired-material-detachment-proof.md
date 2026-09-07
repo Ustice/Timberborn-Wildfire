@@ -41,13 +41,13 @@ Unexpected exceptions are conservatively fatal inside the guarded runner; only C
 
 **Important existing protocol limit:** an admitted handoff rejected by the GPU still runs ordinary simulation with unchanged material. A caller-side ordinary-Tick gate cannot prevent that single rejected step. Valid planner preflight must eliminate routine rejections. An unexpected rejection is an invalid played-world boundary, so the prototype throws inside the existing guard and requires reload of a valid snapshot. This is distinct from provably no-step CapacityBlocked and NotApplied; it does not introduce another persistent phase ledger or change the shader protocol.
 
-## Exact queue-capacity counterexample
+## Queue-capacity counterexample and verified correction
 
 At `094e5d3`, FireSimStepCoordinator.TryTickWithInputCore calls `_changes.PrepareBatch(_changeCapacity, ...)`, then returns null if that ordinary batch already fills `_changeCapacity`. The handoff marker is one more ordinary 16-byte command in the same ExternalChanges buffer. Native and Unity adapters allocate command storage to the configured capacity; it is not merely an arbitrary host queue limit. Material request/receipt capacity is a separate bound.
 
 The fixed path prepares all pending valid ordinary inputs plus the final material marker. Existing command/delta scratch storage grows before dispatch; ordinary Tick/ash admission budgets, command/receipt/delta layouts and HLSL stay unchanged. With ordinary budget1 and either one or three older commands, the updated prototype proves every older command/delta remains ordered under the original TargetId/SlotId, the marker follows them, exactly one simulation occurs, no queued input remains, and the archive captures the final pre-detach fuel. Native resource delivery stays inside the existing guard. The separate whole-material-request capacity case still proves no-step CapacityBlocked and a blocked normal Tick.
 
-Allocation failure before dispatch remains NotApplied and preserves pending inputs; an attempted preparation consumes its attempt token, so the next snapshot supplies a new token. This fixes the queue deadlock without changing unexpected GPU rejection fail-stop policy.
+Allocation failure before dispatch remains NotApplied and preserves pending inputs; an attempted preparation consumes its attempt token, so the next snapshot supplies a new token. This fixes the queue deadlock without changing unexpected GPU rejection fail-stop policy. See [capacity implementation and actual native factory proof](material-control-capacity.md).
 
 ## What executes in the tests
 
