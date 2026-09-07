@@ -44,7 +44,7 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator>
                     simulator.SnapshotCapability != FireSimSnapshotCapability.CompleteMaterialHistory)
                     throw new ArgumentException("Initial simulator must retain complete material history on the captured grid.");
                 var actual = FireSimSnapshotValidation.ValidateAndClone(simulator.CaptureSnapshot());
-                TimberbornInitialSimulationAssembly.RequireUnchanged(initial, actual);
+                TimberbornOwnedSimulationValidation.RequireUnchanged(initial, actual);
                 // This invokes native liveness callbacks; the complete reread below must follow it.
                 consumer.CopyHistoryDuringCapture().ValidateAssociation(actual, bindings, consequences);
                 var final = captureDuringScope(grid) ?? throw new InvalidOperationException("No final native capture returned.");

@@ -27,15 +27,4 @@ internal static class TimberbornInitialSimulationAssembly
             Array.Empty<FireSimChange>()));
     }
 
-    internal static void RequireUnchanged(FireSimSnapshot expected, FireSimSnapshot actual)
-    {
-        if (actual.Version != expected.Version || actual.Grid != expected.Grid || actual.Tick != 0 ||
-            actual.Parameters != expected.Parameters || actual.Seed != expected.Seed ||
-            !actual.Cells.SequenceEqual(expected.Cells) || !actual.CompanionFields.SequenceEqual(expected.CompanionFields) ||
-            !actual.TransportFields.SequenceEqual(expected.TransportFields) || !actual.TargetIds.SequenceEqual(expected.TargetIds) ||
-            !actual.SlotIds.SequenceEqual(expected.SlotIds) || actual.PendingChanges.Length != 0 ||
-            actual.MaterialAuthority.LastAttemptToken != 0 || actual.MaterialAuthority.Archives.Length != 0 ||
-            !actual.MaterialAuthority.KnownSlots.ToHashSet().SetEquals(expected.MaterialAuthority.KnownSlots))
-            throw new ArgumentException("New backend did not preserve the complete initial snapshot.");
-    }
 }

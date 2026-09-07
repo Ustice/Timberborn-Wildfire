@@ -68,9 +68,13 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator> : IDisposabl
         TSimulator? simulator = null;
         try
         {
-            simulator = createSimulator(simulation) ?? throw new InvalidOperationException("No new simulator returned.");
-            if (simulator.Width != simulation.Grid.Width || simulator.Height != simulation.Grid.Height || simulator.Depth != simulation.Grid.Depth)
-                throw new ArgumentException("Restored simulator dimensions do not match the paired native world.");
+            simulator = createSimulator(FireSimSnapshotValidation.ValidateAndClone(simulation)) ??
+                throw new InvalidOperationException("No new simulator returned.");
+            if (simulator.Width != simulation.Grid.Width || simulator.Height != simulation.Grid.Height || simulator.Depth != simulation.Grid.Depth ||
+                simulator.SnapshotCapability != FireSimSnapshotCapability.CompleteMaterialHistory)
+                throw new ArgumentException("Restored simulator must retain complete material history on the paired native grid.");
+            var actual = FireSimSnapshotValidation.ValidateAndClone(simulator.CaptureSnapshot());
+            TimberbornOwnedSimulationValidation.RequireUnchanged(simulation, actual);
             var consumer = TimberbornOwnedDeltaConsumer.CreateFromHistory(registry, damage, effects, guard, history, catalog);
             if (ids.Any(id => effects.Bodies.ObservePresence(id) != TimberbornOwnedBodyPresence.Live))
                 throw new ArgumentException("A required native owner disappeared during restore staging.");
