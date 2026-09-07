@@ -117,7 +117,7 @@ public sealed class FireSimSnapshotCoordinatorTests
         public void SwapBuffers(uint tick) => Fail("swap");
         private void Fail(string stage) { if (stage == FailingStage) throw new InvalidOperationException(stage); }
         public int MaterialHandoffCapacity => 2;
-        public void UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => throw new NotSupportedException();
+        public void PrepareMaterialHandoff(FireSimMaterialHandoffBatch batch, int orderedCommandCount) => throw new NotSupportedException();
         public uint[] ReadMaterialHandoffHeader() => throw new NotSupportedException();
         public uint[] ReadMaterialHandoffReceipts(int count) => throw new NotSupportedException();
     }

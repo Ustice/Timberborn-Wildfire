@@ -2,7 +2,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed class ComputeBufferGrid : IDisposable
+public sealed partial class ComputeBufferGrid : IDisposable
 {
     public const int PackedCellStrideBytes = sizeof(uint);
     public const int ChangeStrideBytes = FireSimGpuProtocol.ChangeStrideBytes;
@@ -17,6 +17,7 @@ public sealed class ComputeBufferGrid : IDisposable
     public const int CompanionFieldStrideBytes = MaterialFieldStrideBytes;
 
     private readonly List<IComputeBufferHandle> _ownedBuffers;
+    private readonly IComputeBufferAllocator _allocator;
     private bool _disposed;
 
     public ComputeBufferGrid(
@@ -36,6 +37,7 @@ public sealed class ComputeBufferGrid : IDisposable
     {
         ArgumentNullException.ThrowIfNull(allocator);
         Dimensions = dimensions;
+        _allocator = allocator;
 
         ComputeGridValidation.RequireCellCount(dimensions, initialCells.Length, nameof(initialCells));
         if (!initialMaterialFields.IsEmpty)
@@ -112,9 +114,9 @@ public sealed class ComputeBufferGrid : IDisposable
 
     public IComputeBufferHandle NextCells { get; private set; }
 
-    public IComputeBufferHandle QueuedChanges { get; }
+    public IComputeBufferHandle QueuedChanges { get; private set; }
 
-    public IAppendComputeBufferHandle Deltas { get; }
+    public IAppendComputeBufferHandle Deltas { get; private set; }
 
     public IComputeBufferHandle Generations { get; }
 

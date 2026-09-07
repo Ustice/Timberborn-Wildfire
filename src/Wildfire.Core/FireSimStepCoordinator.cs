@@ -94,7 +94,15 @@ public sealed partial class FireSimStepCoordinator
         ValidateBackend(backend);
         if (commit is null) throw new ArgumentNullException(nameof(commit));
         if (!_material.Prepare(batch, backend.MaterialHandoffCapacity)) return null;
-        return TryTickWithInputCore(backend, new FireSimChange(0, MaterialHandoff: batch), () =>
+        // Material control cannot overtake an older queued command or require simulating
+        // a retired owner to drain the ordinary upload budget first.
+        FireSimChangeQueue.Batch queued = _changes.PrepareBatch(_cellCount, int.MaxValue);
+        var changes = new FireSimChange[checked(queued.Changes.Length + 1)];
+        queued.Changes.CopyTo(changes, 0);
+        changes[changes.Length - 1] = new FireSimChange(0, MaterialHandoff: batch);
+        FireSimGpuProtocol.ValidateStepBufferCapacity(_cellCount, changes.Length);
+        foreach (var change in changes) FireSimGpuProtocol.EncodeChange(change);
+        return RunStep(backend, queued, changes, () =>
         {
             FireSimMaterialHandoffReceipt receipt = FireSimMaterialHandoffProtocol.DecodeReceipt(batch,
                 backend.ReadMaterialHandoffHeader(), backend.ReadMaterialHandoffReceipts(batch.Requests.Count));
@@ -103,7 +111,7 @@ public sealed partial class FireSimStepCoordinator
         }, () =>
         {
             _material.BeginAttempt(batch.Token);
-            backend.UploadMaterialHandoff(batch);
+            backend.PrepareMaterialHandoff(batch, changes.Length);
         });
     }
 

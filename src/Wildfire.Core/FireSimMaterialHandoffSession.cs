@@ -11,7 +11,8 @@ public interface IFireSimMaterialHandoffSimulator : IFireSimStepInputSimulator
 public interface IFireSimMaterialHandoffBackend : IFireSimStepBackend
 {
     int MaterialHandoffCapacity { get; }
-    void UploadMaterialHandoff(FireSimMaterialHandoffBatch batch);
+    // Reserve scratch command/delta storage before uploading control data; no active field dispatch.
+    void PrepareMaterialHandoff(FireSimMaterialHandoffBatch batch, int orderedCommandCount);
     uint[] ReadMaterialHandoffHeader();
     uint[] ReadMaterialHandoffReceipts(int count);
 }

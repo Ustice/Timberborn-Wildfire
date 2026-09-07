@@ -3,7 +3,7 @@ using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
 
-public sealed class ComputeBufferGridTests
+public sealed partial class ComputeBufferGridTests
 {
     [Fact]
     public void DimensionsCalculateCellCount()
@@ -221,7 +221,7 @@ public sealed class ComputeBufferGridTests
     {
         public List<RecordingComputeBufferHandle> Handles { get; } = [];
 
-        public string? FailAllocationName { get; init; }
+        public string? FailAllocationName { get; set; }
 
         public string? FailUploadName { get; init; }
 

@@ -41,7 +41,7 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
         ArgumentNullException.ThrowIfNull(grid);
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
-        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count, grid.InitialMaterialIdentities);
+        _step = new FireSimStepCoordinator(Dimensions.CellCount, grid.OrdinaryChangeCapacity, grid.InitialMaterialIdentities);
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         LogInitialized();
     }
@@ -69,7 +69,7 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
 
         BufferGrid = grid;
         Dimensions = grid.Dimensions;
-        _step = restored is null ? new FireSimStepCoordinator(Dimensions.CellCount, grid.QueuedChanges.Count, grid.InitialMaterialIdentities) : new FireSimStepCoordinator(restored, grid.QueuedChanges.Count);
+        _step = restored is null ? new FireSimStepCoordinator(Dimensions.CellCount, grid.OrdinaryChangeCapacity, grid.InitialMaterialIdentities) : new FireSimStepCoordinator(restored, grid.OrdinaryChangeCapacity);
         _dispatcher = dispatcher;
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         _parameters = parameters;
@@ -159,7 +159,11 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
     }
 
     int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Dimensions.CellCount;
-    void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => BufferGrid!.MaterialHandoff.Upload(batch);
+    void IFireSimMaterialHandoffBackend.PrepareMaterialHandoff(FireSimMaterialHandoffBatch batch, int orderedCommandCount)
+    {
+        BufferGrid!.ReserveStepCapacity(orderedCommandCount);
+        BufferGrid.MaterialHandoff.Upload(batch);
+    }
     uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => BufferGrid!.MaterialHandoff.ReadHeader();
     uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => BufferGrid!.MaterialHandoff.ReadReceipts(count);
 

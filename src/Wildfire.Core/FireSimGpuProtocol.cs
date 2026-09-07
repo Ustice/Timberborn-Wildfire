@@ -20,6 +20,17 @@ public static class FireSimGpuProtocol
         return checked(cellCount + changeCapacity);
     }
 
+    // One material-control step may contain the whole ordinary backlog plus its marker.
+    // Validate both structured element counts and managed/native byte sizes before allocation.
+    public static int ValidateStepBufferCapacity(int cellCount, int commandCount)
+    {
+        if (commandCount <= 0) throw new ArgumentOutOfRangeException(nameof(commandCount));
+        int deltaCount = GetDeltaCapacity(cellCount, commandCount);
+        _ = checked(commandCount * ChangeStrideBytes);
+        _ = checked(deltaCount * DeltaStrideBytes);
+        return deltaCount;
+    }
+
     public static FireSimGpuChange[] EncodeChanges(ReadOnlySpan<FireSimChange> changes)
     {
         FireSimGpuChange[] encoded = new FireSimGpuChange[changes.Length];

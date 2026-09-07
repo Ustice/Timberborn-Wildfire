@@ -480,8 +480,8 @@ public sealed partial class TimberbornComputeFireSimulator :
     private readonly uint _seed;
     private readonly ComputeBuffer _currentCells;
     private readonly ComputeBuffer _nextCells;
-    private readonly ComputeBuffer _externalChanges;
-    private readonly ComputeBuffer _deltas;
+    private ComputeBuffer _externalChanges;
+    private ComputeBuffer _deltas;
     private readonly ComputeBuffer _visualFields;
     private readonly ComputeBuffer _currentTransportFields;
     private readonly ComputeBuffer _nextTransportFields;
@@ -851,7 +851,11 @@ public sealed partial class TimberbornComputeFireSimulator :
     }
 
     int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Grid.CellCount;
-    void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => _materialHandoff!.Upload(batch);
+    void IFireSimMaterialHandoffBackend.PrepareMaterialHandoff(FireSimMaterialHandoffBatch batch, int orderedCommandCount)
+    {
+        ReserveStepCapacity(orderedCommandCount);
+        _materialHandoff!.Upload(batch);
+    }
     uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => _materialHandoff!.ReadHeader();
     uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => _materialHandoff!.ReadReceipts(count);
 

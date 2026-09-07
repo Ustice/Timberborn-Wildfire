@@ -10,17 +10,23 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
     private static FireSimStepCoordinator Coordinator(int changeCapacity = 2) => new(2, changeCapacity, [A, default]);
 
     [Fact]
-    public void CapacityRejectionDoesNotUploadOrConsumeTokenOrOrdinaryInputs()
+    public void PreparationFailurePreservesFullQueueAndAuthorityButRequiresNewAttemptToken()
     {
         var step = Coordinator(1);
-        var backend = new Backend();
+        var backend = new Backend { FailUpload = true };
         step.RegisterChange(new(0, AddWater: 1));
-        Assert.Null(step.TryHandoffMaterial(backend, Replace(), _ => throw new Exception()));
-        Assert.Equal(0, backend.Uploads);
+        var failure = Assert.Throws<FireSimStepInputException>(() => step.TryHandoffMaterial(backend, Replace(), _ => { }));
+        Assert.Equal(FireSimStepInputOutcome.NotApplied, failure.Outcome);
+        Assert.Equal(0u, step.CurrentTick);
         Assert.Equal(1, step.PendingChangeCount);
-        step.Tick(backend);
-        Assert.NotNull(step.TryHandoffMaterial(backend, Replace(), _ => { }));
-        Assert.Equal(1, backend.Uploads);
+        Assert.True(step.IsSlotKnown(A));
+        Assert.False(step.IsSlotKnown(B));
+        backend.FailUpload = false;
+        Assert.Throws<ArgumentException>(() => step.TryHandoffMaterial(backend, Replace(), _ => { }));
+        Assert.NotNull(step.TryHandoffMaterial(backend, Replace(2), _ => { }));
+        Assert.Equal((byte)1, backend.Changes[0].AddWater);
+        Assert.Equal(2, backend.Changes.Length);
+        Assert.Equal(0, step.PendingChangeCount);
     }
 
     [Theory]
@@ -42,6 +48,43 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
         Assert.Equal(1u, step.CurrentTick);
         Assert.Equal(1, commits);
         Assert.Equal(1, backend.Uploads);
+    }
+
+    [Fact]
+    public void FrozenControlBatchIgnoresInvalidCellsOnlyOnCommitAndLeavesNewCallbackInputsQueued()
+    {
+        var step = Coordinator(1);
+        var backend = new Backend { FailUpload = true };
+        step.RegisterChange(new(-1, SetFuel: 3));
+        step.RegisterChange(new(0, AddWater: 1));
+        step.RegisterChange(new(99, SetFuel: 3));
+        step.RegisterChange(new(0, SetHeat: 2));
+        Assert.Throws<FireSimStepInputException>(() => step.TryHandoffMaterial(backend, Replace(), _ => { }));
+        Assert.Equal(4, step.PendingChangeCount);
+        backend.FailUpload = false;
+        step.TryHandoffMaterial(backend, Replace(2), _ => step.RegisterChange(new(1, SetHeat: 4)));
+        Assert.Equal(2, step.LastIgnoredChangeCount);
+        Assert.Equal(3, backend.Changes.Length);
+        Assert.Equal((byte)1, backend.Changes[0].AddWater);
+        Assert.Equal((byte)2, backend.Changes[1].SetHeat);
+        Assert.Equal(1, step.PendingChangeCount);
+        step.Tick(backend);
+        Assert.Equal(new FireSimChange(1, SetHeat: 4), Assert.Single(backend.Changes));
+    }
+
+    [Fact]
+    public void MalformedInputCannotEnterOrConsumeAnOlderControlQueueOrAttempt()
+    {
+        var step = Coordinator(1);
+        var backend = new Backend();
+        step.RegisterChange(new(0, AddWater: 1));
+        Assert.Throws<ArgumentException>(() => step.RegisterChange(new(0, CollectCleanAsh: 4)));
+        Assert.Throws<ArgumentException>(() => step.RegisterChange(new(0, MaterialHandoff: Replace())));
+        var stale = new FireSimMaterialHandoffBatch(1, [FireSimMaterialHandoffRequest.Remove(0, new(1, 12), false)]);
+        Assert.Throws<ArgumentException>(() => step.TryHandoffMaterial(backend, stale, _ => { }));
+        Assert.Equal(0, backend.Uploads);
+        Assert.Equal(1, step.PendingChangeCount);
+        Assert.NotNull(step.TryHandoffMaterial(backend, Replace(1), _ => { }));
     }
 
     [Fact]
@@ -222,7 +265,7 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
         public bool Accepted = true, FailUpload;
         public uint[]? Words;
         public FireSimChange[] Changes = [];
-        public void UploadMaterialHandoff(FireSimMaterialHandoffBatch value)
+        public void PrepareMaterialHandoff(FireSimMaterialHandoffBatch value, int orderedCommandCount)
         {
             Uploads++;
             if (FailUpload) throw new InvalidOperationException("allocation failed");
