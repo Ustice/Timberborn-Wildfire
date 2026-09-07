@@ -36,10 +36,14 @@ public sealed class BorrowedDutyNativeTests
         Field(managerType, "_runningExecutor").SetValue(manager, executor);
         Assert.Equal(false, workerType.GetProperty("JobRunning")!.GetValue(worker));
         Assert.Same(donor, workerType.GetProperty("Workplace")!.GetValue(worker));
-        // Native TickRunningExecutor observes the idle executor's Success and releases it.
-        // Supply no game day-cycle dependency by invoking the executor completion directly here.
-        Assert.Equal("Success", executorType.GetMethod("Tick")!.Invoke(executor, new object[] { 0f })!.ToString());
-        Field(managerType, "_runningExecutor").SetValue(manager, null);
+        // Execute the installed native completion path, with its ordinary time sources but no game scene.
+        var clockType = native.LoadNative("Timberborn.TimeSystem").GetType("Timberborn.TimeSystem.DayNightCycle")!;
+        Field(managerType, "_dayNightCycle").SetValue(manager, RuntimeHelpers.GetUninitializedObject(clockType));
+        var tickType = native.LoadNative("Timberborn.TickSystem").GetType("Timberborn.TickSystem.TickService")!;
+        Field(managerType, "_tickService").SetValue(manager, RuntimeHelpers.GetUninitializedObject(tickType));
+        managerType.GetMethod("TickRunningExecutor", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(manager, null);
+        Assert.Null(Field(managerType, "_runningExecutor").GetValue(manager));
+        // A later normal job restores the production flag; live native root selection is separate QA.
         Field(managerType, "_runningBehavior").SetValue(manager, nativeJob);
         Assert.Equal(true, workerType.GetProperty("JobRunning")!.GetValue(worker));
         Assert.Same(donor, workerType.GetProperty("Workplace")!.GetValue(worker));
@@ -72,6 +76,20 @@ public sealed class BorrowedDutyNativeTests
         Update(false); Assert.Equal(new[] { first, offer, last }, list.Cast<object>());
         version = listType.GetField("_version", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(list);
         Update(false); Assert.Equal(version, listType.GetField("_version", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(list));
+    }
+
+    [Fact]
+    public void MissingProcessOptInRejectsNewDutyBeforeTouchingNativeDonor()
+    {
+        using var native = new NativeManagedTestContext();
+        var mod = native.LoadMod();
+        var type = mod.GetType("Wildfire.Timberborn.FireBell.BorrowedDutyFixture")!;
+        var fixture = Activator.CreateInstance(type)!;
+        Assert.Equal(false, type.GetProperty("AdmissionsEnabled")!.GetValue(fixture));
+        var vector = native.LoadNative("UnityEngine.CoreModule").GetType("UnityEngine.Vector3")!;
+        var failure = Assert.Throws<TargetInvocationException>(() => type.GetMethod("Arm")!.Invoke(fixture, new[] { null, Activator.CreateInstance(vector) }));
+        Assert.IsType<InvalidOperationException>(failure.InnerException);
+        Assert.Contains("--wildfire-enable-borrowed-duty", failure.InnerException!.Message);
     }
     private static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!;
 }

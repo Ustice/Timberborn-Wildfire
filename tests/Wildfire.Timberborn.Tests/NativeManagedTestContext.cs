@@ -8,7 +8,7 @@ internal sealed class NativeManagedTestContext : AssemblyLoadContext, IDisposabl
 {
     public string ManagedPath { get; } = typeof(NativeManagedTestContext).Assembly
         .GetCustomAttributes<AssemblyMetadataAttribute>().Single(attribute => attribute.Key == "TimberbornManagedPath").Value!;
-    public NativeManagedTestContext() : base(isCollectible: true) { }
+    public NativeManagedTestContext(bool collectible = true) : base(isCollectible: collectible) { }
     public Assembly LoadMod() => LoadFromAssemblyPath(typeof(TimberbornCompatibilityReport).Assembly.Location);
     public Assembly LoadNative(string name) => LoadFromAssemblyPath(Path.Combine(ManagedPath, name + ".dll"));
     protected override Assembly? Load(AssemblyName name)
@@ -17,5 +17,5 @@ internal sealed class NativeManagedTestContext : AssemblyLoadContext, IDisposabl
         string path = Path.Combine(ManagedPath, name.Name + ".dll");
         return File.Exists(path) ? LoadFromAssemblyPath(path) : null;
     }
-    public void Dispose() => Unload();
+    public void Dispose() { if (IsCollectible) Unload(); }
 }

@@ -78,7 +78,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
         var eligibility = new BorrowedDutyEligibility(_worker.Employed && ReferenceEquals(_worker.Workplace, donor),
             district is not null && _citizen.HasAssignedDistrict && ReferenceEquals(_citizen.AssignedDistrict, district.District),
             _hours.AreWorkingHours, _refuser.RefusesWork, _needs.AnyNeedIsInCriticalState(), _mortal.Dead || _mortal.ShouldDie,
-            _carrier.IsCarrying, _reserver.HasReservedCapacity || _reserver.HasReservedStock, _equipment.Loaded,
+            _carrier.IsCarrying, _reserver.CapacityReservation.Inventory is not null || _reserver.StockReservation.Inventory is not null, _equipment.Loaded,
             !string.IsNullOrEmpty(_manager.RunningExecutor.Name), _resources.IsIndeterminate);
         if (!eligibility.CanJoin) return false;
         TimberbornOwnedWalker.Verify();
@@ -96,19 +96,21 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
         if (_mortal.Dead || _mortal.ShouldDie)
         { _movement.Stop(); _progress.Finish(); return ExecutorStatus.Failure; }
         if (_resources.IsIndeterminate) { _movement.RejectRoute(); return ExecutorStatus.Running; }
-        if (_restored)
-        {
-            _restored = false; _movement.Stop();
-            if (!Launch(_destination)) return Finish();
-        }
+        bool restoreWalk = _restored;
+        _restored = false;
         _progress.Advance(hours);
         if (_progress.Hours >= 2 || !_field.ObservationAvailable) return Finish();
         if (Phase != BorrowedDutyPhase.Returning &&
             (_progress.CancellationRequested || !_field.Ready || _donor is null || !_donor || !_donor.Enabled ||
              !_worker.Employed || !ReferenceEquals(_worker.Workplace, _donor) || !_hours.AreWorkingHours ||
              _refuser.RefusesWork || _needs.AnyNeedIsInCriticalState() || _carrier.IsCarrying ||
-             _reserver.HasReservedStock || _reserver.HasReservedCapacity)) return Return();
+             _reserver.StockReservation.Inventory is not null || _reserver.CapacityReservation.Inventory is not null)) return Return();
         if (Phase == BorrowedDutyPhase.AtPoint) return Return();
+        if (restoreWalk)
+        {
+            _movement.Stop();
+            if (!Launch(_destination)) return Finish();
+        }
         if (_routeRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
         if (_unsafeRoute) return Phase == BorrowedDutyPhase.Returning ? Finish() : Return();
         var status = _walk.Tick(hours);
