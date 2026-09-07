@@ -1785,7 +1785,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerCropBurnYieldLost = null,
     int? LastDeltaConsumerCropBurnKilledCropCount = null,
     int? LastDeltaConsumerCropBurnVisualStateUpdateCount = null,
-    int? LastDeltaConsumerCropBurnDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerCropBurnCoalescedCellCount = null,
     int? LastDeltaConsumerCropBurnUnmappedTargetCount = null,
     int? LastDeltaConsumerCropBurnUnknownHarvestResourceCount = null,
     int? LastDeltaConsumerCropBurnNonBurnableTargetCount = null,
@@ -1795,7 +1795,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerTreeBurnYieldLost = null,
     int? LastDeltaConsumerTreeBurnKilledTreeCount = null,
     int? LastDeltaConsumerTreeBurnVisualStateUpdateCount = null,
-    int? LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerTreeBurnCoalescedCellCount = null,
     int? LastDeltaConsumerTreeBurnUnmappedTargetCount = null,
     int? LastDeltaConsumerTreeBurnUnknownCuttableResourceCount = null,
     int? LastDeltaConsumerTreeBurnNonBurnableTargetCount = null,
@@ -2174,7 +2174,7 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_crop_burn_yield_lost={FormatNumber(State.LastDeltaConsumerCropBurnYieldLost)} " +
         $"last_delta_consumer_crop_burn_killed_crops={FormatNumber(State.LastDeltaConsumerCropBurnKilledCropCount)} " +
         $"last_delta_consumer_crop_burn_visual_state_updates={FormatNumber(State.LastDeltaConsumerCropBurnVisualStateUpdateCount)} " +
-        $"last_delta_consumer_crop_burn_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerCropBurnDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_crop_burn_coalesced_cells={FormatNumber(State.LastDeltaConsumerCropBurnCoalescedCellCount)} " +
         $"last_delta_consumer_crop_burn_unmapped_targets={FormatNumber(State.LastDeltaConsumerCropBurnUnmappedTargetCount)} " +
         $"last_delta_consumer_crop_burn_unknown_harvest_resources={FormatNumber(State.LastDeltaConsumerCropBurnUnknownHarvestResourceCount)} " +
         $"last_delta_consumer_crop_burn_non_burnable_targets={FormatNumber(State.LastDeltaConsumerCropBurnNonBurnableTargetCount)} " +
@@ -2183,7 +2183,7 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_tree_burn_yield_lost={FormatNumber(State.LastDeltaConsumerTreeBurnYieldLost)} " +
         $"last_delta_consumer_tree_burn_killed_trees={FormatNumber(State.LastDeltaConsumerTreeBurnKilledTreeCount)} " +
         $"last_delta_consumer_tree_burn_visual_state_updates={FormatNumber(State.LastDeltaConsumerTreeBurnVisualStateUpdateCount)} " +
-        $"last_delta_consumer_tree_burn_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_tree_burn_coalesced_cells={FormatNumber(State.LastDeltaConsumerTreeBurnCoalescedCellCount)} " +
         $"last_delta_consumer_tree_burn_unmapped_targets={FormatNumber(State.LastDeltaConsumerTreeBurnUnmappedTargetCount)} " +
         $"last_delta_consumer_tree_burn_unknown_cuttable_resources={FormatNumber(State.LastDeltaConsumerTreeBurnUnknownCuttableResourceCount)} " +
         $"last_delta_consumer_tree_burn_non_burnable_targets={FormatNumber(State.LastDeltaConsumerTreeBurnNonBurnableTargetCount)} " +

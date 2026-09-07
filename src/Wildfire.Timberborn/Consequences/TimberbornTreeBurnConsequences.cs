@@ -51,7 +51,7 @@ public sealed partial class TimberbornTreeBurnConsequenceSink : ITimberbornTreeB
     }
 
     private TimberbornTreeBurnConsequenceSummary ApplyTreeHits(uint tick, TreeCandidateHit[] treeHits,
-        int duplicateCells, int unmappedTargets)
+        int coalescedCells, int unmappedTargets)
     {
         TreeCandidateTarget[] consideredTreeTargets = treeHits
             .GroupBy(static hit => hit.State.TargetKey)
@@ -81,7 +81,7 @@ public sealed partial class TimberbornTreeBurnConsequenceSink : ITimberbornTreeB
             YieldLost: outcomes.Sum(static outcome => outcome.YieldLost),
             KilledTreeCount: outcomes.Count(static outcome => outcome.Killed),
             VisualStateUpdateCount: outcomes.Count(static outcome => outcome.VisualUpdated),
-            DuplicateCellSuppressedCount: duplicateCells,
+            CoalescedCellCount: coalescedCells,
             UnmappedTargetCount: unmappedTargets,
             UnknownCuttableResourceCount: consideredTreeTargetStates.Count(static state => state.MissingResourceIds.Count > 0),
             NonBurnableTreeTargetCount: consideredTreeTargetStates.Count(static state =>

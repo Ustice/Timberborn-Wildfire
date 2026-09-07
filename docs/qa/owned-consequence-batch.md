@@ -27,8 +27,10 @@ The result includes body damage, individual tree/crop summaries, actual inventor
 hazards, and Structure owners whose rollback is unavailable. Configured family capabilities mean
 an adapter is present; native partial yield and other unavailable actions retain their truthful
 per-action results. `StructureRollbackSupported` is false even when that Structure's storage burns.
-Owned tree/crop duplicate counters are scoped to their own subsets instead of borrowing the global
-mixed-family reducer's counts. Legacy tree/crop summaries also count their own repeated body effects, separately from duplicate damage-cell reports.
+Tree/crop `CoalescedCellCount` counts extra cell contributions grouped into one compound body effect.
+This applies to both owned and legacy family summaries. It is separate from the damage reducer's
+`DuplicateCellSuppressedCount`, which reports discarded repeated damage rows. Coalescing effects does
+not discard damage from distinct burning cells.
 
 ## Evidence
 

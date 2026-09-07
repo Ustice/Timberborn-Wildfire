@@ -50,7 +50,7 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
     int YieldLost,
     int KilledTreeCount,
     int VisualStateUpdateCount,
-    int DuplicateCellSuppressedCount,
+    int CoalescedCellCount,
     int UnmappedTargetCount,
     int UnknownCuttableResourceCount,
     int NonBurnableTreeTargetCount,
@@ -64,7 +64,7 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
         YieldLost: 0,
         KilledTreeCount: 0,
         VisualStateUpdateCount: 0,
-        DuplicateCellSuppressedCount: 0,
+        CoalescedCellCount: 0,
         UnmappedTargetCount: 0,
         UnknownCuttableResourceCount: 0,
         NonBurnableTreeTargetCount: 0,
@@ -79,7 +79,7 @@ public readonly record struct TimberbornTreeBurnConsequenceSummary(
             $"yield_lost={YieldLost} " +
             $"killed_trees={KilledTreeCount} " +
             $"visual_state_updates={VisualStateUpdateCount} " +
-            $"duplicate_cells_suppressed={DuplicateCellSuppressedCount} " +
+            $"coalesced_cells={CoalescedCellCount} " +
             $"unmapped_targets={UnmappedTargetCount} " +
             $"unknown_cuttable_resources={UnknownCuttableResourceCount} " +
             $"non_burnable_tree_targets={NonBurnableTreeTargetCount} " +

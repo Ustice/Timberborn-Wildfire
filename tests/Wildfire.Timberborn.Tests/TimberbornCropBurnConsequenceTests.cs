@@ -127,7 +127,7 @@ public sealed class TimberbornCropBurnConsequenceTests
             ],
             cropApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
         Assert.Equal(1, summary.ConsideredCropTargetCount);
-        Assert.Equal(1, summary.DuplicateCellSuppressedCount);
+        Assert.Equal(1, summary.CoalescedCellCount);
         Assert.Equal(2, summary.YieldLost);
     }
 

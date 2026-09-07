@@ -796,7 +796,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int CropBurnYieldLost,
     int CropBurnKilledCropCount,
     int CropBurnVisualStateUpdateCount,
-    int CropBurnDuplicateCellSuppressedCount,
+    int CropBurnCoalescedCellCount,
     int CropBurnUnmappedTargetCount,
     int CropBurnUnknownHarvestResourceCount,
     int CropBurnNonBurnableTargetCount,
@@ -806,7 +806,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
     int TreeBurnYieldLost,
     int TreeBurnKilledTreeCount,
     int TreeBurnVisualStateUpdateCount,
-    int TreeBurnDuplicateCellSuppressedCount,
+    int TreeBurnCoalescedCellCount,
     int TreeBurnUnmappedTargetCount,
     int TreeBurnUnknownCuttableResourceCount,
     int TreeBurnNonBurnableTargetCount,
@@ -934,7 +934,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         CropBurnYieldLost: 0,
         CropBurnKilledCropCount: 0,
         CropBurnVisualStateUpdateCount: 0,
-        CropBurnDuplicateCellSuppressedCount: 0,
+        CropBurnCoalescedCellCount: 0,
         CropBurnUnmappedTargetCount: 0,
         CropBurnUnknownHarvestResourceCount: 0,
         CropBurnNonBurnableTargetCount: 0,
@@ -944,7 +944,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
         TreeBurnYieldLost: 0,
         TreeBurnKilledTreeCount: 0,
         TreeBurnVisualStateUpdateCount: 0,
-        TreeBurnDuplicateCellSuppressedCount: 0,
+        TreeBurnCoalescedCellCount: 0,
         TreeBurnUnmappedTargetCount: 0,
         TreeBurnUnknownCuttableResourceCount: 0,
         TreeBurnNonBurnableTargetCount: 0,
@@ -1095,7 +1095,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             cropBurnSummary.YieldLost,
             cropBurnSummary.KilledCropCount,
             cropBurnSummary.VisualStateUpdateCount,
-            cropBurnSummary.DuplicateCellSuppressedCount,
+            cropBurnSummary.CoalescedCellCount,
             cropBurnSummary.UnmappedTargetCount,
             cropBurnSummary.UnknownHarvestResourceCount,
             cropBurnSummary.NonBurnableCropTargetCount,
@@ -1105,7 +1105,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             treeBurnSummary.YieldLost,
             treeBurnSummary.KilledTreeCount,
             treeBurnSummary.VisualStateUpdateCount,
-            treeBurnSummary.DuplicateCellSuppressedCount,
+            treeBurnSummary.CoalescedCellCount,
             treeBurnSummary.UnmappedTargetCount,
             treeBurnSummary.UnknownCuttableResourceCount,
             treeBurnSummary.NonBurnableTreeTargetCount,
@@ -1236,7 +1236,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"crop_burn_yield_lost={CropBurnYieldLost} " +
             $"crop_burn_killed_crops={CropBurnKilledCropCount} " +
             $"crop_burn_visual_state_updates={CropBurnVisualStateUpdateCount} " +
-            $"crop_burn_duplicate_cells_suppressed={CropBurnDuplicateCellSuppressedCount} " +
+            $"crop_burn_coalesced_cells={CropBurnCoalescedCellCount} " +
             $"crop_burn_unmapped_targets={CropBurnUnmappedTargetCount} " +
             $"crop_burn_unknown_harvest_resources={CropBurnUnknownHarvestResourceCount} " +
             $"crop_burn_non_burnable_targets={CropBurnNonBurnableTargetCount} " +
@@ -1245,7 +1245,7 @@ public readonly record struct TimberbornFireDeltaConsumerSummary(
             $"tree_burn_yield_lost={TreeBurnYieldLost} " +
             $"tree_burn_killed_trees={TreeBurnKilledTreeCount} " +
             $"tree_burn_visual_state_updates={TreeBurnVisualStateUpdateCount} " +
-            $"tree_burn_duplicate_cells_suppressed={TreeBurnDuplicateCellSuppressedCount} " +
+            $"tree_burn_coalesced_cells={TreeBurnCoalescedCellCount} " +
             $"tree_burn_unmapped_targets={TreeBurnUnmappedTargetCount} " +
             $"tree_burn_unknown_cuttable_resources={TreeBurnUnknownCuttableResourceCount} " +
             $"tree_burn_non_burnable_targets={TreeBurnNonBurnableTargetCount} " +

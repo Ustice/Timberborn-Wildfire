@@ -305,7 +305,7 @@ public sealed class TimberbornTreeBurnConsequenceTests
             ],
             treeApi.Consequences.Select(static consequence => consequence.Kind).ToArray());
         Assert.Equal(1, summary.ConsideredTreeTargetCount);
-        Assert.Equal(3, summary.DuplicateCellSuppressedCount);
+        Assert.Equal(3, summary.CoalescedCellCount);
         Assert.Equal(2, summary.YieldLost);
     }
 

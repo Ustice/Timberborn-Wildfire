@@ -65,7 +65,7 @@ public readonly record struct TimberbornCropBurnConsequenceSummary(
     int YieldLost,
     int KilledCropCount,
     int VisualStateUpdateCount,
-    int DuplicateCellSuppressedCount,
+    int CoalescedCellCount,
     int UnmappedTargetCount,
     int UnknownHarvestResourceCount,
     int NonBurnableCropTargetCount,
@@ -81,7 +81,7 @@ public readonly record struct TimberbornCropBurnConsequenceSummary(
         YieldLost: 0,
         KilledCropCount: 0,
         VisualStateUpdateCount: 0,
-        DuplicateCellSuppressedCount: 0,
+        CoalescedCellCount: 0,
         UnmappedTargetCount: 0,
         UnknownHarvestResourceCount: 0,
         NonBurnableCropTargetCount: 0,
@@ -96,7 +96,7 @@ public readonly record struct TimberbornCropBurnConsequenceSummary(
             $"yield_lost={YieldLost} " +
             $"killed_crops={KilledCropCount} " +
             $"visual_state_updates={VisualStateUpdateCount} " +
-            $"duplicate_cells_suppressed={DuplicateCellSuppressedCount} " +
+            $"coalesced_cells={CoalescedCellCount} " +
             $"unmapped_targets={UnmappedTargetCount} " +
             $"unknown_harvest_resources={UnknownHarvestResourceCount} " +
             $"non_burnable_crop_targets={NonBurnableCropTargetCount} " +

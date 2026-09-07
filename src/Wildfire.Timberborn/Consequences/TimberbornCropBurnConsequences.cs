@@ -51,7 +51,7 @@ public sealed partial class TimberbornCropBurnConsequenceSink : ITimberbornCropB
     }
 
     private TimberbornCropBurnConsequenceSummary ApplyCropHits(uint tick, CropCandidateHit[] cropHits,
-        int duplicateCells, int unmappedTargets)
+        int coalescedCells, int unmappedTargets)
     {
         TimberbornBurnDamageTargetState[] consideredCropTargets = cropHits
             .Select(static hit => hit.State)
@@ -72,7 +72,7 @@ public sealed partial class TimberbornCropBurnConsequenceSink : ITimberbornCropB
             YieldLost: outcomes.Sum(static outcome => outcome.YieldLost),
             KilledCropCount: outcomes.Count(static outcome => outcome.Killed),
             VisualStateUpdateCount: outcomes.Count(static outcome => outcome.VisualUpdated),
-            DuplicateCellSuppressedCount: duplicateCells,
+            CoalescedCellCount: coalescedCells,
             UnmappedTargetCount: unmappedTargets,
             UnknownHarvestResourceCount: consideredCropTargets.Count(static state => state.MissingResourceIds.Count > 0),
             NonBurnableCropTargetCount: consideredCropTargets.Count(static state =>
