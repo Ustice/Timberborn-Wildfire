@@ -33,8 +33,8 @@ public sealed partial class OwnedWorldSessionTests
     {
         var original = new F(); var tree = original.Registrations[0].EntityId;
         var key = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(tree,NativeBurnTargetFamily.Tree));
-        original.Damage.RemoveTarget(key); original.Native.Live.Remove(tree);
-        var saved = Snapshot(original); var native = new F(); native.Damage.RemoveTarget(key); native.Native.Live.Remove(tree);
+        original.Native.Live.Remove(tree); original.Consumer.RetireNativeOwner(tree);
+        var saved = Snapshot(original); var native = new F(); native.Native.Live.Remove(tree); native.Consumer.RetireNativeOwner(tree);
         using var restored = Restore(saved,native,out _);
         var result = restored.Consumer.Consume(38,[original.Delta(tree,15)]);
         Assert.Equal(1,result.NotLiveOwners); Assert.Empty(native.Native.TreeCalls);
@@ -94,8 +94,8 @@ public sealed partial class OwnedWorldSessionTests
     public void BodyLivenessReadCannotRegisterOrMutateResources()
     {
         var f=new F(); var retired=f.Registrations[0].EntityId;
-        f.Damage.RemoveTarget(new(TimberbornBurnDamageIdentity.ForEntity(retired,NativeBurnTargetFamily.Tree)));
         f.Native.Live.Remove(retired);
+        f.Consumer.RetireNativeOwner(retired);
         int mutations=0;
         f.Native.DuringIsLive=()=>
         {

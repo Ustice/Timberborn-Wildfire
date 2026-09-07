@@ -233,7 +233,12 @@ public sealed class OwnedConsequenceBatchTests
         }
         public TimberbornStoredGoodHazardConsequenceResult ApplyHazards(TimberbornStoredGoodBurnTarget target,
             TimberbornStoredGoodBurnConsequence consequence, IReadOnlyList<TimberbornStoredGoodHazardStack> stacks) => throw new Exception("No hazardous good is present.");
-        public void Info(string message) { if (message.StartsWith("wildfire_timberborn_burn_damage_applied ")) DamagePasses++; }
+        internal Action? DuringRegistration;
+        public void Info(string message)
+        {
+            if (message.StartsWith("wildfire_timberborn_burn_damage_applied ")) DamagePasses++;
+            if (message.StartsWith("wildfire_timberborn_burn_damage_targets_registered ")) DuringRegistration?.Invoke();
+        }
         public void Warning(string message) { }
     }
 }

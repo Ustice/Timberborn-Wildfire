@@ -60,7 +60,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
             var bodyLive = batch.Decisions.Select(item => item.EntityId).Distinct().ToDictionary(id => id, _bodies.IsLive);
             var live = batch.Decisions.Where(item => bodyLive[item.EntityId]).ToArray();
             // Revalidate every required state before ANY body mutation, including zero-damage rows.
-            if (live.Any(item => !_damage.TryGetState(item.TargetKey, out var state) || !MatchesFamily(item.Family, state)))
+            if (live.Any(item => _origins.IsRetired(item.EntityId) || !_damage.TryGetState(item.TargetKey, out var state) || !MatchesFamily(item.Family, state)))
                 throw new InvalidOperationException("A live owned body lost its supported canonical registration after preflight.");
             TimberbornOwnedConsequenceBatchResult result = default;
             _guard.TransferInventory(() =>

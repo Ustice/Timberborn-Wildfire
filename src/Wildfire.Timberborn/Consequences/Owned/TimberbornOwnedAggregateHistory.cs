@@ -33,7 +33,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
             if (owner.Retention == OwnedBodyRetention.RetiredNativeOwner)
             {
                 if (effects.Bodies.IsLive(owner.EntityId)) throw new ArgumentException("A retired saved owner cannot authorize a live native body.");
-                consumer._origins.Register(owner.EntityId, owner.Family, owner.TargetKey);
+                consumer._origins.RegisterRetired(owner.EntityId, owner.Family, owner.TargetKey);
             }
             else consumer.Register(new(owner.EntityId, owner.Family));
         }
