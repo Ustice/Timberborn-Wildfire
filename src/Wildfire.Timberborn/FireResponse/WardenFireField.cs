@@ -13,6 +13,8 @@ public readonly record struct WardenTarget(int CellIndex, Vector3 Approach);
 /// <summary>Derived targeting and safety observations. The simulator remains authoritative.</summary>
 public sealed class WardenFireField
 {
+    public const int ResponseRange = 20;
+    public bool ResponseEnabled => _runtime.WardenResponseEnabled;
     private readonly TimberbornFireRuntime _runtime;
     private readonly INavigationService _navigation;
     private readonly List<PathCorner> _path = new();
@@ -31,7 +33,7 @@ public sealed class WardenFireField
         if (!_runtime.TryObserveWardenField(out var field)) return false;
         RefreshFireTargets(field);
         var burning = _burning
-            .Where(item => (item.Position - station).sqrMagnitude <= 400)
+            .Where(item => (item.Position - station).sqrMagnitude <= ResponseRange * ResponseRange)
             .OrderBy(item => (item.Position - start).sqrMagnitude).Take(32);
         foreach (var fire in burning)
         foreach (var offset in ApproachOffsets)

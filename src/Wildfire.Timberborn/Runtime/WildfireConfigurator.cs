@@ -1,4 +1,5 @@
 using Bindito.Core;
+using Timberborn.EntityPanelSystem;
 using Wildfire.Timberborn.FireResponse;
 using Timberborn.WorkSystem;
 using Timberborn.Beavers;
@@ -35,6 +36,9 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornFertileAshFieldWorkplaceBehavior>().AsTransient();
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
+        Bind<WardenStationFragment>().AsSingleton();
+        Bind<WardenRecoveryNotification>().AsSingleton();
+        MultiBind<EntityPanelModule>().ToProvider<WardenPanelModuleProvider>().AsSingleton();
         Bind<WardenDeliveryService>().AsSingleton();
         Bind<WardenFireField>().AsSingleton();
         Bind<WardenStation>().AsTransient();
@@ -43,6 +47,18 @@ public sealed class WildfireConfigurator : Configurator
         Bind<WardenStationInventoryInitializer>().AsSingleton();
         Bind<WardenEquipmentInventoryInitializer>().AsSingleton();
         MultiBind<TemplateModule>().ToProvider<WardenTemplateModuleProvider>().AsSingleton();
+    }
+
+    private sealed class WardenPanelModuleProvider : IProvider<EntityPanelModule>
+    {
+        private readonly WardenStationFragment _fragment;
+        public WardenPanelModuleProvider(WardenStationFragment fragment) => _fragment = fragment;
+        public EntityPanelModule Get()
+        {
+            EntityPanelModule.Builder builder = new();
+            builder.AddMiddleFragment(_fragment, 0);
+            return builder.Build();
+        }
     }
 
     private sealed class WardenTemplateModuleProvider : IProvider<TemplateModule>

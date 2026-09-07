@@ -24,6 +24,9 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
     public Workplace Workplace { get; private set; } = null!;
     public Accessible Access { get; private set; } = null!;
     private bool _finished;
+    public bool Finished => _finished;
+    public bool Restocking { get; private set; }
+    public const int WaterCapacity = 20;
     public bool Operational => _finished && Workplace.Enabled && Inventory.Enabled;
     public string Status { get; private set; } = "Waiting for construction";
 
@@ -38,6 +41,7 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
 
     public override Decision Decide(BehaviorAgent agent)
     {
+        Restocking = false;
         if (!Operational || !Inventory.Enabled) return Decision.ReleaseNow();
         var executor = agent.GetComponent<WardenExecutor>();
         if (!executor.TryLaunch(this))
@@ -48,7 +52,7 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
                 !agent.GetComponent<GoodReserver>().HasReservedStock &&
                 !agent.GetComponent<GoodReserver>().HasReservedCapacity &&
                 agent.GetComponent<CarrierInventoryFinder>().TryCarryFromAnyInventoryLimited(WardenEquipment.WaterId, Inventory, 1))
-                Status = "Fetching reserve water";
+            { Restocking = true; Status = "Fetching reserve water"; }
             return Decision.ReleaseNow();
         }
         Status = "Responding";
@@ -62,8 +66,8 @@ public sealed class WardenStationInventoryInitializer : IDedicatedDecoratorIniti
     public WardenStationInventoryInitializer(InventoryInitializerFactory factory) => _factory = factory;
     public void Initialize(WardenStation station, Inventory inventory)
     {
-        var initializer = _factory.Create(inventory, 20, "Wildfire.WardenStation");
-        initializer.AddAllowedGood(new StorableGoodAmount(StorableGood.CreateAsGivable(WardenEquipment.WaterId), 20));
+        var initializer = _factory.Create(inventory, WardenStation.WaterCapacity, "Wildfire.WardenStation");
+        initializer.AddAllowedGood(new StorableGoodAmount(StorableGood.CreateAsGivable(WardenEquipment.WaterId), WardenStation.WaterCapacity));
         initializer.HasPublicInput();
         initializer.Initialize();
         station.InitializeInventory(inventory);

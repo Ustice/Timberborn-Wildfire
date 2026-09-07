@@ -10,6 +10,14 @@
       <HintPath>$(TimberbornManagedPath)/Bindito.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.EntityPanelSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.EntityPanelSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Localization">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Localization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.SingletonSystem">
       <HintPath>$(TimberbornManagedPath)/Timberborn.SingletonSystem.dll</HintPath>
       <Private>false</Private>

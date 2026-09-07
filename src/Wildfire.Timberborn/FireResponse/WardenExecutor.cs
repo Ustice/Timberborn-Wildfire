@@ -48,6 +48,8 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private long _routeFieldRevision = -1;
     private Transform _transform = null!;
     private Guid _entityId;
+    public WardenPhase Phase => _sortie.Phase;
+    public WardenResponseReason ResponseReason { get; private set; }
     private string _status = "Ready";
     public string Status
     {
@@ -90,22 +92,23 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
 
     public bool TryLaunch(WardenStation station)
     {
-        if (!_field.Ready || _delivery.IsIndeterminate) return Refuse("Fire simulation unavailable");
+        if (!_field.Ready || _delivery.IsIndeterminate) return Refuse(WardenResponseReason.Unavailable, "Fire simulation unavailable");
         if (_carrier.IsCarrying || _reserver.HasReservedStock || _reserver.HasReservedCapacity)
-            return Refuse("Finishing previous work");
-        if (station.Access.Accesses.Count == 0) return Refuse("Station has no access");
+            return Refuse(WardenResponseReason.OtherWork, "Finishing previous work");
+        if (station.Access.Accesses.Count == 0) return Refuse(WardenResponseReason.NoAccess, "Station has no access");
         var start = _navigator.CurrentAccessOrPosition();
-        if (!_field.TryFindTarget(start, station.Access.Accesses[0], out _target)) return Refuse("No safely reachable fire");
+        if (!_field.TryFindTarget(start, station.Access.Accesses[0], out _target)) return Refuse(WardenResponseReason.NoSafeFire, "No safely reachable fire");
         if (!_equipment.Loaded && !station.Inventory.HasUnreservedStock(WardenEquipment.Bucket))
-            return Refuse("Waiting for water");
+            return Refuse(WardenResponseReason.NoWater, "Waiting for water");
         _station = station;
         _sortie.Begin(_equipment.Loaded);
         if (!_equipment.Loaded)
         {
             _reserver.ReserveExactStockAmount(station.Inventory, WardenEquipment.Bucket);
-            if (!TryWalkToStation()) { ReleaseReservation(); _sortie.Finish(); return Refuse("Water access unsafe"); }
+            if (!TryWalkToStation()) { ReleaseReservation(); _sortie.Finish(); return Refuse(WardenResponseReason.UnsafeRoute, "Water access unsafe"); }
         }
-        else if (!LaunchWalk(_target.Approach)) { _sortie.Finish(); return Refuse("Fire approach unsafe"); }
+        else if (!LaunchWalk(_target.Approach)) { _sortie.Finish(); return Refuse(WardenResponseReason.UnsafeRoute, "Fire approach unsafe"); }
+        ResponseReason = WardenResponseReason.None;
         Status = "Responding";
         return true;
     }
@@ -115,50 +118,50 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (_mortal.Dead || _mortal.ShouldDie)
         { ReleaseReservation(); _walker.StopNextTick(); _sortie.Finish(); return ExecutorStatus.Failure; }
         if (_delivery.IsIndeterminate) return ExecutorStatus.Running;
-        if (!_field.ObservationAvailable) return Finish("Fire observations unavailable; water retained");
-        if (!_field.Ready && _sortie.Phase != WardenPhase.Returning) return Retreat("Wildfire disabled");
+        if (!_field.ObservationAvailable) return Finish(WardenResponseReason.Unavailable, "Fire observations unavailable; water retained");
+        if (!_field.Ready && _sortie.Phase != WardenPhase.Returning) return Retreat(WardenResponseReason.Disabled, "Wildfire disabled");
         if (_sortie.Phase == WardenPhase.Idle) return ExecutorStatus.Success;
         if (_sortie.Phase != WardenPhase.Returning &&
             (_station is null || !_station || !_station.Operational || !_station.Enabled ||
              !_worker.Employed || _worker.Workplace != _station.Workplace || _needs.AnyNeedIsInCriticalState()))
-            return Retreat("Response interrupted");
+            return Retreat(WardenResponseReason.Interrupted, "Response interrupted");
         if (_sortie.Phase is WardenPhase.Fetching or WardenPhase.Approaching &&
-            !_field.IsBurning(_target.CellIndex)) return Retreat("Fire no longer burning");
-        if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat("Returning after application"); }
+            !_field.IsBurning(_target.CellIndex)) return Retreat(WardenResponseReason.TargetGone, "Fire no longer burning");
+        if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat(WardenResponseReason.Applied, "Returning after application"); }
         if (_restoreWalk)
         {
             if (!_walker.Stopped()) return ExecutorStatus.Running;
             _restoreWalk = false;
             if (_sortie.Phase is WardenPhase.Fetching or WardenPhase.Approaching or WardenPhase.Returning)
-                if (!LaunchWalk(_destination)) return Retreat("Saved route no longer safe");
+                if (!LaunchWalk(_destination)) return Retreat(WardenResponseReason.UnsafeRoute, "Saved route no longer safe");
         }
         _sortie.Advance(deltaTimeInHours);
-        if (_sortie.HoursInPhase > 2) return Finish("Response timed out; water retained");
+        if (_sortie.HoursInPhase > 2) return Finish(WardenResponseReason.TimedOut, "Response timed out; water retained");
         if (_sortie.Phase is WardenPhase.Applying or WardenPhase.AwaitingApplication)
         {
             if (!At(_target.Approach) || !_field.SafePosition(_navigator.CurrentAccessOrPosition()) ||
-                !_field.IsBurning(_target.CellIndex) || !_equipment.Loaded) return Retreat("Target no longer eligible");
+                !_field.IsBurning(_target.CellIndex) || !_equipment.Loaded) return Retreat(WardenResponseReason.TargetUnavailable, "Target no longer eligible");
             Status = _sortie.AwaitingApplication ? "Applying water" : "Preparing spray";
             return ExecutorStatus.Running;
         }
         // Regenerate on field changes, then inspect the path Walker actually installed (including its prefix).
         if (_routeFieldRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
-        if (_installedRouteUnsafe) return Retreat("Installed route became unsafe");
+        if (_installedRouteUnsafe) return Retreat(WardenResponseReason.UnsafeRoute, "Installed route became unsafe");
         var walkStatus = _walk.Tick(deltaTimeInHours);
         if (walkStatus == ExecutorStatus.Running) return ExecutorStatus.Running;
-        if (walkStatus == ExecutorStatus.Failure || !At(_destination)) return Retreat("Route interrupted before arrival");
+        if (walkStatus == ExecutorStatus.Failure || !At(_destination)) return Retreat(WardenResponseReason.Interrupted, "Route interrupted before arrival");
         if (_sortie.Phase == WardenPhase.Fetching)
         {
-            if (_station is null || !_equipment.TryFill(_station.Inventory, _reserver)) return Retreat("Reserved water unavailable");
+            if (_station is null || !_equipment.TryFill(_station.Inventory, _reserver)) return Retreat(WardenResponseReason.NoWater, "Reserved water unavailable");
             _sortie.Filled();
-            if (!LaunchWalk(_target.Approach)) return Retreat("Fire approach became unsafe");
+            if (!LaunchWalk(_target.Approach)) return Retreat(WardenResponseReason.UnsafeRoute, "Fire approach became unsafe");
             Status = "Carrying water to fire";
             return ExecutorStatus.Running;
         }
         if (_sortie.Phase == WardenPhase.Approaching)
         { _sortie.Arrived(At(_target.Approach)); return ExecutorStatus.Running; }
         if (_station is not null && _station && AtStation()) _equipment.TryReturn(_station.Inventory);
-        return Finish(_equipment.Loaded ? "Water retained for next response" : "Response complete");
+        return Finish(_equipment.Loaded ? WardenResponseReason.WaterRetained : WardenResponseReason.Complete, _equipment.Loaded ? "Water retained for next response" : "Response complete");
     }
 
     internal bool TryPrepareApplication(out FireSimChange input, out Action commit)
@@ -185,7 +188,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     }
 
     private bool _needsReturnRoute;
-    private ExecutorStatus Retreat(string reason)
+    private ExecutorStatus Retreat(WardenResponseReason responseReason, string reason)
     {
         // Set the phase first: a stopped native walk reports Success, not cancellation.
         _sortie.Cancel();
@@ -193,9 +196,10 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         _walker.StopNextTick();
         var accesses = _station is not null && _station ? _station.Access.Accesses : Enumerable.Empty<Vector3>();
         if (!_field.TryRetreat(_navigator.CurrentAccessOrPosition(), accesses, out var safe))
-            return Finish(reason + "; no safe route, water retained");
+            return Finish(WardenResponseReason.NoSafeReturn, reason + "; no safe route, water retained");
         _destination = safe;
         _restoreWalk = true; // Walker's pending StopNextTick must run before relaunching.
+        ResponseReason = responseReason;
         Status = reason + "; withdrawing";
         return ExecutorStatus.Running;
     }
@@ -229,12 +233,13 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
 
     private bool At(Vector3 destination) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), destination);
     private bool AtStation() => _station is not null && _station.Access.Accesses.Any(At);
-    private bool Refuse(string reason) { Status = reason; return false; }
-    private ExecutorStatus Finish(string reason)
+    private bool Refuse(WardenResponseReason responseReason, string reason) { ResponseReason = responseReason; Status = reason; return false; }
+    private ExecutorStatus Finish(WardenResponseReason responseReason, string reason)
     {
         ReleaseReservation();
         _walker.StopNextTick();
         _sortie.Finish();
+        ResponseReason = responseReason;
         Status = reason;
         return ExecutorStatus.Success;
     }
