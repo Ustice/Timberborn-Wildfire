@@ -1,0 +1,40 @@
+namespace Wildfire.Timberborn.FireBell;
+
+public enum BorrowedDutyPhase { Idle, Outbound, AtPoint, Returning }
+
+/// <summary>Disposable workforce experiment; no old executor stack or goods are owned here.</summary>
+public sealed class BorrowedDutyProgress
+{
+    public BorrowedDutyPhase Phase { get; private set; }
+    public float Hours { get; private set; }
+    public bool CancellationRequested { get; private set; }
+    public void Begin() { Phase = BorrowedDutyPhase.Outbound; Hours = 0; CancellationRequested = false; }
+    public void Arrive(bool physicallyPresent)
+    {
+        if (Phase != BorrowedDutyPhase.Outbound || !physicallyPresent) throw new InvalidOperationException("Borrowed duty requires physical arrival.");
+        Phase = BorrowedDutyPhase.AtPoint;
+    }
+    public void Advance(float hours)
+    {
+        if (!float.IsFinite(hours) || hours < 0) throw new ArgumentOutOfRangeException(nameof(hours));
+        Hours += hours;
+    }
+    public void RequestCancel() => CancellationRequested = true;
+    public void Return() => Phase = BorrowedDutyPhase.Returning;
+    public void Finish() => Phase = BorrowedDutyPhase.Idle;
+    public void Restore(int phase, float hours, bool cancel)
+    {
+        if (!Enum.IsDefined(typeof(BorrowedDutyPhase), phase) || !float.IsFinite(hours) || hours < 0)
+            throw new InvalidOperationException("Invalid borrowed duty save state.");
+        Phase = (BorrowedDutyPhase)phase; Hours = hours; CancellationRequested = cancel;
+    }
+}
+
+public readonly record struct BorrowedDutyEligibility(bool EmployedAtDonor, bool SameDistrict,
+    bool DuringWorkHours, bool RefusesWork, bool CriticalNeed, bool Mortal, bool CarriesGoods,
+    bool HasReservation, bool HoldsResponseWater, bool HasRunningExecutor, bool ResourceStateUnsafe)
+{
+    public bool CanJoin => EmployedAtDonor && SameDistrict && DuringWorkHours && !RefusesWork &&
+        !CriticalNeed && !Mortal && !CarriesGoods && !HasReservation && !HoldsResponseWater &&
+        !HasRunningExecutor && !ResourceStateUnsafe;
+}

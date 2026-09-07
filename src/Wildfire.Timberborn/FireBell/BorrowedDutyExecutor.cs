@@ -1,0 +1,169 @@
+using Timberborn.BaseComponentSystem;
+using Timberborn.BehaviorSystem;
+using Timberborn.Carrying;
+using Timberborn.CharacterNavigation;
+using Timberborn.EntitySystem;
+using Timberborn.GameDistricts;
+using Timberborn.InventorySystem;
+using Timberborn.MortalSystem;
+using Timberborn.Navigation;
+using Timberborn.NeedSystem;
+using Timberborn.Persistence;
+using Timberborn.WalkingSystem;
+using Timberborn.WorkSystem;
+using Timberborn.WorldPersistence;
+using UnityEngine;
+using Wildfire.Timberborn.FireResponse;
+using Wildfire.Timberborn.Resources;
+
+namespace Wildfire.Timberborn.FireBell;
+
+/// <summary>One empty-handed round trip. Employment is observed, never changed.</summary>
+public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableComponent, IDeletableEntity
+{
+    private static readonly ComponentKey Key = new("Wildfire.BorrowedDutyExecutor");
+    private static readonly PropertyKey<int> PhaseKey = new("Phase");
+    private static readonly PropertyKey<float> HoursKey = new("Hours");
+    private static readonly PropertyKey<bool> CancelKey = new("Cancel");
+    private static readonly PropertyKey<Workplace> DonorKey = new("Donor");
+    private static readonly PropertyKey<Vector3> OriginKey = new("Origin");
+    private static readonly PropertyKey<Vector3> PointKey = new("Point");
+    private static readonly PropertyKey<Vector3> DestinationKey = new("Destination");
+    private readonly BorrowedDutyFixture _fixture;
+    private readonly WardenFireField _field;
+    private readonly NativeResourceCoordinator _resources;
+    private readonly ReferenceSerializer _references;
+    private readonly INavigationService _navigation;
+    private readonly BorrowedDutyProgress _progress = new();
+    private Worker _worker = null!;
+    private Citizen _citizen = null!;
+    private WorkerWorkingHours _hours = null!;
+    private WorkRefuser _refuser = null!;
+    private GoodCarrier _carrier = null!;
+    private GoodReserver _reserver = null!;
+    private WardenEquipment _equipment = null!;
+    private Mortal _mortal = null!;
+    private NeedManager _needs = null!;
+    private BehaviorManager _manager = null!;
+    private Walker _walker = null!;
+    private TimberbornOwnedWalker _movement = null!;
+    private WalkToPositionExecutor _walk = null!;
+    private Navigator _navigator = null!;
+    private Transform _transform = null!;
+    private Workplace? _donor;
+    private Vector3 _origin, _point, _destination;
+    private bool _restored, _unsafeRoute;
+    private long _routeRevision = -1;
+    public BorrowedDutyPhase Phase => _progress.Phase;
+    public BorrowedDutyExecutor(BorrowedDutyFixture fixture, WardenFireField field, NativeResourceCoordinator resources,
+        ReferenceSerializer references, INavigationService navigation)
+    { _fixture = fixture; _field = field; _resources = resources; _references = references; _navigation = navigation; }
+    public void Awake()
+    {
+        _worker = GetComponent<Worker>(); _citizen = GetComponent<Citizen>();
+        _hours = GetComponent<WorkerWorkingHours>(); _refuser = GetComponent<WorkRefuser>();
+        _carrier = GetComponent<GoodCarrier>(); _reserver = GetComponent<GoodReserver>();
+        _equipment = GetComponent<WardenEquipment>(); _mortal = GetComponent<Mortal>();
+        _needs = GetComponent<NeedManager>(); _manager = GetComponent<BehaviorManager>();
+        _walker = GetComponent<Walker>(); _walk = GetComponent<WalkToPositionExecutor>();
+        _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
+        _navigator = GetComponent<Navigator>(); _transform = GetComponent<Transform>();
+        _walker.StartedNewPath += OnStartedNewPath;
+        _fixture.Register(this);
+    }
+    internal bool TryLaunch(Workplace donor, Vector3 point)
+    {
+        if (Phase != BorrowedDutyPhase.Idle || !_field.Ready || donor.GetComponent<WardenStation>() is not null) return false;
+        var district = donor.GetComponent<DistrictBuilding>();
+        var eligibility = new BorrowedDutyEligibility(_worker.Employed && ReferenceEquals(_worker.Workplace, donor),
+            district is not null && _citizen.HasAssignedDistrict && ReferenceEquals(_citizen.AssignedDistrict, district.District),
+            _hours.AreWorkingHours, _refuser.RefusesWork, _needs.AnyNeedIsInCriticalState(), _mortal.Dead || _mortal.ShouldDie,
+            _carrier.IsCarrying, _reserver.HasReservedCapacity || _reserver.HasReservedStock, _equipment.Loaded,
+            !string.IsNullOrEmpty(_manager.RunningExecutor.Name), _resources.IsIndeterminate);
+        if (!eligibility.CanJoin) return false;
+        TimberbornOwnedWalker.Verify();
+        _origin = _navigator.CurrentAccessOrPosition();
+        if ((point - _origin).sqrMagnitude > 16 * 16 || !_field.SafeRoute(_origin, point)) return false;
+        _donor = donor; _point = point; _progress.Begin();
+        if (Launch(point)) return true;
+        Finish(); return false;
+    }
+    public void RequestCancel() { if (Phase != BorrowedDutyPhase.Idle) _progress.RequestCancel(); }
+    public ExecutorStatus Tick(float hours)
+    {
+        if (Phase == BorrowedDutyPhase.Idle) return ExecutorStatus.Success;
+        if (!_manager.IsRunningExecutor<BorrowedDutyExecutor>()) throw new InvalidOperationException("Borrowed duty does not own native movement.");
+        if (_mortal.Dead || _mortal.ShouldDie)
+        { _movement.Stop(); _progress.Finish(); return ExecutorStatus.Failure; }
+        if (_resources.IsIndeterminate) { _movement.RejectRoute(); return ExecutorStatus.Running; }
+        if (_restored)
+        {
+            _restored = false; _movement.Stop();
+            if (!Launch(_destination)) return Finish();
+        }
+        _progress.Advance(hours);
+        if (_progress.Hours >= 2 || !_field.ObservationAvailable) return Finish();
+        if (Phase != BorrowedDutyPhase.Returning &&
+            (_progress.CancellationRequested || !_field.Ready || _donor is null || !_donor || !_donor.Enabled ||
+             !_worker.Employed || !ReferenceEquals(_worker.Workplace, _donor) || !_hours.AreWorkingHours ||
+             _refuser.RefusesWork || _needs.AnyNeedIsInCriticalState() || _carrier.IsCarrying ||
+             _reserver.HasReservedStock || _reserver.HasReservedCapacity)) return Return();
+        if (Phase == BorrowedDutyPhase.AtPoint) return Return();
+        if (_routeRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
+        if (_unsafeRoute) return Phase == BorrowedDutyPhase.Returning ? Finish() : Return();
+        var status = _walk.Tick(hours);
+        if (status == ExecutorStatus.Running) return status;
+        if (status == ExecutorStatus.Failure || !At(_destination)) return Finish();
+        _movement.Stop();
+        if (Phase == BorrowedDutyPhase.Returning) return Finish();
+        _progress.Arrive(At(_point));
+        return ExecutorStatus.Running;
+    }
+    private ExecutorStatus Return()
+    {
+        _movement.Stop(); _progress.Return();
+        if (!_field.TryRetreat(_navigator.CurrentAccessOrPosition(), new[] { _origin }, out var destination) || !Launch(destination)) return Finish();
+        return ExecutorStatus.Running;
+    }
+    private bool Launch(Vector3 destination)
+    {
+        if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination, Phase == BorrowedDutyPhase.Returning)) return false;
+        _destination = destination; _unsafeRoute = false;
+        var status = _walk.Launch(destination);
+        if (status == ExecutorStatus.Failure || _unsafeRoute) { _movement.Stop(); return false; }
+        _movement.ReleasePause(); return true;
+    }
+    private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
+    {
+        if (Phase is not (BorrowedDutyPhase.Outbound or BorrowedDutyPhase.Returning)) return;
+        _routeRevision = _field.Revision;
+        _unsafeRoute = !_field.SafeInstalledPath(_transform.position, _walker.PathCorners, Phase == BorrowedDutyPhase.Returning);
+        if (_unsafeRoute) _movement.RejectRoute();
+    }
+    private bool At(Vector3 destination) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), destination);
+    private ExecutorStatus Finish()
+    {
+        _movement.Stop(); _progress.Finish(); _movement.ReleasePause();
+        return ExecutorStatus.Success;
+    }
+    public void DeleteEntity()
+    {
+        _walker.StartedNewPath -= OnStartedNewPath; _fixture.Unregister(this);
+    }
+    public void Save(IEntitySaver saver)
+    {
+        var state = saver.GetComponent(Key);
+        state.Set(PhaseKey, (int)Phase); state.Set(HoursKey, _progress.Hours); state.Set(CancelKey, _progress.CancellationRequested);
+        if (_donor is not null && _donor) state.Set(DonorKey, _donor, _references.Of<Workplace>());
+        state.Set(OriginKey, _origin); state.Set(PointKey, _point); state.Set(DestinationKey, _destination);
+    }
+    public void Load(IEntityLoader loader)
+    {
+        var state = loader.GetComponent(Key);
+        _progress.Restore(state.Get(PhaseKey), state.Get(HoursKey), state.Get(CancelKey));
+        if (state.Has(DonorKey)) state.GetObsoletable(DonorKey, _references.Of<Workplace>(), out _donor);
+        _origin = state.Get(OriginKey); _point = state.Get(PointKey); _destination = state.Get(DestinationKey);
+        _restored = Phase != BorrowedDutyPhase.Idle;
+        // No movement or employment changes during Load; the first owned Tick replans.
+    }
+}
