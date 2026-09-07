@@ -72,6 +72,21 @@ public sealed class TimberbornTextureTreeBurnConsequenceApi : ITimberbornLiveTre
         };
     }
 
+    // Deliberately unwired: generation-aware request lifetime and save authority must precede activation.
+    internal TimberbornPartialYieldLossResult ApplyPositivePartialYieldLoss(TimberbornTreeBurnConsequence consequence)
+    {
+        if (consequence.Kind != TimberbornTreeBurnConsequenceKind.ReduceYield || consequence.EntityId == Guid.Empty ||
+            consequence.TargetKey.StableId != TimberbornBurnDamageIdentity.ForEntity(consequence.EntityId, NativeBurnTargetFamily.Tree))
+            throw new InvalidOperationException("Partial tree yield loss requires an exact Guid resource action.");
+        if (!TryResolveTree(consequence.EntityId, out var tree)) return new(TimberbornPartialYieldLossStatus.NotLive);
+        if (!tree.TryGetComponent(out Cuttable cuttable)) return new(TimberbornPartialYieldLossStatus.Unavailable);
+        string name = cuttable.YielderSpec.YielderComponentName;
+        var yielder = TimberbornPartialYieldLoss.SelectNamed(tree.AllComponents.OfType<Yielder>(), name);
+        if (!ReferenceEquals(cuttable.Yielder, yielder))
+            throw new InvalidOperationException("Native cuttable points at another named yielder.");
+        return TimberbornPartialYieldLoss.Apply(yielder, name, consequence.YieldResourceId, consequence.YieldLost);
+    }
+
     private TimberbornTreeBurnConsequenceResult ApplyDryTree(TimberbornTreeBurnConsequence consequence, BlockObject blockObject)
     {
 

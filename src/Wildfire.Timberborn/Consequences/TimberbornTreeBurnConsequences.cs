@@ -233,10 +233,14 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             return Unapplied(result);
         }
 
-        _appliedYieldLossByTarget[state.TargetKey] = targetYieldLost;
+        result.ValidateReceipt();
+        if (result.YieldLost > incrementalYieldLoss)
+            throw new InvalidOperationException("Native tree yield receipt exceeds requested loss.");
+        _appliedYieldLossByTarget.TryGetValue(state.TargetKey, out int previous);
+        _appliedYieldLossByTarget[state.TargetKey] = checked(previous + result.YieldLost);
         return new TimberbornTreeBurnTargetOutcome(
             Burnable: true,
-            YieldLost: incrementalYieldLoss,
+            YieldLost: result.YieldLost,
             Killed: false,
             VisualUpdated: false,
             IsUnknownResource: false,
@@ -393,6 +397,7 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
         TimberbornTreeBurnConsequenceKind kind,
         TimberbornBurnDamageTargetState state)
     {
+        result.ValidateReceipt();
         if (!result.Failed)
         {
             return;

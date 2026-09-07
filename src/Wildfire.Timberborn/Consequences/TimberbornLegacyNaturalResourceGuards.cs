@@ -18,6 +18,7 @@ public sealed class TimberbornLegacyTreeMutationGuard : ITimberbornTreeBurnConse
         _guard.TransferInventory(() =>
         {
             result = _api.ApplyConsequence(consequence);
+            result.ValidateReceipt();
             if (result.Failed) throw new InvalidOperationException("Native tree consequence reported failure.");
         });
         return result;

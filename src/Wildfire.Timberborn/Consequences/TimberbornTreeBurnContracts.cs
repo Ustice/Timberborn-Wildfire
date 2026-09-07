@@ -28,8 +28,13 @@ public enum TimberbornTreeBurnConsequenceStatus
     NotLive, Applied, AlreadySatisfied, Unavailable, Failed,
 }
 
-public readonly record struct TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus Status)
+public readonly record struct TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus Status, int YieldLost = 0)
 {
+    internal void ValidateReceipt()
+    {
+        if (YieldLost < 0 || (Status != TimberbornTreeBurnConsequenceStatus.Applied && YieldLost != 0))
+            throw new InvalidOperationException("Native tree consequence returned a contradictory yield receipt.");
+    }
     public bool Applied => Status == TimberbornTreeBurnConsequenceStatus.Applied;
     public bool Failed => Status == TimberbornTreeBurnConsequenceStatus.Failed;
     public bool Satisfied => Applied || Status == TimberbornTreeBurnConsequenceStatus.AlreadySatisfied;

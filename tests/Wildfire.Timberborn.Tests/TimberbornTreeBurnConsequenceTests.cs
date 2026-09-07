@@ -441,7 +441,8 @@ public sealed class TimberbornTreeBurnConsequenceTests
         RecordingTreeBurnConsequenceApi treeApi = new(static consequence =>
             consequence.Kind == TimberbornTreeBurnConsequenceKind.MarkBurnedLeftover
                 ? new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Failed)
-                : new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied));
+                : new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied,
+                    consequence.Kind == TimberbornTreeBurnConsequenceKind.ReduceYield ? consequence.YieldLost : 0));
         TimberbornTreeBurnConsequenceSink treeSink = new(burnDamageService, treeApi);
         TimberbornFireCellDeltaDecision burnStep = Decision(0, oldFuel: 15, newFuel: 3);
         TimberbornFireCellDeltaDecision spentFuel = Decision(0, oldFuel: 3, newFuel: 0);
@@ -618,7 +619,8 @@ public sealed class TimberbornTreeBurnConsequenceTests
         public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence consequence)
         {
             Consequences.Add(consequence);
-            return apply?.Invoke(consequence) ?? new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied);
+            return apply?.Invoke(consequence) ?? new TimberbornTreeBurnConsequenceResult(TimberbornTreeBurnConsequenceStatus.Applied,
+                consequence.Kind == TimberbornTreeBurnConsequenceKind.ReduceYield ? consequence.YieldLost : 0);
         }
     }
 

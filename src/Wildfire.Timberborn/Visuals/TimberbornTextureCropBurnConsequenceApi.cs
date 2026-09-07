@@ -52,6 +52,21 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornLiveCro
         };
     }
 
+    // Deliberately unwired: generation-aware request lifetime and save authority must precede activation.
+    internal TimberbornPartialYieldLossResult ApplyPositivePartialYieldLoss(TimberbornCropBurnConsequence consequence)
+    {
+        if (consequence.Kind != TimberbornCropBurnConsequenceKind.ReduceYield || consequence.EntityId == Guid.Empty ||
+            consequence.TargetKey.StableId != TimberbornBurnDamageIdentity.ForEntity(consequence.EntityId, NativeBurnTargetFamily.Crop))
+            throw new InvalidOperationException("Partial crop yield loss requires an exact canonical Guid resource action.");
+        if (!TryResolveCrop(consequence.EntityId, out var crop)) return new(TimberbornPartialYieldLossStatus.NotLive);
+        if (!crop.TryGetComponent(out Gatherable gatherable)) return new(TimberbornPartialYieldLossStatus.Unavailable);
+        string name = gatherable.YielderSpec.YielderComponentName;
+        var yielder = TimberbornPartialYieldLoss.SelectNamed(crop.AllComponents.OfType<Yielder>(), name);
+        if (!ReferenceEquals(gatherable.Yielder, yielder))
+            throw new InvalidOperationException("Native gatherable points at another named yielder.");
+        return TimberbornPartialYieldLoss.Apply(yielder, name, consequence.YieldResourceId, consequence.YieldLost);
+    }
+
     private bool TryResolveCrop(Guid id, out BlockObject crop)
     {
         crop = null!;

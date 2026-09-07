@@ -74,6 +74,7 @@
       <HintPath>$(TimberbornManagedPath)/Timberborn.Carrying.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.ReservableSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.ReservableSystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.Yielding">
       <HintPath>$(TimberbornManagedPath)/Timberborn.Yielding.dll</HintPath>
       <Private>false</Private>
