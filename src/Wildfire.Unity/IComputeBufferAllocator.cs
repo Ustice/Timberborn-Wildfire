@@ -16,6 +16,9 @@ public interface IComputeBufferHandle : IDisposable
     int StrideBytes { get; }
 
     void Upload(ReadOnlySpan<uint> values);
+
+    // Element offsets/counts refer to structured elements, not uint words.
+    uint[] ReadElements(int firstElement, int elementCount);
 }
 
 public interface IAppendComputeBufferHandle : IComputeBufferHandle

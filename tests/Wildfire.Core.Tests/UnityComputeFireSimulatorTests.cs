@@ -6,6 +6,45 @@ namespace Wildfire.Core.Tests;
 public sealed class UnityComputeFireSimulatorTests
 {
     [Fact]
+    public void AshCollectionReadsTheAppendedGpuCommandAfterTheFullStep()
+    {
+        using var grid = ComputeBufferGrid.FromCells(2, 1, 1, [0, 0], new RecordingComputeBufferAllocator());
+        var changes = (RecordingComputeBufferHandle)grid.QueuedChanges;
+        var originalNext = grid.NextCells;
+        var dispatcher = new RecordingFireSimComputeDispatcher
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName == UnityComputeFireSimulator.ApplyExternalChangesKernelName)
+                    changes.UploadedValues[6] |= FireSimGpuProtocol.CollectionReceiptValidMask | (1u << 27);
+            }
+        };
+        IFireSimAshCollectionSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        simulator.RegisterChange(new(0, RemoveAsh: 1));
+        FireSimAshCollectionReceipt? receipt = null;
+        simulator.TryCollectAsh(new(1, 3), value =>
+        {
+            Assert.Same(originalNext, grid.CurrentCells);
+            Assert.Equal(2, dispatcher.Dispatches.Count);
+            receipt = value;
+        });
+        Assert.Equal(new FireSimAshCollectionReceipt(1, 3, 1), receipt);
+        Assert.Equal(2u, dispatcher.Dispatches[0].ChangeCount);
+    }
+
+    [Fact]
+    public void MissingGpuReceiptDoesNotCallHostEvenThoughTheStepCompleted()
+    {
+        using var grid = ComputeBufferGrid.FromCells(1, 1, 1, [0], new RecordingComputeBufferAllocator());
+        IFireSimAshCollectionSimulator simulator = new UnityComputeFireSimulator(grid, new RecordingFireSimComputeDispatcher());
+        int goods = 0;
+        var exception = Assert.Throws<FireSimStepInputException>(() =>
+            simulator.TryCollectAsh(new(0, 1), receipt => goods += receipt.Collected));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, exception.Outcome);
+        Assert.Equal(0, goods);
+    }
+
+    [Fact]
     public void StepInputUsesProductionUploadAndCommitsAfterBufferSwap()
     {
         RecordingComputeBufferAllocator allocator = new();
@@ -763,6 +802,12 @@ public sealed class UnityComputeFireSimulatorTests
 
             UploadedValues = values.ToArray();
             UploadHistory.Add(UploadedValues);
+        }
+
+        public uint[] ReadElements(int firstElement, int elementCount)
+        {
+            int words = StrideBytes / sizeof(uint);
+            return UploadedValues.Skip(firstElement * words).Take(elementCount * words).ToArray();
         }
 
         public void ResetAppendCounter()

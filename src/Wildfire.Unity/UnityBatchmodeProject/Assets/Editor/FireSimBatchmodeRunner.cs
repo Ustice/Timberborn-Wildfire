@@ -109,6 +109,7 @@ namespace Wildfire.UnityBatchmode
                     LogPhase("dispatch", "start", "tick=" + tick);
                     deltas.SetCounterValue(0);
                     FireSimChangeGpu[] changes = fixture.ChangesForTick(tick);
+                    uint[] appliedWords = new uint[changes.Length * 4];
                     if (changes.Length > 0)
                     {
                         externalChanges.SetData(changes);
@@ -118,6 +119,15 @@ namespace Wildfire.UnityBatchmode
                             currentAtmosphericFields, nextAtmosphericFields, companionFields);
                         shader.SetInt("ChangeCount", changes.Length);
                         shader.Dispatch(applyKernel, 1, 1, 1);
+                        var applied = new FireSimChangeGpu[changes.Length];
+                        externalChanges.GetData(applied, 0, 0, applied.Length);
+                        for (int c = 0; c < applied.Length; c++)
+                        {
+                            appliedWords[c * 4] = applied[c].CellIndex;
+                            appliedWords[c * 4 + 1] = applied[c].SetMask;
+                            appliedWords[c * 4 + 2] = applied[c].AddFields;
+                            appliedWords[c * 4 + 3] = applied[c].SetValues;
+                        }
                         LogPhase("external-changes", "ok", "tick=" + tick + " count=" + changes.Length);
                     }
 
@@ -143,7 +153,7 @@ namespace Wildfire.UnityBatchmode
 
                     LogPhase("readback", "start", "tick=" + tick);
                     DeltaSnapshot[] tickDeltas = ReadDeltas(deltas, deltaCounter, deltas.count);
-                    ticks[tick - 1] = new TickSnapshot(tick, tickDeltas);
+                    ticks[tick - 1] = new TickSnapshot(tick, tickDeltas, appliedWords);
                     LogPhase("readback", "ok", "tick=" + tick + " deltas=" + tickDeltas.Length);
                     Swap(ref currentCells, ref nextCells);
                     Swap(ref currentAtmosphericFields, ref nextAtmosphericFields);
@@ -645,11 +655,13 @@ namespace Wildfire.UnityBatchmode
     {
         public readonly int Tick;
         public readonly DeltaSnapshot[] Deltas;
+        public readonly uint[] AppliedChangeWords;
 
-        public TickSnapshot(int tick, DeltaSnapshot[] deltas)
+        public TickSnapshot(int tick, DeltaSnapshot[] deltas, uint[] appliedChangeWords)
         {
             Tick = tick;
             Deltas = deltas;
+            AppliedChangeWords = appliedChangeWords;
         }
 
         public void AppendJson(StringBuilder builder, string indent)
@@ -657,6 +669,13 @@ namespace Wildfire.UnityBatchmode
             builder.AppendLine(indent + "{");
             builder.AppendLine(indent + "  \"tick\": " + Tick.ToString(CultureInfo.InvariantCulture) + ",");
             builder.AppendLine(indent + "  \"deltaCount\": " + Deltas.Length.ToString(CultureInfo.InvariantCulture) + ",");
+            builder.Append(indent + "  \"appliedChangeWords\": [");
+            for (int i = 0; i < AppliedChangeWords.Length; i++)
+            {
+                if (i > 0) builder.Append(",");
+                builder.Append(AppliedChangeWords[i].ToString(CultureInfo.InvariantCulture));
+            }
+            builder.AppendLine("],");
             builder.AppendLine(indent + "  \"deltas\": [");
             for (int index = 0; index < Deltas.Length; index += 1)
             {

@@ -3,7 +3,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed class UnityComputeFireSimulator : IFireSimStepInputSimulator, IFireSimStepBackend
+public sealed class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshCollectionBackend
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -120,6 +120,21 @@ public sealed class UnityComputeFireSimulator : IFireSimStepInputSimulator, IFir
         }
 
         return _step.TryTickWithInput(this, input, commitInput);
+    }
+
+    public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commitCollection)
+    {
+        if (BufferGrid is null || _dispatcher is null)
+            throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
+        return _step.TryCollectAsh(this, input, commitCollection);
+    }
+
+    FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
+    {
+        uint[] words = BufferGrid!.QueuedChanges.ReadElements(changeIndex, 1);
+        if (words.Length != FireSimGpuProtocol.UInt32WordsPerChange)
+            throw new InvalidOperationException("GPU ash receipt readback returned an incomplete command.");
+        return new FireSimGpuChange(words[0], words[1], words[2], words[3]);
     }
 
     void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)

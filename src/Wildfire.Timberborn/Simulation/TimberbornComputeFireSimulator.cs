@@ -451,12 +451,12 @@ public interface ITimberbornConfigurableFireSimParameters
 }
 
 public sealed class TimberbornComputeFireSimulator :
-    IFireSimStepInputSimulator,
+    IFireSimAshCollectionSimulator,
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
     ITimberbornTransportFieldReader, ITimberbornCellFieldReader,
-    IFireSimStepBackend,
+    IFireSimAshCollectionBackend,
     IDisposable
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
@@ -823,6 +823,19 @@ public sealed class TimberbornComputeFireSimulator :
     {
         ThrowIfDisposed();
         return _step.TryTickWithInput(this, input, commitInput);
+    }
+
+    public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commitCollection)
+    {
+        ThrowIfDisposed();
+        return _step.TryCollectAsh(this, input, commitCollection);
+    }
+
+    FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
+    {
+        var applied = new FireSimGpuChange[1];
+        _externalChanges.GetData(applied, 0, changeIndex, 1);
+        return applied[0];
     }
 
     void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)

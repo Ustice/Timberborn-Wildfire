@@ -340,6 +340,12 @@ public sealed class ShaderSnapshotHarnessTests
             UploadedValues = values.ToArray();
         }
 
+        public uint[] ReadElements(int firstElement, int elementCount)
+        {
+            int words = StrideBytes / sizeof(uint);
+            return UploadedValues.Skip(firstElement * words).Take(elementCount * words).ToArray();
+        }
+
         public void ResetAppendCounter()
         {
         }

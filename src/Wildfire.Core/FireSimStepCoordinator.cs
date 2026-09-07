@@ -61,6 +61,8 @@ public sealed class FireSimStepCoordinator
     public GpuFireStepResult? TryCollectAsh(IFireSimAshCollectionBackend backend, FireSimAshCollectionInput input,
         Action<FireSimAshCollectionReceipt> commitCollection)
     {
+        if (input.CellIndex < 0 || input.CellIndex >= _cellCount)
+            throw new ArgumentOutOfRangeException(nameof(input), "Collection must address a cell in this grid.");
         if (commitCollection is null) throw new ArgumentNullException(nameof(commitCollection));
         var change = new FireSimChange(input.CellIndex, CollectCleanAsh: input.Requested);
         FireSimGpuProtocol.EncodeChange(change); // Reject range errors before admission.

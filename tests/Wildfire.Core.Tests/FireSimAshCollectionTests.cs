@@ -19,6 +19,17 @@ public sealed class FireSimAshCollectionTests
         Assert.Throws<ArgumentException>(() => FireSimGpuProtocol.EncodeChange(new(4, SetAsh: 3, CollectCleanAsh: request)));
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public void InvalidCellFailsBeforeAnyBackendWork(int cell)
+    {
+        var backend = new Backend();
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new FireSimStepCoordinator(1, 1).TryCollectAsh(backend, new(cell, 1), _ => { }));
+        Assert.Empty(backend.Events);
+    }
+
     [Fact]
     public void OversizedRequestAndUnacknowledgedCollectionAreRejectedBeforeAdmission()
     {

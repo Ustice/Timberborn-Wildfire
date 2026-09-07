@@ -72,7 +72,8 @@ public sealed record ShaderSnapshotCapture(
 public sealed record ShaderSnapshotTick(
     int Tick,
     int DeltaCount,
-    ShaderSnapshotDelta[] Deltas);
+    ShaderSnapshotDelta[] Deltas,
+    uint[]? AppliedChangeWords = null);
 
 public readonly record struct ShaderSnapshotDelta(
     int CellIndex,
@@ -460,7 +461,11 @@ public static class ShaderSnapshotJson
             throw new InvalidDataException($"{sourceName}: tick {tickNumber} deltaCount {deltaCount} does not match {deltas.Length} deltas.");
         }
 
-        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas);
+        uint[]? appliedWords = tick.TryGetProperty("appliedChangeWords", out var words) && words.ValueKind != JsonValueKind.Null
+            ? words.EnumerateArray().Select(word => word.GetUInt32()).ToArray() : null;
+        if (appliedWords is not null && appliedWords.Length % FireSimGpuProtocol.UInt32WordsPerChange != 0)
+            throw new InvalidDataException($"{sourceName}: appliedChangeWords must contain complete commands.");
+        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas, appliedWords);
     }
 
     private static ShaderSnapshotDelta ReadDelta(JsonElement delta, string sourceName)
@@ -707,6 +712,12 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
         AddIfDifferent(differences, $"ticks[{expected.Tick}].tick", expected.Tick, actual.Tick, maxDifferences);
         AddIfDifferent(differences, $"ticks[{expected.Tick}].deltaCount", expected.DeltaCount, actual.DeltaCount, maxDifferences);
         AddIfDifferent(differences, $"ticks[{expected.Tick}].deltas.length", expected.Deltas.Length, actual.Deltas.Length, maxDifferences);
+
+        uint[] expectedWords = expected.AppliedChangeWords ?? [];
+        uint[] actualWords = actual.AppliedChangeWords ?? [];
+        AddIfDifferent(differences, $"ticks[{expected.Tick}].appliedChangeWords.length", expectedWords.Length, actualWords.Length, maxDifferences);
+        for (int i = 0; i < Math.Min(expectedWords.Length, actualWords.Length); i++)
+            AddIfDifferent(differences, $"ticks[{expected.Tick}].appliedChangeWords[{i}]", expectedWords[i], actualWords[i], maxDifferences);
 
         ShaderSnapshotDelta[] expectedDeltas = SortDeltas(expected.Deltas);
         ShaderSnapshotDelta[] actualDeltas = SortDeltas(actual.Deltas);
