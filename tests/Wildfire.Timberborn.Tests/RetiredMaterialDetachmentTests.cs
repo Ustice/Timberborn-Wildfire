@@ -95,14 +95,16 @@ public sealed class RetiredMaterialDetachmentTests
     }
 
     [Fact]
-    public void RejectedBatchStillDeliversEarlierOutputsAndRemainsCleanupRequired()
+    public void RejectedBatchAfterSimulationPoisonsSaveWithoutPublishingNativeDelivery()
     {
         var f = new Fixture("Empty"); f.Simulator.Accepted = false;
         f.Simulator.RegisterChange(new(0, SetFuel: 2)); int consumed = 0;
-        Assert.Equal(P.Result.Rejected, f.Flush(step => { Assert.Single(step.Deltas); consumed++; }));
-        Assert.Equal(1, consumed); Assert.Equal(0, f.Simulator.Coordinator.PendingChangeCount);
-        Assert.Equal(2u, f.Plan()!.Token); Assert.Throws<InvalidOperationException>(f.RequireNormal);
-        Assert.False(f.Guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(() => f.Flush(_ => consumed++));
+        Assert.Equal(0, consumed); Assert.Equal(0, f.Simulator.Coordinator.PendingChangeCount);
+        Assert.Equal(1, f.Simulator.Simulations); Assert.True(f.Guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(f.Guard.ThrowIfSaveUnsafe);
+        Assert.Throws<InvalidOperationException>(f.RequireNormal);
+        Assert.Throws<InvalidOperationException>(() => f.Flush());
     }
 
     [Fact]

@@ -20,7 +20,7 @@ No per-cell fuel estimates, lifecycle phase journal or archive reconstruction ar
 
 ## Delivery transaction
 
-The test runner `Flush(guard, simulator, batch, consumeRaw)` holds the **existing** NativeResourceTransaction across the material step, its callback/listeners and delivery of the returned delta batch. The receipt callback only records the material receipt. It never declares native output delivery complete. `consumeRaw` must return successfully before Applied/Rejected is returned and save exclusion ends.
+The test runner `Flush(guard, simulator, batch, consumeRaw)` holds the **existing** NativeResourceTransaction across the material step, its callback/listeners and delivery of the returned delta batch. The receipt callback only records the material receipt. It never declares native output delivery complete. `consumeRaw` must return successfully before Applied is returned and save exclusion ends.
 
 The actual public `TimberbornOwnedDeltaConsumer.Consume` currently starts its own guard. It cannot be passed directly into this already guarded prototype. Production composition needs a narrow agreed inner-delivery entry owned by the same outer transaction; opening a save gap or nesting guards is not the solution. No such native consumer extraction or runtime binding is implemented here.
 
@@ -30,14 +30,14 @@ The actual public `TimberbornOwnedDeltaConsumer.Consume` currently starts its ow
 | CapacityBlocked/null | No upload, token attempt, queued-input consumption or simulation. | Retired-active snapshot can remain an explicit cleanup-required checkpoint; ordinary step stays blocked. |
 | Typed NotApplied | No external inputs applied, but attempt token may have advanced before failed upload. | Guard remains safe; replan from fresh authority, keep ordinary step blocked. |
 | Accepted + raw consumer completes | Exact outgoing archives published, earlier old-owner outputs consumed, all incoming material admitted. | Recompute pending work; normal step only if none remains. |
-| Rejected + raw consumer completes | Earlier ordinary inputs and simulation still ran under unchanged material authority. | Still cleanup-required. Never call this a no-op or assume no old material simulated. Runtime rejection policy remains to be chosen. |
+| Rejected | Earlier ordinary inputs and simulation already ran under unchanged material authority. No raw native delivery is attempted or reported complete. | Reconciliation failure inside the existing guard poisons save and normal steps. No ordinary retry or guessed output replay. |
 | Indeterminate | GPU write/readback or host commit may have partly completed. | Existing host guard poisoned; no save, replay or ordinary step. |
 | Committed listener failure | Core authority committed, but no successful returned output batch reaches the runner. | Host delivery guard poisoned, even though Core itself permits later steps. No guessed delta replay. |
 | Raw consumer failure | Native effects may have partly completed. | Same guard poisoned; no save or replay. |
 
 Unexpected exceptions are conservatively fatal inside the guarded runner; only Core's explicit NotApplied outcome is handled as read-safe. This is a prototype contract, not a promise that every future host validation error needs to poison.
 
-**Important existing protocol limit:** an admitted handoff rejected by the GPU still runs ordinary simulation with unchanged material. A caller-side ordinary-Tick gate cannot prevent that single rejected step. Valid planner preflight should avoid expected rejections, but fail-stop/reconciliation behavior after rejection must be explicit before activation. The prototype exposes Rejected and keeps the next ordinary step blocked.
+**Important existing protocol limit:** an admitted handoff rejected by the GPU still runs ordinary simulation with unchanged material. A caller-side ordinary-Tick gate cannot prevent that single rejected step. Valid planner preflight must eliminate routine rejections. An unexpected rejection is an invalid played-world boundary, so the prototype throws inside the existing guard and requires reload of a valid snapshot. This is distinct from provably no-step CapacityBlocked and NotApplied; it does not introduce another persistent phase ledger or change the shader protocol.
 
 ## Exact queue-capacity counterexample
 

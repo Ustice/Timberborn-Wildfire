@@ -9,7 +9,7 @@ namespace Wildfire.Timberborn.Tests;
 // Disposable orchestration proof. No runtime registration or independent material authority.
 internal static class RetiredMaterialDetachmentPrototype
 {
-    internal enum Result { NoWork, CapacityBlocked, Applied, Rejected }
+    internal enum Result { NoWork, CapacityBlocked, Applied }
 
     internal static FireSimMaterialHandoffBatch? Plan(TimberbornNativeMaterialRegistry registry,
         IReadOnlyDictionary<Guid, OwnedBodyRetention> owners, FireSimSnapshot snapshot,
@@ -72,8 +72,9 @@ internal static class RetiredMaterialDetachmentPrototype
             { notApplied = exception; return; } // Explicit no-apply receipt, not a guessed rollback.
             if (step is null) return;
             if (receipt is null) throw new InvalidOperationException("Completed step has no material receipt.");
+            if (!receipt.Accepted) throw new InvalidOperationException("Material reconciliation was rejected after simulation; reload a valid snapshot.");
             consumeRaw(step.Value); // Deliberately raw: actual public owned Consumer currently starts its own guard.
-            outcome = receipt.Accepted ? Result.Applied : Result.Rejected;
+            outcome = Result.Applied;
         });
         if (notApplied is not null) ExceptionDispatchInfo.Capture(notApplied).Throw();
         return outcome;
