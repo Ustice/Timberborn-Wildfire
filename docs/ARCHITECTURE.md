@@ -39,6 +39,16 @@ The [protocol](../src/Wildfire.Core/FireSimGpuProtocol.cs) encodes all supported
 
 [TimberbornComputeFireSimulator](../src/Wildfire.Timberborn/Simulation/TimberbornComputeFireSimulator.cs) implements the native backend. [ComputeBufferGrid](../src/Wildfire.Unity/ComputeBufferGrid.cs) supports the portable Unity backend. Changes to bindings also need the [batchmode runner](../src/Wildfire.Unity/UnityBatchmodeProject/Assets/Editor/FireSimBatchmodeRunner.cs) checked against the shared format.
 
+## Material ownership and native consequences
+
+[FireSimMaterialHandoffSession](../src/Wildfire.Core/FireSimMaterialHandoffSession.cs) owns accepted active slots, known identities, inactive GPU archives and attempted transaction tokens. Whole-batch validation and GPU receipts govern material changes; a desired native projection is not an accepted simulator state. Hidden material retains its actual fuel and companion fields. Administrative handoffs do not create burn-damage deltas. See [the handoff protocol and executed proof](qa/material-handoff-prototype.md).
+
+[TimberbornNativeMaterialRegistry](../src/Wildfire.Timberborn/Mapping/TimberbornNativeMaterialRegistry.cs) owns durable Guid/local-footprint bindings and desired native projections. Local slot identity survives movement, rotation and overlap; retained target lookup includes removed owners. These bindings do not own remaining fuel or authorize replacing a known slot with fresh material.
+
+[TimberbornOwnedDeltaConsumer](../src/Wildfire.Timberborn/Consequences/Owned/TimberbornOwnedDeltaConsumer.cs) resolves a complete batch to canonical native owners before effects. One body-damage pass precedes raw tree, crop and storage effects under the same resource guard used by world saves. Each native mutation rechecks the original entity. A callback can delete a later target; that does not authorize an effect on its replacement. Body liveness is independent of inventory availability, and structure rollback remains explicitly unavailable in this route.
+
+These owned components are implemented and independently exercised, but the production initializer still uses legacy world import and dispatch. Activation requires coherent native lifecycle publication and consequence-history restoration; neither the material registry nor complete GPU saves alone fulfills those requirements. [The aggregate's proof and limits](qa/owned-consequence-batch.md) describe this boundary.
+
 ## Runtime lifecycle
 
 [TimberbornRuntimeInitialization](../src/Wildfire.Timberborn/Runtime/TimberbornRuntimeInitialization.cs) owns `Unloaded`, `WaitingForWorld`, `Initializing`, `Ready`, `Unsupported`, and `Failed` states. Only readiness waits retry automatically. Unsupported dimensions and initialization failures remain terminal until explicit load/reset; size is checked before expensive world import.
@@ -73,7 +83,11 @@ At each FireSystem tick, QA prepares pending spend inputs, the shared scheduler 
 
 `CellDelta` contains packed-cell transitions, not full transport state. [ITimberbornTransportFieldReader](../src/Wildfire.Timberborn/Simulation/ITimberbornTransportFieldReader.cs) provides an explicit synchronous transport snapshot. [TimberbornAshFieldSynchronizer](../src/Wildfire.Timberborn/Ash/TimberbornAshFieldSynchronizer.cs) reads it at most once per successfully synchronized tick and updates the derived ash model.
 
-Routine ash synchronization reads one transport buffer. Save capture separately reads cells and transport through the [persistence boundary](../src/Wildfire.Timberborn/Persistence/). The observation still allocates and performs synchronous full-grid readback; it is not asynchronous or incremental. Gameplay and rendering derive ash from simulator transport and queue mutations back rather than maintaining independent authority.
+Routine ash synchronization reads one transport buffer. The observation still allocates and performs synchronous full-grid readback; it is not asynchronous or incremental. Gameplay and rendering derive ash from simulator transport and queue mutations back rather than maintaining independent authority.
+
+[FireSimSnapshot](../src/Wildfire.Core/FireSimSnapshot.cs) captures cells, transport, companion fields, target/slot identities, inactive archives, authority tokens, parameters, seed, tick and pending ordinary inputs. Both backends restore into newly constructed simulators. Capture rejects uncertain simulator state and interleaving mutation; a legacy cells-only restore explicitly lacks complete material history. [The actual native-factory probe](qa/material-snapshot-prototype.md) verifies preserved archives and exhausted fuel after serialization and new construction.
+
+[TimberbornOwnedMaterialSnapshot](../src/Wildfire.Timberborn/Persistence/TimberbornOwnedMaterialSnapshot.cs) pairs that simulator state with native Guid/local-slot bindings in the WF2 codec. Production saves still use WF1; the initializer preserves and refuses unsupported WF2 adoption. Complete consequence history, canonical deleted-owner registrations, native world reconciliation and single publication of the restored runtime remain required. [The save bridge](qa/owned-material-persistence-bridge.md) distinguishes codec proof from complete world restoration.
 
 ## Native equipment assets
 
@@ -83,7 +97,7 @@ Routine ash synchronization reads one transport buffer. Save capture separately 
 
 [Timberborn.Managed.props](../build/Timberborn.Managed.props) supplies a shared `TimberbornManagedPath`, defaulting to the macOS Steam installation. The adapter and native tests import it. Set `-p:TimberbornManagedPath=/path/to/Managed` for another installation; missing assemblies produce a direct diagnostic. This selects assemblies, not a platform-support promise.
 
-[TimberbornInventoryMutations](../src/Wildfire.Timberborn/Compatibility/TimberbornInventoryMutations.cs) distinguishes consuming goods, restoring existing stock, carrying uncountable harvest, and recording production at deposit. [TimberbornConstructionRebuild](../src/Wildfire.Timberborn/Compatibility/TimberbornConstructionRebuild.cs) captures a full blueprint and placement before deletion and validates the recreated construction state. Root, dependent, and overlapping-path requests are prepared before destructive rebuild operations. Native creation can still fail afterward; preflight is not rollback.
+[TimberbornInventoryMutations](../src/Wildfire.Timberborn/Compatibility/TimberbornInventoryMutations.cs) distinguishes consuming goods, restoring existing stock, carrying uncountable harvest, and recording production at deposit. The legacy reconstruction path uses [TimberbornConstructionRebuild](../src/Wildfire.Timberborn/Compatibility/TimberbornConstructionRebuild.cs) to capture blueprint and placement before deletion. Preparation is not rollback, stock conservation or replacement-identity proof. That path is excluded from owned dispatch while exact repair lineage and material accounting are rebuilt. [Native closure fixtures](qa/native-structure-closure-proof.md) separately establish blocker ownership, player-pause independence and callback failure semantics; they do not implement material-funded repair.
 
 [Compatibility probes](../src/Wildfire.Timberborn/Compatibility/) record runtime capabilities. Compile-time API changes may prevent probes from running. [Mapping](../src/Wildfire.Timberborn/Mapping/) translates world observations; [consequences](../src/Wildfire.Timberborn/Consequences/) perform native actions; [beaver services](../src/Wildfire.Timberborn/Beavers/) translate exposure; [visuals](../src/Wildfire.Timberborn/Visuals/) present fields. Full Unity `EntityId` values identify cached native materials and textures.
 
