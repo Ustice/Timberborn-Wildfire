@@ -16,9 +16,11 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         try
         {
             var owners = _origins.Capture(_damage);
-            if (owners.Any(owner => owner.Retention == OwnedBodyRetention.RetiredNativeOwner && _bodies.ObservePresence(owner.EntityId)!=TimberbornOwnedBodyPresence.Absent))
-                throw new InvalidOperationException("A live native owner lost its body definition; it cannot be saved as a tombstone.");
-            if (_nativeDefinitions is not null && owners.Any(owner=>owner.Retention==OwnedBodyRetention.RetainedBody && _bodies.ObservePresence(owner.EntityId)!=TimberbornOwnedBodyPresence.Live))
+            if (owners.Any(owner => owner.Retention == OwnedBodyRetention.RetiredNativeOwner &&
+                _bodies.ObservePresence(owner.EntityId) != TimberbornOwnedBodyPresence.Absent))
+                throw new InvalidOperationException("A native registry entry remains for a retired owner; it cannot be saved as a tombstone.");
+            if (_nativeDefinitions is not null && owners.Any(owner => owner.Retention == OwnedBodyRetention.RetainedBody &&
+                _bodies.ObservePresence(owner.EntityId) != TimberbornOwnedBodyPresence.Live))
                 throw new InvalidOperationException("Cannot capture a witnessed retained body whose native entity is missing; removal must settle first.");
             var natural = owners.Where(owner => owner.Family is NativeBurnTargetFamily.Tree or NativeBurnTargetFamily.Crop)
                 .Select(owner => owner.Family == NativeBurnTargetFamily.Tree ? _trees.CaptureProgress(owner) : _crops.CaptureProgress(owner));
@@ -36,7 +38,8 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         {
             if (owner.Retention == OwnedBodyRetention.RetiredNativeOwner)
             {
-                if (effects.Bodies.ObservePresence(owner.EntityId)!=TimberbornOwnedBodyPresence.Absent) throw new ArgumentException("A retired saved owner cannot authorize a live native body.");
+                if (effects.Bodies.ObservePresence(owner.EntityId) != TimberbornOwnedBodyPresence.Absent)
+                    throw new ArgumentException("A retired saved owner cannot authorize a remaining native registry entry.");
                 consumer._origins.RegisterRetired(owner.EntityId, owner.Family, owner.TargetKey);
             }
             else consumer._origins.Register(owner.EntityId, owner.Family, owner.TargetKey);
@@ -49,7 +52,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
             else consumer._crops.RestoreProgress(owner, progress);
         }
         consumer._storage.RestoreCredit(history);
-        consumer._nativeDefinitions=history.NativeDefinitions;
+        consumer._nativeDefinitions = history.NativeDefinitions;
         return consumer;
     }
 }
