@@ -1,6 +1,6 @@
 # Conditional clean ash collection
 
-This protocol provides a receipt for actual simulator-owned removal. It does not yet replace the native ash worker or make that worker's saves/accounting safe.
+This protocol provides a receipt for actual simulator-owned removal. The [native ash-worker prototype](../qa/ash-native-harvest-prototype.md) now uses it for one-unit collection and guarded native deposit; live worker/save validation remains outstanding.
 
 `IFireSimAshCollectionSimulator.TryCollectAsh(FireSimAshCollectionInput, Action<FireSimAshCollectionReceipt>)` admits one exclusive input after the next ordinary queued batch. Full capacity returns null without ticking or enqueuing collection. Invalid cell/request arguments fail before admission. `Requested` is explicitly 0–3; zero is a valid request with a GPU-authored zero receipt. Generic `RegisterChange` and `TryTickWithInput` reject any collection field, including zero. The existing unconditional water callback is unchanged.
 
