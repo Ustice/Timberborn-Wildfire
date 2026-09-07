@@ -27,7 +27,7 @@ The actual public `TimberbornOwnedDeltaConsumer.Consume` currently starts its ow
 | Outcome | Material/queue implications | Native save and next-step gate |
 | --- | --- | --- |
 | NoWork | No retired slot remains active; no step dispatched. | Ordinary step may proceed if other prerequisites hold. |
-| CapacityBlocked/null | No upload, token attempt, queued-input consumption or simulation. | Retired-active snapshot can remain an explicit cleanup-required checkpoint; ordinary step stays blocked. |
+| Whole material-request CapacityBlocked/null | No upload, token attempt, queued-input consumption or simulation. | Retired-active snapshot can remain an explicit cleanup-required checkpoint; ordinary step stays blocked. |
 | Typed NotApplied | No external inputs applied, but attempt token may have advanced before failed upload. | Guard remains safe; replan from fresh authority, keep ordinary step blocked. |
 | Accepted + raw consumer completes | Exact outgoing archives published, earlier old-owner outputs consumed, all incoming material admitted. | Recompute pending work; normal step only if none remains. |
 | Rejected | Earlier ordinary inputs and simulation already ran under unchanged material authority. No raw native delivery is attempted or reported complete. | Reconciliation failure inside the existing guard poisons save and normal steps. No ordinary retry or guessed output replay. |
@@ -43,9 +43,9 @@ Unexpected exceptions are conservatively fatal inside the guarded runner; only C
 
 At `094e5d3`, FireSimStepCoordinator.TryTickWithInputCore calls `_changes.PrepareBatch(_changeCapacity, ...)`, then returns null if that ordinary batch already fills `_changeCapacity`. The handoff marker is one more ordinary 16-byte command in the same ExternalChanges buffer. Native and Unity adapters allocate command storage to the configured capacity; it is not merely an arbitrary host queue limit. Material request/receipt capacity is a separate bound.
 
-With command capacity 1 and either one or three queued changes, the prototype proves zero upload/simulation, all original pending changes retained, the same next token and a blocked ordinary step. Increasing the material-request capacity does not resolve this. Calling ordinary Tick to drain would simulate retired material. Reserving one slot after only a capacity-sized prefix would also let the marker overtake older queued changes in the tail.
+The fixed path prepares all pending valid ordinary inputs plus the final material marker. Existing command/delta scratch storage grows before dispatch; ordinary Tick/ash admission budgets, command/receipt/delta layouts and HLSL stay unchanged. With ordinary budget1 and either one or three older commands, the updated prototype proves every older command/delta remains ordered under the original TargetId/SlotId, the marker follows them, exactly one simulation occurs, no queued input remains, and the archive captures the final pre-detach fuel. Native resource delivery stays inside the existing guard. The separate whole-material-request capacity case still proves no-step CapacityBlocked and a blocked normal Tick.
 
-The protocol worker is investigating pre-dispatch capacity preparation covering **all earlier pending changes plus the marker**, with the same buffer bindings/UAV count and matching delta capacity. That is separate work; these tests document the old deadlock rather than bless it as a release behavior. Update the capacity assertions alongside the proven protocol change, retaining full-queue/overfull ordering and no-dropped-input coverage.
+Allocation failure before dispatch remains NotApplied and preserves pending inputs; an attempted preparation consumes its attempt token, so the next snapshot supplies a new token. This fixes the queue deadlock without changing unexpected GPU rejection fail-stop policy.
 
 ## What executes in the tests
 

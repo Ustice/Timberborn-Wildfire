@@ -15,6 +15,7 @@ internal sealed class RetiredDetachmentSimulatorFixture : IFireSimMaterialHandof
     private readonly List<CellDelta> _deltas = [];
     internal int Uploads, Applies, Simulations, Delivered;
     internal bool Accepted = true;
+    internal FireSimChange[] AppliedChanges = [];
     internal string? FailAt;
     public int MaterialHandoffCapacity { get; set; }
     internal RetiredDetachmentSimulatorFixture(FireSimSnapshot initial, int changeCapacity = 4)
@@ -37,7 +38,7 @@ internal sealed class RetiredDetachmentSimulatorFixture : IFireSimMaterialHandof
         Coordinator.TryHandoffMaterial(this, batch, commit);
     public bool IsSlotKnown(FireSimMaterialIdentity identity) => Coordinator.IsSlotKnown(identity);
     public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) => Coordinator.TryGetMaterialArchive(identity, out archive!);
-    public void UploadMaterialHandoff(FireSimMaterialHandoffBatch batch)
+    public void PrepareMaterialHandoff(FireSimMaterialHandoffBatch batch, int orderedCommandCount)
     { Uploads++; if (FailAt == "Upload") throw new ApplicationException("upload failed"); _batch = batch; }
     public uint[] ReadMaterialHandoffHeader()
     {
@@ -48,6 +49,7 @@ internal sealed class RetiredDetachmentSimulatorFixture : IFireSimMaterialHandof
     public void ResetDeltaCounter(uint tick) => _deltas.Clear();
     public void ApplyExternalChanges(uint tick, FireSimChange[] changes)
     {
+        AppliedChanges = changes.ToArray();
         Applies++; if (FailAt == "Apply") throw new ApplicationException("apply failed after possible write");
         foreach (var change in changes)
         {

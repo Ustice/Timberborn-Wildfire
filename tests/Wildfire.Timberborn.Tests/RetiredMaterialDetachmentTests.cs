@@ -57,15 +57,29 @@ public sealed class RetiredMaterialDetachmentTests
     [Theory]
     [InlineData(1)]
     [InlineData(3)]
-    public void FullAndOverfullOrdinaryQueueBlocksWithoutDroppingOrRunningGhostStep(int queued)
+    public void FullAndOverfullOrdinaryQueueDetachesAfterEveryOldInputWithoutGhostDrainStep(int queued)
     {
         var f = new Fixture("Empty", changeCapacity: 1);
-        for (int i = 0; i < queued; i++) f.Simulator.RegisterChange(new(0, SetFuel: (byte)i));
-        Assert.Equal(P.Result.CapacityBlocked, f.Flush());
-        Assert.Equal(queued, f.Simulator.Coordinator.PendingChangeCount);
-        Assert.Equal(0, f.Simulator.Uploads); Assert.Equal(0, f.Simulator.Simulations);
-        Assert.Equal(1u, f.Plan()!.Token); Assert.False(f.Guard.IsIndeterminate);
+        var pending = Enumerable.Range(0, queued).Select(i => new FireSimChange(0, SetFuel: (byte)(6 - 2 * i))).ToArray();
+        foreach (var change in pending) f.Simulator.RegisterChange(change);
         Assert.Throws<InvalidOperationException>(f.RequireNormal);
+        int delivered = 0;
+        Assert.Equal(P.Result.Applied, f.Flush(step =>
+        {
+            Assert.Throws<InvalidOperationException>(f.Guard.ThrowIfSaveUnsafe);
+            Assert.Equal(queued, step.Deltas.Count);
+            Assert.All(step.Deltas, delta => { Assert.Equal(f.A0.TargetId, delta.TargetId); Assert.Equal(f.A0.SlotId, delta.SlotId); });
+            Assert.Equal(pending.Select(change => (int)change.SetFuel!.Value), step.Deltas.Select(delta => PackedCell.Fuel(delta.NewCell)));
+            delivered++;
+        }));
+        Assert.Equal(pending, f.Simulator.AppliedChanges.Take(queued));
+        Assert.NotNull(f.Simulator.AppliedChanges[^1].MaterialHandoff);
+        Assert.Equal(queued + 1, f.Simulator.AppliedChanges.Length);
+        Assert.Equal(0, f.Simulator.Coordinator.PendingChangeCount);
+        Assert.Equal(1, f.Simulator.Uploads); Assert.Equal(1, f.Simulator.Simulations); Assert.Equal(1, delivered);
+        Assert.Null(f.Plan()); Assert.False(f.Guard.IsIndeterminate); f.RequireNormal();
+        Assert.True(f.Simulator.TryGetMaterialArchive(f.A0, out var archive));
+        Assert.Equal(pending[^1].SetFuel!.Value, PackedCell.Fuel((ushort)archive.PackedCell));
     }
 
     [Fact]
