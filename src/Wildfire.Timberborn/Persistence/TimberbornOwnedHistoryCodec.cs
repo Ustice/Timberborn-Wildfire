@@ -23,8 +23,9 @@ internal static partial class TimberbornOwnedMaterialCodec
             output.Write(credit.EntityId.ToByteArray()); WriteText(output, credit.ResourceId);
             output.Write(credit.FractionalBudget); output.Write(credit.FuelValue);
         });
+        if(history.NativeDefinitions is {} definitions) WriteNativeDefinitions(writer,definitions);
     }
-    private static TimberbornOwnedConsequenceSnapshot ReadHistory(BinaryReader reader)
+    private static TimberbornOwnedConsequenceSnapshot ReadHistory(BinaryReader reader, int envelope)
     {
         var owners = ReadArray(reader, input =>
         {
@@ -36,7 +37,8 @@ internal static partial class TimberbornOwnedMaterialCodec
             ReadFlag(input), ReadFlag(input), ReadFlag(input), (OwnedCharredPresentation)input.ReadInt32()), 27, owners.Length);
         var credits = ReadArray(reader, input => new OwnedStorageCredit(new Guid(input.ReadBytes(16)), ReadText(input),
             input.ReadInt32(), input.ReadByte()), 25);
-        return new(owners, natural, credits);
+        var definitions=envelope>=3 ? ReadNativeDefinitions(reader, owners.Length) : null;
+        return new(owners, natural, credits, definitions);
     }
     private static void WriteProfile(BinaryWriter writer, OwnedBodyAccountingProfile profile)
     {

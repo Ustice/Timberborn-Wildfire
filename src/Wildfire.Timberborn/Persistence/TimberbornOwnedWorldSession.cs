@@ -33,21 +33,30 @@ public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
 
     public static TimberbornOwnedWorldSession<TSimulator> PrepareRestore(TimberbornWildfirePersistenceSnapshot snapshot,
         IEnumerable<int> solidTerrain, Func<FireSimSnapshot, TSimulator> createSimulator,
-        Func<TimberbornNativeMaterialRegistry, TimberbornBurnDamageService> createBodyDefinitions,
+        Func<FireGrid, IReadOnlyList<Guid>, IReadOnlyList<TimberbornInitialMaterialBody>> captureRetainedBodies,
         TimberbornOwnedNativeEffects effects, INativeResourceMutationGuard guard, TimberbornResourceFuelCatalog? catalog = null)
     {
-        guard.ThrowIfSaveUnsafe();
+        return guard.CaptureAtRest(()=>PrepareRestoreDuringCapture(snapshot,solidTerrain,createSimulator,captureRetainedBodies,effects,guard,catalog));
+    }
+
+    private static TimberbornOwnedWorldSession<TSimulator> PrepareRestoreDuringCapture(TimberbornWildfirePersistenceSnapshot snapshot,
+        IEnumerable<int> solidTerrain, Func<FireSimSnapshot, TSimulator> createSimulator,
+        Func<FireGrid,IReadOnlyList<Guid>,IReadOnlyList<TimberbornInitialMaterialBody>> captureRetainedBodies,
+        TimberbornOwnedNativeEffects effects,INativeResourceMutationGuard guard,TimberbornResourceFuelCatalog? catalog)
+    {
         if (snapshot.PersistenceVersion != 2 || snapshot.FireSim is not null)
             throw new ArgumentException("Complete restore requires WF2 with no legacy FIRE payload.");
         var material = snapshot.OwnedMaterial ?? throw new ArgumentException("Restore requires complete owned material state.");
         var history = material.History ?? throw new NotSupportedException("OWNED1 has no authoritative consequence history.");
+        if(history.NativeDefinitions is null) throw new NotSupportedException("OWNED2 has no saved native static-definition evidence.");
         var simulation = material.CaptureSimulation();
         history.ValidateAssociation(simulation, material.Bindings, snapshot.Consequences);
         var registry = new TimberbornNativeMaterialRegistry(simulation.Grid, solidTerrain);
         registry.RestoreBindings(material.Bindings);
-        // Build definitions from settled native world, then isolate all mutable damage before restoration.
-        var definitions = createBodyDefinitions(registry) ?? throw new InvalidOperationException("No body definitions returned.");
-        var damage = definitions.CreateOwnedRestoredCopy(history, snapshot.Consequences);
+        // Native provider captures exact required Guids under this same scope; initial eligibility is irrelevant.
+        var ids=history.Owners.Where(owner=>owner.Retention==OwnedBodyRetention.RetainedBody).Select(owner=>owner.EntityId).ToArray();
+        var facts=captureRetainedBodies(simulation.Grid,Array.AsReadOnly(ids)) ?? throw new InvalidOperationException("No retained native body facts returned.");
+        var damage=TimberbornBurnDamageService.CreateFromSavedOwnedDefinitions(simulation.Grid,history,snapshot.Consequences,facts);
         TSimulator? simulator = null;
         try
         {
@@ -55,7 +64,7 @@ public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
             if (simulator.Width != simulation.Grid.Width || simulator.Height != simulation.Grid.Height || simulator.Depth != simulation.Grid.Depth)
                 throw new ArgumentException("Restored simulator dimensions do not match the paired native world.");
             var consumer = TimberbornOwnedDeltaConsumer.CreateFromHistory(registry, damage, effects, guard, history, catalog);
-            guard.ThrowIfSaveUnsafe();
+            if(ids.Any(id=>!effects.Bodies.IsLive(id))) throw new ArgumentException("A required native owner disappeared during restore staging.");
             return new(simulator, registry, damage, consumer, guard);
         }
         catch { simulator?.Dispose(); throw; }

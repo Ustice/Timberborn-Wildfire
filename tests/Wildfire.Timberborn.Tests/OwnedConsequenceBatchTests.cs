@@ -158,7 +158,7 @@ public sealed class OwnedConsequenceBatchTests
         internal readonly TimberbornOwnedNativeEffects Effects;
         internal readonly TimberbornOwnedBodyRegistration[] Registrations = Ids.Select((id, i) => new TimberbornOwnedBodyRegistration(id, Families[i])).ToArray();
         internal readonly TimberbornOwnedDeltaConsumer Consumer;
-        internal Fixture()
+        internal Fixture(bool witnessed = false)
         {
             string[] specs = ["Pine", "Carrot", "Warehouse", "Mill"];
             TimberbornMaterialPart[] parts = [TimberbornMaterialPart.Tree("Pine"), TimberbornMaterialPart.Crop("Carrot"),
@@ -173,9 +173,15 @@ public sealed class OwnedConsequenceBatchTests
             Damage.RegisterTargets(Grid, Ids.Select((id, i) => new TimberbornBurnDamageTargetRegistration(Key(id), specs[i],
                 [new(i, 0, 0), new(i, 1, 0)], 10)).ToArray());
             Effects = new(Native, Native, Native, Native, Native);
-            Consumer = new(Registry, Damage, Effects, Guard, Registrations,
-                new TimberbornResourceFuelCatalog([new("Log", 2, 3, false, false, true)]));
+            var catalog=new TimberbornResourceFuelCatalog([new("Log", 2, 3, false, false, true)]);
+            Consumer = witnessed ? TimberbornOwnedDeltaConsumer.CreateWithNativeDefinitions(Registry,Damage,Effects,Guard,NativeBodies(),catalog) :
+                new(Registry, Damage, Effects, Guard, Registrations,catalog);
         }
+        internal IReadOnlyList<TimberbornInitialMaterialBody> NativeBodies()=>Ids.Select((id,i)=>new TimberbornInitialMaterialBody(
+            id,new[]{"Pine","Carrot","Warehouse","Mill"}[i],new[]{TimberbornInitialBodyShape.Tree,TimberbornInitialBodyShape.Crop,
+                TimberbornInitialBodyShape.Stockpile,TimberbornInitialBodyShape.Structure}[i],
+            [new(new(0,0,0),i),new(new(1,0,0),i+4)],i<2 ? [new(TimberbornCapturedYieldRole.Cuttable,"Cuttable",i==0?"Log":"Carrot",10,
+                i==0?"Log":"Carrot",10,true,true)] : [],[],i>=2 ? [new("Log",20)] : null)).ToArray();
         internal CellDelta Delta(Guid id, int loss, int? cell = null) => new(cell ?? Array.IndexOf(Ids, id),
             PackedCell.Pack(15, 10, 3, 0, 0, 1), PackedCell.Pack(15 - loss, 10, 3, 0, 0, 1),
             Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId, cell >= 4 ? 2u : 1u);

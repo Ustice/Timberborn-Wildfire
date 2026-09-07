@@ -12,7 +12,7 @@ internal static partial class TimberbornOwnedMaterialCodec
         var simulation = owned.CaptureSimulation();
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
-        writer.Write(owned.History is null ? 1 : 2); // Paired native envelope schema.
+        writer.Write(owned.History is null ? 1 : owned.History.NativeDefinitions is null ? 2 : 3); // Paired native envelope schema.
         writer.Write(simulation.Version);
         writer.Write(simulation.Grid.Width); writer.Write(simulation.Grid.Height); writer.Write(simulation.Grid.Depth);
         writer.Write(simulation.Tick); writer.Write(simulation.Seed);
@@ -49,7 +49,7 @@ internal static partial class TimberbornOwnedMaterialCodec
             using var stream = new MemoryStream(Convert.FromBase64String(encoded), writable: false);
             using var reader = new BinaryReader(stream);
             int envelope = reader.ReadInt32();
-            if (envelope is not (1 or 2)) throw new FormatException("Unsupported owned-material envelope schema.");
+            if (envelope is not (1 or 2 or 3)) throw new FormatException("Unsupported owned-material envelope schema.");
             int version = reader.ReadInt32();
             var grid = new FireGrid(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
             if (grid.Width <= 0 || grid.Height <= 0 || grid.Depth <= 0) throw new FormatException("Invalid material grid dimensions.");
@@ -71,7 +71,7 @@ internal static partial class TimberbornOwnedMaterialCodec
             var entities = ReadArray(reader, input => new TimberbornMaterialEntityBinding(new Guid(input.ReadBytes(16)),
                 input.ReadUInt32(), input.ReadUInt32(), ReadArray(input, slotInput => new TimberbornMaterialSlotBinding(
                     new(slotInput.ReadInt32(), slotInput.ReadInt32(), slotInput.ReadInt32()), slotInput.ReadUInt32()), 16)), 28);
-            var history = envelope == 2 ? ReadHistory(reader) : null;
+            var history = envelope >= 2 ? ReadHistory(reader, envelope) : null;
             if (stream.Position != stream.Length) throw new FormatException("Trailing data in owned-material payload.");
             return new TimberbornOwnedMaterialSnapshot(new FireSimSnapshot(version, grid, tick, parameters, seed, cells,
                 transport, companions, targets, slots, new FireSimMaterialAuthoritySnapshot(token, known, archives), changes),

@@ -106,8 +106,11 @@ public sealed class TimberbornOwnedConsequenceSnapshot
     public IReadOnlyList<OwnedConsequenceOwner> Owners { get; }
     public IReadOnlyList<OwnedNaturalProgress> Natural { get; }
     public IReadOnlyList<OwnedStorageCredit> StorageCredits { get; }
+    public OwnedNativeDefinitionSet? NativeDefinitions { get; }
+    public OwnedNativeCompatibilityCapability NativeCompatibility => NativeDefinitions is null ?
+        OwnedNativeCompatibilityCapability.Unavailable : OwnedNativeCompatibilityCapability.Complete;
     public TimberbornOwnedConsequenceSnapshot(IEnumerable<OwnedConsequenceOwner> owners,
-        IEnumerable<OwnedNaturalProgress> natural, IEnumerable<OwnedStorageCredit> credits)
+        IEnumerable<OwnedNaturalProgress> natural, IEnumerable<OwnedStorageCredit> credits, OwnedNativeDefinitionSet? nativeDefinitions = null)
     {
         var all = owners.OrderBy(owner => owner.EntityId).ToArray();
         if (all.Select(owner => owner.EntityId).Distinct().Count() != all.Length) throw new ArgumentException("Duplicate owned body identity.");
@@ -122,12 +125,18 @@ public sealed class TimberbornOwnedConsequenceSnapshot
             !map.TryGetValue(item.EntityId, out var owner) || owner.Family is not (NativeBurnTargetFamily.Stockpile or NativeBurnTargetFamily.Structure)))
             throw new ArgumentException("Storage history needs a unique canonical inventory owner.");
         Owners = Array.AsReadOnly(all); Natural = Array.AsReadOnly(progress); StorageCredits = Array.AsReadOnly(fractions);
+        nativeDefinitions?.Validate(Owners); NativeDefinitions=nativeDefinitions;
     }
     internal void ValidateAssociation(FireSimSnapshot simulation, TimberbornMaterialBindingSnapshot bindings,
         TimberbornConsequencePersistenceSnapshot damage)
     {
         var entities = bindings.Entities.ToDictionary(item => item.EntityId);
         var owners = Owners.ToDictionary(item => item.EntityId);
+        if(NativeDefinitions is {} definitions)
+            foreach(var witness in definitions.Definitions)
+                if(!entities.TryGetValue(witness.EntityId,out var binding) ||
+                    !binding.Slots.Select(slot=>slot.LocalCoordinates).ToHashSet().SetEquals(witness.LocalFootprint))
+                    throw new ArgumentException("Native definition footprint differs from its durable local slot bindings.");
         if (Owners.Any(owner => !entities.ContainsKey(owner.EntityId))) throw new ArgumentException("History has no retained native binding.");
         var knownTargets = simulation.MaterialAuthority.KnownSlots.Select(item => item.TargetId).ToHashSet();
         if (bindings.Entities.Any(entity => knownTargets.Contains(entity.TargetId) && !owners.ContainsKey(entity.EntityId)))

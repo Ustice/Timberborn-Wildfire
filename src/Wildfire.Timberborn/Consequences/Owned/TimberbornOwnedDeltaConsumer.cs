@@ -42,6 +42,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
     {
         _guard.ThrowIfSaveUnsafe();
         if (_consuming) throw new InvalidOperationException("Cannot change owned body registrations during delivery.");
+        if (_nativeDefinitions is not null) throw new NotSupportedException("Witnessed native admission requires a complete lifecycle update; legacy registration is unavailable.");
         if (registration is null) throw new ArgumentNullException(nameof(registration));
         var key = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(registration.EntityId, registration.Family));
         if (!_damage.TryGetState(key, out var state) || !MatchesFamily(registration.Family, state))

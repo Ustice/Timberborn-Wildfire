@@ -10,22 +10,34 @@ public sealed partial class TimberbornBurnDamageService
             descriptor.ResourceYields, descriptor.ConstructionResources);
     }
 
-    internal TimberbornBurnDamageService CreateOwnedRestoredCopy(TimberbornOwnedConsequenceSnapshot history,
-        TimberbornConsequencePersistenceSnapshot damage)
+    internal static TimberbornBurnDamageService CreateFromSavedOwnedDefinitions(Wildfire.Core.FireGrid grid,
+        TimberbornOwnedConsequenceSnapshot history,TimberbornConsequencePersistenceSnapshot damage,
+        IReadOnlyList<TimberbornInitialMaterialBody> facts)
     {
-        var copy = new TimberbornBurnDamageService(_descriptorCatalog, _capacityCalculator, _logSink);
-        copy._dynamicDescriptorsBySpecId = new(_dynamicDescriptorsBySpecId, StringComparer.Ordinal);
-        var states = _states.ToDictionary(pair => pair.Key, pair => pair.Value with
+        var definitions=history.NativeDefinitions ?? throw new NotSupportedException("Saved native definition evidence is unavailable.");
+        var retained=history.Owners.Where(o=>o.Retention==OwnedBodyRetention.RetainedBody).ToArray();
+        if(facts.Count!=retained.Length || facts.Select(f=>f.EntityId).Distinct().Count()!=facts.Count)
+            throw new ArgumentException("Restore requires exactly one current fact record for each retained native owner.");
+        var byId=facts.ToDictionary(f=>f.EntityId);
+        var registrations=new List<TimberbornBurnDamageTargetRegistration>();
+        foreach(var owner in retained)
         {
-            OwnedCellIndices = pair.Value.OwnedCellIndices.ToArray(),
-            MissingResourceIds = pair.Value.MissingResourceIds.ToArray(),
-            AccountedResourceIds = pair.Value.AccountedResourceIds.ToArray(),
-        });
-        var registrations = new Dictionary<TimberbornBurnDamageTargetKey, RegisteredTarget>(_registrations);
-        if (_grid is { } grid) copy.PublishRegistration(grid, registrations, states,
-            Array.Empty<TimberbornBurnDamageTargetKey>(), reset: true);
-        copy.RestoreOwnedBodyHistory(history, damage);
-        return copy;
+            var profile=owner.Profile!;
+            if(!byId.TryGetValue(owner.EntityId,out var body) || body.SpecId!=profile.SpecId || body.Family!=owner.Family ||
+                body.PhysicalBodyKind!=profile.TargetKind || !definitions.Get(owner.EntityId).Matches(OwnedNativeDefinitionWitness.Capture(body)))
+                throw new ArgumentException("A required native body's static definition differs from its saved witness.");
+            var descriptor=new TimberbornBurnDamageDescriptor(profile.SpecId,profile.TargetKind,profile.MaterialKind,
+                profile.ResourceYields,profile.ConstructionResources,profile.BurnableProfile);
+            var cells=body.Footprint.Select(slot=>
+            {
+                var c=grid.FromIndex(slot.CellIndex);return new TimberbornCellCoordinates(c.X,c.Y,c.Z);
+            }).ToArray();
+            registrations.Add(new(owner.TargetKey,profile.SpecId,cells,0,descriptor));
+        }
+        var restored=new TimberbornBurnDamageService(new TimberbornBurnDamageDescriptorCatalog(Array.Empty<TimberbornBurnDamageDescriptor>()));
+        restored.RegisterTargets(grid,registrations);
+        restored.RestoreOwnedBodyHistory(history,damage);
+        return restored;
     }
 
     private void RestoreOwnedBodyHistory(TimberbornOwnedConsequenceSnapshot history, TimberbornConsequencePersistenceSnapshot damage)
