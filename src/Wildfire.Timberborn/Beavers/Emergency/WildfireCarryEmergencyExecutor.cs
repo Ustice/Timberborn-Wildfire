@@ -97,7 +97,13 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
     public void BeforeBehaviorTick()
     {
         if (!_ready || !_state.Active && !_session.AdmissionsEnabled) return;
-        if (_session.Safety.IsPoisoned) return; // Failure cleanup already stopped/paused; never retry indeterminate movement.
+        if (_session.Safety.IsPoisoned)
+        {
+            // The guard is shared by every actor. Pause other owned escapes too, without retrying
+            // the failed native stop or changing their still-owned path/reservation state.
+            if (_state.Active) _movement.RejectRoute();
+            return;
+        }
         if (_state.Active) _session.Safety.Transition(AdvanceOwnership, StopMovement);
         else TryAdmit();
         if (_lastStatus == Status) return;
