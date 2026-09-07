@@ -102,7 +102,8 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornLiveCro
         bool hasLiving = crop.TryGetComponent(out LivingNaturalResource living);
         bool hasGrower = crop.TryGetComponent(out GatherableYieldGrower grower);
         bool delete = consequence.TargetKind == TimberbornBurnDamageTargetKind.Resource;
-        if ((!hasLiving && !hasGrower) || (!delete && !crop.TryGetComponent(out NaturalResourceModel _)))
+        if ((!hasLiving && !hasGrower) || (hasGrower && !hasYield) ||
+            (!delete && !crop.TryGetComponent(out NaturalResourceModel _)))
             return new(TimberbornCropBurnConsequenceStatus.Unavailable);
         bool hasStack = crop.TryGetComponent(out GoodStack stack);
         if (hasStack && !CanClearStack(stack)) return new(TimberbornCropBurnConsequenceStatus.Unavailable);
@@ -157,10 +158,16 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornLiveCro
     private int ClearStack(Guid id, BlockObject crop, GoodStack stack)
     {
         RequireComponent(id, crop, stack);
+        if (!CanClearStack(stack))
+            throw new InvalidOperationException("Crop stock acquired reservations during whole-burn; completion is unknown.");
         int destroyed = 0;
         foreach (var item in stack.Inventory.UnreservedTakeableStock().ToArray())
         {
             RequireComponent(id, crop, stack);
+            int current = stack.Inventory.UnreservedTakeableStock()
+                .Where(value => value.GoodId == item.GoodId).Sum(value => value.Amount);
+            if (current < item.Amount)
+                throw new InvalidOperationException("Crop stock changed before consumption; completion is unknown.");
             TimberbornInventoryMutations.Consume(stack.Inventory, item);
             destroyed += item.Amount;
         }
