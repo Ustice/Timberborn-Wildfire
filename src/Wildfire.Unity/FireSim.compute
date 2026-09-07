@@ -73,9 +73,8 @@ struct MaterialReceiptGpu
 };
 RWStructuredBuffer<uint> MaterialTargetIds;
 RWStructuredBuffer<uint> MaterialSlotIds;
-RWStructuredBuffer<MaterialRequestGpu> MaterialRequests;
+StructuredBuffer<MaterialRequestGpu> MaterialRequests;
 RWStructuredBuffer<MaterialReceiptGpu> MaterialReceipts;
-RWStructuredBuffer<uint4> MaterialHeader;
 uint MaterialRequestCapacity;
 
 RWStructuredBuffer<uint> CurrentCells;
@@ -1624,12 +1623,23 @@ uint ValidateMaterialRequest(uint index, uint count)
     return 1u;
 }
 
-void ApplyMaterialBatch(FireSimChangeGpu marker)
+// The exclusive final input becomes the four-word receipt in its existing 16-byte slot.
+void WriteMaterialHeader(uint changeIndex, uint token, uint status, uint count, uint rejected)
+{
+    FireSimChangeGpu receipt;
+    receipt.CellIndex = token;
+    receipt.SetMask = status;
+    receipt.AddFields = count;
+    receipt.SetValues = rejected;
+    ExternalChanges[changeIndex] = receipt;
+}
+
+void ApplyMaterialBatch(uint changeIndex, FireSimChangeGpu marker)
 {
     uint count = marker.AddFields;
-    if (marker.CellIndex != 0u || marker.SetMask != MATERIAL_BATCH || marker.SetValues == 0u || count == 0u || count > MaterialRequestCapacity)
+    if (changeIndex + 1u != ChangeCount || marker.CellIndex != 0u || marker.SetMask != MATERIAL_BATCH || marker.SetValues == 0u || count == 0u || count > MaterialRequestCapacity)
     {
-        MaterialHeader[0] = uint4(marker.SetValues, 2u, count, 0u);
+        WriteMaterialHeader(changeIndex, marker.SetValues, 2u, count, 0u);
         return;
     }
     // Capture the entire table before validation/apply. Sources may be overwritten by any later row.
@@ -1667,7 +1677,7 @@ void ApplyMaterialBatch(FireSimChangeGpu marker)
     }
     if (rejected != 0xffffffffu)
     {
-        MaterialHeader[0] = uint4(marker.SetValues, 2u, count, rejected);
+        WriteMaterialHeader(changeIndex, marker.SetValues, 2u, count, rejected);
         return;
     }
     for (uint i = 0u; i < count; i++)
@@ -1695,7 +1705,7 @@ void ApplyMaterialBatch(FireSimChangeGpu marker)
         MaterialSlotIds[request.CellIndex] = receipt.AppliedSlot;
         MaterialReceipts[i] = receipt;
     }
-    MaterialHeader[0] = uint4(marker.SetValues, 1u, count, 0xffffffffu);
+    WriteMaterialHeader(changeIndex, marker.SetValues, 1u, count, 0xffffffffu);
 }
 
 // Baseline apply is intentionally single-threaded so repeated changes to one cell
@@ -1714,7 +1724,7 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
 
         if ((change.SetMask & MATERIAL_BATCH) != 0u)
         {
-            ApplyMaterialBatch(change);
+            ApplyMaterialBatch(changeIndex, change);
             continue;
         }
         if (change.CellIndex >= CellCount)

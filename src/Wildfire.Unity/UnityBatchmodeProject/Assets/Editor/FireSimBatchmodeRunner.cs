@@ -21,6 +21,9 @@ namespace Wildfire.UnityBatchmode
                 ConfigureLogging();
                 HarnessArguments arguments = HarnessArguments.Parse(Environment.GetCommandLineArgs());
                 LogPhase("environment", "start", "project=" + Directory.GetCurrentDirectory());
+                LogPhase("device", "info", "backend=" + SystemInfo.graphicsDeviceType + " device=" + SystemInfo.graphicsDeviceName +
+                    " supportedRandomWriteTargetCount=" + SystemInfo.supportedRandomWriteTargetCount +
+                    " maxComputeBufferInputsCompute=" + SystemInfo.maxComputeBufferInputsCompute);
                 Fixture fixture = Fixture.Load(arguments.FixturePath);
                 ComputeShader shader = LoadComputeShader(arguments.ShaderPath);
                 Snapshot snapshot = DispatchFixture(shader, fixture, arguments.TickCount);
@@ -135,7 +138,7 @@ namespace Wildfire.UnityBatchmode
                         LogPhase("external-changes", "ok", "tick=" + tick + " count=" + changes.Length);
                     }
 
-                    uint[] materialHeader = material.ReadHeader();
+                    uint[] materialHeader = material.ReadHeader(appliedWords);
                     uint[] materialReceipts = material.ReadReceipts();
                     Bind(
                         shader,

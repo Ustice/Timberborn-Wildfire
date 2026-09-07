@@ -124,6 +124,7 @@ public sealed class MaterialHandoffShaderTests
         var capture = Capture(fixture);
         var receipt = Receipt(capture, batch);
         Assert.True(receipt.Accepted);
+        Assert.Equal(fixture.ExternalChanges![0].Words[..4], Assert.Single(capture.Ticks).AppliedChangeWords![..4]);
         var deltas = Assert.Single(capture.Ticks).Deltas.Where(delta => delta.CellIndex == 0).ToArray();
         Assert.Equal(1u, deltas[0].TargetId);
         Assert.Contains(deltas.Skip(1), delta => delta.TargetId == 2);
@@ -165,6 +166,7 @@ public sealed class MaterialHandoffShaderTests
     private static FireSimMaterialHandoffReceipt Receipt(ShaderSnapshotCapture capture, FireSimMaterialHandoffBatch batch)
     {
         var tick = Assert.Single(capture.Ticks);
+        Assert.Equal(tick.MaterialHeader, tick.AppliedChangeWords![^4..]); // Same final 16-byte marker slot read by production.
         return FireSimMaterialHandoffProtocol.DecodeReceipt(batch, tick.MaterialHeader!, tick.MaterialReceipts!);
     }
     private static ShaderSnapshotFixture Fixture(string name, FireSimMaterialHandoffBatch batch, FireSimChange[]? preceding = null)

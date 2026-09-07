@@ -15,6 +15,9 @@ public static class MaterialSnapshotProbe
         try
         {
             var output = Environment.GetEnvironmentVariable("WILDFIRE_SNAPSHOT_PROBE_OUTPUT");
+            Debug.Log("WILDFIRE_GPU_RESOURCE_LIMITS backend=" + SystemInfo.graphicsDeviceType + " device=" + SystemInfo.graphicsDeviceName +
+                " supportedRandomWriteTargetCount=" + SystemInfo.supportedRandomWriteTargetCount +
+                " maxComputeBufferInputsCompute=" + SystemInfo.maxComputeBufferInputsCompute);
             AssetDatabase.ImportAsset("Assets/FireSim.compute", ImportAssetOptions.ForceSynchronousImport);
             var shader = AssetDatabase.LoadAssetAtPath<ComputeShader>("Assets/FireSim.compute");
             Require(shader != null, "shader missing");

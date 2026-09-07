@@ -13,7 +13,6 @@ internal sealed class TimberbornMaterialHandoffBuffers : IDisposable
         {
             Slots = new ComputeBuffer(initial.Count, sizeof(uint), ComputeBufferType.Structured);
             Slots.SetData(initial.Select(static identity => identity.SlotId).ToArray());
-            Header = new ComputeBuffer(1, FireSimMaterialHandoffProtocol.HeaderWords * sizeof(uint), ComputeBufferType.Structured);
             Resize(1);
         }
         catch { Dispose(); throw; }
@@ -21,19 +20,11 @@ internal sealed class TimberbornMaterialHandoffBuffers : IDisposable
     public ComputeBuffer Slots { get; private set; } = null!;
     public ComputeBuffer Requests { get; private set; } = null!;
     public ComputeBuffer Receipts { get; private set; } = null!;
-    public ComputeBuffer Header { get; private set; } = null!;
     public void Upload(FireSimMaterialHandoffBatch batch)
     {
         if (batch.Requests.Count > _maximum) throw new ArgumentOutOfRangeException(nameof(batch));
         if (batch.Requests.Count > Requests.count) Resize(batch.Requests.Count);
         Requests.SetData(FireSimMaterialHandoffProtocol.EncodeRequests(batch));
-        Header.SetData(new uint[FireSimMaterialHandoffProtocol.HeaderWords]);
-    }
-    public uint[] ReadHeader()
-    {
-        uint[] words = new uint[FireSimMaterialHandoffProtocol.HeaderWords];
-        Header.GetData(words);
-        return words;
     }
     public uint[] ReadReceipts(int count)
     {
@@ -46,7 +37,6 @@ internal sealed class TimberbornMaterialHandoffBuffers : IDisposable
         shader.SetBuffer(kernel, "MaterialSlotIds", Slots);
         shader.SetBuffer(kernel, "MaterialRequests", Requests);
         shader.SetBuffer(kernel, "MaterialReceipts", Receipts);
-        shader.SetBuffer(kernel, "MaterialHeader", Header);
         shader.SetInt("MaterialRequestCapacity", Requests.count);
     }
     private void Resize(int count)
@@ -60,5 +50,5 @@ internal sealed class TimberbornMaterialHandoffBuffers : IDisposable
         Requests = requests;
         Receipts = receipts;
     }
-    public void Dispose() { Slots?.Release(); Requests?.Release(); Receipts?.Release(); Header?.Release(); }
+    public void Dispose() { Slots?.Release(); Requests?.Release(); Receipts?.Release(); }
 }

@@ -846,10 +846,16 @@ public sealed partial class TimberbornComputeFireSimulator :
 
     int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Grid.CellCount;
     void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => _materialHandoff!.Upload(batch);
-    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => _materialHandoff!.ReadHeader();
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader()
+    {
+        var applied = ReadAppliedChange(_step.LastUploadedChangeCount - 1);
+        return new[] { applied.CellIndex, applied.SetMask, applied.AddFields, applied.SetValues };
+    }
     uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => _materialHandoff!.ReadReceipts(count);
 
-    FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
+    FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex) => ReadAppliedChange(changeIndex);
+
+    private FireSimGpuChange ReadAppliedChange(int changeIndex)
     {
         var applied = new FireSimGpuChange[1];
         _externalChanges.GetData(applied, 0, changeIndex, 1);

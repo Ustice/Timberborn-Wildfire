@@ -16,7 +16,7 @@ namespace Wildfire.UnityBatchmode
     {
         private readonly Fixture fixture;
         private readonly int cellCount;
-        private ComputeBuffer targets, slots, requests, receipts, header;
+        private ComputeBuffer targets, slots, requests, receipts;
         private int requestCount;
 
         public MaterialHandoffFixtureBuffers(Fixture fixture, int cellCount, int tickCount)
@@ -39,7 +39,6 @@ namespace Wildfire.UnityBatchmode
                 slots = new ComputeBuffer(cellCount, 4, ComputeBufferType.Structured);
                 requests = new ComputeBuffer(capacity, 40, ComputeBufferType.Structured);
                 receipts = new ComputeBuffer(capacity, 40, ComputeBufferType.Structured);
-                header = new ComputeBuffer(1, 16, ComputeBufferType.Structured);
                 targets.SetData(CellWords(fixture.initialTargetIds));
                 slots.SetData(CellWords(fixture.initialSlotIds));
             }
@@ -49,7 +48,6 @@ namespace Wildfire.UnityBatchmode
         public void Upload(int tick)
         {
             requestCount = 0;
-            header.SetData(new uint[4]);
             foreach (var batch in fixture.materialHandoffs ?? new FixtureMaterialHandoff[0])
                 if (batch.tick == tick)
                 {
@@ -64,11 +62,17 @@ namespace Wildfire.UnityBatchmode
             shader.SetBuffer(kernel, "MaterialSlotIds", slots);
             shader.SetBuffer(kernel, "MaterialRequests", requests);
             shader.SetBuffer(kernel, "MaterialReceipts", receipts);
-            shader.SetBuffer(kernel, "MaterialHeader", header);
             shader.SetInt("MaterialRequestCapacity", requests.count);
         }
 
-        public uint[] ReadHeader() => requestCount == 0 ? new uint[0] : Read(header, 4);
+        public uint[] ReadHeader(uint[] appliedWords)
+        {
+            if (requestCount == 0) return new uint[0];
+            if (appliedWords.Length < 4) throw new InvalidOperationException("Material receipt requires its final input marker.");
+            var header = new uint[4];
+            Array.Copy(appliedWords, appliedWords.Length - 4, header, 0, 4);
+            return header;
+        }
         public uint[] ReadReceipts() => requestCount == 0 ? new uint[0] : Read(receipts, requestCount * 10);
         public uint[] ReadTargets() => Read(targets, cellCount);
         public uint[] ReadSlots() => Read(slots, cellCount);
@@ -86,7 +90,7 @@ namespace Wildfire.UnityBatchmode
         }
         public void Dispose()
         {
-            targets?.Release(); slots?.Release(); requests?.Release(); receipts?.Release(); header?.Release();
+            targets?.Release(); slots?.Release(); requests?.Release(); receipts?.Release();
         }
     }
 }

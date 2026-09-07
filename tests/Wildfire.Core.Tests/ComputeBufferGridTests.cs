@@ -70,7 +70,6 @@ public sealed class ComputeBufferGridTests
                 "wildfire.material_target_ids",
                 "wildfire.material_slot_ids",
                 "wildfire.material_fields",
-                "wildfire.material_header",
                 "wildfire.material_requests",
                 "wildfire.material_receipts",
             ],
@@ -79,7 +78,6 @@ public sealed class ComputeBufferGridTests
         Assert.Equal(1, grid.MaterialHandoff.Requests.Count);
         Assert.Equal(40, grid.MaterialHandoff.Requests.StrideBytes);
         Assert.Equal(40, grid.MaterialHandoff.Receipts.StrideBytes);
-        Assert.Equal(16, grid.MaterialHandoff.Header.StrideBytes);
         Assert.Equal(4, grid.Deltas.Count);
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.CurrentCells.StrideBytes);
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.NextCells.StrideBytes);

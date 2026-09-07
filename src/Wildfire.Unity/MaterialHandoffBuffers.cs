@@ -10,19 +10,15 @@ public sealed class MaterialHandoffBuffers : IDisposable
     {
         _allocator = allocator;
         _maximum = maximum;
-        Header = allocator.Allocate("wildfire.material_header", 1, FireSimMaterialHandoffProtocol.HeaderWords * sizeof(uint));
-        try { Resize(1); }
-        catch { Header.Dispose(); throw; }
+        Resize(1);
     }
     public IComputeBufferHandle Requests { get; private set; } = null!;
     public IComputeBufferHandle Receipts { get; private set; } = null!;
-    public IComputeBufferHandle Header { get; }
     public void Upload(FireSimMaterialHandoffBatch batch)
     {
         if (batch.Requests.Count > _maximum) throw new ArgumentOutOfRangeException(nameof(batch));
         if (batch.Requests.Count > Requests.Count) Resize(batch.Requests.Count);
         Requests.Upload(FireSimMaterialHandoffProtocol.EncodeRequests(batch));
-        Header.Upload(new uint[FireSimMaterialHandoffProtocol.HeaderWords]);
     }
     private void Resize(int count)
     {
@@ -35,5 +31,5 @@ public sealed class MaterialHandoffBuffers : IDisposable
         Requests = requests;
         Receipts = receipts;
     }
-    public void Dispose() { Requests.Dispose(); Receipts.Dispose(); Header.Dispose(); }
+    public void Dispose() { Requests.Dispose(); Receipts.Dispose(); }
 }

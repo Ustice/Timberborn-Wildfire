@@ -24,7 +24,6 @@ public readonly record struct FireSimComputeDispatch(
     IComputeBufferHandle MaterialSlotIds,
     IComputeBufferHandle MaterialRequests,
     IComputeBufferHandle MaterialReceipts,
-    IComputeBufferHandle MaterialHeader,
     FireSimParameters Parameters,
     FireSimWind Wind,
     uint ChangeCount,

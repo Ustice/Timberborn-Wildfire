@@ -6,7 +6,7 @@ namespace Wildfire.Core.Tests;
 public sealed class UnityComputeFireSimulatorTests
 {
     [Fact]
-    public void MaterialBatchResizesDedicatedBuffersBindsEveryKernelAndReadsCompleteRows()
+    public void MaterialBatchReadsItsFinalUploadedMarkerAfterEarlierAndIgnoredChanges()
     {
         using var grid = ComputeBufferGrid.FromCells(2, 1, 1, [0, 0], new RecordingComputeBufferAllocator());
         var initialRequests = grid.MaterialHandoff.Requests;
@@ -23,11 +23,11 @@ public sealed class UnityComputeFireSimulatorTests
                 Assert.Same(grid.MaterialSlotIds, dispatch.MaterialSlotIds);
                 Assert.Same(grid.MaterialHandoff.Requests, dispatch.MaterialRequests);
                 Assert.Same(grid.MaterialHandoff.Receipts, dispatch.MaterialReceipts);
-                Assert.Same(grid.MaterialHandoff.Header, dispatch.MaterialHeader);
                 if (dispatch.KernelName != UnityComputeFireSimulator.ApplyExternalChangesKernelName) return;
-                Assert.Equal(new uint[4], ((RecordingComputeBufferHandle)dispatch.MaterialHeader).UploadedValues);
+                var appliedWords = ((RecordingComputeBufferHandle)dispatch.QueuedChanges).UploadedValues;
+                Assert.Equal(new uint[] { 0, 0, 1u << 23, 0, 0, FireSimMaterialHandoffProtocol.BatchMarkerMask, 2, 1 }, appliedWords);
                 Assert.Equal(FireSimMaterialHandoffProtocol.EncodeRequests(batch), ((RecordingComputeBufferHandle)dispatch.MaterialRequests).UploadedValues);
-                dispatch.MaterialHeader.Upload(new uint[] { 1, 1, 2, uint.MaxValue });
+                new uint[] { 1, 1, 2, uint.MaxValue }.CopyTo(appliedWords, 4);
                 dispatch.MaterialReceipts.Upload(new uint[]
                 {
                     0, 0, 0, 0, 0, 2, 21, definition.PackedMaterial, definition.CompanionMaterial, 1,
@@ -36,11 +36,40 @@ public sealed class UnityComputeFireSimulatorTests
             }
         };
         IFireSimMaterialHandoffSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        simulator.RegisterChange(new(99, AddWater: 1)); // Ignored input must not shift the uploaded marker index.
+        simulator.RegisterChange(new(0, AddWater: 1));
         simulator.TryHandoffMaterial(batch, receipt => Assert.Equal(2, receipt.Cells.Count));
         Assert.NotSame(initialRequests, grid.MaterialHandoff.Requests);
         Assert.Equal(2, grid.MaterialHandoff.Requests.Count);
         Assert.Equal(2, dispatcher.Dispatches.Count);
         Assert.False(simulator.TryGetMaterialArchive(new(2, 21), out _));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void UnexecutedOrStaleMaterialMarkerCannotCommitOrAllowContinuation(bool staleReceipt)
+    {
+        using var grid = ComputeBufferGrid.FromCells(2, 1, 1, [0, 0], new RecordingComputeBufferAllocator());
+        var definition = new FireSimMaterialDefinition(WildfireMaterialClass.Tree, 7,
+            WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 9, 2, 1);
+        var batch = new FireSimMaterialHandoffBatch(2,
+            [FireSimMaterialHandoffRequest.Fresh(0, default, new(2, 21), definition)]);
+        var dispatcher = new RecordingFireSimComputeDispatcher
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (staleReceipt && dispatch.KernelName == UnityComputeFireSimulator.ApplyExternalChangesKernelName)
+                    new uint[] { 1, 1, 1, uint.MaxValue }.CopyTo(((RecordingComputeBufferHandle)dispatch.QueuedChanges).UploadedValues, 4);
+            }
+        };
+        IFireSimMaterialHandoffSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        simulator.RegisterChange(new(1, AddWater: 1));
+        int commits = 0;
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.TryHandoffMaterial(batch, _ => commits++));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        Assert.Equal(0, commits);
+        Assert.Throws<InvalidOperationException>(() => simulator.Tick());
     }
 
     [Fact]

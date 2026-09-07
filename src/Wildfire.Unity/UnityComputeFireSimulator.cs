@@ -152,15 +152,21 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
 
     int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Dimensions.CellCount;
     void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => BufferGrid!.MaterialHandoff.Upload(batch);
-    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => BufferGrid!.MaterialHandoff.Header.ReadElements(0, 1);
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => ReadAppliedChangeWords(_step.LastUploadedChangeCount - 1);
     uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => BufferGrid!.MaterialHandoff.Receipts.ReadElements(0, count);
 
     FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
     {
+        uint[] words = ReadAppliedChangeWords(changeIndex);
+        return new FireSimGpuChange(words[0], words[1], words[2], words[3]);
+    }
+
+    private uint[] ReadAppliedChangeWords(int changeIndex)
+    {
         uint[] words = BufferGrid!.QueuedChanges.ReadElements(changeIndex, 1);
         if (words.Length != FireSimGpuProtocol.UInt32WordsPerChange)
-            throw new InvalidOperationException("GPU ash receipt readback returned an incomplete command.");
-        return new FireSimGpuChange(words[0], words[1], words[2], words[3]);
+            throw new InvalidOperationException("GPU input receipt readback returned an incomplete command.");
+        return words;
     }
 
     void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)
@@ -195,7 +201,6 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
             BufferGrid.MaterialSlotIds,
             BufferGrid.MaterialHandoff.Requests,
             BufferGrid.MaterialHandoff.Receipts,
-            BufferGrid.MaterialHandoff.Header,
             _parameters,
             Wind.Normalized(),
             0u,
@@ -252,7 +257,6 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
             BufferGrid.MaterialSlotIds,
             BufferGrid.MaterialHandoff.Requests,
             BufferGrid.MaterialHandoff.Receipts,
-            BufferGrid.MaterialHandoff.Header,
             _parameters,
             Wind.Normalized(),
             checked((uint)changeCount),
