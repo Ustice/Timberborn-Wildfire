@@ -10,15 +10,15 @@ public sealed class OwnedTreeDeltaConsumerTests
     private static readonly FireGrid Grid = new(3, 1, 1);
 
     [Fact]
-    public void SameCellOldAndNewOriginsDamageTheirOwnTargetsAndDeduplicatePerOwner()
+    public void SameCellOldAndNewOriginsDamageTheirOwnTargetsAndSumDistinctCells()
     {
         var fixture = new Fixture();
         var result = fixture.Consumer.Consume(7, [Delta(fixture.Token(A), 0, 15, 13),
             Delta(fixture.Token(A), 1, 15, 12), Delta(fixture.Token(B), 0, 15, 11)]);
-        Assert.Equal(3, fixture.Damage.States[Key(A)].DamageTaken);
+        Assert.Equal(5, fixture.Damage.States[Key(A)].DamageTaken);
         Assert.Equal(4, fixture.Damage.States[Key(B)].DamageTaken);
         Assert.Equal(2, result.Damage.DamageAppliedTargetCount);
-        Assert.Equal(1, result.Damage.DuplicateCellSuppressedCount);
+        Assert.Equal(0, result.Damage.DuplicateCellSuppressedCount);
         Assert.Equal(new[] { A, B }, fixture.Native.Calls.Select(call => call.EntityId).Distinct().ToArray());
     }
 

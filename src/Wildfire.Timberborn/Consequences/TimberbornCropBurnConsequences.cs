@@ -37,7 +37,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
             .Where(static hit => hit.HasValue)
             .Select(static hit => hit!.Value)
             .ToArray();
-        return ApplyCropHits(tick, cropHits, _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
+        return ApplyCropHits(tick, cropHits, cropHits.Length - cropHits.Select(hit => hit.State.TargetKey).Distinct().Count(),
             _burnDamageService.LastApplySummary.UnresolvedCellCount);
     }
 

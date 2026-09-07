@@ -11,15 +11,15 @@ public sealed class OwnedStorageDeltaConsumerTests
     private static readonly FireGrid Grid = new(2, 1, 1);
 
     [Fact]
-    public void SameCellOriginsUseTheirOwnInventoryAndMaximumPerOwnerBodyDamage()
+    public void SameCellOriginsUseTheirOwnInventoryAndSumDistinctCellDamage()
     {
         var f = new Fixture();
         var result = f.Consumer.Consume(1, [f.Delta(A, 2), f.Delta(A, 4, 1), f.Delta(B, 2)]);
-        Assert.Equal(4, f.Damage.States[Registration(A).TargetKey].DamageTaken);
+        Assert.Equal(6, f.Damage.States[Registration(A).TargetKey].DamageTaken);
         Assert.Equal(2, f.Damage.States[Registration(B).TargetKey].DamageTaken);
         Assert.Equal(2, result.Damage.DamageAppliedTargetCount);
-        Assert.Equal(1, result.Damage.DuplicateCellSuppressedCount);
-        Assert.Equal(8, f.Inventory.Stock[A]["Log"]);
+        Assert.Equal(0, result.Damage.DuplicateCellSuppressedCount);
+        Assert.Equal(8, f.Inventory.Stock[A]["Log"]); // Raw storage sink still has its separate per-owner budget rule.
         Assert.Equal(9, f.Inventory.Stock[B]["Log"]);
         Assert.Equal(3, result.DestroyedItems);
     }

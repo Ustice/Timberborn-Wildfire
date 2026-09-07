@@ -22,14 +22,14 @@ public sealed class TimberbornBurnDamageRegistrationTests
 
         Assert.False(service.TryGetStateForCell(0, out _));
         Assert.Equal(First, service.TargetKeyByCellIndex[2]);
-        Assert.Equal(2, service.States[First].DamageTaken);
+        Assert.Equal(4, service.States[First].DamageTaken);
         Assert.Equal(12u, service.States[First].LastDamagedTick);
         Assert.Same(unrelated, service.States[Second]);
         Assert.False(service.TryGetAppliedEvent(First, out _));
         Assert.True(service.TryGetAppliedEvent(Second, out _));
         Assert.Equal(previousSummary, service.LastApplySummary);
         service.ApplyDamage(13, [Hit(1), Hit(2)]);
-        Assert.Equal(4, service.States[First].DamageTaken); // One hit per entity, not per occupied cell.
+        Assert.Equal(8, service.States[First].DamageTaken); // Both distinct cells burn; the entity is updated once.
     }
 
     [Fact]

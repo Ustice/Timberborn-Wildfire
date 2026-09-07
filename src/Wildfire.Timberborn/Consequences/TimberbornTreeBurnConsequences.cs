@@ -38,7 +38,7 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             .Where(static hit => hit.HasValue)
             .Select(static hit => hit!.Value)
             .ToArray();
-        return ApplyTreeHits(tick, treeHits, _burnDamageService.LastApplySummary.DuplicateCellSuppressedCount,
+        return ApplyTreeHits(tick, treeHits, treeHits.Length - treeHits.Select(hit => hit.State.TargetKey).Distinct().Count(),
             _burnDamageService.LastApplySummary.UnresolvedCellCount);
     }
 

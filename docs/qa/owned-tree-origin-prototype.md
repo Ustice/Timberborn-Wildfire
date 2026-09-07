@@ -20,7 +20,7 @@ Tree rendering/native actions moved out of the mixed `TimberbornRuntimeBurnedTex
 
 ## Validation and limits
 
-- 16 new owned-route tests cover old A/new B at the same cell, maximum-per-owner dedup, hidden A, removed A with B present, restored retained bindings, zero/unknown/unmigrated origins, dynamic registration, per-action disappearance, definite failure, callback exception, and registration reentrancy.
+- 16 new owned-route tests cover old A/new B at the same cell, distinct-cell body aggregation, hidden A, removed A with B present, restored retained bindings, zero/unknown/unmigrated origins, dynamic registration, per-action disappearance, definite failure, callback exception, and registration reentrancy.
 - Four managed native fixtures execute installed EntityRegistry and EntityComponent state getters. They verify post-construction registry lookup and missing/deleted/not-initialized rejection, and rejection of hash/mismatched Guid consequences before mutation. Every action on a deleted origin returns no applied result. Actual installed LivingNaturalResource.Die executes once, returns AlreadySatisfied on the second call, and propagates a Died callback exception after native IsDead changes. The private native yield action classifies unavailable without invoking Cut or modifying goods.
 - Full native managed suite: 762 passed, zero failed/skipped, on the origin-tree worktree after these tests. No shader/Core/backend changes.
 - Positive live Unity object/component resolution, drying/death/leftover visuals, actual native creation and callback deletion remain game QA. Tests do not create fake Unity liveness or claim a live tree trip. No game, Unity, deployment, or save mutation was performed for this slice.

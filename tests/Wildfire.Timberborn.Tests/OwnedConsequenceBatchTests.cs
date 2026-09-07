@@ -23,12 +23,12 @@ public sealed class OwnedConsequenceBatchTests
             f.Delta(Stock, 4, 6), f.Delta(Structure, 2)]);
         Assert.Equal(1, f.Native.DamagePasses);
         Assert.Equal(4, result.Damage.DamageAppliedTargetCount);
-        Assert.Equal(1, result.Damage.DuplicateCellSuppressedCount);
+        Assert.Equal(0, result.Damage.DuplicateCellSuppressedCount);
         Assert.Equal(0, result.Trees.DuplicateCellSuppressedCount);
         Assert.Equal(0, result.Crops.DuplicateCellSuppressedCount);
         Assert.Equal(2, f.Damage.States[Key(Structure)].DamageTaken); // Body+inventory share one damage state.
-        Assert.Equal(4, f.Damage.States[Key(Stock)].DamageTaken);
-        Assert.Equal(3, result.Storage.DestroyedItems);
+        Assert.Equal(6, f.Damage.States[Key(Stock)].DamageTaken);
+        Assert.Equal(3, result.Storage.DestroyedItems); // Storage budget aggregation is a separate boundary.
         Assert.NotEmpty(f.Native.TreeCalls);
         Assert.NotEmpty(f.Native.CropCalls);
         Assert.Equal(1, result.StructureRollbackUnavailableOwners);

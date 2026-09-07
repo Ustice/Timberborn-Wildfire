@@ -14,9 +14,9 @@ public sealed class OwnedCropDeltaConsumerTests
     {
         var f = new Fixture();
         var result = f.Consumer.Consume(1, [Delta(f.Token(A), 0, 15, 13), Delta(f.Token(A), 1, 15, 12), Delta(f.Token(B), 0, 15, 11)]);
-        Assert.Equal(3, f.Damage.States[Key(A)].DamageTaken);
+        Assert.Equal(5, f.Damage.States[Key(A)].DamageTaken);
         Assert.Equal(4, f.Damage.States[Key(B)].DamageTaken);
-        Assert.Equal(1, result.Damage.DuplicateCellSuppressedCount);
+        Assert.Equal(0, result.Damage.DuplicateCellSuppressedCount);
         Assert.Equal(new[] { A, B }, f.Api.Calls.Select(call => call.EntityId).Distinct());
         Assert.Equal(0, result.Crops.YieldLost); // Native partial-yield effect remains unavailable.
     }
@@ -80,7 +80,7 @@ public sealed class OwnedCropDeltaConsumerTests
         f.Damage.UpsertTarget(Grid, new(alias, "Crop.Carrot", [new(0, 0, 0)], 100));
         f.Consumer.RegisterCrop(A); // Idempotent canonical binding, never a second alias damage target.
         var result = f.Consumer.Consume(5, [Delta(f.Token(A), 0, 15, 13), Delta(f.Token(A), 1, 15, 12)]);
-        Assert.Equal(3, f.Damage.States[Key(A)].DamageTaken);
+        Assert.Equal(5, f.Damage.States[Key(A)].DamageTaken);
         Assert.Equal(0, f.Damage.States[alias].DamageTaken);
         Assert.Equal(1, result.Damage.DamageAppliedTargetCount);
         Assert.All(f.Api.Calls, call => Assert.Equal(Key(A), call.TargetKey));

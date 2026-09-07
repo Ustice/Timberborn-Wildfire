@@ -291,13 +291,23 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
     private TimberbornBurnDamageApplySummary ApplyHits(uint tick, int consideredCount, int candidateCount,
         TimberbornBurnDamageCellHit[] resolvedHits)
     {
-        TimberbornBurnDamageAppliedEvent[] appliedEvents = resolvedHits
-            .GroupBy(static hit => hit.TargetKey)
+        // A coherent GPU step has one local material slot per cell. Repeated reports of
+        // that cell are duplicates; different cells of the same body are independent burns.
+        var distinctCells = resolvedHits.GroupBy(static hit => (hit.TargetKey, hit.CellIndex))
             .Select(static group => group
                 .OrderByDescending(static hit => hit.DamageUnits)
                 .ThenByDescending(static hit => hit.Heat)
-                .ThenBy(static hit => hit.CellIndex)
                 .First())
+            .ToArray();
+        TimberbornBurnDamageAppliedEvent[] appliedEvents = distinctCells
+            .GroupBy(static hit => hit.TargetKey)
+            .Select(static group =>
+            {
+                var representative = group.OrderByDescending(hit => hit.DamageUnits)
+                    .ThenByDescending(hit => hit.Heat).ThenBy(hit => hit.CellIndex).First();
+                // Only the body's capacity can be spent; saturate before converting the sum.
+                return representative with { DamageUnits = (int)Math.Min(int.MaxValue, group.Sum(hit => (long)hit.DamageUnits)) };
+            })
             .Select(hit => ApplyResolvedHit(tick, hit))
             .Where(static appliedEvent => appliedEvent.DamageApplied > 0)
             .ToArray();
@@ -309,10 +319,7 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
             DamageCandidateCellCount: candidateCount,
             ResolvedTargetCellCount: resolvedHits.Length,
             UnresolvedCellCount: candidateCount - resolvedHits.Length,
-            DuplicateCellSuppressedCount: resolvedHits.Length - resolvedHits
-                .Select(static hit => hit.TargetKey)
-                .Distinct()
-                .Count(),
+            DuplicateCellSuppressedCount: resolvedHits.Length - distinctCells.Length,
             DamageAppliedTargetCount: appliedEvents.Length,
             TotalDamageApplied: appliedEvents.Sum(static appliedEvent => appliedEvent.DamageApplied),
             PersistenceWriteCount: appliedEvents.Length);
