@@ -8,9 +8,6 @@ public interface ITimberbornLiveTreeBurnConsequenceApi : ITimberbornTreeBurnCons
     bool IsLive(Guid entityId);
 }
 
-internal readonly record struct TimberbornOwnedBurnDecision(
-    TimberbornFireCellDeltaDecision Decision, Guid EntityId, TimberbornBurnDamageTargetKey TargetKey);
-
 public readonly record struct TimberbornOwnedTreeBatchResult(
     int UnownedCount, int NotLiveCount, TimberbornBurnDamageApplySummary Damage,
     TimberbornTreeBurnConsequenceSummary Trees);
@@ -21,18 +18,17 @@ public readonly record struct TimberbornOwnedTreeBatchResult(
 /// </summary>
 public sealed class TimberbornOwnedTreeDeltaConsumer
 {
-    private readonly TimberbornNativeMaterialRegistry _origins;
+    private readonly TimberbornOwnedBurnOrigins _origins;
     private readonly TimberbornBurnDamageService _damage;
     private readonly ITimberbornLiveTreeBurnConsequenceApi _native;
     private readonly TimberbornTreeBurnConsequenceSink _trees;
-    private readonly Dictionary<Guid, TimberbornBurnDamageTargetKey> _registeredTrees = new();
     private bool _consuming;
 
     public TimberbornOwnedTreeDeltaConsumer(TimberbornNativeMaterialRegistry origins,
         TimberbornBurnDamageService damage, ITimberbornLiveTreeBurnConsequenceApi native,
         IEnumerable<Guid> registeredTrees)
     {
-        _origins = origins ?? throw new ArgumentNullException(nameof(origins));
+        _origins = new TimberbornOwnedBurnOrigins(origins);
         _damage = damage ?? throw new ArgumentNullException(nameof(damage));
         _native = native ?? throw new ArgumentNullException(nameof(native));
         _trees = new TimberbornTreeBurnConsequenceSink(damage, native);
@@ -46,7 +42,7 @@ public sealed class TimberbornOwnedTreeDeltaConsumer
         var key = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(entityId, NativeBurnTargetFamily.Tree));
         if (!_damage.TryGetState(key, out var state) || !TimberbornTreeBurnTargetClassifier.IsTreeOrCuttable(state))
             throw new ArgumentException("Tree origin requires its exact registered tree damage state.", nameof(entityId));
-        _registeredTrees[entityId] = key;
+        _origins.Register(entityId, NativeBurnTargetFamily.Tree, key);
     }
 
     public TimberbornOwnedTreeBatchResult Consume(uint tick, ReadOnlySpan<CellDelta> deltas)
@@ -55,25 +51,14 @@ public sealed class TimberbornOwnedTreeDeltaConsumer
         _consuming = true;
         try
         {
-            var resolved = new List<TimberbornOwnedBurnDecision>();
-            int unowned = 0;
-            // Identity preflight is whole-batch: a late unknown/unmigrated row must not follow earlier mutation.
-            foreach (CellDelta delta in deltas)
-            {
-                var decision = TimberbornFireCellDeltaDecision.FromDelta(delta);
-                if (decision.TargetId == 0) { unowned++; continue; }
-                if (!_origins.TryResolveOrigin(decision.TargetId, out Guid entityId))
-                    throw new InvalidOperationException($"Unknown material origin {decision.TargetId}; native consequences require reconciliation.");
-                if (!_registeredTrees.TryGetValue(entityId, out var key))
-                    throw new NotSupportedException($"Native material origin {entityId:D} is not registered for owned tree consequences.");
-                resolved.Add(new TimberbornOwnedBurnDecision(decision, entityId, key));
-            }
+            var batch = _origins.Resolve(deltas);
+            var resolved = batch.Decisions;
             var live = resolved.Where(item => _native.IsLive(item.EntityId)).ToArray();
             if (live.Any(item => !_damage.TryGetState(item.TargetKey, out _)))
                 throw new InvalidOperationException("Live tree origin has no registered damage state.");
             var damage = _damage.ApplyOwnedDamage(tick, live);
             var trees = _trees.ApplyOwnedConsequences(tick, live);
-            return new TimberbornOwnedTreeBatchResult(unowned, resolved.Count - live.Length, damage, trees);
+            return new TimberbornOwnedTreeBatchResult(batch.UnownedCount, resolved.Length - live.Length, damage, trees);
         }
         finally { _consuming = false; }
     }
