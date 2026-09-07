@@ -154,6 +154,26 @@ public sealed class NativeMaterialRegistryTests
         Assert.Empty(registry.CaptureBindings().Entities);
     }
 
+    [Fact]
+    public void OriginLookupRetainsHiddenAndRemovedOwnersAcrossRestore()
+    {
+        var registry = new TimberbornNativeMaterialRegistry(Grid, Array.Empty<int>());
+        registry.Reconcile(new[] { Project(TreeId, 10, TimberbornMaterialPart.Tree("Pine")),
+            Project(BuildingId, 10, TimberbornMaterialPart.Building("LumberMill.Folktails")) }, Array.Empty<Guid>());
+        var tree = registry.ResolveCell(10).Contributors.Single(value => value.Owner.EntityId == TreeId).Owner;
+        Assert.Equal(BuildingId, registry.ResolveCell(10).Owner!.Value.EntityId);
+        Assert.True(registry.TryResolveOrigin(tree.TargetId, out Guid hidden));
+        Assert.Equal(TreeId, hidden);
+        registry.Reconcile(Array.Empty<TimberbornMaterialProjection>(), new[] { TreeId });
+        var restored = new TimberbornNativeMaterialRegistry(Grid, Array.Empty<int>());
+        restored.RestoreBindings(registry.CaptureBindings());
+        Assert.True(restored.TryResolveOrigin(tree.TargetId, out Guid removed));
+        Assert.Equal(TreeId, removed);
+        Assert.Null(restored.ResolveCell(10).Owner);
+        Assert.False(restored.TryResolveOrigin(0, out _));
+        Assert.False(restored.TryResolveOrigin(registry.CaptureBindings().NextTargetId, out _));
+    }
+
     private static TimberbornMaterialFootprintSlot Slot(int localX, int cell) => new(new(localX, 0, 0), cell);
     private static TimberbornMaterialProjection Project(Guid id, int cell, params TimberbornMaterialPart[] parts) => new(id, new[] { Slot(0, cell) }, parts);
 }

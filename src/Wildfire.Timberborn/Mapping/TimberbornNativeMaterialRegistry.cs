@@ -29,6 +29,15 @@ public sealed class TimberbornNativeMaterialRegistry
         foreach (int cell in _solidTerrain) _grid.FromIndex(cell);
     }
 
+    /// <summary>Resolve retained origin identity, including hidden/removed projections. Never resolve through the current cell.</summary>
+    public bool TryResolveOrigin(uint targetId, out Guid entityId)
+    {
+        foreach (var pair in _entries)
+            if (pair.Value.TargetId == targetId) { entityId = pair.Key; return true; }
+        entityId = default;
+        return false;
+    }
+
     public TimberbornResolvedMaterialCell ResolveCell(int cellIndex)
     {
         _grid.FromIndex(cellIndex);
