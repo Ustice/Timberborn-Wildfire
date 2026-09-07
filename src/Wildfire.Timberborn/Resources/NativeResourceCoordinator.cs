@@ -3,11 +3,15 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Resources;
 
-/// <summary>Pending jobs remain in native executors. Only one dose enters an owned synchronous GPU step.</summary>
+/// <summary>Pending jobs remain in native executors. Only one resource conversion enters an owned synchronous GPU step.</summary>
 public sealed class NativeResourceCoordinator
 {
     private readonly List<WardenExecutor> _wardens = new();
-    private IFireSimStepInputSimulator? _simulator;
+    private IFireSimAshCollectionSimulator? _simulator;
+    private readonly List<AshHarvestExecutor> _harvesters = new();
+    private readonly NativeResourceStepScheduler _scheduler = new();
+    public void Register(AshHarvestExecutor executor) => _harvesters.Add(executor);
+    public void Unregister(AshHarvestExecutor executor) => _harvesters.Remove(executor);
     private readonly NativeResourceTransaction _transaction = new();
     public long FieldRevision { get; private set; }
     public bool IsIndeterminate => _transaction.IsIndeterminate;
@@ -17,8 +21,8 @@ public sealed class NativeResourceCoordinator
     public void Attach(IGpuFireSimulator simulator)
     {
         ThrowIfSaveUnsafe();
-        _simulator = simulator as IFireSimStepInputSimulator ??
-            throw new InvalidOperationException("Warden response requires simulator support for committed step inputs.");
+        _simulator = simulator as IFireSimAshCollectionSimulator ??
+            throw new InvalidOperationException("Native resource conversion requires simulator support for committed water inputs and ash receipts.");
     }
 
     public GpuFireStepResult Tick()
@@ -30,15 +34,27 @@ public sealed class NativeResourceCoordinator
     private GpuFireStepResult TickCore()
     {
         ThrowIfSaveUnsafe();
-        var simulator = _simulator ?? throw new InvalidOperationException("Warden simulator has not been attached.");
+        var simulator = _simulator ?? throw new InvalidOperationException("Resource simulator has not been attached.");
+        return _scheduler.Tick(ash => ash ? TryAsh(simulator) : TryWater(simulator), simulator.Tick);
+    }
+
+    private NativeResourceAttempt TryWater(IFireSimAshCollectionSimulator simulator)
+    {
         foreach (var warden in _wardens.ToArray())
         {
             if (!warden.TryPrepareApplication(out var input, out var commit)) continue;
-            var result = _transaction.TryDeliver(simulator, input, commit);
-            // Capacity rejection has not queued a dose, changed the worker, or advanced the simulation.
-            return result ?? simulator.Tick();
+            return new(true, _transaction.TryDeliver(simulator, input, () => { commit(); _scheduler.Committed(ash: false); }));
         }
-        return simulator.Tick();
+        return default;
+    }
+    private NativeResourceAttempt TryAsh(IFireSimAshCollectionSimulator simulator)
+    {
+        foreach (var harvester in _harvesters.ToArray())
+        {
+            if (!harvester.TryPrepareCollection(out var input, out var commit)) continue;
+            return new(true, _transaction.TryCollectAsh(simulator, input, receipt => { commit(receipt); _scheduler.Committed(ash: true); }));
+        }
+        return default;
     }
 
     public void TransferInventory(Action transfer) => _transaction.TransferInventory(transfer);
@@ -48,7 +64,8 @@ public sealed class NativeResourceCoordinator
     // Called only by actual world load/unload. Disabling/reinitializing fire must never clear poison.
     public void ResetForWorldLoad()
     {
-        _simulator = null;
         _transaction.ResetForWorldLoad();
+        _simulator = null;
+        _scheduler.ResetForWorldLoad();
     }
 }

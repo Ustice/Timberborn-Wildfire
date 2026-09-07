@@ -36,6 +36,9 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornFertilizeForestryToolButton>().AsSingleton();
         Bind<TimberbornDeferredToolButtonInstaller>().AsSingleton();
         Bind<TimberbornFertileAshFieldWorkplaceBehavior>().AsTransient();
+        Bind<AshHarvestExecutor>().AsTransient();
+        Bind<AshHarvestBehavior>().AsTransient();
+        Bind<AshHarvestFragment>().AsSingleton();
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
         Bind<WardenStationFragment>().AsSingleton();
@@ -71,11 +74,13 @@ public sealed class WildfireConfigurator : Configurator
     private sealed class WardenPanelModuleProvider : IProvider<EntityPanelModule>
     {
         private readonly WardenStationFragment _fragment;
-        public WardenPanelModuleProvider(WardenStationFragment fragment) => _fragment = fragment;
+        private readonly AshHarvestFragment _ash;
+        public WardenPanelModuleProvider(WardenStationFragment fragment, AshHarvestFragment ash) { _fragment = fragment; _ash = ash; }
         public EntityPanelModule Get()
         {
             EntityPanelModule.Builder builder = new();
             builder.AddMiddleFragment(_fragment, 0);
+            builder.AddMiddleFragment(_ash, 0);
             return builder.Build();
         }
     }
@@ -106,6 +111,8 @@ public sealed class WildfireConfigurator : Configurator
         {
             TemplateModule.Builder builder = new();
             builder.AddDecorator<GathererFlag, TimberbornFertileAshFieldWorkplaceBehavior>();
+            builder.AddDecorator<AdultSpec, AshHarvestExecutor>();
+            builder.AddDecorator<AdultSpec, AshHarvestBehavior>();
             return builder.Build();
         }
     }

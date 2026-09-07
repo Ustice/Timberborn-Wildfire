@@ -585,25 +585,11 @@ public sealed partial class TimberbornFireRuntime :
         return true;
     }
 
-    public bool TryCompleteFertileAshFieldHarvest(
-        TimberbornFertileAshFieldHarvestTarget target,
-        out TimberbornAshFieldCollectionRemoval removal)
+    internal bool IsCleanAshAvailable(int cellIndex)
     {
-        removal = _ashFieldService.CalculateCollectedFertileStrengthRemoval(target.CellIndex, target.StrengthToRemove);
-        if (removal.StrengthRemoved <= 0)
-        {
-            return false;
-        }
-
-        QueueCollectedAshRemoval(new TimberbornFertileAshCollectedCell(
-            target.CellIndex,
-            removal.StrengthRemoved,
-            target.GoodAmount.Amount));
-        _fertileAshCollectionService.RecordWorkerHarvest(
-            _fireSystem?.LastTick ?? 0,
-            removal,
-            target.GoodAmount.Amount);
-        return true;
+        if (!TryObserveWardenField(out var field) || cellIndex < 0 || cellIndex >= field.TransportFields.Count) return false;
+        var state = WildfireTransportFieldState.Unpack(field.TransportFields[cellIndex]);
+        return state.Ash > 0 && state.AshContamination == 0;
     }
 
     private static (int X, int Y, int Z) ToFireGridCoordinates(Vector3Int timberbornCoordinates)
