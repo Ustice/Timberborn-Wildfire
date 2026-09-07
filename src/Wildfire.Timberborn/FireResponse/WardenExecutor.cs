@@ -127,7 +127,12 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             throw new InvalidOperationException("Active warden does not own BehaviorManager's executor.");
         if (_mortal.Dead || _mortal.ShouldDie)
         { ReleaseReservation(); _movement.Stop(); _sortie.Finish(); return ExecutorStatus.Failure; }
-        if (_delivery.IsIndeterminate) return ExecutorStatus.Running;
+        if (_delivery.IsIndeterminate)
+        {
+            // Keep the installed path intact, but do not let an unmonitored owned mover keep walking.
+            _movement.RejectRoute();
+            return ExecutorStatus.Running;
+        }
         if (!_field.ObservationAvailable) return Finish(WardenResponseReason.Unavailable, "Fire observations unavailable; water retained");
         if (!_field.Ready && _sortie.Phase != WardenPhase.Returning) return Retreat(WardenResponseReason.Disabled, "Wildfire disabled");
         if (_sortie.Phase != WardenPhase.Returning &&

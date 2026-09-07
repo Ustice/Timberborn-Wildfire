@@ -106,7 +106,12 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
             else _cycle.Finish(); // The existing unsafe-save guard remains; mortality must still win.
             return ExecutorStatus.Failure; // Native mortality owns its ordinary carried-good loss; no refund or mint.
         }
-        if (_resources.IsIndeterminate) return ExecutorStatus.Running;
+        if (_resources.IsIndeterminate)
+        {
+            // Keep the installed path intact, but do not let an unmonitored owned mover keep walking.
+            _ownedWalk.RejectRoute();
+            return ExecutorStatus.Running;
+        }
         if (_restored)
         {
             _restored = false;
