@@ -31,9 +31,10 @@ public sealed class TimberbornInitialWorldProjectionProvider
         _guard = guard ?? throw new ArgumentNullException(nameof(guard));
     }
 
-    public TimberbornInitialWorldCapture Capture(FireGrid grid) => _guard.CaptureAtRest(() => CaptureAtRest(grid));
+    public TimberbornInitialWorldCapture Capture(FireGrid grid) => _guard.CaptureAtRest(() => CaptureDuringScope(grid));
 
-    private TimberbornInitialWorldCapture CaptureAtRest(FireGrid grid)
+    // Initial session composition owns the same guard through capture, backend staging and final reread.
+    internal TimberbornInitialWorldCapture CaptureDuringScope(FireGrid grid)
     {
         var environment = _environment.Capture(grid);
         var entities = _entities.Entities.ToArray(); // Native property is a view of a mutable instantiation list.

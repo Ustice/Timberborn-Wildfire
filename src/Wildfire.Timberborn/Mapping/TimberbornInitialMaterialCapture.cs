@@ -186,4 +186,12 @@ public sealed class TimberbornInitialWorldCapture
     public IReadOnlyList<TimberbornInitialExcludedEntity> Excluded { get; }
     public IReadOnlyList<TimberbornInitialWaterSource> WaterSources { get; }
     public TimberbornInitialEnvironmentCapture Environment { get; }
+    internal bool SameReadings(TimberbornInitialWorldCapture other) => Grid == other.Grid &&
+        Bodies.Count == other.Bodies.Count && Bodies.Select((body, index) => body.SameReadings(other.Bodies[index])).All(equal => equal) &&
+        Excluded.SequenceEqual(other.Excluded) && WaterSources.Count == other.WaterSources.Count &&
+        WaterSources.Select((source, index) => source.EntityId == other.WaterSources[index].EntityId &&
+            source.SpecId == other.WaterSources[index].SpecId && source.Badwater == other.WaterSources[index].Badwater &&
+            source.Footprint.SequenceEqual(other.WaterSources[index].Footprint)).All(equal => equal) &&
+        Environment.SameReadings(other.Environment);
+
 }
