@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Compatibility;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
 using Timberborn.Carrying;
@@ -34,6 +35,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
     private WalkToAccessibleExecutor _deliveryWalk = null!;
     private WalkToPositionExecutor _escapeWalk = null!;
     private Walker _walker = null!;
+    private TimberbornOwnedWalker _movement = null!;
     private GoodCarrier _carrier = null!;
     private GoodReserver _reserver = null!;
     private Character _character = null!;
@@ -73,6 +75,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         _deliveryWalk = GetComponent<WalkToAccessibleExecutor>();
         _escapeWalk = GetComponent<WalkToPositionExecutor>();
         _walker = GetComponent<Walker>();
+        _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
         _carrier = GetComponent<GoodCarrier>();
         _reserver = GetComponent<GoodReserver>();
         _character = GetComponent<Character>();
@@ -85,17 +88,18 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         if (_session.AdmissionsEnabled) VerifyIdentity();
     }
     public void InitializeEntity() => _ready = true;
-    public void PostLoadEntity() { _ready = true; if (_state.Active) StopMovement(); }
+    public void PostLoadEntity() => _ready = true;
     public void DeleteEntity() => _walker.StartedNewPath -= OnStartedNewPath;
     private void VerifyIdentity() => _session.Access.VerifyExecutorIdentity(GetComponentsAllocating<IExecutor>(), this);
 
-    // Only this pre-manager entry point may replace the executor. Replacing from IExecutor.Tick then
-    // returning Success/Failure would make BehaviorManager immediately clear the replacement.
+    // Ordinary pre-manager transitions and exact existing-carry path-refresh callbacks may claim ownership.
+    // Never replace from IExecutor.Tick then return Success/Failure: native code clears the replacement.
     public void BeforeBehaviorTick()
     {
         if (!_ready || !_state.Active && !_session.AdmissionsEnabled) return;
-        if (_session.Safety.IsPoisoned) { if (_state.Active) StopMovement(); return; }
-        _session.Safety.Transition(AdvanceOwnership);
+        if (_session.Safety.IsPoisoned) return; // Failure cleanup already stopped/paused; never retry indeterminate movement.
+        if (_state.Active) _session.Safety.Transition(AdvanceOwnership, StopMovement);
+        else TryAdmit();
         if (_lastStatus == Status) return;
         _lastStatus = Status;
         Debug.Log($"wildfire_carry_emergency beaver={_id} phase={Phase} status=\"{Status}\"");
@@ -103,12 +107,12 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
 
     private void AdvanceOwnership()
     {
-        if (!_state.Active) { TryAdmit(); return; }
-        if (!_session.Access.Owns(_manager, this)) throw new InvalidOperationException("Carrying emergency lost native executor ownership.");
+        if (!_session.Access.Owns(_manager, _carryBehavior, this)) throw new InvalidOperationException("Carrying emergency lost native executor ownership.");
         if (!_character.Alive || _control.UnderControl)
         {
             StopMovement();
-            _session.Access.Replace(_manager, this, null, returnToCarry: false);
+            if (_character.Alive) _movement.ReleasePause(); // Explicit player control; dead movers remain disabled.
+            _session.Access.Replace(_manager, _carryBehavior, this, null, returnToCarry: false);
             _state.Release();
             return; // Native roots handle death or explicit player control, including native goods semantics.
         }
@@ -117,13 +121,12 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         if (_restore)
         {
             StopMovement();
-            if (!_walker.Stopped()) return; // Ordinary Walker order is intentionally not assumed.
             _restore = false;
             _state.Hold(CarryEmergencyReason.AwaitingDelivery);
         }
         if (!_field.SafePosition(_transform.position))
         {
-            if (_state.Phase != CarryEmergencyPhase.Escaping || _routeRejected) TryEscape();
+            if (_state.Phase != CarryEmergencyPhase.Escaping || _routeRejected || _walker.Stopped()) TryEscape();
             else CheckEscapeRoute();
             return;
         }
@@ -138,23 +141,48 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
             _state.Hold(_needs.AnyNeedIsInCriticalState() ? CarryEmergencyReason.CriticalNeeds : CarryEmergencyReason.AwaitingDelivery);
     }
 
+    private bool CanAdmit() =>
+        _session.AdmissionsEnabled && _ready && !_session.Safety.IsPoisoned &&
+        _character.Alive && !_control.UnderControl && !_enterer.IsInside && !_walker.Stopped() &&
+        !_needs.AnyNeedIsInCriticalState() &&
+        _session.Access.IsNativeDelivery(_manager, _carryBehavior, _deliveryWalk) &&
+        ReservationMatches() && _field.Ready;
+
     private void TryAdmit()
     {
-        if (!_field.Ready || !_character.Alive || _control.UnderControl || _enterer.IsInside ||
-            _walker.Stopped() || _needs.AnyNeedIsInCriticalState() ||
-            !_session.Access.IsNativeDelivery(_manager, _carryBehavior, _deliveryWalk) || !ReservationMatches()) return;
-        var target = DeliveryAccess();
-        if (_field.SafePosition(_transform.position) && target is not null && HasSafeDeliveryCandidate(target)) return;
+        if (!CanAdmit()) return;
+        var remainingPath = _session.Access.ReadRemainingPath(_walker.PathFollower);
+        if (remainingPath is null) return;
+        if (_field.SafeInstalledPath(_transform.position, remainingPath, escaping: false)) return;
+        _session.Safety.Transition(() =>
+        {
+            ClaimNativeDelivery();
+            StopMovement();
+            TryEscape();
+        }, StopMovement);
+    }
+    private void ClaimNativeDelivery()
+    {
+        // Recheck exact native owner immediately before mutation, including callback-time admission.
+        if (!CanAdmit()) throw new InvalidOperationException("Native carrying admission changed before ownership transfer.");
         _state.Begin();
-        _session.Access.Replace(_manager, _deliveryWalk, this, returnToCarry: false);
-        StopMovement();
-        TryEscape();
+        _session.Access.Replace(_manager, _carryBehavior, _deliveryWalk, this, returnToCarry: false);
+    }
+    private void TryAdmitRefreshedPath()
+    {
+        if (!CanAdmit() || _field.SafeInstalledPath(_transform.position, _walker.PathCorners, escaping: false)) return;
+        _session.Safety.Transition(() =>
+        {
+            ClaimNativeDelivery();
+            _routeRejected = true;
+            _movement.RejectRoute(); // Keep FindPath's path intact; next ordinary tick stops/replans.
+        }, StopMovement);
     }
 
     private bool ReservationMatches()
     {
-        if (!_carrier.IsCarrying || _carrier.CarriedGood.Type == CarriedGoodType.Uncountable ||
-            _reserver.HasReservedStock || !_reserver.HasReservedCapacity) return false;
+        if (!_carrier.IsCarrying || _carrier.CarriedGood.Type is not (CarriedGoodType.Available or CarriedGoodType.Unavailable) ||
+            _reserver.StockReservation.Inventory is not null || !_reserver.HasReservedCapacity) return false;
         var carried = _carrier.CarriedGood.GoodAmount;
         var reserved = _reserver.CapacityReservation.GoodAmount;
         return carried.GoodId == reserved.GoodId && carried.Amount > 0 && carried.Amount == reserved.Amount;
@@ -178,6 +206,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         var result = _escapeWalk.Launch(_refuge);
         if (_routeRejected || result == ExecutorStatus.Failure || result == ExecutorStatus.Success && !At(_refuge))
         { StopMovement(); _state.Hold(CarryEmergencyReason.NoEscape); }
+        else _movement.ReleasePause();
     }
     private void CheckEscapeRoute()
     {
@@ -196,46 +225,57 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         finally { _launchingDelivery = false; }
         var receipt = new CarryDeliveryReceipt(!_routeRejected, result == ExecutorStatus.Running,
             result == ExecutorStatus.Success, target.Accesses.Any(At));
-        if (!_state.TryRelease(_field.SafePosition(_transform.position), ReservationMatches(), receipt))
+        if (!_state.CanRelease(_field.SafePosition(_transform.position), ReservationMatches(), receipt))
         { StopMovement(); return false; }
-        _session.Access.Replace(_manager, this, _deliveryWalk, returnToCarry: true);
+        _movement.ReleasePause();
+        _session.Access.Replace(_manager, _carryBehavior, this, _deliveryWalk, returnToCarry: true);
+        _state.Release();
         return true;
     }
     private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
     {
-        if (!_state.Active) return;
+        if (!_state.Active)
+        {
+            // A native NavMeshObserver may run after our ordinary interceptor. Exact current carry
+            // ownership admits it here; a new Carry.Decide launch has no running executor and fails admission.
+            TryAdmitRefreshedPath();
+            return;
+        }
         try { ValidateInstalledRoute(); }
         catch (Exception exception)
         {
             // Native navigation refresh can call this outside the pre-manager transition.
-            _session.Safety.MarkIndeterminate(exception);
+            _session.Safety.FailMovement(exception, StopMovement);
             throw;
         }
     }
     private void ValidateInstalledRoute()
     {
-        if (!_session.Access.Owns(_manager, this))
+        if (!_session.Access.Owns(_manager, _carryBehavior, this))
             throw new InvalidOperationException("Another executor replaced an active carrying emergency.");
         _routeRevision = _field.Revision;
         _routeRejected = _restore || !_ready || _session.Safety.IsPoisoned ||
             !_launchingDelivery && _state.Phase != CarryEmergencyPhase.Escaping ||
             !_field.SafeInstalledPath(_transform.position, _walker.PathCorners, escaping: !_launchingDelivery);
-        if (_routeRejected) StopMovement();
-        // Walker stores its destination AFTER this event; callers inspect _routeRejected after Launch returns.
+        if (_routeRejected) _movement.RejectRoute();
+        // FindPath still reads this path and assigns its destination AFTER the callback. Disable the
+        // late mover now; clear native movement after FindPath returns. This also intercepts a native
+        // NavMeshObserver refresh before its later WalkerMover tick, regardless of ordinary tick order.
     }
     private bool At(Vector3 position) => _navigation.InStoppingProximity(_transform.position, position);
-    private void StopMovement() { _walker.PathFollower.StopMoving(); _walker.StopNextTick(); }
+    private void StopMovement() => _movement.Stop();
 
     public ExecutorStatus Tick(float deltaTimeInHours)
     {
-        _session.Safety.ThrowIfSaveUnsafe();
+        if (_session.Safety.IsPoisoned) return ExecutorStatus.Running;
         _state.Advance(deltaTimeInHours);
         return ExecutorStatus.Running;
     }
     public void Save(IEntitySaver saver)
     {
         _session.Safety.ThrowIfSaveUnsafe();
-        if (!_state.Active) throw new InvalidOperationException("Inactive emergency is still installed in BehaviorManager.");
+        if (!_state.Active || !_session.Access.Owns(_manager, _carryBehavior, this))
+            throw new InvalidOperationException("Emergency save does not match native carrying ownership.");
         var state = saver.GetComponent(Key);
         state.Set(VersionKey, 1);
         state.Set(PhaseKey, (int)_state.Phase);
@@ -247,8 +287,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         VerifyIdentity(); // Also version-checks restored ownership when new admissions are disabled.
         var state = loader.GetComponent(Key);
         _state.Restore(state.Get(VersionKey), state.Get(PhaseKey), state.Get(ReasonKey), state.Get(HoursKey));
-        _restore = true;
-        StopMovement();
+        _restore = true; // First owned tick stops/replans after native entity loading settles.
         // Native GoodReserver.PostLoadEntity restores or invalidates its own reservations.
         // No movement is allowed until ordinary ticks begin after all entity post-load work.
     }

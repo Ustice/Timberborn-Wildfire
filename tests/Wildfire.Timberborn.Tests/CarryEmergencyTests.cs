@@ -12,7 +12,7 @@ public sealed class CarryEmergencyTests
     {
         var state = new CarryEmergencyState();
         state.Begin();
-        Assert.False(state.TryRelease(true, true, new(accepted, running, success, atTarget)));
+        Assert.False(state.CanRelease(true, true, new(accepted, running, success, atTarget)));
         Assert.True(state.Active);
     }
     [Theory]
@@ -22,7 +22,8 @@ public sealed class CarryEmergencyTests
     {
         var state = new CarryEmergencyState();
         state.Begin();
-        Assert.True(state.TryRelease(true, true, new(true, running, success, atTarget)));
+        Assert.True(state.CanRelease(true, true, new(true, running, success, atTarget)));
+        state.Release();
         Assert.Equal(CarryEmergencyPhase.Inactive, state.Phase);
     }
     [Theory]
@@ -32,14 +33,14 @@ public sealed class CarryEmergencyTests
     {
         var state = new CarryEmergencyState();
         state.Begin();
-        Assert.False(state.TryRelease(atSafeRefuge, reservationMatches, new(true, true, false, false)));
+        Assert.False(state.CanRelease(atSafeRefuge, reservationMatches, new(true, true, false, false)));
         Assert.True(state.Active);
     }
     [Fact]
     public void SaveDuringTransitionIsRejectedWithoutPoisonWhenNoCallbackEscapes()
     {
         var safety = new CarryEmergencySafety();
-        safety.Transition(() => Assert.Throws<InvalidOperationException>(safety.ThrowIfSaveUnsafe));
+        safety.Transition(() => Assert.Throws<InvalidOperationException>(safety.ThrowIfSaveUnsafe), () => { });
         safety.ThrowIfSaveUnsafe();
     }
     [Fact]
@@ -48,19 +49,45 @@ public sealed class CarryEmergencyTests
         var safety = new CarryEmergencySafety();
         var exception = new InvalidOperationException("native path listener failed");
         var writes = 0;
-        Assert.Same(exception, Assert.Throws<InvalidOperationException>(() => safety.Transition(() => { writes++; throw exception; })));
+        Assert.Same(exception, Assert.Throws<InvalidOperationException>(() => safety.Transition(() => { writes++; throw exception; }, () => { })));
         Assert.True(safety.IsPoisoned);
-        Assert.Throws<InvalidOperationException>(() => safety.Transition(() => writes++));
+        Assert.Throws<InvalidOperationException>(() => safety.Transition(() => writes++, () => { }));
         Assert.Equal(1, writes);
         Assert.Same(exception, Assert.Throws<InvalidOperationException>(safety.ThrowIfSaveUnsafe).InnerException);
+    }
+    [Fact]
+    public void FailureAfterMovementLaunchStopsEvenIfLogicalPhaseAlreadyReleased()
+    {
+        var state = new CarryEmergencyState();
+        state.Begin();
+        var safety = new CarryEmergencySafety();
+        bool moving = false;
+        Assert.Throws<InvalidOperationException>(() => safety.Transition(() =>
+        {
+            moving = true;
+            state.Release();
+            throw new InvalidOperationException("native ownership handoff failed");
+        }, () => moving = false));
+        Assert.False(moving);
+        Assert.True(safety.IsPoisoned);
+    }
+    [Fact]
+    public void FailedStopPreservesOriginalFailureAndPreventsSave()
+    {
+        var safety = new CarryEmergencySafety();
+        var handoff = new Exception("handoff");
+        var stop = new Exception("stop");
+        Assert.Same(handoff, Assert.Throws<Exception>(() => safety.Transition(() => throw handoff, () => throw stop)));
+        Assert.Same(stop, safety.StopFailure);
+        Assert.Same(handoff, Assert.Throws<InvalidOperationException>(safety.ThrowIfSaveUnsafe).InnerException);
     }
     [Fact]
     public void NavigationCallbackOutsideTransitionPoisonsSameSaveGuard()
     {
         var safety = new CarryEmergencySafety();
         var exception = new Exception("refresh callback failed");
-        safety.MarkIndeterminate(exception);
-        safety.MarkIndeterminate(new Exception("secondary failure"));
+        safety.FailMovement(exception, () => { });
+        safety.FailMovement(new Exception("secondary failure"), () => { });
         Assert.Same(exception, Assert.Throws<InvalidOperationException>(safety.ThrowIfSaveUnsafe).InnerException);
     }
     [Fact]

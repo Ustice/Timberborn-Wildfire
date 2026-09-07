@@ -25,11 +25,10 @@ public sealed class CarryEmergencyState
         if (float.IsNaN(hours) || float.IsInfinity(hours) || hours < 0) throw new ArgumentOutOfRangeException(nameof(hours));
         if (Active) Hours = Math.Min(Hours + hours, 100000);
     }
-    public bool TryRelease(bool atSafeRefuge, bool reservationMatches, CarryDeliveryReceipt receipt)
+    public bool CanRelease(bool atSafeRefuge, bool reservationMatches, CarryDeliveryReceipt receipt)
     {
         RequireActive();
         if (!atSafeRefuge || !reservationMatches || !receipt.CanResume) return false;
-        Release();
         return true;
     }
     public void Release() { Phase = CarryEmergencyPhase.Inactive; Reason = CarryEmergencyReason.None; Hours = 0; }
@@ -60,16 +59,27 @@ public sealed class CarryEmergencySafety
 {
     private bool _inFlight;
     public Exception? Failure { get; private set; }
+    public Exception? StopFailure { get; private set; }
     public bool IsPoisoned => Failure is not null;
-    public void Transition(Action action)
+    public void Transition(Action action, Action stopOnFailure)
     {
         ThrowIfSaveUnsafe();
         _inFlight = true;
         try { action(); }
-        catch (Exception exception) { Failure = exception; throw; }
+        catch (Exception exception)
+        {
+            FailMovement(exception, stopOnFailure);
+            throw;
+        }
         finally { _inFlight = false; }
     }
-    public void MarkIndeterminate(Exception exception) => Failure ??= exception;
+    public void FailMovement(Exception exception, Action stopOnFailure)
+    {
+        Failure ??= exception;
+        // Movement may already have launched even if the logical phase was released.
+        try { stopOnFailure(); }
+        catch (Exception stopFailure) { StopFailure ??= stopFailure; }
+    }
     public void ThrowIfSaveUnsafe()
     {
         if (_inFlight || Failure is not null)
