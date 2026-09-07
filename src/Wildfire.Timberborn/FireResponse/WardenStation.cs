@@ -23,7 +23,8 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
     public Inventory Inventory { get; private set; } = null!;
     public Workplace Workplace { get; private set; } = null!;
     public Accessible Access { get; private set; } = null!;
-    public bool Operational { get; private set; }
+    private bool _finished;
+    public bool Operational => _finished && Workplace.Enabled && Inventory.Enabled;
     public string Status { get; private set; } = "Waiting for construction";
 
     public void InitializeInventory(Inventory inventory) => Inventory = inventory;
@@ -32,8 +33,8 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
         Workplace = GetComponent<Workplace>();
         Access = GetComponent<Accessible>();
     }
-    public void OnEnterFinishedState() { Operational = true; Inventory.Enable(); }
-    public void OnExitFinishedState() { Operational = false; Inventory.Disable(); }
+    public void OnEnterFinishedState() { _finished = true; Inventory.Enable(); }
+    public void OnExitFinishedState() { _finished = false; Inventory.Disable(); }
 
     public override Decision Decide(BehaviorAgent agent)
     {
@@ -62,7 +63,7 @@ public sealed class WardenStationInventoryInitializer : IDedicatedDecoratorIniti
     public void Initialize(WardenStation station, Inventory inventory)
     {
         var initializer = _factory.Create(inventory, 20, "Wildfire.WardenStation");
-        initializer.AddAllowedGood(new StorableGoodAmount(StorableGood.CreateGiveableAndTakeable(WardenEquipment.WaterId), 20));
+        initializer.AddAllowedGood(new StorableGoodAmount(StorableGood.CreateAsGivable(WardenEquipment.WaterId), 20));
         initializer.HasPublicInput();
         initializer.Initialize();
         station.InitializeInventory(inventory);

@@ -159,7 +159,7 @@
       "HasEntrance": true,
       "Coordinates": {
         "X": 1,
-        "Y": -1,
+        "Y": 3,
         "Z": 0
       }
     },
@@ -187,14 +187,14 @@
         "BoxColliders": [
           {
             "Center": {
-              "X": 1.5,
-              "Y": 1.152500033378601,
-              "Z": 1.5
+              "X": 1.50000012,
+              "Y": 1.15250003,
+              "Z": 1.60995853
             },
             "Size": {
-              "X": 2.976680278778076,
-              "Y": 2.305000066757202,
-              "Z": 2.414130926132202
+              "X": 2.9682653,
+              "Y": 2.30500007,
+              "Z": 2.41008258
             }
           }
         ]
@@ -213,8 +213,15 @@
     "LocalAccess": {
       "X": 1.5,
       "Y": 0,
-      "Z": -0.5
+      "Z": 3.5
     },
     "ForceOneFinalAccess": true
+  },
+  "EnterableSpec": {
+    "OperatingState": "Finished",
+    "LimitedCapacityFinished": false,
+    "CapacityFinished": 0,
+    "LimitedCapacityUnfinished": false,
+    "CapacityUnfinished": 0
   }
 }

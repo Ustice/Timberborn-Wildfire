@@ -122,6 +122,8 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             (_station is null || !_station || !_station.Operational || !_station.Enabled ||
              !_worker.Employed || _worker.Workplace != _station.Workplace || _needs.AnyNeedIsInCriticalState()))
             return Retreat("Response interrupted");
+        if (_sortie.Phase is WardenPhase.Fetching or WardenPhase.Approaching &&
+            !_field.IsBurning(_target.CellIndex)) return Retreat("Fire no longer burning");
         if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat("Returning after application"); }
         if (_restoreWalk)
         {
