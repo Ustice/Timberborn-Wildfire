@@ -127,7 +127,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             return Retreat(WardenResponseReason.Interrupted, "Response interrupted");
         if (_sortie.Phase is WardenPhase.Fetching or WardenPhase.Approaching &&
             !_field.IsBurning(_target.CellIndex)) return Retreat(WardenResponseReason.TargetGone, "Fire no longer burning");
-        if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat(WardenResponseReason.Applied, "Returning after application"); }
+        if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat(ResponseReason, "Replanning return route"); }
         if (_restoreWalk)
         {
             if (!_walker.Stopped()) return ExecutorStatus.Running;
@@ -178,6 +178,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         {
             _equipment.ConsumeBucket();
             _sortie.Applied();
+            ResponseReason = WardenResponseReason.Applied;
             _restoreWalk = true;
             // Return routing happens on the next native character tick, outside the GPU commit callback.
             _destination = _navigator.CurrentAccessOrPosition();
