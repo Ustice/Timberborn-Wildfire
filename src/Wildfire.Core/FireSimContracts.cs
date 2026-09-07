@@ -24,6 +24,10 @@ public interface IFireSimListener
     void OnFireSimDeltas(ReadOnlySpan<CellDelta> deltas);
 }
 
+/// <summary>Queued cell and transport changes, applied in registration order.</summary>
+/// <param name="AddWater">Wetness-band increment, clamped to 0..3. Applied after SetCell,
+/// saturating the resulting water at 3, and before SetWater (which wins if both are supplied).
+/// Null and zero leave water unchanged. This is not a quantity of host inventory water.</param>
 public readonly record struct FireSimChange(
     int CellIndex,
     ushort? SetCell = null,
@@ -40,4 +44,5 @@ public readonly record struct FireSimChange(
     byte? SetBurningLevel = null,
     byte? SetTerrain = null,
     byte? SetSmoke = null,
-    byte? SetSmokeContamination = null);
+    byte? SetSmokeContamination = null,
+    byte? AddWater = null);

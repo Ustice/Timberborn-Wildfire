@@ -11,7 +11,7 @@ public sealed class ShaderSnapshotHarnessTests
     public void ExternalChangeFixtureRoundTripsProductionEncodedWords()
     {
         ShaderSnapshotExternalChanges changes = ShaderSnapshotExternalChanges.Encode(
-            2, new FireSimChange(0, SetHeat: 15, SetSmoke: 5, SetSmokeContamination: 7));
+            2, new FireSimChange(0, SetHeat: 15, SetSmoke: 5, SetSmokeContamination: 7, AddWater: 2));
         ShaderSnapshotFixture fixture = new(
             1, "external-changes", 89, new ComputeGridDimensions(1, 1, 1),
             new ShaderSnapshotLayer(0, 0, 1), [0], ExternalChanges: [changes]);
@@ -23,6 +23,7 @@ public sealed class ShaderSnapshotHarnessTests
         Assert.Equal(2, batch.Tick);
         Assert.Equal(changes.Words, batch.Words);
         Assert.Equal((1u << 3) | (1u << 9) | (1u << 10), batch.Words[1]);
+        Assert.Equal((5u << 17) | (7u << 20) | (2u << 23), batch.Words[2]);
     }
 
     [Fact]

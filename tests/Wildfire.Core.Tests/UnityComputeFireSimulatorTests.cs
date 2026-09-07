@@ -397,6 +397,7 @@ public sealed class UnityComputeFireSimulatorTests
                 SetCell: setCell,
                 AddHeat: 3,
                 AddFuel: 2,
+                AddWater: 2,
                 SetWater: 1,
                 SetFuel: 7,
                 SetHeat: 8,
@@ -435,7 +436,7 @@ public sealed class UnityComputeFireSimulatorTests
             [
                 1u,
                 0b111_1111u,
-                0x23u,
+                0x23u | (2u << 23),
                 (uint)setCell |
                     (1u << 16) |
                     (7u << 18) |

@@ -67,6 +67,8 @@ Some shader bindings retain `AtmosphericFields` and `CompanionFields` names for 
 
 [FireSimContracts](../src/Wildfire.Core/FireSimContracts.cs) defines queued `FireSimChange` inputs and `CellDelta` outputs. Changes can replace a cell or modify selected cell and transport fields. The shared Core coordinator applies queued inputs, simulates, reads results, swaps buffers, and notifies listeners. Changes registered by listeners wait for a subsequent tick.
 
+`AddWater` adds wetness bands (0..3), saturating the cell at 3; null and zero are no-ops. Within one command, `SetCell` runs first, additions next, and explicit field overrides last: `SetWater` wins over `AddWater`. Separate commands run in registration order, so multiple responders can add wetness without overwriting one another. Ambient observations may still use `SetWater`. This input neither creates native water volume nor accounts for carried goods; Timberborn owns inventory consumption and conversion to bands. The normal shader rules determine cooling, evaporation, and fire response.
+
 The GPU output reserves capacity for both external-change and simulation records. A cell can appear more than once in a tick. A `CellDelta` contains an index and old/new packed cell values. It is not a complete transport snapshot. Consumers needing ash, smoke, or steam read the corresponding simulation fields. Renderers may smooth or aggregate these fields for presentation without authoring gameplay state.
 
 ## Gameplay ownership

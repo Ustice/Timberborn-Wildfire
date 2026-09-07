@@ -104,7 +104,8 @@ public static class FireSimGpuProtocol
             (Clamp(change.SetAsh, 3u) << 12) |
             (Clamp(change.SetAshContamination, 7u) << 14) |
             (Clamp(change.SetSmoke, 7u) << 17) |
-            (Clamp(change.SetSmokeContamination, 7u) << 20);
+            (Clamp(change.SetSmokeContamination, 7u) << 20) |
+            (Clamp(change.AddWater, 3u) << 23);
     }
 
     private static uint GetSetValues(FireSimChange change)
