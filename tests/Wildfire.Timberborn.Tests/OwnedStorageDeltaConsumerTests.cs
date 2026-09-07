@@ -178,7 +178,7 @@ public sealed class OwnedStorageDeltaConsumerTests
     {
         internal readonly TimberbornNativeMaterialRegistry Registry = new(Grid, []);
         internal readonly TimberbornBurnDamageService Damage = new(new TimberbornBurnDamageDescriptorCatalog(
-            [new("Warehouse", TimberbornBurnDamageTargetKind.Storage, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)]),
+            [new("Warehouse", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)]),
                 new("Output", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)])]));
         internal readonly NativeResourceTransaction Resources = new();
         internal readonly List<string> Events = [];

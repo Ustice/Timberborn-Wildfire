@@ -72,7 +72,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
                 result = new(batch.UnownedCount, bodyLive.Count(pair => !pair.Value), damage, trees, crops,
                     new(storage.NotLive, storage.Unavailable, storage.Removed, storage.Hazardous, storage.Blasts,
                         storage.Pulses, storage.Unknown, storage.NonBurnable),
-                    live.Where(item => item.Family == NativeBurnTargetFamily.Structure).Select(item => item.EntityId).Distinct().Count(),
+                    live.Where(item => item.Family is NativeBurnTargetFamily.Structure or NativeBurnTargetFamily.Stockpile).Select(item => item.EntityId).Distinct().Count(),
                     Capabilities);
             });
             return result;
@@ -84,7 +84,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
     {
         NativeBurnTargetFamily.Tree => TimberbornTreeBurnTargetClassifier.IsTreeOrCuttable(state),
         NativeBurnTargetFamily.Crop => TimberbornCropBurnTargetClassifier.IsCropOrHarvestable(state),
-        NativeBurnTargetFamily.Stockpile => state.TargetKind == TimberbornBurnDamageTargetKind.Storage,
+        NativeBurnTargetFamily.Stockpile => state.TargetKind == TimberbornBurnDamageTargetKind.Structure,
         NativeBurnTargetFamily.Structure => state.TargetKind == TimberbornBurnDamageTargetKind.Structure,
         _ => false, // No SelectedCrop alias or unmigrated owner family may silently fall back.
     };

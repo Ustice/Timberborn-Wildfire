@@ -92,7 +92,7 @@ public sealed class OwnedConsequenceHistoryCodecTests
     {
         var source = OwnedMaterialPersistenceTests.Fixture(); var material = source.OwnedMaterial!;
         Guid id = material.Bindings.Entities.Single().EntityId;
-        var profile = new OwnedBodyAccountingProfile("Warehouse", TimberbornBurnDamageTargetKind.Storage,
+        var profile = new OwnedBodyAccountingProfile("Warehouse", TimberbornBurnDamageTargetKind.Structure,
             TimberbornBurnMaterialKind.Constructed, 100, 2, 3, [], ["Log"], null, [], [new("Log", 50)]);
         var history = new TimberbornOwnedConsequenceSnapshot([new(id, NativeBurnTargetFamily.Stockpile, OwnedBodyRetention.RetainedBody, profile)], [], [new(id,"Log",1,2)]);
         return source with { OwnedMaterial = new(material.CaptureSimulation(), material.Bindings, history),

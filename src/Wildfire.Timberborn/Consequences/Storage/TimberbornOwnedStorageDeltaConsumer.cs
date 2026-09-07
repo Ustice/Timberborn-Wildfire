@@ -39,9 +39,8 @@ public sealed class TimberbornOwnedStorageDeltaConsumer
     {
         if (_consuming) throw new InvalidOperationException("Cannot change storage origins during consequence delivery.");
         if (owner is null) throw new ArgumentNullException(nameof(owner));
-        var expectedKind = owner.Role == TimberbornOwnedInventoryRole.Stockpile ?
-            TimberbornBurnDamageTargetKind.Storage : TimberbornBurnDamageTargetKind.Structure;
-        if (!_damage.TryGetState(owner.TargetKey, out var state) || state.TargetKind != expectedKind)
+        // Both roles belong to a physical constructed body; inventory role does not change its kind.
+        if (!_damage.TryGetState(owner.TargetKey, out var state) || state.TargetKind != TimberbornBurnDamageTargetKind.Structure)
             throw new ArgumentException("Storage origin requires its exact canonical body damage registration.", nameof(owner));
         _origins.Register(owner.EntityId, owner.Role == TimberbornOwnedInventoryRole.Stockpile ?
             NativeBurnTargetFamily.Stockpile : NativeBurnTargetFamily.Structure, owner.TargetKey);

@@ -31,17 +31,21 @@ public sealed class OwnedConsequenceBatchTests
         Assert.Equal(3, result.Storage.DestroyedItems); // Storage budget aggregation is a separate boundary.
         Assert.NotEmpty(f.Native.TreeCalls);
         Assert.NotEmpty(f.Native.CropCalls);
-        Assert.Equal(1, result.StructureRollbackUnavailableOwners);
+        Assert.Equal(2, result.StructureRollbackUnavailableOwners);
         Assert.False(result.Capabilities.StructureRollbackSupported);
     }
 
-    [Fact]
-    public void LiveStructureWithoutOutputStillTakesBodyDamageAndReportsUnavailableEffects()
+    [Theory]
+    [InlineData(2)] // Stockpile role retains its physical constructed Structure body.
+    [InlineData(3)] // SimpleOutput belongs to the same kind of physical body.
+    public void LiveConstructedOwnerWithoutInventoryStillTakesBodyDamageAndReportsUnavailableEffects(int ownerIndex)
     {
         var f = new Fixture();
-        f.Native.InventoryAvailable.Remove(Structure);
-        var result = f.Consumer.Consume(2, [f.Delta(Structure, 4)]);
-        Assert.Equal(4, f.Damage.States[Key(Structure)].DamageTaken);
+        Guid owner = Ids[ownerIndex];
+        f.Native.InventoryAvailable.Remove(owner);
+        var result = f.Consumer.Consume(2, [f.Delta(owner, 4)]);
+        Assert.Equal(TimberbornBurnDamageTargetKind.Structure, f.Damage.States[Key(owner)].TargetKind);
+        Assert.Equal(4, f.Damage.States[Key(owner)].DamageTaken);
         Assert.Equal(0, result.NotLiveOwners);
         Assert.Equal(1, result.Storage.UnavailableInventories);
         Assert.Equal(0, result.Storage.DestroyedItems);
@@ -164,7 +168,7 @@ public sealed class OwnedConsequenceBatchTests
             Damage = new(new TimberbornBurnDamageDescriptorCatalog([
                 new("Pine", TimberbornBurnDamageTargetKind.Tree, TimberbornBurnMaterialKind.Wood, resourceYields: [new("Log", 10)]),
                 new("Carrot", TimberbornBurnDamageTargetKind.Crop, TimberbornBurnMaterialKind.Organic, resourceYields: [new("Carrot", 10)]),
-                new("Warehouse", TimberbornBurnDamageTargetKind.Storage, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)]),
+                new("Warehouse", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)]),
                 new("Mill", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)])]), logSink: Native);
             Damage.RegisterTargets(Grid, Ids.Select((id, i) => new TimberbornBurnDamageTargetRegistration(Key(id), specs[i],
                 [new(i, 0, 0), new(i, 1, 0)], 10)).ToArray());

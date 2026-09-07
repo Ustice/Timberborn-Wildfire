@@ -69,3 +69,8 @@ activation; the persistence schema is not proof that those native lifecycle sema
 
 Local evidence: `/tmp/wildfire-owned-consequence-history/` (`full-tests.log`, `session-tests.log`,
 `body-alias-reproduction.log`, plus the prior proposal and actual Claude review/disposition).
+
+Stockpile identity and inventory role remain canonical Stockpile while its physical warehouse body is
+Structure. Both the aggregate and standalone owned-storage route accept that actual native registration;
+missing inventory cannot suppress body damage. Stockpiles also count toward unavailable structure
+rollback until exact closure/reconstruction is implemented. This correction changes no body capacity.
