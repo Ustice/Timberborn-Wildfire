@@ -98,7 +98,7 @@ public sealed class WardenEquipmentInventoryInitializer : IDedicatedDecoratorIni
     public void Initialize(WardenEquipment equipment, Inventory inventory)
     {
         var initializer = _factory.Create(inventory, 1, "Wildfire.WardenEquipment");
-        initializer.AddAllowedGood(new StorableGoodAmount(StorableGood.CreateAsTakeable(WardenEquipment.WaterId), 1));
+        initializer.AddAllowedGood(new StorableGoodAmount(StorableGood.CreateAsGivable(WardenEquipment.WaterId), 1));
         initializer.Initialize();
         equipment.InitializeInventory(inventory);
     }
