@@ -23,6 +23,7 @@ Host inputs -> shared queued-change batch
   -> simulate full grid
   -> read compact deltas
   -> swap cell/transport buffers
+  -> read optional collection receipt and commit admitted host input
   -> notify listeners
 ```
 
@@ -31,6 +32,8 @@ The [coordinator](../src/Wildfire.Core/FireSimStepCoordinator.cs) owns this orde
 `IFireSimStepInputSimulator.TryTickWithInput` admits one extra input only when the actual next batch has space. Rejection returns null without ticking; the caller can run the ordinary tick. An admitted input is appended after queued commands but never stored in their queue. Its host commit callback runs after readback and buffer swap, before listeners, even when the input causes no delta. Reentrant ticks are rejected; callbacks may queue inputs for a later tick.
 
 An admitted-step failure reports `NotApplied` before entry to the backend apply stage, `Indeterminate` from entry to apply through an incomplete host commit, or `Committed` after the callback finishes. The original exception is retained. This is a delivery boundary, not rollback: after `Indeterminate`, the host must stop dispatch and prevent inconsistent saves. `Committed` must never replay or rewind host consumption, even if a listener fails. Native stock, worker state, and save guards remain host responsibilities. Invalid cell indices are rejected before admission.
+
+`IFireSimAshCollectionSimulator.TryCollectAsh` uses that same admission and commit boundary for conditional clean-ash removal. The GPU records the amount actually removed in the admitted command; the coordinator validates its identity and receipt before invoking the host callback. Generic queued commands cannot request collection. Later simulation changes do not change that receipt, so host production does not infer removal from a stale observation or a final field difference. See [the receipt protocol](reference/ash-collection-receipts.md) for bit layout, failure semantics, and executed shader evidence. Native worker integration remains a separate requirement.
 
 The [protocol](../src/Wildfire.Core/FireSimGpuProtocol.cs) encodes all supported cell and transport overrides, including smoke and contamination. `AddWater` occupies bits 23–24 of `AddFields`; the four-word/16-byte command layout is unchanged. Both compute backends and the fixture runner pass those same encoded words to the shared shader. Delta capacity is `cellCount + changeCapacity`: external changes and simulation may each append a record for the same cell. Consumers must not assume one record per cell per tick.
 
@@ -61,6 +64,10 @@ At each FireSystem tick, QA prepares pending spend inputs, the shared scheduler 
 `CellDelta` contains packed-cell transitions, not full transport state. [ITimberbornTransportFieldReader](../src/Wildfire.Timberborn/Simulation/ITimberbornTransportFieldReader.cs) provides an explicit synchronous transport snapshot. [TimberbornAshFieldSynchronizer](../src/Wildfire.Timberborn/Ash/TimberbornAshFieldSynchronizer.cs) reads it at most once per successfully synchronized tick and updates the derived ash model.
 
 Routine ash synchronization reads one transport buffer. Save capture separately reads cells and transport through the [persistence boundary](../src/Wildfire.Timberborn/Persistence/). The observation still allocates and performs synchronous full-grid readback; it is not asynchronous or incremental. Gameplay and rendering derive ash from simulator transport and queue mutations back rather than maintaining independent authority.
+
+## Native equipment assets
+
+[WardenAttachmentAssetProvider](../src/Wildfire.Timberborn/FireResponse/Presentation/WardenAttachmentAssetProvider.cs) supplies cached `GameObject` wrappers containing native `TimbermeshDescription` components for four exact Warden attachment names. It registers in Bootstrapper context so the native asset pipeline can resolve them during setup. Reset destroys the provider-owned wrappers; imported clones have their own lifetime. Native mesh data remains packaged under `Data/Equipment/FireResponse` using existing Ironteeth material names. The [isolated Unity probe](../scripts/qa/warden-attachments/README.md) covers actual asset lookup, import and reset. Character attachment, native atlas optimization and animated fit still require further proof.
 
 ## Native compatibility and consequences
 
