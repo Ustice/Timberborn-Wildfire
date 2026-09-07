@@ -20,7 +20,7 @@ The pure validation API accepts known slots and available archives to test the c
 
 ## Explicit buffer layouts
 
-Ordinary command/delta strides stay 16 bytes. The material batch marker is four words: request offset0, opcode `0x80000000`, request count, transaction token. The tag is interpreted before ordinary cell-index/mask fields. This supersedes the unused isolated per-cell encoding experiment 836b088.
+Ordinary commands stay 16 bytes. Delta rows now use 20 bytes to retain both originating target and local-slot ids; see [delta provenance](delta-slot-provenance.md). The material batch marker is four words: request offset0, opcode `0x80000000`, request count, transaction token. The tag is interpreted before ordinary cell-index/mask fields. This supersedes the unused isolated per-cell encoding experiment 836b088.
 
 A request is 10 uints/40 bytes:
 
@@ -48,7 +48,7 @@ The acknowledged material marker remains the exclusive final command and is neve
 3. Any validation rejection leaves every material cell unchanged; earlier ordinary inputs and later normal simulation can still run. If the rejected receipt exposes actual prior ownership different from the host expectation, the session is indeterminate and blocks subsequent ticks; ordinary rejection remains safe only while GPU and host identities agree. A GPU failure during writes is indeterminate and stops/reconciles instead of replaying.
 4. On acceptance apply the complete table from pre-write captures/known archives, then acknowledge. Capture prior/applied state before normal simulation; read receipts alongside deltas and swap before host commit.
 5. Validate all header/row identities, field masks and environmental preservation before a single host ownership/archive commit. New live material may have simulated once; do not write the handoff receipt back as a CPU state mirror.
-6. Fill the existing GPU delta Reserved word with originating TargetId and carry it through both readbacks. Queued old-owner fuel deltas and new-owner simulation deltas remain distinguishable. A native consumer must resolve that original ID, never the replacement cell occupant; native routing itself is not implemented by this prototype. `TimberbornDeltaConsumers.FromDelta` still discards TargetId and native decisions still resolve by current cell; readback identity alone does not fix this.
+6. Append the originating TargetId and SlotId to each GPU delta and retain both in readbacks. Queued old-slot fuel transitions and incoming-slot simulation transitions remain distinguishable, including when the native target is unchanged. The owned consumer must resolve retained origins and normalize complete per-slot transition chains before native mutation. Production legacy dispatch still needs replacement; readback identity alone does not activate the owned route.
 
 ## Engine fixtures
 
@@ -68,7 +68,7 @@ Use production encoded request words, and read prior/applied receipts before sim
 
 No native event registry, placement mapping, save/legacy migration, dynamic resource/profile changes, or exact splitting of existing cross-owner mixed storage fuel. Archives require explicit known ownership. Wrong/missing retained state is rejected, never reconstructed from full initial fuel or aggregate entity damage. No game/deployment actions are needed for this prototype.
 
-The shader trusts the typed host admission for global identity/alias/known-archive authority, while independently checking live expected identities, static profiles, sorted bounds and captured-source references. Raw fixture words intentionally bypass selected host checks to test GPU rejection; they are not a public native material-input API. Current native constructor fallback slot IDs are `cellIndex + 1` only to seed the unactivated session prototype. Existing importer TargetIds collide across providers: a durable native Guid/local-slot registry, coherent initial material projection, ledger persistence and original-owner consequence routing are required before live activation. Snapshot restore of an evolved handoff ledger is not implemented.
+The shader trusts the typed host admission for global identity/alias/known-archive authority, while independently checking live expected identities, static profiles, sorted bounds and captured-source references. Raw fixture words intentionally bypass selected host checks to test GPU rejection; they are not a public native material-input API. Current native constructor fallback slot IDs are `cellIndex + 1` only to seed the unactivated session prototype. Existing importer TargetIds collide across providers: the durable native Guid/local-slot registry, coherent material projection and original-owner route must be published together before live activation. Complete snapshot capture and new-simulator restoration are now implemented and independently tested; see [snapshot evidence](material-snapshot-prototype.md). These do not by themselves validate full native world publication.
 
 ## Verified checkpoint
 
