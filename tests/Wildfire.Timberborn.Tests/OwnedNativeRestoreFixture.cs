@@ -5,6 +5,7 @@ using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.Tests;
 
+// Synthetic accounting choices isolate restoration authority; they do not define native crop fuel policy.
 internal sealed class OwnedNativeRestoreFixture
 {
     internal static readonly Guid Id=new("00000000-0000-0000-0000-000000000002");

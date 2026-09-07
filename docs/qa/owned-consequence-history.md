@@ -3,7 +3,9 @@
 WF2 retains its outer format and sole BURN body-damage ledger. OWNED binary schema 2 adds immutable
 canonical owner definitions, natural request progress and desired charred presentation, and fractional
 storage burn credit. OWNED schema 1 remains readable with `HistoryCapability.Unavailable`; missing
-history cannot become empty complete history. Current production runtime still preserves/rejects WF2
+history cannot become empty complete history. [OWNED3 native restore evidence](owned-native-restore.md)
+adds separately captured static compatibility witnesses; OWNED2 alone cannot prove native compatibility.
+Current production runtime still preserves/rejects WF2
 before its legacy initializer. This change does not activate owned world loading or partial yield.
 
 ## Captured authority
@@ -27,11 +29,12 @@ before its legacy initializer. This change does not activate owned world loading
 ## Capture and publication
 
 `TimberbornOwnedWorldSession<TSimulator>` is a new unpublished bundle of simulator, registry, body
-service and consumer. `PrepareRestore` validates the complete association and actual supplied body
-definitions, clones mutable body state, creates a new simulator, restores consumer history, and returns
-only after the same runtime resource guard accepts it. A late failure disposes the new simulator. Even
-an accidentally reused body-definition service is not mutated during staging. The caller owns final
-single-bundle publication after native entity/model loading has settled.
+service and consumer. `PrepareRestore` now requires OWNED3 static evidence, captures exact retained
+native Guids under the same resource guard, and reconstructs a new body service from saved immutable
+accounting profiles. Current remaining yield or stock does not resize saved capacity. It creates a new
+simulator and restores history before returning the unpublished bundle; late failure disposes the new
+simulator. The caller owns final single-bundle publication after native entity/model loading has settled.
+See the [native restore proof](owned-native-restore.md) for compatibility and presence requirements.
 
 `Capture` holds the same guard's `CaptureAtRest` exclusion scope across all simulator/binding/body/history
 reads. Consumer-only capture uses that scope too. The busy latch prevents successful callback mutations,
@@ -52,8 +55,8 @@ Tests cover nonzero complete schema roundtrips (including profile fields/natural
 history and original preservation, explicit material-only rejection, exact tombstone resolution, actual
 receipt/credit continuation in a new session, no compound mutation replay, profile preflight failure,
 callback capture rejection, readback failure without poisoning, and disposal after late restore failure.
-The latter regression first reproduced a supplied body's DamageTaken changing despite failed restore;
-cloning the body service before applying saved damage fixes that boundary.
+The earlier alias regression reproduced a supplied body's DamageTaken changing despite failed restore.
+The current path constructs an entirely new body service from saved accounting before applying BURN.
 
 An installed native `SingletonSaver`/`ObjectLoader` test stores and reloads the complete encoded OWNED2
 payload. Native constructor/negative lookup tests verify owned construction avoids a world scan and
@@ -76,7 +79,7 @@ Structure. Both the aggregate and standalone owned-storage route accept that act
 missing inventory cannot suppress body damage. Stockpiles also count toward unavailable structure
 rollback until exact closure/reconstruction is implemented. This correction changes no body capacity.
 
-Validation at final source: **884 native tests passed**, zero failures/skips. No game or Unity launch.
+Validation of the original history slice: **884 native tests passed**, zero failures/skips. No game or Unity launch.
 
 The capture-scope regressions first reproduced successful consequence mutation during simulator readback
 and registration during body-liveness lookup. Both now reject before mutation. Logs:
