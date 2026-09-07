@@ -672,84 +672,6 @@ Ironteeth should favor Fire Wardens: higher construction and resource cost, fewe
 
 Fans and constructible fire berms are separate tactical tools. Fans should interact with smoke fields first and only later with fire airflow if the simulation can express the tradeoff. Fire berms are a cleaner spread-control mechanic and can block or reduce spread through a non-burnable constructed barrier.
 
-## 21. Implementation Phases
-
-### Phase 1: Core Data Contracts
-
-- Keep packed cell helpers.
-- Keep grid indexing helpers.
-- Define GPU simulator contracts and delta records.
-- Keep deterministic hash helper for scenario fixtures.
-- Keep scenario catalog tests.
-
-### Phase 2: Unity Compute Prototype
-
-- Implement `FireSim.compute` with the packed cell layout.
-- Implement full-grid dispatch first.
-- Emit compact delta records.
-- Emit visual field output.
-- Add shader snapshot fixtures.
-
-### Phase 3: Scenario Preview And Fixtures
-
-- Keep the CLI as a seeded input-grid preview.
-- Export fixture grids for shader tests.
-- Keep scenario generation deterministic.
-
-### Phase 4: Timberborn GPU Integration
-
-- Add Timberborn adapters.
-- Convert map/building data into cells.
-- Upload external changes.
-- Dispatch the GPU simulator on a fixed cadence.
-- Consume compact deltas.
-- Update overlays/effects from deltas and visual fields.
-- Validate gameplay loop.
-
-### Phase 5: Visual And Performance Tuning
-
-- Add active frontier optimization if profiling justifies it.
-- Tune visual texture output.
-- Tune gameplay delta readback.
-- Add runtime diagnostics.
-
-## 22. Testing Strategy
-
-### Unit Tests
-
-Test:
-
-- Packed cell round-trips.
-- Field setters.
-- Ignition threshold helper behavior.
-- Fire grid indexing.
-- Scenario determinism.
-- Contract-level validation.
-
-### Shader Snapshot Tests
-
-Given:
-
-- Same seed.
-- Same initial grid.
-- Same tick count.
-
-The compute shader should produce stable packed cell grids and compact deltas for each accepted scenario.
-
-Snapshot differences should be understood, reviewed, and bounded by scenario.
-
-### CLI Scenarios
-
-Keep seeded scenarios for:
-
-- Single ignition point.
-- Line of fuel.
-- Water barrier.
-- Vertical fuel column.
-- Sparse forest.
-- Building cluster.
-- Mixed terrain/fuel/water.
-
 ## 23. Important Design Rules
 
 1. The sim owns mutation.
@@ -786,7 +708,7 @@ Keep seeded scenarios for:
 
 ## 24. Release Simulation Decisions
 
-The initial release should stay conservative and ship the already-proven GPU path unless later live evidence creates a specific blocker. These decisions close the release-blocking questions from `TWF-044`; deferred items remain valid future work but should not block Sprint 4 or the first public release.
+The initial release should stay conservative and ship the already-proven GPU path unless later live evidence creates a specific blocker. These historical decisions preceded the later field-model changes.
 
 | Topic                            | Initial Release Decision                                                                                                                                                                                                                           | Evidence And Follow-Up                                                                                                                                                                                                                                                                                               |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

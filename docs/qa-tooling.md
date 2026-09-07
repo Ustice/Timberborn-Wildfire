@@ -1,12 +1,6 @@
 # QA Tooling Reliability
 
-This page defines the durable Wildfire QA tool suite and the local reliability log that helps QA improve Timberborn interaction tools over time.
-
-## Goal
-
-QA should reduce repeated manual validation work by building small, reliable tools for Timberborn launch, readiness checks, save loading, command bridge calls, UI navigation, screenshots, recordings, and evidence capture.
-
-The tools should improve over time. A failing QA run should distinguish product behavior from automation reliability so the next agent knows whether to fix Wildfire, repair the environment, tighten the test design, or improve the QA tool.
+Commands and storage formats for the local QA tool-run log, fixture preflight, and generated scenarios.
 
 ## Local Database
 
@@ -24,17 +18,17 @@ qa/tool-runs.sqlite-*
 
 The Prisma schema is checked in at [../prisma/schema.prisma](../prisma/schema.prisma), the Prisma CLI config lives at [../prisma.config.ts](../prisma.config.ts), and migrations live under [../prisma/migrations/](../prisma/migrations/). Scripts apply migrations automatically when they create or open the local database.
 
-Do not commit the live database. When a result matters for durable project history, export the relevant summary into the GitHub issue, a dated evidence report, or a small evidence manifest.
+The database and its sidecars are local runtime artifacts, not versioned evidence.
 
 ## Failure Classes
 
-Every failed or blocked tool run should use one of these classes:
+The tool-run schema supports these failure classes:
 
 - `tool_failure`: the automation made a bad assumption, clicked the wrong target, timed out incorrectly, misread state, or produced unreliable evidence.
 - `environment_failure`: Timberborn, Steam, the display, the shared QA lock, permissions, or local machine state prevented a fair tool run.
 - `product_failure`: the tool worked, but Wildfire or the Timberborn adapter failed the assigned acceptance criterion.
 - `test_design_failure`: the gate was ambiguous, too broad, missing a stable observable, or depended on an unsafe/manual step.
-- `unknown`: a temporary classification only. QA should reduce this to one of the other classes before integration when practical.
+- `unknown`: the available evidence does not yet identify a failure class.
 
 ## Recording Runs
 
@@ -95,8 +89,6 @@ bun scripts/qa-tool-report.ts --days=7
 bun scripts/qa-tool-report.ts --format=json
 ```
 
-Use the report to decide whether a repeated validation problem should become a QA-tooling issue instead of staying attached to a product ticket.
-
 ## Blocker Preflight
 
 For a gate covered by the blocker preflight, inspect its fixture requirements with:
@@ -113,7 +105,7 @@ To evaluate captured evidence without touching Timberborn:
 bun scripts/qa-blocker-preflight.ts --from-file qa-evidence/<run>/status.txt
 ```
 
-The preflight was introduced for #17, #43, #44, #45, and #60; these issue references identify its original scope, not their current status. If the preflight says the loaded save lacks fixture proof, create or load a targeted scenario instead of running another generic QA pass.
+The preflight was introduced for #17, #43, #44, #45, and #60; these issue references identify its original scope, not their current status.
 
 ## Generated Scenario Profiles
 
@@ -147,10 +139,4 @@ To burn the stocked explosive and contaminated stored-material targets, use the 
 bun scripts/invoke-timberborn-command.ts qa-stored-material-stimulus all --wait=6 --require-advanced-tick
 ```
 
-Targets are `explosive`, `contaminated`, or `all`. The command scans live inventory surfaces for stocked `Explosives` or `Badwater`, queues heat on the matching target occupied cells, and reports `target_key`, `target_spec_id`, `target_good_id`, `target_stock_before`, `target_index`, `target_x`, `target_y`, `target_z`, and `queued_heat_changes`. If no stocked target exists, classify the run as `tool_failure` or fixture setup failure rather than product behavior.
-
-## Ownership
-
-The agent running validation can use this log to investigate repeated tool failures. It is diagnostic tooling, not a required role handoff or a second acceptance ledger.
-
-When a repeated `tool_failure` blocks validation, QA should create or recommend a GitHub issue for the smallest tool improvement that would make the gate reliable.
+Targets are `explosive`, `contaminated`, or `all`. The command scans live inventory surfaces for stocked `Explosives` or `Badwater`, queues heat on the matching target occupied cells, and reports `target_key`, `target_spec_id`, `target_good_id`, `target_stock_before`, `target_index`, `target_x`, `target_y`, `target_z`, and `queued_heat_changes`. No stocked target means this stimulus has no applicable inventory to burn.

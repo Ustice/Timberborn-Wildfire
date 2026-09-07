@@ -32,7 +32,6 @@ This proves remote QA command execution exists, but not menu navigation.
 
 - `docs/timberborn-menu-coordinate-guide.md` documents in-game Escape, load, mods, startup mods, exit confirmation, standalone main menu, and main-menu load coordinates.
 - The guide explicitly states coordinates are valid only for the documented display state and records screen-click verification with `cliclick`.
-- `docs/TEST_PLAN.md` requires UI automation to take coordinate targets from the guide, verify the target app and screen, and fail loudly rather than click unknown states.
 - Historical ticket `TWF-015` on branch `archive/file-kanban-2026-05-23` is still framed as a coordinate-driven Bun utility, not a remote command bridge or in-game save/load command.
 
 This is the current supported path for menu traversal: guarded screen interaction.
@@ -91,21 +90,6 @@ The safer architecture is command-oriented, not menu-oriented:
 - Log before and after state with searchable tokens.
 - Reject unknown commands and avoid arbitrary UI queries or arbitrary VisualElement invocation.
 
-## Safety Boundary
-
-Safe for this sprint:
-
-- Read-only bridge commands such as `status` and `help`.
-- Commands that report current state, loaded-save metadata, mod readiness, or available known commands.
-- A future command that performs one explicitly named, repeatable, non-destructive action after state checks.
-
-Unsafe as a generic primitive:
-
-- "Click menu element by name."
-- "Invoke VisualElement by path."
-- "Select list row by index" without proving the settlement/save identity.
-- Any command that can delete saves, overwrite saves, open external folders/sites, exit to desktop, or mutate a non-disposable save without explicit ticket scope.
-
 ## Risks
 
 - Timberborn internal UI controller and save/load service names may change between versions.
@@ -113,24 +97,6 @@ Unsafe as a generic primitive:
 - Main-menu UI may not exist in the loaded-game context where the current Wildfire game-context bridge is bound.
 - Loading a save from inside a loaded save is state-changing and needs a disposable-save boundary.
 - Keyboard automation still interrupts the active desktop and does not solve the original "remote without screen clicks" goal.
-
-## Smallest Follow-Up Ticket
-
-Create a worker ticket for one allowlisted bridge command, not a generic navigator:
-
-Title: `Add Read-Only Timberborn QA Readiness Command`
-
-Goal: Extend the existing file command bridge with a `qa-readiness` command that reports loaded-game readiness, current Timberborn version text if available from logs or game state, simulator integration, and whether known Wildfire command files are writable. It must not open menus or mutate saves.
-
-Verification:
-
-- `git diff --check`
-- `dotnet test`
-- `dotnet build Wildfire.slnx`
-- `bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6`
-- `Player.log` evidence with `wildfire_command_request command=qa-readiness` and `wildfire_command_result command=qa-readiness success=true`
-
-After that lands, research or implement a separate `load-latest-save` bridge command only if a Timberborn-owned save/load service can be identified and guarded by disposable-save checks. If no such service is found, keep `TWF-015` coordinate-driven.
 
 ## Checked Sources
 
