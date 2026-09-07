@@ -85,5 +85,8 @@ internal static class TimberbornGatherableYieldLoadContract
         ["Timberborn.WorldPersistence.dll"] = "831546b1f90af169d6d85076ca26bd885574daf56e0ad27f3b90bc5b1fdb8bb0",
         ["Timberborn.NaturalResourcesModelSystem.dll"] = "de06f91172601e1e6930c75d026a75bb0aa324639c33d64085bffab25abe539a",
         ["Timberborn.TimeSystem.dll"] = "e4d1f60b5a4bca37927659b28412f6fcd9b1ef02f85a6329c2a84bd8d2a4d20e",
+        ["Timberborn.TemplateInstantiation.dll"] = "259c6e6e6337675c45e480e33eaf8f08e687c70f2d43d0d3af68ee43dfaf4336",
+        ["Timberborn.EntitySystem.dll"] = "c198cf97f6c57a50117c2593a686aa7874cd8eeb567fd25f3409e18d29a0635e",
+        ["Timberborn.BaseComponentSystem.dll"] = "0d479b9533880e1368b5df144f8d83f30d9c8774cfc8f96f071ac53d5851318d",
     };
 }

@@ -8,6 +8,21 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class NativeGatherableYieldLoadTests
 {
     [Fact]
+    public void NativeAutomaticDiscoveryPredicateAdmitsProductionGameConfigurator()
+    {
+        using var f = new Fixture();
+        var type = f.Native.ModType("Wildfire.Timberborn.Compatibility.TimberbornGatherableYieldLoadConfigurator");
+        var definition = f.Native.Type("Bindito.Core", "Bindito.Core.Internal.ContainerDefinition");
+        // Full AppDomain scanning also reaches unrelated test-host assembly contexts whose Timberborn
+        // references deliberately are not globally installed. Invoke the actual native admission predicate.
+        var predicate = Activator.CreateInstance(f.Native.Type("Bindito.Core", "Bindito.Core.Internal.ContainerDefinition+<>c__DisplayClass10_0"))!;
+        predicate.GetType().GetField("configuratorType")!.SetValue(predicate, f.Native.Type("Bindito.Core", "Bindito.Core.IConfigurator"));
+        Assert.True((bool)predicate.GetType().GetMethod("<FindConfigurators>b__1", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(predicate, [type])!);
+        Assert.True((bool)definition.GetMethod("HasContext", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [type, "Game"])!);
+        Assert.False((bool)definition.GetMethod("HasContext", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [type, "MapEditor"])!);
+        Assert.NotNull(Activator.CreateInstance(type));
+    }
+    [Fact]
     public void NativeRipeGrowerLoadRefillsButPreInitializeRestoresSameSavedYieldBeforeLaterConsumers()
     {
         using var f = new Fixture();
