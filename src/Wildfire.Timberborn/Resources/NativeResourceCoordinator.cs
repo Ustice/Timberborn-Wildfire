@@ -1,13 +1,14 @@
+using Wildfire.Timberborn.FireResponse;
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn.FireResponse;
+namespace Wildfire.Timberborn.Resources;
 
 /// <summary>Pending jobs remain in native executors. Only one dose enters an owned synchronous GPU step.</summary>
-public sealed class WardenDeliveryService
+public sealed class NativeResourceCoordinator
 {
     private readonly List<WardenExecutor> _wardens = new();
     private IFireSimStepInputSimulator? _simulator;
-    private readonly WardenDeliveryTransaction _transaction = new();
+    private readonly NativeResourceTransaction _transaction = new();
     public long FieldRevision { get; private set; }
     public bool IsIndeterminate => _transaction.IsIndeterminate;
     public void Register(WardenExecutor executor) => _wardens.Add(executor);

@@ -1,4 +1,5 @@
 using Wildfire.Timberborn.Beavers.Emergency;
+using Wildfire.Timberborn.Resources;
 using Bindito.Core;
 using Timberborn.EntityPanelSystem;
 using Wildfire.Timberborn.FireResponse;
@@ -38,14 +39,14 @@ public sealed class WildfireConfigurator : Configurator
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
         Bind<WardenStationFragment>().AsSingleton();
-        Bind<WardenRecoveryNotification>().AsSingleton();
+        Bind<NativeResourceRecoveryNotification>().AsSingleton();
         MultiBind<EntityPanelModule>().ToProvider<WardenPanelModuleProvider>().AsSingleton();
         Bind<CarryEmergencyFragment>().AsSingleton();
         MultiBind<EntityPanelModule>().ToProvider<CarryEmergencyPanelModuleProvider>().AsSingleton();
         Bind<CarryEmergencySession>().AsSingleton();
         Bind<WildfireCarryEmergencyExecutor>().AsTransient();
         Bind<CarryEmergencyInterrupter>().AsTransient();
-        Bind<WardenDeliveryService>().AsSingleton();
+        Bind<NativeResourceCoordinator>().AsSingleton();
         Bind<WardenFireField>().AsSingleton();
         Bind<WardenStation>().AsTransient();
         Bind<WardenEquipment>().AsTransient();

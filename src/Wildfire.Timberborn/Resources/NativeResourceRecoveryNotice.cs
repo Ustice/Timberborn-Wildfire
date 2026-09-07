@@ -1,7 +1,7 @@
-namespace Wildfire.Timberborn.FireResponse;
+namespace Wildfire.Timberborn.Resources;
 
 /// <summary>One notification attempt per loaded world; never invoked from a water operation.</summary>
-public sealed class WardenRecoveryNotice
+public sealed class NativeResourceRecoveryNotice
 {
     private bool _attempted;
     public void ShowIfNeeded(bool indeterminate, Action show)

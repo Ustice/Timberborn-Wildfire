@@ -1,18 +1,26 @@
 using Wildfire.Core;
 
-namespace Wildfire.Timberborn.FireResponse;
+namespace Wildfire.Timberborn.Resources;
 
 /// <summary>Session safety around the synchronous simulator/stock commit. No inventory is duplicated here.</summary>
-public sealed class WardenDeliveryTransaction
+public sealed class NativeResourceTransaction
 {
     private bool _delivering;
     public bool IsIndeterminate { get; private set; }
 
     public GpuFireStepResult? TryDeliver(IFireSimStepInputSimulator simulator, FireSimChange input, Action commit)
     {
+        return ExecuteStep(() => simulator.TryTickWithInput(input, commit));
+    }
+
+    public GpuFireStepResult? TryCollectAsh(IFireSimAshCollectionSimulator simulator, FireSimAshCollectionInput input,
+        Action<FireSimAshCollectionReceipt> commit) => ExecuteStep(() => simulator.TryCollectAsh(input, commit));
+
+    private GpuFireStepResult? ExecuteStep(Func<GpuFireStepResult?> step)
+    {
         ThrowIfSaveUnsafe();
         _delivering = true;
-        try { return simulator.TryTickWithInput(input, commit); }
+        try { return step(); }
         catch (FireSimStepInputException exception)
         {
             if (exception.Outcome == FireSimStepInputOutcome.Indeterminate) IsIndeterminate = true;
@@ -38,12 +46,12 @@ public sealed class WardenDeliveryTransaction
     public void ThrowIfSaveUnsafe()
     {
         if (_delivering || IsIndeterminate)
-            throw new InvalidOperationException("Warden water delivery is in progress or indeterminate; reload the last saved world before saving.");
+            throw new InvalidOperationException("Wildfire resource conversion is in progress or indeterminate; reload the last saved world before saving.");
     }
 
     public void ResetForWorldLoad()
     {
-        if (_delivering) throw new InvalidOperationException("Cannot replace the world during water delivery.");
+        if (_delivering) throw new InvalidOperationException("Cannot replace the world during resource conversion.");
         IsIndeterminate = false;
     }
 }

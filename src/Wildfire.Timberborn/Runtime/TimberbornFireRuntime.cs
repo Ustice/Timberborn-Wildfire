@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Resources;
 using Wildfire.Timberborn.FireResponse;
 using Timberborn.SingletonSystem;
 using Timberborn.QuickNotificationSystem;
@@ -86,9 +87,9 @@ public sealed partial class TimberbornFireRuntime :
         MapIndexService mapIndexService,
         IDayNightCycle dayNightCycle,
         ISingletonLoader singletonLoader,
-        WardenDeliveryService wardenDelivery)
+        NativeResourceCoordinator resources)
     {
-        _wardenDelivery = wardenDelivery;
+        _resources = resources;
         _releaseSettings = releaseSettings ?? throw new ArgumentNullException(nameof(releaseSettings));
         _fireSimParameterPresetState = fireSimParameterPresetState ??
             throw new ArgumentNullException(nameof(fireSimParameterPresetState));
@@ -154,7 +155,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void Load()
     {
-        _wardenDelivery.ResetForWorldLoad();
+        _resources.ResetForWorldLoad();
         Initialization.Unload();
         ResetRuntimeSession();
         Initialization.Load();
@@ -171,7 +172,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void Unload()
     {
-        _wardenDelivery.ResetForWorldLoad();
+        _resources.ResetForWorldLoad();
         _logSink.Info(
             $"wildfire_timberborn_adapter_stopping game_update_id={_gameUpdateId} simulator_integrated={(_fireSystem is { IsInitialized: true }).ToString().ToLowerInvariant()}");
         Initialization.Unload();
@@ -214,7 +215,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void Save(ISingletonSaver singletonSaver)
     {
-        _wardenDelivery.ThrowIfSaveUnsafe();
+        _resources.ThrowIfSaveUnsafe();
         if (singletonSaver is null)
         {
             throw new ArgumentNullException(nameof(singletonSaver));
@@ -238,7 +239,7 @@ public sealed partial class TimberbornFireRuntime :
 
     public void UpdateSingleton()
     {
-        if (_wardenDelivery.IsIndeterminate) return;
+        if (_resources.IsIndeterminate) return;
         if (InitializationState != TimberbornRuntimeInitializationState.Ready)
         {
             return;
@@ -396,8 +397,8 @@ public sealed partial class TimberbornFireRuntime :
                 throw new InvalidOperationException("Warden response requires native cell observations.");
             _wardenTransport = fireSystem.Simulator as ITimberbornTransportFieldReader ??
                 throw new InvalidOperationException("Warden response requires native smoke observations.");
-            _wardenDelivery.Attach(fireSystem.Simulator!);
-            fireSystem.StepWithHostInput = _wardenDelivery.Tick;
+            _resources.Attach(fireSystem.Simulator!);
+            fireSystem.StepWithHostInput = _resources.Tick;
             _playerFireAlertCameraFocus.ConfigureGrid(grid);
             _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);
             TimberbornFixedCadenceFireDispatcher dispatcher = new(

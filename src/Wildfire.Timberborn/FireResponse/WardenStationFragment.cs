@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Resources;
 using Timberborn.BaseComponentSystem;
 using Timberborn.EntityPanelSystem;
 using Timberborn.Localization;
@@ -8,13 +9,13 @@ namespace Wildfire.Timberborn.FireResponse;
 public sealed class WardenStationFragment : IEntityPanelFragment
 {
     private readonly ILoc _loc;
-    private readonly WardenDeliveryService _delivery;
+    private readonly NativeResourceCoordinator _delivery;
     private readonly WardenFireField _field;
     private VisualElement _root = null!;
     private Label _status = null!, _reason = null!, _reserve = null!, _worker = null!, _payload = null!;
     private WardenStation? _station;
 
-    public WardenStationFragment(ILoc loc, WardenDeliveryService delivery, WardenFireField field)
+    public WardenStationFragment(ILoc loc, NativeResourceCoordinator delivery, WardenFireField field)
     { _loc = loc; _delivery = delivery; _field = field; }
 
     public VisualElement InitializeFragment()

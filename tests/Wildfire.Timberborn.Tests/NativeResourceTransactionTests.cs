@@ -1,14 +1,15 @@
+using Wildfire.Timberborn.Resources;
 using Wildfire.Core;
 using Wildfire.Timberborn.FireResponse;
 
 namespace Wildfire.Timberborn.Tests;
 
-public sealed class WardenDeliveryTransactionTests
+public sealed class NativeResourceTransactionTests
 {
     [Fact]
     public void CapacityRejectionLeavesWaterAndPendingJobUnchanged()
     {
-        var transaction = new WardenDeliveryTransaction();
+        var transaction = new NativeResourceTransaction();
         var consumed = 0;
         var result = transaction.TryDeliver(new StepSimulator { Reject = true }, new(0, AddWater: 3), () => consumed++);
         Assert.Null(result);
@@ -22,7 +23,7 @@ public sealed class WardenDeliveryTransactionTests
     [InlineData(FireSimStepInputOutcome.Committed, false)]
     public void OnlyAmbiguousMutationPoisonsTheSession(FireSimStepInputOutcome outcome, bool poisoned)
     {
-        var transaction = new WardenDeliveryTransaction();
+        var transaction = new NativeResourceTransaction();
         var consumed = 0;
         Assert.Throws<FireSimStepInputException>(() => transaction.TryDeliver(
             new StepSimulator { Failure = outcome }, new(0, AddWater: 3), () => consumed++));
@@ -40,7 +41,7 @@ public sealed class WardenDeliveryTransactionTests
     [Fact]
     public void SaveAndWorldReplacementCannotReenterDelivery()
     {
-        var transaction = new WardenDeliveryTransaction();
+        var transaction = new NativeResourceTransaction();
         transaction.TryDeliver(new StepSimulator(), new(0), () =>
         {
             Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
@@ -52,7 +53,7 @@ public sealed class WardenDeliveryTransactionTests
     [Fact]
     public void StockMutationFailurePoisonsUntilExplicitWorldLoad()
     {
-        var transaction = new WardenDeliveryTransaction();
+        var transaction = new NativeResourceTransaction();
         Assert.Throws<FireSimStepInputException>(() => transaction.TryDeliver(new StepSimulator(), new(0),
             () => throw new InvalidOperationException("native consume failed")));
         Assert.True(transaction.IsIndeterminate);
@@ -63,7 +64,7 @@ public sealed class WardenDeliveryTransactionTests
     [Fact]
     public void PairedTransferFailureAfterSourceMutationIsNotRefundedOrSaveable()
     {
-        var transaction = new WardenDeliveryTransaction();
+        var transaction = new NativeResourceTransaction();
         int source = 1, destination = 0;
         var failure = new InvalidOperationException("inventory event failed after take");
         Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => transaction.TransferInventory(() =>
@@ -81,7 +82,7 @@ public sealed class WardenDeliveryTransactionTests
     [Fact]
     public void SuccessfulTransferAllowsSavingOnlyAfterBothMutations()
     {
-        var transaction = new WardenDeliveryTransaction();
+        var transaction = new NativeResourceTransaction();
         int source = 1, destination = 0;
         transaction.TransferInventory(() =>
         {
@@ -94,8 +95,45 @@ public sealed class WardenDeliveryTransactionTests
         transaction.ThrowIfSaveUnsafe();
     }
 
-    private sealed class StepSimulator : IFireSimStepInputSimulator
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void AshReceiptAndCarrierPhaseCommitShareOneSaveBoundary(byte collected)
     {
+        var transaction = new NativeResourceTransaction();
+        int carried = 0;
+        string phase = "ReadyToCollect";
+        transaction.TryCollectAsh(new StepSimulator { Collected = collected }, new(7, 1), receipt =>
+        {
+            Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+            carried = receipt.Collected;
+            phase = carried == 0 ? "Idle" : "Returning";
+        });
+        Assert.Equal(collected, carried);
+        Assert.Equal(collected == 0 ? "Idle" : "Returning", phase);
+        transaction.ThrowIfSaveUnsafe();
+    }
+
+    [Fact]
+    public void AshCarrierMutationThenPhaseFailureCannotBeSavedOrReplayed()
+    {
+        var transaction = new NativeResourceTransaction();
+        int carried = 0;
+        Assert.Throws<FireSimStepInputException>(() => transaction.TryCollectAsh(new StepSimulator(), new(7, 1), receipt =>
+        {
+            carried = receipt.Collected;
+            throw new InvalidOperationException("carrier subscriber failed before phase change");
+        }));
+        Assert.Equal(1, carried);
+        Assert.True(transaction.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+    }
+
+    private sealed class StepSimulator : IFireSimAshCollectionSimulator
+    {
+        public byte Collected { get; init; } = 1;
+        public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commit)
+            => TryTickWithInput(new FireSimChange(input.CellIndex), () => commit(new(input.CellIndex, input.Requested, Collected)));
         public bool Reject { get; init; }
         public FireSimStepInputOutcome? Failure { get; init; }
         public int Width => 1;

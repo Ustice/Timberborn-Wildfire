@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Resources;
 using Wildfire.Timberborn.FireResponse;
 
 namespace Wildfire.Timberborn.Tests;
@@ -12,7 +13,7 @@ public sealed class WardenPresentationTests
     {
         var state = Ready with { UnsafeWaterState = true, Operational = false, AssignedWorkers = 0,
             Phase = WardenPhase.Returning, Reason = WardenResponseReason.UnsafeRoute };
-        Assert.Equal("Wildfire.Warden.Recovery", WardenStationPresentation.StatusKey(state));
+        Assert.Equal("Wildfire.Resources.Recovery", WardenStationPresentation.StatusKey(state));
     }
 
     [Fact]
@@ -51,8 +52,8 @@ public sealed class WardenPresentationTests
     [Fact]
     public void ThrowingOrReentrantNotificationCannotRepeatOrClearUnsafeWaterState()
     {
-        var transaction = new WardenDeliveryTransaction();
-        var notice = new WardenRecoveryNotice();
+        var transaction = new NativeResourceTransaction();
+        var notice = new NativeResourceRecoveryNotice();
         var inventoryError = new InvalidOperationException("native event after mutation");
         Assert.Same(inventoryError, Assert.Throws<InvalidOperationException>(() =>
             transaction.TransferInventory(() => throw inventoryError)));
@@ -72,7 +73,7 @@ public sealed class WardenPresentationTests
     [Fact]
     public void OnlyWorldLoadRearmsTheRecoveryNotice()
     {
-        var notice = new WardenRecoveryNotice();
+        var notice = new NativeResourceRecoveryNotice();
         int attempts = 0;
         notice.ShowIfNeeded(false, () => attempts++);
         notice.ShowIfNeeded(true, () => attempts++);

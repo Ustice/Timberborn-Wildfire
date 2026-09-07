@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.Resources;
 using Timberborn.BaseComponentSystem;
 using Timberborn.Common;
 using Timberborn.EntitySystem;
@@ -15,8 +16,8 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
 {
     public const string WaterId = "Water";
     public static readonly GoodAmount Bucket = new(WaterId, 1);
-    private readonly WardenDeliveryService _delivery;
-    public WardenEquipment(WardenDeliveryService delivery) => _delivery = delivery;
+    private readonly NativeResourceCoordinator _delivery;
+    public WardenEquipment(NativeResourceCoordinator delivery) => _delivery = delivery;
     private Citizen _citizen = null!;
     private DistrictInventoryRegistry? _registry;
     private DistrictResourceCounter? _counter;

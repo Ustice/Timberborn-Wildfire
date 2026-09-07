@@ -7,7 +7,7 @@ public static class WardenStationPresentation
 {
     public static string StatusKey(WardenStationViewState state)
     {
-        if (state.UnsafeWaterState) return "Wildfire.Warden.Recovery";
+        if (state.UnsafeWaterState) return "Wildfire.Resources.Recovery";
         if (!state.Finished) return "Wildfire.Warden.Construction";
         // Returning remains useful information even after pausing the station or disabling fire.
         if (state.Phase == WardenPhase.Returning) return "Wildfire.Warden.Returning";

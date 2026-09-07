@@ -1,4 +1,5 @@
 using Wildfire.Timberborn.Compatibility;
+using Wildfire.Timberborn.Resources;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
 using Timberborn.Carrying;
@@ -28,7 +29,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private static readonly PropertyKey<Vector3> ApproachKey = new("Approach");
     private static readonly PropertyKey<Vector3> DestinationKey = new("Destination");
     private readonly WardenFireField _field;
-    private readonly WardenDeliveryService _delivery;
+    private readonly NativeResourceCoordinator _delivery;
     private readonly ReferenceSerializer _references;
     private readonly INavigationService _navigation;
     private readonly WardenSortie _sortie = new();
@@ -65,7 +66,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         }
     }
 
-    public WardenExecutor(WardenFireField field, WardenDeliveryService delivery,
+    public WardenExecutor(WardenFireField field, NativeResourceCoordinator delivery,
         ReferenceSerializer references, INavigationService navigation)
     { _field = field; _delivery = delivery; _references = references; _navigation = navigation; }
 
