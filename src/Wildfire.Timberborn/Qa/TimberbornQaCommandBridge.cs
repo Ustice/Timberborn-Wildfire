@@ -2405,6 +2405,7 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_behavior_toxic_smoke_recovery_decays={FormatNumber(State.BeaverFieldBehaviorToxicSmokeRecoveryDecays)} " +
         $"beaver_field_behavior_fire_heat_exposed_beavers={FormatNumber(State.BeaverFieldBehaviorFireHeatExposedBeavers)} " +
         $"beaver_field_behavior_fire_heat_active_flame_contacts={FormatNumber(State.BeaverFieldBehaviorFireHeatActiveFlameContacts)} " +
+        "beaver_field_behavior_fire_heat_contact_basis=nearby_visual_proxy " +
         $"beaver_field_behavior_fire_heat_recovery_decays={FormatNumber(State.BeaverFieldBehaviorFireHeatRecoveryDecays)} " +
         $"beaver_field_behavior_persistence_saves={FormatNumber(State.BeaverFieldBehaviorPersistenceSaves)} " +
         $"beaver_field_behavior_persistence_loads={FormatNumber(State.BeaverFieldBehaviorPersistenceLoads)} " +

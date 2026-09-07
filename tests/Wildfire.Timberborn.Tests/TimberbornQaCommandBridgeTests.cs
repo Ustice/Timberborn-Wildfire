@@ -3173,6 +3173,7 @@ public sealed partial class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_toxic_smoke_decisions_applied=56", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_decisions_applied=57", result.ResultToken);
         Assert.Contains("beaver_field_behavior_unsupported_decisions=7", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_contact_basis=nearby_visual_proxy", result.ResultToken);
         Assert.Contains("beaver_field_behavior_noop_decisions_applied=58", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_cooldown=59", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_batch=60", result.ResultToken);
