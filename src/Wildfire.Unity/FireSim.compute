@@ -1588,6 +1588,15 @@ bool MaterialIdentityEqual(uint targetA, uint slotA, uint targetB, uint slotB)
     return targetA == targetB && slotA == slotB;
 }
 
+// Exact unowned profiles; no capacity, fuel, flammability or history can enter through a baseline.
+// Keep this allowlist aligned with FireSimBaselineDefinition; ambient fields remain outside both masks.
+bool IsCanonicalMaterialBaseline(uint material, uint companion)
+{
+    return (material == 0u && (companion == 0u || companion == 1u ||
+        companion == (8u | (3u << 22)) || companion == (9u | (3u << 20) | (2u << 22)))) ||
+        (material == 0x1000u && companion == 1u);
+}
+
 uint ValidateMaterialRequest(uint index, uint count)
 {
     MaterialRequestGpu request = MaterialRequests[index];
@@ -1610,8 +1619,7 @@ uint ValidateMaterialRequest(uint index, uint count)
     }
     else if (request.Mode == 4u)
     {
-        if (request.ExpectedTarget == 0u || request.IncomingTarget != 0u ||
-            !((request.Material == 0u && request.Companion == 0u) || (request.Material == 0x1000u && request.Companion == 1u))) return 4u;
+        if (request.IncomingTarget != 0u || !IsCanonicalMaterialBaseline(request.Material, request.Companion)) return 4u;
     }
     else
     {

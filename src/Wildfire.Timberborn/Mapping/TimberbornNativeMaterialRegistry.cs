@@ -15,7 +15,7 @@ public sealed record TimberbornMaterialBindingSnapshot(int Version, uint NextTar
 public sealed class TimberbornNativeMaterialRegistry
 {
     private readonly FireGrid _grid;
-    private readonly HashSet<int> _solidTerrain;
+    private readonly TimberbornMaterialBaseline _baseline;
     private Dictionary<Guid, Entry> _entries = new();
     private Dictionary<uint, Guid> _origins = new();
     private HashSet<FireSimMaterialIdentity> _boundSlots = new();
@@ -23,12 +23,15 @@ public sealed class TimberbornNativeMaterialRegistry
     private uint _nextTargetId = 1;
 
     public TimberbornNativeMaterialRegistry(FireGrid grid, IEnumerable<int> solidTerrainCells)
+        : this(new TimberbornMaterialBaseline(grid, solidTerrainCells.Distinct().Select(cell =>
+            new KeyValuePair<int, FireSimBaselineDefinition>(cell, FireSimBaselineDefinition.SolidTerrain))))
     {
-        if (grid.Width <= 0 || grid.Height <= 0 || grid.Depth <= 0) throw new ArgumentOutOfRangeException(nameof(grid));
-        _ = checked(grid.Width * grid.Height * grid.Depth);
-        _grid = grid;
-        _solidTerrain = solidTerrainCells.ToHashSet();
-        foreach (int cell in _solidTerrain) _grid.FromIndex(cell);
+    }
+
+    public TimberbornNativeMaterialRegistry(TimberbornMaterialBaseline baseline)
+    {
+        _baseline = baseline ?? throw new ArgumentNullException(nameof(baseline));
+        _grid = baseline.Grid;
     }
 
     /// <summary>Resolve retained origin identity, including hidden/removed projections. Never resolve through the current cell.</summary>
@@ -44,7 +47,15 @@ public sealed class TimberbornNativeMaterialRegistry
     {
         _grid.FromIndex(cellIndex);
         return _cells.TryGetValue(cellIndex, out var resolved) ? resolved :
-            TimberbornMaterialResolver.Resolve(cellIndex, _solidTerrain.Contains(cellIndex), Array.Empty<TimberbornMaterialContributor>());
+            TimberbornMaterialResolver.Resolve(cellIndex, _baseline.GetCell(cellIndex), Array.Empty<TimberbornMaterialContributor>());
+    }
+
+    /// <summary>Only an uncovered cell may reveal its baseline; lower native contributors must win first.</summary>
+    public FireSimMaterialHandoffRequest CreateBaselineRequest(int cellIndex, FireSimMaterialIdentity expectedGpuOwner)
+    {
+        if (ResolveCell(cellIndex).Owner is not null)
+            throw new InvalidOperationException("A current native contributor must not be replaced with unowned baseline.");
+        return FireSimMaterialHandoffRequest.SetBaseline(cellIndex, expectedGpuOwner, _baseline.GetCell(cellIndex));
     }
 
     /// <summary>
@@ -161,7 +172,7 @@ public sealed class TimberbornNativeMaterialRegistry
         }))
         .GroupBy(value => value.CellIndex)
         .ToDictionary(group => group.Key, group => TimberbornMaterialResolver.Resolve(group.Key,
-            _solidTerrain.Contains(group.Key), group.Select(value => value.Contributor)));
+            _baseline.GetCell(group.Key), group.Select(value => value.Contributor)));
 
     private sealed class Entry
     {

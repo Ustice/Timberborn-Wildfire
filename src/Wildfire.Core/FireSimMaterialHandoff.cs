@@ -122,8 +122,16 @@ public sealed class FireSimMaterialHandoffRequest
     public static FireSimMaterialHandoffRequest Remove(int cell, FireSimMaterialIdentity expectedOwner, bool terrain)
     {
         RequireOwner(expectedOwner);
+        return SetBaseline(cell, expectedOwner, terrain ? FireSimBaselineDefinition.SolidTerrain : FireSimBaselineDefinition.Empty);
+    }
+
+    /// <summary>Reveal or update unowned material, preserving the destination's current ambient fields.</summary>
+    public static FireSimMaterialHandoffRequest SetBaseline(int cell, FireSimMaterialIdentity expectedOwner, FireSimBaselineDefinition baseline)
+    {
+        if (!FireSimBaselineDefinition.IsCanonical(baseline.PackedMaterial, baseline.CompanionMaterial))
+            throw new ArgumentException("Invalid unowned baseline definition.", nameof(baseline));
         return new(cell, expectedOwner, default, FireSimMaterialHandoffMode.Baseline,
-            terrain ? 1u << 12 : 0, terrain ? (uint)WildfireMaterialClass.Terrain : 0);
+            baseline.PackedMaterial, baseline.CompanionMaterial);
     }
 
     private static void RequireOwner(FireSimMaterialIdentity owner)

@@ -4,7 +4,7 @@ namespace Wildfire.Timberborn.Mapping;
 
 internal static class TimberbornMaterialResolver
 {
-    internal static TimberbornResolvedMaterialCell Resolve(int cellIndex, bool solidTerrain,
+    internal static TimberbornResolvedMaterialCell Resolve(int cellIndex, FireSimBaselineDefinition baseline,
         IEnumerable<TimberbornMaterialContributor> contributors)
     {
         var retained = contributors.OrderBy(contributor => contributor.Owner.EntityId).ToArray();
@@ -12,8 +12,8 @@ internal static class TimberbornMaterialResolver
             .ThenByDescending(candidate => candidate.Fuel).ThenByDescending(candidate => candidate.Flammability)
             .ThenBy(candidate => candidate.Owner.EntityId).ToArray();
         if (candidates.Length == 0)
-            return new TimberbornResolvedMaterialCell(cellIndex, null, PackedCell.Pack(0, 0, 0, 0, solidTerrain ? 1 : 0, 0),
-                WildfireMaterialFieldSchema.Default.Lookup(solidTerrain ? WildfireMaterialClass.Terrain : WildfireMaterialClass.Empty), false, Array.AsReadOnly(retained));
+            return new TimberbornResolvedMaterialCell(cellIndex, null, checked((ushort)baseline.PackedMaterial),
+                WildfireMaterialFieldSchema.Default.Lookup(baseline.MaterialClass), false, Array.AsReadOnly(retained));
         var selected = candidates[0];
         if (selected.Priority >= 3 && retained.Any(contributor => contributor.Owner.EntityId != selected.Owner.EntityId &&
                 contributor.Parts.Any(part => part.IsStorage)))
