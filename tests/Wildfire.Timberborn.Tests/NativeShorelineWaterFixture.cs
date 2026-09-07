@@ -9,13 +9,16 @@ namespace Wildfire.Timberborn.Tests;
 // Native managed resource-boundary experiment, not production shoreline/actor admission.
 internal sealed class NativeShorelineWaterFixture : IDisposable
 {
-    private readonly NativeManagedTestContext _native = new();
+    private readonly NativeManagedTestContext _native;
+    private readonly bool _ownsNative;
     internal readonly object Changes, InputService, Source;
     internal readonly float BucketVolume;
     internal readonly NativeResourceTransaction Transaction = new();
     internal Type Type(string assembly, string name) => _native.LoadNative(assembly).GetType(name)!;
-    internal NativeShorelineWaterFixture()
+    internal NativeShorelineWaterFixture(NativeManagedTestContext? native = null)
     {
+        _native = native ?? new NativeManagedTestContext();
+        _ownsNative = native is null;
         Changes = Activator.CreateInstance(Type("Timberborn.WaterSystem", "Timberborn.WaterSystem.WaterChangeService"))!;
         InputService = Activator.CreateInstance(Type("Timberborn.WaterBuildings", "Timberborn.WaterBuildings.WaterInputService"), Changes)!;
         Source = NewInput();
@@ -111,5 +114,5 @@ internal sealed class NativeShorelineWaterFixture : IDisposable
     internal static object? Call(object value, string method, params object?[] args) => value.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public)!.Invoke(value, args);
     internal static object? Get(object value, string field) => value.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(value);
     internal static void Set(object value, string field, object data) => value.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(value, data);
-    public void Dispose() => _native.Dispose();
+    public void Dispose() { if (_ownsNative) _native.Dispose(); }
 }
