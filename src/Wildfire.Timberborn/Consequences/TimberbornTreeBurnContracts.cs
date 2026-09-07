@@ -32,6 +32,8 @@ public readonly record struct TimberbornTreeBurnConsequenceResult(TimberbornTree
 {
     internal void ValidateReceipt()
     {
+        if (Status < TimberbornTreeBurnConsequenceStatus.NotLive || Status > TimberbornTreeBurnConsequenceStatus.Failed)
+            throw new InvalidOperationException("Native tree consequence returned an unknown status.");
         if (YieldLost < 0 || (Status != TimberbornTreeBurnConsequenceStatus.Applied && YieldLost != 0))
             throw new InvalidOperationException("Native tree consequence returned a contradictory yield receipt.");
     }
