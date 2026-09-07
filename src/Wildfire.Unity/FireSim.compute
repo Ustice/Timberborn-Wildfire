@@ -1,5 +1,5 @@
 #pragma kernel ApplyExternalChanges
-#pragma kernel SimulateFullGrid
+#pragma kernel SimulateFullGrid MATERIAL_IDENTITY_READ_ONLY
 
 #define THREAD_GROUP_SIZE_X 8
 #define THREAD_GROUP_SIZE_Y 8
@@ -72,8 +72,14 @@ struct MaterialReceiptGpu
     uint CellIndex; uint PriorTarget; uint PriorSlot; uint PriorCell; uint PriorCompanion;
     uint AppliedTarget; uint AppliedSlot; uint AppliedCell; uint AppliedCompanion; uint Status;
 };
+// Identity is mutable only during ordered material handoff, never during simulation.
+#ifdef MATERIAL_IDENTITY_READ_ONLY
+StructuredBuffer<uint> MaterialTargetIds;
+StructuredBuffer<uint> MaterialSlotIds;
+#else
 RWStructuredBuffer<uint> MaterialTargetIds;
 RWStructuredBuffer<uint> MaterialSlotIds;
+#endif
 StructuredBuffer<MaterialRequestGpu> MaterialRequests;
 RWStructuredBuffer<MaterialReceiptGpu> MaterialReceipts;
 uint MaterialRequestCapacity;
@@ -1570,6 +1576,7 @@ uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric)
     return Pack(fuel, heat, flammability, water, terrain, burningLevel);
 }
 
+#ifndef MATERIAL_IDENTITY_READ_ONLY
 // Material transactions use dedicated captures, never burn-damage deltas.
 #define MATERIAL_BATCH 0x80000000u
 #define MATERIAL_CELL_MASK 0x130fu
@@ -1826,6 +1833,8 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
         AppendDelta(change.CellIndex, oldCell, cell);
     }
 }
+
+#endif
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void SimulateFullGrid(uint3 id : SV_DispatchThreadID)
