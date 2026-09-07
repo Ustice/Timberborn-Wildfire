@@ -1,4 +1,5 @@
 using Bindito.Core;
+using Wildfire.Timberborn.Qa;
 using Timberborn.Beavers;
 using Timberborn.TemplateInstantiation;
 using Timberborn.WorkSystem;
@@ -12,6 +13,7 @@ public sealed class BorrowedDutyConfigurator : Configurator
     protected override void Configure()
     {
         Bind<BorrowedDutyFixture>().AsSingleton();
+        Bind<ITimberbornQaBorrowedDuty>().To<BorrowedDutyQaApi>().AsSingleton();
         Bind<BorrowedDutyBehavior>().AsTransient();
         Bind<BorrowedDutyExecutor>().AsTransient();
         Bind<BorrowedDutyWorkplaceBehavior>().AsTransient();

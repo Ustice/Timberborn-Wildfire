@@ -23,6 +23,9 @@ const knownCommands = [
   "qa-ash-cell",
   "qa-ash-water-stimulus",
   "qa-adjust-inventory",
+  "qa-borrowed-duty-arm",
+  "qa-borrowed-duty-cancel",
+  "qa-borrowed-duty-status",
   "qa-building-burnout-stimulus",
   "qa-burn-duration-stimulus",
   "qa-delta-stimulus",
@@ -40,6 +43,11 @@ const usage = `Usage:
 Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
+  qa-borrowed-duty-status   Read-only pending offer and active borrowed worker state.
+  qa-borrowed-duty-arm <donor-guid> <x> <y> <z>
+                            Offer one development duty at an explicit workplace; Unity y is vertical.
+                            Requires QA mutations and borrowed-duty process switches.
+  qa-borrowed-duty-cancel   Disarm the offer and request active borrowed duty return.
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-ash-water-stimulus <clean|tainted>
                             Queue simulator-owned ash plus water contact on one imported burnable field target.

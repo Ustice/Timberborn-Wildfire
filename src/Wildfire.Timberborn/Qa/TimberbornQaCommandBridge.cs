@@ -7,7 +7,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Qa;
 
-public sealed class TimberbornQaCommandBridge
+public sealed partial class TimberbornQaCommandBridge
 {
     public const string StatusCommand = "status";
     public const string HelpCommand = "help";
@@ -217,7 +217,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaAshWaterStimulus? ashWaterStimulus = null,
         ITimberbornQaInventoryAdjuster? inventoryAdjuster = null,
         ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null,
-        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics,
+        ITimberbornQaBorrowedDuty? borrowedDuty = null)
     {
         if (stateProvider is null)
         {
@@ -260,6 +261,7 @@ public sealed class TimberbornQaCommandBridge
         }
 
         Access = access;
+        _borrowedDuty = borrowedDuty;
         _stateProvider = stateProvider;
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
@@ -329,6 +331,9 @@ public sealed class TimberbornQaCommandBridge
             commands[QaStoredMaterialStimulusCommand] = () => ExecuteQaStoredMaterialStimulus(null);
         }
 
+        if (_borrowedDuty is not null)
+            foreach (var command in TimberbornQaBorrowedDutyCommands.Names)
+                commands[command] = () => ExecuteBorrowedDuty(command, command);
         _commands = commands;
     }
 
@@ -351,7 +356,8 @@ public sealed class TimberbornQaCommandBridge
         string command = NormalizeCommand(commandText);
         _logSink.Info($"wildfire_command_request command={FormatToken(command)}");
 
-        if (!_commands.TryGetValue(command, out Func<TimberbornQaCommandResult>? handler))
+        if (!_commands.TryGetValue(command, out Func<TimberbornQaCommandResult>? handler) &&
+            !TimberbornQaBorrowedDutyCommands.Handles(command))
         {
             TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
                 command,
@@ -402,7 +408,9 @@ public sealed class TimberbornQaCommandBridge
         try
         {
             TimberbornQaCommandResult result =
-                StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand)
+                TimberbornQaBorrowedDutyCommands.Handles(command)
+                    ? ExecuteBorrowedDuty(command, commandText)
+                    : StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand)
                     ? ExecuteQaBurnDurationStimulus(commandText)
                     : StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand)
                         ? ExecuteQaFirePreset(commandText)
@@ -418,7 +426,7 @@ public sealed class TimberbornQaCommandBridge
                                             ? ExecuteQaAdjustInventory(commandText)
                                             : StringComparer.OrdinalIgnoreCase.Equals(command, QaStoredMaterialStimulusCommand)
                                                 ? ExecuteQaStoredMaterialStimulus(commandText)
-                                                : handler();
+                                                : handler!();
             _logSink.Info(result.ResultToken);
             return result;
         }

@@ -17,6 +17,7 @@ public static class TimberbornQaCommandPolicy
         TimberbornQaCommandBridge.QaReadinessCommand,
         TimberbornQaCommandBridge.QaSoilMoistureRangeCommand,
         TimberbornQaCommandBridge.QaAshCellCommand,
+        TimberbornQaBorrowedDutyCommands.Status,
     };
 
     public static TimberbornQaCommandAccess FromProcessArguments(IEnumerable<string> arguments) =>

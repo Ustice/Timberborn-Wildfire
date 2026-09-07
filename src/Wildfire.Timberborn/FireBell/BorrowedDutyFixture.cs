@@ -1,4 +1,6 @@
 using Timberborn.SingletonSystem;
+using Timberborn.EntitySystem;
+using Wildfire.Timberborn.Qa;
 using Timberborn.WorkSystem;
 using UnityEngine;
 
@@ -18,11 +20,22 @@ public sealed class BorrowedDutyFixture : ILoadableSingleton
     public void Arm(Workplace donor, Vector3 destination)
     {
         if (!AdmissionsEnabled) throw new InvalidOperationException($"Borrowed duty requires {OptInSwitch}.");
+        if (_donor is not null) throw new InvalidOperationException("Cancel the existing borrowed duty offer before arming another.");
         if (_executors.Any(executor => executor.Phase != BorrowedDutyPhase.Idle))
             throw new InvalidOperationException("The previous borrowed duty must finish before arming another.");
         if (!donor || !donor.Enabled || !float.IsFinite(destination.x) || !float.IsFinite(destination.y) || !float.IsFinite(destination.z))
             throw new ArgumentException("A live enabled donor and finite destination are required.");
         _donor = donor; _point = destination;
+    }
+    public BorrowedDutyQaStatus CaptureQaStatus()
+    {
+        bool donorLive = _donor is not null && _donor && !_donor.GetComponent<EntityComponent>().Deleted;
+        return new BorrowedDutyQaStatus(AdmissionsEnabled,
+            _donor is null ? "none" : donorLive ? "armed" : "unavailable",
+            donorLive ? _donor!.GetComponent<EntityComponent>().EntityId : null,
+            _executors.Where(executor => executor.Phase != BorrowedDutyPhase.Idle)
+                .Select(executor => new BorrowedDutyQaActor(executor.EntityId, executor.Phase.ToString(), executor.CancellationRequested, executor.NativeExecutionOwned)).ToArray(),
+            _donor is null ? null : new BorrowedDutyQaPoint(_point.x, _point.y, _point.z));
     }
     public void Disarm() => _donor = null;
     public void Cancel()

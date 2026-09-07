@@ -23,7 +23,8 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
         MapSize mapSize,
         ITerrainService terrainService,
         ISoilMoistureService soilMoistureService,
-        MapIndexService mapIndexService)
+        MapIndexService mapIndexService,
+        ITimberbornQaBorrowedDuty borrowedDuty)
     {
         if (fireRuntime is null)
         {
@@ -50,7 +51,8 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             fireRuntime,
             fireRuntime,
             fireRuntime,
-            access: TimberbornQaCommandPolicy.FromProcessArguments(Environment.GetCommandLineArgs()));
+            access: TimberbornQaCommandPolicy.FromProcessArguments(Environment.GetCommandLineArgs()),
+            borrowedDuty: borrowedDuty);
     }
 
     public void Load()

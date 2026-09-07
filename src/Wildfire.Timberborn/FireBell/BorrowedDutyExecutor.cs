@@ -56,11 +56,15 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     private bool _restored, _unsafeRoute;
     private long _routeRevision = -1;
     public BorrowedDutyPhase Phase => _progress.Phase;
+    public bool CancellationRequested => _progress.CancellationRequested;
+    public bool NativeExecutionOwned => _manager is not null && _manager.IsRunningExecutor<BorrowedDutyExecutor>();
+    public Guid EntityId { get; private set; }
     public BorrowedDutyExecutor(BorrowedDutyFixture fixture, FireSafetyField field, NativeResourceCoordinator resources,
         ReferenceSerializer references, INavigationService navigation)
     { _fixture = fixture; _field = field; _resources = resources; _references = references; _navigation = navigation; }
     public void Awake()
     {
+        EntityId = GetComponent<EntityComponent>().EntityId;
         _worker = GetComponent<Worker>(); _citizen = GetComponent<Citizen>();
         _hours = GetComponent<WorkerWorkingHours>(); _refuser = GetComponent<WorkRefuser>();
         _carrier = GetComponent<GoodCarrier>(); _reserver = GetComponent<GoodReserver>();
