@@ -55,16 +55,16 @@ Installed 1.1.2.4 IL provides a smaller possible route than an extra mesh bundle
 4. `TimbermeshSpecConverter` itself creates this same description component and
    calls `SetModelName`.
 
-A tiny Warden-only `IAssetProvider` can therefore be prototyped to supply cached
+The staged Warden-only `IAssetProvider` supplies cached
 GameObjects containing `TimbermeshDescription` for explicit attachment prefab
-IDs; the native optimizer would load our shipped model and native materials.
-Use the existing shipped helmet for the first proof. Return false for every
-unrecognized path/type, keep model data in the existing file provider, destroy
-owned prefab objects on Reset, and register the provider at the asset loader's
-actual context lifetime. Check load ordering and optimized-cache reset rather
-than assuming the Game configurator is early enough. This route has supporting
-native IL but has **not** been executed in-engine; no new provider is shipped by
-this commit.
+IDs; the native optimizer can load our shipped model and native materials.
+It returns false for unrecognized paths/types, keeps model data in the existing
+file provider, and destroys only its own description objects on Reset. A separate
+Bootstrapper configurator matches the native asset-loader lifetime; the Game
+configurator is too late. The isolated licensed Unity probe validates wrapper
+construction, normalized lookup, cache/reset and native geometry import; the
+full game optimizer, materials and attachment fit remain unverified. See
+[the probe instructions](../../../scripts/qa/warden-attachments/README.md) for the reproducible probe.
 
 Fallback: a small platform prefab bundle built with the existing
 `src/Wildfire.Unity/UnityBatchmodeProject/Assets/Editor` pipeline can contain native
@@ -75,9 +75,11 @@ player. Unity can prove bundle structure, but only the game proves its import
 and entity material/highlight behavior. Avoid substituting fake native component
 stubs just to make an editor build pass.
 
-Before either route is wired to a character, export the split source parts as
-native timbermesh using the official exporter and the existing native-material
-mapping. A split-source GLB is not a GameObject prefab and is not directly usable
+The three split source parts now have native timbermesh exports under
+`src/Wildfire.Timberborn/Data/Equipment/FireResponse`, generated with
+`scripts/art/export_warden_attachments.py` and the existing native-material
+mapping. The export retains source origins and creates no new atlas. A split-source
+GLB is not a GameObject prefab and is not directly usable
 as `AttachmentDefinition.Prefab`.
 
 The next acceptance step is one helmet: native creation, employment/duty
