@@ -102,10 +102,11 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
 
     public ExecutorStatus Tick(float deltaTimeInHours)
     {
-        if (_delivery.IsIndeterminate) return ExecutorStatus.Running;
-        if (!_field.Ready) return ExecutorStatus.Running;
         if (_mortal.Dead || _mortal.ShouldDie)
         { ReleaseReservation(); _walker.StopNextTick(); _sortie.Finish(); return ExecutorStatus.Failure; }
+        if (_delivery.IsIndeterminate) return ExecutorStatus.Running;
+        if (!_field.ObservationAvailable) return Finish("Fire observations unavailable; water retained");
+        if (!_field.Ready && _sortie.Phase != WardenPhase.Returning) return Retreat("Wildfire disabled");
         if (_sortie.Phase == WardenPhase.Idle) return ExecutorStatus.Success;
         if (_sortie.Phase != WardenPhase.Returning &&
             (_station is null || !_station || !_station.Operational || !_station.Enabled ||
@@ -129,7 +130,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             return ExecutorStatus.Running;
         }
         // Query the remaining route afresh. Walker.PathCorners can include already-traversed corners.
-        if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), _destination)) return Retreat("Route became unsafe");
+        if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), _destination, _sortie.Phase == WardenPhase.Returning)) return Retreat("Route became unsafe");
         var walkStatus = _walk.Tick(deltaTimeInHours);
         if (walkStatus == ExecutorStatus.Running) return ExecutorStatus.Running;
         if (walkStatus == ExecutorStatus.Failure || !At(_destination)) return Retreat("Route interrupted before arrival");
@@ -194,7 +195,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     }
     private bool LaunchWalk(Vector3 destination)
     {
-        if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination)) return false;
+        if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination, _sortie.Phase == WardenPhase.Returning)) return false;
         _destination = destination;
         return _walk.Launch(destination) != ExecutorStatus.Failure;
     }

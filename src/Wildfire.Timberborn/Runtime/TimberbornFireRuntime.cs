@@ -392,6 +392,10 @@ public sealed partial class TimberbornFireRuntime :
             renderer = PrepareRenderer(fireSystem, grid);
             heatPulseSink.Attach(fireSystem);
             contaminationPulseSink.Attach(fireSystem);
+            _wardenCells = fireSystem.Simulator as ITimberbornCellFieldReader ??
+                throw new InvalidOperationException("Warden response requires native cell observations.");
+            _wardenTransport = fireSystem.Simulator as ITimberbornTransportFieldReader ??
+                throw new InvalidOperationException("Warden response requires native smoke observations.");
             _wardenDelivery.Attach(fireSystem.Simulator!);
             fireSystem.StepWithHostInput = _wardenDelivery.Tick;
             _playerFireAlertCameraFocus.ConfigureGrid(grid);

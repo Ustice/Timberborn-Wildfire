@@ -5,6 +5,9 @@ using Wildfire.Timberborn.Runtime;
 
 namespace Wildfire.Timberborn.FireResponse;
 
+public sealed record WardenFieldObservation(int Width, int Height, int Depth,
+    IReadOnlyList<ushort> Cells, IReadOnlyList<uint> TransportFields);
+
 public readonly record struct WardenTarget(int CellIndex, Vector3 Approach);
 
 /// <summary>Derived targeting and safety observations. The simulator remains authoritative.</summary>
@@ -18,7 +21,8 @@ public sealed class WardenFireField
     public WardenFireField(TimberbornFireRuntime runtime, INavigationService navigation)
     { _runtime = runtime; _navigation = navigation; }
 
-    public bool Ready => _runtime.TryObserveWardenField(out _);
+    public bool Ready => _runtime.WardenResponseEnabled && ObservationAvailable;
+    public bool ObservationAvailable => _runtime.TryObserveWardenField(out _);
 
     public bool TryFindTarget(Vector3 start, Vector3 station, out WardenTarget target)
     {
@@ -38,7 +42,7 @@ public sealed class WardenFireField
         return false;
     }
 
-    private void RefreshFireTargets(TimberbornFireSimPersistenceSnapshot field)
+    private void RefreshFireTargets(WardenFieldObservation field)
     {
         if (ReferenceEquals(_observedCells, field.Cells)) return;
         _observedCells = field.Cells;
@@ -55,53 +59,58 @@ public sealed class WardenFireField
     public bool IsBurning(int cellIndex) => _runtime.TryObserveWardenField(out var field) &&
         cellIndex >= 0 && cellIndex < field.Cells.Count && PackedCell.BurningLevel(field.Cells[cellIndex]) > 0;
 
-    public bool SafeRoute(Vector3 start, Vector3 end)
+    public bool SafeRoute(Vector3 start, Vector3 end, bool escaping = false)
     {
         if (!SafePosition(end)) return false;
         _path.Clear();
-        return _navigation.FindPath(start, end, _path) && SafePath(start, _path);
-    }
-
-    public bool SafePath(Vector3 start, IEnumerable<PathCorner> corners)
-    {
-        foreach (var corner in corners)
+        if (!_navigation.FindPath(start, end, _path)) return false;
+        var samples = new List<WardenRouteSample> { new(0, RiskAt(start)) };
+        float distance = 0;
+        foreach (var corner in _path)
         {
-            if (!SafeSegment(start, corner.Position)) return false;
+            float segment = Vector3.Distance(start, corner.Position);
+            var steps = Math.Max(1, (int)Math.Ceiling(segment * 4));
+            for (var step = 1; step <= steps; step++)
+            {
+                float fraction = (float)step / steps;
+                samples.Add(new WardenRouteSample(distance + segment * fraction,
+                    RiskAt(Vector3.Lerp(start, corner.Position, fraction))));
+            }
+            distance += segment;
             start = corner.Position;
         }
-        return true;
+        return WardenRouteSafety.CanTraverse(samples, escaping);
     }
 
-    public bool SafeSegment(Vector3 start, Vector3 end)
-    {
-        var steps = Math.Max(1, (int)Math.Ceiling(Vector3.Distance(start, end) * 4));
-        for (var step = 1; step <= steps; step++)
-            if (!SafePosition(Vector3.Lerp(start, end, (float)step / steps))) return false;
-        return true;
-    }
+    public bool SafePosition(Vector3 position) => RiskAt(position) is >= 0 and < 2;
 
-    public bool SafePosition(Vector3 position)
+    private int RiskAt(Vector3 position)
     {
-        if (!_runtime.TryObserveWardenField(out var field)) return false;
+        if (!_runtime.TryObserveWardenField(out var field)) return -1;
         int x = (int)Math.Floor(position.x), y = (int)Math.Floor(position.z), z = (int)Math.Floor(position.y);
-        if (x < 0 || y < 0 || z < 0 || x >= field.Width || y >= field.Height || z >= field.Depth) return false;
+        if (x < 0 || y < 0 || z < 0 || x >= field.Width || y >= field.Height || z >= field.Depth) return -1;
         var grid = new FireGrid(field.Width, field.Height, field.Depth);
+        int risk = 0;
         for (var height = z; height <= Math.Min(z + 1, field.Depth - 1); height++)
         {
-            var cell = field.Cells[grid.ToIndex(x, y, height)];
-            if (PackedCell.BurningLevel(cell) > 0 || PackedCell.Heat(cell) >= 2) return false;
+            var index = grid.ToIndex(x, y, height);
+            var cell = field.Cells[index];
+            var transport = WildfireTransportFieldState.Unpack(field.TransportFields[index]);
+            risk = Math.Max(risk, PackedCell.BurningLevel(cell) * 4 + PackedCell.Heat(cell));
+            risk = Math.Max(risk, transport.Smoke >= 3 ? 2 : 0);
+            risk = Math.Max(risk, transport.Smoke > 0 && transport.SmokeContamination > 0 ? 3 : 0);
         }
-        return true;
+        return risk;
     }
 
     public bool TryRetreat(Vector3 start, IEnumerable<Vector3> stationAccesses, out Vector3 end)
     {
         foreach (var access in stationAccesses)
-            if (SafeRoute(start, access)) { end = access; return true; }
+            if (SafeRoute(start, access, escaping: true)) { end = access; return true; }
         foreach (var offset in RetreatOffsets)
         {
             var candidate = start + offset;
-            if (SafeRoute(start, candidate)) { end = candidate; return true; }
+            if (SafeRoute(start, candidate, escaping: true)) { end = candidate; return true; }
         }
         end = default;
         return false;

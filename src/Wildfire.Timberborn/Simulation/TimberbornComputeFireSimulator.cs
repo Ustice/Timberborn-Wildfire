@@ -455,7 +455,7 @@ public sealed class TimberbornComputeFireSimulator :
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
-    ITimberbornTransportFieldReader,
+    ITimberbornTransportFieldReader, ITimberbornCellFieldReader,
     IFireSimStepBackend,
     IDisposable
 {
@@ -669,6 +669,14 @@ public sealed class TimberbornComputeFireSimulator :
             $"ignition={parameters.IgnitionPoint} " +
             $"water_ignition_penalty={parameters.FireWaterIgnitionPenalty} " +
             $"fuel_burn_down={parameters.FireFuelBurnDownPressureNumerator}/{parameters.FireFuelBurnDownPressureDenominator}");
+    }
+
+    public IReadOnlyList<ushort> ReadFireCells()
+    {
+        ThrowIfDisposed();
+        uint[] cells = new uint[Grid.CellCount];
+        _readCells.GetData(cells);
+        return cells.Select(static cell => (ushort)(cell & 0xFFFFu)).ToArray();
     }
 
     public IReadOnlyList<uint> ReadTransportFields()
