@@ -1,0 +1,3 @@
+# Native timbermesh files are zlib-compressed protobuf, even when Git's NUL
+# heuristic mistakes a particular compressed stream for text.
+*.timbermesh binary
