@@ -19,9 +19,7 @@ internal static class TimberbornInitialBodyCompiler
         foreach (var body in capture.Bodies)
         {
             var choice = byId[body.EntityId];
-            var bodyPart = BodyPart(body);
-            if (body.Inventories.Count > 1)
-                throw new NotSupportedException("Initial composition does not yet support multiple native inventory roles.");
+            var projection = TimberbornMaterialProjectionCompiler.Compile(body);
             var resources = SelectResources(body, choice);
             var costs = body.ConstructionResources ?? Array.Empty<TimberbornBurnDamageResourceStack>();
             foreach (var cost in costs) RequireGood(cost.ResourceId);
@@ -35,15 +33,7 @@ internal static class TimberbornInitialBodyCompiler
             var capacity = new TimberbornBurnDamageCapacityCalculator().Calculate(descriptor);
             if (capacity.MissingResourceIds.Count != 0)
                 throw new InvalidOperationException("Initial body accounting has unknown resource definitions.");
-            // Physical material is mandatory even when explicitly excluded from body accounting.
-            var parts = new List<TimberbornMaterialPart> { bodyPart };
-            foreach (var inventory in body.Inventories)
-                foreach (var good in inventory.Stock)
-                {
-                    RequireGood(good.ResourceId);
-                    parts.Add(TimberbornMaterialPart.StoredGood(good.ResourceId));
-                }
-            projections.Add(new(body.EntityId, body.Footprint, parts));
+            projections.Add(projection);
             var key = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(body.EntityId, body.Family!.Value));
             var cells = body.Footprint.Select(slot =>
             {
@@ -53,19 +43,6 @@ internal static class TimberbornInitialBodyCompiler
             registrations.Add(new(key, body.SpecId, cells, 0, descriptor));
         }
         return new(Array.AsReadOnly(projections.ToArray()), Array.AsReadOnly(registrations.ToArray()));
-    }
-
-    private static TimberbornMaterialPart BodyPart(TimberbornInitialMaterialBody body)
-    {
-        if (!body.BodyProfile.Known) throw new NotSupportedException("Initial body has no known material profile.");
-        return body.Shape switch
-        {
-            TimberbornInitialBodyShape.Tree => TimberbornMaterialPart.Tree(body.SpecId),
-            TimberbornInitialBodyShape.Crop => TimberbornMaterialPart.Crop(body.SpecId),
-            TimberbornInitialBodyShape.Vegetation => TimberbornMaterialPart.Vegetation(body.SpecId),
-            TimberbornInitialBodyShape.Structure or TimberbornInitialBodyShape.Stockpile => TimberbornMaterialPart.Building(body.SpecId),
-            _ => throw new NotSupportedException("Initial body family has no complete owned consequence route."),
-        };
     }
 
     private static IReadOnlyList<TimberbornBurnDamageResourceStack> SelectResources(TimberbornInitialMaterialBody body,
@@ -103,12 +80,7 @@ internal static class TimberbornInitialBodyCompiler
         void Add(string good, int amount) => amounts[good] = checked(amounts.GetValueOrDefault(good) + amount);
     }
 
-    private static void RequireGood(string good)
-    {
-        var profile = TimberbornResourceFuelCatalog.Default.Lookup(good);
-        if (!profile.Known || profile.ResourceId != good)
-            throw new NotSupportedException("Captured native resource has no exact known material definition.");
-    }
+    private static void RequireGood(string good) => TimberbornMaterialProjectionCompiler.RequireGood(good);
 }
 
 internal sealed record TimberbornCompiledInitialBodies(IReadOnlyList<TimberbornMaterialProjection> Projections,
