@@ -15,7 +15,11 @@ public sealed class TimberbornLegacyTreeMutationGuard : ITimberbornTreeBurnConse
     public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence consequence)
     {
         TimberbornTreeBurnConsequenceResult result = default;
-        _guard.TransferInventory(() => result = _api.ApplyConsequence(consequence));
+        _guard.TransferInventory(() =>
+        {
+            result = _api.ApplyConsequence(consequence);
+            if (result.Failed) throw new InvalidOperationException("Native tree consequence reported failure.");
+        });
         return result;
     }
 }
@@ -32,7 +36,12 @@ public sealed class TimberbornLegacyCropMutationGuard : ITimberbornCropBurnConse
     public TimberbornCropBurnConsequenceResult ApplyConsequence(TimberbornCropBurnConsequence consequence)
     {
         TimberbornCropBurnConsequenceResult result = default;
-        _guard.TransferInventory(() => result = _api.ApplyConsequence(consequence));
+        _guard.TransferInventory(() =>
+        {
+            result = _api.ApplyConsequence(consequence);
+            result.ValidateReceipt();
+            if (result.FailedConsequence) throw new InvalidOperationException("Native crop consequence reported failure.");
+        });
         return result;
     }
 }

@@ -37,6 +37,16 @@ public readonly record struct TimberbornCropBurnConsequenceResult(
     bool Deleted = false,
     int DestroyedGoodCount = 0)
 {
+    internal void ValidateReceipt()
+    {
+        if (YieldLost < 0 || DestroyedGoodCount < 0 ||
+            (Status != TimberbornCropBurnConsequenceStatus.Applied &&
+             (YieldLost != 0 || DestroyedGoodCount != 0 || KilledCrop || VisualStateUpdated || Deleted)))
+            throw new InvalidOperationException("Native crop consequence returned a contradictory mutation receipt.");
+        if (Status < TimberbornCropBurnConsequenceStatus.NotLive || Status > TimberbornCropBurnConsequenceStatus.Failed)
+            throw new InvalidOperationException("Native crop consequence returned an unknown status.");
+    }
+
     public bool MatchedCropTarget => Status != TimberbornCropBurnConsequenceStatus.NotLive;
     public bool FailedConsequence => Status == TimberbornCropBurnConsequenceStatus.Failed;
     public bool Satisfied => Status is TimberbornCropBurnConsequenceStatus.Applied or TimberbornCropBurnConsequenceStatus.AlreadySatisfied;

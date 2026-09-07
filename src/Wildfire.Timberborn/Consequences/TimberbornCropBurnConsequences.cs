@@ -345,6 +345,7 @@ public sealed class TimberbornCropBurnConsequenceSink : ITimberbornCropBurnConse
         TimberbornCropBurnConsequenceKind kind,
         TimberbornBurnDamageTargetState state)
     {
+        result.ValidateReceipt();
         if (!result.FailedConsequence)
         {
             return;

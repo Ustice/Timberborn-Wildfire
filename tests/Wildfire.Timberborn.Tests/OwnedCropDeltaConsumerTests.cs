@@ -154,6 +154,21 @@ public sealed class OwnedCropDeltaConsumerTests
         Assert.Single(f.Api.Calls);
     }
 
+    [Theory]
+    [InlineData(-1, 0, TimberbornCropBurnConsequenceStatus.Applied)]
+    [InlineData(0, -1, TimberbornCropBurnConsequenceStatus.Applied)]
+    [InlineData(1, 0, TimberbornCropBurnConsequenceStatus.Unavailable)]
+    [InlineData(0, 1, TimberbornCropBurnConsequenceStatus.AlreadySatisfied)]
+    public void ContradictoryReceiptCannotAdvanceLedgerOrEscapeSharedGuard(int yield, int goods, TimberbornCropBurnConsequenceStatus status)
+    {
+        var f = new Fixture(amount: 1);
+        f.Api.Apply = _ => new(status, YieldLost: yield, DestroyedGoodCount: goods);
+        Assert.Throws<InvalidOperationException>(() => f.Consumer.Consume(14, [Delta(f.Token(A), 0, 3, 0)]));
+        Assert.True(f.Guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(f.Guard.ThrowIfSaveUnsafe);
+        Assert.Single(f.Api.Calls);
+    }
+
     private static TimberbornBurnDamageTargetKey Key(Guid id) => new(TimberbornBurnDamageIdentity.ForEntity(id, NativeBurnTargetFamily.Crop));
     private static CellDelta Delta(uint id, int cell, int oldFuel, int newFuel) => new(cell,
         PackedCell.Pack(oldFuel, 10, 3, 0, 0, 1), PackedCell.Pack(newFuel, 10, 3, 0, 0, 1), id);

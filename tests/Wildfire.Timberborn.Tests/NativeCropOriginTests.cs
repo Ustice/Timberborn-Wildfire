@@ -132,6 +132,42 @@ public sealed class NativeCropOriginTests
         Assert.Equal(1, calls);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ExplicitFailedResultPoisonsLegacyGuardInsideItsMutationBoundary(bool crop)
+    {
+        var guard = new NativeResourceTransaction();
+        Action apply = crop
+            ? () => new TimberbornLegacyCropMutationGuard(guard, new ResultCropApi(TimberbornCropBurnConsequenceStatus.Failed)).ApplyConsequence(default)
+            : () => new TimberbornLegacyTreeMutationGuard(guard, new ResultTreeApi(TimberbornTreeBurnConsequenceStatus.Failed)).ApplyConsequence(default);
+        Assert.Throws<InvalidOperationException>(apply);
+        Assert.True(guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(guard.ThrowIfSaveUnsafe);
+    }
+
+    [Theory]
+    [InlineData(TimberbornCropBurnConsequenceStatus.Unavailable, TimberbornTreeBurnConsequenceStatus.Unavailable)]
+    [InlineData(TimberbornCropBurnConsequenceStatus.NotLive, TimberbornTreeBurnConsequenceStatus.NotLive)]
+    public void KnownUnavailabilityOrDisappearanceDoesNotPoisonLegacyGuard(
+        TimberbornCropBurnConsequenceStatus cropStatus, TimberbornTreeBurnConsequenceStatus treeStatus)
+    {
+        var guard = new NativeResourceTransaction();
+        Assert.Equal(cropStatus, new TimberbornLegacyCropMutationGuard(guard, new ResultCropApi(cropStatus)).ApplyConsequence(default).Status);
+        Assert.Equal(treeStatus, new TimberbornLegacyTreeMutationGuard(guard, new ResultTreeApi(treeStatus)).ApplyConsequence(default).Status);
+        guard.ThrowIfSaveUnsafe();
+        Assert.False(guard.IsIndeterminate);
+    }
+
+    private sealed class ResultCropApi(TimberbornCropBurnConsequenceStatus status) : ITimberbornCropBurnConsequenceApi
+    {
+        public TimberbornCropBurnConsequenceResult ApplyConsequence(TimberbornCropBurnConsequence value) => new(status);
+    }
+    private sealed class ResultTreeApi(TimberbornTreeBurnConsequenceStatus status) : ITimberbornTreeBurnConsequenceApi
+    {
+        public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence value) => new(status);
+    }
+
     private sealed class CallbackCropApi(Action call) : ITimberbornCropBurnConsequenceApi
     {
         public TimberbornCropBurnConsequenceResult ApplyConsequence(TimberbornCropBurnConsequence value)

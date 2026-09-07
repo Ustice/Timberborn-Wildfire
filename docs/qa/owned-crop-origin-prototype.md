@@ -8,7 +8,7 @@ The raw native crop API uses the carried Guid and matching crop damage key. Each
 
 Normal and QA-selected native crop providers now share the canonical Crop Guid key. Existing SelectedCrop keys are accepted only as explicit legacy native identities; the owned route never registers that alias. Tests prove an existing alias state cannot receive a second body/effect application.
 
-Results distinguish actual Applied, AlreadySatisfied, Unavailable, NotLive and Failed. The sink advances its yield ledger by the returned native quantity only. Already-dead crops count no new kill. Full-burn deletion, killed state, visual changes, destroyed inventory goods and removed yield are separate receipts; visual completion cannot manufacture yield loss. Unavailable actions remain retryable and callback exceptions propagate.
+Results distinguish actual Applied, AlreadySatisfied, Unavailable, NotLive and Failed. Contradictory receipts (negative quantities or mutation claims from a non-Applied status) are rejected within the shared guard. Legacy wrappers throw on explicit Failed receipts inside that guard, while Unavailable and NotLive remain normal outcomes. The sink advances its yield ledger by the returned native quantity only. Already-dead crops count no new kill. Full-burn deletion, killed state, visual changes, destroyed inventory goods and removed yield are separate receipts; visual completion cannot manufacture yield loss. Unavailable actions remain retryable and callback exceptions propagate.
 
 Partial yield loss remains an unresolved **first-release implementation gate**. Installed `Yielder.DecreaseYield` subtracts then emits YieldDecreased; `Gatherable.OnYieldDecreased` harvests the remainder into a good stack and invokes Gathered. This prototype therefore returns Unavailable for ReduceYield. It does not remove partial loss from the accepted design.
 
@@ -18,9 +18,9 @@ A compound operation that loses its owner/component or encounters a changed rese
 
 ## Proof and remaining native QA
 
-- Eighteen new tests cover retained hidden A versus replacement B, deleted origins, zero/unknown/unregistered whole-batch preflight, canonical alias dedup, actual partial receipts, full-burn deletion versus visual/kill/yield, unavailable retry, and shared-guard callback failure without replay.
+- Twenty-six new tests cover retained hidden A versus replacement B, deleted origins, zero/unknown/unregistered whole-batch preflight, canonical alias dedup, actual partial receipts, full-burn deletion versus visual/kill/yield, unavailable retry, and shared-guard callback failure without replay.
 - Actual installed managed Yielder tests prove whole removal 5→0 and repeat→0 without a harvest callback, and DecreaseYield invokes its callback after reducing quantity. Actual LivingNaturalResource.Die emits once, returns a truthful repeat classification, and leaves IsDead changed when its callback throws. That real callback exception poisons the shared legacy guard and blocks replay/save.
 - Actual EntityRegistry/EntityComponent tests prove missing, newly registered but uninitialized, and deleted rejection. They do not fake positive Unity liveness.
-- Full native suite: **798 passed**, zero failures/skips, on the crop worktree with these changes. No Core, GPU or shader behavior changed.
+- Full native suite: **806 passed**, zero failures/skips, on the crop worktree with these changes. No Core, GPU or shader behavior changed.
 
 Controller-owned copied-save QA is still required for positive scene-object resolution, new crops after initialization, drying/death/model changes, whole-yield and stock clearing, reserved-stock refusal, native resource deletion, and deletion during compound callbacks. The complete native render/delete path has not run in the game. No game, Unity, deployment or save mutation was performed for this slice.
