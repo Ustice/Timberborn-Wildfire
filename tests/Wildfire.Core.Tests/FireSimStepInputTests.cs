@@ -110,6 +110,37 @@ public sealed class FireSimStepInputTests
     }
 
     [Fact]
+    public void CallbackSideEffectFollowedByFailureRemainsIndeterminateWithoutRollbackOrReplay()
+    {
+        FireSimStepCoordinator step = new(1, 1);
+        Backend backend = new();
+        int hostStock = 2;
+        int callbackCalls = 0;
+        bool hostPhaseAdvanced = false;
+
+        FireSimStepInputException error = Assert.Throws<FireSimStepInputException>(() =>
+            step.TryTickWithInput(backend, new(0, AddWater: 1), () =>
+            {
+                callbackCalls++;
+                hostStock--;
+                backend.FailingStage = "host-event";
+                backend.Record("host-event");
+                hostPhaseAdvanced = true;
+            }));
+
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, error.Outcome);
+        Assert.Equal(1, hostStock);
+        Assert.False(hostPhaseAdvanced);
+        Assert.Equal(0, step.PendingChangeCount);
+        // Core does not guess a refund or retain a callback for replay. Production must freeze.
+        backend.FailingStage = null;
+        step.Tick(backend);
+        Assert.Single(backend.Uploads);
+        Assert.Equal(1, callbackCalls);
+        Assert.Equal(1, hostStock);
+    }
+
+    [Fact]
     public void InvalidQueuedChangesDoNotStealAdmissionCapacity()
     {
         FireSimStepCoordinator step = new(1, 1);
