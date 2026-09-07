@@ -20,7 +20,8 @@ public readonly record struct TimberbornTreeBurnConsequence(
     int SourceCellIndex,
     int DamageApplied,
     int DamageTaken,
-    int DamageCapacity);
+    int DamageCapacity,
+    Guid EntityId = default);
 
 public readonly record struct TimberbornTreeBurnConsequenceResult(
     bool Applied,
@@ -117,6 +118,19 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             .Where(static hit => hit.HasValue)
             .Select(static hit => hit!.Value)
             .ToArray();
+        return ApplyTreeHits(tick, treeHits);
+    }
+
+    internal TimberbornTreeBurnConsequenceSummary ApplyOwnedConsequences(
+        uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions)
+    {
+        var hits = decisions.Select(item => CreateTreeCandidateHit(item.Decision, item.TargetKey))
+            .Where(hit => hit.HasValue).Select(hit => hit!.Value).ToArray();
+        return ApplyTreeHits(tick, hits);
+    }
+
+    private TimberbornTreeBurnConsequenceSummary ApplyTreeHits(uint tick, TreeCandidateHit[] treeHits)
+    {
         TreeCandidateTarget[] consideredTreeTargets = treeHits
             .GroupBy(static hit => hit.State.TargetKey)
             .Select(static group => new TreeCandidateTarget(
@@ -167,10 +181,16 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
 
     private TreeCandidateHit? CreateTreeCandidateHit(TimberbornFireCellDeltaDecision decision)
     {
+        return _burnDamageService.TargetKeyByCellIndex.TryGetValue(decision.CellIndex, out var targetKey)
+            ? CreateTreeCandidateHit(decision, targetKey) : null;
+    }
+
+    private TreeCandidateHit? CreateTreeCandidateHit(TimberbornFireCellDeltaDecision decision,
+        TimberbornBurnDamageTargetKey targetKey)
+    {
         bool fuelConsumed = decision.OldFuel > decision.NewFuel;
         bool moistureEvaporated = decision.OldWater > decision.NewWater;
         if ((!fuelConsumed && !moistureEvaporated) ||
-            !_burnDamageService.TargetKeyByCellIndex.TryGetValue(decision.CellIndex, out TimberbornBurnDamageTargetKey targetKey) ||
             !_burnDamageService.States.TryGetValue(targetKey, out TimberbornBurnDamageTargetState state) ||
             !TimberbornTreeBurnTargetClassifier.IsTreeOrCuttable(state))
         {
@@ -407,7 +427,9 @@ public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConse
             appliedEvent.SourceCellIndex,
             appliedEvent.DamageApplied,
             appliedEvent.DamageTaken,
-            appliedEvent.DamageCapacity);
+            appliedEvent.DamageCapacity,
+            EntityId: TimberbornBurnDamageIdentity.TryGetEntity(state.TargetKey.StableId, NativeBurnTargetFamily.Tree,
+                out Guid entityId) ? entityId : Guid.Empty);
     }
 
     private static int CalculateInitialYield(TimberbornBurnDamageTargetState state)

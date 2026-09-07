@@ -274,6 +274,23 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
             .Where(hit => _targetKeyByCellIndex.ContainsKey(hit.CellIndex))
             .Select(hit => hit with { TargetKey = _targetKeyByCellIndex[hit.CellIndex] })
             .ToArray();
+        return ApplyHits(tick, decisions.Count, candidateHits.Length, resolvedHits);
+    }
+
+    /// <summary>Applies preflighted original-owner decisions. Never resolves a current cell occupant.</summary>
+    internal TimberbornBurnDamageApplySummary ApplyOwnedDamage(
+        uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions)
+    {
+        var hits = decisions.Select(item => CreateHit(item.Decision) with { TargetKey = item.TargetKey })
+            .Where(hit => hit.DamageUnits > 0).ToArray();
+        if (hits.Any(hit => !_states.ContainsKey(hit.TargetKey)))
+            throw new InvalidOperationException("An owned burn registration disappeared after batch preflight.");
+        return ApplyHits(tick, decisions.Count, hits.Length, hits);
+    }
+
+    private TimberbornBurnDamageApplySummary ApplyHits(uint tick, int consideredCount, int candidateCount,
+        TimberbornBurnDamageCellHit[] resolvedHits)
+    {
         TimberbornBurnDamageAppliedEvent[] appliedEvents = resolvedHits
             .GroupBy(static hit => hit.TargetKey)
             .Select(static group => group
@@ -288,10 +305,10 @@ public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITi
 
         LastApplySummary = new TimberbornBurnDamageApplySummary(
             Tick: tick,
-            ConsideredCellCount: decisions.Count,
-            DamageCandidateCellCount: candidateHits.Length,
+            ConsideredCellCount: consideredCount,
+            DamageCandidateCellCount: candidateCount,
             ResolvedTargetCellCount: resolvedHits.Length,
-            UnresolvedCellCount: candidateHits.Length - resolvedHits.Length,
+            UnresolvedCellCount: candidateCount - resolvedHits.Length,
             DuplicateCellSuppressedCount: resolvedHits.Length - resolvedHits
                 .Select(static hit => hit.TargetKey)
                 .Distinct()

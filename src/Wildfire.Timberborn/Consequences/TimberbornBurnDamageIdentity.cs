@@ -19,11 +19,23 @@ public static class TimberbornBurnDamageIdentity
                 System.Globalization.CultureInfo.InvariantCulture, out _);
     }
 
+    /// <summary>Strict bridge for existing persisted native family keys; never parses legacy runtime hashes.</summary>
+    public static bool TryGetEntity(string key, NativeBurnTargetFamily family, out Guid entityId)
+    {
+        entityId = Guid.Empty;
+        string prefix = FamilyPrefix(family) + ":entity:";
+        return key.StartsWith(prefix, StringComparison.Ordinal) &&
+            Guid.TryParseExact(key.Substring(prefix.Length), "D", out entityId) && entityId != Guid.Empty;
+    }
+
     public static string ForEntity(Guid entityId, NativeBurnTargetFamily family)
     {
         if (entityId == Guid.Empty)
             throw new InvalidOperationException("Cannot register burn damage before the native entity has a persistent identity.");
-        string prefix = family switch
+        return $"{FamilyPrefix(family)}:entity:{entityId:D}";
+    }
+
+    private static string FamilyPrefix(NativeBurnTargetFamily family) => family switch
         {
             NativeBurnTargetFamily.Stockpile => "stockpile",
             NativeBurnTargetFamily.Structure => "structure",
@@ -35,6 +47,4 @@ public static class TimberbornBurnDamageIdentity
             NativeBurnTargetFamily.PathInfrastructure => "path_infrastructure",
             _ => throw new ArgumentOutOfRangeException(nameof(family)),
         };
-        return $"{prefix}:entity:{entityId:D}";
-    }
 }

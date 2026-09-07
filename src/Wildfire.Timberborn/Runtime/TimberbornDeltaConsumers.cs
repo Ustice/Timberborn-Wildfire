@@ -2,6 +2,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Runtime;
 
+/// <summary>Legacy cell-routed production consumer. Owned material activation must use an origin-routed consumer.</summary>
 public sealed class TimberbornFireDeltaConsumer
 {
     private readonly Dictionary<int, TimberbornFireDebugVisualCellState> _debugVisualCells = new();
@@ -516,7 +517,8 @@ public readonly record struct TimberbornFireCellDeltaDecision(
     int NewWater,
     bool WasBurning,
     bool IsBurning,
-    bool FuelDepleted)
+    bool FuelDepleted,
+    uint TargetId = 0)
 {
     public bool StartedBurning => !WasBurning && IsBurning;
 
@@ -563,7 +565,8 @@ public readonly record struct TimberbornFireCellDeltaDecision(
             PackedCell.Water(delta.NewCell),
             PackedCell.BurningLevel(delta.OldCell) > 0,
             PackedCell.BurningLevel(delta.NewCell) > 0,
-            FuelDepleted: oldFuel > 0 && newFuel == 0);
+            FuelDepleted: oldFuel > 0 && newFuel == 0,
+            TargetId: delta.TargetId);
     }
 }
 
