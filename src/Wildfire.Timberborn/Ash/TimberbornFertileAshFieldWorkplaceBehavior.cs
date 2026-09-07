@@ -35,7 +35,7 @@ public sealed class TimberbornFertileAshFieldWorkplaceBehavior : WorkplaceBehavi
         var occupied = _block.PositionedBlocks?.GetOccupiedCoordinates().ToArray();
         if (occupied is null || occupied.Length == 0) return Decision.ReleaseNextTick();
         Vector3Int center = occupied.OrderBy(position => position.x).ThenBy(position => position.y).ThenBy(position => position.z).ElementAt(occupied.Length / 2);
-        if (!_runtime.TryFindFertileAshFieldHarvestTarget(center, 1, out var target)) return Decision.ReleaseNextTick();
+        if (!_runtime.TryFindFertileAshFieldHarvestTarget(center, out var target)) return Decision.ReleaseNextTick();
         var executor = agent.GetComponent<AshHarvestExecutor>();
         return executor.TryLaunch(_workplace, _inventory, target)
             ? agent.GetComponent<AshHarvestBehavior>().Own(executor)

@@ -25,7 +25,8 @@ public sealed class AshHarvestFragment : IEntityPanelFragment
     public void ClearFragment() { _executor = null; _status.style.display = DisplayStyle.None; }
     public void UpdateFragment()
     {
-        if (_executor is null || !_executor || _executor.Phase == AshHarvestPhase.Idle) { ClearFragment(); return; }
+        if (_executor is null || !_executor) { ClearFragment(); return; }
+        if (_executor.Phase == AshHarvestPhase.Idle) { _status.style.display = DisplayStyle.None; return; }
         _status.style.display = DisplayStyle.Flex;
         _status.text = _loc.T(_resources.IsIndeterminate ? "Wildfire.Resources.Recovery" : _executor.StatusKey);
     }

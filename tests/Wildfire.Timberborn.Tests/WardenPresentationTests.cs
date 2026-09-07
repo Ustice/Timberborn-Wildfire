@@ -11,7 +11,7 @@ public sealed class WardenPresentationTests
     [Fact]
     public void RecoveryInstructionOverridesPausedUnstaffedOrReturningStatus()
     {
-        var state = Ready with { UnsafeWaterState = true, Operational = false, AssignedWorkers = 0,
+        var state = Ready with { UnsafeResourceState = true, Operational = false, AssignedWorkers = 0,
             Phase = WardenPhase.Returning, Reason = WardenResponseReason.UnsafeRoute };
         Assert.Equal("Wildfire.Resources.Recovery", WardenStationPresentation.StatusKey(state));
     }
@@ -50,7 +50,7 @@ public sealed class WardenPresentationTests
     }
 
     [Fact]
-    public void ThrowingOrReentrantNotificationCannotRepeatOrClearUnsafeWaterState()
+    public void ThrowingOrReentrantNotificationCannotRepeatOrClearUnsafeResourceState()
     {
         var transaction = new NativeResourceTransaction();
         var notice = new NativeResourceRecoveryNotice();

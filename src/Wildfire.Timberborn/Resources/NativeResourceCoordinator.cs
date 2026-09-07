@@ -15,6 +15,7 @@ public sealed class NativeResourceCoordinator
     private readonly NativeResourceTransaction _transaction = new();
     public long FieldRevision { get; private set; }
     public bool IsIndeterminate => _transaction.IsIndeterminate;
+    public FireSimAshCollectionReceipt? LastAshReceipt { get; private set; }
     public void Register(WardenExecutor executor) => _wardens.Add(executor);
     public void Unregister(WardenExecutor executor) => _wardens.Remove(executor);
 
@@ -35,6 +36,7 @@ public sealed class NativeResourceCoordinator
     {
         ThrowIfSaveUnsafe();
         var simulator = _simulator ?? throw new InvalidOperationException("Resource simulator has not been attached.");
+        LastAshReceipt = null;
         return _scheduler.Tick(ash => ash ? TryAsh(simulator) : TryWater(simulator), simulator.Tick);
     }
 
@@ -52,7 +54,7 @@ public sealed class NativeResourceCoordinator
         foreach (var harvester in _harvesters.ToArray())
         {
             if (!harvester.TryPrepareCollection(out var input, out var commit)) continue;
-            return new(true, _transaction.TryCollectAsh(simulator, input, receipt => { commit(receipt); _scheduler.Committed(ash: true); }));
+            return new(true, _transaction.TryCollectAsh(simulator, input, receipt => { commit(receipt); LastAshReceipt = receipt; _scheduler.Committed(ash: true); }));
         }
         return default;
     }
@@ -67,5 +69,6 @@ public sealed class NativeResourceCoordinator
         _transaction.ResetForWorldLoad();
         _simulator = null;
         _scheduler.ResetForWorldLoad();
+        LastAshReceipt = null;
     }
 }

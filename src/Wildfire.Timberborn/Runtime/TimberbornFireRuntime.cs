@@ -324,7 +324,7 @@ public sealed partial class TimberbornFireRuntime :
 
         try
         {
-            _fertileAshCollectionService.Apply(tick, _ashFieldService, QueueCollectedAshRemoval);
+            _fertileAshCollectionService.Apply(tick, _ashFieldService);
         }
         catch (Exception exception)
         {
@@ -506,7 +506,6 @@ public sealed partial class TimberbornFireRuntime :
 
     public bool TryFindFertileAshFieldHarvestTarget(
         Vector3Int gathererCenter,
-        int liftingCapacity,
         out TimberbornFertileAshFieldHarvestTarget target)
     {
         target = default;
@@ -516,7 +515,6 @@ public sealed partial class TimberbornFireRuntime :
             return false;
         }
 
-        int goodsToCollect = Math.Max(1, Math.Min(liftingCapacity, 1));
         uint tick = _fireSystem?.LastTick ?? 0;
         (int X, int Y, int Z) gridCenter = ToFireGridCoordinates(gathererCenter);
         TimberbornAshFieldEntry? entry = _ashFieldService.Entries.Values
@@ -553,14 +551,8 @@ public sealed partial class TimberbornFireRuntime :
         }
 
         (int X, int Y, int Z) coordinates = grid.Value.FromIndex(entry.Value.CellIndex);
-        int goodsAmount = Math.Min(goodsToCollect, entry.Value.Strength);
-        target = new TimberbornFertileAshFieldHarvestTarget(
-            entry.Value.CellIndex,
-            StrengthToRemove: TimberbornFertileAshCollectionService.StrengthPerGood * goodsAmount,
-            new GoodAmount(TimberbornAshFieldService.FertileAshGoodId, goodsAmount),
-            new Vector3Int(coordinates.X, coordinates.Y, coordinates.Z),
-            new Vector3(coordinates.X + 0.5f, coordinates.Z, coordinates.Y + 0.5f),
-            TimberbornFertileAshFieldHarvestSource.SimulatorAshField);
+        target = new TimberbornFertileAshFieldHarvestTarget(entry.Value.CellIndex,
+            new Vector3(coordinates.X + 0.5f, coordinates.Z, coordinates.Y + 0.5f));
         return true;
     }
 
@@ -1230,8 +1222,8 @@ public sealed partial class TimberbornFireRuntime :
             FertileAshGathererPosts: fertileAshCollectionSummary.GathererPostCount,
             FertileAshCollectionCandidateCells: fertileAshCollectionSummary.CandidateCellCount,
             FertileAshCollectionReachableCells: fertileAshCollectionSummary.ReachableCellCount,
-            FertileAshCollectedGoods: fertileAshCollectionSummary.CollectedGoodCount,
-            FertileAshCollectionDepletedCells: fertileAshCollectionSummary.DepletedAshCellCount,
+            FertileAshCollectedGoods: _resources.LastAshReceipt?.Collected ?? 0,
+            FertileAshCollectionDepletedCells: null, // The receipt reports units removed, not a post-simulation depletion cause.
             FertileAshCollectionSkippedTaintedOrSpentCells: fertileAshCollectionSummary.SkippedTaintedOrSpentCellCount,
             LastDeltaConsumerAlertCount: deltaConsumerSummary.AlertCount,
             LastPlayerFireAlertTick: alertCounters.LastAlertTick,
@@ -1514,21 +1506,6 @@ public sealed partial class TimberbornFireRuntime :
 
         applicationCellIndex = landingCellIndex.Value;
         return true;
-    }
-
-    private void QueueCollectedAshRemoval(TimberbornFertileAshCollectedCell cell)
-    {
-        byte ashAmount = StrengthToAshUnits(cell.StrengthToRemove);
-        if (ashAmount == 0)
-        {
-            return;
-        }
-
-        _fireSystem?.RegisterChange(
-            new FireSimChange(
-                CellIndex: cell.CellIndex,
-                RemoveAsh: ashAmount),
-            "fertile_ash_collection");
     }
 
     private void QueueDecayedAshRemoval(TimberbornAshFieldCollectionRemoval removal)

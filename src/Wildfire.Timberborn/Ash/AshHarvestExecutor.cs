@@ -4,6 +4,7 @@ using Timberborn.Carrying;
 using Timberborn.CharacterNavigation;
 using Timberborn.EntitySystem;
 using Timberborn.InventorySystem;
+using Timberborn.GameDistricts;
 using Timberborn.MortalSystem;
 using Timberborn.Navigation;
 using Timberborn.NeedSystem;
@@ -39,7 +40,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     private TimberbornOwnedWalker _ownedWalk = null!;
     private WalkToPositionExecutor _walk = null!;
     private Navigator _navigator = null!;
-    private CarrierInventoryFinder _inventoryFinder = null!;
+    private Citizen _citizen = null!;
     private BehaviorManager _behavior = null!;
     private Worker _worker = null!;
     private NeedManager _needs = null!;
@@ -67,7 +68,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
         _walker.StartedNewPath += OnStartedNewPath;
         _walk = GetComponent<WalkToPositionExecutor>();
         _navigator = GetComponent<Navigator>();
-        _inventoryFinder = GetComponent<CarrierInventoryFinder>();
+        _citizen = GetComponent<Citizen>();
         _behavior = GetComponent<BehaviorManager>();
         _worker = GetComponent<Worker>();
         _needs = GetComponent<NeedManager>();
@@ -97,6 +98,14 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
         if (Phase == AshHarvestPhase.Idle) return ExecutorStatus.Success;
         if (!_behavior.IsRunningExecutor<AshHarvestExecutor>())
             throw new InvalidOperationException("Ash movement requires native executor ownership.");
+        if (_mortal.Dead || _mortal.ShouldDie)
+        {
+            _ownedWalk.Stop();
+            if (!_resources.IsIndeterminate)
+                _resources.TransferInventory(() => { _cargo.ReleaseReservation(); _cycle.Finish(); });
+            else _cycle.Finish(); // The existing unsafe-save guard remains; mortality must still win.
+            return ExecutorStatus.Failure; // Native mortality owns its ordinary carried-good loss; no refund or mint.
+        }
         if (_resources.IsIndeterminate) return ExecutorStatus.Running;
         if (_restored)
         {
@@ -104,13 +113,6 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
             _cargo.Validate(_cycle);
             _ownedWalk.Stop();
             _replan = true;
-        }
-        if (_mortal.Dead || _mortal.ShouldDie)
-        {
-            _ownedWalk.Stop();
-            _resources.TransferInventory(() => { _cargo.ReleaseReservation(); _cycle.Finish(); });
-            _ownedWalk.ReleasePause();
-            return ExecutorStatus.Failure; // Native mortality owns its ordinary carried-good loss; no refund or mint.
         }
         if (!_cycle.HasCargo && (!JobActive || !_field.Ready || !LiveDestination || !_runtime.IsCleanAshAvailable(_cell)))
             return CancelBeforeReceipt();
@@ -177,8 +179,9 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
         _resources.TransferInventory(_cargo.ReleaseReservation);
         Inventory? candidate = _workplace is not null && _workplace ? _workplace.GetComponent<SimpleOutputInventory>().Inventory : null;
         if (TryReserveAndWalk(candidate)) return true;
-        var origin = GetComponent<Accessible>();
-        candidate = _inventoryFinder.GetClosestInventoryWithCapacity(AshHarvestCargo.Unit.GoodId, origin, out _);
+        if (!_citizen.HasAssignedDistrict) return false;
+        var picker = _citizen.AssignedDistrict.GetComponent<DistrictInventoryPicker>();
+        candidate = picker.ClosestInventoryWithCapacity(_navigator.CurrentAccessOrPosition(), AshHarvestCargo.Unit, out _);
         return TryReserveAndWalk(candidate);
     }
     private bool TryReserveAndWalk(Inventory? inventory)
@@ -254,7 +257,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     }
     public void DeleteEntity()
     {
-        if (Phase != AshHarvestPhase.Idle)
+        if (Phase != AshHarvestPhase.Idle && !_resources.IsIndeterminate)
         {
             _resources.TransferInventory(_cargo.ReleaseReservation);
         }

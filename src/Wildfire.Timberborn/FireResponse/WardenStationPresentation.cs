@@ -1,13 +1,13 @@
 namespace Wildfire.Timberborn.FireResponse;
 
-public readonly record struct WardenStationViewState(bool UnsafeWaterState, bool Finished, bool Operational,
+public readonly record struct WardenStationViewState(bool UnsafeResourceState, bool Finished, bool Operational,
     bool ResponseEnabled, int AssignedWorkers, bool Restocking, WardenPhase Phase, WardenResponseReason Reason);
 
 public static class WardenStationPresentation
 {
     public static string StatusKey(WardenStationViewState state)
     {
-        if (state.UnsafeWaterState) return "Wildfire.Resources.Recovery";
+        if (state.UnsafeResourceState) return "Wildfire.Resources.Recovery";
         if (!state.Finished) return "Wildfire.Warden.Construction";
         // Returning remains useful information even after pausing the station or disabling fire.
         if (state.Phase == WardenPhase.Returning) return "Wildfire.Warden.Returning";

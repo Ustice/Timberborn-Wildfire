@@ -58,7 +58,7 @@ public sealed class WardenStationFragment : IEntityPanelFragment
             _station.Restocking, executor?.Phase ?? WardenPhase.Idle,
             executor?.ResponseReason ?? WardenResponseReason.None);
         _status.text = _loc.T(WardenStationPresentation.StatusKey(state));
-        _reason.style.display = state.Phase == WardenPhase.Returning && state.Reason != WardenResponseReason.None && !state.UnsafeWaterState
+        _reason.style.display = state.Phase == WardenPhase.Returning && state.Reason != WardenResponseReason.None && !state.UnsafeResourceState
             ? DisplayStyle.Flex : DisplayStyle.None;
         _reason.text = _loc.T(WardenStationPresentation.ReasonKey(state.Reason, "Ready"));
         _reserve.text = _loc.T("Wildfire.Warden.Reserve", _station.Inventory.AmountInStock(WardenEquipment.WaterId), WardenStation.WaterCapacity);
