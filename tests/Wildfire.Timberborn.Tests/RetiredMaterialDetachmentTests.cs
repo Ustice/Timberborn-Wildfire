@@ -157,6 +157,29 @@ public sealed class RetiredMaterialDetachmentTests
         Assert.Throws<InvalidOperationException>(() => f.Plan()); Assert.Equal(0, f.Simulator.Uploads);
     }
 
+    [Theory]
+    [InlineData("Empty")]
+    [InlineData("Fresh")]
+    public void TypedBaselineRevealKeepsOpenSoilAndCurrentAmbientFieldsBesideLowerOwner(string reveal)
+    {
+        var f = new Fixture(reveal, richBaseline: true);
+        Assert.Equal(P.Result.Applied, f.Flush());
+        var snapshot = f.Simulator.CaptureSnapshot();
+        Assert.Equal(0, PackedCell.Terrain(snapshot.Cells[1])); // Open soil is not solid terrain.
+        Assert.Equal(WildfireMaterialClass.Terrain, WildfireMaterialFieldState.Unpack(snapshot.CompanionFields[1]).MaterialClass);
+        Assert.Equal(1, PackedCell.Water(snapshot.Cells[1]));
+        Assert.Equal(5, WildfireMaterialFieldState.Unpack(snapshot.CompanionFields[1]).SoilContamination);
+        Assert.Equal(2, PackedCell.Water(snapshot.Cells[0])); // No baseline/profile default wetness replay.
+        if (reveal == "Fresh") Assert.Equal(f.B0.TargetId, snapshot.TargetIds[0]);
+        else
+        {
+            Assert.Equal(0u, snapshot.TargetIds[0]);
+            Assert.Equal(WildfireMaterialClass.Badwater, WildfireMaterialFieldState.Unpack(snapshot.CompanionFields[0]).MaterialClass);
+        }
+        Assert.True(f.Simulator.TryGetMaterialArchive(f.A0, out _));
+        Assert.True(f.Simulator.TryGetMaterialArchive(f.A1, out _));
+    }
+
     private sealed class ThrowingListener : IFireSimListener
     { public void OnFireSimDeltas(ReadOnlySpan<CellDelta> deltas) => throw new ApplicationException("downstream listener failed"); }
 
@@ -164,13 +187,15 @@ public sealed class RetiredMaterialDetachmentTests
     {
         internal static readonly Guid A = new("00000000-0000-0000-0000-000000000001"), B = new("00000000-0000-0000-0000-000000000002"), C = new("00000000-0000-0000-0000-000000000003");
         internal static readonly uint Companion = new WildfireMaterialFieldState(WildfireMaterialClass.Tree, 7, 5, 0, WildfireAshQuality.None, WildfireContaminationBehavior.None).Pack();
-        internal readonly TimberbornNativeMaterialRegistry Registry = new(new(4, 1, 1), []);
+        internal readonly TimberbornNativeMaterialRegistry Registry;
         internal readonly Dictionary<Guid, OwnedBodyRetention> Owners = new() { [A] = OwnedBodyRetention.RetiredNativeOwner, [B] = OwnedBodyRetention.RetainedBody, [C] = OwnedBodyRetention.RetainedBody };
         internal readonly NativeResourceTransaction Guard = new();
         internal readonly RetiredDetachmentSimulatorFixture Simulator;
         internal readonly FireSimMaterialIdentity A0, A1, B0, C0;
-        internal Fixture(string reveal, int changeCapacity = 4)
+        internal Fixture(string reveal, int changeCapacity = 4, bool richBaseline = false)
         {
+            Registry = richBaseline ? new TimberbornNativeMaterialRegistry(new TimberbornMaterialBaseline(new(4, 1, 1),
+                [new(0, FireSimBaselineDefinition.Badwater), new(1, FireSimBaselineDefinition.OpenSoil)])) : new(new(4, 1, 1), []);
             Registry.Reconcile([Projection(A, 0, 1), Projection(B, 2), Projection(C, 3)], []);
             A0 = Identity(A, 1); A1 = Identity(A, 2); B0 = Identity(B, 1); C0 = Identity(C, 1);
             var targets = new[] { A0.TargetId, A1.TargetId, reveal == "Captured" ? B0.TargetId : 0u, 0u };
@@ -178,8 +203,8 @@ public sealed class RetiredMaterialDetachmentTests
             var known = new List<FireSimMaterialIdentity> { A0, A1 };
             if (reveal is "Captured" or "Archived") known.Add(B0);
             var archive = reveal == "Archived" ? new[] { new FireSimMaterialArchiveSnapshot(B0, 1, 2, 3, Companion) } : [];
-            Simulator = new(new(1, new(4, 1, 1), 0, FireSimParameters.Default, 0, [6, 5, 3, 0], new uint[4],
-                [Companion, Companion, Companion, 0], targets, slots, new(reveal == "Archived" ? 1u : 0u, known.ToArray(), archive), []), changeCapacity);
+            Simulator = new(new(1, new(4, 1, 1), 0, FireSimParameters.Default, 0, [richBaseline ? PackedCell.SetWater(6, 2) : (ushort)6, richBaseline ? PackedCell.SetWater(5, 1) : (ushort)5, 3, 0], new uint[4],
+                [Companion, richBaseline ? Companion | (5u << 25) : Companion, Companion, 0], targets, slots, new(reveal == "Archived" ? 1u : 0u, known.ToArray(), archive), []), changeCapacity);
             var desired = reveal == "Empty" ? Array.Empty<TimberbornMaterialProjection>() :
                 reveal == "Captured" ? new[] { Projection(B, 0), Projection(C, 2) } : new[] { Projection(B, 0) };
             Registry.Reconcile(desired, reveal == "Empty" ? [A, B, C] : reveal == "Captured" ? [A] : [A, C]);

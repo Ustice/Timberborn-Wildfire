@@ -36,7 +36,7 @@ internal static class RetiredMaterialDetachmentPrototype
             var desired = registry.ResolveCell(cell);
             if (desired.Owner is not { } owner)
             {
-                requests.Add(cell, FireSimMaterialHandoffRequest.Remove(cell, expected, PackedCell.Terrain(desired.PackedDefinition) != 0));
+                requests.Add(cell, registry.CreateBaselineRequest(cell, expected));
                 continue;
             }
             if (!owners.TryGetValue(owner.EntityId, out var retention) || retention != OwnedBodyRetention.RetainedBody)
