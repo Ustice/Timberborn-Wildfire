@@ -259,6 +259,9 @@ public sealed class TimberbornFireCellMapperTests
     [InlineData(15.999f, 3)]
     [InlineData(16f, 3)]
     [InlineData(99f, 3)]
+    [InlineData(float.NaN, 0)]
+    [InlineData(float.NegativeInfinity, 0)]
+    [InlineData(float.PositiveInfinity, 3)]
     public void TerrainAdapterQuantizesSoilMoistureToPackedWaterBand(float soilMoisture, int expectedWater)
     {
         Assert.Equal((byte)expectedWater, TimberbornTerrainAdapter.QuantizeSoilMoisture(soilMoisture));
@@ -273,6 +276,10 @@ public sealed class TimberbornFireCellMapperTests
     [InlineData(0.45f, true, 4)]
     [InlineData(0.9f, true, 7)]
     [InlineData(9.0f, true, 7)]
+    [InlineData(float.NaN, true, 0)]
+    [InlineData(float.NegativeInfinity, true, 0)]
+    [InlineData(float.PositiveInfinity, true, 7)]
+    [InlineData(float.PositiveInfinity, false, 0)]
     public void TerrainAdapterQuantizesSoilContaminationToCompanionBand(
         float soilContamination,
         bool isContaminated,

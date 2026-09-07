@@ -6,6 +6,22 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class InitialEnvironmentProjectionTests
 {
     [Fact]
+    public void AcceptedHugeFiniteMoistureSaturatesInitialWetness()
+    {
+        var result = TimberbornInitialEnvironmentProjection.Project(new(new(1, 1, 2), [0],
+            [new(1, float.MaxValue, 0, true, false)], []));
+        Assert.Equal((byte)3, result.InitialFields[1].Wetness);
+    }
+
+    [Fact]
+    public void AcceptedHugeFiniteContaminationSaturatesInitialSoilBand()
+    {
+        var result = TimberbornInitialEnvironmentProjection.Project(new(new(1, 1, 2), [0],
+            [new(1, 0, float.MaxValue, false, true)], []));
+        Assert.Equal((byte)7, result.InitialFields[1].SoilContamination);
+    }
+
+    [Fact]
     public void StackedColumnsKeepSolidSoilAndActualLiquidDistinct()
     {
         var capture = new TimberbornInitialEnvironmentCapture(new(1, 1, 6), [0, 3],
