@@ -16,13 +16,15 @@ The algorithm:
 4. Reject retired/unknown projected owners, a known slot lacking retained authority, duplicate incoming slots or a source that remains at its original cell. The existing batch validates capture single-use and source identity.
 5. Derive the next attempt token from the captured simulator cursor. A no-admission result does not consume it; a failed upload may consume an attempt without applying, requiring a recaptured cursor before retry.
 
+The current Remove request carries only a terrain boolean. This prototype can reveal only its existing class-0 nonterrain or class-1 terrain baseline; it cannot represent richer open-soil/water environment classes. Do not approximate those baselines with the boolean. A separate typed environment admission protocol is required before activating such registry composition. Material reveal must preserve current destination heat/water/ash/soil instead of replaying initial environment arrays.
+
 No per-cell fuel estimates, lifecycle phase journal or archive reconstruction are introduced. Whole-footprint detachment preserves old target/slot/Guid bindings and leaves exact GPU outgoing archives in Core. Revealed known material retains its old fuel/history; it does not restart from its declaration.
 
 ## Delivery transaction
 
 The test runner `Flush(guard, simulator, batch, consumeRaw)` holds the **existing** NativeResourceTransaction across the material step, its callback/listeners and delivery of the returned delta batch. The receipt callback only records the material receipt. It never declares native output delivery complete. `consumeRaw` must return successfully before Applied is returned and save exclusion ends.
 
-The actual public `TimberbornOwnedDeltaConsumer.Consume` currently starts its own guard. It cannot be passed directly into this already guarded prototype. Production composition needs a narrow agreed inner-delivery entry owned by the same outer transaction; opening a save gap or nesting guards is not the solution. No such native consumer extraction or runtime binding is implemented here.
+The public `TimberbornOwnedDeltaConsumer.Consume` starts its own guard and cannot be passed directly into the already guarded prototype runner. The subsequent [owned step delivery proof](owned-step-delivery-proof.md) addresses composition by having the consumer own the entire synchronous step and native delivery through internal `ConsumeStep`. It exposes no raw inner-delivery capability. The old runner remains a test-only failure/capacity model; no runtime binding is implemented.
 
 | Outcome | Material/queue implications | Native save and next-step gate |
 | --- | --- | --- |
