@@ -100,7 +100,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     {
         TimberbornOwnedWalker.Verify();
         if (!_field.Ready || _delivery.IsIndeterminate) return Refuse(WardenResponseReason.Unavailable, "Fire simulation unavailable");
-        if (_carrier.IsCarrying || _reserver.HasReservedStock || _reserver.HasReservedCapacity)
+        if (_carrier.IsCarrying || _reserver.StockReservation.Inventory is not null || _reserver.CapacityReservation.Inventory is not null)
             return Refuse(WardenResponseReason.OtherWork, "Finishing previous work");
         if (station.Access.Accesses.Count == 0) return Refuse(WardenResponseReason.NoAccess, "Station has no access");
         var start = _navigator.CurrentAccessOrPosition();
@@ -108,13 +108,24 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (!_equipment.Loaded && !station.Inventory.HasUnreservedStock(WardenEquipment.Bucket))
             return Refuse(WardenResponseReason.NoWater, "Waiting for water");
         _station = station;
-        _sortie.Begin(_equipment.Loaded);
         if (!_equipment.Loaded)
         {
-            _reserver.ReserveExactStockAmount(station.Inventory, WardenEquipment.Bucket);
+            bool reserved = false;
+            _delivery.TransferInventory(() =>
+            {
+                _reserver.ReserveExactStockAmount(station.Inventory, WardenEquipment.Bucket);
+                if (!_reserver.HasReservedStock) { _reserver.UnreserveStock(); return; }
+                _sortie.Begin(alreadyLoaded: false);
+                reserved = true;
+            });
+            if (!reserved) return Refuse(WardenResponseReason.NoWater, "Reserved water unavailable");
             if (!TryWalkToStation()) { ReleaseReservation(); _sortie.Finish(); _movement.ReleasePause(); return Refuse(WardenResponseReason.UnsafeRoute, "Water access unsafe"); }
         }
-        else if (!LaunchWalk(_target.Approach)) { _sortie.Finish(); _movement.ReleasePause(); return Refuse(WardenResponseReason.UnsafeRoute, "Fire approach unsafe"); }
+        else
+        {
+            _sortie.Begin(alreadyLoaded: true);
+            if (!LaunchWalk(_target.Approach)) { _sortie.Finish(); _movement.ReleasePause(); return Refuse(WardenResponseReason.UnsafeRoute, "Fire approach unsafe"); }
+        }
         ResponseReason = WardenResponseReason.None;
         Status = "Responding";
         return true;
@@ -267,8 +278,11 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     }
     private void ReleaseReservation()
     {
-        if (_station is not null && _reserver is not null && _reserver.HasReservedStock &&
-            _reserver.StockReservation.Inventory == _station.Inventory) _reserver.UnreserveStock();
+        // Do not retry uncertain writes during mortality/deletion. A live disabled inventory can
+        // still own reserved stock even though HasReservedStock reports false.
+        if (_delivery.IsIndeterminate || _station is null || _reserver is null ||
+            _reserver.StockReservation.Inventory is null || _reserver.StockReservation.Inventory != _station.Inventory) return;
+        _delivery.TransferInventory(_reserver.UnreserveStock);
     }
 
     public void Save(IEntitySaver saver)

@@ -16,24 +16,36 @@ internal sealed class AshHarvestCargo
     { _carrier = carrier; _reserver = reserver; _resources = resources; }
     internal Inventory? Destination => _reserver.HasReservedCapacity ? _reserver.CapacityReservation.Inventory : null;
     internal bool Empty => !_carrier.IsCarrying;
-    internal bool HasAnyReservation => _reserver.HasReservedCapacity || _reserver.HasReservedStock;
+    internal bool HasAnyReservation => _reserver.CapacityReservation.Inventory is not null || _reserver.StockReservation.Inventory is not null;
     internal bool HasExactReservation => _reserver.HasReservedCapacity && IsUnit(_reserver.CapacityReservation.GoodAmount);
     internal bool IsOwnedUnit => _carrier.IsCarrying && _carrier.CarriedGood.Type == CarriedGoodType.Uncountable && IsUnit(_carrier.CarriedGood.GoodAmount);
     internal void Validate(AshHarvestCycle cycle)
     {
         cycle.ValidateCargo(_carrier.IsCarrying, IsOwnedUnit, _carrier.CarriedGood.GoodAmount.Amount);
-        if (_reserver.HasReservedStock || (_reserver.HasReservedCapacity && !HasExactReservation))
+        if (_reserver.StockReservation.Inventory is not null ||
+            (_reserver.CapacityReservation.Inventory is not null && !IsUnit(_reserver.CapacityReservation.GoodAmount)))
             throw new InvalidOperationException("Ash harvest has an unrelated native reservation.");
     }
     internal bool TryReserve(Inventory inventory, Action? commitPhase = null)
     {
         if (!inventory || !inventory.Enabled || !inventory.HasUnreservedCapacity(Unit)) return false;
-        _resources.TransferInventory(() => { _reserver.ReserveCapacity(inventory, Unit); commitPhase?.Invoke(); });
-        return HasExactReservation;
+        bool reserved = false;
+        _resources.TransferInventory(() =>
+        {
+            _reserver.ReserveCapacity(inventory, Unit);
+            // Native reservation listeners may disable the target without throwing. Do not create
+            // an active phase when admission will return false and no manager will tick this job.
+            if (!HasExactReservation) { ReleaseReservation(); return; }
+            commitPhase?.Invoke();
+            reserved = true;
+        });
+        return reserved;
     }
     internal void ReleaseReservation()
     {
-        if (_reserver.HasReservedCapacity) _reserver.UnreserveCapacity();
+        // HasReservedCapacity means usable/Enabled, not owned. Native release also handles
+        // disabled live inventories and clears stale references to deleted inventories.
+        _reserver.UnreserveCapacity();
     }
     // Already inside the shared simulator resource transaction; phase transition is part of the callback.
     internal void Receive(byte collected, AshHarvestCycle cycle)

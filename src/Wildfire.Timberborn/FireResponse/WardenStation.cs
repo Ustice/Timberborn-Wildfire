@@ -49,8 +49,8 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
             Status = executor.Status;
             if (!Inventory.HasUnreservedStock(WardenEquipment.Bucket) &&
                 !agent.GetComponent<GoodCarrier>().IsCarrying &&
-                !agent.GetComponent<GoodReserver>().HasReservedStock &&
-                !agent.GetComponent<GoodReserver>().HasReservedCapacity &&
+                agent.GetComponent<GoodReserver>().StockReservation.Inventory is null &&
+                agent.GetComponent<GoodReserver>().CapacityReservation.Inventory is null &&
                 agent.GetComponent<CarrierInventoryFinder>().TryCarryFromAnyInventoryLimited(WardenEquipment.WaterId, Inventory, 1))
             { Restocking = true; Status = "Fetching reserve water"; }
             return Decision.ReleaseNow();
