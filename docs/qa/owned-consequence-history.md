@@ -33,9 +33,10 @@ only after the same runtime resource guard accepts it. A late failure disposes t
 an accidentally reused body-definition service is not mutated during staging. The caller owns final
 single-bundle publication after native entity/model loading has settled.
 
-`Capture` copies simulator/bindings/body/history synchronously with the same guard checked before and
-after. Capturing during resource conversion or consequence delivery rejects. Readback/validation failure
-alone does not poison native resources; actual mutation exceptions retain the existing unsafe-save rule.
+`Capture` holds the same guard's `CaptureAtRest` exclusion scope across all simulator/binding/body/history
+reads. Consumer-only capture uses that scope too. The busy latch prevents successful callback mutations,
+registration, reentrant saves and world resets between snapshot parts, and releases in `finally` without
+poisoning read failures. Actual mutation exceptions retain the existing unsafe-save rule.
 Legacy original payload retention stays unchanged until capture and encoding both succeed.
 
 `RehydratePresentation` exposes only `ITimberbornOwnedPresentationApi`. The native implementation uses
@@ -75,4 +76,8 @@ Structure. Both the aggregate and standalone owned-storage route accept that act
 missing inventory cannot suppress body damage. Stockpiles also count toward unavailable structure
 rollback until exact closure/reconstruction is implemented. This correction changes no body capacity.
 
-Validation at final source: **882 native tests passed**, zero failures/skips. No game or Unity launch.
+Validation at final source: **884 native tests passed**, zero failures/skips. No game or Unity launch.
+
+The capture-scope regressions first reproduced successful consequence mutation during simulator readback
+and registration during body-liveness lookup. Both now reject before mutation. Logs:
+`capture-reentry-reproduction.log` and `capture-scope-tests.log` in the evidence directory.

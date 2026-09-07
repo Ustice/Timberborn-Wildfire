@@ -59,6 +59,8 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
         return default;
     }
 
+    public T CaptureAtRest<T>(Func<T> capture) => _transaction.CaptureAtRest(capture);
+
     public void TransferInventory(Action transfer) => _transaction.TransferInventory(transfer);
 
     public void ThrowIfSaveUnsafe() => _transaction.ThrowIfSaveUnsafe();

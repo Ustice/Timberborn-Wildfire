@@ -190,11 +190,12 @@ public sealed class OwnedConsequenceBatchTests
         internal readonly List<TimberbornCropBurnConsequence> CropCalls = [];
         internal readonly List<Guid> InventoryCalls = [];
         internal Action? AfterTree;
+        internal Action? DuringIsLive;
         internal int DamagePasses;
         internal int TreeMutations;
         internal int TreeYieldReceipt;
         internal readonly List<TimberbornCropBurnConsequenceStatus> CropResults = [];
-        public bool IsLive(Guid id) => Live.Contains(id);
+        public bool IsLive(Guid id) { DuringIsLive?.Invoke(); return Live.Contains(id); }
         public TimberbornTreeBurnConsequenceResult ApplyConsequence(TimberbornTreeBurnConsequence call)
         {
             TreeCalls.Add(call);

@@ -7,5 +7,6 @@ namespace Wildfire.Timberborn.Resources;
 public interface INativeResourceMutationGuard
 {
     void TransferInventory(Action mutation);
+    T CaptureAtRest<T>(Func<T> capture);
     void ThrowIfSaveUnsafe();
 }

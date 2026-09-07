@@ -40,6 +40,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
 
     public void Register(TimberbornOwnedBodyRegistration registration)
     {
+        _guard.ThrowIfSaveUnsafe();
         if (_consuming) throw new InvalidOperationException("Cannot change owned body registrations during delivery.");
         if (registration is null) throw new ArgumentNullException(nameof(registration));
         var key = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(registration.EntityId, registration.Family));

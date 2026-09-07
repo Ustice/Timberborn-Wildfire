@@ -4,18 +4,23 @@ namespace Wildfire.Timberborn.Consequences;
 
 public sealed partial class TimberbornOwnedDeltaConsumer
 {
-    public TimberbornOwnedConsequenceSnapshot CaptureHistory()
+    public TimberbornOwnedConsequenceSnapshot CaptureHistory() => _guard.CaptureAtRest(CopyHistoryDuringCapture);
+
+    // Called only under this consumer's same runtime guard, including complete world capture.
+    internal TimberbornOwnedConsequenceSnapshot CopyHistoryDuringCapture()
     {
-        _guard.ThrowIfSaveUnsafe();
         if (_consuming) throw new InvalidOperationException("Cannot capture consequence history during delivery.");
-        var owners = _origins.Capture(_damage);
-        if (owners.Any(owner => owner.Retention == OwnedBodyRetention.RetiredNativeOwner && _bodies.IsLive(owner.EntityId)))
-            throw new InvalidOperationException("A live native owner lost its body definition; it cannot be saved as a tombstone.");
-        var natural = owners.Where(owner => owner.Family is NativeBurnTargetFamily.Tree or NativeBurnTargetFamily.Crop)
-            .Select(owner => owner.Family == NativeBurnTargetFamily.Tree ? _trees.CaptureProgress(owner) : _crops.CaptureProgress(owner));
-        var history = new TimberbornOwnedConsequenceSnapshot(owners, natural, _storage.CaptureCredit(owners));
-        _guard.ThrowIfSaveUnsafe();
-        return history;
+        _consuming = true;
+        try
+        {
+            var owners = _origins.Capture(_damage);
+            if (owners.Any(owner => owner.Retention == OwnedBodyRetention.RetiredNativeOwner && _bodies.IsLive(owner.EntityId)))
+                throw new InvalidOperationException("A live native owner lost its body definition; it cannot be saved as a tombstone.");
+            var natural = owners.Where(owner => owner.Family is NativeBurnTargetFamily.Tree or NativeBurnTargetFamily.Crop)
+                .Select(owner => owner.Family == NativeBurnTargetFamily.Tree ? _trees.CaptureProgress(owner) : _crops.CaptureProgress(owner));
+            return new(owners, natural, _storage.CaptureCredit(owners));
+        }
+        finally { _consuming = false; }
     }
     internal static TimberbornOwnedDeltaConsumer CreateFromHistory(TimberbornNativeMaterialRegistry registry,
         TimberbornBurnDamageService damage, TimberbornOwnedNativeEffects effects, INativeResourceMutationGuard guard,

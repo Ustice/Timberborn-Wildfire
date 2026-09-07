@@ -20,13 +20,15 @@ public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
     public TimberbornWildfirePersistenceSnapshot Capture(TimberbornAshFieldSnapshot ash, TimberbornBeaverFieldBehaviorSnapshot beavers)
     {
         RequireUsable();
-        var simulation = Simulator.CaptureSnapshot();
-        var history = Consumer.CaptureHistory();
-        var result = new TimberbornWildfirePersistenceSnapshot(2, null, ash, beavers,
-            TimberbornWildfirePersistenceCodec.CaptureConsequences(Damage), new(simulation, Registry.CaptureBindings(), history));
-        history.ValidateAssociation(simulation, result.OwnedMaterial!.Bindings, result.Consequences);
-        RequireUsable();
-        return result;
+        return _guard.CaptureAtRest(() =>
+        {
+            var simulation = Simulator.CaptureSnapshot();
+            var history = Consumer.CopyHistoryDuringCapture();
+            var result = new TimberbornWildfirePersistenceSnapshot(2, null, ash, beavers,
+                TimberbornWildfirePersistenceCodec.CaptureConsequences(Damage), new(simulation, Registry.CaptureBindings(), history));
+            history.ValidateAssociation(simulation, result.OwnedMaterial!.Bindings, result.Consequences);
+            return result;
+        });
     }
 
     public static TimberbornOwnedWorldSession<TSimulator> PrepareRestore(TimberbornWildfirePersistenceSnapshot snapshot,

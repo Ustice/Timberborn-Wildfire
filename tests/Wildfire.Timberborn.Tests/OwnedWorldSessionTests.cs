@@ -79,6 +79,34 @@ public sealed class OwnedWorldSessionTests
         Assert.False(f.Guard.IsIndeterminate);
     }
     [Fact]
+    public void SimulatorReadCannotCommitAReentrantConsequenceBetweenSnapshotParts()
+    {
+        var f=new F(); var saved=Snapshot(f); using var session=Restore(saved,f,out var simulator);
+        var stock=f.Registrations[2].EntityId;
+        simulator.DuringCapture=()=>session.Consumer.Consume(37,[f.Delta(stock,1)]);
+        Assert.Throws<InvalidOperationException>(()=>session.Capture(saved.AshField,saved.BeaverBehavior));
+        Assert.All(session.Damage.States.Values,state=>Assert.Equal(0,state.DamageTaken));
+        Assert.False(f.Guard.IsIndeterminate);
+        simulator.DuringCapture=null;
+        Assert.Empty(session.Capture(saved.AshField,saved.BeaverBehavior).OwnedMaterial!.History!.StorageCredits);
+    }
+    [Fact]
+    public void BodyLivenessReadCannotRegisterOrMutateResources()
+    {
+        var f=new F(); var retired=f.Registrations[0].EntityId;
+        f.Damage.RemoveTarget(new(TimberbornBurnDamageIdentity.ForEntity(retired,NativeBurnTargetFamily.Tree)));
+        f.Native.Live.Remove(retired);
+        int mutations=0;
+        f.Native.DuringIsLive=()=>
+        {
+            Assert.Throws<InvalidOperationException>(()=>f.Consumer.Register(f.Registrations[1]));
+            Assert.Throws<InvalidOperationException>(()=>f.Guard.TransferInventory(()=>mutations++));
+            Assert.Throws<InvalidOperationException>(()=>f.Guard.ResetForWorldLoad());
+        };
+        f.Consumer.CaptureHistory();
+        Assert.Equal(0,mutations); Assert.False(f.Guard.IsIndeterminate);
+    }
+    [Fact]
     public void LostLiveBodyDefinitionCannotBeCapturedAsRetiredHistory()
     {
         var f=new F();
@@ -119,10 +147,10 @@ public sealed class OwnedWorldSessionTests
     { public OwnedPresentationResult Rehydrate(Guid id,NativeBurnTargetFamily family,OwnedCharredPresentation desired)=>OwnedPresentationResult.Applied; }
     private sealed class Simulator(FireSimSnapshot saved) : IGpuFireSimulator,IFireSimSnapshotSimulator,IDisposable
     {
-        internal int Disposals; internal Exception? CaptureFailure;
+        internal int Disposals; internal Exception? CaptureFailure; internal Action? DuringCapture;
         public int Width=>saved.Grid.Width;public int Height=>saved.Grid.Height;public int Depth=>saved.Grid.Depth;
         public FireSimSnapshotCapability SnapshotCapability=>FireSimSnapshotCapability.CompleteMaterialHistory;
-        public FireSimSnapshot CaptureSnapshot()=>CaptureFailure is {} error ? throw error : saved;
+        public FireSimSnapshot CaptureSnapshot() { DuringCapture?.Invoke(); return CaptureFailure is {} error ? throw error : saved; }
         public void Dispose()=>Disposals++;
         public void RegisterChange(FireSimChange change)=>throw new NotSupportedException();
         public GpuFireStepResult Tick()=>throw new NotSupportedException();

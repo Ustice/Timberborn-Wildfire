@@ -29,6 +29,15 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
         finally { _delivering = false; }
     }
 
+    public T CaptureAtRest<T>(Func<T> capture)
+    {
+        ThrowIfSaveUnsafe();
+        if (capture is null) throw new ArgumentNullException(nameof(capture));
+        _delivering = true; // Same exclusion latch; read failures do not imply resource mutation.
+        try { return capture(); }
+        finally { _delivering = false; }
+    }
+
     public void TransferInventory(Action transfer)
     {
         ThrowIfSaveUnsafe();
