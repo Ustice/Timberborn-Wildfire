@@ -26,6 +26,8 @@ Nineteen new cases plus the complete native suite pass: **856 tests, zero failur
 
 A native owner Guid survives harvest/regrowth. Cumulative damage/applied-loss state alone cannot identify a new named yield generation or retire old unavailable requests. Native YieldAdded follows ResetYield, but earlier observers can throw after the native value changes and before a later Wildfire listener. Activation therefore depends on the shared durable lifecycle/history design; resetting a Guid ledger to zero or relying on an unverified event-order assumption is insufficient.
 
+The actual Yielder-only saver/loader fixture does **not** prove final whole-crop quantity after every native component loads. GatherableYieldGrower saves ripe progress1; its Load → FastForwardGrowth(1) → TimeTrigger.Finish can invoke Yielder.ResetYield. Native named-yielder versus grower component load ordering must be verified before activation, and load-time YieldAdded must not be mistaken for a new gameplay generation.
+
 Zero depletion also needs explicit native growth behavior. Changing quantity to zero alone can leave a finished crop timer stalled until reload. Raising Gathered as a substitute falsely reports harvest and runs unrelated consumers. The next audit must prove a narrow native grower restart/depletion operation, its exact reserved/disabled/dead eligibility, and its callback/save boundaries before wiring it into production.
 
 No Core/GPU behavior, generation protocol, game, Unity or deployment changed in this slice.
