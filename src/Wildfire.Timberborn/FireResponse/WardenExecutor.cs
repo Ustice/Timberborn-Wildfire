@@ -33,6 +33,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private readonly INavigationService _navigation;
     private readonly WardenSortie _sortie = new();
     private Walker _walker = null!;
+    private BehaviorManager _behaviorManager = null!;
     private TimberbornOwnedWalker _movement = null!;
     private WalkToPositionExecutor _walk = null!;
     private Navigator _navigator = null!;
@@ -73,6 +74,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         _entityId = GetComponent<EntityComponent>().EntityId;
         _transform = GetComponent<Transform>();
         _walker = GetComponent<Walker>();
+        _behaviorManager = GetComponent<BehaviorManager>();
         _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
         _walker.StartedNewPath += OnStartedNewPath;
         _walk = GetComponent<WalkToPositionExecutor>();
@@ -134,7 +136,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (_needsReturnRoute) { _needsReturnRoute = false; return Retreat(ResponseReason, "Replanning return route"); }
         if (_restoreWalk)
         {
-            if (!_walker.Stopped()) return ExecutorStatus.Running;
+            // Walker.Load or native PostLoad navigation may have restored a destination after Load.
+            // Stop coherently now that the world is ready; waiting for a paused mover would never finish.
+            _movement.Stop();
             _restoreWalk = false;
             if (_sortie.Phase is WardenPhase.Fetching or WardenPhase.Approaching or WardenPhase.Returning)
                 if (!LaunchWalk(_destination)) return Retreat(WardenResponseReason.UnsafeRoute, "Saved route no longer safe");
@@ -274,6 +278,11 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     {
         var state = loader.GetComponent(Key);
         _sortie.Restore(state.Get(PhaseKey), state.Get(HoursKey));
+        _restoreWalk = false;
+        _needsReturnRoute = false;
+        if (_sortie.Phase == WardenPhase.Idle) return; // Never stop or pause somebody else's saved walk.
+        if (!_behaviorManager.IsRunningExecutor<WardenExecutor>())
+            throw new InvalidOperationException("Active saved warden does not own BehaviorManager's executor.");
         if (state.Has(StationKey)) state.GetObsoletable(StationKey, _references.Of<WardenStation>(), out _station);
         _target = new WardenTarget(state.Get(CellKey), state.Get(ApproachKey));
         _destination = state.Get(DestinationKey);
