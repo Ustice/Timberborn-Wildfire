@@ -1,4 +1,8 @@
 using Bindito.Core;
+using Wildfire.Timberborn.FireResponse;
+using Timberborn.WorkSystem;
+using Timberborn.Beavers;
+using Timberborn.InventorySystem;
 using Timberborn.Gathering;
 using Timberborn.TemplateInstantiation;
 
@@ -31,6 +35,30 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornFertileAshFieldWorkplaceBehavior>().AsTransient();
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
+        Bind<WardenStation>().AsTransient();
+        Bind<WardenEquipment>().AsTransient();
+        Bind<WardenExecutor>().AsTransient();
+        Bind<WardenStationInventoryInitializer>().AsSingleton();
+        Bind<WardenEquipmentInventoryInitializer>().AsSingleton();
+        MultiBind<TemplateModule>().ToProvider<WardenTemplateModuleProvider>().AsSingleton();
+    }
+
+    private sealed class WardenTemplateModuleProvider : IProvider<TemplateModule>
+    {
+        private readonly WardenStationInventoryInitializer _station;
+        private readonly WardenEquipmentInventoryInitializer _equipment;
+        public WardenTemplateModuleProvider(WardenStationInventoryInitializer station, WardenEquipmentInventoryInitializer equipment)
+        { _station = station; _equipment = equipment; }
+        public TemplateModule Get()
+        {
+            TemplateModule.Builder builder = new();
+            builder.AddDecorator<WildfireWardenStationSpec, WardenStation>();
+            builder.AddDedicatedDecorator<WardenStation, Inventory>(_station);
+            builder.AddDecorator<AdultSpec, WardenEquipment>();
+            builder.AddDedicatedDecorator<WardenEquipment, Inventory>(_equipment);
+            builder.AddDecorator<AdultSpec, WardenExecutor>();
+            return builder.Build();
+        }
     }
 
     private sealed class FertileAshFieldGatheringTemplateModuleProvider : IProvider<TemplateModule>

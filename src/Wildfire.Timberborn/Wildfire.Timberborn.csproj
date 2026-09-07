@@ -268,6 +268,13 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Timberborn.GameDistricts"><HintPath>$(TimberbornManagedPath)/Timberborn.GameDistricts.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.ResourceCountingSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.ResourceCountingSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.CharacterNavigation"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterNavigation.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.NeedSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.NeedSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.MortalSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.MortalSystem.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>10.0</LangVersion>
