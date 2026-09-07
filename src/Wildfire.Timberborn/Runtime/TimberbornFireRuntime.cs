@@ -393,9 +393,9 @@ public sealed partial class TimberbornFireRuntime :
             renderer = PrepareRenderer(fireSystem, grid);
             heatPulseSink.Attach(fireSystem);
             contaminationPulseSink.Attach(fireSystem);
-            _wardenCells = fireSystem.Simulator as ITimberbornCellFieldReader ??
+            _observedCellsReader = fireSystem.Simulator as ITimberbornCellFieldReader ??
                 throw new InvalidOperationException("Warden response requires native cell observations.");
-            _wardenTransport = fireSystem.Simulator as ITimberbornTransportFieldReader ??
+            _observedTransportReader = fireSystem.Simulator as ITimberbornTransportFieldReader ??
                 throw new InvalidOperationException("Warden response requires native smoke observations.");
             _resources.Attach(fireSystem.Simulator!);
             fireSystem.StepWithHostInput = _resources.Tick;
@@ -579,7 +579,7 @@ public sealed partial class TimberbornFireRuntime :
 
     internal bool IsCleanAshAvailable(int cellIndex)
     {
-        if (!TryObserveWardenField(out var field) || cellIndex < 0 || cellIndex >= field.TransportFields.Count) return false;
+        if (!TryObserveFireField(out var field) || cellIndex < 0 || cellIndex >= field.TransportFields.Count) return false;
         var state = WildfireTransportFieldState.Unpack(field.TransportFields[cellIndex]);
         return state.Ash > 0 && state.AshContamination == 0;
     }

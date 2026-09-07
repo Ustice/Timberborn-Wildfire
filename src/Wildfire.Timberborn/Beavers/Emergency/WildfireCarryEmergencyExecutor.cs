@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireSafety;
 using Wildfire.Timberborn.Compatibility;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
@@ -27,7 +28,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
     private static readonly PropertyKey<int> ReasonKey = new("Reason");
     private static readonly PropertyKey<float> HoursKey = new("Hours");
     private readonly CarryEmergencySession _session;
-    private readonly WardenFireField _field;
+    private readonly FireSafetyField _field;
     private readonly INavigationService _navigation;
     private readonly CarryEmergencyState _state = new();
     private BehaviorManager _manager = null!;
@@ -65,7 +66,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
             _ => "Native carrying behavior"
         };
 
-    public WildfireCarryEmergencyExecutor(CarryEmergencySession session, WardenFireField field, INavigationService navigation)
+    public WildfireCarryEmergencyExecutor(CarryEmergencySession session, FireSafetyField field, INavigationService navigation)
     { _session = session; _field = field; _navigation = navigation; }
 
     public void Awake()

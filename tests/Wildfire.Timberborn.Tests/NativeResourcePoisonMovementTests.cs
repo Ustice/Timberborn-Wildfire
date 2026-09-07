@@ -35,7 +35,7 @@ public sealed class NativeResourcePoisonMovementTests
             new object[] { (Action)(() => throw new InvalidOperationException("uncertain native mutation")) }));
         bool warden = kind == "Warden";
         var executorType = mod.GetType($"Wildfire.Timberborn.{(warden ? "FireResponse" : "Ash")}.{kind}Executor")!;
-        var executor = Activator.CreateInstance(executorType, new object?[warden ? 4 : 5])!;
+        var executor = Activator.CreateInstance(executorType, new object?[5])!;
         Field(executorType, warden ? "_delivery" : "_resources").SetValue(executor, resources);
         Field(executorType, warden ? "_movement" : "_ownedWalk").SetValue(executor, helper);
         var mortalType = native.LoadNative("Timberborn.MortalSystem").GetType("Timberborn.MortalSystem.Mortal")!;

@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireSafety;
 using Wildfire.Timberborn.Compatibility;
 using Wildfire.Timberborn.Resources;
 using Timberborn.BaseComponentSystem;
@@ -28,7 +29,8 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private static readonly PropertyKey<int> CellKey = new("Cell");
     private static readonly PropertyKey<Vector3> ApproachKey = new("Approach");
     private static readonly PropertyKey<Vector3> DestinationKey = new("Destination");
-    private readonly WardenFireField _field;
+    private readonly FireSafetyField _field;
+    private readonly WardenTargetSelector _targets;
     private readonly NativeResourceCoordinator _delivery;
     private readonly ReferenceSerializer _references;
     private readonly INavigationService _navigation;
@@ -66,9 +68,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         }
     }
 
-    public WardenExecutor(WardenFireField field, NativeResourceCoordinator delivery,
+    public WardenExecutor(FireSafetyField field, WardenTargetSelector targets, NativeResourceCoordinator delivery,
         ReferenceSerializer references, INavigationService navigation)
-    { _field = field; _delivery = delivery; _references = references; _navigation = navigation; }
+    { _field = field; _targets = targets; _delivery = delivery; _references = references; _navigation = navigation; }
 
     public void Awake()
     {
@@ -104,7 +106,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             return Refuse(WardenResponseReason.OtherWork, "Finishing previous work");
         if (station.Access.Accesses.Count == 0) return Refuse(WardenResponseReason.NoAccess, "Station has no access");
         var start = _navigator.CurrentAccessOrPosition();
-        if (!_field.TryFindTarget(start, station.Access.Accesses[0], out _target)) return Refuse(WardenResponseReason.NoSafeFire, "No safely reachable fire");
+        if (!_targets.TryFindTarget(start, station.Access.Accesses[0], out _target)) return Refuse(WardenResponseReason.NoSafeFire, "No safely reachable fire");
         if (!_equipment.Loaded && !station.Inventory.HasUnreservedStock(WardenEquipment.Bucket))
             return Refuse(WardenResponseReason.NoWater, "Waiting for water");
         _station = station;

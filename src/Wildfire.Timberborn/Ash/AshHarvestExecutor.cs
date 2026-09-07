@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireSafety;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
 using Timberborn.Carrying;
@@ -30,7 +31,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     private static readonly PropertyKey<int> CellKey = new("Cell");
     private static readonly PropertyKey<Vector3> TargetKey = new("Target");
     private readonly TimberbornFireRuntime _runtime;
-    private readonly WardenFireField _field;
+    private readonly FireSafetyField _field;
     private readonly NativeResourceCoordinator _resources;
     private readonly ReferenceSerializer _references;
     private readonly INavigationService _navigation;
@@ -57,7 +58,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     public AshHarvestPhase Phase => _cycle.Phase;
     public string StatusKey { get; private set; } = "Wildfire.Ash.Ready";
 
-    public AshHarvestExecutor(TimberbornFireRuntime runtime, WardenFireField field,
+    public AshHarvestExecutor(TimberbornFireRuntime runtime, FireSafetyField field,
         NativeResourceCoordinator resources, ReferenceSerializer references, INavigationService navigation)
     { _runtime = runtime; _field = field; _resources = resources; _references = references; _navigation = navigation; }
 

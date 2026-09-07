@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireSafety;
 using Wildfire.Timberborn.Beavers.Emergency;
 using Wildfire.Timberborn.Resources;
 using Bindito.Core;
@@ -50,7 +51,8 @@ public sealed class WildfireConfigurator : Configurator
         Bind<WildfireCarryEmergencyExecutor>().AsTransient();
         Bind<CarryEmergencyInterrupter>().AsTransient();
         Bind<NativeResourceCoordinator>().AsSingleton();
-        Bind<WardenFireField>().AsSingleton();
+        Bind<FireSafetyField>().AsSingleton();
+        Bind<WardenTargetSelector>().AsSingleton();
         Bind<WardenStation>().AsTransient();
         Bind<WardenEquipment>().AsTransient();
         Bind<WardenExecutor>().AsTransient();

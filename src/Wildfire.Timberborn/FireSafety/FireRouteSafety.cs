@@ -1,11 +1,11 @@
-namespace Wildfire.Timberborn.FireResponse;
+namespace Wildfire.Timberborn.FireSafety;
 
-public readonly record struct WardenRouteSample(float Distance, int Risk);
+public readonly record struct FireRouteSample(float Distance, int Risk);
 
-public static class WardenRouteSafety
+public static class FireRouteSafety
 {
     // Safe risk is 0..1. -1 denotes unavailable/out-of-world observation.
-    public static bool CanTraverse(IReadOnlyList<WardenRouteSample> samples, bool escaping)
+    public static bool CanTraverse(IReadOnlyList<FireRouteSample> samples, bool escaping)
     {
         if (samples.Count == 0 || samples[0].Risk < 0) return false;
         var initialRisk = samples[0].Risk;

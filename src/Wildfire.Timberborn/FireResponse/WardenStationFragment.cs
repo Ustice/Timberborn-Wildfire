@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireSafety;
 using Wildfire.Timberborn.Resources;
 using Timberborn.BaseComponentSystem;
 using Timberborn.EntityPanelSystem;
@@ -10,12 +11,12 @@ public sealed class WardenStationFragment : IEntityPanelFragment
 {
     private readonly ILoc _loc;
     private readonly NativeResourceCoordinator _delivery;
-    private readonly WardenFireField _field;
+    private readonly FireSafetyField _field;
     private VisualElement _root = null!;
     private Label _status = null!, _reason = null!, _reserve = null!, _worker = null!, _payload = null!;
     private WardenStation? _station;
 
-    public WardenStationFragment(ILoc loc, NativeResourceCoordinator delivery, WardenFireField field)
+    public WardenStationFragment(ILoc loc, NativeResourceCoordinator delivery, FireSafetyField field)
     { _loc = loc; _delivery = delivery; _field = field; }
 
     public VisualElement InitializeFragment()
@@ -31,7 +32,7 @@ public sealed class WardenStationFragment : IEntityPanelFragment
         _reserve = AddLabel("");
         _worker = AddLabel("");
         _payload = AddLabel("");
-        AddLabel(_loc.T("Wildfire.Warden.Coverage", WardenFireField.ResponseRange));
+        AddLabel(_loc.T("Wildfire.Warden.Coverage", WardenTargetSelector.ResponseRange));
         ClearFragment();
         return _root;
     }

@@ -1,3 +1,4 @@
+using Wildfire.Timberborn.FireSafety;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
 using Timberborn.Carrying;
@@ -30,7 +31,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     private static readonly PropertyKey<Vector3> PointKey = new("Point");
     private static readonly PropertyKey<Vector3> DestinationKey = new("Destination");
     private readonly BorrowedDutyFixture _fixture;
-    private readonly WardenFireField _field;
+    private readonly FireSafetyField _field;
     private readonly NativeResourceCoordinator _resources;
     private readonly ReferenceSerializer _references;
     private readonly INavigationService _navigation;
@@ -55,7 +56,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     private bool _restored, _unsafeRoute;
     private long _routeRevision = -1;
     public BorrowedDutyPhase Phase => _progress.Phase;
-    public BorrowedDutyExecutor(BorrowedDutyFixture fixture, WardenFireField field, NativeResourceCoordinator resources,
+    public BorrowedDutyExecutor(BorrowedDutyFixture fixture, FireSafetyField field, NativeResourceCoordinator resources,
         ReferenceSerializer references, INavigationService navigation)
     { _fixture = fixture; _field = field; _resources = resources; _references = references; _navigation = navigation; }
     public void Awake()
