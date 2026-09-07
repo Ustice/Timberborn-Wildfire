@@ -95,3 +95,9 @@ The authorized tools-disabled Claude proposal review produced no usable second o
 terminal 36395 exited 1 after 41,963 ms with `is_error=true` and a provider refusal/API error. Prompt,
 JSON result and stderr remain in `/tmp/wildfire-owned-restore-authority-review/`. No workaround or
 rerun was attempted; the correctness claims above come from source review and the stated tests.
+
+## Final staging consistency
+
+Backend construction and native presence observers can invoke callbacks. Restoration now copies the first retained-body list, then captures those same required Guids again after callback-capable staging. Full body readings must agree: static definition, world/local footprint, current named yield and availability, inventory stock and availability, and construction cost. This compares two reads of one restore operation; it never compares current quantities against historical accounting or rebases that accounting.
+
+Four counterfactual cases (changed declared definition, actual quantity, availability and captured membership) all failed against the former presence-only completion check. The corrected integrated suite passes **1,057 native tests**, including an additional mutable returned-list case: changing a caller-owned list cannot rewrite the first evidence. Rejected staging disposes the new backend once, leaves the old damage state intact and releases the read guard without poisoning. Evidence: `/tmp/wildfire-restore-staging-counterfactual.log` and `/tmp/wildfire-restore-staging-integrated.log`. These are host callback fixtures; no whole-game reload is implied.

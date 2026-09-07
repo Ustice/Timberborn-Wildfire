@@ -109,6 +109,16 @@ public sealed class TimberbornInitialMaterialBody
     public IReadOnlyList<TimberbornInitialCompositionGap> CompositionGaps { get; }
     public IReadOnlyList<TimberbornBurnDamageResourceStack>? ConstructionResources { get; }
 
+    // Compare one staging operation's native reads, never current quantities against saved accounting.
+    internal bool SameReadings(TimberbornInitialMaterialBody other) =>
+        EntityId == other.EntityId && SpecId == other.SpecId && Shape == other.Shape &&
+        Footprint.SequenceEqual(other.Footprint) && Yields.SequenceEqual(other.Yields) &&
+        (ConstructionResources is null ? other.ConstructionResources is null :
+            other.ConstructionResources is not null && ConstructionResources.SequenceEqual(other.ConstructionResources)) &&
+        Inventories.Count == other.Inventories.Count && Inventories.Select((inventory, index) =>
+            inventory.Role == other.Inventories[index].Role && inventory.Enabled == other.Inventories[index].Enabled &&
+            inventory.Stock.SequenceEqual(other.Inventories[index].Stock)).All(equal => equal);
+
     private static IReadOnlyList<TimberbornBurnDamageResourceStack> CopyConstruction(IEnumerable<TimberbornBurnDamageResourceStack> values)
     {
         var costs = values.OrderBy(value => value.ResourceId, StringComparer.Ordinal).ToArray();

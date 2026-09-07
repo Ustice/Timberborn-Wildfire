@@ -96,7 +96,7 @@ public sealed class TimberbornInitialWorldProjectionProvider
                 if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id ||
                     !entity.TryGetComponent<BlockObject>(out var currentBlock) || !ReferenceEquals(currentBlock, block) ||
                     Exclusion(entity, block) is not null || !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) ||
-                    !SameBodyFacts(body, CaptureBodyFacts(entity, block, grid)))
+                    !body.SameReadings(CaptureBodyFacts(entity, block, grid)))
                     throw new InvalidOperationException("Native body changed during initial capture; no projection was published.");
             });
         }
@@ -135,7 +135,7 @@ public sealed class TimberbornInitialWorldProjectionProvider
             {
                 if (!ReferenceEquals(RequireRetainedEntity(id), entity) || !ReferenceEquals(RequireRetainedBlock(entity), block) ||
                     !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) || block.IsFinished != finished ||
-                    !SameBodyFacts(body, CaptureBodyFacts(entity, block, grid)))
+                    !body.SameReadings(CaptureBodyFacts(entity, block, grid)))
                     throw new InvalidOperationException("Retained native body changed during restore capture.");
             });
         }
@@ -164,11 +164,6 @@ public sealed class TimberbornInitialWorldProjectionProvider
         new(entity.EntityId, block.Name, Shape(entity, block.Name), TimberbornNativeMaterialFootprint.Project(block.Blocks, block.Placement, grid),
             CaptureYields(entity), CaptureInventories(entity), CaptureConstruction(entity));
 
-    private static bool SameBodyFacts(TimberbornInitialMaterialBody left, TimberbornInitialMaterialBody right) =>
-        left.EntityId == right.EntityId && left.SpecId == right.SpecId && left.Shape == right.Shape &&
-        left.Footprint.SequenceEqual(right.Footprint) && left.Yields.SequenceEqual(right.Yields) &&
-        SameInventories(left.Inventories, right.Inventories) && SameConstruction(left.ConstructionResources, right.ConstructionResources);
-
     private static IReadOnlyList<TimberbornBurnDamageResourceStack>? CaptureConstruction(EntityComponent entity)
     {
         if (!entity.TryGetComponent<Building>(out var building)) return null;
@@ -184,14 +179,6 @@ public sealed class TimberbornInitialWorldProjectionProvider
         return spec.BuildingCost.Select(cost => new TimberbornBurnDamageResourceStack(cost.Id, cost.Amount))
             .OrderBy(cost => cost.ResourceId, StringComparer.Ordinal).ToArray();
     }
-
-    private static bool SameConstruction(IReadOnlyList<TimberbornBurnDamageResourceStack>? left,
-        IReadOnlyList<TimberbornBurnDamageResourceStack>? right) =>
-        left is null ? right is null : right is not null && left.SequenceEqual(right);
-
-    private static bool SameInventories(IReadOnlyList<TimberbornInventoryMaterial> left, IReadOnlyList<TimberbornInventoryMaterial> right) =>
-        left.Count == right.Count && left.Select((inventory, index) => inventory.Role == right[index].Role &&
-            inventory.Enabled == right[index].Enabled && inventory.Stock.SequenceEqual(right[index].Stock)).All(equal => equal);
 
     private static TimberbornInitialCaptureExclusion? Exclusion(EntityComponent entity, BlockObject block)
     {

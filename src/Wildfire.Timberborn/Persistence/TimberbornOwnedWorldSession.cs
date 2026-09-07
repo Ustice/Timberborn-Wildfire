@@ -62,7 +62,8 @@ public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
         registry.RestoreBindings(material.Bindings);
         // Native provider captures exact required Guids under this same scope; initial eligibility is irrelevant.
         var ids = history.Owners.Where(owner => owner.Retention == OwnedBodyRetention.RetainedBody).Select(owner => owner.EntityId).ToArray();
-        var facts = captureRetainedBodies(simulation.Grid, Array.AsReadOnly(ids)) ?? throw new InvalidOperationException("No retained native body facts returned.");
+        var facts = (captureRetainedBodies(simulation.Grid, Array.AsReadOnly(ids)) ??
+            throw new InvalidOperationException("No retained native body facts returned.")).ToArray();
         var damage = TimberbornBurnDamageService.CreateFromSavedOwnedDefinitions(simulation.Grid, history, snapshot.Consequences, facts);
         TSimulator? simulator = null;
         try
@@ -73,6 +74,13 @@ public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
             var consumer = TimberbornOwnedDeltaConsumer.CreateFromHistory(registry, damage, effects, guard, history, catalog);
             if (ids.Any(id => effects.Bodies.ObservePresence(id) != TimberbornOwnedBodyPresence.Live))
                 throw new ArgumentException("A required native owner disappeared during restore staging.");
+            // Backend construction and native observers may invoke callbacks. Presence alone cannot
+            // certify that the definitions, placement and quantities used for staging are still current.
+            var finalFacts = (captureRetainedBodies(simulation.Grid, Array.AsReadOnly(ids)) ??
+                throw new InvalidOperationException("No final retained native body facts returned.")).ToArray();
+            if (facts.Length != finalFacts.Length || !facts.OrderBy(body => body.EntityId)
+                    .Zip(finalFacts.OrderBy(body => body.EntityId), (before, after) => before.SameReadings(after)).All(same => same))
+                throw new ArgumentException("Native body facts changed during restore staging.");
             return new(simulator, registry, damage, consumer, guard);
         }
         catch
