@@ -4,7 +4,7 @@ using Wildfire.Timberborn.Resources;
 namespace Wildfire.Timberborn.Persistence;
 
 /// <summary>Unpublished complete owned session. The caller publishes this bundle once after native loading settles.</summary>
-public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
+public sealed partial class TimberbornOwnedWorldSession<TSimulator> : IDisposable
     where TSimulator : class, IGpuFireSimulator, IFireSimSnapshotSimulator, IDisposable
 {
     private readonly INativeResourceMutationGuard _guard;
