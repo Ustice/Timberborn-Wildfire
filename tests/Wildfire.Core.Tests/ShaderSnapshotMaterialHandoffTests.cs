@@ -24,6 +24,7 @@ public sealed class ShaderSnapshotMaterialHandoffTests
         var expected = Capture();
         var restored = ShaderSnapshotJson.Load(ShaderSnapshotJson.Serialize(expected));
         Assert.Equal(1u, Assert.Single(Assert.Single(restored.Ticks).Deltas).TargetId);
+        Assert.Equal(11u, restored.Ticks[0].Deltas[0].SlotId);
         Assert.True(ShaderSnapshotComparison.Create(expected, restored).Matches);
         foreach (var modified in new[]
         {
@@ -31,7 +32,8 @@ public sealed class ShaderSnapshotMaterialHandoffTests
             restored with { FinalSlotIds = [12] },
             restored with { Ticks = [restored.Ticks[0] with { MaterialHeader = [2, 1, 1, uint.MaxValue] }] },
             restored with { Ticks = [restored.Ticks[0] with { MaterialReceipts = [9] }] },
-            restored with { Ticks = [restored.Ticks[0] with { Deltas = [new(0, 0, 1, 2)] }] },
+            restored with { Ticks = [restored.Ticks[0] with { Deltas = [new(0, 0, 1, 2, 11)] }] },
+            restored with { Ticks = [restored.Ticks[0] with { Deltas = [new(0, 0, 1, 1, 12)] }] },
         }) Assert.False(ShaderSnapshotComparison.Create(expected, modified).Matches);
     }
 
@@ -42,12 +44,25 @@ public sealed class ShaderSnapshotMaterialHandoffTests
         var json = JsonNode.Parse(ShaderSnapshotJson.Serialize(capture))!.AsObject();
         json.Remove("finalTargetIds"); json.Remove("finalSlotIds");
         json["perTickDeltas"]![0]!["deltas"]![0]!.AsObject().Remove("targetId");
+        json["perTickDeltas"]![0]!["deltas"]![0]!.AsObject().Remove("slotId");
         var legacy = ShaderSnapshotJson.Load(json.ToJsonString());
         Assert.Equal(0u, legacy.Ticks[0].Deltas[0].TargetId);
+        Assert.Equal(0u, legacy.Ticks[0].Deltas[0].SlotId);
         Assert.True(ShaderSnapshotComparison.Create(legacy, capture).Matches);
     }
 
+    [Fact]
+    public void OldOwnedJsonDoesNotInferItsMissingOriginSlotFromFinalFields()
+    {
+        var json = JsonNode.Parse(ShaderSnapshotJson.Serialize(Capture()))!.AsObject();
+        json["perTickDeltas"]![0]!["deltas"]![0]!.AsObject().Remove("slotId");
+        var legacy = ShaderSnapshotJson.Load(json.ToJsonString());
+        Assert.Equal(1u, legacy.Ticks[0].Deltas[0].TargetId);
+        Assert.Equal(0u, legacy.Ticks[0].Deltas[0].SlotId);
+        Assert.Equal(21u, legacy.FinalSlotIds![0]);
+    }
+
     private static ShaderSnapshotCapture Capture() => new("material-protocol", 1, new(1, 1, 1), 1, [1],
-        [new(1, 1, [new(0, 0, 1, 1)], MaterialHeader: [1, 1, 1, uint.MaxValue], MaterialReceipts: [0, 1, 11, 0, 0, 2, 21, 1, 0, 1])],
+        [new(1, 1, [new(0, 0, 1, 1, 11)], MaterialHeader: [1, 1, 1, uint.MaxValue], MaterialReceipts: [0, 1, 11, 0, 0, 2, 21, 1, 0, 1])],
         FinalTargetIds: [2], FinalSlotIds: [21]);
 }

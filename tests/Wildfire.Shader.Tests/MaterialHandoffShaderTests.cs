@@ -35,6 +35,27 @@ public sealed class MaterialHandoffShaderTests
     }
 
     [UnityShaderFact]
+    public void SameTargetSlotReplacementKeepsPerSlotDeltaProvenanceAndCommandOrder()
+    {
+        var incoming = new FireSimMaterialIdentity(1, 13);
+        var batch = new FireSimMaterialHandoffBatch(1, [FireSimMaterialHandoffRequest.Fresh(0, A0, incoming, Definition(3))]);
+        var fixture = new ShaderSnapshotFixture(1, "material-delta-slot-provenance", 89, new(3, 1, 1), new(0, 0, 3),
+            [PackedCell.Pack(8, 15, 3, 0, 1, 0), 0, 0], CompanionFields: [Companion(0), 0, 0],
+            Parameters: FireSimParameters.Default.WithFuelBurnDown(16, 1), InitialTargetIds: [1, 0, 0], InitialSlotIds: [11, 0, 0],
+            ExternalChanges: [ShaderSnapshotExternalChanges.Encode(1, [new(0, SetFuel: 6), new(0, SetFuel: 2), new(0, MaterialHandoff: batch)])],
+            MaterialHandoffs: [ShaderSnapshotMaterialHandoff.Encode(1, batch)]);
+        var capture = Capture(fixture);
+        Assert.True(Receipt(capture, batch).Accepted);
+        var deltas = Assert.Single(capture.Ticks).Deltas.Where(delta => delta.CellIndex == 0).ToArray();
+        Assert.Equal(new uint[] { 1, 1, 1 }, deltas.Select(delta => delta.TargetId));
+        Assert.Equal(new uint[] { 11, 11, 13 }, deltas.Select(delta => delta.SlotId));
+        Assert.Equal(new[] { 8, 6, 3 }, deltas.Select(delta => delta.OldCell & 15));
+        Assert.Equal(new[] { 6, 2, 0 }, deltas.Select(delta => delta.NewCell & 15));
+        Assert.Equal(deltas[0].NewCell, deltas[1].OldCell); // Same slot's ordered ordinary commands chain.
+        Assert.NotEqual(deltas[1].NewCell, deltas[2].OldCell); // Different material slot starts at its own definition.
+    }
+
+    [UnityShaderFact]
     public void WholeOwnerReplacementCapturesDistinctBurnedSlotsAndPreservesEnvironment()
     {
         var batch = Replace();

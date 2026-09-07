@@ -53,7 +53,8 @@ public static class FireSimDeltaReadback
                 checked((int)cellIndex),
                 ToPackedCell(encoded[offset + 1], "old"),
                 ToPackedCell(encoded[offset + 2], "new"),
-                encoded[offset + 3]);
+                encoded[offset + 3],
+                encoded[offset + 4]);
         }
 
         return decoded;

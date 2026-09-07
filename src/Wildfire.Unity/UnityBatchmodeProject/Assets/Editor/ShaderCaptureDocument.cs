@@ -157,13 +157,15 @@ namespace Wildfire.UnityBatchmode
         private readonly ushort oldCell;
         private readonly ushort newCell;
         private readonly uint targetId;
+        private readonly uint slotId;
 
-        public DeltaSnapshot(int cellIndex, ushort oldCell, ushort newCell, uint targetId)
+        public DeltaSnapshot(int cellIndex, ushort oldCell, ushort newCell, uint targetId, uint slotId)
         {
             this.cellIndex = cellIndex;
             this.oldCell = oldCell;
             this.newCell = newCell;
             this.targetId = targetId;
+            this.slotId = slotId;
         }
 
         public void AppendJson(StringBuilder builder, string indent)
@@ -172,7 +174,8 @@ namespace Wildfire.UnityBatchmode
             builder.AppendLine(indent + "  \"cellIndex\": " + cellIndex.ToString(CultureInfo.InvariantCulture) + ",");
             builder.AppendLine(indent + "  \"oldCell\": " + oldCell.ToString(CultureInfo.InvariantCulture) + ",");
             builder.AppendLine(indent + "  \"newCell\": " + newCell.ToString(CultureInfo.InvariantCulture) + ",");
-            builder.AppendLine(indent + "  \"targetId\": " + targetId.ToString(CultureInfo.InvariantCulture));
+            builder.AppendLine(indent + "  \"targetId\": " + targetId.ToString(CultureInfo.InvariantCulture) + ",");
+            builder.AppendLine(indent + "  \"slotId\": " + slotId.ToString(CultureInfo.InvariantCulture));
             builder.Append(indent + "}");
         }
     }

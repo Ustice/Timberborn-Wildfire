@@ -190,6 +190,7 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
             .ThenBy(static delta => delta.OldCell)
             .ThenBy(static delta => delta.NewCell)
             .ThenBy(static delta => delta.TargetId)
+            .ThenBy(static delta => delta.SlotId)
             .ToArray();
     }
 
@@ -219,8 +220,8 @@ public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences
         ShaderSnapshotDelta expected,
         ShaderSnapshotDelta actual)
     {
-        string expectedOwner = expected.TargetId == 0 ? "" : $" owner {expected.TargetId}";
-        string actualOwner = actual.TargetId == 0 ? "" : $" owner {actual.TargetId}";
+        string expectedOwner = expected.TargetId == 0 ? "" : $" owner {expected.TargetId} slot {expected.SlotId}";
+        string actualOwner = actual.TargetId == 0 ? "" : $" owner {actual.TargetId} slot {actual.SlotId}";
         return $"ticks[{tick}].deltas[{deltaIndex}] expected cell {expected.CellIndex} " +
             $"0x{expected.OldCell:X4}->0x{expected.NewCell:X4}{expectedOwner}, got cell {actual.CellIndex} " +
             $"0x{actual.OldCell:X4}->0x{actual.NewCell:X4}{actualOwner}.";

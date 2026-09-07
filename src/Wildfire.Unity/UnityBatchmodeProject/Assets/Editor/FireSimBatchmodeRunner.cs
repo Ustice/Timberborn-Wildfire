@@ -92,7 +92,7 @@ namespace Wildfire.UnityBatchmode
                 currentCells = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 nextCells = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 externalChanges = new ComputeBuffer(Math.Max(1, cellCount), sizeof(uint) * 4, ComputeBufferType.Structured);
-                deltas = new ComputeBuffer(checked(cellCount + externalChanges.count), sizeof(uint) * 4, ComputeBufferType.Append);
+                deltas = new ComputeBuffer(checked(cellCount + externalChanges.count), sizeof(uint) * 5, ComputeBufferType.Append);
                 visualFields = new ComputeBuffer(cellCount, sizeof(float) * 4, ComputeBufferType.Structured);
                 currentAtmosphericFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
                 nextAtmosphericFields = new ComputeBuffer(cellCount, sizeof(uint), ComputeBufferType.Structured);
@@ -303,7 +303,7 @@ namespace Wildfire.UnityBatchmode
                 snapshots[index] = new DeltaSnapshot(
                     checked((int)raw[index].Index),
                     (ushort)(raw[index].OldCell & 0xFFFFu),
-                    (ushort)(raw[index].NewCell & 0xFFFFu), raw[index].Reserved);
+                    (ushort)(raw[index].NewCell & 0xFFFFu), raw[index].TargetId, raw[index].SlotId);
             }
 
             return snapshots;
@@ -575,7 +575,8 @@ namespace Wildfire.UnityBatchmode
         public uint Index;
         public uint OldCell;
         public uint NewCell;
-        public uint Reserved;
+        public uint TargetId;
+        public uint SlotId;
     }
 
     internal static class ArrayExtensions

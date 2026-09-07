@@ -79,7 +79,8 @@ public readonly record struct ShaderSnapshotDelta(
     int CellIndex,
     ushort OldCell,
     ushort NewCell,
-    uint TargetId = 0);
+    uint TargetId = 0,
+    uint SlotId = 0);
 
 public sealed record ShaderSnapshotVisual(
     string? Checksum = null,
@@ -488,7 +489,8 @@ public static class ShaderSnapshotJson
             GetRequiredProperty(delta, "cellIndex", sourceName).GetInt32(),
             ReadUInt16(GetRequiredProperty(delta, "oldCell", sourceName), sourceName, "oldCell"),
             ReadUInt16(GetRequiredProperty(delta, "newCell", sourceName), sourceName, "newCell"),
-            delta.TryGetProperty("targetId", out var targetId) ? targetId.GetUInt32() : 0);
+            delta.TryGetProperty("targetId", out var targetId) ? targetId.GetUInt32() : 0,
+            delta.TryGetProperty("slotId", out var slotId) ? slotId.GetUInt32() : 0);
     }
 
     private static ushort ReadUInt16(JsonElement value, string sourceName, string propertyName)

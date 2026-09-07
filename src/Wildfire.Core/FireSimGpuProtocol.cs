@@ -6,7 +6,8 @@ public static class FireSimGpuProtocol
 {
     public const int UInt32WordsPerChange = 4;
     public const int ChangeStrideBytes = sizeof(uint) * UInt32WordsPerChange;
-    public const int DeltaStrideBytes = sizeof(uint) * 4;
+    public const int UInt32WordsPerDelta = 5;
+    public const int DeltaStrideBytes = sizeof(uint) * UInt32WordsPerDelta;
 
     // Each uploaded command and each simulated cell may independently append one delta.
     public static int GetDeltaCapacity(int cellCount, int changeCapacity)

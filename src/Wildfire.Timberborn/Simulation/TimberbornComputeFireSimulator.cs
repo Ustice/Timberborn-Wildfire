@@ -1030,7 +1030,7 @@ public sealed partial class TimberbornComputeFireSimulator :
             .Select(static delta => new CellDelta(
                 checked((int)delta.Index),
                 checked((ushort)(delta.OldCell & 0xFFFFu)),
-                checked((ushort)(delta.NewCell & 0xFFFFu)), delta.Reserved))
+                checked((ushort)(delta.NewCell & 0xFFFFu)), delta.TargetId, delta.SlotId))
             .ToArray();
     }
 
@@ -1064,7 +1064,8 @@ public sealed partial class TimberbornComputeFireSimulator :
         public uint Index;
         public uint OldCell;
         public uint NewCell;
-        public uint Reserved;
+        public uint TargetId;
+        public uint SlotId;
     }
 
 }

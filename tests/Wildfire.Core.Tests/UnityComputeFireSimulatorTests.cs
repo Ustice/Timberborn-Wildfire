@@ -228,9 +228,11 @@ public sealed partial class UnityComputeFireSimulatorTests
                     0x1234u,
                     0x5678u,
                     0u,
+                    0u,
                     2u,
                     0x9ABCu,
                     0xDEF0u,
+                    0u,
                     0u,
                 ];
             },
@@ -270,7 +272,7 @@ public sealed partial class UnityComputeFireSimulatorTests
                 }
 
                 deltas.AppendCounter = 1;
-                deltas.AppendedData = [0u, 0u, 0x101u, 0u];
+                deltas.AppendedData = [0u, 0u, 0x101u, 0u, 0u];
             },
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
@@ -312,7 +314,7 @@ public sealed partial class UnityComputeFireSimulatorTests
                 }
 
                 deltas.AppendCounter = 1;
-                deltas.AppendedData = [0u, 0u, newCell, 0u];
+                deltas.AppendedData = [0u, 0u, newCell, 0u, 0u];
             },
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
@@ -353,7 +355,7 @@ public sealed partial class UnityComputeFireSimulatorTests
                 }
 
                 deltas.AppendCounter = 1;
-                deltas.AppendedData = [0u, 0u, newCell, 0u];
+                deltas.AppendedData = [0u, 0u, newCell, 0u, 0u];
             },
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
@@ -381,13 +383,13 @@ public sealed partial class UnityComputeFireSimulatorTests
                 if (dispatch.KernelName == UnityComputeFireSimulator.ApplyExternalChangesKernelName)
                 {
                     deltas.AppendCounter = 1;
-                    deltas.AppendedData = [0, 0, 0x00F0, 0];
+                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0];
                 }
                 else
                 {
                     Assert.Equal(1, deltas.AppendCounter);
                     deltas.AppendCounter = 2;
-                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0, 0x00F0, 0x00E0, 0];
+                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0, 0, 0x00F0, 0x00E0, 0, 0];
                 }
             },
         };

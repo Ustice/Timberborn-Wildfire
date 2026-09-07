@@ -50,7 +50,8 @@ struct CellDeltaGpu
     uint Index;
     uint OldCell;
     uint NewCell;
-    uint Reserved;
+    uint TargetId;
+    uint SlotId;
 };
 
 struct FireSimChangeGpu
@@ -189,7 +190,8 @@ void AppendDelta(uint index, uint oldCell, uint newCell)
     delta.Index = index;
     delta.OldCell = oldCell;
     delta.NewCell = newCell;
-    delta.Reserved = MaterialTargetIds[index];
+    delta.TargetId = MaterialTargetIds[index];
+    delta.SlotId = MaterialSlotIds[index];
     Deltas.Append(delta);
 }
 

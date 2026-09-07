@@ -93,6 +93,7 @@ public static class MaterialSnapshotProbe
             }
             ProveGpuExhaustion(shader, output);
             ProveFirstSlotActivation(shader, output);
+            ProveDeltaSlotProvenance(shader, output);
             Debug.Log("WILDFIRE_MATERIAL_SNAPSHOT_PROBE_PASS backend=native new_simulator=true serialized=true archived_slots=2 restored_fuel=3,0 restored_history=5,9 pending_water_once=true stale_token_rejected=true malformed_alias_rejected=true");
             EditorApplication.Exit(0);
         }
@@ -184,6 +185,33 @@ public static class MaterialSnapshotProbe
             Require((restored.CaptureSnapshot().Cells[0] & 15) == 0, "exhausted sibling refilled after restore");
         }
         Debug.Log("WILDFIRE_FIRST_SLOT_ACTIVATION_PASS backend=native same_target_new_slot=true same_target_handoff=true known_pair_fresh_rejected=true archived_pair_restored=true exhausted_sibling_fuel=0 serialized=true");
+    }
+    private static void ProveDeltaSlotProvenance(ComputeShader shader, string output)
+    {
+        var prior = new FireSimMaterialIdentity(70, 701);
+        var incoming = new FireSimMaterialIdentity(70, 702);
+        var definition = new FireSimMaterialDefinition(WildfireMaterialClass.Tree, 9,
+            WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 3, 2, 1);
+        var snapshot = new FireSimSnapshot(1, new FireGrid(3, 1, 1), 0, FireSimParameters.Default.WithFuelBurnDown(16, 1), 89,
+            new[] { PackedCell.Pack(8, 15, 3, 0, 1, 0), (ushort)0, (ushort)0 }, new uint[3],
+            new[] { Companion(0), 0u, 0u }, new uint[] { 70, 0, 0 }, new uint[] { 701, 0, 0 },
+            new FireSimMaterialAuthoritySnapshot(0, new[] { prior }, new FireSimMaterialArchiveSnapshot[0]), new FireSimChange[0]);
+        using (var simulator = NativeSimulator.Create(snapshot, shader))
+        {
+            simulator.RegisterChange(new FireSimChange(0, SetFuel: 6));
+            simulator.RegisterChange(new FireSimChange(0, SetFuel: 2));
+            var result = simulator.TryHandoffMaterial(new FireSimMaterialHandoffBatch(1, new[] {
+                FireSimMaterialHandoffRequest.Fresh(0, prior, incoming, definition) }), receipt => Require(receipt.Accepted, "delta provenance handoff rejected"));
+            Require(result.HasValue, "delta provenance batch was not admitted");
+            var deltas = result.Value.Deltas.Where(delta => delta.CellIndex == 0).ToArray();
+            Require(deltas.Select(delta => delta.TargetId).SequenceEqual(new uint[] { 70, 70, 70 }), "delta owner changed or rows lost");
+            Require(deltas.Select(delta => delta.SlotId).SequenceEqual(new uint[] { 701, 701, 702 }), "delta origin slot was lost");
+            Require(deltas.Select(delta => delta.OldCell & 15).SequenceEqual(new[] { 8, 6, 3 }) &&
+                deltas.Select(delta => delta.NewCell & 15).SequenceEqual(new[] { 6, 2, 0 }), "native delta row layout or ordered transition changed");
+            Require(deltas[0].NewCell == deltas[1].OldCell && deltas[1].NewCell != deltas[2].OldCell, "per-slot transition boundary was erased");
+            File.WriteAllText(Path.Combine(output, "delta-slot-provenance.json"), JsonConvert.SerializeObject(deltas, Formatting.Indented));
+        }
+        Debug.Log("WILDFIRE_DELTA_SLOT_PROVENANCE_PASS backend=native stride_bytes=20 same_target=70 origin_slots=701,701,702 fuel=8to6,6to2,3to0 ordered_within_slot=true");
     }
     private static uint Companion(byte history) => new WildfireMaterialFieldState(WildfireMaterialClass.Tree, 9, history, 3,
         WildfireAshQuality.Fertile, WildfireContaminationBehavior.None, 6).Pack();
