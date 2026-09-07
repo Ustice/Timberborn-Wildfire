@@ -157,6 +157,7 @@ public sealed class NativeGatherableYieldLoadTests
         int grower = Array.FindIndex(types, t => t.Name == "GatherableYieldGrower");
         Assert.True(yielder >= 0 && grower > yielder);
         Assert.Single(types, t => t.Name == "TimberbornGatherableYieldLoadCorrection");
+        Assert.Single(types, t => t.Name == "GoodStack"); // Dormant harvest machinery exists on the plant template.
     }
 
     private sealed class Fixture : IDisposable
