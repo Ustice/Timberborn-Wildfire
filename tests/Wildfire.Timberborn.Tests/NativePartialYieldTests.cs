@@ -76,6 +76,32 @@ public sealed class NativePartialYieldTests
     }
 
     [Fact]
+    public void NativeCropSelectorSupportsCuttableAnnualsAndExactGatherableResource()
+    {
+        using var f = new NativePartialYieldFixture();
+        var annual = f.NewYielder("Cuttable", "Carrot");
+        var cuttableType = f.Type("Timberborn.Cutting", "Timberborn.Cutting.Cuttable");
+        var cuttable = RuntimeHelpers.GetUninitializedObject(cuttableType);
+        NativePartialYieldFixture.Set(cuttable, "<Yielder>k__BackingField", annual);
+        var specType = f.Type("Timberborn.Cutting", "Timberborn.Cutting.CuttableSpec");
+        var spec = Activator.CreateInstance(specType)!;
+        specType.GetProperty("Yielder")!.SetValue(spec, f.YielderType.GetProperty("YielderSpec")!.GetValue(annual));
+        NativePartialYieldFixture.Set(cuttable, "_cuttableSpec", spec);
+        var selector = f.ModType("Wildfire.Timberborn.Visuals.TimberbornTextureCropBurnConsequenceApi")
+            .GetMethod("SelectCropYield", BindingFlags.Static | BindingFlags.NonPublic)!;
+        Assert.Same(annual, selector.Invoke(null, [null, cuttable, "Carrot"]));
+        Assert.Null(selector.Invoke(null, [null, cuttable, "Blueberry"]));
+        var gatherable = RuntimeHelpers.GetUninitializedObject(f.Type("Timberborn.Gathering", "Timberborn.Gathering.Gatherable"));
+        NativePartialYieldFixture.Set(gatherable, "<Yielder>k__BackingField", f.Yielder);
+        var gatherSpecType = f.Type("Timberborn.Gathering", "Timberborn.Gathering.GatherableSpec");
+        var gatherSpec = Activator.CreateInstance(gatherSpecType)!;
+        gatherSpecType.GetProperty("Yielder")!.SetValue(gatherSpec, f.YielderType.GetProperty("YielderSpec")!.GetValue(f.Yielder));
+        NativePartialYieldFixture.Set(gatherable, "_gatherableSpec", gatherSpec);
+        Assert.Same(f.Yielder, selector.Invoke(null, [gatherable, null, "Carrot"]));
+        Assert.IsType<InvalidOperationException>(Assert.Throws<TargetInvocationException>(() => selector.Invoke(null, [gatherable, cuttable, "Carrot"])).InnerException);
+    }
+
+    [Fact]
     public void FailureAfterActualFieldWritePoisonsSharedGuardWithoutRefundOrReplay()
     {
         using var f = new NativePartialYieldFixture();

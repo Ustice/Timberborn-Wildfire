@@ -19,6 +19,7 @@ internal sealed class NativePartialYieldFixture : IDisposable
         Yielder = NewYielder();
         Reservable = YielderType.GetProperty("Reservable")!.GetValue(Yielder)!;
     }
+    internal Type ModType(string name) => _native.LoadMod().GetType(name)!;
     internal Type Type(string assembly, string name) => _native.LoadNative(assembly).GetType(name)!;
     internal object NewYielder(string name = "Gatherable", string good = "Carrot")
     {

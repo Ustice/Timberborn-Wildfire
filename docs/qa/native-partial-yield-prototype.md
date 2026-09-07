@@ -2,7 +2,7 @@
 
 The compatibility helper and exact native adapter entry are implemented but **not activated**. Public tree/crop ReduceYield still returns Unavailable until durable request lifetime, yield-generation and save authority are integrated. There is no process flag, alternate quantity ledger or local epoch.
 
-`TimberbornPartialYieldLoss` writes only the installed native `Yielder._yield` GoodAmount after checking its named component/resource, positive request, native reservation and Enabled state. It preserves `_initialYield`, native grower state, GoodStack and reservations. No YieldDecreased/Gathered/WasCut event is fabricated. The exact tree/crop internal entry resolves the current original Guid/family, selects the component by the native Cuttable/Gatherable yielder name, and rejects a mismatched named reference. The caller must hold the existing shared outer resource guard.
+`TimberbornPartialYieldLoss` writes only the installed native `Yielder._yield` GoodAmount after checking its named component/resource, positive request, native reservation and Enabled state. It preserves `_initialYield`, native grower state, GoodStack and reservations. No YieldDecreased/Gathered/WasCut event is fabricated. The exact tree/crop internal entry resolves the current original Guid/family, selects the component by the native Cuttable/Gatherable yielder name and resource, and rejects a mismatched or ambiguous reference. Annual crops such as installed Carrot use Cuttable; repeat-yield plants can use Gatherable. The crop entry supports either exact native form. The caller must hold the existing shared outer resource guard.
 
 Compatibility is reviewed only for the six native assembly hashes embedded in the helper: Yielding, Gathering, Cutting, Goods, ReservableSystem and BaseComponentSystem. Both on-disk fingerprint and private field type/mutability are checked before mutation. Future live activation must call Verify at capability initialization, before advertising partial-yield support; a first-fire version failure is not acceptable capability discovery.
 
@@ -12,7 +12,7 @@ Tree results now carry an actual YieldLost receipt. The sink increments its appl
 
 ## Evidence
 
-Nineteen new cases plus the complete native suite pass: **856 tests, zero failures/skips** on this branch.
+Twenty new cases plus the complete native suite pass: **857 tests, zero failures/skips** on this branch.
 
 - Actual helper5→3, zero harvest/yield-added callbacks, initial capacity5.
 - Actual Yielder.Save/Load using native EntitySaver/EntityLoader/SerializedEntity and GoodAmount serializers restores3; next native ResetYield returns5. This is native in-memory serialization, not a world save file or live-game reload.

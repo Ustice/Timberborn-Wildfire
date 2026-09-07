@@ -59,12 +59,27 @@ public sealed class TimberbornTextureCropBurnConsequenceApi : ITimberbornLiveCro
             consequence.TargetKey.StableId != TimberbornBurnDamageIdentity.ForEntity(consequence.EntityId, NativeBurnTargetFamily.Crop))
             throw new InvalidOperationException("Partial crop yield loss requires an exact canonical Guid resource action.");
         if (!TryResolveCrop(consequence.EntityId, out var crop)) return new(TimberbornPartialYieldLossStatus.NotLive);
-        if (!crop.TryGetComponent(out Gatherable gatherable)) return new(TimberbornPartialYieldLossStatus.Unavailable);
-        string name = gatherable.YielderSpec.YielderComponentName;
+        crop.TryGetComponent(out Gatherable gatherable);
+        crop.TryGetComponent(out Cuttable cuttable);
+        var selected = SelectCropYield(gatherable, cuttable, consequence.YieldResourceId);
+        if (selected is null) return new(TimberbornPartialYieldLossStatus.Unavailable);
+        string name = selected.ComponentName;
         var yielder = TimberbornPartialYieldLoss.SelectNamed(crop.AllComponents.OfType<Yielder>(), name);
-        if (!ReferenceEquals(gatherable.Yielder, yielder))
-            throw new InvalidOperationException("Native gatherable points at another named yielder.");
+        if (!ReferenceEquals(selected, yielder))
+            throw new InvalidOperationException("Native crop points at another named yielder.");
         return TimberbornPartialYieldLoss.Apply(yielder, name, consequence.YieldResourceId, consequence.YieldLost);
+    }
+
+    internal static Yielder? SelectCropYield(Gatherable? gatherable, Cuttable? cuttable, string resourceId)
+    {
+        Yielder? selected = gatherable is not null && gatherable.YielderSpec.Yield.Id == resourceId ? gatherable.Yielder : null;
+        if (cuttable is not null && cuttable.YielderSpec.Yield.Id == resourceId)
+        {
+            if (selected is not null && !ReferenceEquals(selected, cuttable.Yielder))
+                throw new InvalidOperationException("Crop resource matches more than one native yield component.");
+            selected = cuttable.Yielder;
+        }
+        return selected;
     }
 
     private bool TryResolveCrop(Guid id, out BlockObject crop)
