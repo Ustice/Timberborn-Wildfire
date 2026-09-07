@@ -87,7 +87,7 @@ public sealed class InitialEnvironmentCaptureTests
 /// <summary>Actual installed map/column/soil/water getters; only the tick boundary is a proxy. No GameObjects.</summary>
 internal sealed class NativeEnvironmentFixture
 {
-    private static readonly NativeManagedTestContext Native = new(collectible: false);
+    private static readonly NativeManagedTestContext Native = NativeManagedTestContext.ProxyContracts;
     private readonly object _provider, _water;
     private readonly Type _providerType;
     private readonly Dictionary<TimberbornInitialEnvironmentCapture, object> _captures = new();

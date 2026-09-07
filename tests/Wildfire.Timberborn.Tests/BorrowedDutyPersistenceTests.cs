@@ -5,7 +5,7 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class BorrowedDutyPersistenceTests
 {
     // DispatchProxy caches generated interface implementations; use one native type identity.
-    private static readonly NativeManagedTestContext Native = new(collectible: false);
+    private static readonly NativeManagedTestContext Native = NativeManagedTestContext.ProxyContracts;
     [Theory]
     [InlineData(0)]
     [InlineData(1)]

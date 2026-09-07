@@ -6,7 +6,7 @@ namespace Wildfire.Timberborn.Tests;
 // The invocation decorator and marker are test-only. Native scheduler/lifecycle/resource methods run unchanged.
 internal sealed class NativeWaterCreditSchedulerFixture : IDisposable
 {
-    private static readonly NativeManagedTestContext Native = new(collectible: false);
+    private static readonly NativeManagedTestContext Native = NativeManagedTestContext.ProxyContracts;
     internal readonly NativeShorelineWaterFixture Water = new(Native);
     internal readonly List<string> Events = new();
     internal bool Tainted;
