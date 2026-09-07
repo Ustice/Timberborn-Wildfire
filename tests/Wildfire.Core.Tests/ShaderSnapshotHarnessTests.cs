@@ -8,6 +8,25 @@ namespace Wildfire.Core.Tests;
 public sealed class ShaderSnapshotHarnessTests
 {
     [Fact]
+    public void LegacyCaptureWithoutReceiptMetadataStillMatchesNewGenericInputCapture()
+    {
+        var legacy = CreateCapture([0, 0], [new ShaderSnapshotTick(1, 0, [])]);
+        var current = legacy with { Ticks = [new(1, 0, [], [0, 0, 1, 0])] };
+        Assert.True(ShaderSnapshotComparison.Create(legacy, current).Matches);
+        Assert.False(ShaderSnapshotComparison.Create(current, legacy).Matches);
+    }
+
+    [Fact]
+    public void SpecifiedReceiptWordsRoundTripAndRequireAnExactMatch()
+    {
+        var expected = CreateCapture([0, 0], [new ShaderSnapshotTick(1, 0, [], [0, 2048, (1u << 25) | (1u << 29), 0])]);
+        var actual = ShaderSnapshotJson.Load(ShaderSnapshotJson.Serialize(expected));
+        Assert.True(ShaderSnapshotComparison.Create(expected, actual).Matches);
+        actual.Ticks[0].AppliedChangeWords![2] |= 1u << 27;
+        Assert.False(ShaderSnapshotComparison.Create(expected, actual).Matches);
+    }
+
+    [Fact]
     public void ExternalChangeFixtureRoundTripsProductionEncodedWords()
     {
         ShaderSnapshotExternalChanges changes = ShaderSnapshotExternalChanges.Encode(
