@@ -33,9 +33,11 @@ public sealed record TimberbornWildfirePersistenceSnapshot(
     TimberbornFireSimPersistenceSnapshot? FireSim,
     TimberbornAshFieldSnapshot AshField,
     TimberbornBeaverFieldBehaviorSnapshot BeaverBehavior,
-    TimberbornConsequencePersistenceSnapshot Consequences)
+    TimberbornConsequencePersistenceSnapshot Consequences,
+    TimberbornOwnedMaterialSnapshot? OwnedMaterial = null)
 {
     public const int CurrentPersistenceVersion = 1;
+    public const int OwnedMaterialPersistenceVersion = 2;
 
     public static readonly TimberbornWildfirePersistenceSnapshot Empty = new(
         CurrentPersistenceVersion,
@@ -70,10 +72,14 @@ public static class TimberbornWildfirePersistenceCodec
             throw new ArgumentNullException(nameof(snapshot));
         }
 
+        ValidateFirePayload(snapshot);
         List<string> lines = new()
         {
             string.Join(Separator, HeaderRecord, snapshot.PersistenceVersion.ToString(CultureInfo.InvariantCulture)),
         };
+
+        if (snapshot.OwnedMaterial is { } owned)
+            lines.Add(string.Join(Separator, "OWNED", TimberbornOwnedMaterialCodec.Encode(owned)));
 
         if (snapshot.FireSim is { } fireSim)
         {
@@ -151,11 +157,14 @@ public static class TimberbornWildfirePersistenceCodec
         string[] header = SplitLine(lines[0]);
         if (header.Length != 2 ||
             header[0] != HeaderRecord ||
-            ParseInt(header[1]) != TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion)
+            ParseInt(header[1]) is not (TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion or
+                TimberbornWildfirePersistenceSnapshot.OwnedMaterialPersistenceVersion))
         {
             throw new FormatException("Wildfire persistence header or version is unsupported.");
         }
 
+        int version = ParseInt(header[1]);
+        TimberbornOwnedMaterialSnapshot? owned = null;
         TimberbornFireSimPersistenceSnapshot? fireSim = null;
         List<TimberbornAshFieldEntry> ashEntries = new();
         List<TimberbornBeaverFieldBehaviorStateEntry> beaverBehaviorEntries = new();
@@ -173,7 +182,10 @@ public static class TimberbornWildfirePersistenceCodec
 
                 switch (parts[0])
                 {
-                    case FireSimRecord when parts.Length == 7 && fireSim is null:
+                    case "OWNED" when version == TimberbornWildfirePersistenceSnapshot.OwnedMaterialPersistenceVersion && parts.Length == 2 && owned is null:
+                        owned = TimberbornOwnedMaterialCodec.Decode(parts[1]);
+                        break;
+                    case FireSimRecord when version == TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion && parts.Length == 7 && fireSim is null:
                         fireSim = DecodeFireSim(parts);
                         break;
                     case AshRecord when parts.Length is 8 or 10:
@@ -193,8 +205,8 @@ public static class TimberbornWildfirePersistenceCodec
                 }
             });
 
-        return new TimberbornWildfirePersistenceSnapshot(
-            TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion,
+        var snapshot = new TimberbornWildfirePersistenceSnapshot(
+            version,
             fireSim,
             new TimberbornAshFieldSnapshot(
                 TimberbornAshFieldEntry.CurrentPersistenceVersion,
@@ -202,7 +214,17 @@ public static class TimberbornWildfirePersistenceCodec
             new TimberbornBeaverFieldBehaviorSnapshot(
                 TimberbornBeaverFieldBehaviorSnapshot.CurrentPersistenceVersion,
                 beaverBehaviorEntries),
-            new TimberbornConsequencePersistenceSnapshot(burnDamageEntries));
+            new TimberbornConsequencePersistenceSnapshot(burnDamageEntries), owned);
+        ValidateFirePayload(snapshot);
+        return snapshot;
+    }
+
+    private static void ValidateFirePayload(TimberbornWildfirePersistenceSnapshot snapshot)
+    {
+        bool legacy = snapshot.PersistenceVersion == TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion && snapshot.OwnedMaterial is null;
+        bool owned = snapshot.PersistenceVersion == TimberbornWildfirePersistenceSnapshot.OwnedMaterialPersistenceVersion &&
+            snapshot.OwnedMaterial is not null && snapshot.FireSim is null;
+        if (!legacy && !owned) throw new FormatException("WF1 requires legacy fire state; WF2 requires one paired owned-material payload and forbids FIRE.");
     }
 
     public static TimberbornConsequencePersistenceSnapshot CaptureConsequences(

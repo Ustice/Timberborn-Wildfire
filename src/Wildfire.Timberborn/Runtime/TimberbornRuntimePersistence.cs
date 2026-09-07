@@ -18,6 +18,10 @@ public sealed class TimberbornRuntimePersistence
         {
             _savedEncoding = readSavedEncoding();
             LoadedSnapshot = _savedEncoding is null ? null : TimberbornWildfirePersistenceCodec.Decode(_savedEncoding);
+            if (LoadedSnapshot?.OwnedMaterial is not null)
+                throw new NotSupportedException(
+                    "WF2 material state is preserved but cannot enter the legacy initializer: native registry/provider " +
+                    "projection, originating-owner consequence routing and paired fresh-simulator publication must be connected first.");
         }
         catch (Exception exception)
         {
