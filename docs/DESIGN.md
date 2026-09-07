@@ -4,6 +4,23 @@ Wildfire models fire, heat, smoke, steam, and ash on a discrete grid and connect
 
 This document describes the implemented data model and durable design choices. [Architecture](ARCHITECTURE.md) maps them to execution paths. Exact equations and tuning live in [FireSim.compute](../src/Wildfire.Unity/FireSim.compute) and [FireSimParameters](../src/Wildfire.Core/FireSimParameters.cs); copied pseudocode must not become a competing specification.
 
+## First release target
+
+The accepted completion target is a polished macOS release with Folktails and Ironteeth firefighting, prevention, natural ignition, recovery, and reliable saves. Fans, extensive overgrowth, Emberpelt response, and Windows support are later expansions. This target describes work in development, not implemented behavior.
+
+The player prepares a settlement, recognizes an incident, directs a response, and recovers afterward. Folktails trade mobilized labor and interrupted production for flexible response; Ironteeth trade equipment and prepared water capacity for greater response per worker. Both need reachable working positions, finite water supply, understandable coverage and failure reasons, and safe retreat. Detailed staffing, containment commands, water accounting, and equipment behavior must be proven through a complete responder prototype before their contracts are fixed.
+
+Completion requires evidence from the packaged mod in the target game version:
+
+- Both factions can prepare for, detect, contain, and recover from a fire through normal player controls. Prepared and unprepared settlements produce understandable differences.
+- Natural ignition is explainable, conservatively bounded at settlement scale, and paced against measured detection, mobilization, travel, and suppression times.
+- Responders obtain and spend water consistently, handle unreachable or extinguished targets, retreat from danger, and resume normal work.
+- Save/reload during response and aftermath preserves accepted durable state without duplicating water, goods, ash, or consequences. Disable/re-enable behavior is recoverable and documented.
+- Visuals and alerts explain fire, smoke, danger, response, and aftermath at ordinary play scales. Performance is measured on representative populated maps, including quiet and aftermath states.
+- A clean macOS installation of the release package passes the gameplay and persistence checks; player documentation, settings, diagnostics, attribution, and Workshop metadata match the verified artifact.
+
+Publishing the public Workshop item is a separate approval from preparing and verifying the release.
+
 ## Simulation model
 
 The simulator uses full-grid compute dispatch with double-buffered cell and transport state. It uses deterministic hash inputs keyed by cell, tick, and seed for stochastic decisions. Reproducibility claims require the same fixture, parameters, shader, and execution environment; deterministic C# fixture tests alone do not prove GPU results.
