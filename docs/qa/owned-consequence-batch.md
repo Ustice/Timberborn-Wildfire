@@ -11,8 +11,8 @@ Stockpile, and Structure origins. It is not bound to the production legacy delta
 - Probe physical native body existence independently of effect availability. A live Structure with
   no enabled SimpleOutput inventory still receives body damage. The native probe rereads
   `EntityRegistry.GetEntity(Guid)` and requires an initialized, undeleted, live entity.
-- Run the shared exact-owner damage reducer once across all live owners, summing distinct burned cells per owner
-  and suppressing repeated reports of the same owner/cell pair. Then call the raw tree, crop, and storage
+- Run the shared exact-owner damage reducer once across all live owners, summing accepted fuel-loss transitions per owner
+  after full target/slot/cell chain validation and exact replay suppression. Then call the raw tree, crop, and storage
   sinks; do not chain standalone family consumers or invoke legacy cell-based structure rollback.
 - Supply the same `NativeResourceCoordinator` that guards world saves. Its existing
   `INativeResourceMutationGuard` surrounds the whole body/effect pass. A callback exception after
@@ -64,12 +64,11 @@ native Guid/local-slot bindings, origin-family registrations, and consequences. 
 bindings alone do not identify historical canonical consequence families; hidden/deleted owner
 registrations must remain available for queued origins. Do not infer them from current occupants.
 
-Storage fractional fuel credit is transient. Tree/crop sinks also retain transient applied-yield
-amounts and dry/kill/visual/leftover sets. Native already-satisfied statuses make some effects
-idempotent, but do not prove that all history can be reconstructed. Any future partial-yield
-adapter must restore or authoritatively derive prior applied loss before replaying cumulative
-loss after load. This prototype adds no duplicate save ledger and does not claim complete
-consequence persistence merely because the material/GPU snapshot is complete.
+The private OWNED2 payload now preserves typed storage fractional credit, canonical retained/retired
+owners, immutable body profiles, natural request progress and desired presentation. Complete capture
+holds the shared guard across all reads, and restore stages a new session. See [history proof and
+remaining native reconciliation limits](owned-consequence-history.md). This does not authorize
+replaying quantities or reconstructing saved capacity from the remaining native yield.
 
 Structure rollback/repair and additional native owner families remain outside this route. Their
 migration must use exact ownership and the same preflight/guard/reducer boundary, not the legacy
@@ -84,7 +83,8 @@ remaining capacity, and writes one event/state per body. Repeated identical owne
 spend the same damage twice. Regression tests reproduce the earlier failures and cover capacity and
 repeated reports. This changes actual multi-cell damage and may require later balance adjustment.
 
-A separate limitation remains under review: ordinary external changes and the simulation can emit
-multiple legitimate chained transitions for one cell. These must be distinguished from repeated
-reports before claiming complete within-cell batching invariance. Storage's raw per-owner maximum
-budget is another separate correction; its receipt counts are not inferred from body damage.
+The later [transition normalization change](owned-transition-normalization.md) also handles multiple
+legitimate changes to one local slot and distinct slots occupying one cell around a handoff. It keeps
+complete packed chains, suppresses only provable exact replay, and rejects unexplained discontinuities
+before effects. Storage now consumes each accepted contribution with exact receipt quantities and
+completion-cell hazard attribution. The legacy cell-routed path still lacks complete slot provenance.
