@@ -43,7 +43,8 @@ public sealed class OwnedNativeDefinitionWitness
         if(named.Select(y=>y.ComponentName).Distinct(StringComparer.Ordinal).Count()!=named.Length)
             throw new ArgumentException("Static named roles must be unique.");
         var cost=buildingCost?.OrderBy(s=>s.ResourceId,StringComparer.Ordinal).ToArray();
-        if(cost is not null && cost.Select(s=>s.ResourceId).Distinct(StringComparer.Ordinal).Count()!=cost.Length)
+        if(cost is not null && (cost.Any(s=>string.IsNullOrWhiteSpace(s.ResourceId) || s.Amount<0) ||
+            cost.Select(s=>s.ResourceId).Distinct(StringComparer.Ordinal).Count()!=cost.Length))
             throw new ArgumentException("Static construction costs must have unique resource ids.");
         EntityId=entityId;SpecId=specId;Shape=shape;BodyProfile=bodyProfile;
         LocalFootprint=Array.AsReadOnly(cells);Yields=Array.AsReadOnly(named);

@@ -64,7 +64,7 @@ public sealed class TimberbornOwnedWorldSession<TSimulator> : IDisposable
             if (simulator.Width != simulation.Grid.Width || simulator.Height != simulation.Grid.Height || simulator.Depth != simulation.Grid.Depth)
                 throw new ArgumentException("Restored simulator dimensions do not match the paired native world.");
             var consumer = TimberbornOwnedDeltaConsumer.CreateFromHistory(registry, damage, effects, guard, history, catalog);
-            if(ids.Any(id=>!effects.Bodies.IsLive(id))) throw new ArgumentException("A required native owner disappeared during restore staging.");
+            if(ids.Any(id=>effects.Bodies.ObservePresence(id)!=TimberbornOwnedBodyPresence.Live)) throw new ArgumentException("A required native owner disappeared during restore staging.");
             return new(simulator, registry, damage, consumer, guard);
         }
         catch { simulator?.Dispose(); throw; }

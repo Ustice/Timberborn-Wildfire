@@ -48,6 +48,13 @@ public sealed class OwnedNativeWitnessCodecTests
         Assert.Throws<ArgumentException>(()=>new TimberbornOwnedConsequenceSnapshot(history.Owners,history.Natural,[],new([witness,extra])));
     }
 
+    [Fact]
+    public void StaticBuildingCostRejectsDefaultInvalidStackAtConstruction()
+    {
+        Assert.Throws<ArgumentException>(()=>new OwnedNativeDefinitionWitness(F.Id,"Warehouse",TimberbornInitialBodyShape.Stockpile,
+            TimberbornBurnableCatalog.Default.Lookup("Warehouse"),[new(0,0,0)],[],[default(TimberbornBurnDamageResourceStack)]));
+    }
+
     [Theory]
     [InlineData("count")][InlineData("truncated")][InlineData("trailing")][InlineData("version")]
     public void MalformedWitnessPayloadRejectsAndOriginalEncodingSurvives(string mode)

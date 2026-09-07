@@ -16,7 +16,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
             var consumer=new TimberbornOwnedDeltaConsumer(origins,damage,effects,guard,Array.Empty<TimberbornOwnedBodyRegistration>(),catalog);
             foreach(var body in bodies)
             {
-                if(body.Family is not {} family || !effects.Bodies.IsLive(body.EntityId))
+                if(body.Family is not {} family || effects.Bodies.ObservePresence(body.EntityId)!=TimberbornOwnedBodyPresence.Live)
                     throw new ArgumentException("Witnessed formation requires an exact supported live native body.");
                 var key=new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(body.EntityId,family));
                 if(!damage.TryGetState(key,out var state) || state.SpecId!=body.SpecId || state.TargetKind!=body.PhysicalBodyKind ||
