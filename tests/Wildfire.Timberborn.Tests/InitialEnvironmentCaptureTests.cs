@@ -89,6 +89,8 @@ internal sealed class NativeEnvironmentFixture
 {
     private static readonly NativeManagedTestContext Native = NativeManagedTestContext.ProxyContracts;
     private readonly object _provider, _water;
+    internal object NativeProvider => _provider;
+    internal static NativeManagedTestContext Context => Native;
     private readonly Type _providerType;
     private readonly Dictionary<TimberbornInitialEnvironmentCapture, object> _captures = new();
     internal readonly byte[] TerrainColumnCounts = new byte[9];

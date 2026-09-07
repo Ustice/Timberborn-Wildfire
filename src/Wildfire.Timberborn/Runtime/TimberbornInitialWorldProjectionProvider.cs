@@ -15,7 +15,7 @@ using Wildfire.Timberborn.Resources;
 namespace Wildfire.Timberborn.Runtime;
 
 /// <summary>
-/// Capture-only input for the future owned initializer. No fire fields, tokens, body damage or native
+/// Capture-only input for the future owned initializer and saved-owner restore. No fire fields, tokens, body damage or native
 /// effects are published. Call on the native thread at a settled load boundary without an async gap.
 /// </summary>
 public sealed class TimberbornInitialWorldProjectionProvider
@@ -67,6 +67,7 @@ public sealed class TimberbornInitialWorldProjectionProvider
                 validate.Add(() =>
                 {
                     if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id || block.Name != source.SpecId ||
+                        !entity.TryGetComponent<BlockObject>(out var currentBlock) || !ReferenceEquals(currentBlock, block) ||
                         Exclusion(entity, block) != TimberbornInitialCaptureExclusion.EnvironmentalWaterSource ||
                         !block.Placement.Equals(waterPlacement) || !ReferenceEquals(block.Blocks, waterBlocks))
                         throw new InvalidOperationException("Native water source changed during initial capture.");
@@ -88,19 +89,14 @@ public sealed class TimberbornInitialWorldProjectionProvider
             }
             var placement = block.Placement;
             var blocks = block.Blocks;
-            var footprint = TimberbornNativeMaterialFootprint.Project(blocks, placement, grid);
-            var yields = CaptureYields(entity);
-            var inventories = CaptureInventories(entity);
-            var construction = CaptureConstruction(entity);
-            var body = new TimberbornInitialMaterialBody(id, block.Name, Shape(entity, block.Name), footprint, yields, inventories, construction);
+            var body = CaptureBodyFacts(entity, block, grid);
             bodies.Add(body);
             validate.Add(() =>
             {
                 if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id ||
+                    !entity.TryGetComponent<BlockObject>(out var currentBlock) || !ReferenceEquals(currentBlock, block) ||
                     Exclusion(entity, block) is not null || !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) ||
-                    block.Name != body.SpecId || Shape(entity, block.Name) != body.Shape || !CaptureYields(entity).SequenceEqual(yields) ||
-                    !SameInventories(inventories, CaptureInventories(entity)) ||
-                    !SameConstruction(construction, CaptureConstruction(entity)))
+                    !SameBodyFacts(body, CaptureBodyFacts(entity, block, grid)))
                     throw new InvalidOperationException("Native body changed during initial capture; no projection was published.");
             });
         }
@@ -111,6 +107,67 @@ public sealed class TimberbornInitialWorldProjectionProvider
             throw new InvalidOperationException("Native entity membership changed during initial capture.");
         return new TimberbornInitialWorldCapture(grid, bodies, excluded, waterSources, environment);
     }
+
+    /// <summary>
+    /// Called inside the owned restore session's existing CaptureAtRest guard; intentionally does not
+    /// enter a nested guard. Reads required saved Guids, including disabled/leftover bodies. It does not
+    /// admit fresh material, compare saved capacities, or replay initial-world eligibility filters.
+    /// </summary>
+    public IReadOnlyList<TimberbornInitialMaterialBody> CaptureRetainedBodies(FireGrid grid, IReadOnlyList<Guid> requiredIds)
+    {
+        if (requiredIds is null) throw new ArgumentNullException(nameof(requiredIds));
+        var ids = requiredIds.OrderBy(id => id).ToArray();
+        if (ids.Any(id => id == Guid.Empty) || ids.Distinct().Count() != ids.Length)
+            throw new ArgumentException("Retained capture requires unique nonempty native Guids.");
+        _environment.RequireSettled(grid);
+        var bodies = new List<TimberbornInitialMaterialBody>();
+        var validate = new List<Action>();
+        foreach (var id in ids)
+        {
+            var entity = RequireRetainedEntity(id);
+            var block = RequireRetainedBlock(entity);
+            var placement = block.Placement;
+            var blocks = block.Blocks;
+            bool finished = block.IsFinished;
+            var body = CaptureBodyFacts(entity, block, grid);
+            bodies.Add(body);
+            validate.Add(() =>
+            {
+                if (!ReferenceEquals(RequireRetainedEntity(id), entity) || !ReferenceEquals(RequireRetainedBlock(entity), block) ||
+                    !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) || block.IsFinished != finished ||
+                    !SameBodyFacts(body, CaptureBodyFacts(entity, block, grid)))
+                    throw new InvalidOperationException("Retained native body changed during restore capture.");
+            });
+        }
+        foreach (var check in validate) check();
+        _environment.RequireSettled(grid);
+        return Array.AsReadOnly(bodies.ToArray());
+    }
+
+    private EntityComponent RequireRetainedEntity(Guid id)
+    {
+        var entity = _entities.GetEntity(id);
+        if (entity is null || entity.EntityId != id || entity.Deleted || !entity.Initialized || !entity)
+            throw new InvalidOperationException("Required saved native body is missing, deleted or not settled.");
+        return entity;
+    }
+
+    private static BlockObject RequireRetainedBlock(EntityComponent entity)
+    {
+        if (!entity.TryGetComponent<BlockObject>(out var block) || !ReferenceEquals(block.GetComponent<EntityComponent>(), entity) ||
+            block.IsPreview || !block.Positioned)
+            throw new InvalidOperationException("Required saved body lacks its exact positioned native block.");
+        return block;
+    }
+
+    private static TimberbornInitialMaterialBody CaptureBodyFacts(EntityComponent entity, BlockObject block, FireGrid grid) =>
+        new(entity.EntityId, block.Name, Shape(entity, block.Name), TimberbornNativeMaterialFootprint.Project(block.Blocks, block.Placement, grid),
+            CaptureYields(entity), CaptureInventories(entity), CaptureConstruction(entity));
+
+    private static bool SameBodyFacts(TimberbornInitialMaterialBody left, TimberbornInitialMaterialBody right) =>
+        left.EntityId == right.EntityId && left.SpecId == right.SpecId && left.Shape == right.Shape &&
+        left.Footprint.SequenceEqual(right.Footprint) && left.Yields.SequenceEqual(right.Yields) &&
+        SameInventories(left.Inventories, right.Inventories) && SameConstruction(left.ConstructionResources, right.ConstructionResources);
 
     private static IReadOnlyList<TimberbornBurnDamageResourceStack>? CaptureConstruction(EntityComponent entity)
     {

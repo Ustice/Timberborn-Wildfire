@@ -36,8 +36,6 @@ public sealed class TimberbornInitialEnvironmentCaptureProvider
 
     public TimberbornInitialEnvironmentCapture Capture(FireGrid grid)
     {
-        if (grid.Width <= 0 || grid.Height <= 0 || grid.Depth <= 0) throw new ArgumentOutOfRangeException(nameof(grid));
-        _ = checked(grid.Width * grid.Height * grid.Depth);
         RequireSettled(grid);
         var solid = new List<int>();
         var soil = new List<TimberbornSurfaceSoilSample>();
@@ -84,8 +82,10 @@ public sealed class TimberbornInitialEnvironmentCaptureProvider
             _moisture.SoilIsMoist(surface), _contamination.SoilIsContaminated(surface));
     }
 
-    private void RequireSettled(FireGrid grid)
+    internal void RequireSettled(FireGrid grid)
     {
+        if (grid.Width <= 0 || grid.Height <= 0 || grid.Depth <= 0) throw new ArgumentOutOfRangeException(nameof(grid));
+        _ = checked(grid.Width * grid.Height * grid.Depth);
         var size = new Vector3Int(grid.Width, grid.Height, grid.Depth);
         if (Environment.CurrentManagedThreadId != _captureThreadId || _ticks.IsStartingParallelTick || !_ticks.ParalleTicklIsFinished || _terrain.Size != size ||
             _indices.TerrainSize != size || _indices.VerticalStride <= 0)
