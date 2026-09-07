@@ -10,6 +10,7 @@ internal sealed class NativePartialYieldFixture : IDisposable
     internal readonly Type YielderType, AmountType, Helper;
     internal readonly FieldInfo EnabledField;
     internal readonly object Yielder, Reservable;
+    internal object LastNativeLoader = null!, LastNativeSaver = null!;
     internal NativePartialYieldFixture()
     {
         Helper = _native.LoadMod().GetType("Wildfire.Timberborn.Compatibility.TimberbornPartialYieldLoss")!;
@@ -62,10 +63,12 @@ internal sealed class NativePartialYieldFixture : IDisposable
         var serialized = Activator.CreateInstance(Type("Timberborn.WorldSerialization", "Timberborn.WorldSerialization.SerializedEntity"),
             Guid.NewGuid(), "Fixture.Crop")!;
         var saver = Activator.CreateInstance(Type("Timberborn.WorldPersistence", "Timberborn.WorldPersistence.EntitySaver"), serialized)!;
+        LastNativeSaver = saver;
         YielderType.GetMethod("Save")!.Invoke(Yielder, [saver]);
         var loaded = NewYielder();
         Set(loaded, "_goodAmountSerializer", amountSerializer);
         var loader = Activator.CreateInstance(Type("Timberborn.WorldPersistence", "Timberborn.WorldPersistence.EntityLoader"), serialized)!;
+        LastNativeLoader = loader;
         YielderType.GetMethod("Load")!.Invoke(loaded, [loader]);
         return loaded;
     }
