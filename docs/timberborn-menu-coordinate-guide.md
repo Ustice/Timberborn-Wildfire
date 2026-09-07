@@ -204,29 +204,18 @@ QA attempted the title-screen coordinate pass on 2026-05-01 from a loaded save, 
 | Current state evidence  | `Player.log` shows `Loading saved game Wildfire testing - 2026-05-01 06h45m, Day 1-1.autosave`                                                       |
 | Final screenshot result | Startup Mods, post-startup loaded save, exit-to-main confirmation, standalone main menu, and main-menu Load Game screenshots are now recorded above. |
 
-The guide still is not a full Timberborn UI atlas. Add settings, new-game, map editor, credits, deeper Mods flows, or destructive load/delete/exit targets only through explicitly assigned QA passes with fresh screenshot evidence.
+Settings, new-game, map editor, credits, and deeper Mods flows were not captured in this reference.
 
-## Refresh Instructions
+## Capture Commands
 
-Refresh this guide whenever Timberborn version, monitor, display resolution, UI scaling, or menu layout changes.
+Coordinates depend on the Timberborn version, display resolution, UI scaling, and current menu layout. These commands record display information and full-display screenshots:
 
-1. Open Timberborn on the target display.
-2. Record display information:
+```bash
+system_profiler SPDisplaysDataType
+screencapture -x docs/reference/screenshots/timberborn-menu-coordinate-guide/<NN-state>.png
+```
 
-   ```bash
-   system_profiler SPDisplaysDataType
-   ```
-
-3. Capture each UI state:
-
-   ```bash
-   screencapture -x docs/reference/screenshots/timberborn-menu-coordinate-guide/<NN-state>.png
-   ```
-
-4. Record coordinates in screenshot pixels, not percentages.
-5. Manually verify at least `pause.load_game -> load_dialog`.
-6. Stop before destructive targets such as delete buttons, save overwrite actions, exiting to desktop, or loading a save unless explicitly assigned.
-7. Update this guide and the assigned ticket notes with screenshot paths, commands, pass/fail results, and boundaries.
+Coordinates in the tables are screenshot pixels.
 
 ## Asset review capture refresh — 2026-09-04
 

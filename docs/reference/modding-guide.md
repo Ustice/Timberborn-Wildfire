@@ -415,31 +415,7 @@ Live QA is not "the build passed". A mod is not validated until the game loads, 
 
 ### Direct Deploy Pipeline
 
-Prometheus showed that a script-owned direct deploy can be faster for agent workflows:
-
-1. Compile C# against the official modding project or imported Timberborn assemblies.
-
-2. Link or copy shippable non-code content into `~/Documents/Timberborn/Mods/<ModName>`.
-
-3. Place the built DLL/PDB under `Scripts/`.
-
-4. Clear logs before launch.
-
-5. Launch Timberborn.
-
-6. Wait for the game process and mod startup log evidence.
-
-7. Run focused live QA.
-
-8. Preserve logs and screenshots as evidence.
-
-Prometheus-specific hardening worth copying:
-
-- One command for test/build/deploy/launch.
-- A shared build/QA lock across worktrees so agents do not clear logs or redeploy during another live QA run.
-- A `--qa` mode that leaves the lock held while live evidence is collected.
-- A command bridge for repeatable in-game actions.
-- A handoff doc that records exact save names, commands, logs, screenshots, and blockers.
+A direct deploy compiles C# against installed Timberborn assemblies and stages the DLL/PDB under `Scripts/` alongside shippable data. Wildfire's [deploy pipeline](timberborn-deploy-pipeline.md) provides the concrete commands, output layout, and build/QA lock behavior. The lock prevents deployment or log clearing during another live session; the command bridge provides repeatable in-game actions.
 
 ## What We Learned From Prometheus
 
@@ -452,7 +428,6 @@ Prometheus-specific hardening worth copying:
 - Debug/admin tools must be as safe as production code. Prometheus replaced unsafe destructive shortcuts with game-owned actions or guarded state transitions.
 - A result named `success` must mean the requested game-state change actually happened. Otherwise return `rejected`, `no_target`, or a specific reason.
 - Deterministic tests catch rule regressions cheaply. Live Timberborn QA catches lifecycle, UI, asset, save/load, and component integration failures that tests cannot.
-- Sibling worktrees are useful for risky cleanup and multi-agent work, but build/deploy/QA must be serialized.
 - Names matter. Descriptive Timberborn-facing type names make search, debugging, and review much easier.
 - Do not keep superseded systems in parallel unless there is a deliberate migration period. Replacement work should remove retired authority paths once the new path is proven.
 

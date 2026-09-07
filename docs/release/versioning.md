@@ -1,10 +1,10 @@
-# Wildfire Versioning And Changelog Discipline
+# Wildfire Release Versions
 
-This page owns the lightweight release version rules for Wildfire. Keep it boring: one manifest version, one package version, one tag, and one changelog entry must agree before a release package is handed off.
+The manifest version, package version, release tag, and changelog entry identify the same release.
 
 ## Version Sources
 
-- `scripts/deploy-timberborn-mod.ts` owns the generated Timberborn `manifest.json` version.
+- `scripts/release-manifest.ts` defines the version used by deployment and package validation.
 - `CHANGELOG.md` owns the human-readable release notes for that same version.
 - `bun run release:package` owns the packaged artifact name and ZIP validation.
 - Release tags should be `v<manifest-version>`, for example `v0.1.0.0`.
@@ -24,11 +24,11 @@ The first three components follow normal release meaning. The fourth component k
 - Prerelease or internal validation builds: increment the fourth component, for example `0.1.0.1`, when the package needs a distinct installable identity before the public release.
 - Patch releases: increment the third component and reset the fourth component to `0`, for example `0.1.1.0`, for compatible fixes or release-note corrections.
 - Minor releases: increment the second component and reset patch/build to `0`, for example `0.2.0.0`, for new player-facing behavior, new settings, or meaningful compatibility changes.
-- Release-candidate builds: use the intended release version in the manifest and changelog, then tag the candidate outside the shipped manifest name only if the release coordinator explicitly asks for it. Do not invent `rc` text inside `manifest.json`; Timberborn expects four numeric components.
+- Release-candidate builds use the intended release version in the manifest and changelog. Candidate labels belong outside `manifest.json`; Timberborn expects four numeric components.
 
-## Release Checklist
+## Package Validation
 
-1. Update the version in `scripts/deploy-timberborn-mod.ts`.
+1. Update the version in `scripts/release-manifest.ts`.
 
 2. Add or promote the matching `CHANGELOG.md` entry.
 

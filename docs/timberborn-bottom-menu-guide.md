@@ -109,18 +109,10 @@ The composite uses labeled crops from the 1920 x 1080 source screenshots so root
 - The version/mod button was clicked only far enough to identify that it opens the pause/version panel.
 - `30-alt-shift-z-attempt-pause-menu.png` and `32-developer-version-panel.png` are retained as diagnostic captures from the shortcut investigation but are not part of the main coverage composite.
 
-## Refresh Instructions
+## Capture Commands
 
-Refresh this guide whenever Timberborn version, display resolution, UI scaling, loaded faction, mod set, or bottom toolbar layout changes.
+Toolbar layout depends on version, faction, enabled mods, display resolution, and UI scaling. The captures above use 1920 × 1080. Developer mode (`Alt-Shift-Z`) and debug panels (`Alt-Shift-X`) are separate surfaces.
 
-1. Open Timberborn on the target display.
-2. Load the target save at 1920 x 1080.
-3. For each visible bottom toolbar item, click the item once and capture:
-
-   ```bash
-   screencapture -x docs/reference/screenshots/timberborn-bottom-menu-guide/<NN-name>.png
-   ```
-
-4. Capture `Shift-Alt-Z` developer mode and `Shift-Alt-X` debug mode separately.
-5. Regenerate the composite after any source screenshot changes.
-6. Update the assigned ticket with coverage, dimensions, visual inspection, and blockers.
+```bash
+screencapture -x docs/reference/screenshots/timberborn-bottom-menu-guide/<NN-name>.png
+```

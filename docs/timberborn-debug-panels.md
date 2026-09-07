@@ -70,10 +70,7 @@ Useful for Wildfire QA:
 - `Dump mesh metrics`, `Automation: Log partitions`, and multithreading snapshots may help diagnose performance or rendering symptoms without directly testing fire rules.
 - `Reset debugging panels position` is useful when panels drift off the visible screen during repeated captures.
 
-Unsafe for routine Wildfire QA:
-
-- Inventory, science, season, water, speed, and character-kill actions mutate the save or simulation timing.
-- Do not use mutation actions in acceptance evidence unless the ticket explicitly requires that state change and the save can be discarded.
+Inventory, science, season, water, speed, and character-kill actions mutate the save or simulation timing.
 
 ## Debug Mode Panel
 
@@ -150,19 +147,4 @@ Useful for Wildfire QA:
 - Weather and time-related singletons can help explain live validation context, especially drought and hazardous-weather conditions.
 - `EventBus`, `TickService`, and `TickProgressService` are useful orientation points when diagnosing whether a live mod adapter is receiving game-tick context.
 
-Unsafe or incomplete for routine Wildfire QA:
-
-- Do not expand or mutate object properties unless a ticket explicitly calls for object-level inspection. The current evidence only verifies the singleton list, not the safety of deeper object-debugger controls.
-- Object debugger evidence is contextual. Always pair it with deterministic Wildfire tests or CLI scenarios when validating simulation rules.
-
-## QA Use
-
-For routine Wildfire live validation:
-
-1. Load the test save and capture a baseline view.
-2. Toggle developer mode with `Alt-Shift-Z` only when developer affordances are needed.
-3. Open debug panels with `Alt-Shift-X` when inspecting performance, weather, terrain, water, or object-service context.
-4. Prefer read-only inspection: screenshots, visible metrics, filters, and logs.
-5. Avoid mutation controls unless the ticket names the action and the evidence notes that the save state was intentionally changed.
-
-Debug-panel evidence can support live Timberborn validation, but it does not replace host-agnostic Wildfire simulation tests.
+The captures verify the singleton list; deeper object-property controls were not exercised.
