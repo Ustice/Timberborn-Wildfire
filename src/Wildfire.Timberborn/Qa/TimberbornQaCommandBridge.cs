@@ -2003,6 +2003,7 @@ public sealed record TimberbornQaCommandState(
     int? BeaverFieldBehaviorDecisionsSkippedCooldown = null,
     int? BeaverFieldBehaviorDecisionsSkippedBatch = null,
     int? BeaverFieldBehaviorFailedDecisions = null,
+    int? BeaverFieldBehaviorUnsupportedDecisions = null,
     int? BeaverFieldBehaviorRecoveryActions = null,
     int? BeaverFieldBehaviorSmokeExposedSamples = null,
     int? BeaverFieldBehaviorSmokeExposureAccumulatedSamples = null,
@@ -2388,6 +2389,7 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_behavior_decisions_skipped_cooldown={FormatNumber(State.BeaverFieldBehaviorDecisionsSkippedCooldown)} " +
         $"beaver_field_behavior_decisions_skipped_batch={FormatNumber(State.BeaverFieldBehaviorDecisionsSkippedBatch)} " +
         $"beaver_field_behavior_failed_decisions={FormatNumber(State.BeaverFieldBehaviorFailedDecisions)} " +
+        $"beaver_field_behavior_unsupported_decisions={FormatNumber(State.BeaverFieldBehaviorUnsupportedDecisions)} " +
         $"beaver_field_behavior_recovery_actions={FormatNumber(State.BeaverFieldBehaviorRecoveryActions)} " +
         $"beaver_field_behavior_smoke_exposed_samples={FormatNumber(State.BeaverFieldBehaviorSmokeExposedSamples)} " +
         $"beaver_field_behavior_smoke_exposure_accumulated_samples={FormatNumber(State.BeaverFieldBehaviorSmokeExposureAccumulatedSamples)} " +

@@ -130,6 +130,7 @@ public enum TimberbornBeaverFieldBehaviorActuatorStatus
 {
     Applied = 1,
     Failed = 2,
+    Unsupported = 3,
 }
 
 public readonly record struct TimberbornBeaverFieldBehaviorDecision(
@@ -156,6 +157,8 @@ public readonly record struct TimberbornBeaverFieldBehaviorActuatorResult(
         TimberbornBeaverFieldBehaviorActuatorStatus.Applied,
         "applied");
 
+    public static TimberbornBeaverFieldBehaviorActuatorResult Unsupported(string reason) => new(
+        TimberbornBeaverFieldBehaviorActuatorStatus.Unsupported, reason);
 }
 
 public interface ITimberbornBeaverFieldBehaviorActuator
@@ -232,6 +235,9 @@ public sealed class TimberbornWorkerSpeedBeaverFieldBehaviorActuator : ITimberbo
 
     public TimberbornBeaverFieldBehaviorActuatorResult Apply(TimberbornBeaverFieldBehaviorDecision decision)
     {
+        if (decision.Action == TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt)
+            return TimberbornBeaverFieldBehaviorActuatorResult.Unsupported("fire_heat_actuation_unavailable");
+
         return IsSmokeReactionAction(decision.Action)
             ? ToActuatorResult(_workerSpeedAdapter.ApplySmokeReaction(
                 decision.BeaverId,
@@ -520,6 +526,7 @@ public readonly record struct TimberbornBeaverFieldBehaviorCounters(
     int DecisionsSkippedCooldown,
     int DecisionsSkippedBatch,
     int FailedDecisions,
+    int UnsupportedDecisions,
     int RecoveryActions,
     int SmokeExposedSamples,
     int SmokeExposureAccumulatedSamples,
@@ -578,6 +585,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private int _decisionsSkippedCooldown;
     private int _decisionsSkippedBatch;
     private int _failedDecisions;
+    private int _unsupportedDecisions;
     private int _recoveryActions;
     private int _smokeExposedSamples;
     private int _smokeExposureAccumulatedSamples;
@@ -621,6 +629,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         DecisionsSkippedCooldown: _decisionsSkippedCooldown,
         DecisionsSkippedBatch: _decisionsSkippedBatch,
         FailedDecisions: _failedDecisions,
+        UnsupportedDecisions: _unsupportedDecisions,
         RecoveryActions: _recoveryActions,
         SmokeExposedSamples: _smokeExposedSamples,
         SmokeExposureAccumulatedSamples: _smokeExposureAccumulatedSamples,
@@ -675,17 +684,17 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             .ToList()
             .ForEach(entry => Recover(entry, tick));
 
-        TimberbornBeaverFieldExposureClassification[] exposedClassifications = classifications
+        // Existing successful state provides fair order across advancing ticks and saves.
+        // Unsupported and cooling actors never spend the supported-application budget.
+        var exposedClassifications = classifications
             .Where(static classification => classification.HasExposure)
-            .OrderBy(static classification => classification.BeaverId, StringComparer.Ordinal)
+            .OrderBy(classification => _statesByBeaverId.ContainsKey(classification.BeaverId) ? 1 : 0)
+            .ThenBy(classification => _statesByBeaverId.TryGetValue(classification.BeaverId, out var state) ? state.LastDecisionTick : 0)
+            .ThenBy(static classification => classification.BeaverId, StringComparer.Ordinal)
             .ToArray();
-        _decisionsSkippedBatch += Math.Max(0, exposedClassifications.Length - Options.MaxDecisionsPerDispatch);
-
-        exposedClassifications
-            .Take(Options.MaxDecisionsPerDispatch)
-            .Select(classification => CreateDecision(classification, tick))
-            .ToList()
-            .ForEach(decision => ApplyDecision(decision, tick));
+        int applied = 0;
+        foreach (var classification in exposedClassifications)
+            if (ApplyDecision(CreateDecision(classification, tick), tick, applied < Options.MaxDecisionsPerDispatch)) applied++;
 
         LogState(tick, "dispatched");
     }
@@ -731,6 +740,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _decisionsSkippedCooldown = 0;
         _decisionsSkippedBatch = 0;
         _failedDecisions = 0;
+        _unsupportedDecisions = 0;
         _recoveryActions = 0;
         _smokeExposedSamples = 0;
         _smokeExposureAccumulatedSamples = 0;
@@ -751,14 +761,20 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _actuator.Clear();
     }
 
-    private void ApplyDecision(TimberbornBeaverFieldBehaviorDecision decision, uint? tick)
+    private bool ApplyDecision(TimberbornBeaverFieldBehaviorDecision decision, uint? tick, bool budgetAvailable)
     {
         _decisionsEvaluated++;
         _smokeExposedSamples += HasSmokeReactionExposure(decision) ? 1 : 0;
+        CountFireHeatObservation(decision);
         if (IsCoolingDown(decision.BeaverId, tick))
         {
             _decisionsSkippedCooldown++;
-            return;
+            return false;
+        }
+        if (!budgetAvailable)
+        {
+            _decisionsSkippedBatch++;
+            return false;
         }
 
         bool hasPreviousState = _statesByBeaverId.TryGetValue(
@@ -781,8 +797,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         };
 
         TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Apply(progressedDecision);
-        if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Failed)
+        if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Unsupported)
         {
+            _unsupportedDecisions++;
+            return false;
+        }
+        if (result.Status != TimberbornBeaverFieldBehaviorActuatorStatus.Applied)
+        {
+            _failedDecisions++;
             throw new InvalidOperationException(
                 $"Beaver field behavior actuator failed {progressedDecision.Action} for {progressedDecision.BeaverId}: {result.Reason}.");
         }
@@ -799,7 +821,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _lastDecisionTick = tick;
         CountAppliedVariant(progressedDecision);
         CountSmokeProgression(progressedDecision, previousExposedSamples, exposedSamples);
-        CountFireHeatProgression(progressedDecision, previousFireHeatExposedSamples, fireHeatExposedSamples);
+        return true;
     }
 
     private bool IsCoolingDown(string beaverId, uint? tick)
@@ -813,8 +835,14 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
     private void Recover(TimberbornBeaverFieldBehaviorStateEntry entry, uint? tick)
     {
         TimberbornBeaverFieldBehaviorActuatorResult result = _actuator.Recover(entry, tick);
-        if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Failed)
+        if (result.Status == TimberbornBeaverFieldBehaviorActuatorStatus.Unsupported)
         {
+            _unsupportedDecisions++;
+            return;
+        }
+        if (result.Status != TimberbornBeaverFieldBehaviorActuatorStatus.Applied)
+        {
+            _failedDecisions++;
             throw new InvalidOperationException(
                 $"Beaver field behavior actuator failed recovery for {entry.BeaverId}: {result.Reason}.");
         }
@@ -890,10 +918,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
                 : 0;
     }
 
-    private void CountFireHeatProgression(
-        TimberbornBeaverFieldBehaviorDecision decision,
-        int previousExposedSamples,
-        int exposedSamples)
+    private void CountFireHeatObservation(TimberbornBeaverFieldBehaviorDecision decision)
     {
         if (decision.Variant != TimberbornBeaverFieldBehaviorVariant.FireHeat)
         {
@@ -903,11 +928,6 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         _fireHeatExposedBeavers++;
         bool activeFlameContact = decision.MaxFire >= Options.ActiveFlameContactThreshold;
         _fireHeatActiveFlameContacts += activeFlameContact ? 1 : 0;
-        if (decision.BurnExposureCells > 0)
-        {
-            throw new InvalidOperationException(
-                $"Fire heat beaver avoidance is not implemented for beaver {decision.BeaverId}.");
-        }
     }
 
     private void CountFireHeatRecovery(TimberbornBeaverFieldBehaviorStateEntry entry, int recoveredExposedSamples)
@@ -1054,6 +1074,7 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
             $"decisions_skipped_cooldown={counters.DecisionsSkippedCooldown} " +
             $"decisions_skipped_batch={counters.DecisionsSkippedBatch} " +
             $"failed_decisions={counters.FailedDecisions} " +
+            $"unsupported_decisions={counters.UnsupportedDecisions} " +
             $"recovery_actions={counters.RecoveryActions} " +
             $"smoke_exposed_samples={counters.SmokeExposedSamples} " +
             $"smoke_exposure_accumulated_samples={counters.SmokeExposureAccumulatedSamples} " +

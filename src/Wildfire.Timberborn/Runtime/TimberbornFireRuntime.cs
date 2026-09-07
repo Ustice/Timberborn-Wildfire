@@ -1310,6 +1310,7 @@ public sealed partial class TimberbornFireRuntime :
             BeaverFieldBehaviorDecisionsSkippedCooldown: beaverFieldBehaviorCounters.DecisionsSkippedCooldown,
             BeaverFieldBehaviorDecisionsSkippedBatch: beaverFieldBehaviorCounters.DecisionsSkippedBatch,
             BeaverFieldBehaviorFailedDecisions: beaverFieldBehaviorCounters.FailedDecisions,
+            BeaverFieldBehaviorUnsupportedDecisions: beaverFieldBehaviorCounters.UnsupportedDecisions,
             BeaverFieldBehaviorRecoveryActions: beaverFieldBehaviorCounters.RecoveryActions,
             BeaverFieldBehaviorSmokeExposedSamples: beaverFieldBehaviorCounters.SmokeExposedSamples,
             BeaverFieldBehaviorSmokeExposureAccumulatedSamples: beaverFieldBehaviorCounters.SmokeExposureAccumulatedSamples,
