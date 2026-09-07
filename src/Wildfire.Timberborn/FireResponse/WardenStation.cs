@@ -8,13 +8,18 @@ using Timberborn.Navigation;
 using Timberborn.TemplateInstantiation;
 using Timberborn.WorkSystem;
 using Timberborn.BehaviorSystem;
+using Timberborn.Carrying;
+using Timberborn.ResourceCountingSystem;
+using Timberborn.Common;
 
 namespace Wildfire.Timberborn.FireResponse;
 
 public sealed record WildfireWardenStationSpec : ComponentSpec;
 
-public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFinishedStateListener
+public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFinishedStateListener, IGoodProcessor
 {
+    private static readonly List<GoodAmount> NoProcessedGoods = new();
+    public ReadOnlyList<GoodAmount> ProcessedGoods => NoProcessedGoods.AsReadOnlyList();
     public Inventory Inventory { get; private set; } = null!;
     public Workplace Workplace { get; private set; } = null!;
     public Accessible Access { get; private set; } = null!;
@@ -34,7 +39,17 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
     {
         if (!Operational || !Inventory.Enabled) return Decision.ReleaseNow();
         var executor = agent.GetComponent<WardenExecutor>();
-        if (!executor.TryLaunch(this)) { Status = executor.Status; return Decision.ReleaseNow(); }
+        if (!executor.TryLaunch(this))
+        {
+            Status = executor.Status;
+            if (!Inventory.HasUnreservedStock(WardenEquipment.Bucket) &&
+                !agent.GetComponent<GoodCarrier>().IsCarrying &&
+                !agent.GetComponent<GoodReserver>().HasReservedStock &&
+                !agent.GetComponent<GoodReserver>().HasReservedCapacity &&
+                agent.GetComponent<CarrierInventoryFinder>().TryCarryFromAnyInventoryLimited(WardenEquipment.WaterId, Inventory, 1))
+                Status = "Fetching reserve water";
+            return Decision.ReleaseNow();
+        }
         Status = "Responding";
         return Decision.ReleaseWhenFinished(executor);
     }

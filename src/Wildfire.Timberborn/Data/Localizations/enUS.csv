@@ -2,3 +2,5 @@ ID,Text,Comment
 Good.FertileAsh.DisplayName,Fertile ash,
 Good.FertileAsh.PluralDisplayName,Fertile ash,
 NaturalResource.FertileAshField.DisplayName,Fertile ash,
+Wildfire.WardenStation.Name,Warden station (prototype),
+Wildfire.WardenStation.Description,One warden fetches finite water and approaches reachable fires. Prototype requires live validation.,

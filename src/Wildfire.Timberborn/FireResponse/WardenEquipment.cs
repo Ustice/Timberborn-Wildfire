@@ -11,19 +11,19 @@ namespace Wildfire.Timberborn.FireResponse;
 
 /// <summary>A private native inventory, not a second water counter or a carrier delivery job.</summary>
 public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitializableEntity,
-    IPostLoadableEntity, IDeletableEntity, IGoodProcessor
+    IPostLoadableEntity, IDeletableEntity
 {
     public const string WaterId = "Water";
     public static readonly GoodAmount Bucket = new(WaterId, 1);
-    private static readonly List<GoodAmount> NoProcessedGoods = new();
     private Citizen _citizen = null!;
     private DistrictInventoryRegistry? _registry;
     private DistrictResourceCounter? _counter;
     public Inventory Inventory { get; private set; } = null!;
-    public ReadOnlyList<GoodAmount> ProcessedGoods => NoProcessedGoods.AsReadOnlyList();
+    private EquipmentCounter _equipmentCounter = null!;
     public bool Loaded => Inventory.AmountInStock(WaterId) == 1;
 
-    public void InitializeInventory(Inventory inventory) => Inventory = inventory;
+    public void InitializeInventory(Inventory inventory)
+    { Inventory = inventory; _equipmentCounter = new EquipmentCounter(inventory); }
 
     public void Awake()
     {
@@ -49,12 +49,12 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
         _counter = _citizen.AssignedDistrict.GetComponent<DistrictResourceCounter>();
         // Even private inventory registration notifies native production/consumption observers.
         _registry.Add(Inventory);
-        _counter.Add(this);
+        _counter.Add(_equipmentCounter);
     }
 
     private void UnregisterDistrict()
     {
-        _counter?.Remove(this);
+        _counter?.Remove(_equipmentCounter);
         _registry?.Remove(Inventory);
         _counter = null;
         _registry = null;
@@ -80,6 +80,15 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
     }
 
     public void ConsumeBucket() => Inventory.TakeConsumed(Bucket);
+
+    // A plain proxy avoids the native IGoodProcessor component decorator, which requires a DistrictBuilding.
+    private sealed class EquipmentCounter : IGoodProcessor
+    {
+        private static readonly List<GoodAmount> Empty = new();
+        public EquipmentCounter(Inventory inventory) => Inventory = inventory;
+        public Inventory Inventory { get; }
+        public ReadOnlyList<GoodAmount> ProcessedGoods => Empty.AsReadOnlyList();
+    }
 }
 
 public sealed class WardenEquipmentInventoryInitializer : IDedicatedDecoratorInitializer<WardenEquipment, Inventory>

@@ -35,6 +35,8 @@ public sealed class WildfireConfigurator : Configurator
         Bind<TimberbornFertileAshFieldWorkplaceBehavior>().AsTransient();
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
+        Bind<WardenDeliveryService>().AsSingleton();
+        Bind<WardenFireField>().AsSingleton();
         Bind<WardenStation>().AsTransient();
         Bind<WardenEquipment>().AsTransient();
         Bind<WardenExecutor>().AsTransient();

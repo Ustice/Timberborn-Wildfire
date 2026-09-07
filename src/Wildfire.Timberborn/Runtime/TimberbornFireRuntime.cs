@@ -15,7 +15,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Runtime;
 
-public sealed class TimberbornFireRuntime :
+public sealed partial class TimberbornFireRuntime :
     ILoadableSingleton,
     IUnloadableSingleton,
     IUpdatableSingleton,
