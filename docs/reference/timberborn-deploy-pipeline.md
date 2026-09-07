@@ -29,7 +29,7 @@ The manifest identity is:
 
 The identity is shared by staging and package validation through [release-manifest.ts](../../scripts/release-manifest.ts). The minimum game version reflects the native API target; it does not replace packaged-artifact validation in the game.
 
-Internal repository files are not copied. In particular, `docs/`, `kanban/`, source files, test files, and agent notes stay out of the deployed mod tree.
+Internal repository files are not copied. In particular, `docs/`, source files, test files, and agent notes stay out of the deployed mod tree.
 
 ## Prerequisites
 

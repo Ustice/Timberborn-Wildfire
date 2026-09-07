@@ -6,7 +6,6 @@ Use this page when you know the concept you need to change, but not the file yet
 
 - Product and simulation design: [DESIGN.md](DESIGN.md).
 - Durable code ownership: [ARCHITECTURE.md](ARCHITECTURE.md).
-- Task-state routing: [HANDOFF.md](HANDOFF.md).
 - Validation commands and evidence expectations: [TEST_PLAN.md](TEST_PLAN.md).
 - Active backlog: [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues).
 

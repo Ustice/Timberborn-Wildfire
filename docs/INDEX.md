@@ -9,7 +9,6 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Source map](source-map.md): concepts mapped to code and tests.
 - [Validation](TEST_PLAN.md): portable checks, shader execution, native game QA, and evidence.
 - [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues): active backlog and acceptance state.
-- [Issue workflow](../kanban/github-issue-workflow.md): coordinating issue-backed work.
 
 ## Focused references
 
@@ -22,6 +21,6 @@ Use the entry point that matches the work. Source and fresh validation establish
 
 ## Design records and history
 
-The [2026-09-04 archive](history/2026-09-04/README.md) preserves earlier design plans, release descriptions, milestone lists, handoffs, and detailed validation evidence. Their original observation dates remain intact. Archive dates do not renew old test results or authorize old procedural instructions.
+The [design records](history/2026-09-04/README.md) preserve earlier gameplay rationale, implementation descriptions, and dated technical findings. They describe their original code and environment, not necessarily the current implementation.
 
-Earlier file-kanban tickets and evidence manifests live on branch `archive/file-kanban-2026-05-23`; see the [kanban archive guide](../kanban/README.md). Active task state belongs in the worktree's ignored `CONTEXT.md`, with durable results moved into issues, PRs, or dated reports.
+Deleted process documents remain in Git history. Earlier file-kanban tickets and evidence manifests are on branch `archive/file-kanban-2026-05-23`.

@@ -92,6 +92,8 @@ bun scripts/invoke-timberborn-command.ts qa-readiness --wait=6 --require-advance
 
 Correlate command response, advancing tick, fresh `Player.log`, and the specific world effect. Runtime initialization distinguishes waiting, ready, unsupported, and failed states; unsupported/failed worlds do not repeatedly import on every update. Reset/load deliberately when retesting changed initialization prerequisites. Capture and inspect the whole scene for visual work. Counters establish execution; they do not establish rendering quality. For persistence changes, exercise save, reload, and the affected state rather than relying on serializer round trips alone.
 
+Last-dispatch counters can return to zero after an effect has occurred. The `last_positive_*` telemetry and the original dispatch log retain evidence that a later status sample may miss.
+
 If startup or transport fails, inspect process and log state before retrying. Distinguish game failure, tool failure, and a missing prerequisite. [QA tooling](qa-tooling.md) documents automation commands and optional reliability analysis; [UI references](reference/timberborn-ui.md) and [debug panels](timberborn-debug-panels.md) support targeted inspection. Old screenshots provide landmarks, not current coordinates.
 
 ## Focused regression boundaries
@@ -105,9 +107,3 @@ If startup or transport fails, inspect process and log state before retrying. Di
 ## Release validation
 
 Packaging and publication have their own [versioning](release/versioning.md) and [Workshop](release/workshop.md) runbooks. Validate the packaged artifact in the target game environment; package contents alone do not establish platform support. An authenticated upload is a separate action from generating or inspecting a package.
-
-## Evidence and history
-
-Put durable acceptance results with their GitHub issue or a dated evidence report. Keep this document focused on repeatable validation rather than accumulating every run. Record local artifact paths when evidence cannot be committed, and identify missing artifacts honestly.
-
-The [archived test plan](history/2026-09-04/TEST_PLAN.md) retains detailed May 2026 scenarios, release and save-lifecycle evidence, command examples, screenshots, and known failures. Its frozen claims and issue statuses are historical. Refresh both source and environment before reusing a procedure.
