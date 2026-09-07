@@ -9,8 +9,9 @@ public sealed class TimberbornOwnedMaterialSnapshot
     private readonly FireSimSnapshot _simulation;
     private readonly TimberbornMaterialBindingSnapshot _bindings;
 
-    public TimberbornOwnedMaterialSnapshot(FireSimSnapshot simulation, TimberbornMaterialBindingSnapshot bindings)
+    public TimberbornOwnedMaterialSnapshot(FireSimSnapshot simulation, TimberbornMaterialBindingSnapshot bindings, TimberbornOwnedConsequenceSnapshot? history = null)
     {
+        History = history;
         _simulation = FireSimSnapshotValidation.ValidateAndClone(simulation);
         var registry = new TimberbornNativeMaterialRegistry(_simulation.Grid, Array.Empty<int>());
         registry.RestoreBindings(bindings);
@@ -20,6 +21,9 @@ public sealed class TimberbornOwnedMaterialSnapshot
         if (_simulation.MaterialAuthority.KnownSlots.Any(identity => !available.Contains(identity)))
             throw new ArgumentException("Every simulator material identity requires an exact retained native Guid/local-slot binding.");
     }
+
+    public TimberbornOwnedConsequenceSnapshot? History { get; }
+    public OwnedConsequenceHistoryCapability HistoryCapability => History is null ? OwnedConsequenceHistoryCapability.Unavailable : OwnedConsequenceHistoryCapability.Complete;
 
     public FireSimSnapshot CaptureSimulation() => FireSimSnapshotValidation.ValidateAndClone(_simulation);
     public TimberbornMaterialBindingSnapshot Bindings => _bindings;

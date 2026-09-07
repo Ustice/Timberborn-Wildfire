@@ -7,7 +7,7 @@ namespace Wildfire.Timberborn.Consequences;
 /// One owned batch: complete identity preflight, one body reducer, then concrete family effects under
 /// the runtime's shared save guard. No legacy cell-routing or family wrapper is called.
 /// </summary>
-public sealed class TimberbornOwnedDeltaConsumer
+public sealed partial class TimberbornOwnedDeltaConsumer
 {
     private readonly TimberbornOwnedBurnOrigins _origins;
     private readonly TimberbornBurnDamageService _damage;

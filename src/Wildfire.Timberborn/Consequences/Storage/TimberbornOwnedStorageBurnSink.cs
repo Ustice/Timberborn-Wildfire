@@ -13,6 +13,8 @@ internal sealed class TimberbornOwnedStorageBurnSink
     internal TimberbornOwnedStorageBurnSink(ITimberbornOwnedStorageInventoryApi inventory,
         ITimberbornStoredGoodHazardConsequenceSink hazards, TimberbornResourceFuelCatalog catalog)
     { _inventory = inventory; _hazards = hazards; _catalog = catalog; }
+    internal OwnedStorageCredit[] CaptureCredit(IReadOnlyList<OwnedConsequenceOwner> owners) => _credit.Capture(owners, _catalog);
+    internal void RestoreCredit(TimberbornOwnedConsequenceSnapshot history) => _credit.Restore(history, _catalog);
     internal bool HasTransientFuelCredit => _credit.HasCredit;
     internal bool IsLive(TimberbornOwnedBurnDecision item) =>
         _inventory.Read(Owner(item)).Status != TimberbornOwnedInventoryStatus.NotLive;

@@ -1,6 +1,6 @@
 namespace Wildfire.Timberborn.Consequences;
 
-public sealed class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConsequenceSink
+public sealed partial class TimberbornTreeBurnConsequenceSink : ITimberbornTreeBurnConsequenceSink
 {
     private readonly TimberbornBurnDamageService _burnDamageService;
     private readonly ITimberbornTreeBurnConsequenceApi _consequenceApi;

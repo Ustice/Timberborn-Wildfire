@@ -2,7 +2,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Consequences;
 
-public sealed class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITimberbornBurnDamageTargetStateProvider
+public sealed partial class TimberbornBurnDamageService : ITimberbornBurnDamageSink, ITimberbornBurnDamageTargetStateProvider
 {
     private readonly TimberbornBurnDamageDescriptorCatalog _descriptorCatalog;
     private readonly TimberbornBurnDamageCapacityCalculator _capacityCalculator;

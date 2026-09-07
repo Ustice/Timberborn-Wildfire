@@ -224,6 +224,8 @@ public static class TimberbornWildfirePersistenceCodec
         bool legacy = snapshot.PersistenceVersion == TimberbornWildfirePersistenceSnapshot.CurrentPersistenceVersion && snapshot.OwnedMaterial is null;
         bool owned = snapshot.PersistenceVersion == TimberbornWildfirePersistenceSnapshot.OwnedMaterialPersistenceVersion &&
             snapshot.OwnedMaterial is not null && snapshot.FireSim is null;
+        if (snapshot.OwnedMaterial?.History is { } history)
+            history.ValidateAssociation(snapshot.OwnedMaterial.CaptureSimulation(), snapshot.OwnedMaterial.Bindings, snapshot.Consequences);
         if (!legacy && !owned) throw new FormatException("WF1 requires legacy fire state; WF2 requires one paired owned-material payload and forbids FIRE.");
     }
 

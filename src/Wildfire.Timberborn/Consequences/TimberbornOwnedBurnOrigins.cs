@@ -24,6 +24,11 @@ internal sealed class TimberbornOwnedBurnOrigins
         _bindings[entityId] = next; // Kept when an entity dies: old origins must never select replacement owners.
     }
 
+    internal OwnedConsequenceOwner[] Capture(TimberbornBurnDamageService damage) => _bindings.Select(pair =>
+        damage.TryGetState(pair.Value.Key, out _) ? new OwnedConsequenceOwner(pair.Key, pair.Value.Family,
+            OwnedBodyRetention.RetainedBody, damage.CaptureOwnedProfile(pair.Value.Key)) :
+            new OwnedConsequenceOwner(pair.Key, pair.Value.Family, OwnedBodyRetention.RetiredNativeOwner, null)).ToArray();
+
     internal TimberbornOwnedBurnBatch Resolve(ReadOnlySpan<CellDelta> deltas)
     {
         var resolved = new List<TimberbornOwnedBurnDecision>();
