@@ -74,3 +74,5 @@ Stockpile identity and inventory role remain canonical Stockpile while its physi
 Structure. Both the aggregate and standalone owned-storage route accept that actual native registration;
 missing inventory cannot suppress body damage. Stockpiles also count toward unavailable structure
 rollback until exact closure/reconstruction is implemented. This correction changes no body capacity.
+
+Validation at final source: **882 native tests passed**, zero failures/skips. No game or Unity launch.

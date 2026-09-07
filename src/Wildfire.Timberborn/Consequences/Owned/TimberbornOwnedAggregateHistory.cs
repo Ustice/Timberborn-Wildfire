@@ -9,6 +9,8 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         _guard.ThrowIfSaveUnsafe();
         if (_consuming) throw new InvalidOperationException("Cannot capture consequence history during delivery.");
         var owners = _origins.Capture(_damage);
+        if (owners.Any(owner => owner.Retention == OwnedBodyRetention.RetiredNativeOwner && _bodies.IsLive(owner.EntityId)))
+            throw new InvalidOperationException("A live native owner lost its body definition; it cannot be saved as a tombstone.");
         var natural = owners.Where(owner => owner.Family is NativeBurnTargetFamily.Tree or NativeBurnTargetFamily.Crop)
             .Select(owner => owner.Family == NativeBurnTargetFamily.Tree ? _trees.CaptureProgress(owner) : _crops.CaptureProgress(owner));
         var history = new TimberbornOwnedConsequenceSnapshot(owners, natural, _storage.CaptureCredit(owners));

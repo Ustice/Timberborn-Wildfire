@@ -79,6 +79,14 @@ public sealed class OwnedWorldSessionTests
         Assert.False(f.Guard.IsIndeterminate);
     }
     [Fact]
+    public void LostLiveBodyDefinitionCannotBeCapturedAsRetiredHistory()
+    {
+        var f=new F();
+        f.Damage.RemoveTarget(new(TimberbornBurnDamageIdentity.ForEntity(f.Registrations[0].EntityId,NativeBurnTargetFamily.Tree)));
+        Assert.Throws<InvalidOperationException>(()=>f.Consumer.CaptureHistory());
+        Assert.False(f.Guard.IsIndeterminate);
+    }
+    [Fact]
     public void MaterialOnlyRestoreCannotInvokeAnyFactory()
     {
         var saved = OwnedMaterialPersistenceTests.Fixture(); var f=new F();
