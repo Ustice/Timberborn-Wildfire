@@ -138,7 +138,7 @@ namespace Wildfire.UnityBatchmode
                         LogPhase("external-changes", "ok", "tick=" + tick + " count=" + changes.Length);
                     }
 
-                    uint[] materialHeader = material.ReadHeader(appliedWords);
+                    uint[] materialHeader = material.ReadHeader();
                     uint[] materialReceipts = material.ReadReceipts();
                     Bind(
                         shader,

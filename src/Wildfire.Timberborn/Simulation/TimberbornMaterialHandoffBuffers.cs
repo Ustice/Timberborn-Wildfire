@@ -25,10 +25,14 @@ internal sealed class TimberbornMaterialHandoffBuffers : IDisposable
         if (batch.Requests.Count > _maximum) throw new ArgumentOutOfRangeException(nameof(batch));
         if (batch.Requests.Count > Requests.count) Resize(batch.Requests.Count);
         Requests.SetData(FireSimMaterialHandoffProtocol.EncodeRequests(batch));
+        Receipts.SetData(new uint[FireSimMaterialHandoffProtocol.ReceiptWords]);
     }
-    public uint[] ReadReceipts(int count)
+    public uint[] ReadHeader() => ReadWords(1).Take(FireSimMaterialHandoffProtocol.HeaderWords).ToArray();
+    public uint[] ReadReceipts(int count) => ReadWords(checked(count + 1)).Skip(FireSimMaterialHandoffProtocol.ReceiptWords).ToArray();
+    private uint[] ReadWords(int rows)
     {
-        uint[] words = new uint[checked(count * FireSimMaterialHandoffProtocol.ReceiptWords)];
+        uint[] words = new uint[checked(rows * FireSimMaterialHandoffProtocol.ReceiptWords)];
+        // Read from raw offset zero: the header shares the 40-byte row stride, not a separate buffer.
         Receipts.GetData(words, 0, 0, words.Length);
         return words;
     }
@@ -41,9 +45,12 @@ internal sealed class TimberbornMaterialHandoffBuffers : IDisposable
     }
     private void Resize(int count)
     {
+        if (count <= 0 || count > _maximum) throw new ArgumentOutOfRangeException(nameof(count));
+        int receiptRows = checked(count + 1);
+        _ = checked(receiptRows * FireSimMaterialHandoffProtocol.ReceiptWords);
         ComputeBuffer requests = new(count, FireSimMaterialHandoffProtocol.RequestStrideBytes, ComputeBufferType.Structured);
         ComputeBuffer receipts;
-        try { receipts = new(count, FireSimMaterialHandoffProtocol.ReceiptStrideBytes, ComputeBufferType.Structured); }
+        try { receipts = new(receiptRows, FireSimMaterialHandoffProtocol.ReceiptStrideBytes, ComputeBufferType.Structured); }
         catch { requests.Release(); throw; }
         Requests?.Release();
         Receipts?.Release();

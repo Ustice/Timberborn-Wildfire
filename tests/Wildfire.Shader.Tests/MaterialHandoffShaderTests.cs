@@ -166,7 +166,8 @@ public sealed class MaterialHandoffShaderTests
     private static FireSimMaterialHandoffReceipt Receipt(ShaderSnapshotCapture capture, FireSimMaterialHandoffBatch batch)
     {
         var tick = Assert.Single(capture.Ticks);
-        Assert.Equal(tick.MaterialHeader, tick.AppliedChangeWords![^4..]); // Same final 16-byte marker slot read by production.
+        Assert.Equal(new uint[] { 0, FireSimMaterialHandoffProtocol.BatchMarkerMask, (uint)batch.Requests.Count, batch.Token },
+            tick.AppliedChangeWords![^4..]); // The material input remains unchanged; row zero carries its header.
         return FireSimMaterialHandoffProtocol.DecodeReceipt(batch, tick.MaterialHeader!, tick.MaterialReceipts!);
     }
     private static ShaderSnapshotFixture Fixture(string name, FireSimMaterialHandoffBatch batch, FireSimChange[]? preceding = null)

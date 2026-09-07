@@ -152,21 +152,15 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
 
     int IFireSimMaterialHandoffBackend.MaterialHandoffCapacity => Dimensions.CellCount;
     void IFireSimMaterialHandoffBackend.UploadMaterialHandoff(FireSimMaterialHandoffBatch batch) => BufferGrid!.MaterialHandoff.Upload(batch);
-    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => ReadAppliedChangeWords(_step.LastUploadedChangeCount - 1);
-    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => BufferGrid!.MaterialHandoff.Receipts.ReadElements(0, count);
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffHeader() => BufferGrid!.MaterialHandoff.ReadHeader();
+    uint[] IFireSimMaterialHandoffBackend.ReadMaterialHandoffReceipts(int count) => BufferGrid!.MaterialHandoff.ReadReceipts(count);
 
     FireSimGpuChange IFireSimAshCollectionBackend.ReadAppliedChange(int changeIndex)
     {
-        uint[] words = ReadAppliedChangeWords(changeIndex);
-        return new FireSimGpuChange(words[0], words[1], words[2], words[3]);
-    }
-
-    private uint[] ReadAppliedChangeWords(int changeIndex)
-    {
         uint[] words = BufferGrid!.QueuedChanges.ReadElements(changeIndex, 1);
         if (words.Length != FireSimGpuProtocol.UInt32WordsPerChange)
-            throw new InvalidOperationException("GPU input receipt readback returned an incomplete command.");
-        return words;
+            throw new InvalidOperationException("GPU ash receipt readback returned an incomplete command.");
+        return new FireSimGpuChange(words[0], words[1], words[2], words[3]);
     }
 
     void IFireSimStepBackend.ResetDeltaCounter(uint dispatchTick)

@@ -19,12 +19,18 @@ public sealed class MaterialHandoffBuffers : IDisposable
         if (batch.Requests.Count > _maximum) throw new ArgumentOutOfRangeException(nameof(batch));
         if (batch.Requests.Count > Requests.Count) Resize(batch.Requests.Count);
         Requests.Upload(FireSimMaterialHandoffProtocol.EncodeRequests(batch));
+        Receipts.Upload(new uint[FireSimMaterialHandoffProtocol.ReceiptWords]);
     }
+    public uint[] ReadHeader() => Receipts.ReadElements(0, 1).Take(FireSimMaterialHandoffProtocol.HeaderWords).ToArray();
+    public uint[] ReadReceipts(int count) => Receipts.ReadElements(0, checked(count + 1)).Skip(FireSimMaterialHandoffProtocol.ReceiptWords).ToArray();
     private void Resize(int count)
     {
+        if (count <= 0 || count > _maximum) throw new ArgumentOutOfRangeException(nameof(count));
+        int receiptRows = checked(count + 1);
+        _ = checked(receiptRows * FireSimMaterialHandoffProtocol.ReceiptWords);
         IComputeBufferHandle requests = _allocator.Allocate("wildfire.material_requests", count, FireSimMaterialHandoffProtocol.RequestStrideBytes);
         IComputeBufferHandle receipts;
-        try { receipts = _allocator.Allocate("wildfire.material_receipts", count, FireSimMaterialHandoffProtocol.ReceiptStrideBytes); }
+        try { receipts = _allocator.Allocate("wildfire.material_receipts", receiptRows, FireSimMaterialHandoffProtocol.ReceiptStrideBytes); }
         catch { requests.Dispose(); throw; }
         Requests?.Dispose();
         Receipts?.Dispose();

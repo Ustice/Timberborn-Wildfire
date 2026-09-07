@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Wildfire.UnityBatchmode
@@ -33,12 +34,14 @@ namespace Wildfire.UnityBatchmode
                     throw new InvalidOperationException("Invalid material fixture request batch.");
                 capacity = Math.Max(capacity, batch.requests.Length / 10);
             }
+            int receiptRows = checked(capacity + 1);
+            _ = checked(receiptRows * 10);
             try
             {
                 targets = new ComputeBuffer(cellCount, 4, ComputeBufferType.Structured);
                 slots = new ComputeBuffer(cellCount, 4, ComputeBufferType.Structured);
                 requests = new ComputeBuffer(capacity, 40, ComputeBufferType.Structured);
-                receipts = new ComputeBuffer(capacity, 40, ComputeBufferType.Structured);
+                receipts = new ComputeBuffer(receiptRows, 40, ComputeBufferType.Structured);
                 targets.SetData(CellWords(fixture.initialTargetIds));
                 slots.SetData(CellWords(fixture.initialSlotIds));
             }
@@ -48,6 +51,7 @@ namespace Wildfire.UnityBatchmode
         public void Upload(int tick)
         {
             requestCount = 0;
+            receipts.SetData(new uint[10]);
             foreach (var batch in fixture.materialHandoffs ?? new FixtureMaterialHandoff[0])
                 if (batch.tick == tick)
                 {
@@ -65,15 +69,8 @@ namespace Wildfire.UnityBatchmode
             shader.SetInt("MaterialRequestCapacity", requests.count);
         }
 
-        public uint[] ReadHeader(uint[] appliedWords)
-        {
-            if (requestCount == 0) return new uint[0];
-            if (appliedWords.Length < 4) throw new InvalidOperationException("Material receipt requires its final input marker.");
-            var header = new uint[4];
-            Array.Copy(appliedWords, appliedWords.Length - 4, header, 0, 4);
-            return header;
-        }
-        public uint[] ReadReceipts() => requestCount == 0 ? new uint[0] : Read(receipts, requestCount * 10);
+        public uint[] ReadHeader() => requestCount == 0 ? new uint[0] : Read(receipts, 10).Take(4).ToArray();
+        public uint[] ReadReceipts() => requestCount == 0 ? new uint[0] : Read(receipts, checked((requestCount + 1) * 10)).Skip(10).ToArray();
         public uint[] ReadTargets() => Read(targets, cellCount);
         public uint[] ReadSlots() => Read(slots, cellCount);
         private static uint[] Read(ComputeBuffer buffer, int count)
