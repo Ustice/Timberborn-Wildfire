@@ -1,6 +1,7 @@
 using Wildfire.Timberborn.FireSafety;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
+using Timberborn.BlockingSystem;
 using Timberborn.Carrying;
 using Timberborn.CharacterNavigation;
 using Timberborn.EntitySystem;
@@ -188,7 +189,32 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
         if (!_citizen.HasAssignedDistrict) return false;
         var picker = _citizen.AssignedDistrict.GetComponent<DistrictInventoryPicker>();
         candidate = picker.ClosestInventoryWithCapacity(_navigator.CurrentAccessOrPosition(), AshHarvestCargo.Unit, out _);
-        return TryReserveAndWalk(candidate);
+        if (TryReserveAndWalk(candidate)) return true;
+        return TryOtherDistrictInventories(candidate);
+    }
+    private bool TryOtherDistrictInventories(Inventory? rejected)
+    {
+        var start = _navigator.CurrentAccessOrPosition();
+        var district = _citizen.AssignedDistrict;
+        var registry = district.GetComponent<DistrictInventoryRegistry>();
+        // Snapshot membership before reservation callbacks. Native capacity, validity and blocking
+        // are rechecked for each attempt; an unsafe nearest inventory must not hide another route.
+        var candidates = new List<Inventory>();
+        foreach (var inventory in registry.ActiveInventoriesWithCapacity(AshHarvestCargo.Unit.GoodId))
+            if (inventory && inventory != rejected) candidates.Add(inventory);
+        var alternatives = candidates.OrderBy(inventory => Vector3.Distance(start, inventory.Transform.position)).ToArray();
+        foreach (var inventory in alternatives)
+        {
+            if (!_citizen.HasAssignedDistrict || !ReferenceEquals(_citizen.AssignedDistrict, district)) return false;
+            if (!inventory || !inventory.Enabled || !inventory.HasUnreservedCapacity(AshHarvestCargo.Unit) ||
+                !registry.ActiveInventoriesWithCapacity(AshHarvestCargo.Unit.GoodId).Contains(inventory) ||
+                !inventory.GetComponent<IInventoryValidator>().ValidInventory ||
+                !inventory.GetComponent<BlockableObject>().IsUnblocked) continue;
+            var access = inventory.GetEnabledComponent<Accessible>();
+            if (access is null || !access.IsReachableUnlimitedRange(start)) continue;
+            if (TryReserveAndWalk(inventory)) return true;
+        }
+        return false;
     }
     private bool TryReserveAndWalk(Inventory? inventory)
     {

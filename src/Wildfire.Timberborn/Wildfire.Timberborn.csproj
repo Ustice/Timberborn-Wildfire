@@ -70,6 +70,10 @@
       <HintPath>$(TimberbornManagedPath)/Timberborn.BehaviorSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.BlockingSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BlockingSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.Carrying">
       <HintPath>$(TimberbornManagedPath)/Timberborn.Carrying.dll</HintPath>
       <Private>false</Private>
