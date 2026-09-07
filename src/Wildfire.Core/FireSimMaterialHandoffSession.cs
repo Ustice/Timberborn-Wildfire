@@ -55,7 +55,15 @@ internal sealed class FireSimMaterialHandoffSession
 
     public void Commit(FireSimMaterialHandoffBatch batch, FireSimMaterialHandoffReceipt receipt)
     {
-        if (!receipt.Accepted) return; // Ordinary inputs and simulation still completed under the old material map.
+        if (!receipt.Accepted)
+        {
+            // A rejected operation is safe only while GPU ownership still agrees with host authority.
+            // Report actual prior identities; never adopt them silently or continue with a divergent map.
+            for (int index = 0; index < receipt.Cells.Count; index++)
+                if (receipt.Cells[index].Prior != batch.Requests[index].Expected)
+                    throw new InvalidOperationException("Rejected material receipt exposes divergent GPU ownership; reconcile before further simulation.");
+            return; // Ordinary inputs and simulation still completed under the unchanged material map.
+        }
         Dictionary<int, FireSimMaterialIdentity> active = ProjectActive(batch);
         HashSet<FireSimMaterialIdentity> known = new(_known);
         Dictionary<FireSimMaterialIdentity, FireSimMaterialArchive> archives = new(_archives);

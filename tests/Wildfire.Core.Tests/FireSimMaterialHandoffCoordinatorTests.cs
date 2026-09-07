@@ -70,6 +70,25 @@ public sealed class FireSimMaterialHandoffCoordinatorTests
     }
 
     [Fact]
+    public void RejectedReceiptWithDivergentActualOwnershipPoisonsAuthorityInsteadOfAdoptingIt()
+    {
+        var step = Coordinator();
+        var backend = new Backend
+        {
+            Accepted = false,
+            Words = [0, 1, 12, 0, 0, 1, 12, 0, 0, 2],
+        };
+        int callbacks = 0;
+        var exception = Assert.Throws<FireSimStepInputException>(() =>
+            step.TryHandoffMaterial(backend, Replace(), _ => callbacks++));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, exception.Outcome);
+        Assert.Equal(0, callbacks);
+        Assert.False(step.TryGetMaterialArchive(A, out _));
+        Assert.Throws<InvalidOperationException>(() => step.Tick(backend));
+        Assert.Throws<InvalidOperationException>(() => step.TryHandoffMaterial(backend, Replace(2), _ => { }));
+    }
+
+    [Fact]
     public void StaleHostOwnershipAndUnacknowledgedMarkerRejectBeforeRuntimeCall()
     {
         var step = Coordinator();
