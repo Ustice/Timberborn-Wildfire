@@ -104,7 +104,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
             if (_state.Active) _movement.RejectRoute();
             return;
         }
-        if (_state.Active) _session.Safety.Transition(AdvanceOwnership, StopMovement);
+        if (_state.Active) _session.Safety.Transition(AdvanceOwnership, FreezeFailedMovement);
         else TryAdmit();
         if (_lastStatus == Status) return;
         _lastStatus = Status;
@@ -165,7 +165,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
             ClaimNativeDelivery();
             StopMovement();
             TryEscape();
-        }, StopMovement);
+        }, FreezeFailedMovement);
     }
     private void ClaimNativeDelivery()
     {
@@ -182,7 +182,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
             ClaimNativeDelivery();
             _routeRejected = true;
             _movement.RejectRoute(); // Keep FindPath's path intact; next ordinary tick stops/replans.
-        }, StopMovement);
+        }, FreezeFailedMovement);
     }
 
     private bool ReservationMatches()
@@ -251,7 +251,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         catch (Exception exception)
         {
             // Native navigation refresh can call this outside the pre-manager transition.
-            _session.Safety.FailMovement(exception, StopMovement);
+            _session.Safety.FailMovement(exception, FreezeFailedMovement);
             throw;
         }
     }
@@ -270,6 +270,13 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
     }
     private bool At(Vector3 position) => _navigation.InStoppingProximity(_transform.position, position);
     private void StopMovement() => _movement.Stop();
+    private void FreezeFailedMovement()
+    {
+        _movement.RejectRoute(); // Always stop late motion, even after a partial handoff released local phase.
+        // Clearing a foreign executor's destination can make its next Tick mistake cancellation for
+        // arrival. Preserve that path while poisoned; only clear a walk the emergency still owns.
+        if (_session.Access.Owns(_manager, _carryBehavior, this)) _movement.Stop();
+    }
 
     public ExecutorStatus Tick(float deltaTimeInHours)
     {

@@ -58,6 +58,7 @@ public readonly record struct CarryDeliveryReceipt(bool RouteAccepted, bool Nati
 public sealed class CarryEmergencySafety
 {
     private bool _inFlight;
+    private bool _cleanupAttempted;
     public Exception? Failure { get; private set; }
     public Exception? StopFailure { get; private set; }
     public bool IsPoisoned => Failure is not null;
@@ -65,17 +66,22 @@ public sealed class CarryEmergencySafety
     {
         ThrowIfSaveUnsafe();
         _inFlight = true;
+        _cleanupAttempted = false;
         try { action(); }
         catch (Exception exception)
         {
             FailMovement(exception, stopOnFailure);
             throw;
         }
-        finally { _inFlight = false; }
+        finally { _inFlight = false; _cleanupAttempted = false; }
     }
     public void FailMovement(Exception exception, Action stopOnFailure)
     {
         Failure ??= exception;
+        // A path callback can report then rethrow through the enclosing transition. One attempt
+        // owns that unwind, including when native cleanup itself throws. Other actors still clean up.
+        if (_inFlight && _cleanupAttempted) return;
+        _cleanupAttempted = true;
         // Movement may already have launched even if the logical phase was released.
         try { stopOnFailure(); }
         catch (Exception stopFailure) { StopFailure ??= stopFailure; }

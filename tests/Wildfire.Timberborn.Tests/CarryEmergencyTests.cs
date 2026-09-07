@@ -91,6 +91,26 @@ public sealed class CarryEmergencyTests
         Assert.Same(exception, Assert.Throws<InvalidOperationException>(safety.ThrowIfSaveUnsafe).InnerException);
     }
     [Fact]
+    public void NestedPathFailureAttemptsCleanupOnceEvenWhenCleanupFails()
+    {
+        var safety = new CarryEmergencySafety();
+        var pathFailure = new Exception("native path listener");
+        var stopFailure = new Exception("native animation stop");
+        int cleanupAttempts = 0;
+        void Cleanup() { cleanupAttempts++; throw stopFailure; }
+        Assert.Same(pathFailure, Assert.Throws<Exception>(() => safety.Transition(() =>
+        {
+            safety.FailMovement(pathFailure, Cleanup); // StartedNewPath handler.
+            throw pathFailure; // Same failure reaches outer transition catch.
+        }, Cleanup)));
+        Assert.Equal(1, cleanupAttempts);
+        Assert.Same(stopFailure, safety.StopFailure);
+        Assert.Same(pathFailure, safety.Failure);
+        int otherActorPauses = 0;
+        safety.FailMovement(new Exception("another actor callback"), () => otherActorPauses++);
+        Assert.Equal(1, otherActorPauses); // Session-wide poison must not skip another actor's freeze.
+    }
+    [Fact]
     public void RestoredHoldingNeverTimesOutIntoTheOldDelivery()
     {
         var state = new CarryEmergencyState();

@@ -8,6 +8,57 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class CarryEmergencyNativeContractTests
 {
     [Fact]
+    public void FailedHandoffPausesForeignNativeWalkWithoutCreatingArrival()
+    {
+        using var native = new NativeManagedTestContext();
+        var mod = native.LoadMod();
+        var walking = native.LoadNative("Timberborn.WalkingSystem");
+        var behavior = native.LoadNative("Timberborn.BehaviorSystem");
+        var carrying = native.LoadNative("Timberborn.Carrying");
+        var components = native.LoadNative("Timberborn.BaseComponentSystem");
+        var movement = native.LoadNative("Timberborn.CharacterMovementSystem");
+        object Make(System.Reflection.Assembly assembly, string name) => RuntimeHelpers.GetUninitializedObject(assembly.GetType(name)!);
+        var manager = Make(behavior, "Timberborn.BehaviorSystem.BehaviorManager");
+        var carry = Make(carrying, "Timberborn.Carrying.CarryRootBehavior");
+        var walk = Make(walking, "Timberborn.WalkingSystem.WalkToAccessibleExecutor");
+        var emergency = Make(mod, "Wildfire.Timberborn.Beavers.Emergency.WildfireCarryEmergencyExecutor");
+        var walker = Make(walking, "Timberborn.WalkingSystem.Walker");
+        var mover = Make(walking, "Timberborn.WalkingSystem.WalkerMover");
+        var follower = Make(movement, "Timberborn.CharacterMovementSystem.PathFollower");
+        var destination = Make(walking, "Timberborn.WalkingSystem.PositionDestination");
+        var path = Array.CreateInstance(native.LoadNative("Timberborn.Navigation").GetType("Timberborn.Navigation.PathCorner")!, 1);
+        Field(follower, "_pathCorners").SetValue(follower, path);
+        Field(manager, "_runningBehavior").SetValue(manager, carry);
+        Field(manager, "_runningExecutor").SetValue(manager, walk); // Native handoff already occurred.
+        Field(walker, "_currentDestination").SetValue(walker, destination);
+        Field(walker, "<PathFollower>k__BackingField").SetValue(walker, follower);
+        var baseType = components.GetType("Timberborn.BaseComponentSystem.BaseComponent")!;
+        baseType.GetField("_componentCache", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mover,
+            Make(components, "Timberborn.BaseComponentSystem.ComponentCache"));
+        baseType.GetField("<Enabled>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mover, true);
+        var helper = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Compatibility.TimberbornOwnedWalker")!, walker, mover);
+        Field(emergency, "_movement").SetValue(emergency, helper);
+        Field(emergency, "_manager").SetValue(emergency, manager);
+        Field(emergency, "_carryBehavior").SetValue(emergency, carry);
+        Field(emergency, "_session").SetValue(emergency,
+            Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Beavers.Emergency.CarryEmergencySession")!));
+        var freeze = emergency.GetType().GetMethod("FreezeFailedMovement", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        freeze.Invoke(emergency, null);
+        Assert.Equal(false, baseType.GetProperty("Enabled")!.GetValue(mover));
+        Assert.Same(destination, Field(walker, "_currentDestination").GetValue(walker));
+        Assert.Same(path, Field(follower, "_pathCorners").GetValue(follower));
+        Assert.Same(walk, Field(manager, "_runningExecutor").GetValue(manager));
+        Assert.Equal(false, walker.GetType().GetMethod("Stopped")!.Invoke(walker, null));
+        // When exact emergency ownership remains, coherent native cleanup is allowed. The native
+        // animation dependency is deliberately absent and throws only after destination is cleared.
+        Field(manager, "_runningExecutor").SetValue(manager, emergency);
+        Assert.Throws<TargetInvocationException>(() => freeze.Invoke(emergency, null));
+        Assert.Null(Field(walker, "_currentDestination").GetValue(walker));
+        static FieldInfo Field(object owner, string name) => owner.GetType().GetField(name,
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+    }
+
+    [Fact]
     public void ReviewedNativeFieldsSwapByIdentityAndRejectForeignOwner()
     {
         using var native = new NativeManagedTestContext();
