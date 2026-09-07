@@ -28,6 +28,8 @@ public interface IFireSimListener
 /// <param name="AddWater">Wetness-band increment, clamped to 0..3. Applied after SetCell,
 /// saturating the resulting water at 3, and before SetWater (which wins if both are supplied).
 /// Null and zero leave water unchanged. This is not a quantity of host inventory water.</param>
+/// <param name="CollectCleanAsh">Exclusive conditional collection request, strictly 0..3.
+/// Only TryCollectAsh admits this operation; generic queues reject it. No other fields may be supplied.</param>
 public readonly record struct FireSimChange(
     int CellIndex,
     ushort? SetCell = null,
