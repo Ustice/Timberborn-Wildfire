@@ -33,4 +33,4 @@ The assembly grants test-only friend access to exercise the internal typed entry
 
 ## Remaining activation gates
 
-No game, Unity or GPU test ran for this source change. The scripted backend does not implement fire evolution or native entity mutation. Native production routing, environment composition, full ordinary-queue admission, same-session complete capture/restore and actual live play remain separate gates. The older detachment test runner is not production wiring; its raw callback is superseded by consumer-owned ConsumeStep for future composition.
+No game, Unity or GPU test ran for this source change. The scripted backend does not implement fire evolution or native entity mutation. Native production routing, environment composition, same-session complete capture/restore and actual live play remain separate gates. [Ordered control capacity](material-control-capacity.md) now separately proves full ordinary-backlog admission and native GPU execution. The older detachment test runner is not production wiring; its raw callback is superseded by consumer-owned ConsumeStep for future composition.
