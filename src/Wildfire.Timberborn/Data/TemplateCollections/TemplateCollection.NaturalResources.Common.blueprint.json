@@ -2,7 +2,8 @@
   "TemplateCollectionSpec": {
     "CollectionId": "Common",
     "Blueprints#append": [
-      "NaturalResources/FertileAshField/FertileAshField.blueprint"
+      "NaturalResources/FertileAshField/FertileAshField.blueprint",
+      "NaturalResources/WildfireNaturalWaterSource/NaturalWaterSource.QA.blueprint"
     ]
   }
 }
