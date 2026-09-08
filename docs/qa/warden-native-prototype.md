@@ -1,6 +1,6 @@
 # Native Ironteeth warden prototype
 
-Status: integrated with the QA command gate and original station/gear meshes; 617 native-project tests pass on 2026-09-07 against the installed macOS game assemblies. This is source/API and isolated protocol evidence. Native placement, worker assignment, actual trips, visuals, accounting UI, and save/reload remain unverified until the sole live QA controller can access Steam. The station uses its canonical Ironteeth model; gear assets are packaged but are not attached to characters.
+Status: integrated with the QA command gate and original station/gear meshes. Steam access is restored. The [corrected Iron Teeth startup](warden-corrected-startup-live.md) passed ordinary simulation with 13 beavers and a healthy save. Positioning the station then exposed a missing native pivot; the [placement regression fix](warden-preview-pivot.md) passes with 1,307 native-project tests. Actual placement, worker assignment, trips, visuals, accounting UI and sortie save/reload remain live acceptance work. The station uses its canonical Ironteeth model; gear assets are packaged but are not attached to characters. Earlier test counts below describe their individual checkpoints.
 
 ## Ownership and native contracts
 
@@ -27,7 +27,7 @@ Only the assigned live controller performs these steps after checking the QA loc
 
 ## Open release work
 
-The first release still needs Folktails response, prevention, natural ignition, recovery, complete reliable-save coverage, and civilian fire avoidance. Existing `BeaverFieldBehavior` exposure handling remains an explicit blocker; this prototype does not hide its exception.
+The first release still needs Folktails response, prevention, natural ignition, recovery, complete reliable-save coverage, and civilian fire avoidance. Healthy-world samples establish enumeration, not exposed-beaver behavior: actual exposure handling and injury remain separate acceptance gates.
 
 The station is a development-only free placement. Construction costs/unlock, localization review and visible gear attachment and spray remain unfinished. The native station panel and one-time recovery notification are implemented but await live UI verification. Equipment assets exist separately but are not attached or animated. Reach, heat/smoke thresholds, two-cell approaches, 20-cell range, preparation/timeout durations, and escape distance are provisional. One cached cell+transport full-grid observation is shared per field revision; performance and frequent native route refresh cost are unmeasured. The prototype is not a completed gameplay acceptance result.
 
