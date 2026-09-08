@@ -18,7 +18,7 @@ using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.FireBell;
 
-/// <summary>One empty-handed round trip. Employment is observed, never changed.</summary>
+/// <summary>Borrowed-duty trips and return-only recovery observe employment without changing it.</summary>
 public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableComponent, IDeletableEntity
 {
     private static readonly ComponentKey Key = new("Wildfire.BorrowedDutyExecutor");
