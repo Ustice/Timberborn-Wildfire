@@ -4,7 +4,7 @@ Source checkpoint `a8bd26c` adds an **unwired** native discovery helper. It does
 
 `TimberbornNativeInventoryRoles.Capture(EntityComponent)` returns a copied read-only list of transient `TimberbornDeclaredInventory` bindings. Each contains the immutable public `TimberbornInventoryDeclaration` (native role plus exact `Inventory.ComponentName`) and its native inventory reference. References are only for same-scope validation; future compatibility data uses declarations, never native references.
 
-The declared roles are `Stockpile`, `SimpleOutput`, `GoodStack`, `Manufactory` `RecoveredGoodStack` and `WardenStation`. This enum is separate from the currently admitted physical material role enum. Discovery enumerates all instances of these actual native components and every native `Inventory` on the body. It rejects:
+The declared roles are `Stockpile`, `SimpleOutput`, `GoodStack`, `Manufactory`, `RecoveredGoodStack` and `WardenStation`. Physical snapshots and initial selections now reuse this exact declaration enum and ComponentName; material/effect admission remains a separate explicit gate (see [physical capture proof](declaration-physical-inventory.md)). Discovery enumerates all instances of these actual native components and every native `Inventory` on the body. It rejects:
 
 - Missing or foreign role/inventory references, including native role components whose owning entity differs.
 - Duplicate role instances, repeated inventory components, or one inventory claimed by two roles.
