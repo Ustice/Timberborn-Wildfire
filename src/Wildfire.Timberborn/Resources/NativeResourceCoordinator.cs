@@ -65,6 +65,8 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
 
     public void ThrowIfSaveUnsafe() => _transaction.ThrowIfSaveUnsafe();
 
+    public void InvalidateAfterLifecycleFailure() => _transaction.InvalidateAfterLifecycleFailure();
+
     // Called only by actual world load/unload. Disabling/reinitializing fire must never clear poison.
     public void ResetForWorldLoad()
     {

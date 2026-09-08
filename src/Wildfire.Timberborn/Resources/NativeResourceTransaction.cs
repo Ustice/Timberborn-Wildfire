@@ -20,7 +20,14 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
     {
         ThrowIfSaveUnsafe();
         _delivering = true;
-        try { return step(); }
+        try
+        {
+            var result = step();
+            if (IsIndeterminate)
+                throw new FireSimStepInputException(FireSimStepInputOutcome.Indeterminate,
+                    new InvalidOperationException("Native lifecycle cleanup invalidated the resource step."));
+            return result;
+        }
         catch (FireSimStepInputException exception)
         {
             if (exception.Outcome == FireSimStepInputOutcome.Indeterminate) IsIndeterminate = true;
@@ -34,15 +41,28 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
         ThrowIfSaveUnsafe();
         if (capture is null) throw new ArgumentNullException(nameof(capture));
         _delivering = true; // Same exclusion latch; read failures do not imply resource mutation.
-        try { return capture(); }
+        try
+        {
+            T result = capture();
+            if (IsIndeterminate) ThrowIfSaveUnsafe();
+            return result;
+        }
         finally { _delivering = false; }
     }
+
+    // Irreversible native teardown must continue even when its guarded cleanup cannot.
+    // Invalidation never authorizes a write or clears existing poison.
+    public void InvalidateAfterLifecycleFailure() => IsIndeterminate = true;
 
     public void TransferInventory(Action transfer)
     {
         ThrowIfSaveUnsafe();
         _delivering = true;
-        try { transfer(); }
+        try
+        {
+            transfer();
+            if (IsIndeterminate) ThrowIfSaveUnsafe();
+        }
         catch
         {
             // Native inventory calls mutate before raising events. No rollback is inferred from an exception.
