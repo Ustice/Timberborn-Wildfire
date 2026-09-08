@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Wildfire.Timberborn.Tests;
 
-public sealed class NativeWardenDistrictLifecycleTests
+public sealed partial class NativeWardenDistrictLifecycleTests
 {
     [Fact]
     public void WardenAdditionalRegistrationAdmissionDoesNotAcquireSatchelPendingDeathPolicy()
@@ -337,7 +337,7 @@ public sealed class NativeWardenDistrictLifecycleTests
         Assert.Equal(1, f.Quantity);
     }
 
-    private sealed class Fixture : IDisposable
+    private sealed partial class Fixture : IDisposable
     {
         private readonly NativeManagedTestContext _native = new();
         internal object Resources { get; }
