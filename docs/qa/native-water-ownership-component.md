@@ -48,6 +48,14 @@ Three discriminating counterfactuals are preserved in `/tmp`:
 
 Focused log: `/tmp/wildfire-water-ownership-focused.log`. Full native log: `/tmp/wildfire-water-ownership-full.log`. Installed hashes and source recipe are under `/tmp/wildfire-folktails-bucket-route/`. This slice changes no Core/fire rules or shader code and does not run an engine.
 
+## Independent source/native review
+
+A separate review of exact `b93e308` checked native singleton/load-list ordering, fixed-coordinate finalization, placement notification and the callback-free credit loop. It found no additional demonstrated defect; successful real finished-source arming and full native factory positive-buffer restore remain unproved. The boundary must be provisioned before native singleton discovery freezes even though scheduler installation is lazy.
+
+One actual authenticated Claude request, with tools disabled and only the immutable three-file packet/native facts, completed with exit **0**, `is_error=false`, one turn, **516.948 seconds**. Its sole alleged defect was an uncaught guard rejection from `TryArmNewSource`/`PostLoad`. The proposed fresh-creation trigger is contradicted by the source: `Track` first taints creation inside that same active guard, so `TryArmNewSource` returns before `Install`. Manually invoking an earlier source's arm/load entry inside an unrelated protected operation is forbidden reentry, not a demonstrated ordinary native lifecycle failure. No production change followed. This is a source-adjudicated disputed finding, not blanket reviewer clearance.
+
+Exact prompt, response, terminal status, copied source hashes, native IL and disposition: `/tmp/wildfire-natural-water-ownership-review/`. No engine or new test pass is claimed by this review; the managed validation above and controller gates below retain their original scope.
+
 ## Remaining controller proof
 
 Supply a real source GameObject/template with the native fixed WaterInput and real BlockObject lifecycle. Prove successful new-source arming, positive buffered false-marker full native save/load, exact source movement/deletion, actual fluid removal/credit, competitor appearance/disappearance and taint reload. Then compose the existing one-unit private native inventory conversion under the same runtime coordinator. The managed receipt fixture supplies native fluid result dictionaries; it does not prove river physics, shoreline access, movement, source placement, demand cadence or a completed firefighter trip.
