@@ -60,4 +60,4 @@ Exact prompt, response, terminal status, copied source hashes, native IL and dis
 
 [Native factory and finite positive restore](native-water-source-factory.md) subsequently passed in CPU Unity: actual source creation/arming, supplied-result credit, competitor taint/deletion, native save and fresh native batch restoration of the positive buffer. The finite SerializedWorld fixture is not a full game archive, and its supplied receipt does not prove physical fluid removal.
 
-Source movement, actual fluid removal/credit integration, tainted reload and one-unit private native inventory conversion under the same runtime coordinator remain open. Neither this slice nor the engine follow-up proves shoreline access, demand cadence or a completed firefighter trip.
+The follow-up also passes actual finite native removal, scheduled credit and byte-identical fresh restoration. Full parallel fluid scheduling, source movement, tainted reload and one-unit private native inventory conversion under the same runtime coordinator remain open. Neither this slice nor the engine follow-up proves shoreline access, demand cadence or a completed firefighter trip.
