@@ -1,4 +1,5 @@
 using System.Text;
+using Wildfire.Core;
 using Wildfire.Timberborn.Mapping;
 using Wildfire.Timberborn.Persistence;
 using F = Wildfire.Timberborn.Tests.OwnedNativeRestoreFixture;
@@ -29,6 +30,28 @@ public sealed class OwnedInventoryWitnessCodecTests
         var complete = new TimberbornOwnedConsequenceSnapshot([], [], [], OwnedNativeDefinitionSet.WithInventoryDeclarations([]));
         Assert.Equal(OwnedNativeCompatibilityCapability.Unavailable, legacy.NativeCompatibility);
         Assert.Equal(OwnedNativeCompatibilityCapability.Complete, complete.NativeCompatibility);
+    }
+
+    [Theory]
+    [InlineData(false, 3)]
+    [InlineData(true, 4)]
+    public void ZeroOwnerEnvelopeRetainsExplicitEvidenceVersion(bool complete, int version)
+    {
+        var definitions = complete ? OwnedNativeDefinitionSet.WithInventoryDeclarations([]) : new OwnedNativeDefinitionSet([]);
+        var history = new TimberbornOwnedConsequenceSnapshot([], [], [], definitions);
+        var simulation = new FireSimSnapshot(1, new(1, 1, 1), 0, FireSimParameters.Default, 7,
+            [0], [0], [0], [0], [0], new(0, [], []), []);
+        var source = TimberbornWildfirePersistenceSnapshot.Empty with
+        {
+            PersistenceVersion = 2,
+            OwnedMaterial = new(simulation, new(1, 1, []), history),
+        };
+        var encoded = TimberbornWildfirePersistenceCodec.Encode(source);
+        var decoded = TimberbornWildfirePersistenceCodec.Decode(encoded);
+        Assert.Equal(version, Envelope(encoded));
+        Assert.Equal(complete, decoded.OwnedMaterial!.History!.NativeDefinitions!.HasInventoryDeclarations);
+        Assert.Empty(decoded.OwnedMaterial.History.NativeDefinitions.Definitions);
+        Assert.Equal(encoded, TimberbornWildfirePersistenceCodec.Encode(decoded));
     }
 
     [Fact]
