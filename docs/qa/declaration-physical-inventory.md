@@ -2,6 +2,8 @@
 
 Source checkpoint `48c56f3`; no engine, game, deployment or stock effect activation.
 
+This is the historical capture-only checkpoint. [Constructed inventory material admission](constructed-inventory-material.md) now admits supported constructed inventory sets after exact declaration-driven effects; the broader role and live-engine limits below remain historical evidence boundaries.
+
 `TimberbornInventoryMaterial` and the explicit initial accounting selection now carry the existing immutable `TimberbornInventoryDeclaration`: native role plus exact Inventory.ComponentName. The redundant three-value captured-role enum is removed. Existing native-role numeric values and OWNED4 codecs are unchanged. Copied physical readings include the declaration, Enabled and all positive native Stock, including reservations and disabled positive goods. A dormant disabled empty GoodStack remains declared but has no physical part.
 
 The native provider discovers and validates complete actual role ownership before CaptureBodyFacts reads stock. Those transient bindings supply physical capture, covering every declared role. Initial and retained final rereads rediscover and compare exact inventory references and declarations before reading stock, then compare complete copied body readings and check topology again. No native references are saved. Initial selections and declaration/material consistency now compare full role-and-name equality; selecting a same-role inventory under another name rejects.
