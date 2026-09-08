@@ -218,7 +218,8 @@ public sealed partial class TimberbornQaCommandBridge
         ITimberbornQaInventoryAdjuster? inventoryAdjuster = null,
         ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null,
         TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics,
-        ITimberbornQaBorrowedDuty? borrowedDuty = null)
+        ITimberbornQaBorrowedDuty? borrowedDuty = null,
+        ITimberbornQaSession? session = null)
     {
         if (stateProvider is null)
         {
@@ -262,6 +263,7 @@ public sealed partial class TimberbornQaCommandBridge
 
         Access = access;
         _borrowedDuty = borrowedDuty;
+        _session = session;
         _stateProvider = stateProvider;
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
@@ -334,6 +336,9 @@ public sealed partial class TimberbornQaCommandBridge
         if (_borrowedDuty is not null)
             foreach (var command in TimberbornQaBorrowedDutyCommands.Names)
                 commands[command] = () => ExecuteBorrowedDuty(command, command);
+        if (_session is not null)
+            foreach (var command in SessionCommands)
+                commands[command] = () => ExecuteSession(command, command);
         _commands = commands;
     }
 
@@ -408,7 +413,9 @@ public sealed partial class TimberbornQaCommandBridge
         try
         {
             TimberbornQaCommandResult result =
-                TimberbornQaBorrowedDutyCommands.Handles(command)
+                SessionCommands.Contains(command, StringComparer.OrdinalIgnoreCase)
+                    ? ExecuteSession(command.ToLowerInvariant(), commandText)
+                    : TimberbornQaBorrowedDutyCommands.Handles(command)
                     ? ExecuteBorrowedDuty(command, commandText)
                     : StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand)
                     ? ExecuteQaBurnDurationStimulus(commandText)

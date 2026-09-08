@@ -6,6 +6,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Timberborn.GameSaveRuntimeSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.GameSaveRuntimeSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.GameSaveRepositorySystem"><HintPath>$(TimberbornManagedPath)/Timberborn.GameSaveRepositorySystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Collections.Immutable">
       <HintPath>$(TimberbornManagedPath)/System.Collections.Immutable.dll</HintPath>
       <Private>false</Private>

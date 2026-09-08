@@ -15,6 +15,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
     private const string OutboxFileName = "command-outbox.txt";
 
     private readonly TimberbornQaCommandBridge _commandBridge;
+    private readonly TimberbornQaSession _session;
     private readonly string _inboxPath;
     private readonly string _outboxPath;
 
@@ -24,13 +25,15 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
         ITerrainService terrainService,
         ISoilMoistureService soilMoistureService,
         MapIndexService mapIndexService,
-        ITimberbornQaBorrowedDuty borrowedDuty)
+        ITimberbornQaBorrowedDuty borrowedDuty,
+        TimberbornQaSession session)
     {
         if (fireRuntime is null)
         {
             throw new ArgumentNullException(nameof(fireRuntime));
         }
 
+        _session = session;
         string qaDirectory = Path.Combine(Application.persistentDataPath, QaDirectoryName);
         _inboxPath = Path.Combine(qaDirectory, InboxFileName);
         _outboxPath = Path.Combine(qaDirectory, OutboxFileName);
@@ -52,7 +55,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             fireRuntime,
             fireRuntime,
             access: TimberbornQaCommandPolicy.FromProcessArguments(Environment.GetCommandLineArgs()),
-            borrowedDuty: borrowedDuty);
+            borrowedDuty: borrowedDuty, session: session);
     }
 
     public void Load()
@@ -66,12 +69,11 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             $"known_commands={TimberbornQaCommandBridge.FormatToken(string.Join(",", _commandBridge.KnownCommands))}");
     }
 
-    public void Unload()
-    {
-    }
+    public void Unload() => _session.Unload();
 
     public void UpdateSingleton()
     {
+        _session.Update();
         if (!File.Exists(_inboxPath))
         {
             return;

@@ -43,6 +43,7 @@ public sealed class WildfireConfigurator : Configurator
         Bind<AshHarvestBehavior>().AsTransient();
         Bind<AshHarvestFragment>().AsSingleton();
         MultiBind<TemplateModule>().ToProvider<FertileAshFieldGatheringTemplateModuleProvider>().AsSingleton();
+        Bind<TimberbornQaSession>().AsSingleton();
         Bind<TimberbornQaCommandFileBridge>().AsSingleton();
         Bind<WardenStationFragment>().AsSingleton();
         Bind<NativeResourceRecoveryNotification>().AsSingleton();
