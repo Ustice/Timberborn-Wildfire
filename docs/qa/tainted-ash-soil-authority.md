@@ -39,3 +39,7 @@ Artifacts: `/tmp/wildfire-soil-authority-review/REPORT.md`, `red-capability.log`
 Timberborn.SoilContaminationSystem.dll dca062222ef4b6334faddd79aa5cc94528e98cf9df1ed86c5781f08837bda97c
 Timberborn.TerrainSystemRendering.dll 14f756b26038146b3b410f1985ef01222fc73eeb633da1f5ba7339fc609b6922
 ```
+
+## Subsequent native engine counterexample
+
+A [licensed CPU-only Unity run of the original hook](original-soil-hook-native-counterexample.md) subsequently executed the exact `683a506` wrapper and adapter. It observed candidate/applied1, actual native getter0 before and after, and native render queue1. This closes the service-level execution gap above; it does not implement a replacement source or prove native terrain-column mapping, plant effects, texture upload or world persistence.
