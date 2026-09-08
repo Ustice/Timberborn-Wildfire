@@ -43,3 +43,13 @@ Its useful recommendation is to extend existing composed station/adult contract 
 Full original prompt, output, terminal record, independent IL and counterexample: `/tmp/wildfire-warden-composition-claude/REPORT.md`. Its prompt's historical public-input method label was inaccurate; the actual boundary was `DistrictInventoryPicker.InventoryIsTaking` → `IInventoryValidator.ValidInventory`, supplied by `Emptiable`. The preserved review report records that erratum rather than rewriting the prompt.
 
 Native assembly SHA256 manifest: `/tmp/wildfire-warden-district-lifecycle/native-sha256.json`. Regression logs: `/tmp/wildfire-warden-composition-proof/`.
+
+## Executed validation
+
+At `052d702`, 28 focused lifecycle/resource tests passed and the full native project passed **1,336 tests, zero failures or skips**. The original three-case red run and all final logs are preserved in `/tmp/wildfire-warden-composition-proof/`. Commands:
+
+```sh
+dotnet test tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj \
+  --filter 'FullyQualifiedName~NativeWardenDistrictLifecycleTests|FullyQualifiedName~NativeLifecycleInvalidationTests|FullyQualifiedName~NativeResourceTransactionTests'
+dotnet test tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj
+```
