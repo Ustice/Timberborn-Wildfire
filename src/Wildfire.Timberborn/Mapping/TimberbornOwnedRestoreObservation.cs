@@ -90,8 +90,19 @@ internal sealed class TimberbornOwnedRestoreObservation
     {
         RequireSupported(requiredIds);
         return Array.AsReadOnly(RetainedBodies.Where((body, index) =>
-            States[index].IsDead != true && body.Yields.All(yield => yield.YieldEnabled))
+            IsFreshEligible(body, States[index]))
             .Select(body => body.EntityId).ToArray());
+    }
+
+    private static bool IsFreshEligible(TimberbornInitialMaterialBody body, TimberbornRetainedBodyObservation state)
+    {
+        if (body.Shape != TimberbornInitialBodyShape.Tree)
+            return state.IsDead != true && body.Yields.All(yield => yield.YieldEnabled);
+        if (state.IsDead != false || !state.SupportsRetainedTreeMaterial) return false;
+        // Native first fruit/resin growth can remain disabled after the Cuttable wood is mature.
+        // That auxiliary harvest cycle neither removes the trunk nor authorizes its later refill.
+        var cuttable = body.Yields.Where(yield => yield.Role == TimberbornCapturedYieldRole.Cuttable).ToArray();
+        return cuttable.Length == 1 && cuttable[0].YieldEnabled && cuttable[0].ActualAmount > 0;
     }
 
 }
