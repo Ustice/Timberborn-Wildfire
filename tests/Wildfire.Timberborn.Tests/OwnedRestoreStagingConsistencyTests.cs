@@ -1,3 +1,4 @@
+using Wildfire.Core;
 using Wildfire.Timberborn.Mapping;
 using Wildfire.Timberborn.Persistence;
 using F = Wildfire.Timberborn.Tests.OwnedNativeRestoreFixture;
@@ -6,6 +7,28 @@ namespace Wildfire.Timberborn.Tests;
 
 public sealed class OwnedRestoreStagingConsistencyTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DiagnosticRestoreRejectsBackendMutationFromLateNativeOrCaptureCallback(bool nativeObserver)
+    {
+        var f = new F();
+        var saved = f.Snapshot();
+        F.Simulator? backend = null;
+        void ChangeField()
+        {
+            if (backend is not null) backend.CaptureSnapshot().Cells[0] = PackedCell.SetWater(backend.CaptureSnapshot().Cells[0], 1);
+        }
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(saved, [], input =>
+        {
+            backend = new(input);
+            if (nativeObserver) f.Native.DuringIsLive = ChangeField;
+            return backend;
+        }, (_, _) => { if (!nativeObserver) ChangeField(); return new[] { F.Facts() }; }, f.Effects, f.Guard));
+        Assert.Equal(1, backend!.Disposals);
+        Assert.False(f.Guard.IsIndeterminate);
+    }
+
     [Theory]
     [InlineData("definition")]
     [InlineData("quantity")]

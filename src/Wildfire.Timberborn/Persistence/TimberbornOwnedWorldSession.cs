@@ -77,6 +77,8 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator> : IDisposabl
             if (facts.Length != finalFacts.Length || !facts.OrderBy(body => body.EntityId)
                     .Zip(finalFacts.OrderBy(body => body.EntityId), (before, after) => before.SameReadings(after)).All(same => same))
                 throw new ArgumentException("Native body facts changed during restore staging.");
+            TimberbornOwnedSimulationValidation.RequireUnchanged(simulation,
+                FireSimSnapshotValidation.ValidateAndClone(simulator.CaptureSnapshot()));
             return new(simulator, registry, damage, consumer, guard, TimberbornDesiredWorldCapability.DiagnosticOnly);
         }
         catch

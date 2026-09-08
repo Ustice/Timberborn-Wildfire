@@ -117,6 +117,39 @@ public sealed class OwnedInitialSessionTests
         Assert.Equal(2, session.Damage.States.Count);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OriginalBackendMustStillMatchAfterLastNativeAndCaptureCallbacks(bool nativeObserver)
+    {
+        var f = new Fixture();
+        void ChangeField()
+        {
+            if (f.Backend is not null) f.Backend.CaptureSnapshot().Cells[2] = PackedCell.SetWater(f.Backend.CaptureSnapshot().Cells[2], 0);
+        }
+        f.AfterCreate = () =>
+        {
+            if (nativeObserver) f.Native.DuringIsLive = ChangeField;
+            else f.CheckProducer = ChangeField;
+        };
+        Assert.Throws<ArgumentException>(() => f.Prepare());
+        Assert.Equal(1, f.Backend!.Disposals);
+        Assert.False(f.Guard.IsIndeterminate);
+    }
+
+    [Fact]
+    public void UnavailableOriginalInventoryEvidenceIsNotAnEmptyInventoryDeclaration()
+    {
+        var f = new Fixture();
+        var current = f.Current;
+        f.Current = new(Grid, current.Bodies, current.Excluded, current.WaterSources, current.Environment);
+        Assert.Null(f.Current.InventoryDeclarations);
+        Assert.False(current.SameReadings(f.Current));
+        Assert.Throws<NotSupportedException>(() => f.Prepare());
+        Assert.Equal(0, f.Created);
+        Assert.False(f.Guard.IsIndeterminate);
+    }
+
     private sealed class Fixture
     {
         internal readonly NativeResourceTransaction Guard = new();

@@ -107,6 +107,34 @@ public sealed class CompleteRestoreProjectionTests
         Assert.Empty(bindings.Entities[1].Slots);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CallbackCannotAlterSavedSimulatorAuthorityAfterFactoryFidelityCheck(bool duringNativeObserver)
+    {
+        var f = new Fixture();
+        void ChangeSavedFields()
+        {
+            if (f.Backend is { } backend)
+                backend.CaptureSnapshot().Cells[2] = PackedCell.SetWater(backend.CaptureSnapshot().Cells[2], 2);
+        }
+        if (duringNativeObserver) f.AfterCreate = () => f.Native.DuringIsLive = ChangeSavedFields;
+        else f.DuringCapture = ChangeSavedFields;
+        Assert.Throws<ArgumentException>(() => f.Restore());
+        Assert.Equal(1, f.Backend!.Disposals);
+        Assert.False(f.Guard.IsIndeterminate);
+    }
+
+    [Fact]
+    public void NewCurrentInventoryDeclarationCannotBeAcceptedAgainstOriginalEmptyEvidence()
+    {
+        var f = new Fixture();
+        f.Current = f.Observe("declaration");
+        Assert.Throws<ArgumentException>(() => f.Restore());
+        Assert.Null(f.Backend);
+        f.Guard.ThrowIfSaveUnsafe();
+    }
+
     private sealed class Fixture
     {
         private static readonly Guid A = new("00000000-0000-0000-0000-000000000001");

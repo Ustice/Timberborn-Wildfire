@@ -54,6 +54,8 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator>
                 if (!observation.SameReadings(final))
                     throw new ArgumentException("Native world changed during complete restore staging.");
                 final.RequireSupported(ids);
+                TimberbornOwnedSimulationValidation.RequireUnchanged(simulation,
+                    FireSimSnapshotValidation.ValidateAndClone(simulator.CaptureSnapshot()));
                 return new TimberbornOwnedWorldSession<TSimulator>(simulator, registry, damage, consumer, guard, TimberbornDesiredWorldCapability.CompleteStaged);
             }
             catch

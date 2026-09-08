@@ -51,6 +51,8 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator>
                 consumer.CopyHistoryDuringCapture().ValidateAssociation(actual, bindings, consequences);
                 var final = captureDuringScope(grid) ?? throw new InvalidOperationException("No final native capture returned.");
                 if (!capture.SameReadings(final)) throw new ArgumentException("Native world changed during initial staging; no session was published.");
+                TimberbornOwnedSimulationValidation.RequireUnchanged(initial,
+                    FireSimSnapshotValidation.ValidateAndClone(simulator.CaptureSnapshot()));
                 return new TimberbornOwnedWorldSession<TSimulator>(simulator, registry, damage, consumer, guard, TimberbornDesiredWorldCapability.CompleteStaged);
             }
             catch
