@@ -1,6 +1,6 @@
 # Native water source factory and positive restore
 
-Two CPU Unity Play-mode probes passed on immutable `2b28d8a86c263d2db0361966759ec51c34e55c56`. These exercise actual native creation and finite entity restoration. The ownership feature remains unbound in shipping gameplay.
+Four CPU Unity Play-mode probes passed on immutable `2b28d8a86c263d2db0361966759ec51c34e55c56`. These exercise actual native creation and finite entity restoration. The ownership feature remains unbound in shipping gameplay.
 
 | Proof | Actual result |
 | --- | --- |
@@ -36,6 +36,21 @@ A's first attempt (`/tmp/wildfire-natural-source-a-engine-run/`, terminal 29740,
 
 The second attempt (`/tmp/wildfire-natural-source-a-corrected-run/`, terminal 92029, exit 1) passed startup/resolution, then exposed a fixture provider reading the container before native eager construction returned it. The correction uses actual Bindito constructor-injected IContainer and preserves eager/scoping behavior; managed counterfactuals are under `/tmp/wildfire-natural-source-a-provider-injection-fix/`. Both failures and cleanup remain intact. Production DLLs were unchanged; the third A attempt and first B attempt passed.
 
+## Actual removal and fresh restore follow-up
+
+A separate **C** run replaced A's supplied receipt path with actual native demand, removal task and scheduled credit. `WaterInput.DemandCleanWaterAmount` uses the exact factory's native WaterService/WaterChangeService. Actual scheduler cycles publish demand and credit the real `UpdateWaterChangesTask.Run` result; no authored receipt, direct input-volume write or manual Changes.Tick remains. Task completion is synchronous over exclusively supplied finite native columns, between settled native scheduler cycles.
+
+The installed one-Water quantum is 0.2. First native receipt/buffer was **0.199999988**, strictly insufficient; a second full request returned another **0.199999988**, accumulating **0.399999976**. Column depth decreased from 1 to 0.6 within the measured conservation tolerance. Actual empty tasks clear receipts and subsequent scheduler cycles do not replay credit. Native save retains the exact untainted positive buffer. Genuine empty-cycle competitor taint, deletion/unregistration and refusal to rearm also pass.
+
+**B2** reused byte-identical B1 source, Entry, binaries, factory helper and supplier. Only the input bytes/hash and output paths changed. It restored C's exact native-removal save through the same real native loader/batch/PostLoad chain. The first empty scheduler cycle preserves clean 0.399999976/dirty 0, Ready/Armed state and one registration without new arming, receipt, refill or debit. Native loading issues are empty. Resave is **byte-identical** to C's input.
+
+| Run | Artifacts | Terminal / result |
+| --- | --- | --- |
+| C: actual removal | `/tmp/wildfire-natural-source-real-fluid-run/` | 76452, PID 74274, exit 0; all 22 prepared inputs unchanged; deferred destruction 8/8 after an actual frame, zero cleanup errors/Unity exceptions. |
+| B2: actual-removal save restore | `/tmp/wildfire-natural-source-b2-engine-run/` | 72237, PID 74588, exit 0; all 24 inputs unchanged; native deletion 1, deferred destruction 5/5 after an actual frame, zero cleanup errors/Unity exceptions. |
+
+C adds the reviewed finite WaterSimulatorSpec supplier to its external helper (SHA `bd487c3f82398833fbc3d852cbc4b989a87c68b933cc378e019a607a98224102`); production native/Core and passed Entry/scene remain unchanged. B2 uses B1's original helper. The C save/B2 input/resave SHA is `a28a9bd73560b1ac3895ee1a49138d8ea94937af1567cddeb6d4678461b2303a`, owner `9410c0a3-d696-4211-af3c-936363cfd82a`, same template/input `(3,1,4)`. Original A/B1 artifacts retain their separate supplied-0.2 provenance.
+
 ## Remaining boundary
 
-A supplies the completed removal dictionary, so its 0.2 credit does **not** prove actual river removal or the [native float receipt precision](native-water-removal-task.md). B supplies finite serialized data rather than a game archive. Actual fluid integration, movement/shoreline access, tainted reload, demand cadence, native bucket conversion and a completed firefighter trip remain separate. [Ownership source/native tests](native-water-ownership-component.md) and this proof do not activate a production binding.
+C+B2 establish finite native removal → exact credit → save → fresh native entity restoration without replay. Supplied finite columns and synchronous task completion do not prove full river simulation or native parallel WaterSimulationTaskStarter scheduling. B1/B2 supply finite serialized data rather than a game archive. Cleanliness/underwater admission, movement/shoreline access, tainted reload, gameplay demand cadence, native bucket conversion and a completed firefighter trip remain separate. [Ownership source/native tests](native-water-ownership-component.md) and these probes do not activate a production binding.
