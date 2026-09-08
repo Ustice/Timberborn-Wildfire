@@ -54,9 +54,13 @@ work; this entry is not a parallel production tick loop.
 
 Protocol negative draft: 12 failed / 5 passed against deliberately unconditional fabricated
 success; strict decoder: 17 passed. Focused application/step/snapshot suite: 36 passed.
+Full portable suite: 227 passed. Full native suite: 1,314 passed, zero failures or skips.
 Managed tests exercise phase rejection, exact accepted callback, native coordinator
 forwarding through its installed-assembly context, failed callback poison, and listener
-failure completion. They do not execute native stock changes or GPU code.
+failure completion. They do not execute native stock changes or GPU code. A Unity adapter test verifies the
+appended structured command index and outcome bits30–31 through the existing four-word
+readback abstraction. Both positive and rejected receipts retain committed failure semantics
+when a later listener throws.
 
 Seven `AshApplicationShaderTests` compile without warnings. They cover competing requests,
 earlier removal/taint, later removal, OpenSoil, rejection field preservation against an

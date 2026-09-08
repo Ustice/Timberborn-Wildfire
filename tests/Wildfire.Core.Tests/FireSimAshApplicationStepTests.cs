@@ -80,8 +80,9 @@ public sealed class FireSimAshApplicationStepTests
         Assert.Throws<InvalidOperationException>(() => step.Tick(backend));
     }
 
-    [Fact]
-    public void CallbackFailureIsIndeterminateButLaterListenerFailureNeverReplaysApplication()
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void CallbackFailureIsIndeterminateButLaterListenerFailureNeverReplaysApplication(bool rejected)
     {
         var step = new FireSimStepCoordinator(1, 1);
         var failure = new IOException("native mutation callback");
@@ -91,11 +92,11 @@ public sealed class FireSimAshApplicationStepTests
         step = new FireSimStepCoordinator(1, 1);
         using var listener = step.Subscribe(new Listener(() => throw failure));
         int applications = 0;
-        error = Assert.Throws<FireSimStepInputException>(() => step.TryApplyCleanAsh(new Backend(), new(0, 1), _ => applications++));
+        error = Assert.Throws<FireSimStepInputException>(() => step.TryApplyCleanAsh(new Backend { Outcome = rejected ? FireSimAshApplicationOutcome.Full : FireSimAshApplicationOutcome.Applied }, new(0, 1), _ => applications++));
         Assert.Equal(FireSimStepInputOutcome.Committed, error.Outcome);
         listener.Dispose();
         step.Tick(new Backend());
-        Assert.Equal(1, applications);
+        Assert.Equal(rejected ? 0 : 1, applications);
         Assert.Equal(0, step.PendingChangeCount);
     }
 
