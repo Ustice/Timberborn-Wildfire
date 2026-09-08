@@ -64,6 +64,52 @@ public sealed class FertilizerRejectionCommitTests
         Assert.Equal(1, sim.Swaps);
     }
 
+    [Fact]
+    public void MisleadingNotAppliedFromDispositionCannotRelabelTheCompletedStep()
+    {
+        var guard = new NativeResourceTransaction();
+        var sim = new TimberbornIncompleteDispatchTests.Simulator();
+        var cause = new FireSimStepInputException(FireSimStepInputOutcome.NotApplied, new IOException("actor callback"));
+        var error = Assert.Throws<FireSimStepInputException>(() => WorkerStep(guard, sim, _ => throw cause));
+        Assert.Equal(FireSimStepInputOutcome.Committed, error.Outcome);
+        Assert.Same(cause, error.InnerException);
+        Assert.Equal(1, sim.Swaps);
+        Assert.Throws<InvalidOperationException>(() => WorkerStep(guard, sim, _ => { }));
+        Assert.Equal(1, sim.Swaps);
+    }
+
+    [Theory]
+    [InlineData(1, 2, 0)]
+    [InlineData(0, 1, 0)]
+    [InlineData(0, 2, 1)]
+    public void ChangedReturnedRejectionCannotPublishDispositionOrReplay(int cell, byte limit, byte added)
+    {
+        var guard = new NativeResourceTransaction();
+        var sim = new ChangedReceiptSimulator(new(cell, limit, added, FireSimAshApplicationOutcome.Full));
+        int dispositions = 0;
+        var error = Assert.Throws<FireSimStepInputException>(() => WorkerStep(guard, sim, _ => dispositions++));
+        Assert.Equal(FireSimStepInputOutcome.Committed, error.Outcome);
+        Assert.Equal(0, dispositions);
+        Assert.Equal(1, sim.Core.Swaps);
+        Assert.Throws<InvalidOperationException>(() => WorkerStep(guard, sim, _ => dispositions++));
+        Assert.Equal(1, sim.Core.Swaps);
+    }
+
+    private sealed class ChangedReceiptSimulator(FireSimAshApplicationReceipt receipt) : IFireSimAshApplicationSimulator
+    {
+        internal readonly TimberbornIncompleteDispatchTests.Simulator Core = new();
+        public int Width => Core.Width;
+        public int Height => Core.Height;
+        public int Depth => Core.Depth;
+        public void RegisterChange(FireSimChange input) => Core.RegisterChange(input);
+        public IDisposable Subscribe(IFireSimListener listener) => Core.Subscribe(listener);
+        public GpuFireStepResult Tick() => Core.Tick();
+        public GpuFireStepResult? TryTickWithInput(FireSimChange input, Action commit) => Core.TryTickWithInput(input, commit);
+        public FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input,
+            Action<FireSimAshApplicationReceipt> commit) => Core.TryApplyCleanAsh(input, commit) is { } result
+                ? result with { Receipt = receipt } : null;
+    }
+
     private static FireSimAshApplicationStepResult? WorkerStep(NativeResourceTransaction guard,
         IFireSimAshApplicationSimulator sim, Action<FireSimAshApplicationReceipt> rejected)
     {

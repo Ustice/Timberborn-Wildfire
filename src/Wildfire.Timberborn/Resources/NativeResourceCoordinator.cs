@@ -1,5 +1,6 @@
 using Wildfire.Timberborn.FireResponse;
 using Wildfire.Core;
+using Wildfire.Timberborn.Fertilizer;
 
 namespace Wildfire.Timberborn.Resources;
 
@@ -7,6 +8,9 @@ namespace Wildfire.Timberborn.Resources;
 public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, ITimberbornFireDispatchHost
 {
     private readonly List<WardenExecutor> _wardens = new();
+    private readonly List<FertilizerExecutor> _fertilizers = new();
+    internal void Register(FertilizerExecutor executor) => _fertilizers.Add(executor);
+    internal void Unregister(FertilizerExecutor executor) => _fertilizers.Remove(executor);
     private IFireSimAshCollectionSimulator? _simulator;
     private readonly List<AshHarvestExecutor> _harvesters = new();
     private readonly NativeResourceStepScheduler _scheduler = new();
@@ -37,7 +41,13 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
         _transaction.ThrowIfOperationUnsafe();
         var simulator = _simulator ?? throw new InvalidOperationException("Resource simulator has not been attached.");
         LastAshReceipt = null;
-        return _scheduler.Tick(ash => ash ? TryAsh(simulator) : TryWater(simulator), simulator.Tick);
+        return _scheduler.Tick(kind => kind switch
+        {
+            NativeResourceProducerKind.Water => TryWater(simulator),
+            NativeResourceProducerKind.AshCollection => TryAsh(simulator),
+            NativeResourceProducerKind.FertilizerApplication => TryFertilizer(simulator),
+            _ => throw new InvalidOperationException("Unknown native resource producer."),
+        }, simulator.Tick);
     }
 
     private NativeResourceAttempt TryWater(IFireSimAshCollectionSimulator simulator)
@@ -45,7 +55,7 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
         foreach (var warden in _wardens.ToArray())
         {
             if (!warden.TryPrepareApplication(out var input, out var commit)) continue;
-            return new(true, _transaction.TryDeliver(simulator, input, () => { commit(); _scheduler.Committed(ash: false); }));
+            return new(true, _transaction.TryDeliver(simulator, input, () => { commit(); _scheduler.Completed(NativeResourceProducerKind.Water); }));
         }
         return default;
     }
@@ -54,7 +64,22 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
         foreach (var harvester in _harvesters.ToArray())
         {
             if (!harvester.TryPrepareCollection(out var input, out var commit)) continue;
-            return new(true, _transaction.TryCollectAsh(simulator, input, receipt => { commit(receipt); LastAshReceipt = receipt; _scheduler.Committed(ash: true); }));
+            return new(true, _transaction.TryCollectAsh(simulator, input, receipt => { commit(receipt); LastAshReceipt = receipt; _scheduler.Completed(NativeResourceProducerKind.AshCollection); }));
+        }
+        return default;
+    }
+
+    private NativeResourceAttempt TryFertilizer(IFireSimAshCollectionSimulator simulator)
+    {
+        foreach (var executor in _fertilizers.ToArray())
+        {
+            if (!executor.TryPrepareApplication(out var input, out var accepted, out var rejected)) continue;
+            var application = simulator as IFireSimAshApplicationSimulator ??
+                throw new InvalidOperationException("The attached world simulator lacks conditional ash application support.");
+            var result = _transaction.TryApplyCleanAsh(application, input,
+                receipt => { accepted(receipt); _scheduler.Completed(NativeResourceProducerKind.FertilizerApplication); },
+                receipt => { rejected(receipt); _scheduler.Completed(NativeResourceProducerKind.FertilizerApplication); });
+            return new(true, result?.Step);
         }
         return default;
     }

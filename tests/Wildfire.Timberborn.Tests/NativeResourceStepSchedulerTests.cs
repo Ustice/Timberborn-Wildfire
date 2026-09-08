@@ -12,12 +12,14 @@ public sealed class NativeResourceStepSchedulerTests
         var commits = new List<string>();
         int water = 3, ash = 3, ordinaryTicks = 0, attempts = 0;
         bool reject = false;
-        NativeResourceAttempt Attempt(bool collectAsh)
+        NativeResourceAttempt Attempt(NativeResourceProducerKind kind)
         {
+            if (kind == NativeResourceProducerKind.FertilizerApplication) return default;
+            bool collectAsh = kind == NativeResourceProducerKind.AshCollection;
             attempts++;
             if (reject) return new(true, null);
             if (collectAsh) { ash--; commits.Add("ash"); } else { water--; commits.Add("water"); }
-            scheduler.Committed(collectAsh);
+            scheduler.Completed(kind);
             return new(true, new GpuFireStepResult(Array.Empty<CellDelta>(), 1));
         }
         GpuFireStepResult Ordinary() { ordinaryTicks++; return new(Array.Empty<CellDelta>(), 1); }
@@ -35,12 +37,54 @@ public sealed class NativeResourceStepSchedulerTests
     public void StalePreferredProducerYieldsToReadyOtherProducer()
     {
         var scheduler = new NativeResourceStepScheduler();
-        var attempted = new List<bool>();
+        var attempted = new List<NativeResourceProducerKind>();
         scheduler.Tick(ash =>
         {
             attempted.Add(ash);
-            return ash ? new(true, new GpuFireStepResult(Array.Empty<CellDelta>(), 1)) : default;
+            return ash == NativeResourceProducerKind.AshCollection ? new(true, new GpuFireStepResult(Array.Empty<CellDelta>(), 1)) : default;
         }, () => throw new InvalidOperationException("Ready ash must advance the step"));
-        Assert.Equal(new[] { false, true }, attempted);
+        Assert.Equal(new[] { NativeResourceProducerKind.Water, NativeResourceProducerKind.AshCollection }, attempted);
     }
+    [Fact]
+    public void ThreeReadyKindsRotateOnlyAfterCompletedAdmission()
+    {
+        var scheduler = new NativeResourceStepScheduler();
+        var order = new List<NativeResourceProducerKind>();
+        for (int i = 0; i < 6; i++)
+            scheduler.Tick(kind =>
+            {
+                order.Add(kind);
+                scheduler.Completed(kind);
+                return new(true, new GpuFireStepResult([], 1));
+            }, () => throw new Exception("unexpected ordinary step"));
+        Assert.Equal(new[] { NativeResourceProducerKind.Water, NativeResourceProducerKind.AshCollection,
+            NativeResourceProducerKind.FertilizerApplication, NativeResourceProducerKind.Water,
+            NativeResourceProducerKind.AshCollection, NativeResourceProducerKind.FertilizerApplication }, order);
+    }
+
+    [Fact]
+    public void PreparedFertilizerWithFullQueueRunsOneOrdinaryStepAndNoOtherProducer()
+    {
+        var scheduler = new NativeResourceStepScheduler();
+        scheduler.Completed(NativeResourceProducerKind.AshCollection);
+        var attempts = new List<NativeResourceProducerKind>();
+        int ordinary = 0;
+        for (int i = 0; i < 2; i++)
+            scheduler.Tick(kind => { attempts.Add(kind); return new(true, null); },
+                () => { ordinary++; return new([], 1); });
+        Assert.Equal(new[] { NativeResourceProducerKind.FertilizerApplication,
+            NativeResourceProducerKind.FertilizerApplication }, attempts);
+        Assert.Equal(2, ordinary);
+    }
+
+    [Fact]
+    public void NoPreparedKindRunsOrdinaryExactlyOnce()
+    {
+        var scheduler = new NativeResourceStepScheduler();
+        int attempts = 0, ordinary = 0;
+        scheduler.Tick(_ => { attempts++; return default; }, () => { ordinary++; return new([], 1); });
+        Assert.Equal(3, attempts);
+        Assert.Equal(1, ordinary);
+    }
+
 }
