@@ -32,6 +32,9 @@ public sealed class BorrowedDutyPersistenceTests
         });
         var saver = NativePersistenceProxy.Create(world.GetType("Timberborn.WorldPersistence.IEntitySaver")!, (_, _) => ObjectProxy("IObjectSaver"));
         type.GetMethod("Save")!.Invoke(source, new[] { saver });
+        // Exercise the actual old unversioned empty-trip payload, not an upgraded save.
+        values.Remove(type.GetField("VersionKey", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!);
+        values.Remove(type.GetField("ReturnOnlyKey", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!);
         var loader = NativePersistenceProxy.Create(world.GetType("Timberborn.WorldPersistence.IEntityLoader")!, (_, _) => ObjectProxy("IObjectLoader"));
         var restored = Activator.CreateInstance(type, new object?[5])!;
         type.GetMethod("Load")!.Invoke(restored, new[] { loader });

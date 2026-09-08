@@ -19,9 +19,12 @@ using Wildfire.Timberborn.Resources;
 namespace Wildfire.Timberborn.FireBell;
 
 /// <summary>One empty-handed round trip. Employment is observed, never changed.</summary>
-public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableComponent, IDeletableEntity
+public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableComponent, IDeletableEntity
 {
     private static readonly ComponentKey Key = new("Wildfire.BorrowedDutyExecutor");
+    private static readonly PropertyKey<int> VersionKey = new("Version");
+    private static readonly PropertyKey<Inventory> ReturnInventoryKey = new("ReturnInventory");
+    private static readonly PropertyKey<bool> ReturnOnlyKey = new("ReturnOnly");
     private static readonly PropertyKey<int> PhaseKey = new("Phase");
     private static readonly PropertyKey<float> HoursKey = new("Hours");
     private static readonly PropertyKey<bool> CancelKey = new("Cancel");
@@ -61,6 +64,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     public void Awake()
     {
         _entity = GetComponent<EntityComponent>();
+        _returnBehavior = GetComponent<BorrowedDutyBehavior>();
         _worker = GetComponent<Worker>(); _citizen = GetComponent<Citizen>();
         _hours = GetComponent<WorkerWorkingHours>(); _refuser = GetComponent<WorkRefuser>();
         _carrier = GetComponent<GoodCarrier>(); _reserver = GetComponent<GoodReserver>();
@@ -97,6 +101,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     {
         if (Phase == BorrowedDutyPhase.Idle) return ExecutorStatus.Success;
         if (!_manager.IsRunningExecutor<BorrowedDutyExecutor>()) throw new InvalidOperationException("Borrowed duty does not own native movement.");
+        if (_returnOnly) return TickReturn(hours);
         if (_mortal.Dead || _mortal.ShouldDie)
         { _movement.Stop(); _progress.Finish(); return ExecutorStatus.Failure; }
         if (_resources.IsIndeterminate) { _movement.RejectRoute(); return ExecutorStatus.Running; }
@@ -144,11 +149,17 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     }
     public void DeleteEntity()
     {
-        _movement.Dispose(); _fixture.Unregister(this);
+        try { if (_returnOnly) FinishReturn(dying: true); }
+        finally { _movement.Dispose(); _fixture.Unregister(this); }
     }
     public void Save(IEntitySaver saver)
     {
+        if (_returnOnly) _resources.ThrowIfSaveUnsafe();
         var state = saver.GetComponent(Key);
+        state.Set(VersionKey, 2);
+        state.Set(ReturnOnlyKey, _returnOnly);
+        if (_returnOnly && _returnInventory is not null && _returnInventory)
+            state.Set(ReturnInventoryKey, _returnInventory, _references.Of<Inventory>());
         state.Set(PhaseKey, (int)Phase); state.Set(HoursKey, _progress.Hours); state.Set(CancelKey, _progress.CancellationRequested);
         if (_donor is not null && _donor) state.Set(DonorKey, _donor, _references.Of<Workplace>());
         state.Set(OriginKey, _origin); state.Set(PointKey, _point); state.Set(DestinationKey, _destination);
@@ -156,7 +167,15 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     public void Load(IEntityLoader loader)
     {
         var state = loader.GetComponent(Key);
+        if (state.Has(VersionKey) && state.Get(VersionKey) != 2)
+            throw new InvalidOperationException("Unsupported borrowed executor version.");
+        _returnOnly = state.Has(VersionKey) && state.Get(ReturnOnlyKey);
+        _returnInventory = null;
+        if (_returnOnly && state.Has(ReturnInventoryKey))
+            state.GetObsoletable(ReturnInventoryKey, _references.Of<Inventory>(), out _returnInventory);
         _progress.Restore(state.Get(PhaseKey), state.Get(HoursKey), state.Get(CancelKey));
+        if (_returnOnly && Phase != BorrowedDutyPhase.Returning)
+            throw new InvalidOperationException("Borrowed recovery has a non-return phase.");
         if (state.Has(DonorKey)) state.GetObsoletable(DonorKey, _references.Of<Workplace>(), out _donor);
         _origin = state.Get(OriginKey); _point = state.Get(PointKey); _destination = state.Get(DestinationKey);
         _restored = Phase != BorrowedDutyPhase.Idle;
