@@ -24,6 +24,8 @@ const knownCommands = [
   "qa-ash-water-stimulus",
   "qa-adjust-inventory",
   "qa-borrowed-duty-arm",
+  "qa-borrowed-duty-water",
+  "qa-borrowed-duty-source",
   "qa-borrowed-duty-cancel",
   "qa-borrowed-duty-status",
   "qa-building-burnout-stimulus",
@@ -47,6 +49,10 @@ Commands:
   qa-borrowed-duty-arm <donor-guid> <x> <y> <z>
                             Offer one development duty at an explicit workplace; Unity y is vertical.
                             Requires QA mutations and borrowed-duty process switches.
+  qa-borrowed-duty-source <input-x> <input-y> <input-z> <shore-x> <shore-y> <shore-z>
+                            Create one explicit fixed input; input z/shore y are vertical.
+  qa-borrowed-duty-water <donor-guid> <source-guid> <shore-x> <shore-y> <shore-z> <fire-cell> <approach-x> <approach-y> <approach-z> <return-owner-guid> <inventory-component>
+                            Offer one clean-source sortie; no mixed-water shipping policy.
   qa-borrowed-duty-cancel   Disarm the offer and request active borrowed duty return.
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-ash-water-stimulus <clean|tainted>
