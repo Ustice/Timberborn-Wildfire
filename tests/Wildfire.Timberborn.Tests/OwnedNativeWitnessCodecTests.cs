@@ -14,7 +14,7 @@ public sealed class OwnedNativeWitnessCodecTests
         Assert.StartsWith("WF\t2\n",encoded);
         Assert.Equal(3,BitConverter.ToInt32(Convert.FromBase64String(encoded.Split('\n')[1].Split('\t')[1])));
         var history=restored.OwnedMaterial!.History!;
-        Assert.Equal(OwnedNativeCompatibilityCapability.Complete,history.NativeCompatibility);
+        Assert.Equal(OwnedNativeCompatibilityCapability.Unavailable,history.NativeCompatibility);
         Assert.Equivalent(source.OwnedMaterial!.History!.NativeDefinitions,history.NativeDefinitions,strict:true);
         Assert.Single(restored.Consequences.BurnDamageStates);Assert.Equal(2,restored.Consequences.BurnDamageStates.Single().DamageTaken);
         Assert.Equal(encoded,TimberbornWildfirePersistenceCodec.Encode(restored));

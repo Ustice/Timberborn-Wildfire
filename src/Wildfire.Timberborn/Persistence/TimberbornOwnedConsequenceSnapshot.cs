@@ -107,8 +107,8 @@ public sealed class TimberbornOwnedConsequenceSnapshot
     public IReadOnlyList<OwnedNaturalProgress> Natural { get; }
     public IReadOnlyList<OwnedStorageCredit> StorageCredits { get; }
     public OwnedNativeDefinitionSet? NativeDefinitions { get; }
-    public OwnedNativeCompatibilityCapability NativeCompatibility => NativeDefinitions is null ?
-        OwnedNativeCompatibilityCapability.Unavailable : OwnedNativeCompatibilityCapability.Complete;
+    public OwnedNativeCompatibilityCapability NativeCompatibility => NativeDefinitions?.HasInventoryDeclarations == true ?
+        OwnedNativeCompatibilityCapability.Complete : OwnedNativeCompatibilityCapability.Unavailable;
     public TimberbornOwnedConsequenceSnapshot(IEnumerable<OwnedConsequenceOwner> owners,
         IEnumerable<OwnedNaturalProgress> natural, IEnumerable<OwnedStorageCredit> credits, OwnedNativeDefinitionSet? nativeDefinitions = null)
     {

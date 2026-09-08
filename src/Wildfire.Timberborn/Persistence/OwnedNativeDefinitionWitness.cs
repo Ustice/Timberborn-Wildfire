@@ -34,6 +34,19 @@ public sealed class OwnedNativeDefinitionWitness
     public OwnedNativeDefinitionWitness(Guid entityId, string specId, TimberbornInitialBodyShape shape,
         TimberbornBurnableProfile bodyProfile, IEnumerable<TimberbornCellCoordinates> footprint,
         IEnumerable<OwnedNamedYieldDefinition> yields, IEnumerable<TimberbornBurnDamageResourceStack>? buildingCost)
+        : this(entityId, specId, shape, bodyProfile, footprint, yields, buildingCost, null, false) { }
+
+    public OwnedNativeDefinitionWitness(Guid entityId, string specId, TimberbornInitialBodyShape shape,
+        TimberbornBurnableProfile bodyProfile, IEnumerable<TimberbornCellCoordinates> footprint,
+        IEnumerable<OwnedNamedYieldDefinition> yields, IEnumerable<TimberbornBurnDamageResourceStack>? buildingCost,
+        IEnumerable<TimberbornInventoryDeclaration> inventoryDeclarations)
+        : this(entityId, specId, shape, bodyProfile, footprint, yields, buildingCost,
+            inventoryDeclarations ?? throw new ArgumentNullException(nameof(inventoryDeclarations)), true) { }
+
+    private OwnedNativeDefinitionWitness(Guid entityId, string specId, TimberbornInitialBodyShape shape,
+        TimberbornBurnableProfile bodyProfile, IEnumerable<TimberbornCellCoordinates> footprint,
+        IEnumerable<OwnedNamedYieldDefinition> yields, IEnumerable<TimberbornBurnDamageResourceStack>? buildingCost,
+        IEnumerable<TimberbornInventoryDeclaration>? inventoryDeclarations, bool inventoryEvidence)
     {
         if (entityId == Guid.Empty || string.IsNullOrWhiteSpace(specId) ||
             shape is not (TimberbornInitialBodyShape.Tree or TimberbornInitialBodyShape.Crop or TimberbornInitialBodyShape.Vegetation or
@@ -54,6 +67,12 @@ public sealed class OwnedNativeDefinitionWitness
         if (cost is not null && (cost.Any(s => string.IsNullOrWhiteSpace(s.ResourceId) || s.Amount < 0) ||
             cost.Select(s => s.ResourceId).Distinct(StringComparer.Ordinal).Count() != cost.Length))
             throw new ArgumentException("Static construction costs must have unique resource ids.");
+        var inventory = inventoryDeclarations?.ToArray();
+        if (inventory is not null && (inventory.Any(d => d is null) ||
+            inventory.Select(d => d.Role).Distinct().Count() != inventory.Length ||
+            inventory.Select(d => d.ComponentName).Distinct(StringComparer.Ordinal).Count() != inventory.Length))
+            throw new ArgumentException("Static inventory declarations require unique native roles and names.");
+        InventoryDeclarations = inventoryEvidence ? Array.AsReadOnly(inventory!.OrderBy(d => d.Role).ToArray()) : null;
         EntityId = entityId;
         SpecId = specId;
         Shape = shape;
@@ -62,6 +81,8 @@ public sealed class OwnedNativeDefinitionWitness
         Yields = Array.AsReadOnly(named);
         BuildingCost = cost is null ? null : Array.AsReadOnly(cost);
     }
+    /// <summary>Null is unknown legacy evidence; an explicit empty list proves no declared inventories.</summary>
+    public IReadOnlyList<TimberbornInventoryDeclaration>? InventoryDeclarations { get; }
     public Guid EntityId { get; }
     public string SpecId { get; }
     public TimberbornInitialBodyShape Shape { get; }
@@ -80,34 +101,50 @@ public sealed class OwnedNativeDefinitionWitness
         body.BodyProfile, body.Footprint.Select(slot => slot.LocalCoordinates), body.Yields.Select(y => new OwnedNamedYieldDefinition(
             y.Role, y.ComponentName, y.DeclaredGoodId, y.DeclaredAmount, y.RemoveOnCut)), body.ConstructionResources);
 
+    internal static OwnedNativeDefinitionWitness Capture(TimberbornInitialMaterialBody body,
+        IReadOnlyList<TimberbornInventoryDeclaration> inventoryDeclarations) => new(body.EntityId, body.SpecId, body.Shape,
+        body.BodyProfile, body.Footprint.Select(slot => slot.LocalCoordinates), body.Yields.Select(y => new OwnedNamedYieldDefinition(
+            y.Role, y.ComponentName, y.DeclaredGoodId, y.DeclaredAmount, y.RemoveOnCut)), body.ConstructionResources, inventoryDeclarations);
+
     internal bool Matches(OwnedNativeDefinitionWitness other) => EntityId == other.EntityId && SpecId == other.SpecId &&
         Shape == other.Shape && BodyProfile == other.BodyProfile && LocalFootprint.SequenceEqual(other.LocalFootprint) &&
         Yields.SequenceEqual(other.Yields) && (BuildingCost is null ? other.BuildingCost is null :
-            other.BuildingCost is not null && BuildingCost.SequenceEqual(other.BuildingCost));
+            other.BuildingCost is not null && BuildingCost.SequenceEqual(other.BuildingCost)) &&
+        (InventoryDeclarations is null ? other.InventoryDeclarations is null :
+            other.InventoryDeclarations is not null && InventoryDeclarations.SequenceEqual(other.InventoryDeclarations));
 }
 
-/// <summary>Exactly the retained owners' static evidence; absence of this collection means unavailable legacy evidence.</summary>
+/// <summary>Legacy evidence covers retained owners; inventory-complete evidence keeps every original owner, including retired.</summary>
 public sealed class OwnedNativeDefinitionSet
 {
     private readonly IReadOnlyDictionary<Guid, OwnedNativeDefinitionWitness> _byId;
-    public OwnedNativeDefinitionSet(IEnumerable<OwnedNativeDefinitionWitness> definitions)
+    public OwnedNativeDefinitionSet(IEnumerable<OwnedNativeDefinitionWitness> definitions) : this(definitions, false) { }
+    public static OwnedNativeDefinitionSet WithInventoryDeclarations(IEnumerable<OwnedNativeDefinitionWitness> definitions) => new(definitions, true);
+    private OwnedNativeDefinitionSet(IEnumerable<OwnedNativeDefinitionWitness> definitions, bool hasInventoryDeclarations)
     {
-        var values = definitions.OrderBy(d => d.EntityId).ToArray();
-        if (values.Select(d => d.EntityId).Distinct().Count() != values.Length)
-            throw new ArgumentException("Duplicate native witness.");
-        Definitions = Array.AsReadOnly(values);
+        var values = definitions.ToArray();
+        if (values.Any(d => d is null) || values.Select(d => d.EntityId).Distinct().Count() != values.Length)
+            throw new ArgumentException("Missing or duplicate native witness.");
+        if (values.Any(d => (d.InventoryDeclarations is not null) != hasInventoryDeclarations))
+            throw new ArgumentException("Native witness set cannot mix or discard inventory declaration evidence.");
+        Definitions = Array.AsReadOnly(values.OrderBy(d => d.EntityId).ToArray());
+        HasInventoryDeclarations = hasInventoryDeclarations;
         _byId = values.ToDictionary(d => d.EntityId);
     }
+    public bool HasInventoryDeclarations { get; }
     public IReadOnlyList<OwnedNativeDefinitionWitness> Definitions { get; }
     internal OwnedNativeDefinitionWitness Get(Guid id) => _byId.TryGetValue(id, out var witness) ? witness :
-        throw new ArgumentException("Retained owner has no static native witness.");
+        throw new ArgumentException("Canonical owner has no static native witness.");
     internal void Validate(IReadOnlyList<OwnedConsequenceOwner> owners)
     {
-        var retained = owners.Where(o => o.Retention == OwnedBodyRetention.RetainedBody).ToArray();
-        if (retained.Length != Definitions.Count || retained.Any(o => !_byId.TryGetValue(o.EntityId, out var d) ||
-            d.SpecId != o.Profile!.SpecId || d.Family != o.Family))
-            throw new ArgumentException("Native witnesses must match exactly the retained owner identities.");
+        var expected = HasInventoryDeclarations ? owners.ToArray() : owners.Where(o => o.Retention == OwnedBodyRetention.RetainedBody).ToArray();
+        if (expected.Length != Definitions.Count || expected.Any(o => !_byId.TryGetValue(o.EntityId, out var d) ||
+            d.Family != o.Family || (o.Retention == OwnedBodyRetention.RetainedBody && d.SpecId != o.Profile!.SpecId)))
+            throw new ArgumentException("Native witnesses must match exactly their canonical owner identities.");
     }
-    internal OwnedNativeDefinitionSet ForRetained(IReadOnlyList<OwnedConsequenceOwner> owners) =>
-        new(owners.Where(o => o.Retention == OwnedBodyRetention.RetainedBody).Select(o => Get(o.EntityId)));
+    internal OwnedNativeDefinitionSet ForOwners(IReadOnlyList<OwnedConsequenceOwner> owners)
+    {
+        if (HasInventoryDeclarations) { Validate(owners); return this; }
+        return new(owners.Where(o => o.Retention == OwnedBodyRetention.RetainedBody).Select(o => Get(o.EntityId)));
+    }
 }

@@ -37,9 +37,13 @@ internal static partial class TimberbornOwnedMaterialCodec
             output.Write(value.BuildingCost is not null);
             if (value.BuildingCost is { } cost)
                 WriteArray(output, cost, WriteStack);
+            if (definitions.HasInventoryDeclarations)
+                WriteArray(output, value.InventoryDeclarations!, (o, declaration) =>
+                { o.Write((int)declaration.Role); WriteText(o, declaration.ComponentName); });
         });
-    private static OwnedNativeDefinitionSet ReadNativeDefinitions(BinaryReader reader, int maxOwners) => new(
-        ReadArray(reader, input =>
+    private static OwnedNativeDefinitionSet ReadNativeDefinitions(BinaryReader reader, int maxOwners, bool inventoryEvidence)
+    {
+        var values = ReadArray(reader, input =>
         {
             var id = new Guid(input.ReadBytes(16));
             string spec = ReadText(input);
@@ -50,6 +54,10 @@ internal static partial class TimberbornOwnedMaterialCodec
             var yields = ReadArray(input, r => new OwnedNamedYieldDefinition((TimberbornCapturedYieldRole)r.ReadInt32(),
                 ReadText(r), ReadText(r), r.ReadInt32(), ReadFlag(r)), 17);
             var cost = ReadFlag(input) ? ReadArray(input, ReadStack, 8) : null;
-            return new OwnedNativeDefinitionWitness(id, spec, shape, profile, cells, yields, cost);
-        }, 46, maxOwners));
+            return inventoryEvidence ? new OwnedNativeDefinitionWitness(id, spec, shape, profile, cells, yields, cost,
+                ReadArray(input, r => new TimberbornInventoryDeclaration((TimberbornNativeInventoryRole)r.ReadInt32(), ReadText(r)), 8)) :
+                new OwnedNativeDefinitionWitness(id, spec, shape, profile, cells, yields, cost);
+        }, 46, maxOwners);
+        return inventoryEvidence ? OwnedNativeDefinitionSet.WithInventoryDeclarations(values) : new(values);
+    }
 }

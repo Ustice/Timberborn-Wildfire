@@ -37,7 +37,7 @@ internal static partial class TimberbornOwnedMaterialCodec
             ReadFlag(input), ReadFlag(input), ReadFlag(input), (OwnedCharredPresentation)input.ReadInt32()), 27, owners.Length);
         var credits = ReadArray(reader, input => new OwnedStorageCredit(new Guid(input.ReadBytes(16)), ReadText(input),
             input.ReadInt32(), input.ReadByte()), 25);
-        var definitions=envelope>=3 ? ReadNativeDefinitions(reader, owners.Length) : null;
+        var definitions=envelope>=3 ? ReadNativeDefinitions(reader, owners.Length, envelope >= 4) : null;
         return new(owners, natural, credits, definitions);
     }
     private static void WriteProfile(BinaryWriter writer, OwnedBodyAccountingProfile profile)

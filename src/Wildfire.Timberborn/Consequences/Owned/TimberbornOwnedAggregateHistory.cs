@@ -24,7 +24,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
                 throw new InvalidOperationException("Cannot capture a witnessed retained body whose native entity is missing; removal must settle first.");
             var natural = owners.Where(owner => owner.Family is NativeBurnTargetFamily.Tree or NativeBurnTargetFamily.Crop)
                 .Select(owner => owner.Family == NativeBurnTargetFamily.Tree ? _trees.CaptureProgress(owner) : _crops.CaptureProgress(owner));
-            return new(owners, natural, _storage.CaptureCredit(owners), _nativeDefinitions?.ForRetained(owners));
+            return new(owners, natural, _storage.CaptureCredit(owners), _nativeDefinitions?.ForOwners(owners));
         }
         finally { _consuming = false; }
     }
