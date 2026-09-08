@@ -121,7 +121,7 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
     {
         var reservation = reserver.CapacityReservation;
         return ReferenceEquals(reservation.Inventory, destination) && IsUnit(reservation.GoodAmount) &&
-            !reservation.ConsumeGood && reserver.StockReservation.Inventory is null;
+            reservation.FixedAmount && !reservation.ConsumeGood && reserver.StockReservation.Inventory is null;
     }
 
     private static bool IsUnit(GoodAmount good) => good.GoodId == FertilizerSatchelStock.GoodId && good.Amount == 1;

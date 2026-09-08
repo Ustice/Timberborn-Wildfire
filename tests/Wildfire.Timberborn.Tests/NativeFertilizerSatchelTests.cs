@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Reflection;
 
 namespace Wildfire.Timberborn.Tests;
@@ -243,7 +242,6 @@ public sealed class NativeFertilizerSatchelTests
         Assert.False(f.Poisoned);
     }
 
-
     [Fact]
     public void DeathDuringAppliedCallbackConsumesOnlyOnceButCannotReportSuccessfulStep()
     {
@@ -269,6 +267,60 @@ public sealed class NativeFertilizerSatchelTests
         Assert.IsType<ArgumentNullException>(error.InnerException);
         Assert.Equal(1, f.Quantity(f.Inventory));
         Assert.False(f.Poisoned);
+    }
+
+    [Theory]
+    [InlineData("empty", 0)]
+    [InlineData("overfilled", 2)]
+    [InlineData("reserved", 1)]
+    [InlineData("foreign", 1)]
+    public void AcceptedApplicationCannotConsumeEmptyReservedOrMismatchedNativeCargo(string kind, int quantity)
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        if (quantity > 0) f.Give(f.Inventory, quantity);
+        if (kind == "reserved") f.Call(f.Inventory, "ReserveStock", f.Amount());
+        if (kind == "foreign")
+        {
+            // Native Inventory.Load trusts its serialized storage registry; model unexpected
+            // saved stock without pretending the satchel initializer admitted that good.
+            var storage = f.Inventory.GetType().GetField("_storage", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Inventory)!;
+            f.Call(storage, "Add", f.Amount("Water"));
+        }
+        Assert.Throws<TargetInvocationException>(() => f.Apply());
+        Assert.Equal(quantity, f.Quantity(f.Inventory));
+        Assert.Equal(0, f.Consumption);
+        Assert.True(f.Poisoned); // The fake GPU receipt was already applied; never replay it.
+    }
+
+    [Fact]
+    public void ActualCachedActorAwakeHooksNativeDeathAndDeletionUnsubscribesWithoutSpending()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        var character = f.ModelActorAwake();
+        f.ModelDistrictRegistration();
+        var eventField = character.GetType().GetField("Died", NativeFertilizerSatchelFixture.Flags)!;
+        var handlers = (Delegate)eventField.GetValue(character)!;
+        Assert.Single(handlers.GetInvocationList());
+        handlers.DynamicInvoke(character, EventArgs.Empty); // Drive the real subscribed handler, not native mortality itself.
+        Assert.Equal(0, f.RegisteredProcessors);
+        f.Call(f.Satchel, "DeleteEntity");
+        Assert.Null(eventField.GetValue(character));
+        Assert.Equal(1, f.Quantity(f.Inventory));
+        Assert.Equal(0, f.Consumption);
+        Assert.False(f.Poisoned);
+    }
+
+    [Fact]
+    public void ReturnRejectsNonfixedReservationWhileNativeCapacityReservationRemainsSupported()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Call(f.Reserver, "ReserveCapacity", f.Source, f.Amount());
+        Assert.Equal(true, f.Get(f.Get(f.Reserver, "CapacityReservation")!, "FixedAmount"));
+        Assert.True(f.Reservation("Capacity", f.Source));
+        f.SetReservation("Capacity", f.Source, fixedAmount: false);
+        Assert.False(f.Reservation("Capacity", f.Source));
+        Assert.Same(f.Source, f.Get(f.Get(f.Reserver, "CapacityReservation")!, "Inventory"));
     }
 
 }

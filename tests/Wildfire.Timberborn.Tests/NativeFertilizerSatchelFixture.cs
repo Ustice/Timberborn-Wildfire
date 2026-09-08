@@ -19,6 +19,7 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     private readonly object _goods;
     private readonly object _serializer;
     private readonly Type _stock;
+    private object? _registeredCounter;
     internal const string Good = "FertileAsh";
 
     internal NativeFertilizerSatchelFixture()
@@ -73,9 +74,19 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
             inventory, Amount(good, amount), fixedAmount, consume);
         Set(Reserver, "<" + kind + "Reservation>k__BackingField", reservation);
     }
+    internal object ModelActorAwake()
+    {
+        var character = RuntimeHelpers.GetUninitializedObject(T("Timberborn.Characters", "Character"));
+        var mortal = RuntimeHelpers.GetUninitializedObject(T("Timberborn.MortalSystem", "Mortal"));
+        var citizen = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "Citizen"));
+        AttachCache(Satchel, Inventory, character, mortal, citizen);
+        Call(Satchel, "Awake");
+        return character;
+    }
     internal void ModelDistrictRegistration()
     {
         var counter = Activator.CreateInstance(T("Timberborn.ResourceCountingSystem", "DistrictResourceCounter"))!;
+        _registeredCounter = counter;
         Call(counter, "Add", Satchel.GetType().GetField("_satchelCounter", Flags)!.GetValue(Satchel));
         Set(Satchel, "_counter", counter);
         Set(Satchel, "_registry", District);
@@ -84,7 +95,7 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     {
         get
         {
-            var counter = Satchel.GetType().GetField("_counter", Flags)!.GetValue(Satchel);
+            var counter = _registeredCounter;
             if (counter is null) return 0;
             var processed = counter.GetType().GetField("_processedGoodCounter", Flags)!.GetValue(counter)!;
             return ((IList)processed.GetType().GetField("_goodProcessors", Flags)!.GetValue(processed)!).Count;
@@ -121,7 +132,10 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
         var serialized = Activator.CreateInstance(T("Timberborn.WorldSerialization", "SerializedEntity"), Guid.NewGuid(), "Fixture.Adult")!;
         Call(Inventory, "Save", Activator.CreateInstance(T("Timberborn.WorldPersistence", "EntitySaver"), serialized));
         var restored = NewInventory();
-        Set(restored, "<ComponentName>k__BackingField", Get(Inventory, "ComponentName"));
+        var restoredSatchel = Activator.CreateInstance(Mod("FertilizerSatchel"), Resources)!;
+        var factory = Activator.CreateInstance(T("Timberborn.InventorySystem", "InventoryInitializerFactory"), _goods)!;
+        var initializer = Activator.CreateInstance(Mod("FertilizerSatchelInventoryInitializer"), factory)!;
+        Call(initializer, "Initialize", restoredSatchel, restored);
         Call(restored, "Load", Activator.CreateInstance(T("Timberborn.WorldPersistence", "EntityLoader"), serialized));
         return restored;
     }
