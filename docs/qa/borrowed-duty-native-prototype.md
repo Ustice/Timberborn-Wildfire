@@ -2,6 +2,8 @@
 
 This is a development-only workforce experiment for the Folktails Fire Bell decision. It does not adopt the unresolved donor/communal policy or implement water collection, suppression, bell art, alarms, gear, or a player interface.
 
+Current additional source: [inactive borrowed-water return recovery](borrowed-water-return-recovery.md). The empty-trip protocol and historical evidence below remain intact; the new return binding does not activate water collection or suppression.
+
 ## Implemented boundary
 
 `BorrowedDutyFixture` admits one explicitly selected workplace employee at a native between-job decision boundary, only with process switch `--wildfire-enable-borrowed-duty`. The native employer is never changed. A beaver-owned registered behavior/executor performs one empty-handed trip to an explicit nearby safe point, then returns and releases to ordinary native arbitration. There is no saved old executor or job stack.
