@@ -19,6 +19,7 @@ public sealed class NativeQaSessionLifecycleTests
         Assert.Contains("save_state=failed", f.Call("SaveStatus", id)!.ToString());
         Assert.Empty(Directory.GetFiles(f.SettlementPath));
         Assert.Throws<TargetInvocationException>(() => f.Call("ChangeSpeed", 1));
+        Assert.Throws<TargetInvocationException>(() => f.Call("ChangeSpeed", 0));
     }
 
     [Fact]
@@ -33,18 +34,24 @@ public sealed class NativeQaSessionLifecycleTests
     }
 
     [Fact]
-    public void UnsafeSaveGuardAndNonreadyWorldRefuseBeforeQueueOrSpeedMutation()
+    public void PauseRemainsAvailableWhileUnsafeOrNonreadyResumeAndSaveRefuse()
     {
         using var f = new Fixture();
         f.Initialization.GetType().GetMethod("Unload")!.Invoke(f.Initialization, null);
         Assert.Throws<TargetInvocationException>(() => f.Queue(Guid.NewGuid()));
         Assert.Throws<TargetInvocationException>(() => f.Call("ChangeSpeed", 1));
+        f.Call("ChangeSpeed", 0);
+        Assert.Equal(0f, f.Speed.GetType().GetField("_nextSpeed", Hidden)!.GetValue(f.Speed));
         f.Ready();
+        f.Call("ChangeSpeed", 1);
+        Assert.Equal(1f, f.Speed.GetType().GetField("_nextSpeed", Hidden)!.GetValue(f.Speed));
         var failure = new InvalidOperationException("partial native mutation");
         Assert.Throws<TargetInvocationException>(() => f.Resources.GetType().GetMethod("TransferInventory")!
             .Invoke(f.Resources, new object[] { (Action)(() => throw failure) }));
         Assert.Throws<TargetInvocationException>(() => f.Queue(Guid.NewGuid()));
         Assert.Throws<TargetInvocationException>(() => f.Call("ChangeSpeed", 1));
+        f.Call("ChangeSpeed", 0);
+        Assert.Equal(0f, f.Speed.GetType().GetField("_nextSpeed", Hidden)!.GetValue(f.Speed));
     }
 
     [Fact]
@@ -59,6 +66,9 @@ public sealed class NativeQaSessionLifecycleTests
         f.Speed.GetType().GetMethod("UnlockSpeed")!.Invoke(f.Speed, null);
         f.Call("ChangeSpeed", 1);
         Assert.Equal(1f, next.GetValue(f.Speed));
+        f.Speed.GetType().GetMethod("ChangeAndLockSpeed")!.Invoke(f.Speed, new object[] { 1f });
+        f.Call("ChangeSpeed", 0);
+        Assert.Equal(1f, next.GetValue(f.Speed)); // Emergency pause still honors native lock.
         Assert.Equal(0f, f.Speed.GetType().GetProperty("CurrentSpeed")!.GetValue(f.Speed));
         // LateUpdate calls Unity Time.timeScale before CurrentSpeed publication; actual
         // frame application is an engine boundary, not replaced with a managed shim.

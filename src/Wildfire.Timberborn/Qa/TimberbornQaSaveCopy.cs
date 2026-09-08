@@ -54,7 +54,7 @@ internal sealed class TimberbornQaSaveCopy
         // guarantees closure if any registered native entry writer throws.
         using (var stream = new FileStream(TempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
             serialize(stream);
-        File.Move(TempPath, Path); // Atomic no-overwrite publication; keep partial on failure.
+        File.Move(TempPath, Path); // No-overwrite publication; keep partial on failure.
         Published = true;
         using var saved = new FileStream(Path, FileMode.Open, FileAccess.Read, FileShare.Read);
         Bytes = saved.Length;

@@ -44,8 +44,8 @@ public sealed class TimberbornQaSession : ITimberbornQaSession
         if (_request is { Pending: true }) throw new InvalidOperationException("A QA save is already pending.");
         if (_request?.Id == requestId) throw new InvalidOperationException("This QA save request was already used; query its status.");
         RequireReady();
-        var loaded = _loader.LoadedSave ?? throw new InvalidOperationException("A loaded copied save is required.");
-        if (_loader.IsNewGame) throw new InvalidOperationException("A loaded copied save is required.");
+        var loaded = _loader.LoadedSave ?? throw new InvalidOperationException("A loaded save is required.");
+        if (_loader.IsNewGame) throw new InvalidOperationException("A loaded save is required.");
         var path = _repository.SaveNameToFileName(new SaveReference(name, loaded.SettlementReference));
         TimberbornQaSaveCopy.RequireDestination(path);
         _request = new TimberbornQaSaveCopy(requestId, loaded, path);
@@ -58,7 +58,8 @@ public sealed class TimberbornQaSession : ITimberbornQaSession
     public string ChangeSpeed(int speed)
     {
         if (speed is not (0 or 1)) throw new ArgumentOutOfRangeException(nameof(speed));
-        RequireReady();
+        if (_unloaded) throw new InvalidOperationException("The game session is unloaded.");
+        if (speed == 1) RequireReady();
         _speed.ChangeSpeed(speed); // Native lock and late-update application remain authoritative.
         return $"requested_speed={speed} current_speed={_speed.CurrentSpeed.ToString(CultureInfo.InvariantCulture)}";
     }
