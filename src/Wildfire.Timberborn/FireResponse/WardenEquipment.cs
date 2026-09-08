@@ -1,4 +1,5 @@
 using Wildfire.Timberborn.Resources;
+using Wildfire.Timberborn.Runtime;
 using Timberborn.BaseComponentSystem;
 using Timberborn.Common;
 using Timberborn.Characters;
@@ -18,6 +19,7 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
     public const string WaterId = "Water";
     public static readonly GoodAmount Bucket = new(WaterId, 1);
     private readonly NativeResourceCoordinator _delivery;
+    private readonly Action<string> _warn = new UnityTimberbornFireLogSink().Warning;
     public WardenEquipment(NativeResourceCoordinator delivery) => _delivery = delivery;
     private Citizen _citizen = null!;
     private Character _character = null!;
@@ -105,7 +107,18 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
         // Keep native death/deletion progressing without replaying an uncertain write.
         if (_delivery.IsIndeterminate) return;
         try { _delivery.TransferInventory(UnregisterDistrict); }
-        catch { _delivery.InvalidateAfterLifecycleFailure(); }
+        catch (Exception exception)
+        {
+            _delivery.InvalidateAfterLifecycleFailure();
+            try
+            {
+                _warn($"wildfire_warden_equipment_lifecycle status=indeterminate operation=unregister_district error={exception}");
+            }
+            catch
+            {
+                // Diagnostics must not abort native teardown or retry this exited component.
+            }
+        }
     }
 
     private void UnregisterDistrict()

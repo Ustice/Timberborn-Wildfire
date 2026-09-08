@@ -8,6 +8,104 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class NativeWardenDistrictLifecycleTests
 {
     [Fact]
+    public void ActualBinditoStillSelectsTheSingleProductionConstructor()
+    {
+        using var native = new NativeManagedTestContext();
+        var type = native.LoadMod().GetType("Wildfire.Timberborn.FireResponse.WardenEquipment")!;
+        var retriever = Activator.CreateInstance(native.LoadNative("Bindito.Core")
+            .GetType("Bindito.Core.Internal.ConstructorRetriever")!)!;
+        var constructor = (ConstructorInfo)retriever.GetType().GetMethod("GetEligibleConstructor")!
+            .Invoke(retriever, [type])!;
+        Assert.True(constructor.IsPublic);
+        Assert.Equal("Wildfire.Timberborn.Resources.NativeResourceCoordinator",
+            Assert.Single(constructor.GetParameters()).ParameterType.FullName);
+    }
+
+    [Fact]
+    public void SwallowedNativeCleanupCauseIsRecordedOnceWithItsOriginalStack()
+    {
+        using var f = new Fixture();
+        var cause = new IOException("original district observer failure");
+        f.On(f.Registry, "InventoryUnregistered", () => throw cause);
+        bool nativeDeleted = false;
+        f.DeleteThroughNativeEntity(() => nativeDeleted = true);
+        Assert.True(nativeDeleted);
+        Assert.True(f.Poisoned);
+        var warning = Assert.Single(f.Warnings);
+        Assert.Contains("wildfire_warden_equipment_lifecycle", warning);
+        Assert.Contains("operation=unregister_district", warning);
+        Assert.Contains(cause.ToString(), warning); // Includes original type, message and callback stack.
+        f.Call(f.Equipment, "DeleteEntity");
+        Assert.Single(f.Warnings);
+        Assert.Equal(1, f.Quantity);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void ThrowingOrReentrantLoggerCannotInterruptNativeTeardown(bool reenter, bool death)
+    {
+        using var f = new Fixture();
+        f.On(f.Registry, "InventoryUnregistered", () => throw new IOException("district failure"));
+        bool attempted = false;
+        bool poisonedBeforeLog = false;
+        f.OnWarning = _ =>
+        {
+            attempted = true;
+            poisonedBeforeLog = f.Poisoned;
+            if (reenter)
+            {
+                f.Call(f.Equipment, "DeleteEntity");
+                f.Capture(() => throw new Exception("must never enter a poisoned capture"));
+            }
+            throw new IOException("logger failed");
+        };
+        bool laterNativeEvent = false;
+        if (death)
+        {
+            f.On(f.Character, "Died", () => laterNativeEvent = true);
+            f.Call(f.Character, "KillCharacter");
+        }
+        else f.DeleteThroughNativeEntity(() => laterNativeEvent = true);
+        Assert.True(attempted);
+        Assert.True(poisonedBeforeLog);
+        Assert.True(laterNativeEvent);
+        Assert.True(f.Poisoned);
+        Assert.Single(f.Warnings);
+        f.Call(f.Equipment, "DeleteEntity");
+        Assert.Single(f.Warnings);
+        Assert.Equal(1, f.Quantity);
+    }
+
+    [Fact]
+    public void ExceptionFormattingFailureCannotAbortNativeDeletionOrRetryItsDiagnostic()
+    {
+        using var f = new Fixture();
+        var cause = new UnformattableException();
+        f.On(f.Registry, "InventoryUnregistered", () => throw cause);
+        bool nativeDeleted = false;
+        f.DeleteThroughNativeEntity(() => nativeDeleted = true);
+        Assert.True(nativeDeleted);
+        Assert.True(f.Poisoned);
+        Assert.Equal(1, cause.Attempts);
+        Assert.Empty(f.Warnings);
+        f.Call(f.Equipment, "DeleteEntity");
+        Assert.Equal(1, cause.Attempts);
+    }
+
+    private sealed class UnformattableException : Exception
+    {
+        internal int Attempts;
+        public override string ToString()
+        {
+            Attempts++;
+            throw new IOException("exception formatter failed");
+        }
+    }
+
+    [Fact]
     public void ActualCharacterConstructorIsAliveBeforeEquipmentInitializationAndPostLoad()
     {
         using var f = new Fixture();
@@ -215,6 +313,8 @@ public sealed class NativeWardenDistrictLifecycleTests
         internal object Citizen { get; }
         internal object Registry { get; }
         private readonly object _counter;
+        internal readonly List<string> Warnings = new();
+        internal Action<string>? OnWarning;
         internal bool Poisoned => (bool)Get(Resources, "IsIndeterminate")!;
         internal int Quantity => (int)Call(Inventory, "AmountInStock", "Water")!;
         internal int RegisteredProcessors
@@ -231,6 +331,11 @@ public sealed class NativeWardenDistrictLifecycleTests
             var mod = _native.LoadMod();
             Resources = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Resources.NativeResourceCoordinator")!)!;
             Equipment = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.FireResponse.WardenEquipment")!, Resources)!;
+            Set(Equipment, "_warn", (Action<string>)(message =>
+            {
+                Warnings.Add(message);
+                OnWarning?.Invoke(message);
+            }));
             var goods = RuntimeHelpers.GetUninitializedObject(T("Timberborn.Goods", "GoodService"));
             var goodType = T("Timberborn.Goods", "GoodSpec");
             var good = Activator.CreateInstance(goodType)!;
