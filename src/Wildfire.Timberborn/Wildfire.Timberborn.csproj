@@ -84,6 +84,10 @@
       <HintPath>$(TimberbornManagedPath)/Timberborn.BlockingSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.Emptying">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Emptying.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.Carrying">
       <HintPath>$(TimberbornManagedPath)/Timberborn.Carrying.dll</HintPath>
       <Private>false</Private>

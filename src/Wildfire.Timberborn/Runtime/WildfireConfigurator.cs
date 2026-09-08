@@ -7,6 +7,7 @@ using Wildfire.Timberborn.FireResponse;
 using Timberborn.WorkSystem;
 using Timberborn.Beavers;
 using Timberborn.InventorySystem;
+using Timberborn.Emptying;
 using Timberborn.Gathering;
 using Timberborn.TemplateInstantiation;
 
@@ -98,6 +99,10 @@ public sealed class WildfireConfigurator : Configurator
             TemplateModule.Builder builder = new();
             builder.AddDecorator<WildfireWardenStationSpec, WardenStation>();
             builder.AddDedicatedDecorator<WardenStation, Inventory>(_station);
+            // Native public-input selection requires Emptiable's IInventoryValidator.
+            builder.AddDecorator<WardenStation, Emptiable>();
+            builder.AddDecorator<WardenStation, EmptyInventoriesWorkplaceBehavior>();
+            builder.AddDecorator<WardenStation, RemoveUnwantedStockWorkplaceBehavior>();
             builder.AddDecorator<AdultSpec, WardenEquipment>();
             builder.AddDedicatedDecorator<WardenEquipment, Inventory>(_equipment);
             builder.AddDecorator<AdultSpec, WardenExecutor>();
