@@ -14,7 +14,9 @@ Use the entry point that matches the work. Source and fresh validation establish
 
 - [Current-build live baseline](qa/live-current-build-baseline.md): verified deployment, ordinary GPU ticks, and tick-33 save/reload at `8cbeb19`.
 - [Fresh faction startup](qa/live-faction-startup.md): populated Folktails success and the Iron Teeth Warden preview failure on that build.
-- [Corrected Iron Teeth startup](qa/warden-corrected-startup-live.md), [green placement preview](qa/warden-pivot-placement-live.md), and [doorstep parent fix](qa/warden-doorstep-parent.md): successive live building checks and their native regressions; completed placement and worker operation remain separate checks.
+- [Corrected Iron Teeth startup](qa/warden-corrected-startup-live.md), [green placement preview](qa/warden-pivot-placement-live.md), [doorstep parent fix](qa/warden-doorstep-parent.md), and [completed placement](qa/warden-doorstep-placement-live.md): placement, district connection and native Warden assignment passed; subsequent ordinary hauling exposed a missing public-input validator.
+- [Warden public input](qa/warden-public-input-native-contract.md): native validator and emptying behavior regressions; corrected live hauling remains to be verified.
+- [Warden helmet presentation](qa/warden-helmet-presentation.md): lazy attachment, ownership and lifecycle proof; provisional pose and full native rendering remain unverified.
 - [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
 - [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
 - [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
