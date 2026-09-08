@@ -1,6 +1,6 @@
 # Verified native followup contract gaps
 
-Read-only review at source `460a0cf`; unchanged by `6953d3e` save exclusion. The soil false-success hook is now removed; see [current soil capability and evidence](tainted-ash-soil-authority.md). The remaining rows are concrete followups, not completed fixes. Native instruction inspection used the installed Timberborn assemblies listed below, without launching Unity/game. Actual native readback regressions and supported API review are still required before changing gameplay hooks.
+Initial read-only review at source `460a0cf`; unchanged by `6953d3e` save exclusion. Subsequent corrections and their proof limits are recorded below. Native instruction inspection used the installed Timberborn assemblies listed below; later executed regressions are linked separately.
 
 | Existing path | Verified native/source behavior | Remaining contract |
 | --- | --- | --- |
@@ -25,3 +25,5 @@ Timberborn.WorkSystem.dll e1b32c9b6c2c97223c9e3ca1d95c60e72f2afe7aa276175f5819b8
 Focused/full IL artifacts remain in `/tmp/wildfire-dispatch-save-exclusion-review/`: `soil-il.txt`, `soil-authority-il.txt`, `soil-map-il.txt`, `soil-service-all-il.txt`, `terrain-material-map-all-il.txt`, `growable-il.txt`, `time-trigger-il.txt`, `worker-il.txt`. The durable behavioral call chains above preserve the finding if scratch artifacts disappear; no live readback or callback-failure execution is claimed by that inspection.
 
 The smoke mutation/callback and ordinary recovery classification are now covered by the [native smoke delivery correction](smoke-native-delivery.md). Its executed per-actor/runtime regressions supersede the smoke row's source-only status; final observation failures remain distinct from incomplete native/history delivery.
+
+The [growth correction](ash-native-elapsed-growth.md) removes native mutation from restore, synchronization and decay. Actual native timer/callback regressions cover the replacement's guarded elapsed-time calculation, but its ticker remains unbound pending native soil mapping and readiness proof. The old growth row describes the reproduced defect, not current observation behavior. The [original soil hook now has an executed Unity counterexample](original-soil-hook-native-counterexample.md): rendering was queued while authoritative contamination remained zero. Lasting soil effects and ash-to-water coupling remain open.
