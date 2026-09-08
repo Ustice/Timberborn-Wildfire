@@ -6,7 +6,7 @@ internal enum TimberbornInitialYieldUse { Excluded = 1, Actual = 2, Declared = 3
 internal enum TimberbornInitialInventoryUse { Excluded = 1, PhysicalStock = 2 }
 internal sealed record TimberbornInitialYieldSelection(string ComponentName, TimberbornCapturedYieldRole Role,
     TimberbornInitialYieldUse Use);
-internal sealed record TimberbornInitialInventorySelection(TimberbornCapturedInventoryRole Role,
+internal sealed record TimberbornInitialInventorySelection(TimberbornInventoryDeclaration Declaration,
     TimberbornInitialInventoryUse Accounting);
 
 internal sealed class TimberbornInitialBodySelection
@@ -21,9 +21,10 @@ internal sealed class TimberbornInitialBodySelection
         if (named.Any(item => item is null || string.IsNullOrWhiteSpace(item.ComponentName) ||
                 !Enum.IsDefined(typeof(TimberbornCapturedYieldRole), item.Role) || !Enum.IsDefined(typeof(TimberbornInitialYieldUse), item.Use)) ||
             named.Select(item => item.ComponentName).Distinct(StringComparer.Ordinal).Count() != named.Length ||
-            stock.Any(item => item is null || !Enum.IsDefined(typeof(TimberbornCapturedInventoryRole), item.Role) ||
+            stock.Any(item => item is null || item.Declaration is null ||
                 !Enum.IsDefined(typeof(TimberbornInitialInventoryUse), item.Accounting)) ||
-            stock.Select(item => item.Role).Distinct().Count() != stock.Length)
+            stock.Select(item => item.Declaration.Role).Distinct().Count() != stock.Length ||
+            stock.Select(item => item.Declaration.ComponentName).Distinct(StringComparer.Ordinal).Count() != stock.Length)
             throw new ArgumentException("Initial role selections must be explicit, valid and unique.");
         EntityId = entityId; Accounting = accounting;
         Yields = Array.AsReadOnly(named); Inventories = Array.AsReadOnly(stock);

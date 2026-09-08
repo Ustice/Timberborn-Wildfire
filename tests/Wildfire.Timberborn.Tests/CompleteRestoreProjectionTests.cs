@@ -254,7 +254,7 @@ public sealed class CompleteRestoreProjectionTests
             var compiled = TimberbornInitialBodyCompiler.Compile(original.CurrentWorld, original.RetainedBodies.Select(body =>
                 new TimberbornInitialBodySelection(body.EntityId, TimberbornInitialAccountingBasis.NativeResourceAmounts,
                     [new(_tree ? "Cuttable" : "Gatherable", _tree ? TimberbornCapturedYieldRole.Cuttable : TimberbornCapturedYieldRole.Gatherable, TimberbornInitialYieldUse.Actual)],
-                    withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, TimberbornInitialInventoryUse.Excluded)] : [])));
+                    withDisabledStock ? [new(new(TimberbornNativeInventoryRole.GoodStack, "HarvestStack"), TimberbornInitialInventoryUse.Excluded)] : [])));
             var registry = new TimberbornNativeMaterialRegistry(Grid, []);
             registry.Reconcile(compiled.Projections, []);
             var damage = compiled.CreateDamage(Grid);
@@ -280,7 +280,7 @@ public sealed class CompleteRestoreProjectionTests
                     _tree ? "Cuttable" : "Gatherable", _tree ? "Log" : "Carrot",
                     _tree && mutation == "disabled" ? 0 : mutation == "quantity" ? 2 : actual,
                     _tree ? "Log" : "Carrot", 5, false, mutation != "disabled")],
-                _withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, false, [new("Carrot", 2)])] : [], null);
+                _withDisabledStock ? [new(new(TimberbornNativeInventoryRole.GoodStack, "HarvestStack"), false, [new("Carrot", 2)])] : [], null);
             var bodies = new[] { Body(A), Body(B) };
             var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, mutation is "state" or "tree-evidence", _tree && mutation != "tree-evidence",
                 mutation is "declaration" or "new-role" ? [new(mutation == "new-role" ? TimberbornNativeInventoryRole.Manufactory : TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : _withDisabledStock ? [new(TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : [])).ToArray();

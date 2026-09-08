@@ -112,9 +112,9 @@ public sealed class NativeInventoryRoleTests
         Assert.Same(f.Inventory, f.Property(goodStack, "Inventory")); Assert.Equal(name, f.Property(f.Inventory, "ComponentName"));
         Assert.Equal(false, f.Property(f.Inventory, "Enabled")); Assert.Equal(0, f.Physical);
         var assembly = f.Stock.Resources.GetType().Assembly;
-        var role = Enum.Parse(assembly.GetType("Wildfire.Timberborn.Mapping.TimberbornCapturedInventoryRole")!, "GoodStack");
+        var role = Enum.Parse(assembly.GetType("Wildfire.Timberborn.Mapping.TimberbornNativeInventoryRole")!, "GoodStack");
         var capture = assembly.GetType("Wildfire.Timberborn.Runtime.TimberbornInitialWorldProjectionProvider")!
-            .GetMethod("CaptureInventoryMaterial", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [role, f.Inventory]);
+            .GetMethod("CaptureInventoryMaterial", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [Activator.CreateInstance(assembly.GetType("Wildfire.Timberborn.Mapping.TimberbornInventoryDeclaration")!, role, name), f.Inventory]);
         Assert.Null(capture); // Existing physical-part omission cannot be used as a static-role witness.
     }
 }

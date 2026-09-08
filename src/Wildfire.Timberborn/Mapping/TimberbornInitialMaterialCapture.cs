@@ -3,7 +3,6 @@ using Wildfire.Core;
 namespace Wildfire.Timberborn.Mapping;
 
 public enum TimberbornCapturedYieldRole { Cuttable, Gatherable, Unclassified }
-public enum TimberbornCapturedInventoryRole { Stockpile, SimpleOutput, GoodStack }
 public enum TimberbornInitialBodyShape { Structure, Stockpile, Tree, Crop, Vegetation, Infrastructure, GoodStack, Unknown }
 public enum TimberbornInitialCompositionGap
 {
@@ -42,20 +41,20 @@ public sealed record TimberbornNamedYieldMaterial
 /// <summary>All physical stock in one exact native role, including reserved stock. Never a mutation allowance.</summary>
 public sealed class TimberbornInventoryMaterial
 {
-    public TimberbornInventoryMaterial(TimberbornCapturedInventoryRole role, bool enabled,
+    public TimberbornInventoryMaterial(TimberbornInventoryDeclaration declaration, bool enabled,
         IEnumerable<TimberbornStoredGoodStack> stock)
     {
-        if (!Enum.IsDefined(typeof(TimberbornCapturedInventoryRole), role)) throw new ArgumentOutOfRangeException(nameof(role));
+        Declaration = declaration ?? throw new ArgumentNullException(nameof(declaration));
         var values = stock.ToArray();
         if (values.Any(good => string.IsNullOrWhiteSpace(good.ResourceId) || good.Amount < 0))
             throw new ArgumentException("Native inventory capture contains malformed stock.", nameof(stock));
-        Role = role; Enabled = enabled;
+        Enabled = enabled;
         Stock = Array.AsReadOnly(values.Where(good => good.Amount > 0).OrderBy(good => good.ResourceId, StringComparer.Ordinal).ToArray());
         if (Stock.Select(good => good.ResourceId).Distinct(StringComparer.Ordinal).Count() != Stock.Count)
             throw new ArgumentException("Native inventory contains duplicate resource entries.", nameof(stock));
         Goods = Array.AsReadOnly(Stock.Select(good => TimberbornResourceFuelCatalog.Default.Lookup(good.ResourceId)).ToArray());
     }
-    public TimberbornCapturedInventoryRole Role { get; }
+    public TimberbornInventoryDeclaration Declaration { get; }
     public bool Enabled { get; }
     public IReadOnlyList<TimberbornStoredGoodStack> Stock { get; }
     public IReadOnlyList<TimberbornResourceFuelProfile> Goods { get; }
@@ -74,12 +73,13 @@ public sealed class TimberbornInitialMaterialBody
             throw new ArgumentException("A native building requires captured construction costs, including an explicitly empty cost.");
         ConstructionResources = constructionResources is null ? null : CopyConstruction(constructionResources);
         var slots = footprint.ToArray(); var yieldParts = yields.OrderBy(yield => yield.ComponentName, StringComparer.Ordinal).ToArray();
-        var inventoryParts = inventories.OrderBy(inventory => inventory.Role).ToArray();
+        var inventoryParts = inventories.OrderBy(inventory => inventory.Declaration.Role).ToArray();
         if (slots.Length == 0 || slots.Any(slot => slot.CellIndex < 0 || slot.LocalCoordinates.X < 0 || slot.LocalCoordinates.Y < 0 || slot.LocalCoordinates.Z < 0) ||
             slots.Select(slot => slot.LocalCoordinates).Distinct().Count() != slots.Length || slots.Select(slot => slot.CellIndex).Distinct().Count() != slots.Length)
             throw new ArgumentException("Initial body requires a complete bijective native footprint.");
         if (yieldParts.Select(yield => yield.ComponentName).Distinct(StringComparer.Ordinal).Count() != yieldParts.Length ||
-            inventoryParts.Select(inventory => inventory.Role).Distinct().Count() != inventoryParts.Length)
+            inventoryParts.Select(inventory => inventory.Declaration.Role).Distinct().Count() != inventoryParts.Length ||
+            inventoryParts.Select(inventory => inventory.Declaration.ComponentName).Distinct(StringComparer.Ordinal).Count() != inventoryParts.Length)
             throw new ArgumentException("Initial body contains ambiguous native component roles.");
         EntityId = entityId; SpecId = specId; Shape = shape;
         Footprint = Array.AsReadOnly(slots.OrderBy(slot => slot.LocalCoordinates.Z).ThenBy(slot => slot.LocalCoordinates.Y).ThenBy(slot => slot.LocalCoordinates.X).ToArray());
@@ -116,7 +116,7 @@ public sealed class TimberbornInitialMaterialBody
         (ConstructionResources is null ? other.ConstructionResources is null :
             other.ConstructionResources is not null && ConstructionResources.SequenceEqual(other.ConstructionResources)) &&
         Inventories.Count == other.Inventories.Count && Inventories.Select((inventory, index) =>
-            inventory.Role == other.Inventories[index].Role && inventory.Enabled == other.Inventories[index].Enabled &&
+            inventory.Declaration == other.Inventories[index].Declaration && inventory.Enabled == other.Inventories[index].Enabled &&
             inventory.Stock.SequenceEqual(other.Inventories[index].Stock)).All(equal => equal);
 
     private static IReadOnlyList<TimberbornBurnDamageResourceStack> CopyConstruction(IEnumerable<TimberbornBurnDamageResourceStack> values)

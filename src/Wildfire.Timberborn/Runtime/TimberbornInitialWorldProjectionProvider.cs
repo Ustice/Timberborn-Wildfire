@@ -6,7 +6,6 @@ using Timberborn.Forestry;
 using Timberborn.Gathering;
 using Timberborn.GoodStackSystem;
 using Timberborn.InventorySystem;
-using Timberborn.SimpleOutputBuildings;
 using Timberborn.Stockpiles;
 using Timberborn.Yielding;
 using Wildfire.Core;
@@ -91,17 +90,16 @@ public sealed partial class TimberbornInitialWorldProjectionProvider
             }
             var placement = block.Placement;
             var blocks = block.Blocks;
-            var body = CaptureBodyFacts(entity, block, grid);
-            bodies.Add(body);
             var declared = TimberbornNativeInventoryRoles.Capture(entity);
+            var body = CaptureBodyFacts(entity, block, grid, declared);
+            bodies.Add(body);
             declarations.Add(new(id, declared.Select(inventory => inventory.Declaration)));
             validate.Add(() =>
             {
                 if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id ||
                     !entity.TryGetComponent<BlockObject>(out var currentBlock) || !ReferenceEquals(currentBlock, block) ||
                     Exclusion(entity, block) is not null || !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) ||
-                    !body.SameReadings(CaptureBodyFacts(entity, block, grid)) ||
-                    !SameInventories(declared, TimberbornNativeInventoryRoles.Capture(entity)))
+                    !SameBodyInventoryReadings(entity, block, grid, body, declared))
                     throw new InvalidOperationException("Native body changed during initial capture; no projection was published.");
             });
         }
@@ -138,13 +136,14 @@ public sealed partial class TimberbornInitialWorldProjectionProvider
             var placement = block.Placement;
             var blocks = block.Blocks;
             bool finished = block.IsFinished;
-            var body = CaptureBodyFacts(entity, block, grid);
+            var declared = TimberbornNativeInventoryRoles.Capture(entity);
+            var body = CaptureBodyFacts(entity, block, grid, declared);
             bodies.Add(body);
             validate.Add(() =>
             {
                 if (!ReferenceEquals(RequireRetainedEntity(id), entity) || !ReferenceEquals(RequireRetainedBlock(entity), block) ||
                     !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) || block.IsFinished != finished ||
-                    !body.SameReadings(CaptureBodyFacts(entity, block, grid)))
+                    !SameBodyInventoryReadings(entity, block, grid, body, declared))
                     throw new InvalidOperationException("Retained native body changed during restore capture.");
             });
         }
@@ -169,9 +168,10 @@ public sealed partial class TimberbornInitialWorldProjectionProvider
         return block;
     }
 
-    private static TimberbornInitialMaterialBody CaptureBodyFacts(EntityComponent entity, BlockObject block, FireGrid grid) =>
+    private static TimberbornInitialMaterialBody CaptureBodyFacts(EntityComponent entity, BlockObject block, FireGrid grid,
+        IReadOnlyList<TimberbornDeclaredInventory> declared) =>
         new(entity.EntityId, block.Name, Shape(entity, block.Name), TimberbornNativeMaterialFootprint.Project(block.Blocks, block.Placement, grid),
-            CaptureYields(entity), CaptureInventories(entity), CaptureConstruction(entity));
+            CaptureYields(entity), CaptureInventories(declared), CaptureConstruction(entity));
 
     private static IReadOnlyList<TimberbornBurnDamageResourceStack>? CaptureConstruction(EntityComponent entity)
     {
@@ -244,28 +244,25 @@ public sealed partial class TimberbornInitialWorldProjectionProvider
         return new(role, yielder.ComponentName, actual.GoodId, actual.Amount, spec.Yield.Id, spec.Yield.Amount, removeOnCut, yielder.Enabled);
     }
 
-    private static IReadOnlyList<TimberbornInventoryMaterial> CaptureInventories(EntityComponent entity)
-    {
-        var captures = new List<TimberbornInventoryMaterial>();
-        if (entity.TryGetComponent<Stockpile>(out var stockpile)) Capture(TimberbornCapturedInventoryRole.Stockpile, stockpile.Inventory);
-        if (entity.TryGetComponent<SimpleOutputInventory>(out var output)) Capture(TimberbornCapturedInventoryRole.SimpleOutput, output.Inventory);
-        if (entity.TryGetComponent<GoodStack>(out var stack)) Capture(TimberbornCapturedInventoryRole.GoodStack, stack.Inventory);
-        return captures;
+    // Complete topology has already been validated. Native references live only through this observation.
+    private static IReadOnlyList<TimberbornInventoryMaterial> CaptureInventories(IReadOnlyList<TimberbornDeclaredInventory> declared) =>
+        declared.Select(binding => CaptureInventoryMaterial(binding.Declaration, binding.Inventory))
+            .Where(material => material is not null).Cast<TimberbornInventoryMaterial>().ToArray();
 
-        void Capture(TimberbornCapturedInventoryRole role, Inventory inventory)
-        {
-            if (inventory is null || !inventory || !ReferenceEquals(inventory.GetComponent<EntityComponent>(), entity))
-                throw new InvalidOperationException("Native inventory role lacks its exact live body-owned inventory.");
-            // Stock is physical material, including reservations; mutation-time availability is a separate contract.
-            var material = CaptureInventoryMaterial(role, inventory);
-            if (material is not null) captures.Add(material);
-        }
-    }
-    // A harvestable's dormant empty GoodStack is a capability, not another physical material part.
-    private static TimberbornInventoryMaterial? CaptureInventoryMaterial(TimberbornCapturedInventoryRole role, Inventory inventory)
+    private static bool SameBodyInventoryReadings(EntityComponent entity, BlockObject block, FireGrid grid,
+        TimberbornInitialMaterialBody before, IReadOnlyList<TimberbornDeclaredInventory> declared)
     {
-        var material = new TimberbornInventoryMaterial(role, inventory.Enabled,
+        var current = TimberbornNativeInventoryRoles.Capture(entity);
+        if (!SameInventories(declared, current)) return false;
+        var body = CaptureBodyFacts(entity, block, grid, current);
+        return before.SameReadings(body) && SameInventories(current, TimberbornNativeInventoryRoles.Capture(entity));
+    }
+
+    // A harvestable's dormant empty GoodStack remains a declaration without a physical material part.
+    private static TimberbornInventoryMaterial? CaptureInventoryMaterial(TimberbornInventoryDeclaration declaration, Inventory inventory)
+    {
+        var material = new TimberbornInventoryMaterial(declaration, inventory.Enabled,
             inventory.Stock.Select(good => new TimberbornStoredGoodStack(good.GoodId, good.Amount)));
-        return role == TimberbornCapturedInventoryRole.GoodStack && !material.Enabled && material.Stock.Count == 0 ? null : material;
+        return declaration.Role == TimberbornNativeInventoryRole.GoodStack && !material.Enabled && material.Stock.Count == 0 ? null : material;
     }
 }

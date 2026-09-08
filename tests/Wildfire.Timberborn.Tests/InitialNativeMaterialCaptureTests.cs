@@ -16,7 +16,7 @@ public sealed class InitialNativeMaterialCaptureTests
     {
         using var blueprint = NativeBlueprint("Buildings/Storage/SmallWarehouse/SmallWarehouse.Folktails.blueprint.json");
         Assert.Equal("Box", blueprint.RootElement.GetProperty("StockpileSpec").GetProperty("WhitelistedGoodType").GetString());
-        var empty = new TimberbornInventoryMaterial(TimberbornCapturedInventoryRole.Stockpile, true, []);
+        var empty = new TimberbornInventoryMaterial(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), true, []);
         var body = Body("SmallWarehouse.Folktails", TimberbornInitialBodyShape.Stockpile, [], [empty]);
         Assert.Equal(NativeBurnTargetFamily.Stockpile, body.Family);
         Assert.Equal(TimberbornBurnDamageTargetKind.Structure, body.PhysicalBodyKind);
@@ -30,7 +30,7 @@ public sealed class InitialNativeMaterialCaptureTests
     public void PhysicalInventoryCaptureKeepsActualQuantityAndDisabledStockWithoutMultiplyingFuel()
     {
         var source = new[] { new TimberbornStoredGoodStack("Log", 12), new TimberbornStoredGoodStack("Plank", 0) };
-        var inventory = new TimberbornInventoryMaterial(TimberbornCapturedInventoryRole.SimpleOutput, false, source);
+        var inventory = new TimberbornInventoryMaterial(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), false, source);
         source[0] = new("Log", 0);
         var body = Body("LumberMill.Folktails", TimberbornInitialBodyShape.Structure, [], [inventory]);
         Assert.Single(body.Inventories);
@@ -116,7 +116,7 @@ public sealed class InitialNativeMaterialCaptureTests
     [Fact]
     public void UnsupportedRolesAndUnknownProfilesRemainExplicitInsteadOfCreatingUsableFreshMaterial()
     {
-        var inventory = new TimberbornInventoryMaterial(TimberbornCapturedInventoryRole.GoodStack, true, [new("ModGood", 1)]);
+        var inventory = new TimberbornInventoryMaterial(new(TimberbornNativeInventoryRole.GoodStack, "GoodStack"), true, [new("ModGood", 1)]);
         var stack = Body("GoodStack.ModGood", TimberbornInitialBodyShape.GoodStack, [], [inventory]);
         Assert.Null(stack.Family);
         Assert.Contains(TimberbornInitialCompositionGap.UnsupportedBodyFamily, stack.CompositionGaps);
@@ -125,7 +125,7 @@ public sealed class InitialNativeMaterialCaptureTests
         Assert.Equal(NativeBurnTargetFamily.PathInfrastructure, infrastructure.Family);
         Assert.Contains(TimberbornInitialCompositionGap.UnsupportedBodyFamily, infrastructure.CompositionGaps);
         var ambiguous = Body("SmallWarehouse.Folktails", TimberbornInitialBodyShape.Stockpile, [], [
-            new(TimberbornCapturedInventoryRole.Stockpile, true, []), new(TimberbornCapturedInventoryRole.SimpleOutput, true, [])]);
+            new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), true, []), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), true, [])]);
         Assert.Contains(TimberbornInitialCompositionGap.MultipleInventoryRoles, ambiguous.CompositionGaps);
         Assert.Throws<ArgumentException>(() => new TimberbornNamedYieldMaterial(TimberbornCapturedYieldRole.Gatherable, "Gatherable", "Log", 1, "Berries", 3, false, true));
     }

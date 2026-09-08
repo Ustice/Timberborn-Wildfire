@@ -46,21 +46,13 @@ public sealed class TimberbornInventoryDeclarationCapture
             if (declarations.Any(role => role.Role is not (TimberbornNativeInventoryRole.Stockpile or
                 TimberbornNativeInventoryRole.SimpleOutput or TimberbornNativeInventoryRole.GoodStack)))
                 throw new NotSupportedException("Declared inventory role has no supported material representation.");
-            if (body.Inventories.Any(inventory => !declarations.Any(role => role.Role == DeclaredRole(inventory.Role))))
+            if (body.Inventories.Any(inventory => !declarations.Any(role => role == inventory.Declaration)))
                 throw new ArgumentException("Physical inventory has no exact declared native role.");
             if (declarations.Any(role => role.Role != TimberbornNativeInventoryRole.GoodStack &&
-                !body.Inventories.Any(inventory => DeclaredRole(inventory.Role) == role.Role)))
+                !body.Inventories.Any(inventory => inventory.Declaration == role)))
                 throw new ArgumentException("Declared physical inventory was omitted from native material facts.");
         }
     }
-    private static TimberbornNativeInventoryRole DeclaredRole(TimberbornCapturedInventoryRole role) => role switch
-    {
-        TimberbornCapturedInventoryRole.Stockpile => TimberbornNativeInventoryRole.Stockpile,
-        TimberbornCapturedInventoryRole.SimpleOutput => TimberbornNativeInventoryRole.SimpleOutput,
-        TimberbornCapturedInventoryRole.GoodStack => TimberbornNativeInventoryRole.GoodStack,
-        _ => throw new NotSupportedException("Unknown physical inventory role."),
-    };
-
     internal bool SameReadings(TimberbornInventoryDeclarationCapture other) => Bodies.Count == other.Bodies.Count &&
         Bodies.Zip(other.Bodies, (a, b) => a.EntityId == b.EntityId && a.Declarations.SequenceEqual(b.Declarations)).All(equal => equal);
 }

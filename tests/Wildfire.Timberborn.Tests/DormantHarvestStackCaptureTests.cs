@@ -44,9 +44,9 @@ public sealed class DormantHarvestStackCaptureTests
         if (hasStock) fixture.Call(fixture.Inventory, "GiveExisting", fixture.Amount);
         if (!enabled) fixture.Disable();
         var mod = fixture.Resources.GetType().Assembly;
-        var role = Enum.Parse(mod.GetType("Wildfire.Timberborn.Mapping.TimberbornCapturedInventoryRole")!, roleName);
+        var role = Enum.Parse(mod.GetType("Wildfire.Timberborn.Mapping.TimberbornNativeInventoryRole")!, roleName);
         var helper = mod.GetType("Wildfire.Timberborn.Runtime.TimberbornInitialWorldProjectionProvider")!;
-        var capture = helper.GetMethod("CaptureInventoryMaterial", Flags | BindingFlags.Static)!.Invoke(null, [role, fixture.Inventory]);
+        var capture = helper.GetMethod("CaptureInventoryMaterial", Flags | BindingFlags.Static)!.Invoke(null, [Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Mapping.TimberbornInventoryDeclaration")!, role, "Native.Captured"), fixture.Inventory]);
         Assert.Equal(included, capture is not null);
         if (capture is not null)
         {

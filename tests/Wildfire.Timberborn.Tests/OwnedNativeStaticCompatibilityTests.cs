@@ -23,7 +23,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
     {
         var f=new F(witnessed:true);var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();
         var warehouse=facts[2];
-        facts[2]=Copy(warehouse,inventory:[new(TimberbornCapturedInventoryRole.Stockpile,false,[new("Log",3)])],
+        facts[2]=Copy(warehouse,inventory:[new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"),false,[new("Log",3)])],
             footprint:warehouse.Footprint.Select(slot=>new TimberbornMaterialFootprintSlot(slot.LocalCoordinates,slot.CellIndex==2?6:2)).ToArray());
         f.Native.Amounts[warehouse.EntityId]=3;
         using var restored=TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],s=>new(s),(_,_)=>facts,f.Effects,f.Guard);

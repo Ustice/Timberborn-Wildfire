@@ -28,7 +28,7 @@ public sealed class MaterialProjectionCompilerTests
     {
         var body = new TimberbornInitialMaterialBody(Guid.NewGuid(), "SmallWarehouse.Folktails",
             TimberbornInitialBodyShape.Stockpile, [new(new(0, 0, 0), 0)], [],
-            [new(TimberbornCapturedInventoryRole.Stockpile, false, [new("Log", 2)])], [new("Log", 3)]);
+            [new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), false, [new("Log", 2)])], [new("Log", 3)]);
         var projection = TimberbornMaterialProjectionCompiler.Compile(body);
         Assert.Contains(TimberbornMaterialPart.Building(body.SpecId), projection.Parts);
         Assert.Contains(TimberbornMaterialPart.StoredGood("Log"), projection.Parts);

@@ -20,6 +20,9 @@ internal static class TimberbornMaterialProjectionCompiler
         };
         if (body.Inventories.Count > 1)
             throw new NotSupportedException("Material composition does not yet support multiple native inventory roles.");
+        if (body.Inventories.Any(inventory => inventory.Declaration.Role is not (TimberbornNativeInventoryRole.Stockpile or
+            TimberbornNativeInventoryRole.SimpleOutput or TimberbornNativeInventoryRole.GoodStack)))
+            throw new NotSupportedException("Captured inventory role has no admitted material/effect route.");
         // Physical stock is material even when a separate initial accounting selection excludes it.
         var parts = new List<TimberbornMaterialPart> { bodyPart };
         foreach (var inventory in body.Inventories)

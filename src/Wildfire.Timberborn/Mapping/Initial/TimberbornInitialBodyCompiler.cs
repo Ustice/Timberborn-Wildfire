@@ -70,7 +70,7 @@ internal static class TimberbornInitialBodyCompiler
         }
         foreach (var selected in choice.Inventories)
         {
-            var native = body.Inventories.SingleOrDefault(item => item.Role == selected.Role)
+            var native = body.Inventories.SingleOrDefault(item => item.Declaration == selected.Declaration)
                 ?? throw new ArgumentException("Selected inventory role does not belong to this exact body.");
             if (selected.Accounting == TimberbornInitialInventoryUse.PhysicalStock)
                 foreach (var good in native.Stock) { RequireGood(good.ResourceId); Add(good.ResourceId, good.Amount); }

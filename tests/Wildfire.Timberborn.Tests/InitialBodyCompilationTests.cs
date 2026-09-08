@@ -74,8 +74,8 @@ public sealed class InitialBodyCompilationTests
     [Fact]
     public void ExcludedInventoryAccountingCannotHidePhysicalStockAndConstructedBasisIsExplicit()
     {
-        var body = Building([new(TimberbornCapturedInventoryRole.Stockpile, false, [new("Log", 4)])]);
-        TimberbornInitialBodySelection Choice(Basis basis) => new(A, basis, [], [new(TimberbornCapturedInventoryRole.Stockpile, InventoryUse.Excluded)]);
+        var body = Building([new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), false, [new("Log", 4)])]);
+        TimberbornInitialBodySelection Choice(Basis basis) => new(A, basis, [], [new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), InventoryUse.Excluded)]);
         var resources = Compile([body], [Choice(Basis.NativeResourceAmounts)]);
         var catalog = Compile([body], [Choice(Basis.CatalogBodyProfile)]);
         Assert.Contains(resources.Projections[0].Parts, part => part == TimberbornMaterialPart.StoredGood("Log"));
@@ -101,19 +101,53 @@ public sealed class InitialBodyCompilationTests
     [Fact]
     public void UnknownPositiveStockCannotBeExcludedOutOfPhysicalMaterial()
     {
-        var body = Building([new(TimberbornCapturedInventoryRole.Stockpile, true, [new("UnreviewedGood", 1)])]);
+        var body = Building([new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), true, [new("UnreviewedGood", 1)])]);
         Assert.Throws<NotSupportedException>(() => Compile([body],
-            [new(A, Basis.NativeResourceAmounts, [], [new(TimberbornCapturedInventoryRole.Stockpile, InventoryUse.Excluded)])]));
+            [new(A, Basis.NativeResourceAmounts, [], [new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), InventoryUse.Excluded)])]));
     }
 
     [Fact]
     public void MultipleInventoriesAndUnsupportedBodyAreNotSilentlyOmitted()
     {
-        var body = Building([new(TimberbornCapturedInventoryRole.Stockpile, true, []), new(TimberbornCapturedInventoryRole.SimpleOutput, true, [])]);
+        var body = Building([new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), true, []), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), true, [])]);
         Assert.Throws<NotSupportedException>(() => Compile([body], [new(A, Basis.NativeResourceAmounts, [],
-            [new(TimberbornCapturedInventoryRole.Stockpile, InventoryUse.Excluded), new(TimberbornCapturedInventoryRole.SimpleOutput, InventoryUse.Excluded)])]));
+            [new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), InventoryUse.Excluded), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), InventoryUse.Excluded)])]));
         var unsupported = new TimberbornInitialMaterialBody(A, "Pine", TimberbornInitialBodyShape.Unknown, [new(new(0, 0, 0), 0)], [], [], null);
         Assert.Throws<NotSupportedException>(() => Compile([unsupported], [new(A, Basis.NativeResourceAmounts, [], [])]));
+    }
+
+    [Fact]
+    public void InventorySelectionRequiresExactNameAndCannotReuseAnotherRoleOrDeclaration()
+    {
+        var declaration = new TimberbornInventoryDeclaration(TimberbornNativeInventoryRole.Stockpile, "Exact.Store");
+        var body = Building([new(declaration, true, [new("Log", 4)])]);
+        TimberbornInitialBodySelection Choice(TimberbornInventoryDeclaration identity) => new(A, Basis.NativeResourceAmounts, [],
+            [new(identity, InventoryUse.PhysicalStock)]);
+        var compiled = Compile([body], [Choice(declaration)]);
+        Assert.Equal(4, Assert.Single(compiled.Registrations[0].DescriptorOverride!.ResourceYields).Amount);
+        Assert.Throws<ArgumentException>(() => Compile([body], [Choice(new(declaration.Role, "Wrong.Store"))]));
+        Assert.Throws<ArgumentException>(() => Compile([body], [Choice(new(TimberbornNativeInventoryRole.SimpleOutput, declaration.ComponentName))]));
+        Assert.Throws<ArgumentException>(() => new TimberbornInitialBodySelection(A, Basis.NativeResourceAmounts, [],
+            [new(declaration, InventoryUse.Excluded), new(declaration, InventoryUse.PhysicalStock)]));
+        var renamed = Building([new(new(declaration.Role, "Changed.Store"), true, [new("Log", 4)])]);
+        Assert.False(body.SameReadings(renamed));
+        var declarations = new TimberbornInventoryDeclarationCapture([new(A, [declaration])]);
+        declarations.RequireSupportedMaterialBodies([body]);
+        Assert.Throws<ArgumentException>(() => declarations.RequireSupportedMaterialBodies([renamed]));
+    }
+
+    [Theory]
+    [InlineData(TimberbornNativeInventoryRole.Manufactory)]
+    [InlineData(TimberbornNativeInventoryRole.RecoveredGoodStack)]
+    [InlineData(TimberbornNativeInventoryRole.WardenStation)]
+    public void CapturingAdditionalNativeRoleDoesNotAdmitItsMaterialOrEffects(TimberbornNativeInventoryRole role)
+    {
+        var declaration = new TimberbornInventoryDeclaration(role, "Native.Exact");
+        var body = Building([new(declaration, false, [new("Log", 2)])]);
+        Assert.Throws<NotSupportedException>(() => Compile([body], [new(A, Basis.NativeResourceAmounts, [],
+            [new(declaration, InventoryUse.PhysicalStock)])]));
+        var declarations = new TimberbornInventoryDeclarationCapture([new(A, [declaration])]);
+        Assert.Throws<NotSupportedException>(() => declarations.RequireSupportedMaterialBodies([body]));
     }
 
     [Fact]
