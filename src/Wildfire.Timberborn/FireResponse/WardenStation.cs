@@ -58,7 +58,7 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
             return Decision.ReleaseNow();
         }
         Status = "Responding";
-        return Decision.ReleaseWhenFinished(executor);
+        return agent.GetComponent<WardenBehavior>().Own(executor);
     }
 }
 

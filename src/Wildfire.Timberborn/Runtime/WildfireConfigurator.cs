@@ -59,6 +59,7 @@ public sealed class WildfireConfigurator : Configurator
         Bind<WardenStationRange>().AsTransient();
         Bind<WardenEquipment>().AsTransient();
         Bind<WardenExecutor>().AsTransient();
+        Bind<WardenBehavior>().AsTransient();
         Bind<WardenHelmetPresentation>().AsTransient();
         Bind<WardenStationInventoryInitializer>().AsSingleton();
         Bind<WardenEquipmentInventoryInitializer>().AsSingleton();
@@ -110,6 +111,7 @@ public sealed class WildfireConfigurator : Configurator
             builder.AddDecorator<AdultSpec, WardenEquipment>();
             builder.AddDedicatedDecorator<WardenEquipment, Inventory>(_equipment);
             builder.AddDecorator<AdultSpec, WardenExecutor>();
+            builder.AddDecorator<AdultSpec, WardenBehavior>();
             builder.AddDecorator<AdultSpec, WardenHelmetPresentation>();
             builder.AddDecorator<AdultSpec, WildfireCarryEmergencyExecutor>();
             builder.AddDecorator<AdultSpec, CarryEmergencyInterrupter>();
