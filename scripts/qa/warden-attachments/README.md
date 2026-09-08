@@ -36,7 +36,10 @@ static cache, saved visual state or independently allocated materials. It owns
 only the inert source descriptors and clears them on native asset-loader Reset.
 The native optimizer owns imported clones separately.
 
-No character blueprint currently asks for these prefabs. This is a staged
-provisioning prototype, not an equipped-visual feature. The four reserved IDs are
+The helmet-only draft now appends one lazy adult attachment and derives visibility
+from owned Warden response state; see [its acceptance boundary](../../../docs/qa/warden-helmet-presentation.md).
+Its descriptor starts inactive, and this probe now checks inactive source/clone
+parity. Those new assertions and full game fitting still need controller execution.
+Tank/wand/hose remain provisioning-only. The four reserved IDs are
 `Wildfire/Characters/Attachments/Warden{Helmet,Tank,Wand,Hose}.IronTeeth`.
 The merged preview meshes and coat are unchanged.

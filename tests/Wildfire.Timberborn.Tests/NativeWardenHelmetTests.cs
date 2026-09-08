@@ -1,4 +1,6 @@
+using System.Collections;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json.Nodes;
@@ -90,6 +92,52 @@ public sealed class NativeWardenHelmetTests
         Assert.Equal(1, f.Created);
     }
 
+    [Fact]
+    public void ActualWardenTemplateModuleAddsOnePresentationDecoratorBesideItsExecutor()
+    {
+        using var native = new NativeManagedTestContext();
+        var mod = native.LoadMod();
+        var providerType = mod.GetType("Wildfire.Timberborn.Runtime.WildfireConfigurator+WardenTemplateModuleProvider")!;
+        var provider = Activator.CreateInstance(providerType,
+            RuntimeHelpers.GetUninitializedObject(mod.GetType("Wildfire.Timberborn.FireResponse.WardenStationInventoryInitializer")!),
+            RuntimeHelpers.GetUninitializedObject(mod.GetType("Wildfire.Timberborn.FireResponse.WardenEquipmentInventoryInitializer")!))!;
+        var module = providerType.GetMethod("Get")!.Invoke(provider, null)!;
+        var moduleType = native.LoadNative("Timberborn.TemplateInstantiation").GetType("Timberborn.TemplateInstantiation.TemplateModule")!;
+        var modules = Array.CreateInstance(moduleType, 1);
+        modules.SetValue(module, 0);
+        var factoryType = native.LoadNative("Timberborn.TemplateInstantiation").GetType("Timberborn.TemplateInstantiation.TemplateInstantiatorProvider")!;
+        var factory = Activator.CreateInstance(factoryType, null, null, modules)!;
+        var instantiator = factoryType.GetMethod("Get")!.Invoke(factory, null)!;
+        var blueprintAssembly = native.LoadNative("Timberborn.BlueprintSystem");
+        var specs = Array.CreateInstance(blueprintAssembly.GetType("Timberborn.BlueprintSystem.ComponentSpec")!, 1);
+        specs.SetValue(Activator.CreateInstance(native.LoadNative("Timberborn.Beavers").GetType("Timberborn.Beavers.AdultSpec")!), 0);
+        var blueprintType = blueprintAssembly.GetType("Timberborn.BlueprintSystem.Blueprint")!;
+        var children = typeof(System.Collections.Immutable.ImmutableArray<>).MakeGenericType(blueprintType).GetField("Empty")!.GetValue(null)!;
+        var blueprint = Activator.CreateInstance(blueprintType, "BeaverAdult", specs, children)!;
+        object?[] args = [blueprint, null, null];
+        instantiator.GetType().GetMethod("GetInstanceComponents", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(instantiator, args);
+        var types = ((IEnumerable)args[2]!).Cast<Type>().Select(type => type.FullName).ToArray();
+        Assert.Single(types, name => name == "Wildfire.Timberborn.FireResponse.Presentation.WardenHelmetPresentation");
+        Assert.Single(types, name => name == "Wildfire.Timberborn.FireResponse.WardenExecutor");
+    }
+
+    [Fact]
+    public void PresentationPostInitializeCreatesNothingAndDeathThenDeleteHideTheExistingToggle()
+    {
+        using var f = new Fixture();
+        var presentation = f.Presentation();
+        presentation.GetType().GetMethod("PostInitializeEntity")!.Invoke(presentation, null);
+        Assert.Equal(0, f.Created);
+        f.Observe(true, "Returning", true);
+        presentation.GetType().GetMethod("OnDied", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(presentation, new object[] { presentation, EventArgs.Empty });
+        Assert.False(f.Visible);
+        int events = f.Events;
+        presentation.GetType().GetMethod("DeleteEntity")!.Invoke(presentation, null);
+        Assert.Equal(events, f.Events);
+        Assert.Equal(1, f.Created);
+    }
+
     private static string Source(string path)
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);
@@ -134,6 +182,14 @@ public sealed class NativeWardenHelmetTests
                 if (ThrowOnShow && Visible) throw new InvalidOperationException("Native renderer callback failed");
             }));
             return _toggle;
+        }
+
+        internal object Presentation()
+        {
+            var type = _native.LoadMod().GetType("Wildfire.Timberborn.FireResponse.Presentation.WardenHelmetPresentation")!;
+            var component = Activator.CreateInstance(type)!;
+            type.GetField("_visibility", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(component, _state);
+            return component;
         }
 
         internal void Observe(bool owner, string phase, bool alive) =>
