@@ -11,6 +11,7 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     private readonly NativeManagedTestContext _native = new();
     internal object Resources { get; }
     internal object Satchel { get; }
+    internal object Registration => Satchel.GetType().GetField("_registration", Flags)!.GetValue(Satchel)!;
     internal object Inventory { get; }
     internal object Source { get; }
     internal object Reserver { get; }
@@ -123,9 +124,17 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
         ModelActorAwake();
         var counter = Activator.CreateInstance(T("Timberborn.ResourceCountingSystem", "DistrictResourceCounter"))!;
         _registeredCounter = counter;
-        Call(counter, "Add", Satchel.GetType().GetField("_satchelCounter", Flags)!.GetValue(Satchel));
-        Set(Satchel, "_counter", counter);
-        Set(Satchel, "_registry", District);
+        Call(counter, "Add", Registration.GetType().GetField("_processor", Flags)!.GetValue(Registration));
+        Set(Registration, "_counter", counter);
+        Set(Registration, "_registry", District);
+    }
+    internal object SelectDistrictForRegistrationMutation()
+    {
+        Call(Satchel, "InitializeEntity");
+        var district = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "DistrictCenter"));
+        AttachCache(district, District, _registeredCounter!);
+        Set(Citizen, "<AssignedDistrict>k__BackingField", district);
+        return district; // Mutation-only proof; no fabricated positive Unity district liveness.
     }
     internal int RegisteredProcessors
     {

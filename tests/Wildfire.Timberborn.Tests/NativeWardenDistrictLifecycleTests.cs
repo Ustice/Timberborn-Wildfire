@@ -8,6 +8,40 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class NativeWardenDistrictLifecycleTests
 {
     [Fact]
+    public void WardenAdditionalRegistrationAdmissionDoesNotAcquireSatchelPendingDeathPolicy()
+    {
+        using var f = new Fixture();
+        var admitted = (Func<bool>)f.Registration.GetType().GetField("_canRegister",
+            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(f.Registration)!;
+        f.Call(f.Mortal, "DieSilentlyAsSoonAsPossible", "fixture pending death");
+        Assert.True((bool)f.Get(f.Mortal, "ShouldDie")!);
+        Assert.True((bool)f.Get(f.Character, "Alive")!);
+        Assert.True(admitted()); // The shared helper still independently requires Character.Alive.
+        Assert.Equal(1, f.Quantity);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeRegistryCallbackExitPreventsCounterPublication(bool exitDuringAdd)
+    {
+        using var f = new Fixture();
+        var district = f.SelectDistrictForRegistrationMutation();
+        f.On(f.Registry, "InventoryRegistered", () =>
+        {
+            Assert.Equal(0, f.RegisteredProcessors);
+            if (exitDuringAdd) f.Call(f.Equipment, "DeleteEntity");
+        });
+        void Register() => f.Transfer(() => f.Call(f.Registration, "RegisterDistrict", district));
+        if (exitDuringAdd) Assert.Throws<TargetInvocationException>(Register);
+        else Register();
+        Assert.Equal(exitDuringAdd ? 0 : 1, f.RegisteredProcessors);
+        Assert.Equal(exitDuringAdd, f.Poisoned);
+        Assert.Equal(exitDuringAdd, (bool)f.Get(f.Registration, "Exited")!);
+        Assert.Equal(1, f.Quantity);
+    }
+
+    [Fact]
     public void ActualBinditoStillSelectsTheSingleProductionConstructor()
     {
         using var native = new NativeManagedTestContext();
@@ -307,9 +341,11 @@ public sealed class NativeWardenDistrictLifecycleTests
     {
         private readonly NativeManagedTestContext _native = new();
         internal object Resources { get; }
+        internal object Registration => Equipment.GetType().GetField("_registration", Flags)!.GetValue(Equipment)!;
         internal object Equipment { get; }
         internal object Inventory { get; }
         internal object Character { get; }
+        internal object Mortal { get; }
         internal object Citizen { get; }
         internal object Registry { get; }
         private readonly object _counter;
@@ -358,15 +394,26 @@ public sealed class NativeWardenDistrictLifecycleTests
                 Activator.CreateInstance(T("Timberborn.SingletonSystem", "EventBus")), null, null)!;
             Citizen = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "Citizen"));
             Set(Citizen, "_unassignedCitizenRegistry", Activator.CreateInstance(T("Timberborn.GameDistricts", "UnassignedCitizenRegistry")));
-            AttachCache(Equipment, Inventory, Character, Citizen);
+            Mortal = RuntimeHelpers.GetUninitializedObject(T("Timberborn.MortalSystem", "Mortal"));
+            Set(Mortal, "_character", Character);
+            AttachCache(Equipment, Inventory, Character, Citizen, Mortal);
             Call(Citizen, "Awake"); // Native Citizen subscribes first: its OnDied unassigns before our handler.
             Call(Equipment, "Awake");
             Registry = Activator.CreateInstance(T("Timberborn.InventorySystem", "DistrictInventoryRegistry"), goods)!;
             Call(Registry, "Add", Inventory); // Native private registration still raises events.
             _counter = Activator.CreateInstance(T("Timberborn.ResourceCountingSystem", "DistrictResourceCounter"))!;
-            Call(_counter, "Add", Equipment.GetType().GetField("_equipmentCounter", Flags)!.GetValue(Equipment));
-            Set(Equipment, "_counter", _counter);
-            Set(Equipment, "_registry", Registry);
+            Call(_counter, "Add", Registration.GetType().GetField("_processor", Flags)!.GetValue(Registration));
+            Set(Registration, "_counter", _counter);
+            Set(Registration, "_registry", Registry);
+        }
+
+        internal object SelectDistrictForRegistrationMutation()
+        {
+            Call(Equipment, "InitializeEntity"); // Removes the fixture's earlier unassigned registration.
+            var district = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "DistrictCenter"));
+            AttachCache(district, Registry, _counter);
+            Set(Citizen, "<AssignedDistrict>k__BackingField", district);
+            return district; // The tested mutation starts after Unity-only HasAssignedDistrict admission.
         }
 
         internal void DeleteThroughNativeEntity(Action deletedEvent)

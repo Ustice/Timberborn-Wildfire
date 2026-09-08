@@ -5,6 +5,44 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class NativeFertilizerDistrictLifecycleTests
 {
     [Fact]
+    public void SatchelAdditionalRegistrationAdmissionTracksActualNativePendingDeath()
+    {
+        using var f = Ready();
+        var mortal = f.Satchel.GetType().GetField("_mortal", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Satchel)!;
+        var admitted = (Func<bool>)f.Registration.GetType()
+            .GetField("_canRegister", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Registration)!;
+        Assert.True(admitted());
+        f.Call(mortal, "DieSilentlyAsSoonAsPossible", "fixture pending death");
+        Assert.True((bool)f.Get(f.Character, "Alive")!);
+        Assert.True((bool)f.Get(mortal, "ShouldDie")!);
+        Assert.False(admitted()); // Pending death is the satchel's extra rule, not generic Character.Alive.
+        Assert.Equal(1, f.Quantity(f.Inventory));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SatchelRereadsNativePendingDeathAfterRegistryCallback(bool scheduleDeath)
+    {
+        using var f = Ready();
+        var district = f.SelectDistrictForRegistrationMutation();
+        var mortal = f.Satchel.GetType().GetField("_mortal", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Satchel)!;
+        f.On(f.District, "InventoryRegistered", () =>
+        {
+            Assert.Equal(0, f.RegisteredProcessors);
+            if (scheduleDeath) f.Call(mortal, "DieSilentlyAsSoonAsPossible", "registration callback");
+        });
+        void Register() => f.Transfer(() => f.Call(f.Registration, "RegisterDistrict", district));
+        if (scheduleDeath) Assert.Throws<TargetInvocationException>(Register);
+        else Register();
+        Assert.True((bool)f.Get(f.Character, "Alive")!);
+        Assert.Equal(scheduleDeath ? 0 : 1, f.RegisteredProcessors);
+        Assert.Equal(scheduleDeath, f.Poisoned);
+        Assert.Equal(1, f.Quantity(f.Inventory));
+        Assert.Equal(0, f.Consumption);
+    }
+
+    [Fact]
     public void ActualMortalityImmediatelyMakesNativeMortalDead()
     {
         using var f = Ready();
@@ -26,7 +64,7 @@ public sealed class NativeFertilizerDistrictLifecycleTests
         f.DeleteThroughNativeEntity(() =>
         {
             observed = true;
-            Assert.True((bool)f.Satchel.GetType().GetField("_exited", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Satchel)!);
+            Assert.True((bool)f.Get(f.Registration, "Exited")!);
             Assert.True((bool)f.Get(f.Character, "Alive")!);
             Assert.False((bool)f.Get(mortal, "Dead")!);
             Assert.False((bool)f.Get(mortal, "ShouldDie")!);

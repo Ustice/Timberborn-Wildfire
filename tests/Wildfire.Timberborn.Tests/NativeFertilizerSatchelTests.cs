@@ -198,8 +198,8 @@ public sealed class NativeFertilizerSatchelTests
         int unregistered = 0;
         f.On(f.District, "InventoryUnregistered", () => { unregistered++; throw new IOException("district cleanup callback"); });
         if (alreadyPoisoned) Assert.Throws<TargetInvocationException>(() => f.Transfer(() => throw new IOException("prior poison")));
-        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
-        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+        f.Call(f.Character, "KillCharacter");
+        f.Call(f.Character, "KillCharacter");
         Assert.Equal(alreadyPoisoned ? 0 : 1, unregistered);
         Assert.True(f.Poisoned);
         Assert.Equal(1, f.Quantity(f.Inventory)); // Native owner deletion, not a refund or consumption, owns eventual loss.
@@ -215,7 +215,7 @@ public sealed class NativeFertilizerSatchelTests
         bool mortalityContinued = false;
         Assert.Throws<TargetInvocationException>(() => f.Capture(() =>
         {
-            f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+            f.Call(f.Character, "KillCharacter");
             mortalityContinued = true;
         }));
         Assert.True(mortalityContinued);
@@ -233,8 +233,8 @@ public sealed class NativeFertilizerSatchelTests
         f.ModelDistrictRegistration();
         int unregistered = 0;
         f.On(f.District, "InventoryUnregistered", () => unregistered++);
-        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
-        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+        f.Call(f.Character, "KillCharacter");
+        f.Call(f.Character, "KillCharacter");
         Assert.Equal(1, unregistered);
         Assert.Equal(0, f.RegisteredProcessors);
         Assert.Equal(1, f.Quantity(f.Inventory));
@@ -249,7 +249,7 @@ public sealed class NativeFertilizerSatchelTests
         f.Give(f.Inventory);
         f.ModelDistrictRegistration();
         var failure = Assert.Throws<TargetInvocationException>(() =>
-            f.Apply(() => f.Call(f.Satchel, "OnDied", null, EventArgs.Empty)));
+            f.Apply(() => f.Call(f.Character, "KillCharacter")));
         var step = Assert.IsType<Wildfire.Core.FireSimStepInputException>(failure.InnerException);
         Assert.Equal(Wildfire.Core.FireSimStepInputOutcome.Indeterminate, step.Outcome);
         Assert.Equal(0, f.Quantity(f.Inventory));
