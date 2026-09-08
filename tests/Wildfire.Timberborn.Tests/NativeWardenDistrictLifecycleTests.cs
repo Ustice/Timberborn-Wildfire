@@ -8,6 +8,23 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class NativeWardenDistrictLifecycleTests
 {
     [Fact]
+    public void ActualCharacterConstructorIsAliveBeforeEquipmentInitializationAndPostLoad()
+    {
+        using var f = new Fixture();
+        // Character.Awake/PreInitialize have not run; native construction already establishes Alive.
+        Assert.True((bool)f.Get(f.Character, "Alive")!);
+        f.Call(f.Equipment, "InitializeEntity");
+        f.Call(f.Inventory, "Disable");
+        int enabled = 0;
+        f.On(f.Inventory, "InventoryEnabled", () => enabled++);
+        f.Call(f.Equipment, "PostLoadEntity");
+        Assert.Equal(1, enabled); // A false initial death inference would have permanently exited instead.
+        Assert.True((bool)f.Get(f.Inventory, "Enabled")!);
+        Assert.Equal(1, f.Quantity);
+        Assert.False(f.Poisoned);
+    }
+
+    [Fact]
     public void NativeUnregisterFailureDoesNotAbortDeletionOrAllowSave()
     {
         using var f = new Fixture();
@@ -232,9 +249,8 @@ public sealed class NativeWardenDistrictLifecycleTests
             Call(Inventory, "Enable");
             Call(Inventory, "GiveExistingIgnoringCapacity", Activator.CreateInstance(T("Timberborn.Goods", "GoodAmount"), "Water", 1));
 
-            Character = RuntimeHelpers.GetUninitializedObject(T("Timberborn.Characters", "Character"));
-            Set(Character, "<Alive>k__BackingField", true);
-            Set(Character, "_eventBus", Activator.CreateInstance(T("Timberborn.SingletonSystem", "EventBus")));
+            Character = Activator.CreateInstance(T("Timberborn.Characters", "Character"),
+                Activator.CreateInstance(T("Timberborn.SingletonSystem", "EventBus")), null, null)!;
             Citizen = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "Citizen"));
             Set(Citizen, "_unassignedCitizenRegistry", Activator.CreateInstance(T("Timberborn.GameDistricts", "UnassignedCitizenRegistry")));
             AttachCache(Equipment, Inventory, Character, Citizen);
