@@ -198,7 +198,7 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
         AttachCache(inventory, Activator.CreateInstance(T("Timberborn.InventorySystem", "Inventories"))!);
         return inventory;
     }
-    private void AttachCache(params object[] components)
+    internal void AttachCache(params object[] components)
     {
         var list = components.ToList();
         var cache = RuntimeHelpers.GetUninitializedObject(T("Timberborn.BaseComponentSystem", "ComponentCache"));

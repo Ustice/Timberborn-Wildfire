@@ -1,6 +1,6 @@
 # Inactive fertilizer satchel recovery prototype
 
-This source-only prototype adds three unregistered components/helpers, 327 production lines. It does not activate a template, register an executor, recruit a worker, apply fertilizer, change designations or add a scheduler. No engine, game, desktop or deployment was used for this checkpoint.
+This source-only prototype adds three unregistered components/helpers, 342 production lines. It does not activate a template, register an executor, recruit a worker, apply fertilizer, change designations or add a scheduler. No engine, game, desktop or deployment was used for this checkpoint.
 
 ## Behavior and ownership
 
@@ -19,10 +19,10 @@ Each active Tick yields for urgent needs or invalid ownership/destination, and a
 Focused command:
 
 ```sh
-dotnet test tests/Wildfire.Timberborn.Tests --no-restore --filter 'FullyQualifiedName~FertilizerRecovery|FullyQualifiedName~NativeFertilizer|FullyQualifiedName~TimberbornFireWalk'
+dotnet test tests/Wildfire.Timberborn.Tests --no-restore --filter 'FullyQualifiedName~FertilizerRecovery|FullyQualifiedName~NativeFertilizer|FullyQualifiedName~TimberbornFireWalk|FullyQualifiedName~NativeWardenPublicInventory'
 ```
 
-87 focused tests and the full 1,465-test native suite passed, zero failed/skipped. New recovery cases exercise:
+90 focused tests and the full 1,466-test native suite passed, zero failed/skipped. New recovery cases exercise:
 
 - Actual installed `BeaverBehaviorInitializer.InitializeBehaviors(true)` with supplied native components in a native `ComponentCache`; actual `EntityComponent.PostInitialize` dispatches the recovery installation. This validates those managed stages, not full prefab instantiation.
 - Actual native `ProcessBehaviors` executes decision probes at the installed positions: CriticalNeeder/Stranded win before recovery, recovery can precede work, and a decline lets work run. These probes isolate native arbitration; they do not impersonate full native need behavior execution.
@@ -31,7 +31,20 @@ dotnet test tests/Wildfire.Timberborn.Tests --no-restore --filter 'FullyQualifie
 - Capture rejection retains active cancellation ownership; death during capture returns native failure and poisons the attempted capture. Native return-state Load performs no movement or inventory write.
 - Actual native Worker classification is non-job both with supplied employment and after that employment reference is removed. Native clock-contract advancement releases the transient retry delay.
 
-Evidence logs are in `/tmp/wildfire-fertilizer-recovery-review/`: `focused-native-lifecycle.log`, `full-native.log`; the preceding proposal's installed IL is retained there. The previous tools-disabled Claude attempt refused/returned API error and supplied no substantive review. No Claude findings are claimed for this implementation.
+## Native destination contract follow-up
+
+The names of native helpers are not the admission proof. Installed IL establishes the chain:
+
+- `DistrictInventoryRegistry.Add` IL0000–0017 registers only public input or output inventories in its public registry. `InventoryRegistry.UpdateRegistries` IL0000–002f adds a capacity candidate only when `PublicInput` and `HasUnreservedCapacity(string)` hold. The string overload first calls `Takes(good)`, which reads the native allowed input-good set, before checking capacity. Thus private satchels and output-only/other-good stores cannot become deposit candidates through this set.
+- `DistrictInventoryPicker.InventoryIsTaking` IL0002/000f/001c additionally checks requested unreserved quantity, `IInventoryValidator.ValidInventory`, then `BlockableObject.IsUnblocked`. The prototype applies the same checks; it does not treat the validator as an allowed-good filter. Existing actual-native public Warden inventory fixtures prove public-input inclusion, private exclusion, full-capacity removal, emptying-validator rejection and blocking rejection.
+- `DistrictInventoryAssigner.Awake` gets the owner's `DistrictBuilding`; `AddRegisteredInventories` IL0001–001b takes its exact `District` and that district's registry. This establishes the prototype's post-reservation `DistrictBuilding.District` check without requiring membership in a capacity set from which the reservation can legitimately remove the inventory.
+- The picker obtains an enabled `Accessible`, and its Vector3 `FindRoadPath` and `FindRoadToTerrainPath` methods both start with `UnblockedSingleAccess`. The straight-line fallback additionally calls `IsReachableUnlimitedRange`. `ValidAccessible` alone checks enabled state and accessibility validators; it does **not** check native `IBlockedAccessible`. For buildings, `BuildingBlockedAccessible.IsBlocked` checks native navmesh connection between entrance and doorstep.
+
+The prototype now reads public `UnblockedSingleAccess` after `ValidAccessible` for both route planning and arrival revalidation. No private blocked-member reflection, manual coordinate or selector framework was added. A native Accessible with supplied `IBlockedAccessible` contract returns validity true while blocked: the old helper exposed `(1.5,2,3.5)` and the regression failed; the new helper returns no point, returns the exact point when unblocked, and rejects it again if blocked before arrival. Disabled access also declines. Multiple points on one Accessible retain native `Single()` rejection and are explicitly unsupported in this destination path; the prototype does not choose an arbitrary one. The test supplies the obstruction contract and runs actual native Accessible getters, not a live doorstep/navmesh.
+
+Root-order validation now uses direct loops, with no LINQ iterators or per-anchor result arrays. Unique ordered anchors, foreign-entry preservation, exact recovery identity and idempotence are unchanged; no cache or timing benchmark was introduced.
+
+Evidence logs are in `/tmp/wildfire-fertilizer-recovery-review/`: `followup-focused2.log`, `followup-full-native.log`, `blocked-access-red2.log` and `native-destination-evidence.il.txt`; the preceding proposal's installed IL is retained there. The previous tools-disabled Claude attempt refused/returned API error and supplied no substantive review. No Claude findings are claimed for this implementation.
 
 ## Explicit remaining gates
 

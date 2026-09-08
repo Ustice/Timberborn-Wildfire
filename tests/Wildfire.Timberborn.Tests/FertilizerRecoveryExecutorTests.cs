@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace Wildfire.Timberborn.Tests;
@@ -122,6 +123,36 @@ public sealed class FertilizerRecoveryExecutorTests
         f.Day = .1f; // Advance the native clock contract; no persisted retry task exists.
         f.Set(f.Root, "_executor", f.Executor);
         Assert.True(f.Stock.Get(f.Stock.Call(f.Root, "Decide", new object?[] { null })!, "ShouldReleaseNow") is true);
+    }
+
+    [Fact]
+    public void ValidButNativeBlockedEntranceCannotBecomeDepositPoint()
+    {
+        using var f = new NativeFertilizerSatchelFixture(NativeManagedTestContext.ProxyContracts);
+        var access = Activator.CreateInstance(f.T("Timberborn.Navigation", "Accessible"), new object?[] { null })!;
+        var vector = NativeManagedTestContext.ProxyContracts.LoadNative("UnityEngine.CoreModule").GetType("UnityEngine.Vector3")!;
+        var point = Activator.CreateInstance(vector, 1.5f, 2f, 3.5f)!;
+        var points = (IList)access.GetType().GetField("_accesses", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(access)!;
+        points.Add(point);
+        bool blocked = true;
+        var obstruction = NativePersistenceProxy.Create(f.T("Timberborn.Navigation", "IBlockedAccessible"), (_, _) => blocked);
+        NativeFertilizerSatchelFixture.Set(access, "_blockedAccessible", obstruction);
+        f.Call(access, "EnableComponent");
+        f.AttachCache(f.Source, access);
+        Assert.True(f.Get(access, "ValidAccessible") is true); // ValidAccessible does not consult obstruction.
+        object[] Candidates() => ((IEnumerable)f.Mod("FertilizerRecoveryExecutor").GetMethod("Accesses", StaticFlags)!
+            .Invoke(null, [f.Source])!).Cast<object>().ToArray();
+        Assert.Empty(Candidates());
+        blocked = false;
+        Assert.Equal(point, Assert.Single(Candidates())); // Exact native point, no inferred center/offset.
+        blocked = true;
+        Assert.Empty(Candidates()); // The same function rechecks current access at arrival.
+        blocked = false;
+        points.Add(Activator.CreateInstance(vector, 2.5f, 2f, 3.5f)!);
+        Assert.Throws<InvalidOperationException>(() => Candidates()); // Native single-access contract is explicit.
+        points.RemoveAt(1);
+        f.Call(access, "DisableComponent");
+        Assert.Empty(Candidates());
     }
 
     [Fact]

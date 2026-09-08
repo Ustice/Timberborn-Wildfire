@@ -21,8 +21,7 @@ internal static class FertilizerRecoveryOrder
     {
         var roots = (List<RootBehavior>)Roots.Value.GetValue(manager)!;
         int worker = WorkerIndex(roots);
-        var existing = roots.Where(root => root is FertilizerRecoveryRoot).ToArray();
-        if (existing.Length != 0)
+        if (RecoveryCount(roots) != 0)
         {
             if (!IsInstalled(manager, recovery))
                 throw new InvalidOperationException("Fertilizer recovery was duplicated or reordered.");
@@ -34,7 +33,7 @@ internal static class FertilizerRecoveryOrder
     {
         var roots = (List<RootBehavior>)Roots.Value.GetValue(manager)!;
         int worker = WorkerIndex(roots);
-        return roots.Count(root => root is FertilizerRecoveryRoot) == 1 && worker > 0 &&
+        return RecoveryCount(roots) == 1 && worker > 0 &&
             ReferenceEquals(roots[worker - 1], recovery);
     }
     private static int WorkerIndex(List<RootBehavior> roots)
@@ -42,13 +41,28 @@ internal static class FertilizerRecoveryOrder
         int previous = -1, worker = -1;
         foreach (string anchor in Anchors)
         {
-            var matches = roots.Select((root, index) => (root, index)).Where(pair => pair.root?.GetType().FullName == anchor).ToArray();
-            if (matches.Length != 1 || matches[0].index <= previous)
+            int match = -1;
+            for (int index = 0; index < roots.Count; index++)
+            {
+                if (roots[index]?.GetType().FullName != anchor) continue;
+                if (match >= 0)
+                    throw new InvalidOperationException("Native fertilizer recovery requires unique ordered adult roots.");
+                match = index;
+            }
+            if (match <= previous)
                 throw new InvalidOperationException("Native fertilizer recovery requires unique ordered adult roots.");
-            previous = matches[0].index;
+            previous = match;
             if (anchor == "Timberborn.WorkSystem.WorkerRootBehavior") worker = previous;
         }
         return worker;
+    }
+
+    private static int RecoveryCount(List<RootBehavior> roots)
+    {
+        int count = 0;
+        for (int index = 0; index < roots.Count; index++)
+            if (roots[index] is FertilizerRecoveryRoot) count++;
+        return count;
     }
 
     private static FieldInfo Verify()

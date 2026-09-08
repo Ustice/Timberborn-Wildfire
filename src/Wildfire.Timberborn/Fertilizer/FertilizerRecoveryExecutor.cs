@@ -124,7 +124,8 @@ public sealed class FertilizerRecoveryExecutor : BaseComponent, IExecutor, IAwak
     private static IEnumerable<Vector3> Accesses(Inventory inventory)
     {
         var accesses = new List<Accessible>(); inventory.GetComponents(accesses);
-        return accesses.Where(access => access.ValidAccessible).SelectMany(access => access.Accesses);
+        foreach (var access in accesses)
+            if (access.ValidAccessible && access.UnblockedSingleAccess is { } point) yield return point;
     }
     public ExecutorStatus Tick(float hours)
     {
