@@ -19,13 +19,15 @@ internal sealed class NaturalWaterSourceQaFactory
     private readonly NaturalWaterSourceShore _shore;
     private readonly NativeResourceCoordinator _resources;
     private readonly Ticker _ticker;
+    private readonly BlockValidator _validator;
+    private readonly IBlockService _blocks;
 
     internal NaturalWaterSourceQaFactory(ISpecService specs, BlockObjectFactory factory, EntityRegistry entities,
         EntityService entityService, NaturalWaterSourceShore shore, NativeResourceCoordinator resources,
-        Ticker ticker, TimberbornWaterCreditBoundary boundary)
+        Ticker ticker, TimberbornWaterCreditBoundary boundary, BlockValidator validator, IBlockService blocks)
     {
         _specs = specs; _factory = factory; _entities = entities; _entityService = entityService;
-        _shore = shore; _resources = resources; _ticker = ticker;
+        _shore = shore; _resources = resources; _ticker = ticker; _validator = validator; _blocks = blocks;
         // This dependency provisions the same boundary before singleton collection, including restore PostLoad.
         _ = boundary ?? throw new ArgumentNullException(nameof(boundary));
     }
@@ -40,12 +42,31 @@ internal sealed class NaturalWaterSourceQaFactory
         if (!_shore.IsUsable(inputCoordinate, shorelinePoint))
             throw new InvalidOperationException("No clean fixed water input beside the exact dry native shore.");
         var blueprint = _specs.GetSingleSpec<NaturalWaterSourceQaSpec>().Blueprint;
-        var block = _factory.CreateFinished(new EntitySetup.Builder(blueprint), new Placement(inputCoordinate));
-        var source = block.GetComponent<TimberbornNaturalWaterSource>();
-        if (source.TryArmNewSource() && IsUsable(source, shorelinePoint)) return source;
-        // Only this returned, newly created entity is ours to remove. Never adopt or delete an older source.
-        _entityService.Delete(block);
-        throw new InvalidOperationException("Native fixed source failed post-creation ownership/shore admission.");
+        var placement = new Placement(inputCoordinate);
+        if (_blocks.AnyObjectAt(inputCoordinate) || !_validator.BlocksValid(blueprint.Specs.OfType<BlockObjectSpec>().Single(), placement))
+            throw new InvalidOperationException("Native intake placement is occupied or unsupported.");
+        var setup = new EntitySetup.Builder(blueprint);
+        Guid id = setup.Build().Id; // Native Build creates and retains this ID across its later factory call.
+        if (_entities.GetEntity(id) is not null) throw new InvalidOperationException("Native source ID already exists.");
+        try
+        {
+            var block = _factory.CreateFinished(setup, placement);
+            var source = block.GetComponent<TimberbornNaturalWaterSource>();
+            if (source.TryArmNewSource() && IsUsable(source, shorelinePoint)) return source;
+            throw new InvalidOperationException("Native fixed source failed post-creation ownership/shore admission.");
+        }
+        catch (Exception failure)
+        {
+            // Native Instantiate registers before all initialization callbacks finish and has no rollback.
+            // Only this new ID is eligible for native cleanup; preserve any cleanup failure as well.
+            try
+            {
+                var partial = _entities.GetEntity(id);
+                if (partial is not null && partial && !partial.Deleted) _entityService.Delete(partial);
+            }
+            catch (Exception cleanup) { throw new AggregateException("Native source creation and cleanup failed.", failure, cleanup); }
+            throw;
+        }
     }
 
     internal bool IsUsable(TimberbornNaturalWaterSource source, Vector3 shorelinePoint) =>

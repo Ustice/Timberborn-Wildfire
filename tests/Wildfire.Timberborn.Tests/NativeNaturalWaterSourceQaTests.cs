@@ -17,7 +17,9 @@ public sealed class NativeNaturalWaterSourceQaTests
     [InlineData(4.5f, 4f, 5.5f, false)] // Water cell itself.
     [InlineData(5.5f, 4f, 6.5f, false)] // Diagonal cannot silently widen reach.
     [InlineData(6.5f, 4f, 5.5f, false)]
-    [InlineData(5.5f, 5f, 5.5f, false)]
+    [InlineData(5.5f, 5f, 5.5f, true)] // Adjacent one-level bank.
+    [InlineData(5.5f, 6f, 5.5f, false)]
+    [InlineData(5.5f, 3f, 5.5f, false)]
     [InlineData(5.25f, 4f, 5.5f, false)]
     [InlineData(float.NaN, 4f, 5.5f, false)]
     [InlineData(float.PositiveInfinity, 4f, 5.5f, false)]
@@ -35,7 +37,7 @@ public sealed class NativeNaturalWaterSourceQaTests
         {
             Assert.Equal((int)x, grid.GetProperty("x")!.GetValue(args[3]));
             Assert.Equal((int)z, grid.GetProperty("y")!.GetValue(args[3]));
-            Assert.Equal(4, grid.GetProperty("z")!.GetValue(args[3]));
+            Assert.Equal((int)y, grid.GetProperty("z")!.GetValue(args[3]));
         }
     }
 
@@ -93,6 +95,37 @@ public sealed class NativeNaturalWaterSourceQaTests
         var exception = Assert.Throws<TargetInvocationException>(() => type.GetMethod("Create", Private)!.Invoke(
             RuntimeHelpers.GetUninitializedObject(type), [Activator.CreateInstance(grid), Activator.CreateInstance(vector)]));
         Assert.Equal("qa_mutations_disabled", Assert.IsType<InvalidOperationException>(exception.InnerException).Message);
+    }
+
+    [Fact]
+    public void ActualBinditoSelectsEachSoleInternalConstructorWithoutProviderShim()
+    {
+        using var native = new NativeManagedTestContext();
+        var retrieverType = native.LoadNative("Bindito.Core").GetType("Bindito.Core.Internal.ConstructorRetriever")!;
+        var retriever = Activator.CreateInstance(retrieverType)!;
+        var mod = native.LoadMod();
+        foreach (string name in new[] { "NaturalWaterSourceQaFactory", "NaturalWaterSourceShore", "TimberbornNaturalWaterSource", "TimberbornWaterCreditBoundary" })
+        {
+            var type = mod.GetType("Wildfire.Timberborn.FireBell." + name)!;
+            var selected = Assert.IsAssignableFrom<ConstructorInfo>(retrieverType.GetMethod("GetEligibleConstructor")!.Invoke(retriever, [type]));
+            Assert.Equal(Assert.Single(type.GetConstructors(Private)), selected);
+            Assert.True(selected.IsAssembly);
+        }
+    }
+
+    [Fact]
+    public void ActualNativeBuilderRetainsGeneratedIdentityAcrossFactoryPreparation()
+    {
+        using var native = new NativeManagedTestContext();
+        var type = native.LoadNative("Timberborn.EntitySystem").GetType("Timberborn.EntitySystem.EntitySetup+Builder")!;
+        var builder = Activator.CreateInstance(type, new object?[] { null })!;
+        object Build() => type.GetMethod("Build")!.Invoke(builder, null)!;
+        Guid Id(object setup) => (Guid)setup.GetType().GetProperty("Id")!.GetValue(setup)!;
+        var first = Build();
+        type.GetMethod("AddInitComponent")!.Invoke(builder, [new object()]);
+        var second = Build();
+        Assert.NotEqual(Guid.Empty, Id(first));
+        Assert.Equal(Id(first), Id(second));
     }
 
     private static string BlueprintPath()

@@ -31,8 +31,8 @@ internal sealed class NaturalWaterSourceShore
         shore = default;
         if (!float.IsFinite(point.x) || !float.IsFinite(point.y) || !float.IsFinite(point.z) ||
             input.x < 0 || input.y < 0 || input.z < 0 || input.x >= size.x || input.y >= size.y || input.z >= size.z ||
-            point.x < 0 || point.z < 0 || point.x >= size.x || point.z >= size.y || point.y != input.z) return false;
-        shore = new((int)point.x, (int)point.z, input.z);
+            point.x < 0 || point.z < 0 || point.x >= size.x || point.z >= size.y || (point.y != input.z && point.y != input.z + 1) || point.y >= size.z) return false;
+        shore = new((int)point.x, (int)point.z, (int)point.y);
         return point.x == shore.x + .5f && point.z == shore.y + .5f &&
             Math.Abs((long)shore.x - input.x) + Math.Abs((long)shore.y - input.y) == 1;
     }
