@@ -160,10 +160,11 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
         => ApplyCallback(() => Consume(commitPhase), reject);
     internal void ApplyCallback(Action commit, bool reject = false)
     {
-        Call(Resources, "Attach", new ApplicationSimulator(reject));
+        AttachApplicationSimulator(reject);
         Call(Resources, "TryApplyCleanAsh", new FireSimAshApplicationInput(0, 2),
             (Action<FireSimAshApplicationReceipt>)(_ => commit()));
     }
+    internal void AttachApplicationSimulator(bool reject = false) => Call(Resources, "Attach", new ApplicationSimulator(reject));
     internal void Transfer(Action action) => Call(Resources, "TransferInventory", action);
     internal bool Reservation(string kind, object inventory) => (bool)Mod("FertilizerSatchel")
         .GetMethod("Exact" + kind + "Reservation", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [inventory, Reserver])!;

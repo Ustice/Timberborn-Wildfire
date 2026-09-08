@@ -34,7 +34,7 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
 
     private GpuFireStepResult TickCore()
     {
-        ThrowIfSaveUnsafe();
+        _transaction.ThrowIfOperationUnsafe();
         var simulator = _simulator ?? throw new InvalidOperationException("Resource simulator has not been attached.");
         LastAshReceipt = null;
         return _scheduler.Tick(ash => ash ? TryAsh(simulator) : TryWater(simulator), simulator.Tick);
@@ -62,7 +62,7 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
     internal FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input,
         Action<FireSimAshApplicationReceipt> commitApplication)
     {
-        ThrowIfSaveUnsafe();
+        _transaction.ThrowIfOperationUnsafe();
         var simulator = _simulator as IFireSimAshApplicationSimulator ??
             throw new InvalidOperationException("The attached world simulator lacks conditional ash application support.");
         return _transaction.TryApplyCleanAsh(simulator, input, commitApplication);
@@ -75,6 +75,10 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
     public void TransferInventory(Action transfer) => _transaction.TransferInventory(transfer);
 
     public void ThrowIfSaveUnsafe() => _transaction.ThrowIfSaveUnsafe();
+
+    void ITimberbornFireDispatchHost.ThrowIfStepUnsafe() => _transaction.ThrowIfOperationUnsafe();
+
+    internal void ExcludeSavesDuringDispatch(Action dispatch) => _transaction.ExcludeSavesDuringDispatch(dispatch);
 
     // A known step without complete host consequences uses the same irreversible session poison.
     public void InvalidateIncompleteDispatch() => _transaction.InvalidateAfterLifecycleFailure();

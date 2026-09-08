@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Wildfire.Timberborn.Tests;
 
-public sealed class NativeRuntimeIncompleteDispatchTests
+public sealed partial class NativeRuntimeIncompleteDispatchTests
 {
     [Theory]
     [InlineData(false)]
@@ -43,9 +43,11 @@ public sealed class NativeRuntimeIncompleteDispatchTests
         internal readonly TimberbornIncompleteDispatchTests.Simulator Simulator = new();
         private readonly object _runtime;
         private readonly object _resources;
+        private readonly object _system;
         private long _update;
         internal bool FailFinalRuntimeLog;
         internal bool FailWarnings;
+        internal Action<string>? OnLog;
         internal List<string> Messages = new();
         internal List<string> Warnings = new();
         internal bool Poisoned => (bool)_resources.GetType().GetProperty("IsIndeterminate")!.GetValue(_resources)!;
@@ -55,6 +57,7 @@ public sealed class NativeRuntimeIncompleteDispatchTests
             _resources = New("Resources.NativeResourceCoordinator");
             Call(_resources, "Attach", Simulator);
             var system = New("Runtime.TimberbornFireSystem", Simulator);
+            _system = system;
             system.GetType().GetProperty("HostDispatch", Flags)!.SetValue(system, _resources);
             var dispatcher = New("Runtime.TimberbornFixedCadenceFireDispatcher", system);
             _runtime = RuntimeHelpers.GetUninitializedObject(M("Runtime.TimberbornFireRuntime"));
@@ -64,6 +67,7 @@ public sealed class NativeRuntimeIncompleteDispatchTests
             var log = Proxy("Runtime.ITimberbornFireLogSink", (method, args) =>
             {
                 string message = (string)args[0]!;
+                OnLog?.Invoke(message);
                 if (method.Name == "Warning")
                 {
                     Warnings.Add(message);
@@ -75,6 +79,7 @@ public sealed class NativeRuntimeIncompleteDispatchTests
                 return null;
             });
             Set(_runtime, "_logSink", log);
+            Set(system, "_logSink", log);
             var clock = NativePersistenceProxy.Create(_native.LoadNative("Timberborn.TimeSystem")
                 .GetType("Timberborn.TimeSystem.IDayNightCycle")!, (method, _) =>
                 method.Name == "get_DayNumber" ? 0 : throw new InvalidOperationException(method.Name));
@@ -101,6 +106,14 @@ public sealed class NativeRuntimeIncompleteDispatchTests
 
         internal void Dispatch() => Call(_runtime, "DispatchFireUpdate",
             New("Runtime.TimberbornFireUpdate", ++_update, TimeSpan.FromSeconds(1)));
+        internal void PrepareRepeatedInput() => Call(_system.GetType().GetProperty("SustainedIgnition")!.GetValue(_system)!,
+            "Start", new Wildfire.Core.FireSimChange[] { new(0, AddHeat: 1) }, "scope-test");
+        internal void Transfer(Action action) => Call(_resources, "TransferInventory", action);
+        internal void Capture(Action action) => _resources.GetType().GetMethod("CaptureAtRest")!
+            .MakeGenericMethod(typeof(int)).Invoke(_resources, [new Func<int>(() => { action(); return 1; })]);
+        internal void Reset() => Call(_resources, "ResetForWorldLoad");
+        internal void Attach() => Call(_resources, "Attach", Simulator);
+        internal void Invalidate() => Call(_resources, "InvalidateAfterLifecycleFailure");
         internal void SaveAdmission() => Call(_runtime, "Save", new object?[] { null });
         private object Proxy(string name, Func<MethodInfo, object?[], object?> method) => NativePersistenceProxy.Create(M(name), method);
         private Type M(string name) => _native.LoadMod().GetType("Wildfire.Timberborn." + name)!;

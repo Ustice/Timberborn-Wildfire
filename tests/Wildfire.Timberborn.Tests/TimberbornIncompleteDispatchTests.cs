@@ -6,6 +6,25 @@ namespace Wildfire.Timberborn.Tests;
 
 public sealed class TimberbornIncompleteDispatchTests
 {
+    [Fact]
+    public void SaveScopeStillCoversLegacySinkAfterTheInnerResourceStepReturned()
+    {
+        using var f = new Fixture();
+        int reads = 0;
+        f.NativeEffect = () =>
+        {
+            Assert.Throws<InvalidOperationException>(f.Guard.ThrowIfSaveUnsafe);
+            Assert.Throws<InvalidOperationException>(() => f.Guard.CaptureAtRest(() => ++reads));
+            f.Guard.TransferInventory(() => { }); // Existing legacy inner seam remains usable.
+        };
+        f.Guard.ExcludeSavesDuringDispatch(f.Dispatch);
+        Assert.Equal(1, f.Commits);
+        Assert.Equal(1, f.NativeCalls);
+        Assert.Equal(1, f.RuntimeFollowups);
+        Assert.Equal(0, reads);
+        f.Guard.ThrowIfSaveUnsafe();
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -171,13 +190,13 @@ public sealed class TimberbornIncompleteDispatchTests
         }
         public GpuFireStepResult Tick()
         {
-            Guard.ThrowIfSaveUnsafe();
+            Guard.ThrowIfOperationUnsafe();
             if (_rejectedApplication)
                 return Guard.TryApplyCleanAsh(Simulator, new(0, 2), _ => { Commits++; CommitEffect(); })!.Value.Step;
             return _ordinary ? Simulator.Tick() : Guard.TryDeliver(Simulator, new(0, AddHeat: 1),
                 () => { Commits++; CommitEffect(); })!.Value;
         }
-        public void ThrowIfSaveUnsafe() => Guard.ThrowIfSaveUnsafe();
+        public void ThrowIfStepUnsafe() => Guard.ThrowIfOperationUnsafe();
         public void InvalidateIncompleteDispatch() => Guard.InvalidateAfterLifecycleFailure();
         internal void Dispatch()
         {
@@ -202,6 +221,7 @@ public sealed class TimberbornIncompleteDispatchTests
     {
         private readonly FireSimStepCoordinator _core = new(1, 8);
         internal Exception? ResetFailure;
+        internal Action? OnRegisterChange;
         internal int Swaps, RegisteredChanges;
         internal CellDelta[] Deltas = [];
         private FireSimChange[] _changes = [];
@@ -220,7 +240,7 @@ public sealed class TimberbornIncompleteDispatchTests
             return new(c.CellIndex, c.SetMask, c.AddFields | (1u << 29) | ((uint)FireSimAshApplicationOutcome.Full << 30), c.SetValues);
         }
         public IDisposable Subscribe(IFireSimListener listener) => _core.Subscribe(listener);
-        public void RegisterChange(FireSimChange change) { RegisteredChanges++; _core.RegisterChange(change); }
+        public void RegisterChange(FireSimChange change) { OnRegisterChange?.Invoke(); RegisteredChanges++; _core.RegisterChange(change); }
         public void ResetDeltaCounter(uint tick) { if (ResetFailure is not null) throw ResetFailure; }
         public void ApplyExternalChanges(uint tick, FireSimChange[] changes) => _changes = changes;
         public void Simulate(uint tick) { }

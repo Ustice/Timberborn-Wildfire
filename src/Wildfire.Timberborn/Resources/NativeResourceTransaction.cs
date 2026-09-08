@@ -6,6 +6,7 @@ namespace Wildfire.Timberborn.Resources;
 public sealed class NativeResourceTransaction : INativeResourceMutationGuard
 {
     private bool _delivering;
+    private bool _dispatching;
     private bool _ashApplicationCommit;
     public bool IsIndeterminate { get; private set; }
 
@@ -40,7 +41,7 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
 
     private T ExecuteStep<T>(Func<T> step)
     {
-        ThrowIfSaveUnsafe();
+        ThrowIfOperationUnsafe();
         _delivering = true;
         try
         {
@@ -78,7 +79,7 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
 
     public void TransferInventory(Action transfer)
     {
-        ThrowIfSaveUnsafe();
+        ThrowIfOperationUnsafe();
         _delivering = true;
         try
         {
@@ -96,13 +97,33 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
 
     public void ThrowIfSaveUnsafe()
     {
-        if (_delivering || IsIndeterminate)
+        if (_dispatching || _delivering || IsIndeterminate)
             throw new InvalidOperationException("Wildfire resource conversion is in progress or indeterminate; reload the last saved world before saving.");
+    }
+
+    // Save exclusion is not a mutation privilege: existing inner operations still own their latch.
+    internal void ExcludeSavesDuringDispatch(Action dispatch)
+    {
+        if (dispatch is null) throw new ArgumentNullException(nameof(dispatch));
+        ThrowIfSaveUnsafe();
+        _dispatching = true;
+        try
+        {
+            dispatch();
+            if (IsIndeterminate) ThrowIfSaveUnsafe();
+        }
+        finally { _dispatching = false; }
+    }
+
+    internal void ThrowIfOperationUnsafe()
+    {
+        if (_delivering || IsIndeterminate)
+            throw new InvalidOperationException("Wildfire resource operation is in progress or indeterminate.");
     }
 
     public void ResetForWorldLoad()
     {
-        if (_delivering) throw new InvalidOperationException("Cannot replace the world during resource conversion.");
+        if (_dispatching || _delivering) throw new InvalidOperationException("Cannot replace the world during resource conversion or dispatch.");
         IsIndeterminate = false;
     }
 }

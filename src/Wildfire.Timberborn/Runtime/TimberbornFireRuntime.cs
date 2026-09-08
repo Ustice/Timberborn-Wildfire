@@ -258,9 +258,11 @@ public sealed partial class TimberbornFireRuntime :
     }
 
     // Native update supplies time above; this dispatch/completion path itself does not read Unity time.
-    internal void DispatchFireUpdate(TimberbornFireUpdate update)
+    internal void DispatchFireUpdate(TimberbornFireUpdate update) =>
+        _resources.ExcludeSavesDuringDispatch(() => DispatchFireUpdateCore(update));
+
+    private void DispatchFireUpdateCore(TimberbornFireUpdate update)
     {
-        _resources.ThrowIfSaveUnsafe();
         bool awaitingFollowups = false;
         try
         {

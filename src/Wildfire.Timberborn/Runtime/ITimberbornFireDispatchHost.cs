@@ -6,6 +6,6 @@ namespace Wildfire.Timberborn.Runtime;
 internal interface ITimberbornFireDispatchHost
 {
     GpuFireStepResult Tick();
-    void ThrowIfSaveUnsafe();
+    void ThrowIfStepUnsafe();
     void InvalidateIncompleteDispatch();
 }

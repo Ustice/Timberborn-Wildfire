@@ -350,7 +350,7 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
     public GpuFireStepResult Tick()
     {
         ITimberbornFireDispatchHost? host = HostDispatch;
-        host?.ThrowIfSaveUnsafe(); // Before QA/input preparation, not only the eventual GPU call.
+        host?.ThrowIfStepUnsafe(); // Before QA/input preparation; normal Runtime also excludes saves.
         IGpuFireSimulator fireSimulator = RequireSimulator();
         Qa.PrepareTick();
         string? sustainedInputSource = SustainedIgnition.BeforeTick();
