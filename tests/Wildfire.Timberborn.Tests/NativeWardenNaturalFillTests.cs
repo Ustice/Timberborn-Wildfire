@@ -81,6 +81,47 @@ public sealed class NativeWardenNaturalFillTests
         Assert.Throws<TargetInvocationException>(() => f.Native.Call(f.Native.Resources, "ThrowIfSaveUnsafe"));
     }
     [Fact]
+    public void PhaseSensitiveValidationEndsBeforeLoadedCommit()
+    {
+        using var f = new F(); f.Credited(.2f, 0);
+        string phase = "AwaitingCredit"; int validations = 0;
+        Assert.Equal("Filled", f.Fill(validate: () =>
+        {
+            Assert.Equal("AwaitingCredit", phase); validations++; f.RequireSaveExcluded();
+        }, commit: () => phase = "ApproachingFire"));
+        Assert.Equal(2, validations); Assert.Equal("ApproachingFire", phase);
+        Assert.False(f.Native.Poisoned);
+    }
+    [Fact]
+    public void TwoPrivateBucketsCannotSpendTheSameCreditedQuantum()
+    {
+        using var f = new F(); f.Credited(.2f, .125f);
+        var second = f.Native.Call(f.Native, "Inventory", 1, "Wildfire.WardenEquipment", false)!;
+        Assert.Equal("Filled", f.Fill());
+        Assert.Equal("AwaitingCredit", f.Fill(inventory: second));
+        Assert.Equal((0f, .125f), f.Buffer);
+        Assert.Equal(1, f.Native.Quantity(f.Native.Source)); Assert.Equal(0, f.Native.Quantity(second));
+        Assert.Equal(1, f.Pending); Assert.False(f.Native.Poisoned);
+    }
+    [Theory]
+    [InlineData("disabled")]
+    [InlineData("reserved")]
+    [InlineData("owner")]
+    public void ProducedCallbackDriftCannotCommitLoadedPhase(string change)
+    {
+        using var f = new F(); f.Credited(.2f, .125f); bool owner = true; int commits = 0;
+        f.Native.On(f.Native.Source, "InventoryChanged", () =>
+        {
+            if (change == "disabled") f.Native.Call(f.Native.Source, "Disable");
+            if (change == "reserved") f.Native.Call(f.Native.Source, "ReserveStock", f.Native.Amount());
+            if (change == "owner") owner = false;
+        });
+        Assert.Throws<TargetInvocationException>(() => f.Fill(
+            validate: () => { if (!owner) throw new InvalidOperationException("caller lost ownership"); }, commit: () => commits++));
+        Assert.Equal(0, commits); Assert.True(f.Native.Poisoned);
+        Assert.Equal((0f, .125f), f.Buffer); Assert.Equal(1, f.Native.Quantity(f.Native.Source));
+    }
+    [Fact]
     public void RequiredCallbacksRejectBeforeNativeUnityReadAndMissingMapCannotBeAdmitted()
     {
         using var f = new F();
@@ -112,11 +153,11 @@ public sealed class NativeWardenNaturalFillTests
         internal float Quantum => (float)Native.Get(Contract, "WaterUnit")!;
         internal (float, float) Buffer => ((float, float))Native.Call(Contract, "Buffer", Input)!;
         internal int Pending => ((IList)NativeShorelineWaterFixture.Get(Changes, "_waterChanges")!).Count;
-        internal string Fill(Action? validate = null, Action? commit = null)
+        internal string Fill(Action? validate = null, Action? commit = null, object? inventory = null)
         {
             object? result = null;
             Native.Transfer(() => result = Native.Mod("FireResponse.WardenEquipment").GetMethod("ConvertCreditedUnit", BindingFlags.NonPublic | BindingFlags.Static)!
-                .Invoke(null, [Native.Source, Input, Contract, validate ?? (() => { }), commit ?? (() => { })]));
+                .Invoke(null, [inventory ?? Native.Source, Input, Contract, validate ?? (() => { }), commit ?? (() => { })]));
             return result!.ToString()!;
         }
         internal void RequireSaveExcluded() => Assert.Throws<TargetInvocationException>(() => Native.Call(Native.Resources, "ThrowIfSaveUnsafe"));
