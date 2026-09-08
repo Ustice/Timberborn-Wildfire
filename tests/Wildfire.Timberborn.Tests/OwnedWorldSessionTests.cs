@@ -48,7 +48,7 @@ public sealed partial class OwnedWorldSessionTests
         var original = new F(witnessed:true); var stock = original.Registrations[2].EntityId;
         original.Consumer.Consume(1,[original.Delta(stock,1)]);
         var saved = Snapshot(original); var native = new F(witnessed:true); var simulator = new Simulator(saved.OwnedMaterial!.CaptureSimulation());
-        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[], _=>simulator,
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[], _=>simulator,
             (_,ids)=>native.NativeBodies().Where(body=>ids.Contains(body.EntityId)).ToArray(),native.Effects,native.Guard,new TimberbornResourceFuelCatalog([new("Log",3,3,false,false,true)])));
         Assert.Equal(1,simulator.Disposals); Assert.False(native.Guard.IsIndeterminate);
         Assert.All(native.Damage.States.Values, state=>Assert.Equal(0,state.DamageTaken));
@@ -59,7 +59,7 @@ public sealed partial class OwnedWorldSessionTests
     {
         var original = new F(witnessed:true); var saved = Snapshot(original); var native = new F(witnessed:true);
         int created=0;
-        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[], _=>{created++;return new(saved.OwnedMaterial!.CaptureSimulation());},
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[], _=>{created++;return new(saved.OwnedMaterial!.CaptureSimulation());},
             (_,ids)=>native.NativeBodies().Skip(1).ToArray(),native.Effects,native.Guard));
         Assert.Equal(0,created); Assert.False(native.Guard.IsIndeterminate);
     }
@@ -117,13 +117,13 @@ public sealed partial class OwnedWorldSessionTests
     public void MaterialOnlyRestoreCannotInvokeAnyFactory()
     {
         var saved = OwnedMaterialPersistenceTests.Fixture(); var f=new F(witnessed:true);
-        Assert.Throws<NotSupportedException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[],
+        Assert.Throws<NotSupportedException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],
             _=>throw new Exception("not called"),(_,_)=>throw new Exception("not called"),f.Effects,f.Guard));
     }
     private static TimberbornOwnedWorldSession<Simulator> Restore(TimberbornWildfirePersistenceSnapshot saved,F f,out Simulator simulator)
     {
         simulator=new(saved.OwnedMaterial!.CaptureSimulation()); var result=simulator;
-        return TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[],_=>result,(_,ids)=>f.NativeBodies().Where(body=>ids.Contains(body.EntityId)).ToArray(),f.Effects,f.Guard,
+        return TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],_=>result,(_,ids)=>f.NativeBodies().Where(body=>ids.Contains(body.EntityId)).ToArray(),f.Effects,f.Guard,
             new TimberbornResourceFuelCatalog([new("Log",2,3,false,false,true)]));
     }
     internal static TimberbornWildfirePersistenceSnapshot Snapshot(F f)

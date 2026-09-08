@@ -31,7 +31,7 @@ public sealed class OwnedNativeRestorePresenceTests
             new([retired],h.Natural,[],new([])))};
         f.Native.Live.Remove(F.Id);f.Native.PresenceOverrides[F.Id]=presence;
         var simulator=new F.Simulator(m.CaptureSimulation());
-        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(snapshot,[],_=>simulator,
+        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(snapshot,[],_=>simulator,
             (_,_)=>[],f.Effects,f.Guard));
         Assert.Equal(1,simulator.Disposals);Assert.False(f.Guard.IsIndeterminate);
     }

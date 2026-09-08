@@ -13,7 +13,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
         var f=new F(witnessed:true);var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();
         var warehouse=facts[2];facts[2]=Copy(warehouse,cost:[new("Log",21)]);
         int created=0;
-        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[],s=>{created++;return new(s);},
+        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],s=>{created++;return new(s);},
             (_,_)=>facts,f.Effects,f.Guard));
         Assert.Equal(0,created);Assert.Empty(f.Native.InventoryCalls);Assert.False(f.Guard.IsIndeterminate);
     }
@@ -26,7 +26,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
         facts[2]=Copy(warehouse,inventory:[new(TimberbornCapturedInventoryRole.Stockpile,false,[new("Log",3)])],
             footprint:warehouse.Footprint.Select(slot=>new TimberbornMaterialFootprintSlot(slot.LocalCoordinates,slot.CellIndex==2?6:2)).ToArray());
         f.Native.Amounts[warehouse.EntityId]=3;
-        using var restored=TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[],s=>new(s),(_,_)=>facts,f.Effects,f.Guard);
+        using var restored=TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],s=>new(s),(_,_)=>facts,f.Effects,f.Guard);
         var key=new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(warehouse.EntityId,NativeBurnTargetFamily.Stockpile));
         Assert.Equal(f.Damage.States[key].DamageCapacity,restored.Damage.States[key].DamageCapacity);
         Assert.Equal(3,f.Native.Amounts[warehouse.EntityId]);Assert.Empty(f.Native.InventoryCalls);
@@ -42,7 +42,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
         facts[0]=Copy(body,yields:body.Yields.Select(y=>new TimberbornNamedYieldMaterial(y.Role,y.ComponentName,y.DeclaredGoodId,
             0,y.DeclaredGoodId,y.DeclaredAmount,y.RemoveOnCut,false)).ToArray());
         f.Native.TreeCalls.Clear();
-        using var restored=TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[],s=>new(s),(_,ids)=>
+        using var restored=TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],s=>new(s),(_,ids)=>
         {
             Assert.Contains(tree,ids);return facts;
         },f.Effects,f.Guard);
@@ -61,7 +61,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
         saved=saved with {OwnedMaterial=new(m.CaptureSimulation(),m.Bindings,new([new(owner.EntityId,owner.Family,owner.Retention,changed)],
             h.Natural,h.StorageCredits,h.NativeDefinitions))};
         int created=0;
-        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved,[],s=>{created++;return new(s);},
+        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],s=>{created++;return new(s);},
             (_,_)=>[OwnedNativeRestoreFixture.Facts()],f.Effects,f.Guard));
         Assert.Equal(0,created);Assert.Equal(15,f.Damage.States[OwnedNativeRestoreFixture.Key].DamageCapacity);
     }

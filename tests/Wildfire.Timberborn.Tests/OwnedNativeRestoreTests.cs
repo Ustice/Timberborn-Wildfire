@@ -41,7 +41,7 @@ public sealed class OwnedNativeRestoreTests
         foreach(bool enabled in new[]{true,false})
         {
             native.EnabledField.SetValue(loaded,enabled);
-            using var restored=TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(snapshot,[],s=>new(s),(_,ids)=>
+            using var restored=TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(snapshot,[],s=>new(s),(_,ids)=>
             {
                 Assert.Equal(new[]{F.Id},ids);
                 var fact=helper.Invoke(null,[loaded,role,false])!;
@@ -71,7 +71,7 @@ public sealed class OwnedNativeRestoreTests
             _=>F.Facts(),
         };
         int backend=0;f.Native.CropCalls.Clear();
-        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(snapshot,[],s=>{backend++;return new(s);},
+        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(snapshot,[],s=>{backend++;return new(s);},
             (_,_)=>change=="missing" ? [] : [facts],f.Effects,f.Guard));
         Assert.Equal(0,backend);Assert.Equal(2,f.Damage.States[F.Key].DamageTaken);
         Assert.Empty(f.Native.CropCalls);Assert.False(f.Guard.IsIndeterminate);
@@ -81,7 +81,7 @@ public sealed class OwnedNativeRestoreTests
     public void CallbackMutationCannotInterleaveNativeFactsAndBackendStaging()
     {
         var f=new F();var snapshot=f.Snapshot();int writes=0;
-        Assert.Throws<InvalidOperationException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(snapshot,[],s=>new(s),(_,_)=>
+        Assert.Throws<InvalidOperationException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(snapshot,[],s=>new(s),(_,_)=>
         {
             f.Guard.TransferInventory(()=>writes++);return new[]{F.Facts()};
         },f.Effects,f.Guard));
@@ -94,7 +94,7 @@ public sealed class OwnedNativeRestoreTests
     public void LateDisappearanceDisposesBackendAndReadFailureDoesNotPoison()
     {
         var f=new F();var snapshot=f.Snapshot();var simulator=new F.Simulator(snapshot.OwnedMaterial!.CaptureSimulation());
-        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(snapshot,[],_=>
+        Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(snapshot,[],_=>
         {
             f.Native.Live.Remove(F.Id);return simulator;
         },(_,_)=>[F.Facts()],f.Effects,f.Guard));
@@ -107,6 +107,6 @@ public sealed class OwnedNativeRestoreTests
         var f=new F();f.Native.Live.Remove(F.Id);
         Assert.Throws<InvalidOperationException>(()=>f.Consumer.CaptureHistory());
         Assert.False(f.Guard.IsIndeterminate);
-        f.Native.Live.Add(F.Id);Assert.Equal(OwnedNativeCompatibilityCapability.Complete,f.Consumer.CaptureHistory().NativeCompatibility);
+        f.Native.Live.Add(F.Id);Assert.Equal(OwnedNativeCompatibilityCapability.Unavailable,f.Consumer.CaptureHistory().NativeCompatibility);
     }
 }

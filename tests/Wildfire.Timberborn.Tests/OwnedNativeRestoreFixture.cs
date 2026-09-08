@@ -42,7 +42,7 @@ internal sealed class OwnedNativeRestoreFixture
         IReadOnlyList<TimberbornInitialMaterialBody> facts,out Simulator simulator)
     {
         var created=new Simulator(snapshot.OwnedMaterial!.CaptureSimulation());simulator=created;
-        return TimberbornOwnedWorldSession<Simulator>.PrepareRestore(snapshot,[],_=>created,(_,_)=>facts,Effects,Guard);
+        return TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(snapshot,[],_=>created,(_,_)=>facts,Effects,Guard);
     }
     internal sealed class Simulator(FireSimSnapshot saved):IGpuFireSimulator,IFireSimSnapshotSimulator,IDisposable
     {

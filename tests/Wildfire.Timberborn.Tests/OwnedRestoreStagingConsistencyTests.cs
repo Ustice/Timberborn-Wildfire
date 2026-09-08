@@ -20,7 +20,7 @@ public sealed class OwnedRestoreStagingConsistencyTests
         var original = new List<TimberbornInitialMaterialBody> { F.Facts() };
         IReadOnlyList<TimberbornInitialMaterialBody> current = original;
         int captures = 0;
-        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(saved, [], _ =>
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(saved, [], _ =>
         {
             if (change == "mutable-capture") original[0] = F.Facts(actual: 2);
             current = change switch

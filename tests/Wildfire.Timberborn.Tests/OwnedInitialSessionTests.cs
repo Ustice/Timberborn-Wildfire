@@ -31,8 +31,8 @@ public sealed class OwnedInitialSessionTests
         var saved = session.Capture(empty.AshField, empty.BeaverBehavior);
         Assert.NotNull(saved.OwnedMaterial!.History!.NativeDefinitions);
         Assert.All(saved.OwnedMaterial.History.Natural, entry => Assert.Equal(0, entry.AppliedYieldLoss));
-        using var restored = TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved, [0, 1], value => new(value),
-            (_, _) => f.Current.Bodies, f.Effects, f.Guard);
+        using var restored = TimberbornOwnedWorldSession<Simulator>.PrepareCompleteRestore(saved, value => new(value),
+            (_, _) => new(f.Current, f.Current.Bodies, f.Current.Bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, false, []))), f.Effects, f.Guard);
         Assert.Equal(TimberbornWildfirePersistenceCodec.Encode(saved),
             TimberbornWildfirePersistenceCodec.Encode(restored.Capture(empty.AshField, empty.BeaverBehavior)));
         Assert.Empty(f.Native.TreeCalls); Assert.Empty(f.Native.CropCalls); Assert.Empty(f.Native.InventoryCalls);
@@ -146,10 +146,12 @@ public sealed class OwnedInitialSessionTests
     {
         TimberbornInitialMaterialBody Body(Guid id, int cell) => new(id, "Pine", TimberbornInitialBodyShape.Tree,
             [new(new(0, 0, 0), cell)], [new(TimberbornCapturedYieldRole.Cuttable, "Cuttable", "Log", mutation == "quantity" ? 2 : 3, "Log", 5, false, true)], [], null);
-        return new(Grid, mutation == "membership" ? [Body(A, 2)] : [Body(A, mutation == "placement" ? 3 : 2), Body(B, overlap ? 2 : 3)],
+        TimberbornInitialMaterialBody[] bodies = mutation == "membership" ? [Body(A, 2)] : [Body(A, mutation == "placement" ? 3 : 2), Body(B, overlap ? 2 : 3)];
+        return new(Grid, bodies,
             mutation == "excluded" ? [new(Guid.NewGuid(), "Preview", TimberbornInitialCaptureExclusion.Preview)] : [], [],
             new(Grid, [0, 1], [new(2, .1f, 0, true, false), new(3, .2f, 0, true, false)],
-                [new(0, 0, 1, 2, mutation == "environment" ? .8f : .5f, 0, 0)]));
+                [new(0, 0, 1, 2, mutation == "environment" ? .8f : .5f, 0, 0)]),
+            new(bodies.Select(body => new TimberbornBodyInventoryDeclarations(body.EntityId, []))));
     }
     private static TimberbornBurnDamageTargetKey Key(Guid id) => new(TimberbornBurnDamageIdentity.ForEntity(id, NativeBurnTargetFamily.Tree));
     private sealed class Simulator(FireSimSnapshot snapshot) : IGpuFireSimulator, IFireSimSnapshotSimulator, IDisposable

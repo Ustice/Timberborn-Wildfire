@@ -25,7 +25,7 @@ public sealed class OwnedRestoreBackendFidelityTests
         saved = saved with { OwnedMaterial = new(original, saved.OwnedMaterial.Bindings, saved.OwnedMaterial.History) };
         string before = TimberbornWildfirePersistenceCodec.Encode(saved);
         Simulator? backend = null;
-        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareRestore(saved, [], input =>
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved, [], input =>
         {
             var actual = FireSimSnapshotValidation.ValidateAndClone(input);
             if (change == "fuel") actual.MaterialAuthority.Archives[0] = actual.MaterialAuthority.Archives[0] with { PackedCell = 3 };

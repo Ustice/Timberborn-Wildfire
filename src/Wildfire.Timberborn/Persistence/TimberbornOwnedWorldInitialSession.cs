@@ -21,13 +21,15 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator>
         {
             var capture = captureDuringScope(grid) ?? throw new InvalidOperationException("No initial native capture returned.");
             if (capture.Grid != grid) throw new ArgumentException("Initial capture belongs to a different grid.");
+            var inventories = capture.InventoryDeclarations ?? throw new NotSupportedException("Initial formation requires explicit original inventory declaration evidence.");
+            inventories.RequireSupportedMaterialBodies(capture.Bodies);
             var plan = compose(capture) ?? throw new InvalidOperationException("No explicit initial accounting plan returned.");
             var compiled = TimberbornInitialBodyCompiler.Compile(capture, plan.Bodies);
             var environment = TimberbornInitialEnvironmentProjection.Project(capture.Environment);
             var registry = new TimberbornNativeMaterialRegistry(environment.MaterialBaseline);
             registry.Reconcile(compiled.Projections, Array.Empty<Guid>());
             var damage = compiled.CreateDamage(grid);
-            var consumer = TimberbornOwnedDeltaConsumer.CreateWithNativeDefinitionsDuringCapture(registry, damage, effects, guard, capture.Bodies);
+            var consumer = TimberbornOwnedDeltaConsumer.CreateWithCompleteNativeDefinitionsDuringCapture(registry, damage, effects, guard, capture.Bodies, inventories);
             var initial = TimberbornInitialSimulationAssembly.Build(registry, environment, plan);
             var bindings = registry.CaptureBindings();
             var consequences = TimberbornWildfirePersistenceCodec.CaptureConsequences(damage);
@@ -49,7 +51,7 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator>
                 consumer.CopyHistoryDuringCapture().ValidateAssociation(actual, bindings, consequences);
                 var final = captureDuringScope(grid) ?? throw new InvalidOperationException("No final native capture returned.");
                 if (!capture.SameReadings(final)) throw new ArgumentException("Native world changed during initial staging; no session was published.");
-                return new TimberbornOwnedWorldSession<TSimulator>(simulator, registry, damage, consumer, guard);
+                return new TimberbornOwnedWorldSession<TSimulator>(simulator, registry, damage, consumer, guard, TimberbornDesiredWorldCapability.CompleteStaged);
             }
             catch
             {

@@ -17,6 +17,24 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         TimberbornBurnDamageService damage, TimberbornOwnedNativeEffects effects,
         Wildfire.Timberborn.Resources.INativeResourceMutationGuard guard, IReadOnlyList<TimberbornInitialMaterialBody> bodies,
         TimberbornResourceFuelCatalog? catalog = null)
+        => CreateWithDefinitionEvidence(origins, damage, effects, guard, bodies,
+            new OwnedNativeDefinitionSet(bodies.Select(OwnedNativeDefinitionWitness.Capture)), catalog);
+
+    internal static TimberbornOwnedDeltaConsumer CreateWithCompleteNativeDefinitionsDuringCapture(TimberbornNativeMaterialRegistry origins,
+        TimberbornBurnDamageService damage, TimberbornOwnedNativeEffects effects,
+        Wildfire.Timberborn.Resources.INativeResourceMutationGuard guard, IReadOnlyList<TimberbornInitialMaterialBody> bodies,
+        TimberbornInventoryDeclarationCapture inventories, TimberbornResourceFuelCatalog? catalog = null)
+    {
+        inventories.RequireSupportedMaterialBodies(bodies);
+        return CreateWithDefinitionEvidence(origins, damage, effects, guard, bodies,
+            OwnedNativeDefinitionSet.WithInventoryDeclarations(bodies.Select(body =>
+                OwnedNativeDefinitionWitness.Capture(body, inventories.Get(body.EntityId)))), catalog);
+    }
+
+    private static TimberbornOwnedDeltaConsumer CreateWithDefinitionEvidence(TimberbornNativeMaterialRegistry origins,
+        TimberbornBurnDamageService damage, TimberbornOwnedNativeEffects effects,
+        Wildfire.Timberborn.Resources.INativeResourceMutationGuard guard, IReadOnlyList<TimberbornInitialMaterialBody> bodies,
+        OwnedNativeDefinitionSet definitions, TimberbornResourceFuelCatalog? catalog)
     {
         if (damage.States.Values.Any(state => state.DamageTaken != 0 || state.LastDamagedTick != 0))
             throw new ArgumentException("Native formation cannot manufacture evidence for an already damaged body.");
@@ -31,7 +49,6 @@ public sealed partial class TimberbornOwnedDeltaConsumer
                 throw new ArgumentException("Native facts do not match their chosen body accounting.");
             consumer._origins.Register(body.EntityId, family, key);
         }
-        var definitions = new OwnedNativeDefinitionSet(bodies.Select(OwnedNativeDefinitionWitness.Capture));
         var owners = consumer._origins.Capture(damage);
         definitions.Validate(owners);
         if (owners.Length != damage.States.Count)

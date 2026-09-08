@@ -18,7 +18,7 @@ namespace Wildfire.Timberborn.Runtime;
 /// Capture-only input for the future owned initializer and saved-owner restore. No fire fields, tokens, body damage or native
 /// effects are published. Call on the native thread at a settled load boundary without an async gap.
 /// </summary>
-public sealed class TimberbornInitialWorldProjectionProvider
+public sealed partial class TimberbornInitialWorldProjectionProvider
 {
     private readonly EntityRegistry _entities;
     private readonly TimberbornInitialEnvironmentCaptureProvider _environment;
@@ -40,6 +40,7 @@ public sealed class TimberbornInitialWorldProjectionProvider
         var entities = _entities.Entities.ToArray(); // Native property is a view of a mutable instantiation list.
         var bodies = new List<TimberbornInitialMaterialBody>();
         var excluded = new List<TimberbornInitialExcludedEntity>();
+        var declarations = new List<TimberbornBodyInventoryDeclarations>();
         var waterSources = new List<TimberbornInitialWaterSource>();
         var validate = new List<Action>();
         foreach (var entity in entities)
@@ -92,12 +93,15 @@ public sealed class TimberbornInitialWorldProjectionProvider
             var blocks = block.Blocks;
             var body = CaptureBodyFacts(entity, block, grid);
             bodies.Add(body);
+            var declared = TimberbornNativeInventoryRoles.Capture(entity);
+            declarations.Add(new(id, declared.Select(inventory => inventory.Declaration)));
             validate.Add(() =>
             {
                 if (!ReferenceEquals(_entities.GetEntity(id), entity) || entity.EntityId != id ||
                     !entity.TryGetComponent<BlockObject>(out var currentBlock) || !ReferenceEquals(currentBlock, block) ||
                     Exclusion(entity, block) is not null || !block.Placement.Equals(placement) || !ReferenceEquals(block.Blocks, blocks) ||
-                    !body.SameReadings(CaptureBodyFacts(entity, block, grid)))
+                    !body.SameReadings(CaptureBodyFacts(entity, block, grid)) ||
+                    !SameInventories(declared, TimberbornNativeInventoryRoles.Capture(entity)))
                     throw new InvalidOperationException("Native body changed during initial capture; no projection was published.");
             });
         }
@@ -106,8 +110,12 @@ public sealed class TimberbornInitialWorldProjectionProvider
         var current = _entities.Entities;
         if (current.Count != entities.Length || current.Where((entity, index) => !ReferenceEquals(entity, entities[index])).Any())
             throw new InvalidOperationException("Native entity membership changed during initial capture.");
-        return new TimberbornInitialWorldCapture(grid, bodies, excluded, waterSources, environment);
+        return new TimberbornInitialWorldCapture(grid, bodies, excluded, waterSources, environment, new(declarations));
     }
+
+    private static bool SameInventories(IReadOnlyList<TimberbornDeclaredInventory> before, IReadOnlyList<TimberbornDeclaredInventory> after) =>
+        before.Count == after.Count && before.Zip(after, (a, b) => a.Declaration == b.Declaration &&
+            ReferenceEquals(a.Inventory, b.Inventory)).All(equal => equal);
 
     /// <summary>
     /// Called inside the owned restore session's existing CaptureAtRest guard; intentionally does not

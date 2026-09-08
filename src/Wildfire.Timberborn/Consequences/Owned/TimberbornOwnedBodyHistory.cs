@@ -14,6 +14,22 @@ public sealed partial class TimberbornBurnDamageService
     internal static TimberbornBurnDamageService CreateFromSavedOwnedDefinitions(Wildfire.Core.FireGrid grid,
         TimberbornOwnedConsequenceSnapshot history, TimberbornConsequencePersistenceSnapshot damage,
         IReadOnlyList<TimberbornInitialMaterialBody> facts)
+        => CreateFromObservedDefinitions(grid, history, damage, facts,
+            new OwnedNativeDefinitionSet(facts.Select(OwnedNativeDefinitionWitness.Capture)));
+
+    internal static TimberbornBurnDamageService CreateFromCompleteSavedOwnedDefinitions(Wildfire.Core.FireGrid grid,
+        TimberbornOwnedConsequenceSnapshot history, TimberbornConsequencePersistenceSnapshot damage,
+        IReadOnlyList<TimberbornInitialMaterialBody> facts, TimberbornInventoryDeclarationCapture inventories)
+    {
+        inventories.RequireOwners(facts.Select(body => body.EntityId));
+        return CreateFromObservedDefinitions(grid, history, damage, facts,
+            OwnedNativeDefinitionSet.WithInventoryDeclarations(facts.Select(body =>
+                OwnedNativeDefinitionWitness.Capture(body, inventories.Get(body.EntityId)))));
+    }
+
+    private static TimberbornBurnDamageService CreateFromObservedDefinitions(Wildfire.Core.FireGrid grid,
+        TimberbornOwnedConsequenceSnapshot history, TimberbornConsequencePersistenceSnapshot damage,
+        IReadOnlyList<TimberbornInitialMaterialBody> facts, OwnedNativeDefinitionSet observed)
     {
         var definitions = history.NativeDefinitions ?? throw new NotSupportedException("Saved native definition evidence is unavailable.");
         var retained = history.Owners.Where(o => o.Retention == OwnedBodyRetention.RetainedBody).ToArray();
@@ -25,7 +41,7 @@ public sealed partial class TimberbornBurnDamageService
         {
             var profile = owner.Profile!;
             if (!byId.TryGetValue(owner.EntityId, out var body) || body.SpecId != profile.SpecId || body.Family != owner.Family ||
-                body.PhysicalBodyKind != profile.TargetKind || !definitions.Get(owner.EntityId).Matches(OwnedNativeDefinitionWitness.Capture(body)))
+                body.PhysicalBodyKind != profile.TargetKind || !definitions.Get(owner.EntityId).Matches(observed.Get(body.EntityId)))
                 throw new ArgumentException("A required native body's static definition differs from its saved witness.");
             var descriptor = new TimberbornBurnDamageDescriptor(profile.SpecId, profile.TargetKind, profile.MaterialKind,
                 profile.ResourceYields, profile.ConstructionResources, profile.BurnableProfile);

@@ -182,6 +182,16 @@ public sealed class TimberbornInitialWorldCapture
             throw new ArgumentOutOfRangeException(nameof(bodies), "A native footprint is outside the complete grid.");
         Grid = grid; Bodies = Array.AsReadOnly(captured); Excluded = Array.AsReadOnly(omitted); WaterSources = Array.AsReadOnly(water);
     }
+    public TimberbornInitialWorldCapture(FireGrid grid, IEnumerable<TimberbornInitialMaterialBody> bodies,
+        IEnumerable<TimberbornInitialExcludedEntity> excluded, IEnumerable<TimberbornInitialWaterSource> waterSources,
+        TimberbornInitialEnvironmentCapture environment, TimberbornInventoryDeclarationCapture inventoryDeclarations)
+        : this(grid, bodies, excluded, waterSources, environment)
+    {
+        InventoryDeclarations = inventoryDeclarations ?? throw new ArgumentNullException(nameof(inventoryDeclarations));
+        InventoryDeclarations.RequireOwners(Bodies.Select(body => body.EntityId));
+    }
+    /// <summary>Null means unavailable historical/prototype evidence; it never means every owner had no inventories.</summary>
+    public TimberbornInventoryDeclarationCapture? InventoryDeclarations { get; }
     public FireGrid Grid { get; }
     public IReadOnlyList<TimberbornInitialMaterialBody> Bodies { get; }
     public IReadOnlyList<TimberbornInitialExcludedEntity> Excluded { get; }
@@ -193,6 +203,7 @@ public sealed class TimberbornInitialWorldCapture
         WaterSources.Select((source, index) => source.EntityId == other.WaterSources[index].EntityId &&
             source.SpecId == other.WaterSources[index].SpecId && source.Badwater == other.WaterSources[index].Badwater &&
             source.Footprint.SequenceEqual(other.WaterSources[index].Footprint)).All(equal => equal) &&
-        Environment.SameReadings(other.Environment);
+        Environment.SameReadings(other.Environment) && (InventoryDeclarations is null ? other.InventoryDeclarations is null :
+            other.InventoryDeclarations is not null && InventoryDeclarations.SameReadings(other.InventoryDeclarations));
 
 }

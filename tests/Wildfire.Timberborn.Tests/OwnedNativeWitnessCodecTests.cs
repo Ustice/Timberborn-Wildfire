@@ -29,7 +29,7 @@ public sealed class OwnedNativeWitnessCodecTests
         Assert.Equal(encoded,TimberbornWildfirePersistenceCodec.Encode(decoded));
         Assert.Null(decoded.OwnedMaterial!.History?.NativeDefinitions);
         var f=new F();int calls=0;
-        Assert.Throws<NotSupportedException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareRestore(decoded,[],s=>{calls++;return new(s);},
+        Assert.Throws<NotSupportedException>(()=>TimberbornOwnedWorldSession<F.Simulator>.PrepareDiagnosticRestore(decoded,[],s=>{calls++;return new(s);},
             (_,_)=>{calls++;return new[]{F.Facts()};},f.Effects,f.Guard));
         Assert.Equal(0,calls);Assert.False(f.Guard.IsIndeterminate);
         var runtime=new TimberbornRuntimePersistence();runtime.Load(()=>encoded);
