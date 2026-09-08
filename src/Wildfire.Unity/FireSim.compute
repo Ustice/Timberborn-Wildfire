@@ -1800,71 +1800,73 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
                 change.AddFields |= (added << 27) | COLLECTION_RECEIPT_VALID | (outcome << 30);
             }
             ExternalChanges[changeIndex] = change;
-            continue;
         }
-
-        uint oldCell = CurrentCells[change.CellIndex] & 0xFFFFu;
-        uint cell = oldCell;
-        uint oldAtmospheric = CurrentAtmosphericFields[change.CellIndex] & 0xFFFFu;
-
-        if ((change.SetMask & CHANGE_SET_CELL) != 0u)
+        else
         {
-            cell = change.SetValues & 0xFFFFu;
+
+            uint oldCell = CurrentCells[change.CellIndex] & 0xFFFFu;
+            uint cell = oldCell;
+            uint oldAtmospheric = CurrentAtmosphericFields[change.CellIndex] & 0xFFFFu;
+
+            if ((change.SetMask & CHANGE_SET_CELL) != 0u)
+            {
+                cell = change.SetValues & 0xFFFFu;
+            }
+
+            uint addHeat = change.AddFields & 0xFu;
+            uint addFuel = (change.AddFields >> 4) & 0xFu;
+            uint addWater = (change.AddFields >> 23) & 0x3u;
+
+            if (addHeat > 0u)
+            {
+                cell = WithHeat(cell, min(15u, Heat(cell) + addHeat));
+            }
+
+            if (addFuel > 0u)
+            {
+                cell = WithFuel(cell, min(15u, Fuel(cell) + addFuel));
+            }
+
+            // Like heat and fuel, increments follow SetCell and precede field overrides.
+            if (addWater > 0u)
+            {
+                cell = WithWater(cell, min(3u, Water(cell) + addWater));
+            }
+
+            if ((change.SetMask & CHANGE_SET_WATER) != 0u)
+            {
+                cell = WithWater(cell, (change.SetValues >> 16) & 0x3u);
+            }
+
+            if ((change.SetMask & CHANGE_SET_FUEL) != 0u)
+            {
+                cell = WithFuel(cell, (change.SetValues >> 18) & 0xFu);
+            }
+
+            if ((change.SetMask & CHANGE_SET_HEAT) != 0u)
+            {
+                cell = WithHeat(cell, (change.SetValues >> 22) & 0xFu);
+            }
+
+            if ((change.SetMask & CHANGE_SET_FLAMMABILITY) != 0u)
+            {
+                cell = WithFlammability(cell, (change.SetValues >> 26) & 0x3u);
+            }
+
+            if ((change.SetMask & CHANGE_SET_BURNING_LEVEL) != 0u)
+            {
+                cell = WithBurningLevel(cell, (change.SetValues >> 28) & 0x7u);
+            }
+
+            if ((change.SetMask & CHANGE_SET_TERRAIN) != 0u)
+            {
+                cell = WithTerrain(cell, (change.SetValues >> 31) & 0x1u);
+            }
+
+            CurrentCells[change.CellIndex] = cell;
+            CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);
+            AppendDelta(change.CellIndex, oldCell, cell);
         }
-
-        uint addHeat = change.AddFields & 0xFu;
-        uint addFuel = (change.AddFields >> 4) & 0xFu;
-        uint addWater = (change.AddFields >> 23) & 0x3u;
-
-        if (addHeat > 0u)
-        {
-            cell = WithHeat(cell, min(15u, Heat(cell) + addHeat));
-        }
-
-        if (addFuel > 0u)
-        {
-            cell = WithFuel(cell, min(15u, Fuel(cell) + addFuel));
-        }
-
-        // Like heat and fuel, increments follow SetCell and precede field overrides.
-        if (addWater > 0u)
-        {
-            cell = WithWater(cell, min(3u, Water(cell) + addWater));
-        }
-
-        if ((change.SetMask & CHANGE_SET_WATER) != 0u)
-        {
-            cell = WithWater(cell, (change.SetValues >> 16) & 0x3u);
-        }
-
-        if ((change.SetMask & CHANGE_SET_FUEL) != 0u)
-        {
-            cell = WithFuel(cell, (change.SetValues >> 18) & 0xFu);
-        }
-
-        if ((change.SetMask & CHANGE_SET_HEAT) != 0u)
-        {
-            cell = WithHeat(cell, (change.SetValues >> 22) & 0xFu);
-        }
-
-        if ((change.SetMask & CHANGE_SET_FLAMMABILITY) != 0u)
-        {
-            cell = WithFlammability(cell, (change.SetValues >> 26) & 0x3u);
-        }
-
-        if ((change.SetMask & CHANGE_SET_BURNING_LEVEL) != 0u)
-        {
-            cell = WithBurningLevel(cell, (change.SetValues >> 28) & 0x7u);
-        }
-
-        if ((change.SetMask & CHANGE_SET_TERRAIN) != 0u)
-        {
-            cell = WithTerrain(cell, (change.SetValues >> 31) & 0x1u);
-        }
-
-        CurrentCells[change.CellIndex] = cell;
-        CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);
-        AppendDelta(change.CellIndex, oldCell, cell);
     }
 }
 
