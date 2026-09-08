@@ -69,3 +69,7 @@ The production constructor is unchanged. Installed Bindito `ConstructorRetriever
 The original missing-diagnostic run failed its three new recording/logger cases while the native constructor check passed. Expanded validation covers the exact original exception/stack, throwing and reentrant loggers through actual `Character.KillCharacter` and `EntityComponent.Delete`, and exception-formatting failure. Focused lifecycle/resource tests: **35 passed**. Logs: `/tmp/wildfire-warden-district-lifecycle/diagnostic-{red,green,full-native}.log`.
 
 Full native suite on `5e8a65f`: **1,343 passed, zero failures or skips**. No engine/deployment action was taken for the diagnostic follow-up.
+
+## Shared implementation follow-up
+
+The corrected native district protocol now lives in [PersonalInventoryDistrictRegistration](personal-inventory-district-registration.md). Earlier counts and source hashes above remain historical evidence. Both native lifecycle suites run against the shared implementation; cargo, admission policy and public constructors remain component-owned.
