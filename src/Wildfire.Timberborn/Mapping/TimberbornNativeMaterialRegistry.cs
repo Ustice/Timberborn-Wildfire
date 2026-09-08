@@ -22,6 +22,8 @@ public sealed class TimberbornNativeMaterialRegistry
     private Dictionary<int, TimberbornResolvedMaterialCell> _cells = new();
     private uint _nextTargetId = 1;
 
+    internal FireGrid Grid => _grid;
+
     public TimberbornNativeMaterialRegistry(FireGrid grid, IEnumerable<int> solidTerrainCells)
         : this(new TimberbornMaterialBaseline(grid, solidTerrainCells.Distinct().Select(cell =>
             new KeyValuePair<int, FireSimBaselineDefinition>(cell, FireSimBaselineDefinition.SolidTerrain))))
