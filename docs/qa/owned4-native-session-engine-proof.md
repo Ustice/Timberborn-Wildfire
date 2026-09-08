@@ -46,3 +46,11 @@ Unity6000.3.6f1 used Metal on Apple M2 Pro, resolving native dependencies from i
 This is supplied native state and real engine allocation/readback, not full native template creation, a native world/save load, running-colony coverage or a new shader simulation proof. No ordinary tick or handoff executes; complete staging does not waive the desired-material reconciliation gate. The fixture retains its six-layer test grid and does not address the separately confirmed upper native building-domain gap.
 
 After execution there were no Unity/game/Blender processes, the build/deploy lock was absent, and `/root/baseline_audit` retained idle controller ownership. No Steam launch, game launch or deployment occurred.
+
+## Cleanup-order diagnosis addendum
+
+A separate controlled rerun at `/tmp/wildfire-owned4-session-cleanup` kept the exact original e5885d1 native/Core/shader bytes and changed only fixture cleanup/exit control plus completion instrumentation. Original proof files remain unchanged. The original fixture called `EditorApplication.Exit` inside its try/catch, before the finally cleanup; the corrected fixture records the result, completes cleanup, then calls Exit. Cleanup attempts every resource even if one disposal throws, verifies native backend disposal and GameObject destruction, and forces exit1 for any cleanup error.
+
+The rerun exited0 and logged `WILDFIRE_OWNED4_CLEANUP_COMPLETE sessions=2/2 backends=4/4 gameobjects=4/4 errors=0 exit_code=0`, followed by `WILDFIRE_OWNED4_EXIT_AFTER_CLEANUP code=0`. All five capture/snapshot/binding/save artifacts were byte-identical to the original successful run. The original `Persistent allocates 26` shutdown notice was absent, with no `Leak Detected` message. This controlled comparison supports premature fixture exit as the cause of that notice; it provides no evidence of a production allocation leak. The familiar licensing token-update error remained unrelated to successful execution.
+
+`comparison-inputs.json` fingerprints identical production inputs; `comparison-result.json` records artifact equality, notice comparison and final idle/no-engine/no-build-lock state. Reuse the corrected probe and exit-after-cleanup recipe for future engine evidence. No production change or additional game/deploy operation was made.
