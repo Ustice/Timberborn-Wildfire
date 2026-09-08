@@ -22,6 +22,8 @@ Scratch evidence: `/tmp/wildfire-fertilizer-finite-job/` contains full/focused l
 
 The [CPU native finite-persistence probe](finite-fertilizer-native-persistence.md) now closes full actor behavior-reference Save/Load, native stock reservation PostLoad/release and cancel-on-first-owned-Tick for supplied adult graphs. It includes real pickup for loaded saves and the native walker/model stop chain. Physical admission/travel, complete adult lifecycle and concrete Ready-through-Runtime remain open.
 
+The [CPU native target-admission probe](finite-fertilizer-native-target.md) also closes real native placement, computed group/range/soil admission and negative controls for supplied plant/employer graphs. Public source, actor/district and Ready-through-Runtime remain separate gates.
+
 The sole controller should use a disposable fixture world and explicit test-only composition of the native adult/workplace components plus the inactive fertilizer components. Native actor, employer, plant and inventory must be real GameObjects with native component caches; do not force fake-positive Unity truth. Initialize satchel and actor recovery ordering through the actual native modules. No production template admission is supplied by this change.
 
 1. First prove the complete actor-owned behavior reference through native `BehaviorManager.Save/Load`. Test employer/source disappearance, no action during Load, and first owned Tick cancellation. Prove native source reservation counters release exactly once and loaded private stock survives for recovery; no application intent is resumed.

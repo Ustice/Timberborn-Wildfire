@@ -37,6 +37,7 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Inactive finite fertilizer job](qa/finite-fertilizer-job.md): native job ownership, guarded acceptance/rejection, cancel-on-load intent and explicit pending-offer cancellation; Claude review completed, with concrete Runtime and tree travel acceptance still open.
 - [Native fertilizer tree destination](qa/fertilizer-native-destination.md): native offset paths and exact destination identity prevent false arrival; physical delivery remains open.
 - [Finite fertilizer native persistence](qa/finite-fertilizer-native-persistence.md): full actor behavior references, actual reservation release and native walker/model cancellation; supplied adult state, no physical trip or Ready application.
+- [Finite fertilizer native target admission](qa/finite-fertilizer-native-target.md): actual placement/soil/group/range controls on supplied native graphs; no actor, public source, physical trip or Ready application.
 - [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
 - [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
 - [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
