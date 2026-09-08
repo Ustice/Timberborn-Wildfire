@@ -52,7 +52,7 @@ internal sealed class TimberbornQaSaveCopy
         RequireDestination(Path);
         // Native SaveWriter closes its archive/output before returning. Our using also
         // guarantees closure if any registered native entry writer throws.
-        using (var stream = new FileStream(TempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        using (var stream = new FileStream(TempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
             serialize(stream);
         File.Move(TempPath, Path); // Atomic no-overwrite publication; keep partial on failure.
         Published = true;
