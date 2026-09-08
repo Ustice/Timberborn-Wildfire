@@ -59,3 +59,7 @@ This prototype does not fix or adopt the current instant legacy fertilization se
 ## Subsequent integration evidence
 
 Integrated with normal runtime dispatch save exclusion at `da4dabe`: **228 Core and 1,511 native tests passed**, zero failures/skips. The separate [headless Unity satchel probe](fertilizer-satchel-native-return.md), built from `460a0cf`, proves the positive native TryReturn and capacity-release boundary described above. It does not prove this recovery executor's navigation, registration or component-chain reload; those gates remain open.
+
+A subsequent [native Unity component persistence probe](fertilizer-recovery-native-persistence.md), built from `683a506`, passed actual manager/reference loading and reservation PostLoad in both component orders, plus missing-destination loading. It did not tick or launch the executor. The earlier component-chain limitation is narrowed accordingly; full world loading and production template registration remain open.
+
+A smaller actual Claude review of `5920003` completed successfully (exit 0, one tools-disabled turn, 176.460 seconds). It noted the intentional malformed-stock exception as a possible resilience improvement. Its other concerns assumed silent poison or application/home phases; the existing transaction postcheck/save guard and deposit-only executor contradict those paths. No normal-path defect was established by that review; its exact critique and local dispositions remain in `/tmp/wildfire-recovery-small-claude-review/REPORT.md`.
