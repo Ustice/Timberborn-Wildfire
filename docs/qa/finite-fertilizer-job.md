@@ -1,0 +1,43 @@
+# Inactive finite fertilizer job and scheduler
+
+Source: `ef9e319` then `427aad5`, based on `cd26a4a`. This is a finite explicit-offer prototype, not shipping fertilizer admission. No template/configurator/tool binding, recurrence, nearest-source search, new cargo ledger, or actor-driven simulator step is added.
+
+A workplace holds one fixture-supplied plant, source inventory and limit. Successful native worker transfer assigns a beaver-owned `FertilizerBehavior`/`IJobBehavior`. The executor checks exact employment, native `PlanterBuilding.CanPlant`, range, live growing/nondead/nondying target, native soil ceiling, same district/public-output source, exact one-unit reservation, arrival and installed recovery ordering. Original placement and `CoordinatesAtBaseZ` soil coordinates are distinct retained facts. Four native hours bound this disposable job; that is a prototype cancellation limit, not a shipping scheduling policy.
+
+Pickup uses the existing native satchel transfer. Once standing at the target, the existing normal resource coordinator offers one conditional ash application. Accepted `Added=1` consumes only within the existing positive privilege; Ready phase, exact target and actual native manager ownership are checked before consumption and before phase publication. Valid rejected zero changes disposition inside the same inner guard, without consumption privilege. Both completed dispositions rotate the fixed Water → AshCollection → FertilizerApplication order. Prepared/null retains that producer's turn and runs one ordinary step without trying another producer into the full queue.
+
+## Executed managed evidence
+
+- Full native adapter suite: **1,537 passed, zero skipped**. Core: **228 passed**. These counts describe the isolated source, before later root smoke/growth tests.
+- Ownership counterfactual: removing Ready/manager/exit checks makes all three actual manager-boundary tests fail; corrected tests pass. This directly tests the common pre/post-consumption boundary, not positive Unity admission.
+- Rejected callback save/capture/nested write attempts are excluded; consumption privilege is absent. An `IOException` or misleading nested `NotApplied` after a returned step becomes `Committed` with original cause retained, poisons further work, and cannot replay the swap. Changed receipt cell/limit/added fields cannot publish actor disposition. Null/full queue performs no callback or swap at this lower step seam.
+- Actual native `BehaviorManager.SaveRunningExecutor` / `LoadRunningExecutor` invoke the new executor. A supplied surviving actor behavior restores cancel-only intent; missing behavior skips executor load. Load performs no movement or resource write. The first owned Tick clears intent even without an employer/target. This does **not** execute native `SaveRunningBehavior` under positive Unity object truth.
+- Exact-source cleanup preserves foreign stock and capacity references and physical quantities. Actual managed `GoodReserver.UnreserveStock` clears its owned reference; positive Unity-dependent native reservation counter release remains an engine check.
+- Actual native death during capture reaches later native listeners even if diagnostics throw; capture fails and the existing poison remains. No unguarded cleanup bypass occurs, repeated deletion unsubscribes once.
+- An actual concrete Idle executor registered with the real Runtime fixture declines; one ordinary dispatch, field revision and normal save admission remain intact. **Accepted/rejected/null concrete Ready-executor through normal Runtime is still an engine gate.** Lower receipt/scheduler proof is not substituted for it.
+
+Scratch evidence: `/tmp/wildfire-fertilizer-finite-job/` contains full/focused logs, the ownership RED log, native lifecycle/walking IL and exact source reports.
+
+## Required physical and native persistence acceptance
+
+The sole controller should use a disposable fixture world and explicit test-only composition of the native adult/workplace components plus the inactive fertilizer components. Native actor, employer, plant and inventory must be real GameObjects with native component caches; do not force fake-positive Unity truth. Initialize satchel and actor recovery ordering through the actual native modules. No production template admission is supplied by this change.
+
+1. First prove the complete actor-owned behavior reference through native `BehaviorManager.Save/Load`. Test employer/source disappearance, no action during Load, and first owned Tick cancellation. Prove native source reservation counters release exactly once and loaded private stock survives for recovery; no application intent is resumed.
+2. Use a real growing Carrot with the native Farmhouse employer/group/range and actual source district inventory. Record exact soil anchor, source access and observed actor position. Prove reserve → actual source arrival → pickup → target arrival separately from any phase-injected protocol fixture.
+3. A bounded protocol fixture may explicitly supply real actor position/Ready phase and coherent field observation after an actual native pickup. Label this as protocol setup, **not a physical trip**. Exercise normal `Runtime.DispatchFireUpdate`, not a direct coordinator-only replacement: accepted one consumes exactly one native ash and publishes Ending; Full/Tainted/InvalidSurface zero leaves it loaded; full command queue runs exactly one ordinary step and does not try another prepared producer. Check native consumption/district accounting and all runtime followups.
+4. Between preparation and receipt, change native running executor or phase. Before-consume drift must consume nothing and fail-stop the already admitted step; native consumed callback drift must retain actual consumed quantity and fail-stop without replay. Test callback save/nested write rejection and valid rejected disposition failure.
+5. Complete a physical Forester/Pine route only after the native destination boundary below is implemented and validated. Current center-only walking does not establish it.
+
+## Native tree destination gap
+
+Installed `TreeReacher.InitializeEntity` derives a `PositionDestination` from `NaturalResourceCenterProvider.GetWorldCenter()` and scaled `TreeCuttingRadiusSpec.Radius` plus the native cutting offset. Native `PositionDestination.FindPath` asks for the terrain path then offsets its final corner by this stopping distance. Current shared `WalkToPositionExecutor.Launch(Vector3)` creates a zero-stopping-distance destination. A path to an existing tree cannot be inferred from native planting into empty ground.
+
+The next bounded proposal is to allow the shared installed-path protocol to launch the already initialized native `IDestination` through `Walker.GoTo`, retaining native stopping and all existing path monitoring. Candidate preflight must inspect the actual destination-generated path and actual arrival, separately from the soil application cell. Do not call cutting notification/model adjustment or reserve harvest yield. Existing Warden/Ash/Borrowed vector callers should stay unchanged. Detailed API/IL and unresolved tests are in the scratch report; this source does not implement the extension or claim Forester completion.
+
+## Independent review and finite-offer limits
+
+An authenticated tools-disabled Claude review of exact `427aad5` completed successfully (exit 0, `is_error=false`, 287.78 seconds). Its prompt, immutable source hashes, full response and checked disposition are preserved in `/tmp/wildfire-fertilizer-finite-job-claude-review/`.
+
+The proposed accepted-callback poisoning fix was rejected: actual Core already wraps failed native commits as `Indeterminate`; relabeling them `Committed` would be wrong. Rotating on prepared/null contradicts the approved full-queue contract. Releasing a reservation without exact source identity would release foreign reservations; native reservation deserialization already uses the same inventory reference serializer and rejects an obsolete reference.
+
+Two liveness limits remain explicit: an invalid fixture-armed offer has no replacement/cancel API, and failure after reservation/native launch ends that attempt rather than reacquiring another access. This does not establish a shipping designation lifecycle. No automatic retry/recurrence/cancellation policy or broader cleanup was added from the critique.
