@@ -57,4 +57,64 @@ public sealed partial class BorrowedDutyRecoveryTests
         f.Call(executor, "ReleaseReturnReservation");
         Assert.Same(foreign, f.Call(f.Call(reserver, "get_CapacityReservation")!, "get_Inventory"));
     }
+    [Fact]
+    public void WalkingExitPreservesEvenAnIdenticalForeignWaterCapacityReservation()
+    {
+        using var f = new Fixture();
+        using var water = new NativeShorelineWaterFixture(NativeManagedTestContext.ProxyContracts);
+        var destination = water.Bucket();
+        f.AttachInventory(destination);
+        f.Call(destination, "Enable");
+        var unit = Activator.CreateInstance(f.Type("Timberborn.Goods", "GoodAmount"), "Water", 1)!;
+        var reserver = RuntimeHelpers.GetUninitializedObject(f.Type("Timberborn.InventorySystem", "GoodReserver"));
+        var resources = Get(f.Behavior, "_resources")!;
+        var executor = Activator.CreateInstance(f.Mod("BorrowedDutyExecutor"), null, null, resources, null, null)!;
+        var walk = new TimberbornFireWalkTests.Fixture();
+        Set(executor, "_reserver", reserver);
+        Set(executor, "_returnInventory", destination);
+        Set(executor, "_returnOnly", true);
+        Set(executor, "_returnBehavior", f.Behavior);
+        Set(executor, "_movement", walk.Helper);
+        f.AssignMissingDestination();
+        f.Call(Get(executor, "_progress")!, "Restore", 3, .25f, false);
+        Assert.Null(f.Call(f.Call(reserver, "get_CapacityReservation")!, "get_Inventory"));
+        // Supplied walking phase has no reservation; an unrelated native reservation then appears.
+        f.Call(reserver, "ReserveCapacity", destination, unit);
+        Assert.Equal("Success", f.Call(executor, "FinishReturn", false)!.ToString());
+        Assert.Same(destination, f.Call(f.Call(reserver, "get_CapacityReservation")!, "get_Inventory"));
+        Assert.True((bool)f.Call(f.Behavior, "get_ReturnAssigned")!);
+        Assert.Equal("Idle", f.Call(executor, "get_Phase")!.ToString());
+        f.Call(resources, "ThrowIfSaveUnsafe");
+    }
+
+    [Fact]
+    public void FullAtArrivalPreservesNativeWaterWithoutAnyTemporaryReservation()
+    {
+        using var f = new Fixture();
+        using var water = new NativeShorelineWaterFixture(NativeManagedTestContext.ProxyContracts);
+        var destination = water.Bucket();
+        f.AttachInventory(destination);
+        f.Call(destination, "Enable");
+        var unit = Activator.CreateInstance(f.Type("Timberborn.Goods", "GoodAmount"), "Water", 1)!;
+        f.Call(destination, "GiveExisting", unit);
+        var cargo = water.Bucket();
+        f.Call(cargo, "GiveExisting", unit);
+        var reserver = RuntimeHelpers.GetUninitializedObject(f.Type("Timberborn.InventorySystem", "GoodReserver"));
+        var resources = Get(f.Behavior, "_resources")!;
+        var executor = Activator.CreateInstance(f.Mod("BorrowedDutyExecutor"), null, null, resources, null, null)!;
+        Set(executor, "_reserver", reserver);
+        var equipment = Activator.CreateInstance(NativeManagedTestContext.ProxyContracts.LoadMod()
+            .GetType("Wildfire.Timberborn.FireResponse.WardenEquipment")!, resources)!;
+        f.Call(equipment, "InitializeInventory", cargo);
+        Set(executor, "_equipment", equipment);
+        f.AssignMissingDestination();
+        // Actual arrival-operation refusal, with no supplied positive Unity/physical owner.
+        f.Call(executor, "TryDepositAtArrival", destination);
+        Assert.Equal(1, water.Stock(cargo));
+        Assert.Equal(1, water.Stock(destination));
+        Assert.Null(f.Call(f.Call(reserver, "get_CapacityReservation")!, "get_Inventory"));
+        Assert.True((bool)f.Call(f.Behavior, "get_ReturnAssigned")!);
+        f.Call(resources, "ThrowIfSaveUnsafe");
+    }
+
 }

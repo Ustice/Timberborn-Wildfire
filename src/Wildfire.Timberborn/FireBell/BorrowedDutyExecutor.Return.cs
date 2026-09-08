@@ -24,30 +24,18 @@ public sealed partial class BorrowedDutyExecutor
         if (!string.IsNullOrEmpty(_manager.RunningExecutor.Name) || !ReturnEligible || inventory is null ||
             !ReferenceEquals(inventory, _returnBehavior.ReturnDestination)) return false;
         TimberbornOwnedWalker.Verify();
-        // Only this still-recorded return can release its reservation after interruption.
-        if (_returnOnly) _resources.TransferInventory(ReleaseReturnReservation);
         if (HasReservations || !UsableReturnInventory(inventory, requireCapacity: true)) return false;
         _returnInventory = inventory;
         foreach (var point in ReturnAccesses(inventory))
         {
             if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), point, escaping: true)) continue;
-            bool reserved = false;
-            _resources.TransferInventory(() =>
-            {
-                if (!ReturnEligible || HasReservations || !ReferenceEquals(inventory, _returnBehavior.ReturnDestination) ||
-                    !string.IsNullOrEmpty(_manager.RunningExecutor.Name) || !UsableReturnInventory(inventory, requireCapacity: true)) return;
-                _reserver.ReserveCapacity(inventory, WardenEquipment.Bucket);
-                if (!ReturnEligible || !ExactReturnReservation() || !ReferenceEquals(inventory, _returnBehavior.ReturnDestination) ||
-                    !string.IsNullOrEmpty(_manager.RunningExecutor.Name) || !UsableReturnInventory(inventory, requireCapacity: false))
-                { ReleaseReturnReservation(); return; }
-                _progress.Begin();
-                _progress.Return();
-                _returnOnly = true;
-                _restored = false;
-                _donor = null;
-                reserved = true;
-            });
-            if (!reserved) return false;
+            if (!ReturnEligible || HasReservations || !ReferenceEquals(inventory, _returnBehavior.ReturnDestination) ||
+                !string.IsNullOrEmpty(_manager.RunningExecutor.Name) || !UsableReturnInventory(inventory, requireCapacity: true)) return false;
+            _progress.Begin();
+            _progress.Return();
+            _returnOnly = true;
+            _restored = false;
+            _donor = null;
             try { if (Launch(point)) return true; }
             catch { FinishReturn(); throw; }
             FinishReturn();
@@ -95,26 +83,47 @@ public sealed partial class BorrowedDutyExecutor
         {
             _restored = false;
             _movement.Stop();
-            // Native PostLoad has resolved reservations; never trust a saved path or endpoint.
-            return FinishReturn(); // The persistent binding offers a fresh return at later native arbitration.
+            // No capacity is held while walking. Re-arbitrate instead of trusting a saved endpoint.
+            return FinishReturn();
         }
         _progress.Advance(hours);
-        if (_progress.Hours >= 2 || !ExactReturnReservation() ||
+        if (_progress.Hours >= 2 || HasReservations ||
             !UsableReturnInventory(_returnInventory, requireCapacity: false) || !_movement.RefreshIfNeeded()) return FinishReturn();
         var status = _movement.Tick(hours);
         if (status == ExecutorStatus.Running) return status;
         if (status == ExecutorStatus.Failure || !At(_destination) || !ReturnAccesses(_returnInventory).Any(At) ||
             !_field.SafePosition(_navigator.CurrentAccessOrPosition())) return FinishReturn();
         _movement.Stop();
-        var expected = _returnInventory;
-        RequireReturnOwner(expected);
-        _equipment.TryReturn(expected, _reserver, () =>
-        {
-            RequireReturnOwner(expected);
-            _returnBehavior.Returned();
-            _progress.Finish();
-        });
+        TryDepositAtArrival(_returnInventory);
         return FinishReturn();
+    }
+    private void TryDepositAtArrival(Inventory expected)
+    {
+        bool reserved = false;
+        try
+        {
+            _resources.TransferInventory(() =>
+            {
+                if (HasReservations || !expected.HasUnreservedCapacity(WardenEquipment.Bucket)) return;
+                RequireReturnOwner(expected);
+                _reserver.ReserveCapacity(expected, WardenEquipment.Bucket);
+                RequireReturnOwner(expected);
+                if (!ExactReturnReservation()) throw new InvalidOperationException("Borrowed return reservation changed during admission.");
+                reserved = true;
+            });
+            if (!reserved) return;
+            RequireReturnOwner(expected);
+            _equipment.TryReturn(expected, _reserver, () =>
+            {
+                RequireReturnOwner(expected);
+                _returnBehavior.Returned();
+                _progress.Finish();
+            });
+        }
+        finally
+        {
+            if (reserved && !_resources.IsIndeterminate) _resources.TransferInventory(ReleaseReturnReservation);
+        }
     }
     private void RequireReturnOwner(Inventory expected)
     {
@@ -130,8 +139,7 @@ public sealed partial class BorrowedDutyExecutor
         try
         {
             _movement.Stop();
-            if (!_resources.IsIndeterminate) _resources.TransferInventory(() => { ReleaseReturnReservation(); ClearReturn(); });
-            else if (dying) ClearReturn();
+            if (!_resources.IsIndeterminate || dying) ClearReturn();
         }
         catch when (dying) { _resources.InvalidateAfterLifecycleFailure(); ClearReturn(); }
         if (!dying && !_resources.IsIndeterminate) _movement.ReleasePause();
