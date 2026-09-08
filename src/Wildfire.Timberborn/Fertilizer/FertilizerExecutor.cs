@@ -159,6 +159,8 @@ public sealed class FertilizerExecutor : BaseComponent, IExecutor, IAwakableComp
             if (access.ValidAccessible && access.UnblockedSingleAccess is { } point) yield return point;
     }
     private bool At(Vector3 point) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), point);
+    private bool AtTarget(FertilizerJobTarget target) => target.TreeApproach is { } native
+        ? _walk.HasArrivedAt(native) : At(target.Standing);
     public ExecutorStatus Tick(float hours)
     {
         if (_exited || _mortal.Dead || _mortal.ShouldDie) { Exit(); return ExecutorStatus.Failure; }
@@ -169,17 +171,22 @@ public sealed class FertilizerExecutor : BaseComponent, IExecutor, IAwakableComp
         if (!float.IsFinite(hours) || hours < 0) throw new ArgumentOutOfRangeException(nameof(hours));
         _elapsedHours += hours;
         if (_elapsedHours > 4 || !CurrentJob || !_field.Ready) return Finish();
-        if (Phase == FertilizerJobPhase.Ready) return ExecutorStatus.Running;
+        if (Phase == FertilizerJobPhase.Ready) return AtTarget(_target!) ? ExecutorStatus.Running : Finish();
         if (_launchApproach)
         {
             _launchApproach = false;
             _destination = _target!.Standing;
-            if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), _destination) || !_walk.Launch(_destination)) return Finish();
+            if (_target.TreeApproach is { } native)
+            {
+                if (!_walk.Launch(native)) return Finish();
+            }
+            else if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), _destination) || !_walk.Launch(_destination)) return Finish();
         }
         if (!_walk.RefreshIfNeeded()) return Finish();
         var status = _walk.Tick(hours);
         if (status == ExecutorStatus.Running) return status;
-        if (status == ExecutorStatus.Failure || !At(_destination) || !_field.SafePosition(_navigator.CurrentAccessOrPosition())) return Finish();
+        if (status == ExecutorStatus.Failure ||
+            !(Phase == FertilizerJobPhase.Approaching ? AtTarget(_target!) : At(_destination)) || !_field.SafePosition(_navigator.CurrentAccessOrPosition())) return Finish();
         _walk.Stop();
         if (Phase == FertilizerJobPhase.Fetching)
         {
@@ -200,18 +207,18 @@ public sealed class FertilizerExecutor : BaseComponent, IExecutor, IAwakableComp
         input = default; accepted = null!; rejected = null!;
         if (Phase != FertilizerJobPhase.Ready || !_manager.IsRunningExecutor<FertilizerExecutor>() ||
             !CurrentJob || !NoReservations || !_satchel.Loaded || !_field.TryObserve(out var observation) ||
-            !_target!.Matches(observation) || !At(_target.Standing) || !_field.SafePosition(_target.Standing)) return false;
+            !_target!.Matches(observation) || !AtTarget(_target) || !_field.SafePosition(_target.Standing)) return false;
         var target = _target;
         input = new(target.CellIndex, target.Limit);
         accepted = receipt =>
         {
             RequirePreparedActor(target);
-            if (!CurrentJob || !ReferenceEquals(_target, target) || !At(target.Standing) || !NoReservations)
+            if (!CurrentJob || !ReferenceEquals(_target, target) || !AtTarget(target) || !NoReservations)
                 throw new InvalidOperationException("Fertilizer job changed before consumption.");
             _satchel.ConsumeCommittedUnit(() =>
             {
                 RequirePreparedActor(target);
-                if (!CurrentJob || !ReferenceEquals(_target, target) || !At(target.Standing) || !NoReservations)
+                if (!CurrentJob || !ReferenceEquals(_target, target) || !AtTarget(target) || !NoReservations)
                     throw new InvalidOperationException("Fertilizer job changed during consumption.");
                 Complete(receipt.Outcome);
             });

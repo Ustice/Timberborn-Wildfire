@@ -56,6 +56,9 @@ public sealed class FireSafetyField
 
     public bool SafePosition(Vector3 position) => RiskAt(position) is >= 0 and < 2;
 
+    internal bool AtSafeEndpoint(Vector3 actualPosition, Vector3 endpoint) =>
+        SafePosition(actualPosition) && _navigation.InStoppingProximity(actualPosition, endpoint);
+
     private int RiskAt(Vector3 position)
     {
         if (!TryObserve(out var field)) return -1;

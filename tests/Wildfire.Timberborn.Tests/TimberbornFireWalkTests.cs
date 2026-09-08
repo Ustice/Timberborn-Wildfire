@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Wildfire.Timberborn.Tests;
 
@@ -133,7 +134,10 @@ public sealed class TimberbornFireWalkTests
         internal bool Safe = true, Stopped;
         internal long Revision = 5;
         internal int RevisionReads, Subscriptions, Unsubscriptions;
-        internal Action? DuringLaunch;
+        internal Action? DuringLaunch, DuringRelease;
+        internal object? CurrentDestination, Endpoint;
+        internal string TickStatus = "Running";
+        internal bool NearEndpoint = true, CandidateSafe = true;
         private Delegate? _pathStarted;
         private readonly Type _eventType;
         private readonly object _position;
@@ -151,12 +155,16 @@ public sealed class TimberbornFireWalkTests
                 "get_Revision" => ReadRevision(),
                 "get_Stopped" => Stopped,
                 "IsInstalledPathSafe" => Check((bool)args[0]!),
-                "Launch" => NativeLaunch(method.ReturnType),
+                "Launch" => NativeLaunch(method.ReturnType, args[0]),
+                "get_CurrentDestination" => CurrentDestination,
+                "get_InstalledEndpoint" => Endpoint,
+                "IsCandidateSafe" => CandidateSafe,
+                "AtSafeEndpoint" => NearEndpoint,
                 "Refresh" => RefreshDriver(),
                 "Stop" => Record("stop"),
                 "Pause" => Record("pause"),
-                "ReleasePause" => Record("release"),
-                "Tick" => Enum.Parse(method.ReturnType, "Running"),
+                "ReleasePause" => Release(),
+                "Tick" => Enum.Parse(method.ReturnType, TickStatus),
                 _ => throw new NotSupportedException(method.Name)
             });
             var modeType = Mod.GetType("Wildfire.Timberborn.FireSafety.FireWalkMode")!;
@@ -166,7 +174,8 @@ public sealed class TimberbornFireWalkTests
             Helper = Activator.CreateInstance(type!, Flags, null, [driver, currentMode], null)!;
             _position = Activator.CreateInstance(Native.LoadNative("UnityEngine.CoreModule").GetType("UnityEngine.Vector3")!)!;
         }
-        internal object? Call(string method, params object[] args) => Helper.GetType().GetMethod(method, Flags)!.Invoke(Helper, args);
+        internal object? Call(string method, params object[] args) => Helper.GetType().GetMethods(Flags).Single(m => m.Name == method && m.GetParameters().Length == args.Length &&
+            m.GetParameters().Select((p, i) => p.ParameterType.IsInstanceOfType(args[i])).All(matches => matches)).Invoke(Helper, args);
         internal bool Launch() => (bool)Call("Launch", _position)!;
         internal bool Refresh() => (bool)Call("RefreshIfNeeded")!;
         internal void RaisePath() => _pathStarted?.DynamicInvoke(null, null);
@@ -181,13 +190,21 @@ public sealed class TimberbornFireWalkTests
         private object? Unsubscribe(Delegate action) { Unsubscriptions++; _pathStarted = Delegate.Remove(_pathStarted, action); return null; }
         private long ReadRevision() { RevisionReads++; return Revision; }
         private bool Check(bool escaping) { Trace.Add("check:" + (escaping ? "Escape" : "Outbound")); return Safe; }
-        private object NativeLaunch(Type statusType)
+        private object NativeLaunch(Type statusType, object? destination)
         {
             Trace.Add("launch");
             DuringLaunch?.Invoke();
+            if (destination?.GetType().Name == "PositionDestination")
+                CurrentDestination = LaunchStatus == "Running" ? destination : null;
             Trace.Add("returned");
             return Enum.Parse(statusType, LaunchStatus);
         }
+        internal object NewDestination() => RuntimeHelpers.GetUninitializedObject(Native.LoadNative("Timberborn.WalkingSystem")
+            .GetType("Timberborn.WalkingSystem.PositionDestination")!);
+        internal object Position(float x) => Activator.CreateInstance(_position.GetType(), x, 0f, 0f)!;
+        internal bool LaunchDestination(object destination) => (bool)Call("Launch", destination)!;
+        internal bool Arrived(object destination) => (bool)Call("HasArrivedAt", destination)!;
+        private object? Release() { Trace.Add("release"); DuringRelease?.Invoke(); return null; }
         private object? RefreshDriver() { Trace.Add("refresh"); RaisePath(); return Record("refreshed"); }
         private object? Record(string value) { Trace.Add(value); return null; }
     }

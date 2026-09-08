@@ -11,6 +11,8 @@ public sealed class TimberbornOwnedWalker
     private readonly WalkerMover _mover;
     private bool _pausedByOwner;
     private static readonly Lazy<MethodInfo> StopMethod = new(VerifyNativeStop);
+    private static readonly Lazy<FieldInfo> DestinationField = new(VerifyDestinationField);
+    internal IDestination? CurrentDestination => (IDestination?)DestinationField.Value.GetValue(_walker);
 
     public TimberbornOwnedWalker(Walker walker, WalkerMover mover) { _walker = walker; _mover = mover; }
     public static void Verify() => _ = StopMethod.Value;
@@ -35,6 +37,14 @@ public sealed class TimberbornOwnedWalker
         if (!_pausedByOwner) return;
         _mover.EnableComponent();
         _pausedByOwner = false;
+    }
+    private static FieldInfo VerifyDestinationField()
+    {
+        Verify();
+        var field = typeof(Walker).GetField("_currentDestination", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (field?.FieldType != typeof(IDestination) || field.IsStatic)
+            throw new InvalidOperationException("Native Walker destination identity field changed.");
+        return field;
     }
     private static MethodInfo VerifyNativeStop()
     {
