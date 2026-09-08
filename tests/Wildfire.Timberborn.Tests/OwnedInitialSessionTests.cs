@@ -150,6 +150,18 @@ public sealed class OwnedInitialSessionTests
         Assert.False(f.Guard.IsIndeterminate);
     }
 
+    [Fact]
+    public void LegacyTerrainOnlyEvidenceCannotClaimCompleteOwnedFormation()
+    {
+        var f = new Fixture(); var before = f.Current; var env = before.Environment;
+        f.Current = new(Grid, before.Bodies, before.Excluded, before.WaterSources,
+            new(env.Grid, env.SolidVoxelIndices, env.SoilSurfaces, env.WaterColumns), before.InventoryDeclarations!);
+        Assert.Null(f.Current.Environment.OwnedDomain);
+        Assert.False(before.SameReadings(f.Current));
+        Assert.Throws<NotSupportedException>(() => f.Prepare());
+        Assert.Equal(0, f.Created); f.Guard.ThrowIfSaveUnsafe();
+    }
+
     private sealed class Fixture
     {
         internal readonly NativeResourceTransaction Guard = new();
@@ -182,7 +194,7 @@ public sealed class OwnedInitialSessionTests
         TimberbornInitialMaterialBody[] bodies = mutation == "membership" ? [Body(A, 2)] : [Body(A, mutation == "placement" ? 3 : 2), Body(B, overlap ? 2 : 3)];
         return new(Grid, bodies,
             mutation == "excluded" ? [new(Guid.NewGuid(), "Preview", TimberbornInitialCaptureExclusion.Preview)] : [], [],
-            new(Grid, [0, 1], [new(2, .1f, 0, true, false), new(3, .2f, 0, true, false)],
+            TimberbornInitialEnvironmentCapture.ForOwnedDomain(new TimberbornWorldDomain(Grid, new(Grid.Width, Grid.Height, 1)), [0, 1], [new(2, .1f, 0, true, false), new(3, .2f, 0, true, false)],
                 [new(0, 0, 1, 2, mutation == "environment" ? .8f : .5f, 0, 0)]),
             new(bodies.Select(body => new TimberbornBodyInventoryDeclarations(body.EntityId, []))));
     }

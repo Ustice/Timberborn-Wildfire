@@ -12,6 +12,16 @@ public sealed class TimberbornInitialEnvironmentCapture
 {
     public TimberbornInitialEnvironmentCapture(FireGrid grid, IEnumerable<int> solidVoxelIndices,
         IEnumerable<TimberbornSurfaceSoilSample> soilSurfaces, IEnumerable<TimberbornWaterColumnSample> waterColumns)
+        : this(grid, solidVoxelIndices, soilSurfaces, waterColumns, null) { }
+
+    public static TimberbornInitialEnvironmentCapture ForOwnedDomain(TimberbornWorldDomain ownedDomain, IEnumerable<int> solidVoxelIndices,
+        IEnumerable<TimberbornSurfaceSoilSample> soilSurfaces, IEnumerable<TimberbornWaterColumnSample> waterColumns) =>
+        new((ownedDomain ?? throw new ArgumentNullException(nameof(ownedDomain))).WorldGrid,
+            solidVoxelIndices, soilSurfaces, waterColumns, ownedDomain);
+
+    private TimberbornInitialEnvironmentCapture(FireGrid grid, IEnumerable<int> solidVoxelIndices,
+        IEnumerable<TimberbornSurfaceSoilSample> soilSurfaces, IEnumerable<TimberbornWaterColumnSample> waterColumns,
+        TimberbornWorldDomain? ownedDomain)
     {
         if (grid.Width <= 0 || grid.Height <= 0 || grid.Depth <= 0) throw new ArgumentOutOfRangeException(nameof(grid));
         _ = checked(grid.Width * grid.Height * grid.Depth);
@@ -21,6 +31,9 @@ public sealed class TimberbornInitialEnvironmentCapture
         if (solid.Distinct().Count() != solid.Length || soil.Select(sample => sample.CellIndex).Distinct().Count() != soil.Length)
             throw new ArgumentException("Duplicate native geometry or surface identity.");
         foreach (int cell in solid.Concat(soil.Select(sample => sample.CellIndex))) grid.FromIndex(cell);
+        if (ownedDomain is not null && (solid.Any(cell => cell / (grid.Width * grid.Height) >= ownedDomain.TerrainGrid.Depth) ||
+            soil.Any(sample => sample.CellIndex / (grid.Width * grid.Height) > ownedDomain.TerrainGrid.Depth)))
+            throw new ArgumentException("Native solid/surface geometry exceeds its captured terrain domain.");
         var solidSet = solid.ToHashSet();
         if (soil.Any(sample => solidSet.Contains(sample.CellIndex) || sample.CellIndex < grid.Width * grid.Height ||
                 !solidSet.Contains(sample.CellIndex - grid.Width * grid.Height) || !NonnegativeFinite(sample.Moisture) ||
@@ -39,14 +52,16 @@ public sealed class TimberbornInitialEnvironmentCapture
                 previousCeiling = column.Ceiling;
             }
         }
+        OwnedDomain = ownedDomain;
         Grid = grid; SolidVoxelIndices = Array.AsReadOnly(solid); SoilSurfaces = Array.AsReadOnly(soil); WaterColumns = Array.AsReadOnly(water);
     }
 
+    public TimberbornWorldDomain? OwnedDomain { get; }
     public FireGrid Grid { get; }
     public IReadOnlyList<int> SolidVoxelIndices { get; }
     public IReadOnlyList<TimberbornSurfaceSoilSample> SoilSurfaces { get; }
     public IReadOnlyList<TimberbornWaterColumnSample> WaterColumns { get; }
-    internal bool SameReadings(TimberbornInitialEnvironmentCapture other) => Grid == other.Grid &&
+    internal bool SameReadings(TimberbornInitialEnvironmentCapture other) => Grid == other.Grid && OwnedDomain == other.OwnedDomain &&
         SolidVoxelIndices.SequenceEqual(other.SolidVoxelIndices) && SoilSurfaces.SequenceEqual(other.SoilSurfaces) && WaterColumns.SequenceEqual(other.WaterColumns);
     private static bool NonnegativeFinite(float value) => value >= 0 && !float.IsInfinity(value) && !float.IsNaN(value);
 }

@@ -52,6 +52,8 @@ internal sealed class TimberbornOwnedRestoreObservation
 
     internal void RequireSupported(IReadOnlyList<Guid> requiredIds)
     {
+        if (CurrentWorld.Environment.OwnedDomain is null)
+            throw new NotSupportedException("Complete restore requires explicit native total-world domain evidence.");
         if (CurrentWorld.InventoryDeclarations is null)
             throw new NotSupportedException("Complete current world declaration evidence is unavailable.");
         var ids = requiredIds.OrderBy(id => id).ToArray();

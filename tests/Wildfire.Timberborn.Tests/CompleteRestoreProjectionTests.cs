@@ -154,6 +154,19 @@ public sealed class CompleteRestoreProjectionTests
         f.Guard.ThrowIfSaveUnsafe();
     }
 
+    [Fact]
+    public void LegacyTerrainOnlyObservationCannotClaimCompleteRestoreOrRewriteSavedGrid()
+    {
+        var f = new Fixture(); var world = f.Current.CurrentWorld; var env = world.Environment;
+        var saved = TimberbornWildfirePersistenceCodec.Encode(f.Saved);
+        var legacy = new TimberbornInitialWorldCapture(world.Grid, world.Bodies, world.Excluded, world.WaterSources,
+            new(env.Grid, env.SolidVoxelIndices, env.SoilSurfaces, env.WaterColumns), world.InventoryDeclarations!);
+        f.Current = new(legacy, f.Current.RetainedBodies, f.Current.States);
+        Assert.Throws<NotSupportedException>(() => f.Restore());
+        Assert.Null(f.Backend); f.Guard.ThrowIfSaveUnsafe();
+        Assert.Equal(saved, TimberbornWildfirePersistenceCodec.Encode(TimberbornWildfirePersistenceCodec.Decode(saved)));
+    }
+
     private sealed class Fixture
     {
         private static readonly Guid A = new("00000000-0000-0000-0000-000000000001");
@@ -205,7 +218,7 @@ public sealed class CompleteRestoreProjectionTests
             var worldBodies = mutation is "membership" or "excluded" ? bodies.Take(1).ToArray() : bodies;
             var world = new TimberbornInitialWorldCapture(Grid, worldBodies,
                 mutation == "excluded" ? [new(B, "Carrot", TimberbornInitialCaptureExclusion.TreeLeftover)] : [], [],
-                new(Grid, [1, 4], [new(6, .2f, .1f, true, true)],
+                TimberbornInitialEnvironmentCapture.ForOwnedDomain(new TimberbornWorldDomain(Grid, new(Grid.Width, Grid.Height, 1)), [1, 4], [new(6, .2f, .1f, true, true)],
                     [new(2, 0, 0, 1, mutation == "water" ? .9f : .5f, 0, 0), new(3, 0, 0, 1, .5f, .5f, 0)]),
                 new(declarations.Bodies.Where(body => worldBodies.Any(value => value.EntityId == body.EntityId))));
             return new(world, bodies, states);

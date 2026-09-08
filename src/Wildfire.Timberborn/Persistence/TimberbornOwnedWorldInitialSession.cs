@@ -21,6 +21,8 @@ public sealed partial class TimberbornOwnedWorldSession<TSimulator>
         {
             var capture = captureDuringScope(grid) ?? throw new InvalidOperationException("No initial native capture returned.");
             if (capture.Grid != grid) throw new ArgumentException("Initial capture belongs to a different grid.");
+            if (capture.Environment.OwnedDomain is null)
+                throw new NotSupportedException("Owned initial formation requires explicit native total-world domain evidence.");
             var inventories = capture.InventoryDeclarations ?? throw new NotSupportedException("Initial formation requires explicit original inventory declaration evidence.");
             inventories.RequireSupportedMaterialBodies(capture.Bodies);
             var plan = compose(capture) ?? throw new InvalidOperationException("No explicit initial accounting plan returned.");

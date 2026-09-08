@@ -77,9 +77,9 @@ public sealed class NativeMaterialFootprintTests
             _blocks = blockAssembly.GetType("Timberborn.BlockSystem.Blocks")!.GetMethod("From")!.Invoke(null, new[] { spec })!;
             _project = _native.LoadMod().GetType("Wildfire.Timberborn.Mapping.TimberbornNativeMaterialFootprint")!.GetMethod("Project")!;
         }
-        internal IReadOnlyList<TimberbornMaterialFootprintSlot> Project(string rotation, bool flipped, FireGrid grid)
+        internal IReadOnlyList<TimberbornMaterialFootprintSlot> Project(string rotation, bool flipped, FireGrid grid, int z = 2)
         {
-            var placement = Activator.CreateInstance(_placement, Activator.CreateInstance(_vector, 8, 8, 2),
+            var placement = Activator.CreateInstance(_placement, Activator.CreateInstance(_vector, 8, 8, z),
                 Enum.Parse(_orientation, rotation), Activator.CreateInstance(_flip, new object[] { flipped }));
             var result = (IEnumerable)_project.Invoke(null, new[] { _blocks, placement, (object)grid })!;
             return result.Cast<object>().Select(slot =>
