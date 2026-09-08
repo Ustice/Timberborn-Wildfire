@@ -120,12 +120,7 @@ public sealed partial class TimberbornFireRuntime :
             new TimberbornWorkerSpeedBeaverFieldBehaviorActuator(
                 new TimberbornEntityRegistryBeaverWorkerSpeedAdapter(_entityRegistry)),
             _logSink);
-        _ashFieldService = new TimberbornAshFieldService(
-            new TimberbornGrowableAshGrowthAdapter(
-                blockService ?? throw new ArgumentNullException(nameof(blockService)),
-                CurrentGrid,
-                _logSink),
-            _logSink);
+        _ashFieldService = new TimberbornAshFieldService(_logSink);
         _ashFieldSynchronizer = new TimberbornAshFieldSynchronizer(_ashFieldService);
         _taintedAshSoilPoisoningService = new TimberbornTaintedAshSoilPoisoningService(
             UnavailableTimberbornTaintedAshSoilPoisoningAdapter.Instance,

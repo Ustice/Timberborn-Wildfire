@@ -7,8 +7,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void SyncFromTransportFieldsBuildsSimulatorBackedReadModel()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
 
         TimberbornAshFieldSummary summary = service.SyncFromTransportFields(
             9,
@@ -32,8 +31,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void SimulatorFertileAshRequestsLinearGrowth()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
 
         TimberbornAshFieldSummary summary = SyncAsh(
             service,
@@ -45,15 +43,14 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(3, entry.Strength);
         Assert.Equal(1, summary.FertileAshCellCount);
         Assert.Equal(1, summary.GrowthCandidateCellCount);
-        Assert.Single(growthAdapter.Requests);
-        Assert.Equal(1.10f, growthAdapter.Requests.Single().GrowthMultiplier, precision: 3);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
+        Assert.Equal(1.10f, entry.GrowthMultiplier(), precision: 3);
     }
 
     [Fact]
     public void SimulatorContaminatedAshCreatesTaintedAshAndNeverRequestsGrowth()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
 
         TimberbornAshFieldSummary summary = SyncAsh(
             service,
@@ -64,13 +61,13 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(WildfireAshQuality.Tainted, entry.Quality);
         Assert.Equal(0, summary.GrowthCandidateCellCount);
         Assert.Equal(1, summary.GrowthSkippedTaintedCellCount);
-        Assert.Empty(growthAdapter.Requests);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
     }
 
     [Fact]
     public void ActiveAshSourceIsNotCollectableUntilItSettles()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         service.SyncFromTransportFields(
             12,
             [
@@ -97,8 +94,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void GrowthMultiplierClampsAtTenPercent()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
 
         SyncAsh(
             service,
@@ -107,15 +103,13 @@ public sealed class TimberbornAshFieldServiceTests
 
         Assert.True(service.TryGetEntry(7, out TimberbornAshFieldEntry entry));
         Assert.Equal(TimberbornAshFieldService.MaxStrength, entry.Strength);
-        Assert.Equal(1.10f, growthAdapter.Requests.Single().GrowthMultiplier, precision: 3);
+        Assert.Equal(1.10f, entry.GrowthMultiplier(), precision: 3);
     }
 
     [Fact]
-    public void GrowthAdapterReceivesAllFertileCellsAndReportsUnsupportedGrowables()
+    public void ReadModelReportsFertileCandidatesWithoutClaimingNativeMutation()
     {
-        RecordingAshGrowthAdapter growthAdapter = new(
-            request => request.CellIndex is not 22);
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
 
         TimberbornAshFieldSummary summary = SyncAsh(
             service,
@@ -124,50 +118,45 @@ public sealed class TimberbornAshFieldServiceTests
             (CellIndex: 21, Ash: 1, AshContamination: 0),
             (CellIndex: 22, Ash: 1, AshContamination: 0));
 
-        Assert.Equal([20, 21, 22], growthAdapter.Requests.Select(static request => request.CellIndex).ToArray());
+        Assert.Equal([20, 21, 22], service.CaptureGrowthRequests().Select(static request => request.CellIndex).ToArray());
         Assert.Equal(3, summary.GrowthCandidateCellCount);
-        Assert.Equal(2, summary.GrowthAppliedGrowableCount);
-        Assert.Equal(1, summary.GrowthUnsupportedGrowableCount);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
+        Assert.Equal(0, summary.GrowthUnsupportedGrowableCount);
     }
 
     [Fact]
     public void AshDecayWaitsForInGameDay()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             20,
             (CellIndex: 8, Ash: 2, AshContamination: 0));
 
-        growthAdapter.Requests.Clear();
         TimberbornAshFieldSummary summary = service.Advance(22, dayNumber: 0);
 
         Assert.True(service.TryGetEntry(8, out TimberbornAshFieldEntry entry));
         Assert.Equal(2, entry.Strength);
         Assert.Equal(0, summary.DecayedAshCellCount);
-        Assert.Single(growthAdapter.Requests);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
     }
 
     [Fact]
     public void FertileAshDecaysOneUnitEveryFifteenInGameDays()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             20,
             dayNumber: 0,
             (CellIndex: 8, Ash: 2, AshContamination: 0));
 
-        growthAdapter.Requests.Clear();
         TimberbornAshFieldSummary waitingSummary = service.Advance(21, dayNumber: 14);
 
         Assert.True(service.TryGetEntry(8, out TimberbornAshFieldEntry beforeDecay));
         Assert.Equal(2, beforeDecay.Strength);
         Assert.Equal(0, waitingSummary.DecayedAshCellCount);
 
-        growthAdapter.Requests.Clear();
         List<TimberbornAshFieldCollectionRemoval> removals = new();
         TimberbornAshFieldSummary summary = service.ApplyDayDecay(
             22,
@@ -182,13 +171,13 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.True(removal.RemovedEntry);
         Assert.Equal(1, summary.DecayedAshCellCount);
         Assert.Equal(1, summary.GrowthCandidateCellCount);
-        Assert.Single(growthAdapter.Requests);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
     }
 
     [Fact]
     public void TaintedAshDecaysOneUnitEveryThirtyInGameDays()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             20,
@@ -238,8 +227,7 @@ public sealed class TimberbornAshFieldServiceTests
                     UpdatedTick: 30,
                     PersistenceVersion: TimberbornAshFieldEntry.CurrentPersistenceVersion),
             ]);
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService restored = new(growthAdapter);
+        TimberbornAshFieldService restored = new();
 
         TimberbornAshFieldSummary summary = restored.RestoreSnapshot(31, snapshot);
 
@@ -248,7 +236,7 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(WildfireAshQuality.Fertile, fertile.Quality);
         Assert.Equal(WildfireAshQuality.Spent, spent.Quality);
         Assert.Equal(1, summary.PersistenceLoadCount);
-        Assert.Single(growthAdapter.Requests);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
     }
 
     [Fact]
@@ -264,8 +252,7 @@ public sealed class TimberbornAshFieldServiceTests
         burnDamageService.RegisterTargets(
             grid,
             [Registration("tree-pine-1", "Tree.Pine", [new TimberbornCellCoordinates(0, 0, 0)])]);
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService ashFieldService = new(growthAdapter);
+        TimberbornAshFieldService ashFieldService = new();
         TimberbornFireDeltaConsumer consumer = new(
             new RecordingFireLogSink(),
             new TimberbornFireDeltaConsumerSinks(
@@ -296,8 +283,7 @@ public sealed class TimberbornAshFieldServiceTests
         burnDamageService.RegisterTargets(
             grid,
             [Registration("crop-carrot-1", "Crop.Carrot", [new TimberbornCellCoordinates(0, 0, 0)])]);
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService ashFieldService = new(growthAdapter);
+        TimberbornAshFieldService ashFieldService = new();
         TimberbornFireDeltaConsumer consumer = new(
             new RecordingFireLogSink(),
             new TimberbornFireDeltaConsumerSinks(
@@ -315,7 +301,7 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(1, summary.AshFieldTaintedAshCellCount);
         Assert.Equal(0, summary.AshFieldContaminatedBurnSourceCellCount);
         Assert.Equal(1, summary.AshFieldContaminatedAffectedCellCount);
-        Assert.Empty(growthAdapter.Requests);
+        Assert.Equal(0, summary.AshFieldGrowthAppliedGrowableCount);
     }
 
     [Fact]
@@ -330,7 +316,7 @@ public sealed class TimberbornAshFieldServiceTests
         burnDamageService.RegisterTargets(
             grid,
             [Registration("building-badwater-pump-1", "Building.BadwaterPump", [new TimberbornCellCoordinates(0, 0, 0)])]);
-        TimberbornAshFieldService ashFieldService = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService ashFieldService = new();
         TimberbornFireDeltaConsumer consumer = new(
             new RecordingFireLogSink(),
             new TimberbornFireDeltaConsumerSinks(
@@ -349,22 +335,18 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void UnavailableGrowthAdapterFailsLoudlyForGrowthCandidates()
+    public void ObservingFertileAshNeedsNoNativeGrowthAdapter()
     {
-        TimberbornAshFieldService service = new(UnavailableTimberbornAshGrowthAdapter.Instance);
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => SyncAsh(
-            service,
-            50,
-            (CellIndex: 11, Ash: 1, AshContamination: 0)));
-
-        Assert.Contains("Ash growth adapter is unavailable", exception.Message);
+        var service = new TimberbornAshFieldService();
+        var summary = SyncAsh(service, 50, (11, 1, 0));
+        Assert.Equal(1, summary.GrowthCandidateCellCount);
+        Assert.Equal(0, summary.GrowthAppliedGrowableCount);
     }
 
     [Fact]
     public void TaintedAshSoilPoisoningReportsUnavailableWithoutRemovingAsh()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             60,
@@ -383,7 +365,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void AshWaterWashoutQueuesSimulatorRemovalForCleanAshWithoutWaterTaint()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             60,
@@ -461,7 +443,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void AshWaterWashoutFailsLoudlyWhenTaintedWaterAdapterIsUnavailable()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             60,
@@ -490,7 +472,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void AshWaterWashoutPreservesNoOpCellsWithoutWaterOrWhileActiveSource()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         service.SyncFromTransportFields(
             60,
             [
@@ -521,7 +503,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void AshWaterWashoutCanReportWaterTaintAttemptSuccessWithoutDeletingLocally()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             60,
@@ -548,7 +530,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void FertileAshCollectionDepletesOnlyCollectedFertileCells()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             70,
@@ -576,7 +558,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void FertileAshCollectionRemovesFullyCollectedCell()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
         SyncAsh(
             service,
             80,
@@ -600,7 +582,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void SyncFromTransportFieldsReplacesReadModelWithSimulatorSnapshot()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
 
         SyncAsh(service, 10, (CellIndex: 20, Ash: 3, AshContamination: 0));
         SyncAsh(service, 11, (CellIndex: 20, Ash: 1, AshContamination: 0));
@@ -612,7 +594,7 @@ public sealed class TimberbornAshFieldServiceTests
     [Fact]
     public void SyncFromTransportFieldsCountsOnlyNewAshCells()
     {
-        TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
+        TimberbornAshFieldService service = new();
 
         TimberbornAshFieldSummary initial = SyncAsh(service, 10, (CellIndex: 20, Ash: 3, AshContamination: 0));
         TimberbornAshFieldSummary repeated = SyncAsh(service, 11, (CellIndex: 20, Ash: 3, AshContamination: 0));
@@ -622,15 +604,14 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void DayDecaySkipsDuplicateGrowthScanWhenNothingChangedInSameTick()
+    public void DayDecayDoesNotApplyGrowthWhenNothingChangedInSameTick()
     {
-        RecordingAshGrowthAdapter growthAdapter = new();
-        TimberbornAshFieldService service = new(growthAdapter);
+        TimberbornAshFieldService service = new();
 
         SyncAsh(service, 10, (CellIndex: 20, Ash: 3, AshContamination: 0));
         TimberbornAshFieldSummary decay = service.ApplyDayDecay(10, dayNumber: 0);
 
-        Assert.Single(growthAdapter.Requests);
+        Assert.Equal(0, decay.GrowthAppliedGrowableCount);
         Assert.Equal(service.LastSummary, decay);
     }
 
@@ -696,26 +677,6 @@ public sealed class TimberbornAshFieldServiceTests
             cellIndex,
             PackedCell.Pack(oldFuel, heat: 10, flammability: 3, water: 0, terrain: 1, burningLevel: 1),
             PackedCell.Pack(newFuel, heat: 10, flammability: 3, water: 0, terrain: 1, burningLevel: 1));
-    }
-
-    private sealed class RecordingAshGrowthAdapter(
-        Func<TimberbornAshGrowthBonusRequest, bool>? apply = null)
-        : ITimberbornAshGrowthAdapter
-    {
-        public List<TimberbornAshGrowthBonusRequest> Requests { get; } = [];
-
-        public TimberbornAshGrowthApplicationResult ApplyGrowthBonuses(
-            uint tick,
-            IReadOnlyList<TimberbornAshGrowthBonusRequest> requests)
-        {
-            Requests.AddRange(requests);
-            int applied = requests.Count(request => apply?.Invoke(request) ?? true);
-            return new TimberbornAshGrowthApplicationResult(
-                CandidateGrowableCount: requests.Count,
-                AppliedGrowableCount: applied,
-                FailedConsequenceCount: 0,
-                UnsupportedGrowableCount: requests.Count - applied);
-        }
     }
 
     private sealed class RecordingFertileAshCollectionAdapter(

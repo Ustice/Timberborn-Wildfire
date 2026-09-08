@@ -9,7 +9,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     {
         RecordingTransportSimulator simulator = new() { TransportFields = [Ash(2, contamination: 6)] };
         TimberbornFireSystem fireSystem = new(simulator);
-        TimberbornAshFieldService ash = new(new RecordingGrowthAdapter());
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         synchronizer.Sync(fireSystem, tick: 9, dayNumber: 4);
@@ -26,8 +26,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     {
         RecordingTransportSimulator simulator = new() { TransportFields = [Ash(2)] };
         TimberbornFireSystem fireSystem = new(simulator);
-        RecordingGrowthAdapter growth = new();
-        TimberbornAshFieldService ash = new(growth);
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         synchronizer.Sync(fireSystem, tick: 9, dayNumber: 4);
@@ -36,7 +35,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
 
         Assert.Equal(1, simulator.TransportReadCount);
         Assert.True(ash.TryGetEntry(0, out _));
-        Assert.Equal(1, growth.ApplicationCount);
+        Assert.Equal(0, ash.LastSummary.GrowthAppliedGrowableCount);
 
         synchronizer.Sync(fireSystem, tick: 10, dayNumber: 4);
 
@@ -49,7 +48,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     {
         RecordingTransportSimulator simulator = new();
         TimberbornFireSystem fireSystem = new(simulator);
-        TimberbornAshFieldService ash = new(new RecordingGrowthAdapter());
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         synchronizer.Sync(null, tick: 0, dayNumber: 1);
@@ -66,7 +65,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     {
         RecordingTransportSimulator simulator = new() { TransportFields = [Ash(1)] };
         TimberbornFireSystem fireSystem = new(simulator);
-        TimberbornAshFieldService ash = new(new RecordingGrowthAdapter());
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         synchronizer.Sync(fireSystem, tick: 1, dayNumber: 1);
@@ -86,7 +85,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     {
         RecordingTransportSimulator simulator = new() { FailRead = true };
         TimberbornFireSystem fireSystem = new(simulator);
-        TimberbornAshFieldService ash = new(new RecordingGrowthAdapter());
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         Assert.Throws<InvalidOperationException>(() => synchronizer.Sync(fireSystem, tick: 1, dayNumber: 1));
@@ -102,7 +101,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     public void InitializedSimulatorWithoutObservationCapabilityFailsClearly()
     {
         TimberbornFireSystem fireSystem = new(new SimulatorWithoutObservations());
-        TimberbornAshFieldService ash = new(new RecordingGrowthAdapter());
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
@@ -116,7 +115,7 @@ public sealed class TimberbornAshFieldSynchronizerTests
     {
         TimberbornFireSystem uninitialized = new(new UnusedSimulatorFactory());
         RecordingTransportSimulator simulator = new() { TransportFields = [Ash(1)] };
-        TimberbornAshFieldService ash = new(new RecordingGrowthAdapter());
+        TimberbornAshFieldService ash = new();
         TimberbornAshFieldSynchronizer synchronizer = new(ash);
 
         synchronizer.Sync(uninitialized, tick: 0, dayNumber: 1);
@@ -176,16 +175,4 @@ public sealed class TimberbornAshFieldSynchronizerTests
             ReadOnlySpan<WildfireMaterialField> materialFields) => throw new NotSupportedException();
     }
 
-    private sealed class RecordingGrowthAdapter : ITimberbornAshGrowthAdapter
-    {
-        public int ApplicationCount { get; private set; }
-
-        public TimberbornAshGrowthApplicationResult ApplyGrowthBonuses(
-            uint tick,
-            IReadOnlyList<TimberbornAshGrowthBonusRequest> requests)
-        {
-            ApplicationCount++;
-            return new TimberbornAshGrowthApplicationResult(requests.Count, requests.Count, 0, 0);
-        }
-    }
 }
