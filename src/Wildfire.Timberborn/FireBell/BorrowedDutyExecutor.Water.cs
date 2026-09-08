@@ -164,7 +164,8 @@ public sealed partial class BorrowedDutyExecutor : INativeWaterApplicationProduc
     }
     private ExecutorStatus TickWaterReturn(float hours)
     {
-        if (_progress.Hours >= 2 || !_field.ObservationAvailable) return FinishWater();
+        // Native arbitration resumes only after this running executor finishes.
+        if (_needs.AnyNeedIsInCriticalState() || _progress.Hours >= 2 || !_field.ObservationAvailable) return FinishWater();
         if (_waterRoutePending)
         {
             _waterRoutePending = false;
