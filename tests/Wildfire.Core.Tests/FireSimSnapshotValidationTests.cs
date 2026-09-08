@@ -2,6 +2,27 @@ namespace Wildfire.Core.Tests;
 
 public sealed class FireSimSnapshotValidationTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PackedEnumDomainMatchesDeclaredSchemaForActiveAndArchivedMaterial(bool archived)
+    {
+        var source = Valid();
+        for (int material = 0; material <= byte.MaxValue; material++)
+        for (int contamination = 0; contamination < 8; contamination++)
+        {
+            uint companion = (uint)material | (uint)contamination << 22;
+            var candidate = archived
+                ? source with { MaterialAuthority = source.MaterialAuthority with
+                    { Archives = [source.MaterialAuthority.Archives[0] with { Companion = companion }] } }
+                : source with { CompanionFields = [companion, 0] };
+            bool declared = Enum.IsDefined(typeof(WildfireMaterialClass), (byte)material) &&
+                Enum.IsDefined(typeof(WildfireContaminationBehavior), (byte)contamination);
+            if (declared) FireSimSnapshotValidation.ValidateAndClone(candidate);
+            else Assert.Throws<ArgumentException>(() => FireSimSnapshotValidation.ValidateAndClone(candidate));
+        }
+    }
+
     [Fact]
     public void CompleteSnapshotCloneSeparatesAllMutableArraysAndKeepsOrderedPendingInputs()
     {

@@ -2,6 +2,14 @@ namespace Wildfire.Core;
 
 public static class FireSimSnapshotValidation
 {
+    // Packed fields use byte-sized enums. Cache declared membership once, avoiding boxed
+    // reflection arguments for every active and archived cell in each complete validation.
+    private static readonly bool[] MaterialClasses = ByteEnumValues(typeof(WildfireMaterialClass));
+    private static readonly bool[] ContaminationBehaviors = ByteEnumValues(typeof(WildfireContaminationBehavior));
+
+    private static bool[] ByteEnumValues(Type type) => Enumerable.Range(0, 256)
+        .Select(value => Enum.IsDefined(type, (byte)value)).ToArray();
+
     /// <summary>Copy all mutable arrays, then validate the complete graph before any publication or allocation.</summary>
     public static FireSimSnapshot ValidateAndClone(FireSimSnapshot snapshot)
     {
@@ -68,8 +76,8 @@ public static class FireSimSnapshotValidation
     private static void ValidateCompanion(uint companion)
     {
         if ((companion & 0xf0000000u) != 0 ||
-            !Enum.IsDefined(typeof(WildfireMaterialClass), (byte)(companion & 255u)) ||
-            !Enum.IsDefined(typeof(WildfireContaminationBehavior), (byte)((companion >> 22) & 7u)))
+            !MaterialClasses[companion & 255u] ||
+            !ContaminationBehaviors[(companion >> 22) & 7u])
             throw Invalid("Companion field has unknown material or reserved bits.");
     }
 
