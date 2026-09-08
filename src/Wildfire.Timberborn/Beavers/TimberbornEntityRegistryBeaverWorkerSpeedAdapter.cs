@@ -29,7 +29,7 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
         float multiplier)
     {
         EntityComponent entity = GetEntityOrThrow(beaverId);
-        entity.TryGetComponent(out Worker worker);
+        entity.TryGetComponent(out Worker? worker);
         entity.TryGetComponent(out StatusSubject statusSubject);
         MethodInfo? setter = WorkerSpeedMultiplierProperty?.GetSetMethod(nonPublic: true);
         if (worker is not null && setter is null)
@@ -70,7 +70,7 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
     public TimberbornBeaverWorkerSpeedResult RecoverSmokeReaction(string beaverId)
     {
         EntityComponent entity = GetEntityOrThrow(beaverId);
-        entity.TryGetComponent(out Worker worker);
+        entity.TryGetComponent(out Worker? worker);
         float original = _originalWorkingSpeedMultiplierByBeaverId.TryGetValue(beaverId, out float saved) ? saved : 1f;
         bool restore = worker is not null && worker.WorkingSpeedMultiplier <=
             original * TimberbornWorkerSpeedBeaverFieldBehaviorActuator.CoughingWorkingSpeedMultiplier + RestoreTolerance;
