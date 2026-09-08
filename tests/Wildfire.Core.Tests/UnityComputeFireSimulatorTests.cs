@@ -426,7 +426,9 @@ public sealed partial class UnityComputeFireSimulatorTests
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal("GPU delta counter returned 3, but buffer capacity is 2.", exception.Message);
     }
@@ -603,7 +605,9 @@ public sealed partial class UnityComputeFireSimulatorTests
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
         simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal($"Dispatch failed for {UnityComputeFireSimulator.ApplyExternalChangesKernelName}.", exception.Message);
         Assert.Equal(1, simulator.PendingChangeCount);
@@ -629,7 +633,9 @@ public sealed partial class UnityComputeFireSimulatorTests
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
         simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal($"Dispatch failed for {UnityComputeFireSimulator.FullGridKernelName}.", exception.Message);
         Assert.Equal(0, simulator.PendingChangeCount);
@@ -720,7 +726,9 @@ public sealed partial class UnityComputeFireSimulatorTests
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
         simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal("Upload failed for wildfire.queued_changes.", exception.Message);
         Assert.Equal(1, simulator.PendingChangeCount);

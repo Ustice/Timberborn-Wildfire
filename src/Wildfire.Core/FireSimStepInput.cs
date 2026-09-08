@@ -15,11 +15,11 @@ public interface IFireSimStepInputSimulator : IGpuFireSimulator
 
 public enum FireSimStepInputOutcome
 {
-    // No call to ApplyExternalChanges began. The one-step input was not queued.
+    // No call to ApplyExternalChanges or Simulate began. A one-step input was not queued.
     NotApplied,
-    // ApplyExternalChanges began, but commitInput did not complete. Stop and reconcile at the host boundary.
+    // GPU mutation began, but readback/swap or the optional commit did not complete. Stop at the host boundary.
     Indeterminate,
-    // Readback, swap, and commitInput completed. A subsequent listener failed; do not replay the input.
+    // Readback, swap, and any optional commit completed. A later listener or adapter observer failed; do not replay.
     Committed,
 }
 

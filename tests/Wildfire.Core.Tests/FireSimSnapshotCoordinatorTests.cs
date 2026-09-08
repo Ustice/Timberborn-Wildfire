@@ -50,7 +50,9 @@ public sealed class FireSimSnapshotCoordinatorTests
         var snapshot = FireSimSnapshotValidationTests.Valid() with { PendingChanges = [] };
         var step = new FireSimStepCoordinator(snapshot, 2);
         var backend = new Backend(snapshot) { FailingStage = stage };
-        Assert.Throws<InvalidOperationException>(() => step.Tick(backend));
+        var failure = Assert.Throws<FireSimStepInputException>(() => step.Tick(backend));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        Assert.IsType<InvalidOperationException>(failure.InnerException);
         backend.FailingStage = null;
         Assert.Throws<InvalidOperationException>(() => step.CaptureSnapshot(backend));
         Assert.Throws<InvalidOperationException>(() => step.Tick(backend));

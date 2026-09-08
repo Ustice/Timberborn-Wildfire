@@ -204,8 +204,7 @@ public sealed partial class FireSimStepCoordinator
         catch (Exception exception)
         {
             if (outcome == FireSimStepInputOutcome.Indeterminate) _stateUncertain = true;
-            if (commitInput is not null) throw new FireSimStepInputException(outcome, exception);
-            throw;
+            throw new FireSimStepInputException(outcome, exception);
         }
         finally
         {

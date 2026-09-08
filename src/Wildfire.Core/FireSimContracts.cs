@@ -10,6 +10,8 @@ public interface IGpuFireSimulator
 
     void RegisterChange(FireSimChange change);
 
+    /// <summary>Admitted-step failures report FireSimStepInputException with the actual step outcome.
+    /// Validation before admission remains an ordinary argument/state failure.</summary>
     GpuFireStepResult Tick();
 
     IDisposable Subscribe(IFireSimListener listener);

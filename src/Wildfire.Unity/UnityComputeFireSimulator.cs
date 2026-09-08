@@ -115,8 +115,15 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
         }
 
         GpuFireStepResult result = _step.Tick(this);
-        _diagnostics.Info(
-            $"wildfire_gpu_simulator_listeners_notified tick={result.Tick} listener_count={_step.ListenerCount} delta_count={result.Deltas.Count}");
+        try
+        {
+            _diagnostics.Info(
+                $"wildfire_gpu_simulator_listeners_notified tick={result.Tick} listener_count={_step.ListenerCount} delta_count={result.Deltas.Count}");
+        }
+        catch (Exception exception)
+        {
+            throw new FireSimStepInputException(FireSimStepInputOutcome.Committed, exception);
+        }
         return result;
     }
 

@@ -808,17 +808,28 @@ public sealed partial class TimberbornComputeFireSimulator :
     {
         ThrowIfDisposed();
         uint dispatchTick = _step.CurrentTick + 1;
+        bool stepReturned = false;
         try
         {
             GpuFireStepResult result = _step.Tick(this);
+            stepReturned = true;
             _logSink.Info(
                 $"wildfire_timberborn_gpu_listeners_notified tick={result.Tick} listener_count={_step.ListenerCount} delta_count={result.Deltas.Count}");
             return result;
         }
         catch (Exception exception)
         {
-            _logSink.Warning(
-                $"wildfire_timberborn_gpu_dispatch_failed tick={dispatchTick} message=\"{exception.Message}\"");
+            try
+            {
+                _logSink.Warning(
+                    $"wildfire_timberborn_gpu_dispatch_failed tick={dispatchTick} message=\"{exception.Message}\"");
+            }
+            catch
+            {
+                // Diagnostics must not replace the authoritative step outcome.
+            }
+            if (stepReturned)
+                throw new FireSimStepInputException(FireSimStepInputOutcome.Committed, exception);
             throw;
         }
     }
