@@ -1,5 +1,7 @@
 # Exact native water-credit ownership boundary
 
+The later [inactive ownership component](native-water-ownership-component.md) implements the reviewed source/installer seam without shipping bindings; this page records the original test-only scheduler investigation.
+
 This is a proposal with **test-only** native lifecycle/scheduler fixtures. No runtime scheduler installer, source entity, source marker or replacement water service is registered. No player-facing intake policy is selected.
 
 ## Recommendation
