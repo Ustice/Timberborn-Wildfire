@@ -14,7 +14,9 @@ Use the entry point that matches the work. Source and fresh validation establish
 
 - [Current-build live baseline](qa/live-current-build-baseline.md): verified deployment, ordinary GPU ticks, and tick-33 save/reload at `8cbeb19`.
 - [Fresh faction startup](qa/live-faction-startup.md): populated Folktails success and the Iron Teeth Warden preview failure on that build.
+- [Corrected Iron Teeth startup](qa/warden-corrected-startup-live.md) and [Warden placement regression](qa/warden-preview-pivot.md): healthy colony and save after the access fix, followed by the missing-pivot failure and native regression fix; live placement remains a separate check.
 - [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
+- [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
 - [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
 - [Snapshot validation allocation](qa/snapshot-enum-allocation.md): measured optimization and limits of its small-grid comparison.
 
