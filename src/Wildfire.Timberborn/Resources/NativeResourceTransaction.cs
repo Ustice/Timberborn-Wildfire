@@ -19,18 +19,47 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
         Action<FireSimAshCollectionReceipt> commit) => ExecuteStep(() => simulator.TryCollectAsh(input, commit));
 
     public FireSimAshApplicationStepResult? TryApplyCleanAsh(IFireSimAshApplicationSimulator simulator,
-        FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication)
+        FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication) =>
+        TryApplyCleanAsh(simulator, input, commitApplication, static _ => { });
+
+    internal FireSimAshApplicationStepResult? TryApplyCleanAsh(IFireSimAshApplicationSimulator simulator,
+        FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication,
+        Action<FireSimAshApplicationReceipt> completeRejected)
     {
         if (commitApplication is null) throw new ArgumentNullException(nameof(commitApplication));
-        return ExecuteStep(() => simulator.TryApplyCleanAsh(input, receipt =>
+        if (completeRejected is null) throw new ArgumentNullException(nameof(completeRejected));
+        return ExecuteStep(() =>
         {
-            if (receipt.CellIndex != input.CellIndex || receipt.Limit != input.Limit ||
-                input.Limit is < 1 or > 3 || receipt.Added != 1 || receipt.Outcome != FireSimAshApplicationOutcome.Applied)
-                throw new InvalidOperationException("Only an exact accepted ash application can authorize native consumption.");
-            _ashApplicationCommit = true;
-            try { commitApplication(receipt); }
-            finally { _ashApplicationCommit = false; }
-        }));
+            var result = simulator.TryApplyCleanAsh(input, receipt =>
+            {
+                if (receipt.CellIndex != input.CellIndex || receipt.Limit != input.Limit ||
+                    input.Limit is < 1 or > 3 || receipt.Added != 1 || receipt.Outcome != FireSimAshApplicationOutcome.Applied)
+                    throw new InvalidOperationException("Only an exact accepted ash application can authorize native consumption.");
+                _ashApplicationCommit = true;
+                try { commitApplication(receipt); }
+                finally { _ashApplicationCommit = false; }
+            });
+            if (!result.HasValue || result.Value.Receipt.Outcome == FireSimAshApplicationOutcome.Applied)
+                return result;
+            // The simulator has returned a completed step. Actor rejection disposition still
+            // belongs inside this exclusion, without positive consumption privilege.
+            try
+            {
+                var receipt = result.Value.Receipt;
+                if (receipt.CellIndex != input.CellIndex || receipt.Limit != input.Limit ||
+                    input.Limit is < 1 or > 3 || receipt.Added != 0 ||
+                    receipt.Outcome is not (FireSimAshApplicationOutcome.Full or FireSimAshApplicationOutcome.Tainted or
+                        FireSimAshApplicationOutcome.InvalidSurface))
+                    throw new InvalidOperationException("Unexpected completed fertilizer rejection.");
+                completeRejected(receipt);
+            }
+            catch (Exception exception)
+            {
+                IsIndeterminate = true;
+                throw new FireSimStepInputException(FireSimStepInputOutcome.Committed, exception);
+            }
+            return result;
+        });
     }
 
     public void RequireAshApplicationCommit()
