@@ -23,6 +23,9 @@ public sealed class TimberbornNativeMaterialRegistry
     private uint _nextTargetId = 1;
 
     internal FireGrid Grid => _grid;
+    // Reconcile publishes a new dictionary; the returned read view remains stable for a guarded plan.
+    internal IReadOnlyDictionary<int, TimberbornResolvedMaterialCell> DesiredCells => _cells;
+    internal FireSimBaselineDefinition GetBaselineDefinition(int cellIndex) => _baseline.GetCell(cellIndex);
 
     public TimberbornNativeMaterialRegistry(FireGrid grid, IEnumerable<int> solidTerrainCells)
         : this(new TimberbornMaterialBaseline(grid, solidTerrainCells.Distinct().Select(cell =>

@@ -28,7 +28,10 @@ internal static class TimberbornDesiredMaterialReconciliation
         if (registry.Grid != snapshot.Grid || snapshot.Grid != new FireGrid(simulator.Width, simulator.Height, simulator.Depth))
             throw new ArgumentException("Desired native and actual simulator grids must have identical dimensions.");
         var bindings = registry.CaptureBindings();
-        _ = new TimberbornOwnedMaterialSnapshot(snapshot, bindings);
+        // Registry already validated its immutable published bindings. Check the association without
+        // constructing another registry and cloning/revalidating every cell a third time.
+        if (snapshot.MaterialAuthority.KnownSlots.Any(identity => !registry.IsSlotBound(identity.TargetId, identity.SlotId)))
+            throw new ArgumentException("Every simulator material identity requires an exact retained native Guid/local-slot binding.");
         var owners = canonicalOwners.ToDictionary(pair => pair.Key, pair => pair.Value);
         if (!owners.Keys.ToHashSet().SetEquals(bindings.Entities.Select(entity => entity.EntityId)) ||
             owners.Any(pair => pair.Key == Guid.Empty || !Enum.IsDefined(typeof(OwnedBodyRetention), pair.Value)))
@@ -39,20 +42,19 @@ internal static class TimberbornDesiredMaterialReconciliation
             .Where(pair => pair.Identity.IsOwned).ToDictionary(pair => pair.Identity, pair => pair.Cell);
         var known = snapshot.MaterialAuthority.KnownSlots.ToHashSet();
         var archives = ReadAgreedArchives(bindings, snapshot, simulator, known);
-        var desired = Enumerable.Range(0, snapshot.Grid.CellCount).Select(registry.ResolveCell).ToArray();
-        ValidateDesired(desired, owners, registry);
+        var desired = registry.DesiredCells;
+        ValidateDesired(desired.Values, owners, registry);
 
         var pending = new Queue<int>();
-        for (int cell = 0; cell < desired.Length; cell++)
+        for (int cell = 0; cell < snapshot.Grid.CellCount; cell++)
         {
             var expected = new FireSimMaterialIdentity(snapshot.TargetIds[cell], snapshot.SlotIds[cell]);
-            if (desired[cell].Owner is { } owner)
+            if (desired.TryGetValue(cell, out var resolved) && resolved.Owner is { } owner)
             {
                 if (expected != new FireSimMaterialIdentity(owner.TargetId, owner.SlotId)) pending.Enqueue(cell);
                 continue; // Same active slot retains exact GPU state, even when its declared fresh fuel differs.
             }
-            var baseline = registry.CreateBaselineRequest(cell, expected);
-            if (expected.IsOwned || !SameStaticBaseline(snapshot, baseline)) pending.Enqueue(cell);
+            if (expected.IsOwned || !SameStaticBaseline(snapshot, cell, registry.GetBaselineDefinition(cell))) pending.Enqueue(cell);
         }
         if (pending.Count == 0) return null;
 
@@ -61,7 +63,7 @@ internal static class TimberbornDesiredMaterialReconciliation
         {
             if (requests.ContainsKey(cell)) continue;
             var expected = new FireSimMaterialIdentity(snapshot.TargetIds[cell], snapshot.SlotIds[cell]);
-            if (desired[cell].Owner is not { } owner)
+            if (!desired.TryGetValue(cell, out var resolved) || resolved.Owner is not { } owner)
             {
                 requests.Add(cell, registry.CreateBaselineRequest(cell, expected));
                 continue;
@@ -83,9 +85,9 @@ internal static class TimberbornDesiredMaterialReconciliation
         return new(checked(snapshot.MaterialAuthority.LastAttemptToken + 1), requests.Values);
     }
 
-    private static bool SameStaticBaseline(FireSimSnapshot snapshot, FireSimMaterialHandoffRequest baseline) =>
-        ((uint)snapshot.Cells[baseline.CellIndex] & StaticCellMask) == (baseline.PackedMaterial & StaticCellMask) &&
-        (snapshot.CompanionFields[baseline.CellIndex] & StaticCompanionMask) == (baseline.CompanionMaterial & StaticCompanionMask);
+    private static bool SameStaticBaseline(FireSimSnapshot snapshot, int cell, FireSimBaselineDefinition baseline) =>
+        ((uint)snapshot.Cells[cell] & StaticCellMask) == (baseline.PackedMaterial & StaticCellMask) &&
+        (snapshot.CompanionFields[cell] & StaticCompanionMask) == (baseline.CompanionMaterial & StaticCompanionMask);
 
     private static void ValidateDesired(IEnumerable<TimberbornResolvedMaterialCell> cells,
         IReadOnlyDictionary<Guid, OwnedBodyRetention> owners, TimberbornNativeMaterialRegistry registry)
