@@ -53,3 +53,19 @@ dotnet test tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj \
   --filter 'FullyQualifiedName~NativeWardenDistrictLifecycleTests|FullyQualifiedName~NativeLifecycleInvalidationTests|FullyQualifiedName~NativeResourceTransactionTests'
 dotnet test tests/Wildfire.Timberborn.Tests/Wildfire.Timberborn.Tests.csproj
 ```
+
+## Best-effort cleanup diagnostic
+
+Follow-up source `5e8a65f` retains the original swallowed observer exception in one best-effort warning:
+
+```text
+wildfire_warden_equipment_lifecycle status=indeterminate operation=unregister_district error=<original exception and stack>
+```
+
+The shared guard is invalidated before formatting or logging. The existing `_exited` latch prevents repeat attempts; a failed formatter, throwing logger or logger reentry cannot escape native death/deletion. There is no persisted cause ledger or additional notification state. The existing generic recovery notification remains separate.
+
+The production constructor is unchanged. Installed Bindito `ConstructorRetriever` scans `Instance|Public|NonPublic` constructors (flags 52) and rejects multiple parameterful constructors, so an internal test constructor would not be safe. An actual native `GetEligibleConstructor` regression verifies the sole existing public coordinator constructor remains selected. The warning uses the existing `UnityTimberbornFireLogSink.Warning` through a private delegate; native fixtures replace that delegate and never call unsupported Unity logging methods.
+
+The original missing-diagnostic run failed its three new recording/logger cases while the native constructor check passed. Expanded validation covers the exact original exception/stack, throwing and reentrant loggers through actual `Character.KillCharacter` and `EntityComponent.Delete`, and exception-formatting failure. Focused lifecycle/resource tests: **35 passed**. Logs: `/tmp/wildfire-warden-district-lifecycle/diagnostic-{red,green,full-native}.log`.
+
+Full native suite on `5e8a65f`: **1,343 passed, zero failures or skips**. No engine/deployment action was taken for the diagnostic follow-up.
