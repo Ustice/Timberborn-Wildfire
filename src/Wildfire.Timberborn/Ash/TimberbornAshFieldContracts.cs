@@ -60,34 +60,6 @@ public readonly record struct TimberbornAshGrowthApplicationResult(
     int FailedConsequenceCount,
     int UnsupportedGrowableCount);
 
-public interface ITimberbornAshGrowthAdapter
-{
-    TimberbornAshGrowthApplicationResult ApplyGrowthBonuses(
-        uint tick,
-        IReadOnlyList<TimberbornAshGrowthBonusRequest> requests);
-}
-
-public sealed class UnavailableTimberbornAshGrowthAdapter : ITimberbornAshGrowthAdapter
-{
-    public static readonly UnavailableTimberbornAshGrowthAdapter Instance = new();
-
-    private UnavailableTimberbornAshGrowthAdapter()
-    {
-    }
-
-    public TimberbornAshGrowthApplicationResult ApplyGrowthBonuses(
-        uint tick,
-        IReadOnlyList<TimberbornAshGrowthBonusRequest> requests)
-    {
-        if (requests is null)
-        {
-            throw new ArgumentNullException(nameof(requests));
-        }
-
-        throw new InvalidOperationException("Ash growth adapter is unavailable.");
-    }
-}
-
 public sealed record TimberbornAshFieldSnapshot(
     int PersistenceVersion,
     IReadOnlyList<TimberbornAshFieldEntry> Entries);
