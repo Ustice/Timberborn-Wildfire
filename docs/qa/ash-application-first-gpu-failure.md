@@ -47,3 +47,19 @@ Candidate/imported SHA256 `b6718ea1638d938549b02fd3a341e2bf99a0183403bdf9b1049db
 Both generated Metal (application branch at line523 onward) and embedded input bytecode (line1202 onward) now retain validation, landing evaluation, atmospheric mutation and receipt stores. This proves the structural candidate works for this one compiler/fixture; it does not identify the internal optimizer pass. The Simulate cache remains byte-identical to probe4. Broader seven-case application and shared shader regressions, and the final production source without the diagnostic pragma, remain required before adoption.
 
 Artifacts `/tmp/wildfire-ash-application-loop-merge-engine-probe5/` include exact shader/fixture, raw capture, full generated Apply/Simulate source and embedded disassembly, original caches, command and compiler logs. Apply cache66220bytes SHA256 `3b9ad3ad6ab3796876d69d8a29e56501c3b6f6af2ef7db2050443353eb0730af`; Simulate SHA256 `13ddb1b0aba2ecf22bd1d6a802e69cfd19f7c597589774cb4de4b96cb80aabd5`. The controller reported this pass before any broader run or production shader deployment.
+
+## Plain production candidate: full shared GPU regression pass
+
+Exact immutable source `d27b17385e9c9d50694dd9a4fcb488c45bfcee3b` was tested in a new detached checkout. Plain `FireSim.compute` SHA256 `97a49b3feaa9592803bb372108f70e21c2494c66c1a0e43089d3ee521fd6f5a7` contains the loop-merge change without any disassembly pragma. Final imported source matches it byte-for-byte. No fixtures or production rules were adjusted during validation.
+
+The sole controller ran the authorized stages sequentially with `WILDFIRE_RUN_UNITY_SHADER_HARNESS=1`, Unity6000.3.6f1, Release configuration:
+
+| Stage | Actual result |
+| --- | --- |
+| Original `AshApplicationShaderTests` |7 passed,0 failed,0 skipped|
+| `AshCollectionShaderTests` plus `ExternalChangeShaderTests` |9 passed,0 failed,0 skipped|
+| Complete `Wildfire.Shader.Tests` project |46 passed,0 failed,0 skipped|
+
+All processes exited0. The three stages retained101 actual captures. The original open-soil case returns `[0,4096,704643072,0]` and atmospheric848; competing applicants, ordered removal/collection, taint, invalid surface, malformed/reused requests and unchanged-field controls pass. The full suite also covers typed baseline/material handoffs and ordinary fire/transport behavior. Device events identify Metal/AppleM2Pro, supportedRandomWriteTargetCount8 and maxComputeBufferInputsCompute31. Across retained logs, no shader warning or UAV-limit warning was found.
+
+Evidence `/tmp/wildfire-ash-application-final-gpu-proof/`: `SUMMARY.json`, all stage commands/logs/TRX, `capture-index.json`, `shader-warning-audit.json`, and each fixture/capture/Unity log under `tmp/wildfire-shader-harness/`. The original failed6/7 run and four diagnostic failures remain preserved separately. This establishes the final plain source's behavior on the recorded compiler/device, not an identified internal compiler bug, Windows support, or native worker application. No shader deployment occurred during these tests; game/Unity processes were absent after completion and the controller released its engine lock.
