@@ -10,6 +10,14 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Validation](TEST_PLAN.md): portable checks, shader execution, native game QA, and evidence.
 - [GitHub Issues](https://github.com/Ustice/Timberborn-Wildfire/issues): active backlog and acceptance state.
 
+## Release validation evidence
+
+- [Current-build live baseline](qa/live-current-build-baseline.md): verified deployment, ordinary GPU ticks, and tick-33 save/reload at `8cbeb19`.
+- [Fresh faction startup](qa/live-faction-startup.md): populated Folktails success and the Iron Teeth Warden preview failure on that build.
+- [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
+- [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
+- [Snapshot validation allocation](qa/snapshot-enum-allocation.md): measured optimization and limits of its small-grid comparison.
+
 ## Focused references
 
 - [Ash decisions](ash-simulation-model.md) and [steam decisions](steam-simulation-model.md).
