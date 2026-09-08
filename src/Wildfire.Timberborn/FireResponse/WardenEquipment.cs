@@ -10,7 +10,7 @@ using Timberborn.TemplateInstantiation;
 namespace Wildfire.Timberborn.FireResponse;
 
 /// <summary>A private native inventory, not a second water counter or a carrier delivery job.</summary>
-public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitializableEntity,
+public sealed partial class WardenEquipment : BaseComponent, IAwakableComponent, IInitializableEntity,
     IPostLoadableEntity, IDeletableEntity
 {
     public const string WaterId = "Water";

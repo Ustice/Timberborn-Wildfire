@@ -10,7 +10,7 @@ using Timberborn.WorldPersistence;
 
 namespace Wildfire.Timberborn.Compatibility;
 
-internal sealed class TimberbornWaterCreditContract
+internal sealed partial class TimberbornWaterCreditContract
 {
     private const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic;
     private readonly FieldInfo _entries, _target, _metric, _metrics, _inputs, _provider, _clean, _dirty, _worldEntities, _serialized, _removal;
@@ -40,6 +40,13 @@ internal sealed class TimberbornWaterCreditContract
         _serialized = Field(typeof(EntityLoader), "_serializedEntity", typeof(global::Timberborn.WorldSerialization.SerializedEntity));
         _waterKey = Static<ComponentKey>("WaterInputKey");
         _cleanKey = Static<PropertyKey<float>>("CleanWaterAmountKey"); _dirtyKey = Static<PropertyKey<float>>("ContaminatedWaterAmountKey");
+        _inputWaterService = Field(typeof(WaterInput), "_waterService");
+        _inputMap = Field(typeof(WaterInput), "_threadSafeWaterMap");
+        _inputCreditService = Field(typeof(WaterInput), "_waterInputService", typeof(WaterInputService));
+        _waterServiceType = typeof(global::Timberborn.WaterSystem.IWaterService).Assembly.GetType("Timberborn.WaterSystem.WaterService", true)!;
+        _mapType = typeof(global::Timberborn.WaterSystem.IThreadSafeWaterMap).Assembly.GetType("Timberborn.WaterSystem.ThreadSafeWaterMap", true)!;
+        _serviceChanges = Field(_waterServiceType, "_waterChangeService");
+        WaterUnit = ReadNativeWaterUnit();
     }
     private static FieldInfo Field(Type owner, string name, Type? expected = null)
     {
@@ -110,6 +117,7 @@ internal sealed class TimberbornWaterCreditContract
         ["Timberborn.Persistence.dll"] = "d62b8712b75211682eb0cad07af993cd3b0ff6cbc7d8e080288b6d2cbdd26c5e",
         ["Timberborn.WaterBuildings.dll"] = "f006ae2661e3c3682cb55cba4ee75c58f1ebff7c9028edc775c823490c9106f3",
         ["Timberborn.WaterSystem.dll"] = "0680fd336e1d33ac7107b8a4f7d5e47f0535cd0d998c6654086ade44d8bebe20",
+        ["Timberborn.WaterWorkshops.dll"] = "322f0974802d582bf2fcc27ed03ad00a6c6445fdf464e9f5a4a5015688e7ac3a",
         ["Timberborn.EntitySystem.dll"] = "c198cf97f6c57a50117c2593a686aa7874cd8eeb567fd25f3409e18d29a0635e",
         ["Timberborn.BaseComponentSystem.dll"] = "0d479b9533880e1368b5df144f8d83f30d9c8774cfc8f96f071ac53d5851318d",
         ["Timberborn.BlockSystem.dll"] = "49aef9433b68891abbeb9fc12c91f5932220b501d19b63b4e059110abd2baec1",

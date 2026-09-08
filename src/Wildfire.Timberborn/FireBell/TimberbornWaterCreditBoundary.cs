@@ -8,7 +8,7 @@ using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.FireBell;
 
-// Deliberately no configurator: native creation and complete load must supply this exact boundary.
+// Game bindings preserve this exact boundary for explicit QA sources and complete native restore.
 internal sealed class TimberbornWaterCreditBoundary : IPostLoadableSingleton
 {
     private readonly ITickableSingleton _tick;
@@ -43,6 +43,11 @@ internal sealed class TimberbornWaterCreditBoundary : IPostLoadableSingleton
     }
     internal bool CanRead => Environment.CurrentManagedThreadId == _thread && !resources.IsIndeterminate;
     private bool ThreadReady => Environment.CurrentManagedThreadId == _thread && !scheduler.IsStartingParallelTick && scheduler.ParalleTicklIsFinished;
+    internal bool CanFill(NativeResourceCoordinator candidate) => ReferenceEquals(resources, candidate) &&
+        ThreadReady && !resources.IsIndeterminate && Installed;
+    internal bool TryCaptureIntake(TimberbornNaturalWaterSource source, out TimberbornWaterCreditContract.CleanIntake intake) =>
+        Contract!.TryCaptureCleanIntake(source.Input, original, out intake);
+    internal bool MatchesIntake(TimberbornWaterCreditContract.CleanIntake intake) => Contract!.MatchesCleanIntake(intake, original);
     private void RefuseAll() { foreach (var source in _sources) source.Refuse(); }
     private bool EnsureContract()
     {
@@ -114,6 +119,7 @@ internal sealed class TimberbornWaterCreditBoundary : IPostLoadableSingleton
             }
             original.Tick(); // Same native service, exactly once; exceptions retain partial native state and poison.
         });
+        resources.CollectNaturalWater(); // Settled native singleton phase; each collector owns its existing resource operation.
     }
     // Never provisioned/injected: SingletonListener must not discover a second scheduled invocation.
     private sealed class CreditTick : ITickableSingleton

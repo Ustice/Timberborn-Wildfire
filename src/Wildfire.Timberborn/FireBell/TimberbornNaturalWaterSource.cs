@@ -6,10 +6,11 @@ using Timberborn.WaterBuildings;
 using Timberborn.WorldPersistence;
 using UnityEngine;
 using Wildfire.Timberborn.Compatibility;
+using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.FireBell;
 
-// Inactive: only an explicit future source template may create this component.
+// Created only by explicit QA source setup; persistent native ownership is not a public responder policy.
 internal sealed class TimberbornNaturalWaterSource : BaseComponent,
     IAwakableComponent, IPersistentEntity, IDeletableEntity, IPrePlacementChangeListener
 {
@@ -52,6 +53,13 @@ internal sealed class TimberbornNaturalWaterSource : BaseComponent,
     internal bool Active => _block.IsFinished && _block.AddedToService;
     internal bool Ready => _armed && !_tainted && boundary.CanRead && boundary.Installed &&
         Active && MatchesIdentity(boundary.Contract!) && boundary.Exclusive(this, _coordinate);
+    internal bool TryCaptureCleanIntake(NativeResourceCoordinator resources, out TimberbornWaterCreditContract.CleanIntake intake)
+    {
+        intake = default;
+        return boundary.CanFill(resources) && Ready && boundary.TryCaptureIntake(this, out intake);
+    }
+    internal bool MatchesCleanIntake(NativeResourceCoordinator resources, TimberbornWaterCreditContract.CleanIntake intake) =>
+        boundary.CanFill(resources) && Ready && ReferenceEquals(Input, intake.Input) && boundary.MatchesIntake(intake);
     private bool NativeIdentity(TimberbornWaterCreditContract contract) =>
         Entity && Entity.Initialized && !Entity.Deleted && _block &&
         GetComponentsAllocating<WaterInput>().Count == 1 && ReferenceEquals(GetComponent<WaterInput>(), Input) &&
