@@ -96,6 +96,56 @@ public sealed class NativeAshApplicationTransactionTests
         transaction.ThrowIfSaveUnsafe();
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CaughtLifecycleInvalidationDuringAppliedCommitCannotReturnSuccess(bool throwAfterInvalidation)
+    {
+        var transaction = new NativeResourceTransaction();
+        var original = new IOException("native teardown failed after applied stock mutation");
+        int consumed = 0;
+        var error = Assert.Throws<FireSimStepInputException>(() => transaction.TryApplyCleanAsh(
+            new Simulator(), new(0, 2), _ =>
+            {
+                transaction.RequireAshApplicationCommit();
+                consumed++;
+                transaction.InvalidateAfterLifecycleFailure();
+                Denied(transaction); // Even a still-open callback loses privilege once invalidated.
+                if (throwAfterInvalidation) throw original;
+            }));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, error.Outcome);
+        if (throwAfterInvalidation) Assert.Same(original, error.InnerException);
+        Assert.Equal(1, consumed);
+        Assert.True(transaction.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+        Denied(transaction);
+        transaction.ResetForWorldLoad(); // Finally released the outer latch and positive phase.
+        transaction.ThrowIfSaveUnsafe();
+        Denied(transaction);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LifecycleInvalidationCannotHideBehindRejectedReceiptOrNullAdmission(bool noAdmission)
+    {
+        var transaction = new NativeResourceTransaction();
+        int consumed = 0;
+        var simulator = new Simulator
+        {
+            NoCapacity = noAdmission,
+            Full = true,
+            BeforeApplication = transaction.InvalidateAfterLifecycleFailure
+        };
+        var error = Assert.Throws<FireSimStepInputException>(() =>
+            transaction.TryApplyCleanAsh(simulator, new(0, 2), _ => consumed++));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, error.Outcome);
+        Assert.Equal(0, consumed);
+        Assert.True(transaction.IsIndeterminate);
+        Denied(transaction);
+        Assert.Throws<InvalidOperationException>(transaction.ThrowIfSaveUnsafe);
+    }
+
     [Fact]
     public void CoordinatorUsesAttachedWorldAndForwardsItsExistingTransaction()
     {
@@ -132,7 +182,7 @@ public sealed class NativeAshApplicationTransactionTests
         public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commit) => throw new NotSupportedException();
         public bool NoCapacity, Full, ListenerFailure;
         public string? Corruption;
-        public Action? BeforeCommit;
+        public Action? BeforeCommit, BeforeApplication;
         public int Width => 1;
         public int Height => 1;
         public int Depth => 1;
@@ -151,6 +201,7 @@ public sealed class NativeAshApplicationTransactionTests
         public FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commit)
         {
             ApplicationCalls++;
+            BeforeApplication?.Invoke();
             var receipt = new FireSimAshApplicationReceipt(input.CellIndex, input.Limit,
                 (byte)(Full ? 0 : 1), Full ? FireSimAshApplicationOutcome.Full : FireSimAshApplicationOutcome.Applied);
             receipt = Corruption switch
