@@ -32,7 +32,7 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
 
     public bool TryFill(Inventory source, GoodReserver reserver)
     {
-        if (Loaded || !reserver.HasReservedStock || reserver.StockReservation.Inventory != source ||
+        if (Loaded || !Inventory.Enabled || !reserver.HasReservedStock || reserver.StockReservation.Inventory != source ||
             !source.Enabled || !Inventory.HasUnreservedCapacity(Bucket)) return false;
         var filled = false;
         _delivery.TransferInventory(() =>
@@ -40,6 +40,8 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
             reserver.UnreserveStock();
             if (!source.HasUnreservedStock(Bucket)) return;
             source.TakeExisting(Bucket);
+            if (!Inventory.Enabled || !Inventory.HasUnreservedCapacity(Bucket))
+                throw new InvalidOperationException("Warden equipment changed after native water pickup.");
             Inventory.GiveExisting(Bucket);
             filled = true;
         });
@@ -52,6 +54,8 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
         _delivery.TransferInventory(() =>
         {
             Inventory.TakeExisting(Bucket);
+            if (!destination.Enabled || !destination.HasUnreservedCapacity(Bucket))
+                throw new InvalidOperationException("Warden return destination changed after native water pickup.");
             destination.GiveExisting(Bucket);
         });
         return true;

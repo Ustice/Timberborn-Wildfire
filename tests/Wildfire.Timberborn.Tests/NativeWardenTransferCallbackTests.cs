@@ -25,10 +25,12 @@ public sealed partial class NativeWardenDistrictLifecycleTests
             $"Known callback-invalidated transfer reported {returned}; failure={failure?.GetType().Name ?? "none"}, destinationWater={destinationWater}, save remained permitted={saveFailure is null}.");
         Assert.NotNull(failure);
         Assert.Null(returned);
+        Assert.Equal(0, destinationWater);
+        Assert.NotNull(saveFailure);
     }
 
     [Fact]
-    public void FullDestinationAfterTakeIsAlreadyRejectedByActualNativeCapacityCheck()
+    public void FullDestinationAfterTakeCannotOverfillOrRemainSaveSafe()
     {
         using var f = new Fixture();
         var destination = f.ReturnDestination();
@@ -50,6 +52,36 @@ public sealed partial class NativeWardenDistrictLifecycleTests
         Assert.Equal(1, f.Call(destination, "AmountInStock", "Water"));
         Assert.False(f.Poisoned);
         f.Call(f.Resources, "ThrowIfSaveUnsafe");
+    }
+
+    [Fact]
+    public void AlreadyDisabledReturnDestinationIsUnchangedAndSaveSafe()
+    {
+        using var f = new Fixture();
+        var destination = f.ReturnDestination();
+        f.Call(destination, "Disable");
+        Assert.False((bool)f.Call(f.Equipment, "TryReturn", destination)!);
+        Assert.Equal(1, f.Quantity);
+        Assert.Equal(0, f.Call(destination, "AmountInStock", "Water"));
+        Assert.False(f.Poisoned);
+        f.Call(f.Resources, "ThrowIfSaveUnsafe");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeReturnCallbackExceptionKeepsOriginalCauseAndNeverRefunds(bool afterGive)
+    {
+        using var f = new Fixture();
+        var destination = f.ReturnDestination();
+        var cause = new IOException("actual native inventory observer failed");
+        f.On(afterGive ? destination : f.Inventory, "InventoryChanged", () => throw cause);
+        var failure = Assert.Throws<TargetInvocationException>(() => f.Call(f.Equipment, "TryReturn", destination));
+        Assert.Same(cause, failure.InnerException);
+        Assert.True(f.Poisoned);
+        Assert.Equal(0, f.Quantity);
+        Assert.Equal(afterGive ? 1 : 0, f.Call(destination, "AmountInStock", "Water"));
+        Assert.Throws<TargetInvocationException>(() => f.Call(f.Resources, "ThrowIfSaveUnsafe"));
     }
 
     private sealed partial class Fixture
