@@ -63,7 +63,9 @@ internal sealed class TimberbornOwnedStorageBurnSink
                 throw new InvalidOperationException("Native storage returned an inconsistent consumption receipt.");
             if (removal.RemovedAmount > 0) actual.Add(requested with { Amount = removal.RemovedAmount });
             if (removal.Status == TimberbornOwnedInventoryStatus.NotLive) { notLive++; break; }
-            if (removal.Status != TimberbornOwnedInventoryStatus.Available) { unavailable++; break; }
+            // Original topology is revalidated by Consume. A newly disabled inventory cannot
+            // prevent later eligible withdrawals that already own part of this fixed plan.
+            if (removal.Status == TimberbornOwnedInventoryStatus.Unavailable) unavailable++;
         }
         var hazardous = plan.Hazards(actual);
         var hazards = TimberbornStoredGoodHazardConsequenceResult.Empty;

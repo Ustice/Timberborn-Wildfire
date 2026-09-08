@@ -57,6 +57,46 @@ public sealed class DeclaredStorageEffectsTests
         Assert.Equal(new[] { Output, Input }, api.Calls.Select(call => call.Declaration));
     }
 
+    [Theory]
+    [InlineData(false, 2, 3)]
+    [InlineData(true, 1, 2)]
+    public void DisabledMiddleInventoryDoesNotHideLastPlannedWithdrawalButOwnerDeletionStillStops(
+        bool ownerGone, int removed, int attempted)
+    {
+        var store = new TimberbornInventoryDeclaration(TimberbornNativeInventoryRole.Stockpile, "Store");
+        var owner = new TimberbornOwnedStorageRegistration(Id, NativeBurnTargetFamily.Stockpile, [store, Output, Input]);
+        var api = new Api { Good = "Dynamite" };
+        api.Stock[store] = 1; api.Stock[Input] = 1;
+        api.After = () => { if (ownerGone) api.OwnerGone = true; else api.Disabled.Add(Output); };
+        var sink = new TimberbornOwnedStorageBurnSink(api, api, Catalog, _ => owner);
+        var result = sink.ApplyOwnedConsequences(1, [Decision(6) with { TargetKey = owner.TargetKey, Family = owner.Family }]);
+        Assert.Equal(removed, result.Removed); Assert.Equal(removed, result.Hazardous);
+        Assert.Equal(ownerGone ? 0 : 1, result.Unavailable); Assert.Equal(ownerGone ? 1 : 0, result.NotLive);
+        Assert.Equal(attempted, api.Calls.Count);
+        Assert.Equal(ownerGone ? new[] { store, Output } : new[] { store, Output, Input }, api.Calls.Select(call => call.Declaration));
+        Assert.Equal(1, api.Stock[Output]); Assert.Equal(ownerGone ? 1 : 0, api.Stock[Input]);
+        Assert.Equal(removed, api.Hazards.Sum(stack => stack.Amount));
+        Assert.Equal(1, api.Reads); Assert.False(sink.HasTransientFuelCredit); // No re-read, refund or another selector pass.
+    }
+
+    [Fact]
+    public void TopologyFailureAfterFirstWithdrawalStillPoisonsWithoutTryingLastOrPublishingHazards()
+    {
+        var store = new TimberbornInventoryDeclaration(TimberbornNativeInventoryRole.Stockpile, "Store");
+        var owner = new TimberbornOwnedStorageRegistration(Id, NativeBurnTargetFamily.Stockpile, [store, Output, Input]);
+        var api = new Api { Good = "Dynamite" }; api.Stock[store] = 1; api.Stock[Input] = 1;
+        var cause = new InvalidOperationException("original native topology changed");
+        api.After = () => api.ConsumptionFailure = cause;
+        var sink = new TimberbornOwnedStorageBurnSink(api, api, Catalog, _ => owner);
+        var guard = new Wildfire.Timberborn.Resources.NativeResourceTransaction();
+        Assert.Same(cause, Assert.Throws<InvalidOperationException>(() => guard.TransferInventory(() =>
+            sink.ApplyOwnedConsequences(1, [Decision(6) with { TargetKey = owner.TargetKey, Family = owner.Family }]))));
+        Assert.Equal(store, Assert.Single(api.Calls).Declaration);
+        Assert.Equal(0, api.Stock[store]); Assert.Equal(1, api.Stock[Output]); Assert.Equal(1, api.Stock[Input]);
+        Assert.Empty(api.Hazards); Assert.True(guard.IsIndeterminate);
+        Assert.Throws<InvalidOperationException>(guard.ThrowIfSaveUnsafe);
+    }
+
     [Fact]
     public void MissingWitnessAndExplicitEmptyDeclarationsAreDifferent()
     {
@@ -122,6 +162,7 @@ public sealed class DeclaredStorageEffectsTests
         internal readonly List<(TimberbornInventoryDeclaration Declaration, int Amount)> Calls = [];
         internal IReadOnlyList<TimberbornStoredGoodHazardStack> Hazards = [];
         internal TimberbornOwnedInventoryRemoval? ReceiptOverride;
+        internal bool OwnerGone; internal Exception? ConsumptionFailure;
         internal int Reads; internal string Good = "Log"; internal Action? After; internal bool WrongTopology;
         public TimberbornOwnedInventorySnapshot Read(TimberbornOwnedStorageRegistration owner)
         {
@@ -132,6 +173,9 @@ public sealed class DeclaredStorageEffectsTests
         }
         public TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner, TimberbornInventoryDeclaration declaration, TimberbornStoredGoodStack requested)
         {
+            if (ConsumptionFailure is { } cause) throw cause;
+            if (OwnerGone) { Calls.Add((declaration, 0)); return new(TimberbornOwnedInventoryStatus.NotLive, 0); }
+            if (Disabled.Contains(declaration)) { Calls.Add((declaration, 0)); return new(TimberbornOwnedInventoryStatus.Unavailable, 0); }
             int amount = Math.Min(requested.Amount, Stock[declaration]); Stock[declaration] -= amount; Calls.Add((declaration, amount)); After?.Invoke();
             return ReceiptOverride ?? new(TimberbornOwnedInventoryStatus.Available, amount);
         }
