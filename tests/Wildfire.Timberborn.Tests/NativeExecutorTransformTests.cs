@@ -51,6 +51,7 @@ public sealed class NativeExecutorTransformTests
             ("Timberborn.EnterableSystem", "Enterer")
         }) components.Add(RuntimeHelpers.GetUninitializedObject(T(assembly, component)));
         components.Add(Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.FireResponse.WardenEquipment")!, resources)!);
+        components.Add(Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.FireBell.BorrowedDutyBehavior")!, resources, null, null)!);
 
         var transformType = native.LoadNative("UnityEngine.CoreModule").GetType("UnityEngine.Transform")!;
         // A reference sentinel only: no Unity liveness or transform.position call is fabricated.
