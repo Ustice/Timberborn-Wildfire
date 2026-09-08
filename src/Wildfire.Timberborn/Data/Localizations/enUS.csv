@@ -34,7 +34,7 @@ Wildfire.Warden.NoSafeReturn,No safe return route found. Any unused water is ret
 Wildfire.Warden.Reserve,Station water: {0}/{1},
 Wildfire.Warden.Worker,Assigned wardens: {0}/{1},
 Wildfire.Warden.Payload,Warden water: {0}/1,
-Wildfire.Warden.Coverage,Response radius: {0} tiles. A safe route and approach are required.,
+Wildfire.Warden.Coverage,Potential station coverage: {0}-tile radius. Highlighted surfaces still require a safe route and approach.,
 Wildfire.Ash.Ready,Ready to collect ash.,
 Wildfire.Ash.Approaching,Walking to clean ash.,
 Wildfire.Ash.Harvesting,Collecting clean ash.,

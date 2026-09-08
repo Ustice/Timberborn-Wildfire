@@ -66,6 +66,7 @@
       <HintPath>$(TimberbornManagedPath)/Timberborn.MapIndexSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.BuildingRange"><HintPath>$(TimberbornManagedPath)/Timberborn.BuildingRange.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.BlockSystem">
       <HintPath>$(TimberbornManagedPath)/Timberborn.BlockSystem.dll</HintPath>
       <Private>false</Private>

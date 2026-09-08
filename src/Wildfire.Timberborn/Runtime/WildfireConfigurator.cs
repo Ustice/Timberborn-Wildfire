@@ -56,6 +56,7 @@ public sealed class WildfireConfigurator : Configurator
         Bind<FireSafetyField>().AsSingleton();
         Bind<WardenTargetSelector>().AsSingleton();
         Bind<WardenStation>().AsTransient();
+        Bind<WardenStationRange>().AsTransient();
         Bind<WardenEquipment>().AsTransient();
         Bind<WardenExecutor>().AsTransient();
         Bind<WardenHelmetPresentation>().AsTransient();
@@ -100,6 +101,7 @@ public sealed class WildfireConfigurator : Configurator
         {
             TemplateModule.Builder builder = new();
             builder.AddDecorator<WildfireWardenStationSpec, WardenStation>();
+            builder.AddDecorator<WardenStation, WardenStationRange>();
             builder.AddDedicatedDecorator<WardenStation, Inventory>(_station);
             // Native public-input selection requires Emptiable's IInventoryValidator.
             builder.AddDecorator<WardenStation, Emptiable>();
