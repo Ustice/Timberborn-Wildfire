@@ -9,6 +9,7 @@ using Timberborn.MortalSystem;
 using Timberborn.ResourceCountingSystem;
 using Timberborn.TemplateInstantiation;
 using Wildfire.Timberborn.Resources;
+using Wildfire.Timberborn.Runtime;
 
 namespace Wildfire.Timberborn.Fertilizer;
 
@@ -18,6 +19,8 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
 {
     public const string InventoryName = "Wildfire.FertilizerSatchel";
     private readonly NativeResourceCoordinator _resources;
+    private readonly Action<string> _warn = new UnityTimberbornFireLogSink().Warning;
+    private bool _exited;
     private Citizen _citizen = null!;
     private Mortal _mortal = null!;
     private Character _character = null!;
@@ -47,12 +50,7 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
 
     public void InitializeEntity() => RestoreRegistration();
     public void PostLoadEntity() => RestoreRegistration();
-    public void DeleteEntity()
-    {
-        _citizen.ChangedAssignedDistrict -= OnDistrictChanged;
-        _character.Died -= OnDied;
-        CleanupDistrictForExit();
-    }
+    public void DeleteEntity() => CleanupDistrictForExit();
 
     /// <summary>The owning worker must prove arrival and own this exact non-consuming source reservation.</summary>
     public bool TryPickup(Inventory source, GoodReserver reserver, Action commitPhase)
@@ -132,41 +130,76 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
             throw new InvalidOperationException("Native callback replaced the fertilizer worker's reservation.");
     }
 
-    private void RestoreRegistration()
-    {
-        _resources.TransferInventory(() =>
-        {
-            Inventory.Enable();
-            RegisterDistrictCore();
-        });
-    }
+    private void RestoreRegistration() => UpdateRegistration(enableInventory: true);
 
-    private void OnDistrictChanged(object sender, ChangeAssignedDistrictEventArgs args) => RegisterDistrict();
+    private void OnDistrictChanged(object sender, ChangeAssignedDistrictEventArgs args)
+    {
+        // Native Citizen.OnDied can unassign before the satchel's own Died subscriber runs.
+        if (!_character.Alive) CleanupDistrictForExit();
+        else UpdateRegistration(enableInventory: false);
+    }
     private void OnDied(object sender, EventArgs args) => CleanupDistrictForExit();
 
-    private void RegisterDistrict() => _resources.TransferInventory(RegisterDistrictCore);
+    private void UpdateRegistration(bool enableInventory)
+    {
+        if (_exited) return;
+        if (!_character.Alive)
+        {
+            CleanupDistrictForExit();
+            return;
+        }
+        try
+        {
+            _resources.TransferInventory(() =>
+            {
+                if (enableInventory) Inventory.Enable();
+                RegisterDistrictCore();
+            });
+        }
+        catch
+        {
+            // A caught reentrant native district callback still invalidates its enclosing read/write.
+            _resources.InvalidateAfterLifecycleFailure();
+            throw;
+        }
+    }
 
     private void RegisterDistrictCore()
     {
+        if (_resources.IsIndeterminate) _resources.ThrowIfSaveUnsafe();
         UnregisterDistrict();
-        if (!_citizen.HasAssignedDistrict || _mortal.Dead || _mortal.ShouldDie) return;
-        _registry = _citizen.AssignedDistrict.GetComponent<DistrictInventoryRegistry>();
-        _counter = _citizen.AssignedDistrict.GetComponent<DistrictResourceCounter>();
+        if (_resources.IsIndeterminate) _resources.ThrowIfSaveUnsafe();
+        if (_exited || !_character.Alive || !_citizen.HasAssignedDistrict || _mortal.Dead || _mortal.ShouldDie) return;
+        var district = _citizen.AssignedDistrict;
+        _registry = district.GetComponent<DistrictInventoryRegistry>();
+        _counter = district.GetComponent<DistrictResourceCounter>();
         _registry.Add(Inventory);
+        if (_resources.IsIndeterminate || _exited || !_character.Alive || _mortal.Dead || _mortal.ShouldDie ||
+            !ReferenceEquals(_citizen.AssignedDistrict, district))
+            throw new InvalidOperationException("Fertilizer district registration changed during its native callback.");
         _counter.Add(_satchelCounter);
     }
 
     private void CleanupDistrictForExit()
     {
-        // Mortality/deletion must continue even after a prior unsafe resource mutation.
-        // Do not retry uncertain native writes or turn death into consumed/produced goods.
+        if (_exited) return;
+        _exited = true;
+        _citizen.ChangedAssignedDistrict -= OnDistrictChanged;
+        _character.Died -= OnDied;
+        // Native teardown must continue, without retrying uncertain or unguarded writes.
         if (_resources.IsIndeterminate) return;
         try { _resources.TransferInventory(UnregisterDistrict); }
-        catch
+        catch (Exception exception)
         {
             _resources.InvalidateAfterLifecycleFailure();
-            // Includes rejected reentrant cleanup: an enclosing read cannot still publish
-            // a safe snapshot after irreversible native death/deletion continued.
+            try
+            {
+                _warn($"wildfire_fertilizer_satchel_lifecycle status=indeterminate operation=unregister_district error={exception}");
+            }
+            catch
+            {
+                // One best-effort diagnostic cannot prevent native death/delete or retry cleanup.
+            }
         }
     }
 

@@ -20,6 +20,10 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     private readonly object _serializer;
     private readonly Type _stock;
     private object? _registeredCounter;
+    internal object Character { get; private set; } = null!;
+    internal object Citizen { get; private set; } = null!;
+    internal readonly List<string> Warnings = new();
+    internal Action<string>? OnWarning;
     internal const string Good = "FertileAsh";
 
     internal NativeFertilizerSatchelFixture()
@@ -76,15 +80,47 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     }
     internal object ModelActorAwake()
     {
-        var character = RuntimeHelpers.GetUninitializedObject(T("Timberborn.Characters", "Character"));
+        if (Character is not null) return Character;
+        Character = Activator.CreateInstance(T("Timberborn.Characters", "Character"),
+            Activator.CreateInstance(T("Timberborn.SingletonSystem", "EventBus")), null, null)!;
         var mortal = RuntimeHelpers.GetUninitializedObject(T("Timberborn.MortalSystem", "Mortal"));
-        var citizen = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "Citizen"));
-        AttachCache(Satchel, Inventory, character, mortal, citizen);
+        Set(mortal, "_character", Character);
+        Citizen = RuntimeHelpers.GetUninitializedObject(T("Timberborn.GameDistricts", "Citizen"));
+        Set(Citizen, "_unassignedCitizenRegistry", Activator.CreateInstance(T("Timberborn.GameDistricts", "UnassignedCitizenRegistry")));
+        AttachCache(Satchel, Inventory, Character, mortal, Citizen);
+        Call(Citizen, "Awake"); // Actual native subscriber order: district unassignment precedes satchel OnDied.
         Call(Satchel, "Awake");
-        return character;
+        // Only the later diagnostic correction has a sink. No test calls Unity logging internals.
+        Satchel.GetType().GetField("_warn", Flags)?.SetValue(Satchel, (Action<string>)(message =>
+        {
+            Warnings.Add(message);
+            OnWarning?.Invoke(message);
+        }));
+        return Character;
+    }
+    internal void DeleteThroughNativeEntity(Action deletedEvent)
+    {
+        ModelActorAwake();
+        var type = T("Timberborn.EntitySystem", "EntityComponent");
+        var entity = RuntimeHelpers.GetUninitializedObject(type);
+        var state = type.GetField("_entityState", Flags)!;
+        state.SetValue(entity, Enum.Parse(state.FieldType, "Initialized"));
+        Set(entity, "<RegisteredComponents>k__BackingField",
+            Activator.CreateInstance(typeof(List<>).MakeGenericType(T("Timberborn.EntitySystem", "IRegisteredComponent"))));
+        Set(entity, "_entityComponentRegistry", RuntimeHelpers.GetUninitializedObject(T("Timberborn.EntitySystem", "EntityComponentRegistry")));
+        var bus = Activator.CreateInstance(T("Timberborn.SingletonSystem", "EventBus"))!;
+        Set(bus, "_ready", true);
+        var subscriptions = bus.GetType().GetField("_subscriptions", Flags)!.GetValue(bus)!;
+        Call(subscriptions, "Add", T("Timberborn.EntitySystem", "EntityDeletedEvent"), this,
+            (Action<object>)(_ => deletedEvent()));
+        Set(entity, "_eventBus", bus);
+        AttachCache(entity, Satchel, Inventory, Character, Citizen);
+        Call(entity, "Delete");
+        Assert.True((bool)Get(entity, "Deleted")!);
     }
     internal void ModelDistrictRegistration()
     {
+        ModelActorAwake();
         var counter = Activator.CreateInstance(T("Timberborn.ResourceCountingSystem", "DistrictResourceCounter"))!;
         _registeredCounter = counter;
         Call(counter, "Add", Satchel.GetType().GetField("_satchelCounter", Flags)!.GetValue(Satchel));
@@ -157,7 +193,7 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
         var map = Activator.CreateInstance(mapType)!;
         var readOnlyType = T("Timberborn.Common", "ReadOnlyList`1").MakeGenericType(typeof(object));
         var readOnly = Activator.CreateInstance(readOnlyType, Flags, null, [list], null)!;
-        foreach (var type in components.Select(component => component.GetType()).Distinct())
+        foreach (var type in components.Select(component => component.GetType()).Append(T("Timberborn.EntitySystem", "IDeletableEntity")).Distinct())
             mapType.GetMethod("CacheType")!.MakeGenericMethod(type).Invoke(map, [readOnly]);
         Set(cache, "_components", list);
         Set(cache, "_typeIndexMap", map);

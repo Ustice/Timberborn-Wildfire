@@ -301,11 +301,11 @@ public sealed class NativeFertilizerSatchelTests
         f.ModelDistrictRegistration();
         var eventField = character.GetType().GetField("Died", NativeFertilizerSatchelFixture.Flags)!;
         var handlers = (Delegate)eventField.GetValue(character)!;
-        Assert.Single(handlers.GetInvocationList());
+        Assert.Equal(2, handlers.GetInvocationList().Length); // Citizen first, then satchel.
         handlers.DynamicInvoke(character, EventArgs.Empty); // Drive the real subscribed handler, not native mortality itself.
         Assert.Equal(0, f.RegisteredProcessors);
         f.Call(f.Satchel, "DeleteEntity");
-        Assert.Null(eventField.GetValue(character));
+        Assert.Single(((Delegate)eventField.GetValue(character)!).GetInvocationList()); // Native Citizen remains subscribed.
         Assert.Equal(1, f.Quantity(f.Inventory));
         Assert.Equal(0, f.Consumption);
         Assert.False(f.Poisoned);
