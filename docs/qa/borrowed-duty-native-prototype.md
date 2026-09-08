@@ -1,8 +1,8 @@
 # Borrowed duty native prototype
 
-This is a development-only workforce experiment for the Folktails Fire Bell decision. It does not adopt the unresolved donor/communal policy or implement water collection, suppression, bell art, alarms, gear, or a player interface.
+This report records the original development-only workforce experiment for the Folktails Fire Bell decision. It does not adopt the unresolved donor/communal policy or implement water collection, suppression, bell art, alarms, gear, or a player interface.
 
-Current additional source: [inactive borrowed-water return recovery](borrowed-water-return-recovery.md). The empty-trip protocol and historical evidence below remain intact; the new return binding does not activate water collection or suppression.
+Current additional source: [connected finite water sortie](folktails-finite-water-sortie.md), including native source creation, pickup, shared water dispatch and [return recovery](borrowed-water-return-recovery.md). The empty-trip protocol and historical evidence below remain intact; positive physical water-trip acceptance is still pending.
 
 ## Implemented boundary
 
