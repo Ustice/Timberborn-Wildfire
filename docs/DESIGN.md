@@ -15,6 +15,7 @@ Completion requires evidence from the packaged mod in the target game version:
 - Both factions can prepare for, detect, contain, and recover from a fire through normal player controls. Prepared and unprepared settlements produce understandable differences.
 - Natural ignition is explainable, conservatively bounded at settlement scale, and paced against measured detection, mobilization, travel, and suppression times.
 - Responders obtain and spend water consistently, handle unreachable or extinguished targets, retreat from danger, and resume normal work.
+- Interrupted Folktails responders can recover an unused bucket through native work arbitration, including after reload. Retaining water without a way to return or reuse it is incomplete recovery. Missing or full return storage preserves the cargo and permits a later recovery attempt; cancellation does not automatically resume the abandoned fire application.
 - Save/reload during response and aftermath preserves accepted durable state without duplicating water, goods, ash, or consequences. Disable/re-enable behavior is recoverable and documented.
 - Visuals and alerts explain fire, smoke, danger, response, and aftermath at ordinary play scales. Performance is measured on representative populated maps, including quiet and aftermath states.
 - A clean macOS installation of the release package passes the gameplay and persistence checks; player documentation, settings, diagnostics, attribution, and Workshop metadata match the verified artifact.
