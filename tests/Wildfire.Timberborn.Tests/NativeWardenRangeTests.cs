@@ -38,7 +38,7 @@ public sealed class NativeWardenRangeTests
     [InlineData(true, false)]
     [InlineData(false, false)]
     [InlineData(false, true)]
-    public void PreviewUnfinishedAndMissingAccessNeverQuerySurfaceServices(bool preview, bool finished)
+    public void UnpositionedPreviewUnfinishedAndMissingAccessNeverQuerySurfaceServices(bool preview, bool finished)
     {
         using var f = new Fixture();
         var state = RuntimeHelpers.GetUninitializedObject(f.T("Timberborn.BlockSystem", "BlockObjectState"));
