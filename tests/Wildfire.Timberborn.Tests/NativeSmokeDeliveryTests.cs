@@ -57,6 +57,25 @@ public sealed class NativeSmokeDeliveryTests
     }
 
     [Fact]
+    public void MissingOptionalWorkerAndStatusRemainSuccessfulNoOp()
+    {
+        var f = new NativeSmokeDeliveryFixture(); f.Add(A, status: false);
+        f.Dispatch(1, true, A); f.Dispatch(5, false, A);
+        Assert.Equal(false, Get(Assert.Single(f.History()), "IsExposed"));
+        Assert.Empty(f.Workers); Assert.Empty(f.Coughs);
+    }
+
+    [Fact]
+    public void ExplicitClearKeepsBestEffortStatusTeardownSeparateFromOrdinaryRecovery()
+    {
+        var f = new NativeSmokeDeliveryFixture(); f.Add(A); f.Dispatch(1, true, A);
+        f.OnToggle(A, () => throw new InvalidOperationException("renderer teardown"));
+        Call(f.Adapter, "Clear");
+        Assert.False(f.Active(A));
+        Assert.Empty((System.Collections.IDictionary)GetField(f.Adapter, "_statusTogglesByBeaverId")!);
+    }
+
+    [Fact]
     public void FinalSummaryFailureIsObservationalAfterNativeStatusAndHistoryComplete()
     {
         var f = new NativeSmokeDeliveryFixture(); f.Add(A);

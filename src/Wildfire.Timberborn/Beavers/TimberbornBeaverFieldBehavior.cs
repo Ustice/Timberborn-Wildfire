@@ -1,9 +1,3 @@
-using System.Reflection;
-using Timberborn.Beavers;
-using Timberborn.EntitySystem;
-using Timberborn.StatusSystem;
-using Timberborn.WorkSystem;
-
 namespace Wildfire.Timberborn.Beavers;
 
 public sealed class TimberbornBeaverFieldBehaviorOptions

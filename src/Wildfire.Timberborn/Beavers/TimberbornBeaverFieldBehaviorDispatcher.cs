@@ -234,22 +234,29 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         if (result.Status != TimberbornBeaverFieldBehaviorActuatorStatus.Applied)
         {
             _failedDecisions++;
-            throw new InvalidOperationException(
-                $"Beaver field behavior actuator failed {progressedDecision.Action} for {progressedDecision.BeaverId}: {result.Reason}.");
+            throw new TimberbornBeaverFieldDeliveryException(progressedDecision.BeaverId,
+                new InvalidOperationException($"Actuator returned failed: {result.Reason}."));
         }
 
-        _statesByBeaverId[decision.BeaverId] = new TimberbornBeaverFieldBehaviorStateEntry(
-            TimberbornBeaverFieldBehaviorStateEntry.CurrentPersistenceVersion,
-            progressedDecision.BeaverId,
-            progressedDecision.Variant,
-            progressedDecision.Action,
-            tick ?? 0,
-            exposedSamples,
-            fireHeatExposedSamples,
-            IsExposed: true);
-        _lastDecisionTick = tick;
-        CountAppliedVariant(progressedDecision);
-        CountSmokeProgression(progressedDecision, previousExposedSamples, exposedSamples);
+        try
+        {
+            _statesByBeaverId[decision.BeaverId] = new TimberbornBeaverFieldBehaviorStateEntry(
+                TimberbornBeaverFieldBehaviorStateEntry.CurrentPersistenceVersion,
+                progressedDecision.BeaverId,
+                progressedDecision.Variant,
+                progressedDecision.Action,
+                tick ?? 0,
+                exposedSamples,
+                fireHeatExposedSamples,
+                IsExposed: true);
+            _lastDecisionTick = tick;
+            CountAppliedVariant(progressedDecision);
+            CountSmokeProgression(progressedDecision, previousExposedSamples, exposedSamples);
+        }
+        catch (Exception exception)
+        {
+            throw new TimberbornBeaverFieldDeliveryException(decision.BeaverId, exception);
+        }
         return true;
     }
 
@@ -272,20 +279,27 @@ public sealed class TimberbornBeaverFieldBehaviorDispatcher
         if (result.Status != TimberbornBeaverFieldBehaviorActuatorStatus.Applied)
         {
             _failedDecisions++;
-            throw new InvalidOperationException(
-                $"Beaver field behavior actuator failed recovery for {entry.BeaverId}: {result.Reason}.");
+            throw new TimberbornBeaverFieldDeliveryException(entry.BeaverId,
+                new InvalidOperationException($"Recovery actuator returned failed: {result.Reason}."));
         }
 
-        _statesByBeaverId[entry.BeaverId] = entry with
+        try
         {
-            IsExposed = false,
-            ConsecutiveExposedSamples = RecoverySmokeExposedSamples(entry.ConsecutiveExposedSamples),
-            ConsecutiveFireHeatExposedSamples =
-                RecoveryFireHeatExposedSamples(entry.ConsecutiveFireHeatExposedSamples),
+            _statesByBeaverId[entry.BeaverId] = entry with
+            {
+                IsExposed = false,
+                ConsecutiveExposedSamples = RecoverySmokeExposedSamples(entry.ConsecutiveExposedSamples),
+                ConsecutiveFireHeatExposedSamples =
+                    RecoveryFireHeatExposedSamples(entry.ConsecutiveFireHeatExposedSamples),
             };
-        _recoveryActions++;
-        CountSmokeRecovery(entry, _statesByBeaverId[entry.BeaverId].ConsecutiveExposedSamples);
-        CountFireHeatRecovery(entry, _statesByBeaverId[entry.BeaverId].ConsecutiveFireHeatExposedSamples);
+            _recoveryActions++;
+            CountSmokeRecovery(entry, _statesByBeaverId[entry.BeaverId].ConsecutiveExposedSamples);
+            CountFireHeatRecovery(entry, _statesByBeaverId[entry.BeaverId].ConsecutiveFireHeatExposedSamples);
+        }
+        catch (Exception exception)
+        {
+            throw new TimberbornBeaverFieldDeliveryException(entry.BeaverId, exception);
+        }
     }
 
     private void CountAppliedVariant(TimberbornBeaverFieldBehaviorDecision decision)

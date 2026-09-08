@@ -69,7 +69,7 @@ public sealed partial class TimberbornBeaverFieldBehaviorTests
         var failed = new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Failed);
         var dispatcher = new TimberbornBeaverFieldBehaviorDispatcher(failed, new RecordingFireLogSink());
         var batch = Snapshot([Classification("a-smoke", respiratory: 1), Classification("z-smoke", respiratory: 1)]);
-        Assert.Throws<InvalidOperationException>(() => dispatcher.Dispatch(batch, 10));
+        Assert.Throws<TimberbornBeaverFieldDeliveryException>(() => dispatcher.Dispatch(batch, 10));
         Assert.Single(failed.Decisions);
         Assert.Equal(1, dispatcher.Counters.FailedDecisions);
         Assert.Equal(0, dispatcher.Counters.UnsupportedDecisions);
@@ -83,7 +83,7 @@ public sealed partial class TimberbornBeaverFieldBehaviorTests
         Assert.Equal(0, dispatcher.Counters.SmokeDecisionsApplied);
         Assert.Empty(dispatcher.CaptureState().Entries);
         // No retry is performed by this dispatch. Cross-dispatch uncertain mutation protection
-        // belongs to the later native injury transaction boundary, not this capability correction.
+        // belongs to the native adapter delivery classification tested in NativeSmokeDeliveryTests.
     }
 
     private sealed class MutatingThrowingActuator : ITimberbornBeaverFieldBehaviorActuator

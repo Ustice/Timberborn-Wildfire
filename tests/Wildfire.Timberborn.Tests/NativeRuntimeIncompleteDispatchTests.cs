@@ -37,7 +37,7 @@ public sealed partial class NativeRuntimeIncompleteDispatchTests
         Assert.IsType<ArgumentNullException>(save.InnerException); // Guard admitted save; this fixture supplies no actual saver.
     }
 
-    private sealed class Fixture
+    private sealed partial class Fixture
     {
         private readonly NativeManagedTestContext _native = NativeManagedTestContext.ProxyContracts;
         internal readonly TimberbornIncompleteDispatchTests.Simulator Simulator = new();

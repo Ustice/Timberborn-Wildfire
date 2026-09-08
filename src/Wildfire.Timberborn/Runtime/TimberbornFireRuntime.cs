@@ -306,10 +306,18 @@ public sealed partial class TimberbornFireRuntime :
             _beaverFieldBehaviorDispatcher.Dispatch(beaverExposure, tick);
             _playerFireAlerts.PublishBeaverBehavior(tick, _beaverFieldBehaviorDispatcher.Counters);
         }
+        catch (TimberbornBeaverFieldDeliveryException)
+        {
+            throw; // Existing dispatch guard owns incomplete native/history delivery.
+        }
         catch (Exception exception)
         {
-            _logSink.Warning(
-                $"wildfire_timberborn_beaver_field_behavior_dispatch_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+            try
+            {
+                _logSink.Warning(
+                    $"wildfire_timberborn_beaver_field_behavior_dispatch_failed tick={tick} message={TimberbornQaCommandBridge.FormatToken(exception.Message)}");
+            }
+            catch { /* Observation/preflight diagnostic failure cannot invalidate completed actor state. */ }
         }
     }
 

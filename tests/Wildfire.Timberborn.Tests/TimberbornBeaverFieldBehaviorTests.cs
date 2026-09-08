@@ -336,10 +336,10 @@ public sealed partial class TimberbornBeaverFieldBehaviorTests
             new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Failed),
             new RecordingFireLogSink());
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+        TimberbornBeaverFieldDeliveryException exception = Assert.Throws<TimberbornBeaverFieldDeliveryException>(() =>
             dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10));
 
-        Assert.Contains("Beaver field behavior actuator failed", exception.Message);
+        Assert.Contains("Actuator returned failed", exception.InnerException!.Message);
         Assert.Equal(1, dispatcher.Counters.DecisionsEvaluated);
         Assert.Equal(0, dispatcher.Counters.TrackedBeaverCount);
     }
@@ -432,42 +432,6 @@ public sealed partial class TimberbornBeaverFieldBehaviorTests
             TaintedAftermathCells: 0,
             MaxFire: 0f,
             Tick: tick);
-    }
-
-    [Fact]
-    public void SmokeStatusCleanupToleratesTimberbornRendererTeardown()
-    {
-        string source = ReadTimberbornSource("TimberbornBeaverFieldBehavior.cs");
-
-        Assert.Contains("TryDeactivate(_coughingStatus)", source, StringComparison.Ordinal);
-        Assert.Contains("TryDeactivate(_chokingStatus)", source, StringComparison.Ordinal);
-        Assert.Contains("NullReferenceException or InvalidOperationException", source, StringComparison.Ordinal);
-    }
-
-    private static string ReadTimberbornSource(string fileName)
-    {
-        string root = FindRepoRoot();
-        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
-        string path = Directory
-            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
-            .First();
-        return File.ReadAllText(path);
-    }
-
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate Wildfire repo root.");
     }
 
     private sealed class RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus status) :
