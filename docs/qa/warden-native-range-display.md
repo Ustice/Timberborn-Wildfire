@@ -18,4 +18,6 @@ The first draft supports selection of placed, finished stations with native acce
 
 `NativeWardenRangeTests` passes 12 focused managed cases. It executes actual native template composition to prove exactly one range component and the game's preview updater; actual native terrain getters prove solid-versus-surface height; supplied native component state proves the early lifecycle exclusions without invoking rendering or surface services. Geometry cases include horizontal/vertical radius edges, a 12–16–20 diagonal, and an off-level exclusion. Candidate enumeration covers every in-range map column in its fixture.
 
+The full native suite passes 1,331 tests with zero failures or skips on source `bf8f574`. Logs: `/tmp/wildfire-warden-range-focused.log` and `/tmp/wildfire-warden-range-full.log`.
+
 These tests do not instantiate a complete native world or render the overlay. Live QA must select a placed station, inspect ground and platform coverage at visible-level boundaries, compare the 20-tile edge to an eligible target, inspect multiple-station union behavior, and confirm deselection/placement preview cleanup. A highlighted tree or tile is not proof that an actual responder can navigate safely to it. No engine, game, or deployment was run for this source change.
