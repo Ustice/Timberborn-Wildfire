@@ -34,8 +34,7 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
         MethodInfo? setter = WorkerSpeedMultiplierProperty?.GetSetMethod(nonPublic: true);
         if (worker is not null && setter is null)
             return UnsupportedSetter(); // No status has changed yet.
-        float current = worker is null ? 1f : worker.WorkingSpeedMultiplier;
-        float original = _originalWorkingSpeedMultiplierByBeaverId.TryGetValue(beaverId, out float saved) ? saved : current;
+        _ = worker is null ? 1f : worker.WorkingSpeedMultiplier; // Read-only preflight; callbacks can change it.
         bool register = !_statusTogglesByBeaverId.TryGetValue(beaverId, out var toggles);
         if (statusSubject is not null && register) toggles = TimberbornBeaverSmokeStatusToggles.Create();
 
@@ -48,9 +47,13 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
                 nativeStarted = true;
                 if (register) toggles!.Register(statusSubject);
                 toggles!.Apply(action);
+                worker = RefreshWorkerAfterStatus(entity, beaverId);
             }
             if (worker is not null)
             {
+                if (setter is null) throw new InvalidOperationException("Worker speed setter is unavailable after status callbacks.");
+                float current = worker.WorkingSpeedMultiplier;
+                float original = _originalWorkingSpeedMultiplierByBeaverId.TryGetValue(beaverId, out float saved) ? saved : current;
                 _originalWorkingSpeedMultiplierByBeaverId.TryAdd(beaverId, original);
                 nativeStarted = true;
                 setter!.Invoke(worker, new object[] { Math.Min(current, original * multiplier) });
@@ -82,9 +85,15 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
             {
                 nativeStarted = true;
                 toggles.DeactivateAll();
+                worker = RefreshWorkerAfterStatus(entity, beaverId);
             }
+            // Native callbacks may change both the speed and this adapter's cached baseline.
+            original = _originalWorkingSpeedMultiplierByBeaverId.TryGetValue(beaverId, out saved) ? saved : 1f;
+            restore = worker is not null && worker.WorkingSpeedMultiplier <=
+                original * TimberbornWorkerSpeedBeaverFieldBehaviorActuator.CoughingWorkingSpeedMultiplier + RestoreTolerance;
             if (restore)
             {
+                if (setter is null) throw new InvalidOperationException("Worker speed setter is unavailable after status callbacks.");
                 nativeStarted = true;
                 setter!.Invoke(worker, new object[] { original });
             }
@@ -95,6 +104,15 @@ public sealed class TimberbornEntityRegistryBeaverWorkerSpeedAdapter : ITimberbo
         {
             throw new TimberbornBeaverFieldDeliveryException(beaverId, exception);
         }
+    }
+
+    private Worker? RefreshWorkerAfterStatus(EntityComponent expectedEntity, string beaverId)
+    {
+        EntityComponent currentEntity = GetEntityOrThrow(beaverId);
+        if (!ReferenceEquals(currentEntity, expectedEntity))
+            throw new InvalidOperationException("Smoke actor changed during native status callbacks.");
+        currentEntity.TryGetComponent(out Worker worker);
+        return worker;
     }
 
     private static TimberbornBeaverWorkerSpeedResult UnsupportedSetter() => new(
