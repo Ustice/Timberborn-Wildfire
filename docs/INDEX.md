@@ -23,6 +23,7 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Shared fire walking](qa/shared-owned-fire-walk.md): three jobs share native path monitoring while preserving their phase, resource and save decisions; the extraction awaits live acceptance.
 - [Warden district lifecycle](qa/warden-district-lifecycle.md): native death and deletion continue after cleanup failures while the shared resource guard prevents inconsistent saves.
 - [Clean ash application](qa/clean-ash-application-receipt.md): exact conditional receipts, guarded consumption privilege and a full 46-test GPU pass; fertilizer worker adoption remains open.
+- [Inactive fertilizer satchel](qa/native-fertilizer-satchel.md): one native unit, exact reservations, persistence and teardown admission; [shared personal inventory registration](qa/personal-inventory-district-registration.md) centralizes the Warden/satchel lifecycle while preserving their admission rules.
 - [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
 - [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
 - [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
