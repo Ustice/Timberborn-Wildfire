@@ -63,7 +63,7 @@ public sealed class OwnedNativeRetirementTests
     [Fact]
     public void RetiredOwnerCannotBeResurrectedEvenAfterDirectBodyUpsert()
     {
-        var f = new F(); var owner = f.Registrations[0];
+        var f = new F(inventoryWitness:false); var owner = f.Registrations[0];
         f.Native.Live.Remove(owner.EntityId); f.Consumer.RetireNativeOwner(owner.EntityId);
         f.Damage.UpsertTarget(new(4, 2, 1), new(Key(owner), "Pine", [new(0, 0, 0)], 10));
         f.Native.Live.Add(owner.EntityId);

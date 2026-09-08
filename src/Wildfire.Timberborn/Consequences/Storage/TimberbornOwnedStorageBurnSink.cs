@@ -10,14 +10,21 @@ internal sealed class TimberbornOwnedStorageBurnSink
     private readonly ITimberbornStoredGoodHazardConsequenceSink _hazards;
     private readonly TimberbornResourceFuelCatalog _catalog;
     private readonly TimberbornStoredGoodFuelBudget _credit = new();
+    private readonly Func<TimberbornOwnedBurnDecision, TimberbornOwnedStorageRegistration?> _owner;
     internal TimberbornOwnedStorageBurnSink(ITimberbornOwnedStorageInventoryApi inventory,
-        ITimberbornStoredGoodHazardConsequenceSink hazards, TimberbornResourceFuelCatalog catalog)
-    { _inventory = inventory; _hazards = hazards; _catalog = catalog; }
+        ITimberbornStoredGoodHazardConsequenceSink hazards, TimberbornResourceFuelCatalog catalog,
+        Func<TimberbornOwnedBurnDecision, TimberbornOwnedStorageRegistration?> owner)
+    { _inventory = inventory; _hazards = hazards; _catalog = catalog; _owner = owner; }
     internal OwnedStorageCredit[] CaptureCredit(IReadOnlyList<OwnedConsequenceOwner> owners) => _credit.Capture(owners, _catalog);
     internal void RestoreCredit(TimberbornOwnedConsequenceSnapshot history) => _credit.Restore(history, _catalog);
     internal bool HasTransientFuelCredit => _credit.HasCredit;
     internal bool IsLive(TimberbornOwnedBurnDecision item) =>
-        _inventory.Read(Owner(item)).Status != TimberbornOwnedInventoryStatus.NotLive;
+        _owner(item) is not { } owner || ReadOwner(owner).Status != TimberbornOwnedInventoryStatus.NotLive;
+    internal void Preflight(IEnumerable<TimberbornOwnedBurnDecision> decisions)
+    {
+        foreach (var item in decisions.GroupBy(item => item.EntityId).Select(group => group.First()))
+            if (_owner(item) is { } owner) _ = ReadOwner(owner);
+    }
 
     internal TimberbornOwnedStorageEffects ApplyOwnedConsequences(uint tick, IReadOnlyList<TimberbornOwnedBurnDecision> decisions)
     {
@@ -34,18 +41,24 @@ internal sealed class TimberbornOwnedStorageBurnSink
     {
         var consequence = TimberbornStoredGoodBurnConsequence.FromDecision(tick, item.Decision);
         if (!consequence.ShouldBurnStoredGoods) return default;
-        var owner = Owner(item);
+        var owner = _owner(item);
+        if (owner is null) return new(0, Unavailable: 1, 0, 0, 0, 0, 0, 0);
         // Earlier owner callbacks may have removed this entity or changed its stock.
-        var inventory = _inventory.Read(owner);
+        var inventory = ReadOwner(owner);
         if (inventory.Status == TimberbornOwnedInventoryStatus.NotLive) return new(NotLive: 1, 0, 0, 0, 0, 0, 0, 0);
         if (inventory.Status != TimberbornOwnedInventoryStatus.Available) return new(0, Unavailable: 1, 0, 0, 0, 0, 0, 0);
-        var plan = TimberbornOwnedStoredGoodPlan.Create(owner, inventory.Stacks, consequence.BurnBudget, _credit, _catalog);
+        var available = inventory.Inventories.Where(row => row.Status == TimberbornOwnedInventoryStatus.Available).ToArray();
+        var stacks = available.SelectMany(row => row.Stacks).GroupBy(stack => stack.ResourceId, StringComparer.Ordinal)
+            .Select(group => new TimberbornStoredGoodStack(group.Key, group.Aggregate(0, (sum, stack) => checked(sum + stack.Amount)))).ToArray();
+        var plan = TimberbornOwnedStoredGoodPlan.Create(owner, stacks, consequence.BurnBudget, _credit, _catalog);
+        var withdrawals = SplitWithdrawals(plan.Requested, available);
         var actual = new List<TimberbornStoredGoodStack>();
-        int notLive = 0, unavailable = 0;
-        foreach (var requested in plan.Requested)
+        int notLive = 0, unavailable = inventory.Inventories.Count(row => row.Status != TimberbornOwnedInventoryStatus.Available);
+        foreach (var withdrawal in withdrawals)
         {
-            var removal = _inventory.Consume(owner, requested);
-            if (removal.RemovedAmount < 0 || removal.RemovedAmount > requested.Amount ||
+            var requested = withdrawal.Stack;
+            var removal = _inventory.Consume(owner, withdrawal.Declaration, requested);
+            if (!Enum.IsDefined(typeof(TimberbornOwnedInventoryStatus), removal.Status) || removal.RemovedAmount < 0 || removal.RemovedAmount > requested.Amount ||
                 (removal.Status != TimberbornOwnedInventoryStatus.Available && removal.RemovedAmount != 0))
                 throw new InvalidOperationException("Native storage returned an inconsistent consumption receipt.");
             if (removal.RemovedAmount > 0) actual.Add(requested with { Amount = removal.RemovedAmount });
@@ -63,16 +76,38 @@ internal sealed class TimberbornOwnedStorageBurnSink
             hazards.ExplosiveBlastTriggeredCount, hazards.ContaminationPulseCellCount, plan.UnknownResources, plan.NonBurnableItems);
     }
 
-    private static TimberbornOwnedStorageRegistration Owner(TimberbornOwnedBurnDecision item)
+    private TimberbornOwnedInventorySnapshot ReadOwner(TimberbornOwnedStorageRegistration owner)
     {
-        var role = item.Family switch
+        var snapshot = _inventory.Read(owner);
+        if (!Enum.IsDefined(typeof(TimberbornOwnedInventoryStatus), snapshot.Status) ||
+            (snapshot.Status != TimberbornOwnedInventoryStatus.Available && snapshot.Inventories.Count != 0))
+            throw new InvalidOperationException("Native inventory returned an invalid owner status.");
+        if (snapshot.Status != TimberbornOwnedInventoryStatus.Available) return snapshot;
+        if (!owner.Declarations.SequenceEqual(snapshot.Inventories.Select(row => row.Declaration)) ||
+            snapshot.Inventories.Any(row => row.Status is not (TimberbornOwnedInventoryStatus.Available or TimberbornOwnedInventoryStatus.Unavailable) ||
+                (row.Status != TimberbornOwnedInventoryStatus.Available && row.Stacks.Count != 0) ||
+                row.Stacks.Any(stack => string.IsNullOrWhiteSpace(stack.ResourceId) || stack.Amount <= 0) ||
+                row.Stacks.Select(stack => stack.ResourceId).Distinct(StringComparer.Ordinal).Count() != row.Stacks.Count))
+            throw new InvalidOperationException("Native inventory rows differ from the exact owner declarations or contain invalid stock.");
+        return snapshot;
+    }
+
+    internal static (TimberbornInventoryDeclaration Declaration, TimberbornStoredGoodStack Stack)[] SplitWithdrawals(
+        IReadOnlyList<TimberbornStoredGoodStack> selected, IReadOnlyList<TimberbornOwnedInventoryRow> inventories)
+    {
+        var result = new List<(TimberbornInventoryDeclaration, TimberbornStoredGoodStack)>();
+        foreach (var good in selected)
         {
-            NativeBurnTargetFamily.Stockpile => TimberbornOwnedInventoryRole.Stockpile,
-            NativeBurnTargetFamily.Structure => TimberbornOwnedInventoryRole.SimpleOutput,
-            _ => throw new InvalidOperationException("Non-storage family reached the owned storage sink."),
-        };
-        var owner = new TimberbornOwnedStorageRegistration(item.EntityId, role);
-        if (owner.TargetKey != item.TargetKey) throw new InvalidOperationException("Storage body identity differs from its inventory owner.");
-        return owner;
+            int remaining = good.Amount;
+            foreach (var row in inventories.OrderBy(row => row.Declaration.Role).ThenBy(row => row.Declaration.ComponentName, StringComparer.Ordinal))
+            {
+                int amount = Math.Min(remaining, row.Stacks.Where(stack => stack.ResourceId == good.ResourceId).Sum(stack => stack.Amount));
+                if (amount > 0) result.Add((row.Declaration, good with { Amount = amount }));
+                remaining -= amount;
+                if (remaining == 0) break;
+            }
+            if (remaining != 0) throw new InvalidOperationException("Selected owner stock exceeds captured named inventories.");
+        }
+        return result.ToArray();
     }
 }

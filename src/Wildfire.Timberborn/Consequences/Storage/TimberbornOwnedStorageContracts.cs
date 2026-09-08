@@ -1,36 +1,39 @@
 namespace Wildfire.Timberborn.Consequences;
 
-public enum TimberbornOwnedInventoryRole { Stockpile, SimpleOutput }
 public enum TimberbornOwnedInventoryStatus { Available, NotLive, Unavailable }
 
-/// <summary>The caller chooses one inventory role and canonical body damage state for a native owner.</summary>
+/// <summary>One canonical body and its complete original native inventory declarations.</summary>
 public sealed record TimberbornOwnedStorageRegistration
 {
-    public TimberbornOwnedStorageRegistration(Guid entityId, TimberbornOwnedInventoryRole role)
+    public TimberbornOwnedStorageRegistration(Guid entityId, NativeBurnTargetFamily family,
+        IReadOnlyList<TimberbornInventoryDeclaration> declarations)
     {
-        if (entityId == Guid.Empty) throw new ArgumentException("Owned storage requires a native identity.", nameof(entityId));
-        if (!Enum.IsDefined(typeof(TimberbornOwnedInventoryRole), role)) throw new ArgumentOutOfRangeException(nameof(role));
-        EntityId = entityId;
-        Role = role;
-        TargetKey = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(entityId,
-            role == TimberbornOwnedInventoryRole.Stockpile ? NativeBurnTargetFamily.Stockpile : NativeBurnTargetFamily.Structure));
+        if (family is not (NativeBurnTargetFamily.Stockpile or NativeBurnTargetFamily.Structure))
+            throw new ArgumentException("Storage effects require a supported constructed body.", nameof(family));
+        var original = new TimberbornBodyInventoryDeclarations(entityId, declarations);
+        EntityId = entityId; Family = family; Declarations = original.Declarations;
+        TargetKey = new(TimberbornBurnDamageIdentity.ForEntity(entityId, family));
     }
     public Guid EntityId { get; }
-    public TimberbornOwnedInventoryRole Role { get; }
+    public NativeBurnTargetFamily Family { get; }
+    public IReadOnlyList<TimberbornInventoryDeclaration> Declarations { get; }
     public TimberbornBurnDamageTargetKey TargetKey { get; }
 }
 
+public sealed record TimberbornOwnedInventoryRow(TimberbornInventoryDeclaration Declaration,
+    TimberbornOwnedInventoryStatus Status, IReadOnlyList<TimberbornStoredGoodStack> Stacks);
 public sealed record TimberbornOwnedInventorySnapshot(TimberbornOwnedInventoryStatus Status,
-    IReadOnlyList<TimberbornStoredGoodStack> Stacks);
+    IReadOnlyList<TimberbornOwnedInventoryRow> Inventories);
 public readonly record struct TimberbornOwnedInventoryRemoval(TimberbornOwnedInventoryStatus Status, int RemovedAmount);
 
 /// <summary>
-/// Exact-owner stock access. Consume must run inside the runtime's shared native resource guard;
-/// successful amounts are receipts, while native callback exceptions propagate without inferred rollback.
-/// No inventory instance crosses this boundary or survives between mutations.
+/// Exact original topology and named stock access. Consume runs under the caller's existing resource guard.
+/// Completed native calls produce receipts; callback exceptions propagate without inferred rollback.
+/// No native inventory reference crosses this boundary or survives between mutations.
 /// </summary>
 public interface ITimberbornOwnedStorageInventoryApi
 {
     TimberbornOwnedInventorySnapshot Read(TimberbornOwnedStorageRegistration owner);
-    TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner, TimberbornStoredGoodStack requested);
+    TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner,
+        TimberbornInventoryDeclaration declaration, TimberbornStoredGoodStack requested);
 }

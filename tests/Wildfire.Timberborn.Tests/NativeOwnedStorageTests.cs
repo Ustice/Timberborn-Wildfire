@@ -20,8 +20,13 @@ public sealed class NativeOwnedStorageTests
         var entries = (IDictionary)registryType.GetField("_entities", Flags)!.GetValue(registry)!;
         var api = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Consequences.TimberbornOwnedStorageInventoryApi")!, registry)!;
         Guid owner = Guid.NewGuid(), foreign = Guid.NewGuid();
-        var roleType = mod.GetType("Wildfire.Timberborn.Consequences.TimberbornOwnedInventoryRole")!;
-        var registration = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Consequences.TimberbornOwnedStorageRegistration")!, owner, Enum.Parse(roleType, role))!;
+        var roleType = mod.GetType("Wildfire.Timberborn.Mapping.TimberbornNativeInventoryRole")!;
+        var declarationType = mod.GetType("Wildfire.Timberborn.Mapping.TimberbornInventoryDeclaration")!;
+        var declaration = Activator.CreateInstance(declarationType, Enum.Parse(roleType,role), role)!;
+        var declarations = Array.CreateInstance(declarationType,1); declarations.SetValue(declaration,0);
+        var familyType=mod.GetType("Wildfire.Timberborn.Mapping.NativeBurnTargetFamily") ?? mod.GetType("Wildfire.Timberborn.Consequences.NativeBurnTargetFamily")!;
+        var registration = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Consequences.TimberbornOwnedStorageRegistration")!, owner,
+            Enum.Parse(familyType,role=="Stockpile"?"Stockpile":"Structure"),declarations)!;
         var requested = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Consequences.TimberbornStoredGoodStack")!, "Log", 1)!;
         var foreignEntity = RuntimeHelpers.GetUninitializedObject(entityType);
         entries.Add(foreign, foreignEntity); // Another registered entity is never a fallback candidate.
@@ -40,8 +45,8 @@ public sealed class NativeOwnedStorageTests
         {
             var read = NativeInjuryFixture.Call(api, "Read", registration)!;
             Assert.Equal("NotLive", NativeInjuryFixture.Get(read, "Status")!.ToString());
-            Assert.Empty((IEnumerable)NativeInjuryFixture.Get(read, "Stacks")!);
-            var removed = NativeInjuryFixture.Call(api, "Consume", registration, requested)!;
+            Assert.Empty((IEnumerable)NativeInjuryFixture.Get(read, "Inventories")!);
+            var removed = NativeInjuryFixture.Call(api, "Consume", registration, declaration, requested)!;
             Assert.Equal(0, NativeInjuryFixture.Get(removed, "RemovedAmount"));
         }
         // Positive native component ownership/liveness needs Unity; no engine object was fabricated.

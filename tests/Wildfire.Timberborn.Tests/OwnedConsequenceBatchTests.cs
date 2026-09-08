@@ -139,12 +139,34 @@ public sealed class OwnedConsequenceBatchTests
     [Fact]
     public void ConflictingBodyFamilyAndSelectedCropAliasRejectBeforeEffects()
     {
-        var f = new Fixture();
+        var f = new Fixture(inventoryWitness:false);
         var second = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(Structure, NativeBurnTargetFamily.Stockpile));
-        f.Damage.UpsertTarget(Grid, new(second, "Warehouse", [new(3, 0, 0)], 1));
+        f.Damage.UpsertTarget(Grid, new(second, "SmallWarehouse.Folktails", [new(3, 0, 0)], 1));
         Assert.Throws<ArgumentException>(() => f.Consumer.Register(new(Structure, NativeBurnTargetFamily.Stockpile)));
         Assert.Throws<ArgumentException>(() => f.Consumer.Register(new(Crop, NativeBurnTargetFamily.SelectedCrop)));
         Assert.Equal(0, f.Native.DamagePasses);
+    }
+
+    [Fact]
+    public void InventoryPreflightCannotSaveOrMutateAndReadFailureLeavesWorldSafe()
+    {
+        var f = new Fixture();
+        var cause = new ApplicationException("inventory observation failed");
+        int mutations = 0;
+        f.Native.DuringInventoryRead = () =>
+        {
+            Assert.Throws<InvalidOperationException>(f.Guard.ThrowIfSaveUnsafe);
+            Assert.Throws<InvalidOperationException>(() => f.Guard.TransferInventory(() => mutations++));
+            Assert.Throws<InvalidOperationException>(() => f.Consumer.CaptureHistory());
+            Assert.Throws<InvalidOperationException>(() => f.Consumer.Register(f.Registrations[0]));
+            throw cause;
+        };
+        Assert.Same(cause, Assert.Throws<ApplicationException>(() => f.Consumer.Consume(1, [f.Delta(Stock, 2)])));
+        Assert.Equal(0, mutations); Assert.Empty(f.Native.InventoryCalls);
+        Assert.All(f.Damage.States.Values, state => Assert.Equal(0, state.DamageTaken));
+        Assert.False(f.Guard.IsIndeterminate); f.Guard.ThrowIfSaveUnsafe();
+        f.Native.DuringInventoryRead = null;
+        Assert.Equal(1, f.Consumer.Consume(1, [f.Delta(Stock, 2)]).Storage.DestroyedItems);
     }
 
     private static TimberbornBurnDamageTargetKey Key(Guid id) => new(TimberbornBurnDamageIdentity.ForEntity(id,
@@ -158,9 +180,9 @@ public sealed class OwnedConsequenceBatchTests
         internal readonly TimberbornOwnedNativeEffects Effects;
         internal readonly TimberbornOwnedBodyRegistration[] Registrations = Ids.Select((id, i) => new TimberbornOwnedBodyRegistration(id, Families[i])).ToArray();
         internal readonly TimberbornOwnedDeltaConsumer Consumer;
-        internal Fixture(bool witnessed = false)
+        internal Fixture(bool legacyWitness = false, bool inventoryWitness = true)
         {
-            string[] specs = ["Pine", "Carrot", "Warehouse", "Mill"];
+            string[] specs = ["Pine", "Carrot", "SmallWarehouse.Folktails", "LumberMill.Folktails"];
             TimberbornMaterialPart[] parts = [TimberbornMaterialPart.Tree("Pine"), TimberbornMaterialPart.Crop("Carrot"),
                 TimberbornMaterialPart.StoredGood("Log"), TimberbornMaterialPart.Building("LumberMill.Folktails")];
             Registry.Reconcile(Ids.Select((id, i) => new TimberbornMaterialProjection(id,
@@ -168,20 +190,23 @@ public sealed class OwnedConsequenceBatchTests
             Damage = new(new TimberbornBurnDamageDescriptorCatalog([
                 new("Pine", TimberbornBurnDamageTargetKind.Tree, TimberbornBurnMaterialKind.Wood, resourceYields: [new("Log", 10)]),
                 new("Carrot", TimberbornBurnDamageTargetKind.Crop, TimberbornBurnMaterialKind.Organic, resourceYields: [new("Carrot", 10)]),
-                new("Warehouse", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)]),
-                new("Mill", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)])]), logSink: Native);
+                new("SmallWarehouse.Folktails", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)]),
+                new("LumberMill.Folktails", TimberbornBurnDamageTargetKind.Structure, TimberbornBurnMaterialKind.Constructed, constructionResources: [new("Log", 20)])]), logSink: Native);
             Damage.RegisterTargets(Grid, Ids.Select((id, i) => new TimberbornBurnDamageTargetRegistration(Key(id), specs[i],
                 [new(i, 0, 0), new(i, 1, 0)], 10)).ToArray());
             Effects = new(Native, Native, Native, Native, Native);
             var catalog=new TimberbornResourceFuelCatalog([new("Log", 2, 3, false, false, true)]);
-            Consumer = witnessed ? TimberbornOwnedDeltaConsumer.CreateWithNativeDefinitions(Registry,Damage,Effects,Guard,NativeBodies(),catalog) :
-                new(Registry, Damage, Effects, Guard, Registrations,catalog);
+            Consumer = legacyWitness ? TimberbornOwnedDeltaConsumer.CreateWithNativeDefinitions(Registry, Damage, Effects, Guard, NativeBodies(), catalog) :
+                inventoryWitness ? Guard.CaptureAtRest(() => TimberbornOwnedDeltaConsumer.CreateWithCompleteNativeDefinitionsDuringCapture(
+                    Registry,Damage,Effects,Guard,NativeBodies(), new(Ids.Select((id,i)=>new TimberbornBodyInventoryDeclarations(id,
+                        i<2 ? [] : [Declaration(i)]))),catalog)) : new(Registry, Damage, Effects, Guard, Registrations,catalog);
         }
+        internal static TimberbornInventoryDeclaration Declaration(int i) => new(i==2 ? TimberbornNativeInventoryRole.Stockpile : TimberbornNativeInventoryRole.SimpleOutput, i==2 ? "Stockpile" : "SimpleOutput");
         internal IReadOnlyList<TimberbornInitialMaterialBody> NativeBodies()=>Ids.Select((id,i)=>new TimberbornInitialMaterialBody(
-            id,new[]{"Pine","Carrot","Warehouse","Mill"}[i],new[]{TimberbornInitialBodyShape.Tree,TimberbornInitialBodyShape.Crop,
+            id,new[]{"Pine","Carrot","SmallWarehouse.Folktails","LumberMill.Folktails"}[i],new[]{TimberbornInitialBodyShape.Tree,TimberbornInitialBodyShape.Crop,
                 TimberbornInitialBodyShape.Stockpile,TimberbornInitialBodyShape.Structure}[i],
             [new(new(0,0,0),i),new(new(1,0,0),i+4)],i<2 ? [new(TimberbornCapturedYieldRole.Cuttable,"Cuttable",i==0?"Log":"Carrot",10,
-                i==0?"Log":"Carrot",10,true,true)] : [],[],i>=2 ? [new("Log",20)] : null)).ToArray();
+                i==0?"Log":"Carrot",10,true,true)] : [], i>=2 ? [new(Declaration(i),true,[new("Log",10)])] : [],i>=2 ? [new("Log",20)] : null)).ToArray();
         internal CellDelta Delta(Guid id, int loss, int? cell = null) => new(cell ?? Array.IndexOf(Ids, id),
             PackedCell.Pack(15, 10, 3, 0, 0, 1), PackedCell.Pack(15 - loss, 10, 3, 0, 0, 1),
             Registry.CaptureBindings().Entities.Single(binding => binding.EntityId == id).TargetId, cell >= 4 ? 2u : 1u);
@@ -197,6 +222,7 @@ public sealed class OwnedConsequenceBatchTests
         internal readonly List<Guid> InventoryCalls = [];
         internal Action? AfterTree;
         internal Action? DuringIsLive;
+        internal Action? DuringInventoryRead;
         internal int DamagePasses;
         internal int TreeMutations;
         internal int TreeYieldReceipt;
@@ -227,10 +253,14 @@ public sealed class OwnedConsequenceBatchTests
             CropResults.Add(status);
             return new(status);
         }
-        public TimberbornOwnedInventorySnapshot Read(TimberbornOwnedStorageRegistration owner) => !IsLive(owner.EntityId)
+        public TimberbornOwnedInventorySnapshot Read(TimberbornOwnedStorageRegistration owner)
+        {
+            DuringInventoryRead?.Invoke();
+            return !IsLive(owner.EntityId)
             ? new(TimberbornOwnedInventoryStatus.NotLive, []) : !InventoryAvailable.Contains(owner.EntityId)
-                ? new(TimberbornOwnedInventoryStatus.Unavailable, []) : new(TimberbornOwnedInventoryStatus.Available, [new("Log", Amounts[owner.EntityId])]);
-        public TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner, TimberbornStoredGoodStack requested)
+                ? new(TimberbornOwnedInventoryStatus.Unavailable, []) : new(TimberbornOwnedInventoryStatus.Available, [new(owner.Declarations.Single(), TimberbornOwnedInventoryStatus.Available, Amounts[owner.EntityId]>0 ? [new("Log", Amounts[owner.EntityId])] : [])]);
+        }
+        public TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner, TimberbornInventoryDeclaration declaration, TimberbornStoredGoodStack requested)
         {
             InventoryCalls.Add(owner.EntityId);
             int amount = Math.Min(Amounts[owner.EntityId], requested.Amount);

@@ -19,6 +19,7 @@ public sealed class TimberbornOwnedStorageDeltaConsumer
     private readonly TimberbornOwnedStorageBurnSink _storage;
     private readonly INativeResourceMutationGuard _resources;
     private bool _consuming;
+    private readonly Dictionary<Guid, TimberbornOwnedStorageRegistration> _registrations = new();
 
     public TimberbornOwnedStorageDeltaConsumer(TimberbornNativeMaterialRegistry origins, TimberbornBurnDamageService damage,
         ITimberbornOwnedStorageInventoryApi inventory, ITimberbornStoredGoodHazardConsequenceSink hazards,
@@ -28,7 +29,7 @@ public sealed class TimberbornOwnedStorageDeltaConsumer
         _origins = new TimberbornOwnedBurnOrigins(origins);
         _damage = damage ?? throw new ArgumentNullException(nameof(damage));
         _storage = new TimberbornOwnedStorageBurnSink(inventory ?? throw new ArgumentNullException(nameof(inventory)),
-            hazards ?? throw new ArgumentNullException(nameof(hazards)), catalog ?? TimberbornResourceFuelCatalog.Default);
+            hazards ?? throw new ArgumentNullException(nameof(hazards)), catalog ?? TimberbornResourceFuelCatalog.Default, item => _registrations[item.EntityId]);
         _resources = resources ?? throw new ArgumentNullException(nameof(resources));
         foreach (var owner in registrations) Register(owner);
     }
@@ -42,8 +43,11 @@ public sealed class TimberbornOwnedStorageDeltaConsumer
         // Both roles belong to a physical constructed body; inventory role does not change its kind.
         if (!_damage.TryGetState(owner.TargetKey, out var state) || state.TargetKind != TimberbornBurnDamageTargetKind.Structure)
             throw new ArgumentException("Storage origin requires its exact canonical body damage registration.", nameof(owner));
-        _origins.Register(owner.EntityId, owner.Role == TimberbornOwnedInventoryRole.Stockpile ?
-            NativeBurnTargetFamily.Stockpile : NativeBurnTargetFamily.Structure, owner.TargetKey);
+        if (_registrations.TryGetValue(owner.EntityId, out var previous) &&
+            (previous.Family != owner.Family || !previous.Declarations.SequenceEqual(owner.Declarations)))
+            throw new ArgumentException("Original owner declarations cannot be replaced by registration.", nameof(owner));
+        _origins.Register(owner.EntityId, owner.Family, owner.TargetKey);
+        _registrations[owner.EntityId] = owner;
     }
 
     public TimberbornOwnedStorageBatchResult Consume(uint tick, ReadOnlySpan<CellDelta> deltas)
@@ -54,14 +58,20 @@ public sealed class TimberbornOwnedStorageDeltaConsumer
         try
         {
             var batch = _origins.Resolve(deltas);
-            var isLive = batch.Decisions.GroupBy(item => item.EntityId).ToDictionary(group => group.Key, group => _storage.IsLive(group.First()));
-            var live = batch.Decisions.Where(item => isLive[item.EntityId]).ToArray();
+            var prepared = _resources.CaptureAtRest(() =>
+            {
+                var isLive = batch.Decisions.GroupBy(item => item.EntityId).ToDictionary(group => group.Key, group => _storage.IsLive(group.First()));
+                var live = batch.Decisions.Where(item => isLive[item.EntityId]).ToArray();
+                _storage.Preflight(live);
+                return (Live: live, NotLive: isLive.Count(pair => !pair.Value));
+            });
+            var live = prepared.Live;
             TimberbornOwnedStorageBatchResult result = default;
             _resources.TransferInventory(() =>
             {
                 var damage = _damage.ApplyOwnedDamage(tick, live, batch.ReplaySuppressedCount);
                 var effects = _storage.ApplyOwnedConsequences(tick, live);
-                result = new(batch.UnownedCount, isLive.Count(pair => !pair.Value) + effects.NotLive, effects.Unavailable,
+                result = new(batch.UnownedCount, prepared.NotLive + effects.NotLive, effects.Unavailable,
                     damage, effects.Removed, effects.Hazardous, effects.Blasts, effects.Pulses, effects.Unknown, effects.NonBurnable);
             });
             return result;

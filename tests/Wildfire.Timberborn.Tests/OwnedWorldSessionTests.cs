@@ -10,10 +10,10 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void ActualReceiptAndCreditSurviveNewSessionWithoutReplayingNativeEffects()
     {
-        var original = new F(witnessed:true); var tree = original.Registrations[0].EntityId; var stock = original.Registrations[2].EntityId;
+        var original = new F(); var tree = original.Registrations[0].EntityId; var stock = original.Registrations[2].EntityId;
         original.Native.TreeYieldReceipt = 1;
         original.Consumer.Consume(1, [original.Delta(tree,15), original.Delta(stock,1)]);
-        var saved = Snapshot(original); var native = new F(witnessed:true); native.Native.TreeYieldReceipt = 1;
+        var saved = Snapshot(original); var native = new F(); native.Native.TreeYieldReceipt = 1;
         using var restored = Restore(saved, native, out _);
         Assert.Empty(native.Native.TreeCalls); // Restore never calls yield, death, or compound leftover.
         Assert.Empty(native.Native.InventoryCalls);
@@ -31,10 +31,10 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void RetiredOriginRestoresWithoutBodyAndCannotBindAnotherNativeOwner()
     {
-        var original = new F(witnessed:true); var tree = original.Registrations[0].EntityId;
+        var original = new F(); var tree = original.Registrations[0].EntityId;
         var key = new TimberbornBurnDamageTargetKey(TimberbornBurnDamageIdentity.ForEntity(tree,NativeBurnTargetFamily.Tree));
         original.Native.Live.Remove(tree); original.Consumer.RetireNativeOwner(tree);
-        var saved = Snapshot(original); var native = new F(witnessed:true); native.Native.Live.Remove(tree); native.Consumer.RetireNativeOwner(tree);
+        var saved = Snapshot(original); var native = new F(); native.Native.Live.Remove(tree); native.Consumer.RetireNativeOwner(tree);
         using var restored = Restore(saved,native,out _);
         var result = restored.Consumer.Consume(38,[original.Delta(tree,15)]);
         Assert.Equal(1,result.NotLiveOwners); Assert.Empty(native.Native.TreeCalls);
@@ -45,11 +45,11 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void LateRestoreFailureDisposesNewSimulatorWithoutPoisoningOrPublishing()
     {
-        var original = new F(witnessed:true); var stock = original.Registrations[2].EntityId;
+        var original = new F(); var stock = original.Registrations[2].EntityId;
         original.Consumer.Consume(1,[original.Delta(stock,1)]);
-        var saved = Snapshot(original); var native = new F(witnessed:true); var simulator = new Simulator(saved.OwnedMaterial!.CaptureSimulation());
-        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[], _=>simulator,
-            (_,ids)=>native.NativeBodies().Where(body=>ids.Contains(body.EntityId)).ToArray(),native.Effects,native.Guard,new TimberbornResourceFuelCatalog([new("Log",3,3,false,false,true)])));
+        var saved = Snapshot(original); var native = new F(); var simulator = new Simulator(saved.OwnedMaterial!.CaptureSimulation());
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareCompleteRestore(saved, _=>simulator,
+            (grid,ids)=>Observe(native, grid, ids),native.Effects,native.Guard,new TimberbornResourceFuelCatalog([new("Log",3,3,false,false,true)])));
         Assert.Equal(1,simulator.Disposals); Assert.False(native.Guard.IsIndeterminate);
         Assert.All(native.Damage.States.Values, state=>Assert.Equal(0,state.DamageTaken));
         Assert.Empty(native.Native.InventoryCalls);
@@ -57,16 +57,16 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void ProfileFailurePrecedesBackendAndDoesNotClampSavedDamage()
     {
-        var original = new F(witnessed:true); var saved = Snapshot(original); var native = new F(witnessed:true);
+        var original = new F(); var saved = Snapshot(original); var native = new F();
         int created=0;
-        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[], _=>{created++;return new(saved.OwnedMaterial!.CaptureSimulation());},
-            (_,ids)=>native.NativeBodies().Skip(1).ToArray(),native.Effects,native.Guard));
+        Assert.Throws<ArgumentException>(() => TimberbornOwnedWorldSession<Simulator>.PrepareCompleteRestore(saved, _=>{created++;return new(saved.OwnedMaterial!.CaptureSimulation());},
+            (grid,ids)=>Observe(native, grid, ids.Skip(1).ToArray()),native.Effects,native.Guard));
         Assert.Equal(0,created); Assert.False(native.Guard.IsIndeterminate);
     }
     [Fact]
     public void CaptureFailureIsReadOnlyAndCallbackCaptureCannotInterleaveDelivery()
     {
-        var f = new F(witnessed:true); var saved = Snapshot(f);
+        var f = new F(); var saved = Snapshot(f);
         using var session = Restore(saved,f,out var simulator);
         var error = new ApplicationException("readback failed before save encoding");
         simulator.CaptureFailure=error;
@@ -80,7 +80,7 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void SimulatorReadCannotCommitAReentrantConsequenceBetweenSnapshotParts()
     {
-        var f=new F(witnessed:true); var saved=Snapshot(f); using var session=Restore(saved,f,out var simulator);
+        var f=new F(); var saved=Snapshot(f); using var session=Restore(saved,f,out var simulator);
         var stock=f.Registrations[2].EntityId;
         simulator.DuringCapture=()=>session.Consumer.Consume(37,[f.Delta(stock,1)]);
         Assert.Throws<InvalidOperationException>(()=>session.Capture(saved.AshField,saved.BeaverBehavior));
@@ -92,7 +92,7 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void BodyLivenessReadCannotRegisterOrMutateResources()
     {
-        var f=new F(witnessed:true); var retired=f.Registrations[0].EntityId;
+        var f=new F(); var retired=f.Registrations[0].EntityId;
         f.Native.Live.Remove(retired);
         f.Consumer.RetireNativeOwner(retired);
         int mutations=0;
@@ -108,7 +108,7 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void LostLiveBodyDefinitionCannotBeCapturedAsRetiredHistory()
     {
-        var f=new F(witnessed:true);
+        var f=new F();
         f.Damage.RemoveTarget(new(TimberbornBurnDamageIdentity.ForEntity(f.Registrations[0].EntityId,NativeBurnTargetFamily.Tree)));
         Assert.Throws<InvalidOperationException>(()=>f.Consumer.CaptureHistory());
         Assert.False(f.Guard.IsIndeterminate);
@@ -116,16 +116,28 @@ public sealed partial class OwnedWorldSessionTests
     [Fact]
     public void MaterialOnlyRestoreCannotInvokeAnyFactory()
     {
-        var saved = OwnedMaterialPersistenceTests.Fixture(); var f=new F(witnessed:true);
+        var saved = OwnedMaterialPersistenceTests.Fixture(); var f=new F();
         Assert.Throws<NotSupportedException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],
             _=>throw new Exception("not called"),(_,_)=>throw new Exception("not called"),f.Effects,f.Guard));
     }
     private static TimberbornOwnedWorldSession<Simulator> Restore(TimberbornWildfirePersistenceSnapshot saved,F f,out Simulator simulator)
     {
         simulator=new(saved.OwnedMaterial!.CaptureSimulation()); var result=simulator;
-        return TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],_=>result,(_,ids)=>f.NativeBodies().Where(body=>ids.Contains(body.EntityId)).ToArray(),f.Effects,f.Guard,
+        return TimberbornOwnedWorldSession<Simulator>.PrepareCompleteRestore(saved,_=>result,(grid,ids)=>Observe(f, grid, ids),f.Effects,f.Guard,
             new TimberbornResourceFuelCatalog([new("Log",2,3,false,false,true)]));
     }
+    private static TimberbornOwnedRestoreObservation Observe(F fixture, FireGrid grid, IReadOnlyList<Guid> ids)
+    {
+        var bodies = fixture.NativeBodies().Where(body => ids.Contains(body.EntityId)).ToArray();
+        var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null,
+            body.Shape is TimberbornInitialBodyShape.Tree or TimberbornInitialBodyShape.Crop ? false : null,
+            body.Shape == TimberbornInitialBodyShape.Tree, body.Inventories.Select(inventory => inventory.Declaration))).ToArray();
+        var declarations = new TimberbornInventoryDeclarationCapture(states.Select(state => new TimberbornBodyInventoryDeclarations(state.EntityId, state.Inventories)));
+        var world = new TimberbornInitialWorldCapture(grid, bodies, [], [],
+            TimberbornInitialEnvironmentCapture.ForOwnedDomain(new(grid, grid), [], [], []), declarations);
+        return new(world, bodies, states);
+    }
+
     internal static TimberbornWildfirePersistenceSnapshot Snapshot(F f)
     {
         var bindings=f.Registry.CaptureBindings(); var targets=new uint[8]; var slots=new uint[8];

@@ -31,7 +31,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
                 { notApplied = exception; return; }
                 if (result is not { } completed) return;
                 // Simulation may already have mutated: even preflight failures now belong inside the guard.
-                var prepared = PrepareDelivery(completed.Deltas.ToArray());
+                var prepared = PrepareDelivery(_origins.Resolve(completed.Deltas.ToArray()));
                 delivered = new(completed, ApplyDelivery(completed.Tick, prepared));
             });
             // Only the step's explicit NotApplied classification is safe; consequence failures never enter this catch.

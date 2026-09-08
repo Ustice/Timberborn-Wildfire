@@ -10,7 +10,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
     [Fact]
     public void DeclaredConstructionCostMismatchRejectsWithoutTouchingNativeStock()
     {
-        var f=new F(witnessed:true);var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();
+        var f=new F(legacyWitness:true);var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();
         var warehouse=facts[2];facts[2]=Copy(warehouse,cost:[new("Log",21)]);
         int created=0;
         Assert.Throws<ArgumentException>(()=>TimberbornOwnedWorldSession<Simulator>.PrepareDiagnosticRestore(saved,[],s=>{created++;return new(s);},
@@ -21,7 +21,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
     [Fact]
     public void CurrentInventoryAndPhysicalPlacementDoNotChangeStaticDefinitionOrSavedCapacity()
     {
-        var f=new F(witnessed:true);var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();
+        var f=new F(legacyWitness:true);var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();
         var warehouse=facts[2];
         facts[2]=Copy(warehouse,inventory:[new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"),false,[new("Log",3)])],
             footprint:warehouse.Footprint.Select(slot=>new TimberbornMaterialFootprintSlot(slot.LocalCoordinates,slot.CellIndex==2?6:2)).ToArray());
@@ -35,7 +35,7 @@ public sealed class OwnedNativeStaticCompatibilityTests
     [Fact]
     public void RetainedLeftoverRestoresSavedAccountingWithoutCompoundVisualReplay()
     {
-        var f=new F(witnessed:true);var tree=f.Registrations[0].EntityId;
+        var f=new F(legacyWitness:true);var tree=f.Registrations[0].EntityId;
         // Finish the synthetic body's burn while fake native leftover retains the exact same Guid.
         for(uint tick=1;tick<=8;tick++)f.Consumer.Consume(tick,[f.Delta(tree,15)]);
         var saved=OwnedWorldSessionTests.Snapshot(f);var facts=f.NativeBodies().ToArray();var body=facts[0];

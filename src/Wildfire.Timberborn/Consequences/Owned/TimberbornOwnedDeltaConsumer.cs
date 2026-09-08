@@ -32,7 +32,7 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         _crops = new(damage, effects.Crops ?? throw new ArgumentException("Crop effect adapter is required.", nameof(effects)));
         _storage = new(effects.Inventory ?? throw new ArgumentException("Storage inventory adapter is required.", nameof(effects)),
             effects.StorageHazards ?? throw new ArgumentException("Storage hazard adapter is required.", nameof(effects)),
-            catalog ?? TimberbornResourceFuelCatalog.Default);
+            catalog ?? TimberbornResourceFuelCatalog.Default, StorageOwner);
         foreach (var registration in registrations) Register(registration);
     }
 
@@ -57,7 +57,8 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         _consuming = true;
         try
         {
-            var batch = PrepareDelivery(deltas);
+            var origins = _origins.Resolve(deltas);
+            var batch = _guard.CaptureAtRest(() => PrepareDelivery(origins));
             TimberbornOwnedConsequenceBatchResult result = default;
             _guard.TransferInventory(() => result = ApplyDelivery(tick, batch));
             return result;
@@ -65,14 +66,14 @@ public sealed partial class TimberbornOwnedDeltaConsumer
         finally { _consuming = false; }
     }
 
-    private PreparedDelivery PrepareDelivery(ReadOnlySpan<CellDelta> deltas)
+    private PreparedDelivery PrepareDelivery(TimberbornOwnedBurnBatch batch)
     {
-        var batch = _origins.Resolve(deltas);
         var bodyLive = batch.Decisions.Select(item => item.EntityId).Distinct().ToDictionary(id => id, _bodies.IsLive);
         var live = batch.Decisions.Where(item => bodyLive[item.EntityId]).ToArray();
         // Revalidate every required state before ANY body mutation, including zero-damage rows.
         if (live.Any(item => _origins.IsRetired(item.EntityId) || !_damage.TryGetState(item.TargetKey, out var state) || !MatchesFamily(item.Family, state)))
             throw new InvalidOperationException("A live owned body lost its supported canonical registration after preflight.");
+        _storage.Preflight(live.Where(item => item.Family is NativeBurnTargetFamily.Stockpile or NativeBurnTargetFamily.Structure));
         return new(batch.UnownedCount, batch.ReplaySuppressedCount, bodyLive.Count(pair => !pair.Value), live);
     }
 
@@ -89,6 +90,16 @@ public sealed partial class TimberbornOwnedDeltaConsumer
                 storage.Pulses, storage.Unknown, storage.NonBurnable),
             live.Where(item => item.Family is NativeBurnTargetFamily.Structure or NativeBurnTargetFamily.Stockpile).Select(item => item.EntityId).Distinct().Count(),
             Capabilities);
+    }
+
+    private TimberbornOwnedStorageRegistration? StorageOwner(TimberbornOwnedBurnDecision item)
+    {
+        if (_nativeDefinitions?.HasInventoryDeclarations != true) return null;
+        var witness = _nativeDefinitions.Get(item.EntityId);
+        var owner = new TimberbornOwnedStorageRegistration(item.EntityId, item.Family, witness.InventoryDeclarations!);
+        if (witness.Family != item.Family || owner.TargetKey != item.TargetKey)
+            throw new InvalidOperationException("Original inventory witness differs from canonical body identity.");
+        return owner;
     }
 
     private sealed record PreparedDelivery(int UnownedCount, int ReplaySuppressedCount, int NotLiveOwners,

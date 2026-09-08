@@ -167,13 +167,32 @@ public sealed partial class OwnedStorageDeltaConsumerTests
     public void ConflictingInventoryRolesCannotRegisterTwoBodyStatesForOneGuid()
     {
         var f = new Fixture();
-        var output = new TimberbornOwnedStorageRegistration(A, TimberbornOwnedInventoryRole.SimpleOutput);
+        var output = new TimberbornOwnedStorageRegistration(A, NativeBurnTargetFamily.Structure, [new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput")]);
         f.Damage.UpsertTarget(Grid, new(output.TargetKey, "Output", [new(0, 0, 0)], 1));
         Assert.Throws<ArgumentException>(() => f.Consumer.Register(output));
         Assert.Empty(f.Inventory.Calls);
     }
 
-    private static TimberbornOwnedStorageRegistration Registration(Guid id) => new(id, TimberbornOwnedInventoryRole.Stockpile);
+    [Fact]
+    public void StandalonePreflightUsesTheSameReadGuardAndPreservesReadOnlyFailure()
+    {
+        var f = new Fixture(); var cause = new ApplicationException("inventory preflight"); int mutations = 0;
+        f.Inventory.DuringRead = () =>
+        {
+            Assert.Throws<InvalidOperationException>(f.Resources.ThrowIfSaveUnsafe);
+            Assert.Throws<InvalidOperationException>(() => f.Resources.TransferInventory(() => mutations++));
+            Assert.Throws<InvalidOperationException>(() => f.Consumer.Register(Registration(A)));
+            throw cause;
+        };
+        Assert.Same(cause, Assert.Throws<ApplicationException>(() => f.Consumer.Consume(1, [f.Delta(A, 2)])));
+        Assert.Equal(0, mutations); Assert.Empty(f.Inventory.Calls);
+        Assert.All(f.Damage.States.Values, state => Assert.Equal(0, state.DamageTaken));
+        Assert.False(f.Resources.IsIndeterminate); f.Resources.ThrowIfSaveUnsafe();
+        f.Inventory.DuringRead = null;
+        Assert.Equal(1, f.Consumer.Consume(1, [f.Delta(A, 2)]).DestroyedItems);
+    }
+
+    private static TimberbornOwnedStorageRegistration Registration(Guid id) => new(id, NativeBurnTargetFamily.Stockpile, [new(TimberbornNativeInventoryRole.Stockpile, "Stockpile")]);
     private sealed class Fixture
     {
         internal readonly TimberbornNativeMaterialRegistry Registry = new(Grid, []);
@@ -210,12 +229,18 @@ public sealed partial class OwnedStorageDeltaConsumerTests
         internal readonly Dictionary<Guid, Dictionary<string, int>> Stock = new()
             { [A] = new() { ["Log"] = 10 }, [B] = new() { ["Log"] = 10 } };
         internal readonly List<Guid> Calls = [];
+        internal Action? DuringRead;
         internal Action<Guid, TimberbornStoredGoodStack>? BeforeConsume;
         internal Action<Guid, TimberbornStoredGoodStack>? AfterConsume;
-        public TimberbornOwnedInventorySnapshot Read(TimberbornOwnedStorageRegistration owner) => !Live.Contains(owner.EntityId) ?
+        public TimberbornOwnedInventorySnapshot Read(TimberbornOwnedStorageRegistration owner)
+        {
+            DuringRead?.Invoke();
+            return !Live.Contains(owner.EntityId) ?
             new(TimberbornOwnedInventoryStatus.NotLive, []) : new(TimberbornOwnedInventoryStatus.Available,
-                Stock[owner.EntityId].Select(pair => new TimberbornStoredGoodStack(pair.Key, pair.Value)).ToArray());
-        public TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner, TimberbornStoredGoodStack requested)
+                [new(owner.Declarations.Single(), TimberbornOwnedInventoryStatus.Available,
+                    Stock[owner.EntityId].Where(pair => pair.Value > 0).Select(pair => new TimberbornStoredGoodStack(pair.Key, pair.Value)).ToArray())]);
+        }
+        public TimberbornOwnedInventoryRemoval Consume(TimberbornOwnedStorageRegistration owner, TimberbornInventoryDeclaration declaration, TimberbornStoredGoodStack requested)
         {
             Calls.Add(owner.EntityId);
             if (!Live.Contains(owner.EntityId)) return new(TimberbornOwnedInventoryStatus.NotLive, 0);
