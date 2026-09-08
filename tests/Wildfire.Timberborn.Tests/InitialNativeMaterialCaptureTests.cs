@@ -124,9 +124,9 @@ public sealed class InitialNativeMaterialCaptureTests
         var infrastructure = Body("Path.Folktails", TimberbornInitialBodyShape.Infrastructure, [], []);
         Assert.Equal(NativeBurnTargetFamily.PathInfrastructure, infrastructure.Family);
         Assert.Contains(TimberbornInitialCompositionGap.UnsupportedBodyFamily, infrastructure.CompositionGaps);
-        var ambiguous = Body("SmallWarehouse.Folktails", TimberbornInitialBodyShape.Stockpile, [], [
+        var supported = Body("SmallWarehouse.Folktails", TimberbornInitialBodyShape.Stockpile, [], [
             new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), true, []), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), true, [])]);
-        Assert.Contains(TimberbornInitialCompositionGap.MultipleInventoryRoles, ambiguous.CompositionGaps);
+        Assert.DoesNotContain(TimberbornInitialCompositionGap.MultipleInventoryRoles, supported.CompositionGaps);
         Assert.Throws<ArgumentException>(() => new TimberbornNamedYieldMaterial(TimberbornCapturedYieldRole.Gatherable, "Gatherable", "Log", 1, "Berries", 3, false, true));
     }
 

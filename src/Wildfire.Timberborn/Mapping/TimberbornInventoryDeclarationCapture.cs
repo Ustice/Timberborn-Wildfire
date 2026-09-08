@@ -43,9 +43,7 @@ public sealed class TimberbornInventoryDeclarationCapture
         foreach (var body in bodies)
         {
             var declarations = Get(body.EntityId);
-            if (declarations.Any(role => role.Role is not (TimberbornNativeInventoryRole.Stockpile or
-                TimberbornNativeInventoryRole.SimpleOutput or TimberbornNativeInventoryRole.GoodStack)))
-                throw new NotSupportedException("Declared inventory role has no supported material representation.");
+            RequireMaterialSupport(body.Shape, declarations);
             if (body.Inventories.Any(inventory => !declarations.Any(role => role == inventory.Declaration)))
                 throw new ArgumentException("Physical inventory has no exact declared native role.");
             if (declarations.Any(role => role.Role != TimberbornNativeInventoryRole.GoodStack &&
@@ -53,6 +51,27 @@ public sealed class TimberbornInventoryDeclarationCapture
                 throw new ArgumentException("Declared physical inventory was omitted from native material facts.");
         }
     }
+    internal static TimberbornInitialCompositionGap? MaterialSupportGap(TimberbornInitialBodyShape shape,
+        IReadOnlyList<TimberbornInventoryDeclaration> declarations)
+    {
+        if (declarations.Count == 0) return null;
+        if ((shape is TimberbornInitialBodyShape.Structure or TimberbornInitialBodyShape.Stockpile) &&
+            declarations.All(declaration => declaration.Role is TimberbornNativeInventoryRole.Stockpile or
+                TimberbornNativeInventoryRole.SimpleOutput or TimberbornNativeInventoryRole.Manufactory)) return null;
+        // Existing single natural harvest-stack representation; this does not create a new effect route.
+        if ((shape is TimberbornInitialBodyShape.Tree or TimberbornInitialBodyShape.Crop or TimberbornInitialBodyShape.Vegetation) &&
+            declarations.Count == 1 && declarations[0].Role == TimberbornNativeInventoryRole.GoodStack) return null;
+        return declarations.Count > 1 ? TimberbornInitialCompositionGap.MultipleInventoryRoles :
+            TimberbornInitialCompositionGap.UnsupportedInventoryRole;
+    }
+
+    internal static void RequireMaterialSupport(TimberbornInitialBodyShape shape,
+        IReadOnlyList<TimberbornInventoryDeclaration> declarations)
+    {
+        if (MaterialSupportGap(shape, declarations) is { } gap)
+            throw new NotSupportedException($"Declared inventory composition has no supported material route: {gap}.");
+    }
+
     internal bool SameReadings(TimberbornInventoryDeclarationCapture other) => Bodies.Count == other.Bodies.Count &&
         Bodies.Zip(other.Bodies, (a, b) => a.EntityId == b.EntityId && a.Declarations.SequenceEqual(b.Declarations)).All(equal => equal);
 }

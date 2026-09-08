@@ -18,19 +18,16 @@ internal static class TimberbornMaterialProjectionCompiler
             TimberbornInitialBodyShape.Structure or TimberbornInitialBodyShape.Stockpile => TimberbornMaterialPart.Building(body.SpecId),
             _ => throw new NotSupportedException("Native body family has no complete owned consequence route."),
         };
-        if (body.Inventories.Count > 1)
-            throw new NotSupportedException("Material composition does not yet support multiple native inventory roles.");
-        if (body.Inventories.Any(inventory => inventory.Declaration.Role is not (TimberbornNativeInventoryRole.Stockpile or
-            TimberbornNativeInventoryRole.SimpleOutput or TimberbornNativeInventoryRole.GoodStack)))
-            throw new NotSupportedException("Captured inventory role has no admitted material/effect route.");
-        // Physical stock is material even when a separate initial accounting selection excludes it.
+        TimberbornInventoryDeclarationCapture.RequireMaterialSupport(body.Shape,
+            body.Inventories.Select(inventory => inventory.Declaration).ToArray());
+        // Material denotes each present good type once; selected accounting retains exact named quantities.
         var parts = new List<TimberbornMaterialPart> { bodyPart };
-        foreach (var inventory in body.Inventories)
-            foreach (var good in inventory.Stock)
-            {
-                RequireGood(good.ResourceId);
-                parts.Add(TimberbornMaterialPart.StoredGood(good.ResourceId));
-            }
+        foreach (var goodId in body.Inventories.SelectMany(inventory => inventory.Stock).Select(good => good.ResourceId)
+            .Distinct(StringComparer.Ordinal).OrderBy(goodId => goodId, StringComparer.Ordinal))
+        {
+            RequireGood(goodId);
+            parts.Add(TimberbornMaterialPart.StoredGood(goodId));
+        }
         return new(body.EntityId, body.Footprint, parts);
     }
 

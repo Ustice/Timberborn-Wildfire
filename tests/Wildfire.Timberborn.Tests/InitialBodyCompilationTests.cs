@@ -107,11 +107,12 @@ public sealed class InitialBodyCompilationTests
     }
 
     [Fact]
-    public void MultipleInventoriesAndUnsupportedBodyAreNotSilentlyOmitted()
+    public void EmptySupportedInventoriesAddNoFuelAndUnsupportedBodiesStillReject()
     {
         var body = Building([new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), true, []), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), true, [])]);
-        Assert.Throws<NotSupportedException>(() => Compile([body], [new(A, Basis.NativeResourceAmounts, [],
-            [new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), InventoryUse.Excluded), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), InventoryUse.Excluded)])]));
+        var compiled = Compile([body], [new(A, Basis.NativeResourceAmounts, [],
+            [new(new(TimberbornNativeInventoryRole.Stockpile, "Stockpile"), InventoryUse.Excluded), new(new(TimberbornNativeInventoryRole.SimpleOutput, "SimpleOutput"), InventoryUse.Excluded)])]);
+        Assert.Single(compiled.Projections[0].Parts); // Empty supported inventories add no phantom fuel.
         var unsupported = new TimberbornInitialMaterialBody(A, "Pine", TimberbornInitialBodyShape.Unknown, [new(new(0, 0, 0), 0)], [], [], null);
         Assert.Throws<NotSupportedException>(() => Compile([unsupported], [new(A, Basis.NativeResourceAmounts, [], [])]));
     }
@@ -137,7 +138,7 @@ public sealed class InitialBodyCompilationTests
     }
 
     [Theory]
-    [InlineData(TimberbornNativeInventoryRole.Manufactory)]
+    [InlineData(TimberbornNativeInventoryRole.GoodStack)]
     [InlineData(TimberbornNativeInventoryRole.RecoveredGoodStack)]
     [InlineData(TimberbornNativeInventoryRole.WardenStation)]
     public void CapturingAdditionalNativeRoleDoesNotAdmitItsMaterialOrEffects(TimberbornNativeInventoryRole role)
@@ -148,6 +149,22 @@ public sealed class InitialBodyCompilationTests
             [new(declaration, InventoryUse.PhysicalStock)])]));
         var declarations = new TimberbornInventoryDeclarationCapture([new(A, [declaration])]);
         Assert.Throws<NotSupportedException>(() => declarations.RequireSupportedMaterialBodies([body]));
+    }
+
+    [Fact]
+    public void SelectedSameGoodAcrossInventoriesUsesCheckedAccountingAndDistinctMaterial()
+    {
+        var first = new TimberbornInventoryDeclaration(TimberbornNativeInventoryRole.Stockpile, "Store");
+        var second = new TimberbornInventoryDeclaration(TimberbornNativeInventoryRole.Manufactory, "Factory");
+        TimberbornInitialBodySelection choice = new(A, Basis.NativeResourceAmounts, [],
+            [new(first, InventoryUse.PhysicalStock), new(second, InventoryUse.PhysicalStock)]);
+        var body = Building([new(first, false, [new("Log", 3)]), new(second, true, [new("Log", 2), new("Plank", 1)])]);
+        var compiled = Compile([body], [choice]);
+        Assert.Equal(new[] { TimberbornMaterialPart.StoredGood("Log"), TimberbornMaterialPart.StoredGood("Plank") },
+            compiled.Projections[0].Parts.Skip(1));
+        Assert.Equal(5, compiled.Registrations[0].DescriptorOverride!.ResourceYields.Single(value => value.ResourceId == "Log").Amount);
+        var overflow = Building([new(first, true, [new("Log", int.MaxValue)]), new(second, true, [new("Log", 1)])]);
+        Assert.Throws<OverflowException>(() => Compile([overflow], [choice]));
     }
 
     [Fact]

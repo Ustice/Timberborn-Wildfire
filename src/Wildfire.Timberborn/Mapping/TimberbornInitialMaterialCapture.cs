@@ -8,7 +8,7 @@ public enum TimberbornInitialCompositionGap
 {
     UnknownBodyProfile, UnknownGoodProfile, UnsupportedBodyFamily, MultipleInventoryRoles,
     NaturalBudgetUnresolved, MultipleNamedYields, UnclassifiedYield, VegetationProfileMismatch,
-    InventoryUnavailable, YieldUnavailable, PhysicalReconstructionUnavailable,
+    InventoryUnavailable, YieldUnavailable, PhysicalReconstructionUnavailable, UnsupportedInventoryRole,
 }
 
 /// <summary>Native material input, not current GPU fuel. Zero actual yield never becomes the declared yield.</summary>
@@ -132,7 +132,8 @@ public sealed class TimberbornInitialMaterialBody
     {
         if (!BodyProfile.Known) yield return TimberbornInitialCompositionGap.UnknownBodyProfile;
         if (Family is null || Shape == TimberbornInitialBodyShape.Infrastructure) yield return TimberbornInitialCompositionGap.UnsupportedBodyFamily;
-        if (Inventories.Count > 1) yield return TimberbornInitialCompositionGap.MultipleInventoryRoles;
+        if (TimberbornInventoryDeclarationCapture.MaterialSupportGap(Shape, Inventories.Select(inventory => inventory.Declaration).ToArray()) is { } inventoryGap)
+            yield return inventoryGap;
         if (Yields.Count > 0) yield return TimberbornInitialCompositionGap.NaturalBudgetUnresolved;
         if (Yields.Any(yield => !yield.YieldEnabled)) yield return TimberbornInitialCompositionGap.YieldUnavailable;
         if (Yields.Count > 1) yield return TimberbornInitialCompositionGap.MultipleNamedYields;
