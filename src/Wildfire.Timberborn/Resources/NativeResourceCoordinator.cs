@@ -22,6 +22,15 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
     internal void Register(INativeWaterApplicationProducer executor) => _waterResponders.Add(executor);
     internal void Unregister(INativeWaterApplicationProducer executor) => _waterResponders.Remove(executor);
 
+    // The native water-credit boundary calls this after its credit guard exits, before parallel water starts.
+    // Each collector revalidates actual arrival and owns its own source-to-inventory conversion guard.
+    internal void CollectNaturalWater()
+    {
+        _transaction.ThrowIfOperationUnsafe();
+        foreach (var collector in _waterResponders.OfType<INativeNaturalWaterCollector>().ToArray())
+            collector.TryCollectPendingWater();
+    }
+
     public void Attach(IGpuFireSimulator simulator)
     {
         ThrowIfSaveUnsafe();

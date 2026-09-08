@@ -79,6 +79,44 @@ public sealed class NativeWaterResponderDispatchTests
         Assert.Equal(7, Assert.Single(simulator.Accepted).CellIndex);
     }
 
+    [Fact]
+    public void NativeCollectionIsSeparateFromGpuApplicationAndOwnsItsTransferGuard() =>
+        RunNative(nameof(NativeCollectionCase));
+
+    private static void NativeCollectionCase()
+    {
+        var coordinator = new NativeResourceCoordinator();
+        var simulator = new Simulator();
+        coordinator.Attach(simulator);
+        int collections = 0;
+        var collector = new Collector(() => coordinator.TransferInventory(() =>
+        {
+            Assert.Throws<InvalidOperationException>(coordinator.ThrowIfSaveUnsafe);
+            collections++;
+        }));
+        coordinator.Register(collector);
+        coordinator.CollectNaturalWater();
+        Assert.Equal(1, collections);
+        Assert.Empty(simulator.Accepted);
+        Assert.Equal(0, simulator.OrdinaryTicks);
+        Assert.Equal(0, collector.Application.Commits);
+        coordinator.ThrowIfSaveUnsafe();
+        coordinator.Tick();
+        Assert.Equal(1, collector.Application.Commits);
+        Assert.Equal(1, collections);
+        coordinator.Unregister(collector);
+        coordinator.CollectNaturalWater();
+        Assert.Equal(1, collections);
+    }
+
+    private sealed class Collector(Action collect) : INativeWaterApplicationProducer, INativeNaturalWaterCollector
+    {
+        internal Responder Application { get; } = new(7);
+        public void TryCollectPendingWater() => collect();
+        public bool TryPrepareApplication(out FireSimChange input, out Action commit) =>
+            Application.TryPrepareApplication(out input, out commit);
+    }
+
     private static void RunNative(string method)
     {
         using var native = new NativeManagedTestContext();
