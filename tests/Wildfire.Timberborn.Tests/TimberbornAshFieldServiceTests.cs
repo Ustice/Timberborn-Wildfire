@@ -362,7 +362,7 @@ public sealed class TimberbornAshFieldServiceTests
     }
 
     [Fact]
-    public void TaintedAshSoilPoisoningFailsLoudlyWhenAdapterIsUnavailable()
+    public void TaintedAshSoilPoisoningReportsUnavailableWithoutRemovingAsh()
     {
         TimberbornAshFieldService service = new(new RecordingAshGrowthAdapter());
         SyncAsh(
@@ -371,10 +371,13 @@ public sealed class TimberbornAshFieldServiceTests
             (CellIndex: 12, Ash: 1, AshContamination: 1));
         TimberbornTaintedAshSoilPoisoningService poisoning = new();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            poisoning.Apply(61, service.Entries));
+        TimberbornTaintedAshSoilPoisoningSummary summary = poisoning.Apply(61, service.Entries);
 
-        Assert.Contains("Tainted ash soil poisoning adapter is unavailable", exception.Message);
+        Assert.Equal(TimberbornTaintedAshSoilPoisoningOutcome.Unavailable, summary.Outcome);
+        Assert.Equal(1, summary.CandidateCellCount);
+        Assert.Equal(0, summary.AppliedCellCount);
+        Assert.Equal(1, service.Entries[12].Strength);
+        Assert.Equal(WildfireAshQuality.Tainted, service.Entries[12].Quality);
     }
 
     [Fact]
@@ -540,30 +543,6 @@ public sealed class TimberbornAshFieldServiceTests
         Assert.Equal(1, entry.Strength);
         Assert.Equal(1, summary.WaterTaintAttemptCount);
         Assert.Equal(1, summary.WaterTaintSuccessCount);
-    }
-
-    [Fact]
-    public void TaintedAshSoilPoisoningReadsContaminationWithNativeMapIndex()
-    {
-        FireGrid grid = new(50, 50, 23);
-        int simulatorCellIndex = grid.ToIndex(12, 13, 4);
-        int nativeMapIndex = 13 * 50 + 12;
-        RecordingSoilContaminationPoisoningApi soilContamination = new(nativeMapIndex, currentContamination: 0.2f);
-        TimberbornSoilContaminationAshPoisoningAdapter adapter = new(
-            soilContamination,
-            () => grid,
-            (x, y) => y * 50 + x,
-            new RecordingFireLogSink());
-
-        TimberbornTaintedAshSoilPoisoningSummary summary = adapter.ApplyPoisoning(
-            62,
-            [new TimberbornTaintedAshSoilPoisoningCandidate(simulatorCellIndex, Strength: 3)]);
-
-        Assert.Equal(1, summary.CandidateCellCount);
-        Assert.Equal(1, summary.AppliedCellCount);
-        Assert.Equal([nativeMapIndex], soilContamination.ContaminationIndices);
-        Assert.Equal([(12, 13, 4)], soilContamination.UpdatedCoordinates);
-        Assert.Equal([0.9f], soilContamination.UpdatedContamination);
     }
 
     [Fact]
@@ -767,37 +746,6 @@ public sealed class TimberbornAshFieldServiceTests
             {
                 WaterTaintSuccessCount = washoutSummary.WaterTaintSuccessCount + taintedWashouts.Count,
             };
-        }
-    }
-
-    private sealed class RecordingSoilContaminationPoisoningApi(
-        int expectedContaminationIndex,
-        float currentContamination)
-        : ITimberbornSoilContaminationPoisoningApi
-    {
-        public bool IsAvailable => true;
-
-        public List<int> ContaminationIndices { get; } = [];
-
-        public List<(int X, int Y, int Z)> UpdatedCoordinates { get; } = [];
-
-        public List<float> UpdatedContamination { get; } = [];
-
-        public float Contamination(int mapCellIndex)
-        {
-            ContaminationIndices.Add(mapCellIndex);
-            if (mapCellIndex != expectedContaminationIndex)
-            {
-                throw new IndexOutOfRangeException();
-            }
-
-            return currentContamination;
-        }
-
-        public void UpdateContamination(int x, int y, int z, float contamination)
-        {
-            UpdatedCoordinates.Add((x, y, z));
-            UpdatedContamination.Add(contamination);
         }
     }
 

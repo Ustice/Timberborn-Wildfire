@@ -128,11 +128,7 @@ public sealed partial class TimberbornFireRuntime :
             _logSink);
         _ashFieldSynchronizer = new TimberbornAshFieldSynchronizer(_ashFieldService);
         _taintedAshSoilPoisoningService = new TimberbornTaintedAshSoilPoisoningService(
-            new TimberbornSoilContaminationAshPoisoningAdapter(
-                _soilContaminationService,
-                CurrentGrid,
-                mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService)),
-                _logSink),
+            UnavailableTimberbornTaintedAshSoilPoisoningAdapter.Instance,
             _logSink);
         _ashWaterWashoutService = new TimberbornAshWaterWashoutService(
             UnavailableTimberbornAshWaterTaintAdapter.Instance,
@@ -1231,6 +1227,7 @@ public sealed partial class TimberbornFireRuntime :
             ContaminationFireNativeDecontaminationAttempts: contaminationFireSummary.NativeDecontaminationAttemptCount,
             TaintedAshPoisonCandidateCells: taintedAshSummary.CandidateCellCount,
             TaintedAshPoisonAppliedCells: taintedAshSummary.AppliedCellCount,
+            TaintedAshPoisonOutcome: taintedAshSummary.Outcome.ToString().ToLowerInvariant(),
             AshWaterWashoutCandidateAshCells: ashWaterWashoutSummary.CandidateAshCellCount,
             AshWaterWashoutCleanAshWashed: ashWaterWashoutSummary.CleanAshWashedCellCount,
             AshWaterWashoutTaintedAshWashed: ashWaterWashoutSummary.TaintedAshWashedCellCount,

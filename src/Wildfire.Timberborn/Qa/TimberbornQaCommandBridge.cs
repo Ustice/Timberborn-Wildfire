@@ -1914,6 +1914,7 @@ public sealed record TimberbornQaCommandState(
     int? ContaminationFireNativeDecontaminationAttempts = null,
     int? TaintedAshPoisonCandidateCells = null,
     int? TaintedAshPoisonAppliedCells = null,
+    string? TaintedAshPoisonOutcome = null,
     int? AshWaterWashoutCandidateAshCells = null,
     int? AshWaterWashoutCleanAshWashed = null,
     int? AshWaterWashoutTaintedAshWashed = null,
@@ -2300,6 +2301,7 @@ public sealed record TimberbornQaCommandResult(
         $"contamination_fire_native_decontamination_attempts={FormatNumber(State.ContaminationFireNativeDecontaminationAttempts)} " +
         $"tainted_ash_poison_candidate_cells={FormatNumber(State.TaintedAshPoisonCandidateCells)} " +
         $"tainted_ash_poison_applied_cells={FormatNumber(State.TaintedAshPoisonAppliedCells)} " +
+        $"tainted_ash_poison_outcome={State.TaintedAshPoisonOutcome ?? "unknown"} " +
         $"ash_water_washout_candidate_ash_cells={FormatNumber(State.AshWaterWashoutCandidateAshCells)} " +
         $"ash_water_washout_clean_ash_washed={FormatNumber(State.AshWaterWashoutCleanAshWashed)} " +
         $"ash_water_washout_tainted_ash_washed={FormatNumber(State.AshWaterWashoutTaintedAshWashed)} " +

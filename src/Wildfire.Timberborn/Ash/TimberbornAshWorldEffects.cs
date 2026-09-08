@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Timberborn.BaseComponentSystem;
 using Timberborn.BehaviorSystem;
@@ -9,14 +8,12 @@ using Timberborn.EntitySystem;
 using Timberborn.Gathering;
 using Timberborn.Goods;
 using Timberborn.InventorySystem;
-using Timberborn.MapIndexSystem;
 using Timberborn.Navigation;
 using Timberborn.SimpleOutputBuildings;
 using Timberborn.TemplateSystem;
 using Timberborn.WalkingSystem;
 using Timberborn.WorkSystem;
 using Timberborn.WorldPersistence;
-using Timberborn.SoilContaminationSystem;
 using UnityEngine;
 using Wildfire.Core;
 
@@ -68,18 +65,28 @@ public readonly record struct TimberbornTaintedAshSoilPoisoningCandidate(
     int CellIndex,
     int Strength);
 
+public enum TimberbornTaintedAshSoilPoisoningOutcome
+{
+    NoCandidates,
+    Applied,
+    Unavailable,
+}
+
 public readonly record struct TimberbornTaintedAshSoilPoisoningSummary(
     int CandidateCellCount,
-    int AppliedCellCount)
+    int AppliedCellCount,
+    TimberbornTaintedAshSoilPoisoningOutcome Outcome)
 {
     public static readonly TimberbornTaintedAshSoilPoisoningSummary Empty = new(
         CandidateCellCount: 0,
-        AppliedCellCount: 0);
+        AppliedCellCount: 0,
+        Outcome: TimberbornTaintedAshSoilPoisoningOutcome.NoCandidates);
 
     public string ToLogToken(uint tick)
     {
-        return "wildfire_timberborn_tainted_ash_soil_poisoning_applied " +
+        return "wildfire_timberborn_tainted_ash_soil_poisoning " +
             $"tick={tick} " +
+            $"outcome={Outcome.ToString().ToLowerInvariant()} " +
             $"candidate_cells={CandidateCellCount} " +
             $"applied_cells={AppliedCellCount}";
     }
@@ -90,52 +97,6 @@ public interface ITimberbornTaintedAshSoilPoisoningAdapter
     TimberbornTaintedAshSoilPoisoningSummary ApplyPoisoning(
         uint tick,
         IReadOnlyList<TimberbornTaintedAshSoilPoisoningCandidate> candidates);
-}
-
-public interface ITimberbornSoilContaminationPoisoningApi
-{
-    bool IsAvailable { get; }
-
-    float Contamination(int mapCellIndex);
-
-    void UpdateContamination(int x, int y, int z, float contamination);
-}
-
-internal sealed class TimberbornSoilContaminationPoisoningApi : ITimberbornSoilContaminationPoisoningApi
-{
-    private readonly ISoilContaminationService _soilContaminationService;
-    private readonly MethodInfo? _updateMethod;
-
-    public TimberbornSoilContaminationPoisoningApi(ISoilContaminationService soilContaminationService)
-    {
-        _soilContaminationService = soilContaminationService ??
-            throw new ArgumentNullException(nameof(soilContaminationService));
-        _updateMethod = _soilContaminationService
-            .GetType()
-            .GetMethod(
-                "UpdateContamination",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                binder: null,
-                new[] { typeof(Vector3Int), typeof(float) },
-                modifiers: null);
-    }
-
-    public bool IsAvailable => _updateMethod is not null;
-
-    public float Contamination(int mapCellIndex)
-    {
-        return _soilContaminationService.Contamination(mapCellIndex);
-    }
-
-    public void UpdateContamination(int x, int y, int z, float contamination)
-    {
-        if (_updateMethod is null)
-        {
-            throw new InvalidOperationException("The soil contamination update API is unavailable.");
-        }
-
-        _updateMethod.Invoke(_soilContaminationService, new object[] { new Vector3Int(x, y, z), contamination });
-    }
 }
 
 public sealed class UnavailableTimberbornTaintedAshSoilPoisoningAdapter : ITimberbornTaintedAshSoilPoisoningAdapter
@@ -155,7 +116,10 @@ public sealed class UnavailableTimberbornTaintedAshSoilPoisoningAdapter : ITimbe
             throw new ArgumentNullException(nameof(candidates));
         }
 
-        throw new InvalidOperationException("Tainted ash soil poisoning adapter is unavailable.");
+        return candidates.Count == 0
+            ? TimberbornTaintedAshSoilPoisoningSummary.Empty
+            : new TimberbornTaintedAshSoilPoisoningSummary(
+                candidates.Count, 0, TimberbornTaintedAshSoilPoisoningOutcome.Unavailable);
     }
 }
 
@@ -163,6 +127,7 @@ public sealed class TimberbornTaintedAshSoilPoisoningService
 {
     private readonly ITimberbornTaintedAshSoilPoisoningAdapter _adapter;
     private readonly ITimberbornFireLogSink _logSink;
+    private bool _reportedUnavailable;
 
     public TimberbornTaintedAshSoilPoisoningService(
         ITimberbornTaintedAshSoilPoisoningAdapter? adapter = null,
@@ -192,8 +157,15 @@ public sealed class TimberbornTaintedAshSoilPoisoningService
         LastSummary = candidates.Length == 0
             ? TimberbornTaintedAshSoilPoisoningSummary.Empty
             : _adapter.ApplyPoisoning(tick, candidates);
-        if (LastSummary.CandidateCellCount > 0 ||
-            LastSummary.AppliedCellCount > 0)
+        if (LastSummary.Outcome == TimberbornTaintedAshSoilPoisoningOutcome.Unavailable)
+        {
+            if (!_reportedUnavailable)
+            {
+                _reportedUnavailable = true;
+                _logSink.Info(LastSummary.ToLogToken(tick));
+            }
+        }
+        else if (LastSummary.Outcome == TimberbornTaintedAshSoilPoisoningOutcome.Applied)
         {
             _logSink.Info(LastSummary.ToLogToken(tick));
         }
@@ -409,87 +381,6 @@ public sealed class TimberbornAshWaterWashoutService
             entry.Strength,
             entry.Quality,
             contact.Kind);
-    }
-}
-
-public sealed class TimberbornSoilContaminationAshPoisoningAdapter : ITimberbornTaintedAshSoilPoisoningAdapter
-{
-    private const float MaxMapContamination = 0.9f;
-
-    private readonly ITimberbornSoilContaminationPoisoningApi _poisoningApi;
-    private readonly Func<FireGrid?> _gridProvider;
-    private readonly Func<int, int, int> _cellToIndex;
-    private readonly ITimberbornFireLogSink _logSink;
-
-    internal TimberbornSoilContaminationAshPoisoningAdapter(
-        ISoilContaminationService soilContaminationService,
-        Func<FireGrid?> gridProvider,
-        MapIndexService mapIndexService,
-        ITimberbornFireLogSink? logSink = null)
-        : this(
-            new TimberbornSoilContaminationPoisoningApi(soilContaminationService),
-            gridProvider,
-            (x, y) => (mapIndexService ?? throw new ArgumentNullException(nameof(mapIndexService)))
-                .CellToIndex(new Vector2Int(x, y)),
-            logSink)
-    {
-    }
-
-    public TimberbornSoilContaminationAshPoisoningAdapter(
-        ITimberbornSoilContaminationPoisoningApi poisoningApi,
-        Func<FireGrid?> gridProvider,
-        Func<int, int, int> cellToIndex,
-        ITimberbornFireLogSink? logSink = null)
-    {
-        _poisoningApi = poisoningApi ?? throw new ArgumentNullException(nameof(poisoningApi));
-        _gridProvider = gridProvider ?? throw new ArgumentNullException(nameof(gridProvider));
-        _cellToIndex = cellToIndex ?? throw new ArgumentNullException(nameof(cellToIndex));
-        _logSink = logSink ?? NullTimberbornFireLogSink.Instance;
-    }
-
-    public TimberbornTaintedAshSoilPoisoningSummary ApplyPoisoning(
-        uint tick,
-        IReadOnlyList<TimberbornTaintedAshSoilPoisoningCandidate> candidates)
-    {
-        if (candidates is null)
-        {
-            throw new ArgumentNullException(nameof(candidates));
-        }
-
-        FireGrid? grid = _gridProvider();
-        if (!grid.HasValue)
-        {
-            throw new InvalidOperationException("Tainted ash soil poisoning grid is unavailable.");
-        }
-
-        if (!_poisoningApi.IsAvailable)
-        {
-            throw new InvalidOperationException("Tainted ash soil poisoning API is unavailable.");
-        }
-
-        int applied = 0;
-        candidates.ToList().ForEach(candidate =>
-        {
-            try
-            {
-                (int x, int y, int z) = grid.Value.FromIndex(candidate.CellIndex);
-                int mapCellIndex = _cellToIndex(x, y);
-                float current = _poisoningApi.Contamination(mapCellIndex);
-                float target = Math.Max(current, MaxMapContamination);
-                _poisoningApi.UpdateContamination(x, y, z, target);
-                applied++;
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"Tainted ash soil poisoning failed for cell {candidate.CellIndex}.",
-                    exception);
-            }
-        });
-
-        return new TimberbornTaintedAshSoilPoisoningSummary(
-            CandidateCellCount: candidates.Count,
-            AppliedCellCount: applied);
     }
 }
 

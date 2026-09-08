@@ -3037,6 +3037,7 @@ public sealed partial class TimberbornQaCommandBridgeTests
             ContaminationFireNativeDecontaminationAttempts: 0,
             TaintedAshPoisonCandidateCells: 1,
             TaintedAshPoisonAppliedCells: 1,
+            TaintedAshPoisonOutcome: "applied",
             AshWaterWashoutCandidateAshCells: 4,
             AshWaterWashoutCleanAshWashed: 2,
             AshWaterWashoutTaintedAshWashed: 1,
@@ -3255,6 +3256,7 @@ public sealed partial class TimberbornQaCommandBridgeTests
         Assert.Contains("contamination_fire_native_decontamination_attempts=0", result.ResultToken);
         Assert.Contains("tainted_ash_poison_candidate_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_applied_cells=1", result.ResultToken);
+        Assert.Contains("tainted_ash_poison_outcome=applied", result.ResultToken);
         Assert.Contains("ash_water_washout_candidate_ash_cells=4", result.ResultToken);
         Assert.Contains("ash_water_washout_clean_ash_washed=2", result.ResultToken);
         Assert.Contains("ash_water_washout_tainted_ash_washed=1", result.ResultToken);
