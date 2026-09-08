@@ -20,6 +20,7 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Warden coverage display](qa/warden-native-range-display.md): native placement-preview and selection highlighting of potential response surfaces; rendering and preview cleanup passed in the subsequent live run.
 - [Native executor Transform](qa/native-executor-transform.md): the first live Warden response exposed a custom-component lookup error; four executor initialization regressions and the subsequent live path-start retry pass.
 - [Warden charge and return](qa/warden-native-charge-return-live.md): actual Water pickup, unsafe-route withdrawal, retained-charge saves and return to ordinary activity; suppression and active-phase reload remain open.
+- [Warden behavior save owner](qa/warden-behavior-save-owner.md): the worker owns new sortie behaviors so station deletion cannot orphan their saved executor; native reference/load tests pass, with live demolition/reload still pending.
 - [Shared fire walking](qa/shared-owned-fire-walk.md): three jobs share native path monitoring while preserving their phase, resource and save decisions; the extraction awaits live acceptance.
 - [Ash job classification](qa/ash-native-job-marker.md): actual native work-status and nonworking-worker selection regressions preserve ash collection as the gatherer's assigned job.
 - [Warden district lifecycle](qa/warden-district-lifecycle.md): native death and deletion continue after cleanup failures while the shared resource guard prevents inconsistent saves.
