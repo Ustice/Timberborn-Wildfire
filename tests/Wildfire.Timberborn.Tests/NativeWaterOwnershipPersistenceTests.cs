@@ -130,6 +130,23 @@ public sealed partial class NativeWaterOwnershipTests
         Assert.False((bool)NativeShorelineWaterFixture.Get(f.Source, "_restorePermit")!);
     }
 
+    [Fact]
+    public void WrongThreadSaveRejectsWithoutPublishingPermanentTaint()
+    {
+        using var f = new F(); f.Load();
+        var (_, entities, _, _) = f.RestoreStage(marker: true);
+        f.Call(f.EntitiesLoader, "Load", entities);
+        var copy = Activator.CreateInstance(f.T("Timberborn.WorldSerialization", "Timberborn.WorldSerialization.SerializedEntity"), f.Owner, "Fixture.Intake")!;
+        var saver = Activator.CreateInstance(f.T("Timberborn.WorldPersistence", "Timberborn.WorldPersistence.EntitySaver"), copy)!;
+        Exception? failure = null;
+        var thread = new Thread(() => { try { f.Call(f.Source, "Save", saver); } catch (Exception exception) { failure = exception; } });
+        thread.Start(); thread.Join();
+        Assert.IsType<TargetInvocationException>(failure);
+        Assert.False((bool)f.Property(f.Source, "Tainted")!);
+        var loader = Activator.CreateInstance(f.T("Timberborn.WorldPersistence", "Timberborn.WorldPersistence.EntityLoader"), copy)!;
+        Assert.False((bool)f.Call(loader, "HasComponent", f.Key("Wildfire.NaturalWaterOwnership"))!);
+    }
+
     private sealed partial class F
     {
         internal readonly Guid Owner = Guid.NewGuid();

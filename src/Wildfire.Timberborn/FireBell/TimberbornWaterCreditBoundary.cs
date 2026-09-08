@@ -35,7 +35,12 @@ internal sealed class TimberbornWaterCreditBoundary : IPostLoadableSingleton
         if (!Install()) source.Refuse();
     }
     internal void Forget(TimberbornNaturalWaterSource source) => _sources.Remove(source);
-    internal void CheckSave() => resources.ThrowIfSaveUnsafe();
+    internal void CheckSave()
+    {
+        resources.ThrowIfSaveUnsafe();
+        if (Environment.CurrentManagedThreadId != _thread)
+            throw new InvalidOperationException("Native water ownership saving requires the owning native thread.");
+    }
     internal bool CanRead => Environment.CurrentManagedThreadId == _thread && !resources.IsIndeterminate;
     private bool ThreadReady => Environment.CurrentManagedThreadId == _thread && !scheduler.IsStartingParallelTick && scheduler.ParalleTicklIsFinished;
     private void RefuseAll() { foreach (var source in _sources) source.Refuse(); }
@@ -104,7 +109,7 @@ internal sealed class TimberbornWaterCreditBoundary : IPostLoadableSingleton
             foreach (var source in _sources)
             {
                 if (!source.Armed) { source.Refuse(); continue; } // First unobserved credit forbids later zero-buffer adoption.
-                if (!source.Matches(Contract) || inputs.Count(input => ReferenceEquals(input, source.Input)) != 1 ||
+                if (!source.Active || !source.MatchesIdentity(Contract) || inputs.Count(input => ReferenceEquals(input, source.Input)) != 1 ||
                     inputs.Count(input => input.Coordinates == source.Coordinate) != 1) source.Refuse();
             }
             original.Tick(); // Same native service, exactly once; exceptions retain partial native state and poison.

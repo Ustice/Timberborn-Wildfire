@@ -42,24 +42,25 @@ internal sealed class TimberbornNaturalWaterSource : BaseComponent,
     {
         if (_loaded || _armed || _tainted || !boundary.CanRead || !boundary.Install()) return false;
         var contract = boundary.Contract!;
-        if (!contract.ZeroBuffer(Input) || !NativeIdentity(contract) || !boundary.Exclusive(this, Input.Coordinates))
+        if (!contract.ZeroBuffer(Input) || !Active || !NativeIdentity(contract) || !boundary.Exclusive(this, Input.Coordinates))
         { Refuse(); return false; }
         _owner = Entity.EntityId;
         _coordinate = Input.Coordinates;
         _armed = true;
         return true;
     }
+    internal bool Active => _block.IsFinished && _block.AddedToService;
     internal bool Ready => _armed && !_tainted && boundary.CanRead && boundary.Installed &&
-        Matches(boundary.Contract!) && boundary.Exclusive(this, _coordinate);
+        Active && MatchesIdentity(boundary.Contract!) && boundary.Exclusive(this, _coordinate);
     private bool NativeIdentity(TimberbornWaterCreditContract contract) =>
-        Entity && Entity.Initialized && !Entity.Deleted && _block && _block.IsFinished && _block.AddedToService &&
+        Entity && Entity.Initialized && !Entity.Deleted && _block &&
         GetComponentsAllocating<WaterInput>().Count == 1 && ReferenceEquals(GetComponent<WaterInput>(), Input) &&
         contract.Fixed(Input) && _block.TransformCoordinates(GetComponent<WaterInputSpec>().WaterInputCoordinates) == Input.Coordinates;
-    internal bool Matches(TimberbornWaterCreditContract contract) => NativeIdentity(contract) &&
+    internal bool MatchesIdentity(TimberbornWaterCreditContract contract) => NativeIdentity(contract) &&
         Entity.EntityId == _owner && Input.Coordinates == _coordinate && contract.ValidBuffer(Input);
     internal void Refuse() => _tainted = true; // Monotonic ownership invalidation, no native resource write/callback.
     public void OnPrePlacementChanged() { if (_armed) Refuse(); }
-    public void DeleteEntity() => boundary.Forget(this);
+    public void DeleteEntity() { Refuse(); boundary.Forget(this); }
 
     public void Load(IEntityLoader loader)
     {
@@ -78,14 +79,14 @@ internal sealed class TimberbornNaturalWaterSource : BaseComponent,
         bool permitted = _restorePermit;
         _restorePermit = false; // Single native PostLoad fence, never a reusable load permission.
         if (!permitted || _tainted) return;
-        if (!inNativeLoad || !boundary.Installed || !Matches(boundary.Contract!) || !boundary.Exclusive(this, _coordinate))
+        if (!inNativeLoad || !boundary.Installed || !Active || !MatchesIdentity(boundary.Contract!) || !boundary.Exclusive(this, _coordinate))
         { Refuse(); return; }
         _armed = true;
     }
     public void Save(IEntitySaver saver)
     {
         boundary.CheckSave();
-        if (!Ready) Refuse();
+        if (!_armed || !boundary.Installed || !MatchesIdentity(boundary.Contract!)) Refuse();
         var saved = saver.GetComponent(Key);
         saved.Set(Version, 1); saved.Set(Taint, _tainted);
         saved.Set(Owner, (_armed ? _owner : Entity.EntityId).ToString("D"));
