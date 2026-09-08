@@ -34,7 +34,7 @@ For Steam, add the argument to Timberborn's Launch Options for the QA session an
 open 'steam://run/1062090//--wildfire-enable-qa-mutations/'
 ```
 
-Respect the shared controller and launch guard before using that route. Confirm `command_access=development` in the new process log before issuing a stimulus; the URI alone does not prove the game received the argument. The one-shot route still needs live verification in this environment. See [Valve's launch-parameter documentation](https://partner.steamgames.com/doc/api/ISteamApps#GetLaunchCommandLine).
+Respect the shared controller and launch guard before using that route. Confirm `command_access=development` in the new process log before issuing a stimulus; the URI alone does not prove the game received the argument. The one-shot route was verified in the [native Warden run](../qa/warden-native-charge-return-live.md): source `85961c2`, PID31274, fresh `command_access=development`, and a successful copied-save `qa-delta-stimulus`. Saved Steam launch options were unchanged. See [Valve's launch-parameter documentation](https://partner.steamgames.com/doc/api/ISteamApps#GetLaunchCommandLine).
 
 ## Files and packaging
 
@@ -44,4 +44,4 @@ A pending mutation file cannot bypass diagnostic access. Development access inte
 
 Deployment copies the mod manifest, compiled assemblies, four required macOS bundles, and selected game data directories. Package validation rejects source/test/docs/QA directories and source-code extensions. Repository launch, scenario-generation, inventory, publishing, and cleanup scripts are developer tools and are not copied into the player payload. The diagnostic bundle is intentional runtime support; bundle presence does not enable debug overlays. Visual debug visibility defaults to hidden and is controlled by the existing accepted release setting.
 
-Offline command-policy tests establish rejection and deliberate opt-in dispatch. Release acceptance still requires a fresh native file-bridge rejection plus opt-in copied-save stimulus evidence; do not close that live gate from unit tests alone.
+Offline command-policy tests establish rejection and deliberate opt-in dispatch. The opt-in copied-save stimulus is now backed by the native run above. Release acceptance still requires a fresh mutation rejection in a normal diagnostic process and a subsequent restart without the flag to verify development access does not persist. Do not close those gates from unit tests or an opted-in process.
