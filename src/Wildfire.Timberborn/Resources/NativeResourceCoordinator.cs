@@ -1,4 +1,3 @@
-using Wildfire.Timberborn.FireResponse;
 using Wildfire.Core;
 using Wildfire.Timberborn.Fertilizer;
 
@@ -7,7 +6,7 @@ namespace Wildfire.Timberborn.Resources;
 /// <summary>Pending jobs remain in native executors. Only one resource conversion enters an owned synchronous GPU step.</summary>
 public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, ITimberbornFireDispatchHost
 {
-    private readonly List<WardenExecutor> _wardens = new();
+    private readonly List<INativeWaterApplicationProducer> _waterResponders = new();
     private readonly List<FertilizerExecutor> _fertilizers = new();
     internal void Register(FertilizerExecutor executor) => _fertilizers.Add(executor);
     internal void Unregister(FertilizerExecutor executor) => _fertilizers.Remove(executor);
@@ -20,8 +19,8 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
     public long FieldRevision { get; private set; }
     public bool IsIndeterminate => _transaction.IsIndeterminate;
     public FireSimAshCollectionReceipt? LastAshReceipt { get; private set; }
-    public void Register(WardenExecutor executor) => _wardens.Add(executor);
-    public void Unregister(WardenExecutor executor) => _wardens.Remove(executor);
+    internal void Register(INativeWaterApplicationProducer executor) => _waterResponders.Add(executor);
+    internal void Unregister(INativeWaterApplicationProducer executor) => _waterResponders.Remove(executor);
 
     public void Attach(IGpuFireSimulator simulator)
     {
@@ -52,9 +51,9 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, IT
 
     private NativeResourceAttempt TryWater(IFireSimAshCollectionSimulator simulator)
     {
-        foreach (var warden in _wardens.ToArray())
+        foreach (var responder in _waterResponders.ToArray())
         {
-            if (!warden.TryPrepareApplication(out var input, out var commit)) continue;
+            if (!responder.TryPrepareApplication(out var input, out var commit)) continue;
             return new(true, _transaction.TryDeliver(simulator, input, () => { commit(); _scheduler.Completed(NativeResourceProducerKind.Water); }));
         }
         return default;

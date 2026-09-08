@@ -19,7 +19,8 @@ using Wildfire.Core;
 namespace Wildfire.Timberborn.FireResponse;
 
 /// <summary>A registered native executor owns one sortie, including its pending application after reload.</summary>
-public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponent, IDeletableEntity
+public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponent, IDeletableEntity,
+    INativeWaterApplicationProducer
 {
     private static readonly ComponentKey Key = new("Wildfire.WardenExecutor");
     private static readonly PropertyKey<int> PhaseKey = new("Phase");
@@ -186,6 +187,9 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
         if (_station is not null && _station && AtStation()) _equipment.TryReturn(_station.Inventory);
         return Finish(_equipment.Loaded ? WardenResponseReason.WaterRetained : WardenResponseReason.Complete, _equipment.Loaded ? "Water retained for next response" : "Response complete");
     }
+
+    bool INativeWaterApplicationProducer.TryPrepareApplication(out FireSimChange input, out Action commit) =>
+        TryPrepareApplication(out input, out commit);
 
     internal bool TryPrepareApplication(out FireSimChange input, out Action commit)
     {
