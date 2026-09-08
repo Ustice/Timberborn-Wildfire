@@ -81,10 +81,10 @@ This catalog lists Wildfire calls into Timberborn native APIs that are currently
 
 ### Update Soil Contamination From Tainted Ash
 
-- Code: `src/Wildfire.Timberborn/Ash/TimberbornAshWorldEffects.cs:106`
-- Current call: probes `ISoilContaminationService.UpdateContamination(Vector3Int, float)` with public-or-non-public binding flags and invokes it when available.
-- Why Wildfire uses it: tainted ash should poison soil through Timberborn's native contamination field instead of maintaining a detached Wildfire-only state.
-- Requested support: a public soil contamination mutation API with documented coordinate, range, clamping, and update-notification behavior.
+- Code: `src/Wildfire.Timberborn/Ash/TimberbornAshWorldEffects.cs`
+- Current capability: explicitly unavailable. The removed reflection call to concrete `SoilContaminationService.UpdateContamination` only queued rendering changes; it did not update native soil authority.
+- Intended effect: tainted ash should contribute to native soil contamination while native simulation owns spreading, residual decay and persistence.
+- Requested support: a public local-source input contract with documented native column mapping, job snapshot ownership, source removal, load ordering and object notification behavior. A direct cache setter is insufficient. See [native authority proof and limits](../qa/tainted-ash-soil-authority.md).
 
 ### Prioritize Fertile Ash Work Behavior
 

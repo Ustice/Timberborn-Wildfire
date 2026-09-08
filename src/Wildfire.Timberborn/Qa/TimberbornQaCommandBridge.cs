@@ -7,7 +7,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Qa;
 
-public sealed class TimberbornQaCommandBridge
+public sealed partial class TimberbornQaCommandBridge
 {
     public const string StatusCommand = "status";
     public const string HelpCommand = "help";
@@ -52,7 +52,8 @@ public sealed class TimberbornQaCommandBridge
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
@@ -61,14 +62,16 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -77,7 +80,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -85,7 +89,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -94,7 +99,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -103,7 +109,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaDeltaStimulus deltaStimulus,
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -112,7 +119,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -122,7 +130,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaBuildingBurnoutStimulus buildingBurnoutStimulus,
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaBurnDurationStimulus burnDurationStimulus,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -131,7 +140,8 @@ public sealed class TimberbornQaCommandBridge
             burnDurationStimulus,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
@@ -142,7 +152,8 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaWaterSuppressionStimulus waterSuppressionStimulus,
         ITimberbornQaBurnDurationStimulus burnDurationStimulus,
         ITimberbornQaFireSimParameterPresetSelector fireSimParameterPresetSelector,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             deltaStimulus,
@@ -151,14 +162,16 @@ public sealed class TimberbornQaCommandBridge
             burnDurationStimulus,
             fireSimParameterPresetSelector,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaSoilMoistureMapProbe soilMoistureMapProbe,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
@@ -167,14 +180,16 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaBurnDurationStimulus.Instance,
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             soilMoistureMapProbe,
-            logSink)
+            logSink,
+            access: access)
     {
     }
 
     public TimberbornQaCommandBridge(
         ITimberbornQaCommandStateProvider stateProvider,
         ITimberbornQaAshCellProbe ashCellProbe,
-        ITimberbornQaCommandLogSink logSink)
+        ITimberbornQaCommandLogSink logSink,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics)
         : this(
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
@@ -184,7 +199,8 @@ public sealed class TimberbornQaCommandBridge
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink,
-            ashCellProbe)
+            ashCellProbe,
+            access: access)
     {
     }
 
@@ -200,7 +216,10 @@ public sealed class TimberbornQaCommandBridge
         ITimberbornQaAshCellProbe? ashCellProbe = null,
         ITimberbornQaAshWaterStimulus? ashWaterStimulus = null,
         ITimberbornQaInventoryAdjuster? inventoryAdjuster = null,
-        ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null)
+        ITimberbornQaStoredMaterialStimulus? storedMaterialStimulus = null,
+        TimberbornQaCommandAccess access = TimberbornQaCommandAccess.Diagnostics,
+        ITimberbornQaBorrowedDuty? borrowedDuty = null,
+        ITimberbornQaSession? session = null)
     {
         if (stateProvider is null)
         {
@@ -242,6 +261,9 @@ public sealed class TimberbornQaCommandBridge
             throw new ArgumentNullException(nameof(logSink));
         }
 
+        Access = access;
+        _borrowedDuty = borrowedDuty;
+        _session = session;
         _stateProvider = stateProvider;
         _deltaStimulus = deltaStimulus;
         _buildingBurnoutStimulus = buildingBurnoutStimulus;
@@ -311,6 +333,12 @@ public sealed class TimberbornQaCommandBridge
             commands[QaStoredMaterialStimulusCommand] = () => ExecuteQaStoredMaterialStimulus(null);
         }
 
+        if (_borrowedDuty is not null)
+            foreach (var command in TimberbornQaBorrowedDutyCommands.Names)
+                commands[command] = () => ExecuteBorrowedDuty(command, command);
+        if (_session is not null)
+            foreach (var command in SessionCommands)
+                commands[command] = () => ExecuteSession(command, command);
         _commands = commands;
     }
 
@@ -333,11 +361,23 @@ public sealed class TimberbornQaCommandBridge
         string command = NormalizeCommand(commandText);
         _logSink.Info($"wildfire_command_request command={FormatToken(command)}");
 
-        if (!_commands.TryGetValue(command, out Func<TimberbornQaCommandResult>? handler))
+        if (!_commands.TryGetValue(command, out Func<TimberbornQaCommandResult>? handler) &&
+            !TimberbornQaBorrowedDutyCommands.Handles(command))
         {
             TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
                 command,
                 $"Unknown command '{command}'.",
+                TimberbornQaCommandState.Placeholder,
+                KnownCommands);
+            _logSink.Warning(failure.ResultToken);
+            return failure;
+        }
+
+        if (!TimberbornQaCommandPolicy.CanExecute(Access, command))
+        {
+            TimberbornQaCommandResult failure = TimberbornQaCommandResult.CreateFailure(
+                command,
+                "qa_mutations_disabled",
                 TimberbornQaCommandState.Placeholder,
                 KnownCommands);
             _logSink.Warning(failure.ResultToken);
@@ -373,7 +413,11 @@ public sealed class TimberbornQaCommandBridge
         try
         {
             TimberbornQaCommandResult result =
-                StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand)
+                SessionCommands.Contains(command, StringComparer.OrdinalIgnoreCase)
+                    ? ExecuteSession(command.ToLowerInvariant(), commandText)
+                    : TimberbornQaBorrowedDutyCommands.Handles(command)
+                    ? ExecuteBorrowedDuty(command, commandText)
+                    : StringComparer.OrdinalIgnoreCase.Equals(command, QaBurnDurationStimulusCommand)
                     ? ExecuteQaBurnDurationStimulus(commandText)
                     : StringComparer.OrdinalIgnoreCase.Equals(command, QaFirePresetCommand)
                         ? ExecuteQaFirePreset(commandText)
@@ -389,7 +433,7 @@ public sealed class TimberbornQaCommandBridge
                                             ? ExecuteQaAdjustInventory(commandText)
                                             : StringComparer.OrdinalIgnoreCase.Equals(command, QaStoredMaterialStimulusCommand)
                                                 ? ExecuteQaStoredMaterialStimulus(commandText)
-                                                : handler();
+                                                : handler!();
             _logSink.Info(result.ResultToken);
             return result;
         }
@@ -415,7 +459,14 @@ public sealed class TimberbornQaCommandBridge
         }
     }
 
-    public IReadOnlyList<string> KnownCommands => _commands.Keys.OrderBy(command => command, StringComparer.OrdinalIgnoreCase).ToArray();
+    public TimberbornQaCommandAccess Access { get; }
+
+    public string AccessMode => TimberbornQaCommandPolicy.Mode(Access);
+
+    public IReadOnlyList<string> KnownCommands => _commands.Keys
+        .Where(command => TimberbornQaCommandPolicy.CanExecute(Access, command))
+        .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     private TimberbornQaCommandResult ExecuteStatus()
     {
@@ -428,7 +479,7 @@ public sealed class TimberbornQaCommandBridge
             ",",
             KnownCommands.Where(IsSimulatorChangeCommand));
         string message = string.IsNullOrEmpty(writableCommands)
-            ? "Supported commands are read-only: help, qa-readiness, status."
+            ? $"Supported commands are read-only: {string.Join(", ", KnownCommands)}."
             : "Supported commands: " +
             $"{string.Join(",", KnownCommands)}. " +
             $"QA-only simulator change commands: {writableCommands}.";
@@ -437,7 +488,7 @@ public sealed class TimberbornQaCommandBridge
             HelpCommand,
             _stateProvider.GetState(),
             KnownCommands,
-            message);
+            $"command_access={AccessMode}. {message}");
     }
 
     private TimberbornQaCommandResult ExecuteQaReadiness()
@@ -1741,7 +1792,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerCropBurnYieldLost = null,
     int? LastDeltaConsumerCropBurnKilledCropCount = null,
     int? LastDeltaConsumerCropBurnVisualStateUpdateCount = null,
-    int? LastDeltaConsumerCropBurnDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerCropBurnCoalescedCellCount = null,
     int? LastDeltaConsumerCropBurnUnmappedTargetCount = null,
     int? LastDeltaConsumerCropBurnUnknownHarvestResourceCount = null,
     int? LastDeltaConsumerCropBurnNonBurnableTargetCount = null,
@@ -1751,7 +1802,7 @@ public sealed record TimberbornQaCommandState(
     int? LastDeltaConsumerTreeBurnYieldLost = null,
     int? LastDeltaConsumerTreeBurnKilledTreeCount = null,
     int? LastDeltaConsumerTreeBurnVisualStateUpdateCount = null,
-    int? LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount = null,
+    int? LastDeltaConsumerTreeBurnCoalescedCellCount = null,
     int? LastDeltaConsumerTreeBurnUnmappedTargetCount = null,
     int? LastDeltaConsumerTreeBurnUnknownCuttableResourceCount = null,
     int? LastDeltaConsumerTreeBurnNonBurnableTargetCount = null,
@@ -1870,6 +1921,7 @@ public sealed record TimberbornQaCommandState(
     int? ContaminationFireNativeDecontaminationAttempts = null,
     int? TaintedAshPoisonCandidateCells = null,
     int? TaintedAshPoisonAppliedCells = null,
+    string? TaintedAshPoisonOutcome = null,
     int? AshWaterWashoutCandidateAshCells = null,
     int? AshWaterWashoutCleanAshWashed = null,
     int? AshWaterWashoutTaintedAshWashed = null,
@@ -1967,6 +2019,7 @@ public sealed record TimberbornQaCommandState(
     int? BeaverFieldBehaviorDecisionsSkippedCooldown = null,
     int? BeaverFieldBehaviorDecisionsSkippedBatch = null,
     int? BeaverFieldBehaviorFailedDecisions = null,
+    int? BeaverFieldBehaviorUnsupportedDecisions = null,
     int? BeaverFieldBehaviorRecoveryActions = null,
     int? BeaverFieldBehaviorSmokeExposedSamples = null,
     int? BeaverFieldBehaviorSmokeExposureAccumulatedSamples = null,
@@ -2129,7 +2182,7 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_crop_burn_yield_lost={FormatNumber(State.LastDeltaConsumerCropBurnYieldLost)} " +
         $"last_delta_consumer_crop_burn_killed_crops={FormatNumber(State.LastDeltaConsumerCropBurnKilledCropCount)} " +
         $"last_delta_consumer_crop_burn_visual_state_updates={FormatNumber(State.LastDeltaConsumerCropBurnVisualStateUpdateCount)} " +
-        $"last_delta_consumer_crop_burn_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerCropBurnDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_crop_burn_coalesced_cells={FormatNumber(State.LastDeltaConsumerCropBurnCoalescedCellCount)} " +
         $"last_delta_consumer_crop_burn_unmapped_targets={FormatNumber(State.LastDeltaConsumerCropBurnUnmappedTargetCount)} " +
         $"last_delta_consumer_crop_burn_unknown_harvest_resources={FormatNumber(State.LastDeltaConsumerCropBurnUnknownHarvestResourceCount)} " +
         $"last_delta_consumer_crop_burn_non_burnable_targets={FormatNumber(State.LastDeltaConsumerCropBurnNonBurnableTargetCount)} " +
@@ -2138,7 +2191,7 @@ public sealed record TimberbornQaCommandResult(
         $"last_delta_consumer_tree_burn_yield_lost={FormatNumber(State.LastDeltaConsumerTreeBurnYieldLost)} " +
         $"last_delta_consumer_tree_burn_killed_trees={FormatNumber(State.LastDeltaConsumerTreeBurnKilledTreeCount)} " +
         $"last_delta_consumer_tree_burn_visual_state_updates={FormatNumber(State.LastDeltaConsumerTreeBurnVisualStateUpdateCount)} " +
-        $"last_delta_consumer_tree_burn_duplicate_cells_suppressed={FormatNumber(State.LastDeltaConsumerTreeBurnDuplicateCellSuppressedCount)} " +
+        $"last_delta_consumer_tree_burn_coalesced_cells={FormatNumber(State.LastDeltaConsumerTreeBurnCoalescedCellCount)} " +
         $"last_delta_consumer_tree_burn_unmapped_targets={FormatNumber(State.LastDeltaConsumerTreeBurnUnmappedTargetCount)} " +
         $"last_delta_consumer_tree_burn_unknown_cuttable_resources={FormatNumber(State.LastDeltaConsumerTreeBurnUnknownCuttableResourceCount)} " +
         $"last_delta_consumer_tree_burn_non_burnable_targets={FormatNumber(State.LastDeltaConsumerTreeBurnNonBurnableTargetCount)} " +
@@ -2255,6 +2308,7 @@ public sealed record TimberbornQaCommandResult(
         $"contamination_fire_native_decontamination_attempts={FormatNumber(State.ContaminationFireNativeDecontaminationAttempts)} " +
         $"tainted_ash_poison_candidate_cells={FormatNumber(State.TaintedAshPoisonCandidateCells)} " +
         $"tainted_ash_poison_applied_cells={FormatNumber(State.TaintedAshPoisonAppliedCells)} " +
+        $"tainted_ash_poison_outcome={State.TaintedAshPoisonOutcome ?? "unknown"} " +
         $"ash_water_washout_candidate_ash_cells={FormatNumber(State.AshWaterWashoutCandidateAshCells)} " +
         $"ash_water_washout_clean_ash_washed={FormatNumber(State.AshWaterWashoutCleanAshWashed)} " +
         $"ash_water_washout_tainted_ash_washed={FormatNumber(State.AshWaterWashoutTaintedAshWashed)} " +
@@ -2352,6 +2406,7 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_behavior_decisions_skipped_cooldown={FormatNumber(State.BeaverFieldBehaviorDecisionsSkippedCooldown)} " +
         $"beaver_field_behavior_decisions_skipped_batch={FormatNumber(State.BeaverFieldBehaviorDecisionsSkippedBatch)} " +
         $"beaver_field_behavior_failed_decisions={FormatNumber(State.BeaverFieldBehaviorFailedDecisions)} " +
+        $"beaver_field_behavior_unsupported_decisions={FormatNumber(State.BeaverFieldBehaviorUnsupportedDecisions)} " +
         $"beaver_field_behavior_recovery_actions={FormatNumber(State.BeaverFieldBehaviorRecoveryActions)} " +
         $"beaver_field_behavior_smoke_exposed_samples={FormatNumber(State.BeaverFieldBehaviorSmokeExposedSamples)} " +
         $"beaver_field_behavior_smoke_exposure_accumulated_samples={FormatNumber(State.BeaverFieldBehaviorSmokeExposureAccumulatedSamples)} " +
@@ -2367,6 +2422,7 @@ public sealed record TimberbornQaCommandResult(
         $"beaver_field_behavior_toxic_smoke_recovery_decays={FormatNumber(State.BeaverFieldBehaviorToxicSmokeRecoveryDecays)} " +
         $"beaver_field_behavior_fire_heat_exposed_beavers={FormatNumber(State.BeaverFieldBehaviorFireHeatExposedBeavers)} " +
         $"beaver_field_behavior_fire_heat_active_flame_contacts={FormatNumber(State.BeaverFieldBehaviorFireHeatActiveFlameContacts)} " +
+        "beaver_field_behavior_fire_heat_contact_basis=nearby_visual_proxy " +
         $"beaver_field_behavior_fire_heat_recovery_decays={FormatNumber(State.BeaverFieldBehaviorFireHeatRecoveryDecays)} " +
         $"beaver_field_behavior_persistence_saves={FormatNumber(State.BeaverFieldBehaviorPersistenceSaves)} " +
         $"beaver_field_behavior_persistence_loads={FormatNumber(State.BeaverFieldBehaviorPersistenceLoads)} " +

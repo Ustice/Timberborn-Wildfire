@@ -9,14 +9,19 @@ public interface IFireSimStepBackend
     void SwapBuffers(uint tick);
 }
 
-public sealed class FireSimStepCoordinator
+public sealed partial class FireSimStepCoordinator
 {
     private readonly int _cellCount;
     private readonly int _changeCapacity;
     private readonly FireSimChangeQueue _changes = new();
     private readonly List<IFireSimListener> _listeners = new();
+    private bool _isTicking;
+    private bool _isCapturingSnapshot;
+    private bool _stateUncertain;
+    private bool _hasStarted;
+    private readonly FireSimMaterialHandoffSession _material;
 
-    public FireSimStepCoordinator(int cellCount, int changeCapacity)
+    public FireSimStepCoordinator(int cellCount, int changeCapacity, IReadOnlyList<FireSimMaterialIdentity>? initialMaterial = null)
     {
         if (cellCount <= 0 || changeCapacity <= 0)
         {
@@ -25,6 +30,7 @@ public sealed class FireSimStepCoordinator
 
         _cellCount = cellCount;
         _changeCapacity = changeCapacity;
+        _material = new(cellCount, initialMaterial);
     }
 
     public uint CurrentTick { get; private set; }
@@ -35,43 +41,175 @@ public sealed class FireSimStepCoordinator
 
     public void RegisterChange(FireSimChange change)
     {
+        ThrowIfSnapshotInProgress();
+        RejectUnacknowledgedInput(change);
         _changes.Add(change);
     }
 
     public void RestoreTick(uint tick)
     {
+        ThrowIfSnapshotInProgress();
         CurrentTick = tick;
     }
 
     public GpuFireStepResult Tick(IFireSimStepBackend backend)
+    {
+        ValidateBackend(backend);
+        FireSimChangeQueue.Batch batch = _changes.PrepareBatch(_cellCount, _changeCapacity);
+        return RunStep(backend, batch, batch.Changes, commitInput: null);
+    }
+
+    public GpuFireStepResult? TryTickWithInput(IFireSimStepBackend backend, FireSimChange input, Action commitInput)
+    {
+        RejectUnacknowledgedInput(input);
+        return TryTickWithInputCore(backend, input, commitInput);
+    }
+
+    public GpuFireStepResult? TryCollectAsh(IFireSimAshCollectionBackend backend, FireSimAshCollectionInput input,
+        Action<FireSimAshCollectionReceipt> commitCollection)
+    {
+        if (input.CellIndex < 0 || input.CellIndex >= _cellCount)
+            throw new ArgumentOutOfRangeException(nameof(input), "Collection must address a cell in this grid.");
+        if (commitCollection is null) throw new ArgumentNullException(nameof(commitCollection));
+        var change = new FireSimChange(input.CellIndex, CollectCleanAsh: input.Requested);
+        FireSimGpuProtocol.EncodeChange(change); // Reject range errors before admission.
+        return TryTickWithInputCore(backend, change, () => commitCollection(
+            FireSimGpuProtocol.DecodeCollectionReceipt(backend.ReadAppliedChange(LastUploadedChangeCount - 1), input)));
+    }
+
+    public bool IsSlotKnown(FireSimMaterialIdentity identity)
+    {
+        ThrowIfSnapshotInProgress();
+        if (_isTicking || _stateUncertain || !_completeMaterialHistory)
+            throw new InvalidOperationException("Material authority is unavailable, changing, or indeterminate.");
+        return _material.IsSlotKnown(identity);
+    }
+
+    public bool TryGetMaterialArchive(FireSimMaterialIdentity identity, out FireSimMaterialArchive archive) =>
+        _material.TryGetArchive(identity, out archive);
+
+    public GpuFireStepResult? TryHandoffMaterial(IFireSimMaterialHandoffBackend backend, FireSimMaterialHandoffBatch batch,
+        Action<FireSimMaterialHandoffReceipt> commit)
+    {
+        ValidateBackend(backend);
+        if (commit is null) throw new ArgumentNullException(nameof(commit));
+        if (!_material.Prepare(batch, backend.MaterialHandoffCapacity)) return null;
+        // Material control cannot overtake an older queued command or require simulating
+        // a retired owner to drain the ordinary upload budget first.
+        FireSimChangeQueue.Batch queued = _changes.PrepareBatch(_cellCount, int.MaxValue);
+        var changes = new FireSimChange[checked(queued.Changes.Length + 1)];
+        queued.Changes.CopyTo(changes, 0);
+        changes[changes.Length - 1] = new FireSimChange(0, MaterialHandoff: batch);
+        FireSimGpuProtocol.ValidateStepBufferCapacity(_cellCount, changes.Length);
+        foreach (var change in changes) FireSimGpuProtocol.EncodeChange(change);
+        return RunStep(backend, queued, changes, () =>
+        {
+            FireSimMaterialHandoffReceipt receipt = FireSimMaterialHandoffProtocol.DecodeReceipt(batch,
+                backend.ReadMaterialHandoffHeader(), backend.ReadMaterialHandoffReceipts(batch.Requests.Count));
+            _material.Commit(batch, receipt);
+            commit(receipt);
+        }, () =>
+        {
+            _material.BeginAttempt(batch.Token);
+            backend.PrepareMaterialHandoff(batch, changes.Length);
+        });
+    }
+
+    private static void RejectUnacknowledgedInput(FireSimChange change)
+    {
+        if (change.MaterialHandoff is not null)
+            throw new ArgumentException("Material handoff requires acknowledged batch admission.", nameof(change));
+        if (change.ApplyCleanAshLimit.HasValue)
+            throw new ArgumentException("Clean ash application requires TryApplyCleanAsh and its GPU receipt.", nameof(change));
+        if (change.CollectCleanAsh.HasValue)
+            throw new ArgumentException("Clean ash collection requires TryCollectAsh and its GPU receipt.", nameof(change));
+    }
+
+    private GpuFireStepResult? TryTickWithInputCore(IFireSimStepBackend backend, FireSimChange input, Action commitInput, Action? prepareInput = null)
+    {
+        ValidateBackend(backend);
+        if (commitInput is null)
+        {
+            throw new ArgumentNullException(nameof(commitInput));
+        }
+
+        if (input.CellIndex < 0 || input.CellIndex >= _cellCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(input), "Step input must address a cell in this grid.");
+        }
+
+        FireSimChangeQueue.Batch batch = _changes.PrepareBatch(_cellCount, _changeCapacity);
+        if (batch.Changes.Length == _changeCapacity)
+        {
+            return null;
+        }
+
+        FireSimChange[] changes = new FireSimChange[batch.Changes.Length + 1];
+        batch.Changes.CopyTo(changes, 0);
+        changes[changes.Length - 1] = input;
+        return RunStep(backend, batch, changes, commitInput, prepareInput);
+    }
+
+    private void ValidateBackend(IFireSimStepBackend backend)
     {
         if (backend is null)
         {
             throw new ArgumentNullException(nameof(backend));
         }
 
-        FireSimChangeQueue.Batch batch = _changes.PrepareBatch(_cellCount, _changeCapacity);
-        LastIgnoredChangeCount = batch.IgnoredCount;
-        LastUploadedChangeCount = batch.Changes.Length;
-        uint dispatchTick = CurrentTick + 1;
-        backend.ResetDeltaCounter(dispatchTick);
-        if (batch.Changes.Length > 0)
+        ThrowIfSnapshotInProgress();
+        if (_stateUncertain) throw new InvalidOperationException("Simulator state is indeterminate; load a complete snapshot before further simulation.");
+        if (_isTicking)
         {
-            backend.ApplyExternalChanges(dispatchTick, batch.Changes);
+            throw new InvalidOperationException("A simulator step cannot reenter another step.");
         }
+    }
 
-        // Once external changes reached the GPU, retrying a later failed stage must not replay them.
-        _changes.Consume(batch);
-        CurrentTick = dispatchTick;
-        backend.Simulate(dispatchTick);
-        CellDelta[] deltas = backend.ReadDeltas(dispatchTick);
-        backend.SwapBuffers(dispatchTick);
-        foreach (IFireSimListener listener in _listeners.ToArray())
+    private GpuFireStepResult RunStep(
+        IFireSimStepBackend backend, FireSimChangeQueue.Batch batch, FireSimChange[] changes, Action? commitInput, Action? prepareInput = null)
+    {
+        _isTicking = true;
+        _hasStarted = true;
+        FireSimStepInputOutcome outcome = FireSimStepInputOutcome.NotApplied;
+        try
         {
-            listener.OnFireSimDeltas(deltas);
-        }
+            prepareInput?.Invoke();
+            LastIgnoredChangeCount = batch.IgnoredCount;
+            LastUploadedChangeCount = changes.Length;
+            uint dispatchTick = CurrentTick + 1;
+            backend.ResetDeltaCounter(dispatchTick);
+            if (changes.Length > 0)
+            {
+                outcome = FireSimStepInputOutcome.Indeterminate;
+                backend.ApplyExternalChanges(dispatchTick, changes);
+            }
 
-        return new GpuFireStepResult(deltas, dispatchTick);
+            // The one-step input never enters this queue, even if apply throws.
+            // Once external changes reached the GPU, later failures must not replay queued inputs.
+            _changes.Consume(batch);
+            CurrentTick = dispatchTick;
+            outcome = FireSimStepInputOutcome.Indeterminate;
+            backend.Simulate(dispatchTick);
+            CellDelta[] deltas = backend.ReadDeltas(dispatchTick);
+            backend.SwapBuffers(dispatchTick);
+            commitInput?.Invoke();
+            outcome = FireSimStepInputOutcome.Committed;
+            foreach (IFireSimListener listener in _listeners.ToArray())
+            {
+                listener.OnFireSimDeltas(deltas);
+            }
+
+            return new GpuFireStepResult(deltas, dispatchTick);
+        }
+        catch (Exception exception)
+        {
+            if (outcome == FireSimStepInputOutcome.Indeterminate) _stateUncertain = true;
+            throw new FireSimStepInputException(outcome, exception);
+        }
+        finally
+        {
+            _isTicking = false;
+        }
     }
 
     public IDisposable Subscribe(IFireSimListener listener)

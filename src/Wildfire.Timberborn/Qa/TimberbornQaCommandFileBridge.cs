@@ -15,6 +15,7 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
     private const string OutboxFileName = "command-outbox.txt";
 
     private readonly TimberbornQaCommandBridge _commandBridge;
+    private readonly TimberbornQaSession _session;
     private readonly string _inboxPath;
     private readonly string _outboxPath;
 
@@ -23,13 +24,16 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
         MapSize mapSize,
         ITerrainService terrainService,
         ISoilMoistureService soilMoistureService,
-        MapIndexService mapIndexService)
+        MapIndexService mapIndexService,
+        ITimberbornQaBorrowedDuty borrowedDuty,
+        TimberbornQaSession session)
     {
         if (fireRuntime is null)
         {
             throw new ArgumentNullException(nameof(fireRuntime));
         }
 
+        _session = session;
         string qaDirectory = Path.Combine(Application.persistentDataPath, QaDirectoryName);
         _inboxPath = Path.Combine(qaDirectory, InboxFileName);
         _outboxPath = Path.Combine(qaDirectory, OutboxFileName);
@@ -49,7 +53,9 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
             fireRuntime,
             fireRuntime,
             fireRuntime,
-            fireRuntime);
+            fireRuntime,
+            access: TimberbornQaCommandPolicy.FromProcessArguments(Environment.GetCommandLineArgs()),
+            borrowedDuty: borrowedDuty, session: session);
     }
 
     public void Load()
@@ -57,17 +63,17 @@ public sealed class TimberbornQaCommandFileBridge : ILoadableSingleton, IUnloada
         Directory.CreateDirectory(Path.GetDirectoryName(_inboxPath) ?? Application.persistentDataPath);
         Debug.Log(
             "wildfire_command_bridge_ready " +
+            $"command_access={_commandBridge.AccessMode} " +
             $"inbox={TimberbornQaCommandBridge.FormatToken(_inboxPath)} " +
             $"outbox={TimberbornQaCommandBridge.FormatToken(_outboxPath)} " +
             $"known_commands={TimberbornQaCommandBridge.FormatToken(string.Join(",", _commandBridge.KnownCommands))}");
     }
 
-    public void Unload()
-    {
-    }
+    public void Unload() => _session.Unload();
 
     public void UpdateSingleton()
     {
+        _session.Update();
         if (!File.Exists(_inboxPath))
         {
             return;

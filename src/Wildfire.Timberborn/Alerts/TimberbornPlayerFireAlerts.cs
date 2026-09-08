@@ -228,6 +228,7 @@ public sealed class TimberbornPlayerFireAlertSink : ITimberbornWorldConsequenceF
                 DecisionsSkippedCooldown: 0,
                 DecisionsSkippedBatch: 0,
                 FailedDecisions: 0,
+                UnsupportedDecisions: 0,
                 RecoveryActions: 0,
                 SmokeExposedSamples: 0,
                 SmokeExposureAccumulatedSamples: 0,

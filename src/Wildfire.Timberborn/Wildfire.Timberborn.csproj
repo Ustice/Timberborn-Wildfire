@@ -6,8 +6,35 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Timberborn.GameSaveRuntimeSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.GameSaveRuntimeSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.GameSaveRepositorySystem"><HintPath>$(TimberbornManagedPath)/Timberborn.GameSaveRepositorySystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(TimberbornManagedPath)/System.Collections.Immutable.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.TemplateAttachmentSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.TemplateAttachmentSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.CharacterModelSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterModelSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Planting"><HintPath>$(TimberbornManagedPath)/Timberborn.Planting.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.BuildingsNavigation"><HintPath>$(TimberbornManagedPath)/Timberborn.BuildingsNavigation.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Demolishing"><HintPath>$(TimberbornManagedPath)/Timberborn.Demolishing.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Workshops"><HintPath>$(TimberbornManagedPath)/Timberborn.Workshops.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.RecoveredGoodSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.RecoveredGoodSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.WorldSerialization"><HintPath>$(TimberbornManagedPath)/Timberborn.WorldSerialization.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.WaterBuildings"><HintPath>$(TimberbornManagedPath)/Timberborn.WaterBuildings.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.WaterSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.WaterSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Bindito.Core">
       <HintPath>$(TimberbornManagedPath)/Bindito.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.EntityPanelSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.EntityPanelSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Localization">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Localization.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.SingletonSystem">
@@ -46,6 +73,7 @@
       <HintPath>$(TimberbornManagedPath)/Timberborn.MapIndexSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.BuildingRange"><HintPath>$(TimberbornManagedPath)/Timberborn.BuildingRange.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.BlockSystem">
       <HintPath>$(TimberbornManagedPath)/Timberborn.BlockSystem.dll</HintPath>
       <Private>false</Private>
@@ -62,10 +90,19 @@
       <HintPath>$(TimberbornManagedPath)/Timberborn.BehaviorSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.BlockingSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.BlockingSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Emptying">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.Emptying.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.Carrying">
       <HintPath>$(TimberbornManagedPath)/Timberborn.Carrying.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.ReservableSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.ReservableSystem.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.Yielding">
       <HintPath>$(TimberbornManagedPath)/Timberborn.Yielding.dll</HintPath>
       <Private>false</Private>
@@ -268,6 +305,24 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Timberborn.GameDistricts"><HintPath>$(TimberbornManagedPath)/Timberborn.GameDistricts.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.ResourceCountingSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.ResourceCountingSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.CharacterMovementSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterMovementSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.CharacterNavigation"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterNavigation.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.NeedSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.NeedSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.CharacterControlSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.CharacterControlSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Characters"><HintPath>$(TimberbornManagedPath)/Timberborn.Characters.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.MortalSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.MortalSystem.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Timberborn.AssetSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.AssetSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Timbermesh"><HintPath>$(TimberbornManagedPath)/Timberborn.Timbermesh.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Timberborn.DuplicationSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.DuplicationSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.RelationSystem"><HintPath>$(TimberbornManagedPath)/Timberborn.RelationSystem.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>10.0</LangVersion>

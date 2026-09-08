@@ -121,7 +121,7 @@ public sealed class TimberbornTerrainAdapter
             return 3;
         }
 
-        return (byte)Math.Clamp((int)Math.Floor(soilMoisture) / 4, 0, 3);
+        return (byte)Math.Clamp(Math.Floor(soilMoisture / 4d), 0d, 3d);
     }
 
     public static byte QuantizeSoilContamination(float soilContamination, bool isContaminated)
@@ -136,7 +136,7 @@ public sealed class TimberbornTerrainAdapter
             return 7;
         }
 
-        return (byte)Math.Clamp((int)Math.Ceiling((soilContamination / 0.9f) * 7f), 1, 7);
+        return (byte)Math.Clamp(Math.Ceiling((soilContamination / 0.9f) * 7f), 1d, 7d);
     }
 
     public TimberbornCellSource CreateSource(

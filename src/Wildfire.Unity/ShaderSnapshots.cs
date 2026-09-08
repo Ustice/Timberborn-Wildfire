@@ -17,7 +17,10 @@ public sealed record ShaderSnapshotFixture(
     uint[]? CompanionFields = null,
     FireSimWind? Wind = null,
     ShaderSnapshotExternalChanges[]? ExternalChanges = null,
-    FireSimParameters? Parameters = null)
+    FireSimParameters? Parameters = null,
+    uint[]? InitialTargetIds = null,
+    uint[]? InitialSlotIds = null,
+    ShaderSnapshotMaterialHandoff[]? MaterialHandoffs = null)
 {
     public const int CurrentFormatVersion = 1;
     public const string PackedCellValueType = "uint16";
@@ -33,19 +36,12 @@ public sealed record ShaderSnapshotFixture(
 
     public ComputeBufferGrid CreateBufferGrid(IComputeBufferAllocator allocator)
     {
-        ComputeBufferGrid grid = CompanionFields is { Length: > 0 } materialFields
-            ? ComputeBufferGrid.FromCells(
-                Grid.Width,
-                Grid.Height,
-                Grid.Depth,
-                InitialCells,
-                materialFields
-                    .Select(static material => new WildfireMaterialField(
-                        TargetId: 0,
-                        WildfireMaterialFieldState.Unpack(material)))
-                    .ToArray(),
-                allocator)
-            : ComputeBufferGrid.FromCells(Grid.Width, Grid.Height, Grid.Depth, InitialCells, allocator);
+        ShaderSnapshotMaterialHandoff.Validate(this);
+        var materials = Enumerable.Range(0, Grid.CellCount)
+            .Select(index => new WildfireMaterialField(
+                InitialTargetIds?[index] ?? 0,
+                WildfireMaterialFieldState.Unpack(CompanionFields?[index] ?? 0))).ToArray();
+        ComputeBufferGrid grid = new(Grid, InitialCells, materials, allocator, InitialSlotIds ?? []);
 
         if (InitialAtmosphericFields is { Length: > 0 } atmosphericFields)
         {
@@ -67,17 +63,24 @@ public sealed record ShaderSnapshotCapture(
     ShaderSnapshotTick[] Ticks,
     uint[]? FinalAtmosphericFields = null,
     uint[]? FinalCompanionFields = null,
-    ShaderSnapshotVisual? Visual = null);
+    ShaderSnapshotVisual? Visual = null,
+    uint[]? FinalTargetIds = null,
+    uint[]? FinalSlotIds = null);
 
 public sealed record ShaderSnapshotTick(
     int Tick,
     int DeltaCount,
-    ShaderSnapshotDelta[] Deltas);
+    ShaderSnapshotDelta[] Deltas,
+    uint[]? AppliedChangeWords = null,
+    uint[]? MaterialHeader = null,
+    uint[]? MaterialReceipts = null);
 
 public readonly record struct ShaderSnapshotDelta(
     int CellIndex,
     ushort OldCell,
-    ushort NewCell);
+    ushort NewCell,
+    uint TargetId = 0,
+    uint SlotId = 0);
 
 public sealed record ShaderSnapshotVisual(
     string? Checksum = null,
@@ -188,7 +191,10 @@ public static class ShaderSnapshotFixtureLoader
             materialFields,
             wind,
             ShaderSnapshotExternalChanges.Read(root, dimensions.CellCount),
-            ShaderSnapshotParameters.Read(root));
+            ShaderSnapshotParameters.Read(root),
+            ReadOptionalUInt32CellArray(root, "initialTargetIds", dimensions, sourceName),
+            ReadOptionalUInt32CellArray(root, "initialSlotIds", dimensions, sourceName),
+            ShaderSnapshotMaterialHandoff.Read(root));
     }
 
     private static ushort ReadPackedCell(JsonElement value, string sourceName)
@@ -384,13 +390,16 @@ public static class ShaderSnapshotJson
             ticks,
             finalAtmosphericFields,
             finalMaterialFields,
-            visual);
+            visual,
+            ReadOptionalUInt32CellArray(root, "finalTargetIds", dimensions, sourceName),
+            ReadOptionalUInt32CellArray(root, "finalSlotIds", dimensions, sourceName));
     }
 
     public static string SerializeFixture(ShaderSnapshotFixture fixture)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         ShaderSnapshotExternalChanges.Validate(fixture.ExternalChanges, fixture.Grid.CellCount);
+        ShaderSnapshotMaterialHandoff.Validate(fixture);
 
         ShaderSnapshotFixtureDocument document = new(
             FormatVersion: fixture.FormatVersion,
@@ -408,7 +417,10 @@ public static class ShaderSnapshotJson
                 ? new ShaderSnapshotWind(wind.DirectionX, wind.DirectionY, wind.Strength)
                 : null,
             ExternalChanges: fixture.ExternalChanges,
-            Parameters: fixture.EffectiveParameters);
+            Parameters: fixture.EffectiveParameters,
+            InitialTargetIds: fixture.InitialTargetIds,
+            InitialSlotIds: fixture.InitialSlotIds,
+            MaterialHandoffs: fixture.MaterialHandoffs);
 
         return JsonSerializer.Serialize(document, JsonOptions) + Environment.NewLine;
     }
@@ -443,7 +455,9 @@ public static class ShaderSnapshotJson
             FinalCompanionFields: capture.FinalCompanionFields,
             PerTickDeltaCounts: capture.Ticks.Select(static tick => tick.DeltaCount).ToArray(),
             PerTickDeltas: capture.Ticks,
-            Visual: capture.Visual);
+            Visual: capture.Visual,
+            FinalTargetIds: capture.FinalTargetIds,
+            FinalSlotIds: capture.FinalSlotIds);
     }
 
     private static ShaderSnapshotTick ReadTick(JsonElement tick, string sourceName)
@@ -460,7 +474,13 @@ public static class ShaderSnapshotJson
             throw new InvalidDataException($"{sourceName}: tick {tickNumber} deltaCount {deltaCount} does not match {deltas.Length} deltas.");
         }
 
-        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas);
+        uint[]? appliedWords = tick.TryGetProperty("appliedChangeWords", out var words) && words.ValueKind != JsonValueKind.Null
+            ? words.EnumerateArray().Select(word => word.GetUInt32()).ToArray() : null;
+        if (appliedWords is not null && appliedWords.Length % FireSimGpuProtocol.UInt32WordsPerChange != 0)
+            throw new InvalidDataException($"{sourceName}: appliedChangeWords must contain complete commands.");
+        return new ShaderSnapshotTick(tickNumber, deltaCount, deltas, appliedWords,
+            ShaderSnapshotMaterialHandoff.ReadWords(tick, "materialHeader"),
+            ShaderSnapshotMaterialHandoff.ReadWords(tick, "materialReceipts"));
     }
 
     private static ShaderSnapshotDelta ReadDelta(JsonElement delta, string sourceName)
@@ -468,7 +488,9 @@ public static class ShaderSnapshotJson
         return new ShaderSnapshotDelta(
             GetRequiredProperty(delta, "cellIndex", sourceName).GetInt32(),
             ReadUInt16(GetRequiredProperty(delta, "oldCell", sourceName), sourceName, "oldCell"),
-            ReadUInt16(GetRequiredProperty(delta, "newCell", sourceName), sourceName, "newCell"));
+            ReadUInt16(GetRequiredProperty(delta, "newCell", sourceName), sourceName, "newCell"),
+            delta.TryGetProperty("targetId", out var targetId) ? targetId.GetUInt32() : 0,
+            delta.TryGetProperty("slotId", out var slotId) ? slotId.GetUInt32() : 0);
     }
 
     private static ushort ReadUInt16(JsonElement value, string sourceName, string propertyName)
@@ -531,7 +553,9 @@ public static class ShaderSnapshotJson
         uint[]? FinalCompanionFields,
         int[] PerTickDeltaCounts,
         ShaderSnapshotTick[] PerTickDeltas,
-        ShaderSnapshotVisual? Visual);
+        ShaderSnapshotVisual? Visual,
+        uint[]? FinalTargetIds,
+        uint[]? FinalSlotIds);
 
     private sealed record ShaderSnapshotGrid(int Width, int Height, int Depth);
 
@@ -547,217 +571,14 @@ public static class ShaderSnapshotJson
         uint[]? MaterialFields,
         ShaderSnapshotWind? Wind,
         ShaderSnapshotExternalChanges[]? ExternalChanges,
-        FireSimParameters Parameters);
+        FireSimParameters Parameters,
+        uint[]? InitialTargetIds,
+        uint[]? InitialSlotIds,
+        ShaderSnapshotMaterialHandoff[]? MaterialHandoffs);
 
     private sealed record ShaderSnapshotPackedCellValues(string ValueType, string IndexOrder, ushort[] Values);
 
     private sealed record ShaderSnapshotWind(float DirectionX, float DirectionY, float Strength);
-}
-
-public sealed record ShaderSnapshotComparison(bool Matches, string[] Differences)
-{
-    public static ShaderSnapshotComparison Create(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        int maxDifferences = 8)
-    {
-        ArgumentNullException.ThrowIfNull(expected);
-        ArgumentNullException.ThrowIfNull(actual);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxDifferences);
-
-        List<string> differences = [];
-        AddHeaderDifferences(expected, actual, differences, maxDifferences);
-        AddFinalCellDifferences(expected, actual, differences, maxDifferences);
-        AddFinalAtmosphericFieldDifferences(expected, actual, differences, maxDifferences);
-        AddFinalMaterialFieldDifferences(expected, actual, differences, maxDifferences);
-        AddTickDifferences(expected, actual, differences, maxDifferences);
-        AddVisualDifferences(expected, actual, differences, maxDifferences);
-
-        return new ShaderSnapshotComparison(differences.Count == 0, differences.ToArray());
-    }
-
-    private static void AddHeaderDifferences(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        AddIfDifferent(differences, "scenario", expected.Scenario, actual.Scenario, maxDifferences);
-        AddIfDifferent(differences, "seed", expected.Seed, actual.Seed, maxDifferences);
-        AddIfDifferent(differences, "tickCount", expected.TickCount, actual.TickCount, maxDifferences);
-        AddIfDifferent(differences, "grid.width", expected.Grid.Width, actual.Grid.Width, maxDifferences);
-        AddIfDifferent(differences, "grid.height", expected.Grid.Height, actual.Grid.Height, maxDifferences);
-        AddIfDifferent(differences, "grid.depth", expected.Grid.Depth, actual.Grid.Depth, maxDifferences);
-    }
-
-    private static void AddFinalCellDifferences(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        AddIfDifferent(differences, "finalPackedCells.length", expected.FinalPackedCells.Length, actual.FinalPackedCells.Length, maxDifferences);
-
-        int compareLength = Math.Min(expected.FinalPackedCells.Length, actual.FinalPackedCells.Length);
-        Enumerable.Range(0, compareLength)
-            .Where(index => expected.FinalPackedCells[index] != actual.FinalPackedCells[index])
-            .Take(Math.Max(0, maxDifferences - differences.Count))
-            .Select(index => $"finalPackedCells[{index}] expected 0x{expected.FinalPackedCells[index]:X4}, got 0x{actual.FinalPackedCells[index]:X4}.")
-            .ToList()
-            .ForEach(differences.Add);
-    }
-
-    private static void AddFinalAtmosphericFieldDifferences(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        if (expected.FinalAtmosphericFields is null && actual.FinalAtmosphericFields is null)
-        {
-            return;
-        }
-
-        if (expected.FinalAtmosphericFields is null || actual.FinalAtmosphericFields is null)
-        {
-            AddIfDifferent(
-                differences,
-                "finalAtmosphericFields.present",
-                expected.FinalAtmosphericFields is not null,
-                actual.FinalAtmosphericFields is not null,
-                maxDifferences);
-            return;
-        }
-
-        AddIfDifferent(
-            differences,
-            "finalAtmosphericFields.length",
-            expected.FinalAtmosphericFields.Length,
-            actual.FinalAtmosphericFields.Length,
-            maxDifferences);
-
-        int compareLength = Math.Min(expected.FinalAtmosphericFields.Length, actual.FinalAtmosphericFields.Length);
-        Enumerable.Range(0, compareLength)
-            .Where(index => expected.FinalAtmosphericFields[index] != actual.FinalAtmosphericFields[index])
-            .Take(Math.Max(0, maxDifferences - differences.Count))
-            .Select(index => $"finalAtmosphericFields[{index}] expected 0x{expected.FinalAtmosphericFields[index]:X4}, got 0x{actual.FinalAtmosphericFields[index]:X4}.")
-            .ToList()
-            .ForEach(differences.Add);
-    }
-
-    private static void AddFinalMaterialFieldDifferences(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        if (expected.FinalCompanionFields is null && actual.FinalCompanionFields is null)
-        {
-            return;
-        }
-
-        if (expected.FinalCompanionFields is null || actual.FinalCompanionFields is null)
-        {
-            AddIfDifferent(
-                differences,
-                "finalCompanionFields.present",
-                expected.FinalCompanionFields is not null,
-                actual.FinalCompanionFields is not null,
-                maxDifferences);
-            return;
-        }
-
-        AddIfDifferent(
-            differences,
-            "finalCompanionFields.length",
-            expected.FinalCompanionFields.Length,
-            actual.FinalCompanionFields.Length,
-            maxDifferences);
-
-        int compareLength = Math.Min(expected.FinalCompanionFields.Length, actual.FinalCompanionFields.Length);
-        Enumerable.Range(0, compareLength)
-            .Where(index => expected.FinalCompanionFields[index] != actual.FinalCompanionFields[index])
-            .Take(Math.Max(0, maxDifferences - differences.Count))
-            .Select(index => $"finalCompanionFields[{index}] expected 0x{expected.FinalCompanionFields[index]:X8}, got 0x{actual.FinalCompanionFields[index]:X8}.")
-            .ToList()
-            .ForEach(differences.Add);
-    }
-
-    private static void AddTickDifferences(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        AddIfDifferent(differences, "ticks.length", expected.Ticks.Length, actual.Ticks.Length, maxDifferences);
-
-        int compareLength = Math.Min(expected.Ticks.Length, actual.Ticks.Length);
-        Enumerable.Range(0, compareLength)
-            .TakeWhile(_ => differences.Count < maxDifferences)
-            .ToList()
-            .ForEach(index => AddSingleTickDifferences(expected.Ticks[index], actual.Ticks[index], differences, maxDifferences));
-    }
-
-    private static void AddSingleTickDifferences(
-        ShaderSnapshotTick expected,
-        ShaderSnapshotTick actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        AddIfDifferent(differences, $"ticks[{expected.Tick}].tick", expected.Tick, actual.Tick, maxDifferences);
-        AddIfDifferent(differences, $"ticks[{expected.Tick}].deltaCount", expected.DeltaCount, actual.DeltaCount, maxDifferences);
-        AddIfDifferent(differences, $"ticks[{expected.Tick}].deltas.length", expected.Deltas.Length, actual.Deltas.Length, maxDifferences);
-
-        ShaderSnapshotDelta[] expectedDeltas = SortDeltas(expected.Deltas);
-        ShaderSnapshotDelta[] actualDeltas = SortDeltas(actual.Deltas);
-        int compareLength = Math.Min(expected.Deltas.Length, actual.Deltas.Length);
-        Enumerable.Range(0, compareLength)
-            .Where(index => !expectedDeltas[index].Equals(actualDeltas[index]))
-            .Take(Math.Max(0, maxDifferences - differences.Count))
-            .Select(index => FormatDeltaDifference(expected.Tick, index, expectedDeltas[index], actualDeltas[index]))
-            .ToList()
-            .ForEach(differences.Add);
-    }
-
-    private static ShaderSnapshotDelta[] SortDeltas(ShaderSnapshotDelta[] deltas)
-    {
-        return deltas
-            .OrderBy(static delta => delta.CellIndex)
-            .ThenBy(static delta => delta.OldCell)
-            .ThenBy(static delta => delta.NewCell)
-            .ToArray();
-    }
-
-    private static void AddVisualDifferences(
-        ShaderSnapshotCapture expected,
-        ShaderSnapshotCapture actual,
-        List<string> differences,
-        int maxDifferences)
-    {
-        AddIfDifferent(differences, "visual.checksum", expected.Visual?.Checksum, actual.Visual?.Checksum, maxDifferences);
-        AddIfDifferent(differences, "visual.artifactPath", expected.Visual?.ArtifactPath, actual.Visual?.ArtifactPath, maxDifferences);
-    }
-
-    private static void AddIfDifferent<T>(List<string> differences, string fieldName, T expected, T actual, int maxDifferences)
-    {
-        if (differences.Count >= maxDifferences || EqualityComparer<T>.Default.Equals(expected, actual))
-        {
-            return;
-        }
-
-        differences.Add($"{fieldName} expected {expected}, got {actual}.");
-    }
-
-    private static string FormatDeltaDifference(
-        int tick,
-        int deltaIndex,
-        ShaderSnapshotDelta expected,
-        ShaderSnapshotDelta actual)
-    {
-        return $"ticks[{tick}].deltas[{deltaIndex}] expected cell {expected.CellIndex} " +
-            $"0x{expected.OldCell:X4}->0x{expected.NewCell:X4}, got cell {actual.CellIndex} " +
-            $"0x{actual.OldCell:X4}->0x{actual.NewCell:X4}.";
-    }
 }
 
 public sealed class ShaderSnapshotExecutionBlockedException(ShaderSnapshotExecutionBlocker blocker)

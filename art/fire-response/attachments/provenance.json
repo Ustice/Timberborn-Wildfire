@@ -1,0 +1,51 @@
+{
+  "source": "art/fire-response/WardenSprayer.glb",
+  "sourceSha256": "8d54d5d42be54c69d175ea317b1330e216fcf91e2613544e610367269a7c9dc5",
+  "coordinateSystem": "Original glTF Y-up; original node transforms retained; attachment fit not established",
+  "parts": [
+    {
+      "file": "WardenTank.glb",
+      "sha256": "c0bd24412db8093b957ce564be45737df99403ef9ef25326071b210cded8becc",
+      "sourceObjects": [
+        "Backpack tank",
+        "Backplate",
+        "Dial needle",
+        "Filler cap",
+        "Iron rivet.013",
+        "Iron rivet.014",
+        "Iron rivet.015",
+        "Iron rivet.016",
+        "Pressure dial",
+        "Pump lever",
+        "Pump riser",
+        "Shoulder strap",
+        "Shoulder strap.001",
+        "Strap buckle",
+        "Strap buckle.001",
+        "Tank binding",
+        "Tank binding.001",
+        "Valve handwheel.001",
+        "Valve spoke.002",
+        "Valve spoke.003"
+      ],
+      "triangles": 3868
+    },
+    {
+      "file": "WardenWand.glb",
+      "sha256": "d22a39bc0ffbd5d59f720399aa30016d0c7c994be59e80c2fc3b33cfddb87944",
+      "sourceObjects": [
+        "Spray wand",
+        "Wand grip"
+      ],
+      "triangles": 88
+    },
+    {
+      "file": "WardenHose.glb",
+      "sha256": "33af9754689a58777d219ec6cac4859b49c8e65edc1533b49289e26c12041533",
+      "sourceObjects": [
+        "Flexible hose"
+      ],
+      "triangles": 252
+    }
+  ]
+}

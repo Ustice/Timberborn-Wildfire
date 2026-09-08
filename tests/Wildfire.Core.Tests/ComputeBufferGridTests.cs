@@ -3,7 +3,7 @@ using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
 
-public sealed class ComputeBufferGridTests
+public sealed partial class ComputeBufferGridTests
 {
     [Fact]
     public void DimensionsCalculateCellCount()
@@ -68,10 +68,16 @@ public sealed class ComputeBufferGridTests
                 "wildfire.current_transport_fields",
                 "wildfire.next_transport_fields",
                 "wildfire.material_target_ids",
+                "wildfire.material_slot_ids",
                 "wildfire.material_fields",
+                "wildfire.material_requests",
+                "wildfire.material_receipts",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
-        Assert.All(allocator.Handles.Where(handle => handle != grid.Deltas), static handle => Assert.Equal(2, handle.Count));
+        Assert.All(allocator.Handles.Take(11).Where(handle => handle != grid.Deltas), static handle => Assert.Equal(2, handle.Count));
+        Assert.Equal(1, grid.MaterialHandoff.Requests.Count);
+        Assert.Equal(40, grid.MaterialHandoff.Requests.StrideBytes);
+        Assert.Equal(40, grid.MaterialHandoff.Receipts.StrideBytes);
         Assert.Equal(4, grid.Deltas.Count);
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.CurrentCells.StrideBytes);
         Assert.Equal(ComputeBufferGrid.PackedCellStrideBytes, grid.NextCells.StrideBytes);
@@ -204,6 +210,7 @@ public sealed class ComputeBufferGridTests
                 "wildfire.current_transport_fields",
                 "wildfire.next_transport_fields",
                 "wildfire.material_target_ids",
+                "wildfire.material_slot_ids",
                 "wildfire.material_fields",
             ],
             allocator.Handles.Select(static handle => handle.Name).ToArray());
@@ -214,7 +221,7 @@ public sealed class ComputeBufferGridTests
     {
         public List<RecordingComputeBufferHandle> Handles { get; } = [];
 
-        public string? FailAllocationName { get; init; }
+        public string? FailAllocationName { get; set; }
 
         public string? FailUploadName { get; init; }
 
@@ -277,6 +284,12 @@ public sealed class ComputeBufferGridTests
             }
 
             UploadedValues = values.ToArray();
+        }
+
+        public uint[] ReadElements(int firstElement, int elementCount)
+        {
+            int words = StrideBytes / sizeof(uint);
+            return UploadedValues.Skip(firstElement * words).Take(elementCount * words).ToArray();
         }
 
         public void ResetAppendCounter()

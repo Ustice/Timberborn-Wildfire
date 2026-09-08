@@ -25,6 +25,29 @@ public sealed class FireSimGpuProtocolTests
         Assert.Equal(actualWords, FireSimChangeUpload.Encode(changes, capacity: 2));
     }
 
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    [InlineData(3, 3)]
+    [InlineData(255, 3)]
+    public void WaterAdditionUsesSpareBitsWithoutChangingOtherFields(byte addWater, uint expected)
+    {
+        FireSimChange change = new(
+            0, SetCell: 0xA55A, AddHeat: 15, AddFuel: 15, AddAsh: 3, RemoveAsh: 3,
+            SetAsh: 3, SetAshContamination: 7, SetSmoke: 7, SetSmokeContamination: 7,
+            SetWater: 1, AddWater: addWater);
+
+        FireSimGpuChange encoded = FireSimGpuProtocol.EncodeChange(change);
+
+        Assert.Equal(0x7FFFFFu | (expected << 23), encoded.AddFields);
+        Assert.Equal(0x783u, encoded.SetMask);
+        Assert.Equal(0x1A55Au, encoded.SetValues);
+        Assert.Equal(
+            MemoryMarshal.Cast<FireSimGpuChange, uint>(new[] { encoded }).ToArray(),
+            FireSimChangeUpload.Encode([change], capacity: 1));
+    }
+
     [Fact]
     public void DeltaCapacityIncludesBothCommandAndSimulationTransitions()
     {

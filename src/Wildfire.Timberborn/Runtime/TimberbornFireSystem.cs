@@ -13,6 +13,7 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
     private FireGrid? _grid;
     private TimberbornImportedFieldTarget[] _importedTargets = Array.Empty<TimberbornImportedFieldTarget>();
     private int _registeredChangeCountSinceLastDispatch;
+    internal ITimberbornFireDispatchHost? HostDispatch { get; set; }
     public TimberbornQaController Qa { get; }
 
     public TimberbornSustainedIgnitionScheduler SustainedIgnition { get; }
@@ -348,6 +349,8 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
 
     public GpuFireStepResult Tick()
     {
+        ITimberbornFireDispatchHost? host = HostDispatch;
+        host?.ThrowIfStepUnsafe(); // Before QA/input preparation; normal Runtime also excludes saves.
         IGpuFireSimulator fireSimulator = RequireSimulator();
         Qa.PrepareTick();
         string? sustainedInputSource = SustainedIgnition.BeforeTick();
@@ -355,10 +358,12 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
         int pendingChangeCount = _registeredChangeCountSinceLastDispatch;
 
         _logSink.Info($"wildfire_timberborn_dispatch_started pending_changes={pendingChangeCount}");
+        bool stepReturned = false;
         try
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            GpuFireStepResult result = fireSimulator.Tick();
+            GpuFireStepResult result = host is null ? fireSimulator.Tick() : host.Tick();
+            stepReturned = true;
             stopwatch.Stop();
             _registeredChangeCountSinceLastDispatch = 0;
             LastTick = result.Tick;
@@ -372,7 +377,18 @@ public sealed class TimberbornFireSystem : IDisposable, ITimberbornQaWorld
         }
         catch (Exception exception)
         {
-            _logSink.Warning($"wildfire_timberborn_dispatch_failed message=\"{exception.Message}\"");
+            // Even a later observational failure prevents Runtime's remaining native followups.
+            if (stepReturned || exception is FireSimStepInputException
+                { Outcome: FireSimStepInputOutcome.Committed or FireSimStepInputOutcome.Indeterminate })
+                host?.InvalidateIncompleteDispatch();
+            try
+            {
+                _logSink.Warning($"wildfire_timberborn_dispatch_failed message=\"{exception.Message}\"");
+            }
+            catch
+            {
+                // Diagnostics cannot replace the original step/delivery failure.
+            }
             throw;
         }
     }

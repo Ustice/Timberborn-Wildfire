@@ -1,72 +1,7 @@
 namespace Wildfire.Core.Tests;
 
-public sealed class TimberbornBeaverFieldBehaviorTests
+public sealed partial class TimberbornBeaverFieldBehaviorTests
 {
-    [Fact]
-    public void DispatcherFailsLoudlyWhenFireHeatBeaverAvoidanceIsRequested()
-    {
-        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
-        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => dispatcher.Dispatch(
-            Snapshot([
-                Classification("beaver-smoke", respiratory: 2),
-                Classification("beaver-toxic", respiratory: 1, contaminatedSmoke: 1, toxic: 1),
-                Classification("beaver-fire", burn: 1),
-            ]),
-            tick: 10));
-
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
-    }
-
-    [Fact]
-    public void DispatcherFailsLoudlyWhenFireHeatExposureRequiresBeaverAvoidance()
-    {
-        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
-        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 2)]), tick: 10));
-
-        TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
-        Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt, decision.Action);
-        Assert.Equal(1, dispatcher.Counters.FireHeatExposedBeavers);
-    }
-
-    [Fact]
-    public void DispatcherTracksActiveFlameContactBeforeFailingFireHeatAttempt()
-    {
-        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
-        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1, maxFire: 0.9f)]), tick: 10));
-
-        TimberbornBeaverFieldBehaviorDecision decision = Assert.Single(actuator.Decisions);
-        Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt, decision.Action);
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
-        Assert.Equal(1, dispatcher.Counters.FireHeatActiveFlameContacts);
-        Assert.Equal(0.9f, decision.MaxFire);
-    }
-
-    [Fact]
-    public void DispatcherFailsLoudlyWhenFireHeatExposureHasNoImplementedActuator()
-    {
-        RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
-        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
-            actuator,
-            new RecordingFireLogSink(),
-            new TimberbornBeaverFieldBehaviorOptions(
-                DecisionCooldownTicks: 1));
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10));
-
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
-    }
-
     [Fact]
     public void DispatcherDoesNotPrimeFireHeatInjuryFromSmokeOrSteamExposure()
     {
@@ -87,31 +22,13 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             .ToList()
             .ForEach(sample => dispatcher.Dispatch(Snapshot([sample.classification]), tick: (uint)(10 + sample.index)));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-mixed", burn: 1)]), tick: 13));
+        dispatcher.Dispatch(Snapshot([Classification("beaver-mixed", burn: 1)]), tick: 13);
 
         TimberbornBeaverFieldBehaviorDecision decision = actuator.Decisions.Last();
         TimberbornBeaverFieldBehaviorStateEntry entry = Assert.Single(dispatcher.CaptureState().Entries);
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, decision.Variant);
         Assert.Equal(TimberbornBeaverFieldBehaviorAction.FireHeatExposureAttempt, decision.Action);
         Assert.Equal(1, entry.ConsecutiveFireHeatExposedSamples);
-    }
-
-    [Fact]
-    public void DispatcherDecaysFireHeatStateAfterExposureClears()
-    {
-        TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
-            new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Applied),
-            new RecordingFireLogSink(),
-            new TimberbornBeaverFieldBehaviorOptions(
-                DecisionCooldownTicks: 1,
-                FireHeatRecoveryDecaySamples: 2));
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-fire", burn: 1)]), tick: 10));
-
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
     }
 
     [Fact]
@@ -251,7 +168,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
     }
 
     [Fact]
-    public void DispatcherAccumulatesSmokeCoughingEvenWhenFireHeatIsPresent()
+    public void DispatcherKeepsExistingFirePriorityForMixedObservation()
     {
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(
@@ -261,10 +178,8 @@ public sealed class TimberbornBeaverFieldBehaviorTests
                 DecisionCooldownTicks: 1,
                 SmokeCoughingThresholdSamples: 3));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, burn: 1, toxic: 1)]), tick: 10));
+        dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1, burn: 1, toxic: 1)]), tick: 10);
 
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
         Assert.Equal(TimberbornBeaverFieldBehaviorVariant.FireHeat, actuator.Decisions.Last().Variant);
     }
 
@@ -360,7 +275,7 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             tick: 10);
 
         Assert.Equal(1, dispatcher.Counters.DecisionsSkippedBatch);
-        Assert.Equal(1, dispatcher.Counters.SmokeExposedSamples);
+        Assert.Equal(2, dispatcher.Counters.SmokeExposedSamples);
         Assert.Single(actuator.Decisions);
     }
 
@@ -408,11 +323,10 @@ public sealed class TimberbornBeaverFieldBehaviorTests
         RecordingActuator actuator = new(TimberbornBeaverFieldBehaviorActuatorStatus.Applied);
         TimberbornBeaverFieldBehaviorDispatcher dispatcher = new(actuator, new RecordingFireLogSink());
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            dispatcher.Dispatch(Snapshot([Classification("beaver-1", burn: 1)]), tick: 10));
+        dispatcher.Dispatch(Snapshot([Classification("beaver-1", burn: 1)]), tick: 10);
 
-        Assert.Contains("Fire heat beaver avoidance is not implemented", exception.Message);
-        Assert.Empty(actuator.RecoveredEntries);
+        dispatcher.Dispatch(Snapshot([Classification("beaver-1")]), tick: 11);
+        Assert.Single(actuator.RecoveredEntries);
     }
 
     [Fact]
@@ -422,10 +336,10 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             new RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus.Failed),
             new RecordingFireLogSink());
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+        TimberbornBeaverFieldDeliveryException exception = Assert.Throws<TimberbornBeaverFieldDeliveryException>(() =>
             dispatcher.Dispatch(Snapshot([Classification("beaver-1", respiratory: 1)]), tick: 10));
 
-        Assert.Contains("Beaver field behavior actuator failed", exception.Message);
+        Assert.Contains("Actuator returned failed", exception.InnerException!.Message);
         Assert.Equal(1, dispatcher.Counters.DecisionsEvaluated);
         Assert.Equal(0, dispatcher.Counters.TrackedBeaverCount);
     }
@@ -518,42 +432,6 @@ public sealed class TimberbornBeaverFieldBehaviorTests
             TaintedAftermathCells: 0,
             MaxFire: 0f,
             Tick: tick);
-    }
-
-    [Fact]
-    public void SmokeStatusCleanupToleratesTimberbornRendererTeardown()
-    {
-        string source = ReadTimberbornSource("TimberbornBeaverFieldBehavior.cs");
-
-        Assert.Contains("TryDeactivate(_coughingStatus)", source, StringComparison.Ordinal);
-        Assert.Contains("TryDeactivate(_chokingStatus)", source, StringComparison.Ordinal);
-        Assert.Contains("NullReferenceException or InvalidOperationException", source, StringComparison.Ordinal);
-    }
-
-    private static string ReadTimberbornSource(string fileName)
-    {
-        string root = FindRepoRoot();
-        string timberbornRoot = Path.Combine(root, "src", "Wildfire.Timberborn");
-        string path = Directory
-            .EnumerateFiles(timberbornRoot, fileName, SearchOption.AllDirectories)
-            .First();
-        return File.ReadAllText(path);
-    }
-
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Wildfire.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate Wildfire repo root.");
     }
 
     private sealed class RecordingActuator(TimberbornBeaverFieldBehaviorActuatorStatus status) :

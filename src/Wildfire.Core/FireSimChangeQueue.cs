@@ -7,6 +7,8 @@ public sealed class FireSimChangeQueue
 
     public int Count => _changes.Count;
 
+    internal FireSimChange[] CapturePending() => _changes.ToArray();
+
     public void Add(FireSimChange change)
     {
         _changes.Add(change);

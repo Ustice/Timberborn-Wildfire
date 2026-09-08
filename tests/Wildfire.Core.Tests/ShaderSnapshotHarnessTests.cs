@@ -8,10 +8,29 @@ namespace Wildfire.Core.Tests;
 public sealed class ShaderSnapshotHarnessTests
 {
     [Fact]
+    public void LegacyCaptureWithoutReceiptMetadataStillMatchesNewGenericInputCapture()
+    {
+        var legacy = CreateCapture([0, 0], [new ShaderSnapshotTick(1, 0, [])]);
+        var current = legacy with { Ticks = [new(1, 0, [], [0, 0, 1, 0])] };
+        Assert.True(ShaderSnapshotComparison.Create(legacy, current).Matches);
+        Assert.False(ShaderSnapshotComparison.Create(current, legacy).Matches);
+    }
+
+    [Fact]
+    public void SpecifiedReceiptWordsRoundTripAndRequireAnExactMatch()
+    {
+        var expected = CreateCapture([0, 0], [new ShaderSnapshotTick(1, 0, [], [0, 2048, (1u << 25) | (1u << 29), 0])]);
+        var actual = ShaderSnapshotJson.Load(ShaderSnapshotJson.Serialize(expected));
+        Assert.True(ShaderSnapshotComparison.Create(expected, actual).Matches);
+        actual.Ticks[0].AppliedChangeWords![2] |= 1u << 27;
+        Assert.False(ShaderSnapshotComparison.Create(expected, actual).Matches);
+    }
+
+    [Fact]
     public void ExternalChangeFixtureRoundTripsProductionEncodedWords()
     {
         ShaderSnapshotExternalChanges changes = ShaderSnapshotExternalChanges.Encode(
-            2, new FireSimChange(0, SetHeat: 15, SetSmoke: 5, SetSmokeContamination: 7));
+            2, new FireSimChange(0, SetHeat: 15, SetSmoke: 5, SetSmokeContamination: 7, AddWater: 2));
         ShaderSnapshotFixture fixture = new(
             1, "external-changes", 89, new ComputeGridDimensions(1, 1, 1),
             new ShaderSnapshotLayer(0, 0, 1), [0], ExternalChanges: [changes]);
@@ -23,6 +42,7 @@ public sealed class ShaderSnapshotHarnessTests
         Assert.Equal(2, batch.Tick);
         Assert.Equal(changes.Words, batch.Words);
         Assert.Equal((1u << 3) | (1u << 9) | (1u << 10), batch.Words[1]);
+        Assert.Equal((5u << 17) | (7u << 20) | (2u << 23), batch.Words[2]);
     }
 
     [Fact]
@@ -337,6 +357,12 @@ public sealed class ShaderSnapshotHarnessTests
         public void Upload(ReadOnlySpan<uint> values)
         {
             UploadedValues = values.ToArray();
+        }
+
+        public uint[] ReadElements(int firstElement, int elementCount)
+        {
+            int words = StrideBytes / sizeof(uint);
+            return UploadedValues.Skip(firstElement * words).Take(elementCount * words).ToArray();
         }
 
         public void ResetAppendCounter()

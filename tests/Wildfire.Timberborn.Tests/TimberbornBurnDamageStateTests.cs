@@ -401,7 +401,7 @@ public sealed class TimberbornBurnDamageStateTests
     }
 
     [Fact]
-    public void ApplyDamageSuppressesMultiCellAndVerticalDuplicateHits()
+    public void ApplyDamageSumsDistinctHorizontalAndVerticalCells()
     {
         FireGrid grid = new(3, 3, 3);
         TimberbornBurnDamageTargetKey targetKey = new("tree-oak-17");
@@ -428,10 +428,10 @@ public sealed class TimberbornBurnDamageStateTests
         Assert.Equal([12, 13, 21, 22], ownedCells);
         Assert.Equal(4, registrationSummary.OwnedCellCount);
         Assert.Equal(4, applySummary.ResolvedTargetCellCount);
-        Assert.Equal(3, applySummary.DuplicateCellSuppressedCount);
+        Assert.Equal(0, applySummary.DuplicateCellSuppressedCount);
         Assert.Equal(1, applySummary.DamageAppliedTargetCount);
-        Assert.Equal(3, applySummary.TotalDamageApplied);
-        Assert.Equal(3, service.States[targetKey].DamageTaken);
+        Assert.Equal(12, applySummary.TotalDamageApplied);
+        Assert.Equal(12, service.States[targetKey].DamageTaken);
         Assert.Equal(11u, service.States[targetKey].LastDamagedTick);
     }
 

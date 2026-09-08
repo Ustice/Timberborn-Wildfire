@@ -152,14 +152,13 @@ const validateModData = (artifactDir: string): void => {
     return;
   }
 
-  readdirSync(sourceDataDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() || entry.isFile())
-    .map((entry) => join(artifactDir, entry.name))
-    .forEach((path) => {
-      if (!existsSync(path)) {
-        fail(`Timberborn data entry was not packaged: ${path}`);
-      }
-    });
+  for (const sourcePath of walkFiles(sourceDataDir)) {
+    const packagedPath = join(artifactDir, relative(sourceDataDir, sourcePath));
+    requireFile(packagedPath);
+    if (!readFileSync(sourcePath).equals(readFileSync(packagedPath))) {
+      fail(`Packaged Timberborn data differs from source: ${packagedPath}`);
+    }
+  }
 };
 
 const validateExclusions = (artifactDir: string, files: string[]): void => {
@@ -188,7 +187,7 @@ const validateBundleManifestText = (artifactDir: string): void => {
     });
 };
 
-const validateZip = (zipPath: string, artifactName: string): void => {
+const validateZip = (zipPath: string, artifactName: string, artifactFiles: string[]): void => {
   requireFile(zipPath);
   const result = Bun.spawnSync(["unzip", "-Z1", zipPath], {
     cwd: repoRoot,
@@ -202,12 +201,7 @@ const validateZip = (zipPath: string, artifactName: string): void => {
 
   const entries = result.stdout.toString().split(/\r?\n/u).filter(Boolean);
   const blockedEntries = entries.filter((entry) => entry.startsWith("__MACOSX/") || entry.includes("/._"));
-  const requiredZipEntries = [
-    `${artifactName}/manifest.json`,
-    ...requiredAssemblies.map((name) => `${artifactName}/Scripts/${name}`),
-    ...requiredBundles.map((name) => `${artifactName}/${privateComputeShaderFolderName}/${name}`),
-    ...requiredBundleManifests.map((name) => `${artifactName}/${privateComputeShaderFolderName}/${name}`),
-  ];
+  const requiredZipEntries = artifactFiles.map((path) => `${artifactName}/${path.split(/[\\/]/u).join("/")}`);
 
   if (blockedEntries.length > 0) {
     fail(`Release zip contains macOS resource-fork entries: ${blockedEntries.join(", ")}`);
@@ -236,7 +230,7 @@ export const validateTimberbornModArtifact = (
   validatePlatformLayout(files);
 
   if (zipPath) {
-    validateZip(zipPath, artifactName);
+    validateZip(zipPath, artifactName, files);
   }
 
   return {

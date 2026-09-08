@@ -52,6 +52,18 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     }
 
     [Fact]
+    public void FractionalHazardReservationLeavesNoDuplicateOrdinaryBudget()
+    {
+        var inventory = new RecordingStoredGoodBurnInventoryApi(new TimberbornStoredGoodBurnTarget("storage-1",
+            [new("Dynamite", 1), new("Log", 1)], CanMutateInventory: true));
+        var catalog = new TimberbornResourceFuelCatalog([
+            new("Dynamite", 3, 3, true, false, true), new("Log", 2, 3, false, false, true)]);
+        var sink = new TimberbornStoredGoodBurnConsequenceSink(inventory, resourceFuelCatalog: catalog);
+        for (uint tick = 1; tick <= 3; tick++) sink.ApplyConsequences(tick, [Decision(0, oldFuel: 5, newFuel: 4)]);
+        Assert.Equal([new TimberbornStoredGoodStack("Dynamite", 1)], inventory.DestroyedStacks);
+    }
+
+    [Fact]
     public void SinkRequiresBurnDamageStorageOwnershipWhenProviderIsBound()
     {
         RecordingStoredGoodBurnInventoryApi inventoryApi = new(
@@ -115,7 +127,7 @@ public sealed class TimberbornStoredGoodBurnConsequenceTests
     [Fact]
     public void LiveInventoryApiConsumesOnlyUnreservedTakeableStoredGoods()
     {
-        string source = ReadTimberbornSource("TimberbornStoredGoodBurnConsequences.cs");
+        string source = ReadTimberbornSource("TimberbornLegacyStoredGoodInventoryApi.cs");
 
         Assert.Contains("inventory.UnreservedTakeableStock()", source, StringComparison.Ordinal);
         Assert.Contains("goodAmount.GoodId, stack.ResourceId", source, StringComparison.Ordinal);

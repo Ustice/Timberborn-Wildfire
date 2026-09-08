@@ -3,8 +3,71 @@ using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
 
-public sealed class UnityComputeFireSimulatorTests
+public sealed partial class UnityComputeFireSimulatorTests
 {
+    [Fact]
+    public void AshCollectionReadsTheAppendedGpuCommandAfterTheFullStep()
+    {
+        using var grid = ComputeBufferGrid.FromCells(2, 1, 1, [0, 0], new RecordingComputeBufferAllocator());
+        var changes = (RecordingComputeBufferHandle)grid.QueuedChanges;
+        var originalNext = grid.NextCells;
+        var dispatcher = new RecordingFireSimComputeDispatcher
+        {
+            AfterDispatch = dispatch =>
+            {
+                if (dispatch.KernelName == UnityComputeFireSimulator.ApplyExternalChangesKernelName)
+                    changes.UploadedValues[6] |= FireSimGpuProtocol.CollectionReceiptValidMask | (1u << 27);
+            }
+        };
+        IFireSimAshCollectionSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        simulator.RegisterChange(new(0, RemoveAsh: 1));
+        FireSimAshCollectionReceipt? receipt = null;
+        simulator.TryCollectAsh(new(1, 3), value =>
+        {
+            Assert.Same(originalNext, grid.CurrentCells);
+            Assert.Equal(2, dispatcher.Dispatches.Count);
+            receipt = value;
+        });
+        Assert.Equal(new FireSimAshCollectionReceipt(1, 3, 1), receipt);
+        Assert.Equal(2u, dispatcher.Dispatches[0].ChangeCount);
+    }
+
+    [Fact]
+    public void MissingGpuReceiptDoesNotCallHostEvenThoughTheStepCompleted()
+    {
+        using var grid = ComputeBufferGrid.FromCells(1, 1, 1, [0], new RecordingComputeBufferAllocator());
+        IFireSimAshCollectionSimulator simulator = new UnityComputeFireSimulator(grid, new RecordingFireSimComputeDispatcher());
+        int goods = 0;
+        var exception = Assert.Throws<FireSimStepInputException>(() =>
+            simulator.TryCollectAsh(new(0, 1), receipt => goods += receipt.Collected));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, exception.Outcome);
+        Assert.Equal(0, goods);
+    }
+
+    [Fact]
+    public void StepInputUsesProductionUploadAndCommitsAfterBufferSwap()
+    {
+        RecordingComputeBufferAllocator allocator = new();
+        using ComputeBufferGrid grid = ComputeBufferGrid.FromCells(1, 1, 1, [0], allocator);
+        IComputeBufferHandle originalNext = grid.NextCells;
+        RecordingFireSimComputeDispatcher dispatcher = new();
+        IFireSimStepInputSimulator simulator = new UnityComputeFireSimulator(grid, dispatcher);
+        int commits = 0;
+
+        GpuFireStepResult? result = simulator.TryTickWithInput(new(0, AddWater: 2), () =>
+        {
+            Assert.Same(originalNext, grid.CurrentCells);
+            Assert.Equal(2, dispatcher.Dispatches.Count);
+            commits++;
+        });
+
+        Assert.Equal(1u, result!.Value.Tick);
+        Assert.Equal([0u, 0u, 2u << 23, 0u], ((RecordingComputeBufferHandle)grid.QueuedChanges).UploadedValues);
+        simulator.Tick();
+        Assert.Equal(1, commits);
+        Assert.Equal(UnityComputeFireSimulator.FullGridKernelName, dispatcher.Dispatches[2].KernelName);
+    }
+
     [Fact]
     public void TickDispatchesFullGridKernelAndSwapsCellBuffers()
     {
@@ -165,9 +228,11 @@ public sealed class UnityComputeFireSimulatorTests
                     0x1234u,
                     0x5678u,
                     0u,
+                    0u,
                     2u,
                     0x9ABCu,
                     0xDEF0u,
+                    0u,
                     0u,
                 ];
             },
@@ -207,7 +272,7 @@ public sealed class UnityComputeFireSimulatorTests
                 }
 
                 deltas.AppendCounter = 1;
-                deltas.AppendedData = [0u, 0u, 0x101u, 0u];
+                deltas.AppendedData = [0u, 0u, 0x101u, 0u, 0u];
             },
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
@@ -249,7 +314,7 @@ public sealed class UnityComputeFireSimulatorTests
                 }
 
                 deltas.AppendCounter = 1;
-                deltas.AppendedData = [0u, 0u, newCell, 0u];
+                deltas.AppendedData = [0u, 0u, newCell, 0u, 0u];
             },
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
@@ -290,7 +355,7 @@ public sealed class UnityComputeFireSimulatorTests
                 }
 
                 deltas.AppendCounter = 1;
-                deltas.AppendedData = [0u, 0u, newCell, 0u];
+                deltas.AppendedData = [0u, 0u, newCell, 0u, 0u];
             },
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
@@ -318,13 +383,13 @@ public sealed class UnityComputeFireSimulatorTests
                 if (dispatch.KernelName == UnityComputeFireSimulator.ApplyExternalChangesKernelName)
                 {
                     deltas.AppendCounter = 1;
-                    deltas.AppendedData = [0, 0, 0x00F0, 0];
+                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0];
                 }
                 else
                 {
                     Assert.Equal(1, deltas.AppendCounter);
                     deltas.AppendCounter = 2;
-                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0, 0x00F0, 0x00E0, 0];
+                    deltas.AppendedData = [0, 0, 0x00F0, 0, 0, 0, 0x00F0, 0x00E0, 0, 0];
                 }
             },
         };
@@ -361,7 +426,9 @@ public sealed class UnityComputeFireSimulatorTests
         };
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal("GPU delta counter returned 3, but buffer capacity is 2.", exception.Message);
     }
@@ -397,6 +464,7 @@ public sealed class UnityComputeFireSimulatorTests
                 SetCell: setCell,
                 AddHeat: 3,
                 AddFuel: 2,
+                AddWater: 2,
                 SetWater: 1,
                 SetFuel: 7,
                 SetHeat: 8,
@@ -435,7 +503,7 @@ public sealed class UnityComputeFireSimulatorTests
             [
                 1u,
                 0b111_1111u,
-                0x23u,
+                0x23u | (2u << 23),
                 (uint)setCell |
                     (1u << 16) |
                     (7u << 18) |
@@ -537,7 +605,9 @@ public sealed class UnityComputeFireSimulatorTests
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
         simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal($"Dispatch failed for {UnityComputeFireSimulator.ApplyExternalChangesKernelName}.", exception.Message);
         Assert.Equal(1, simulator.PendingChangeCount);
@@ -563,7 +633,9 @@ public sealed class UnityComputeFireSimulatorTests
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
         simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal($"Dispatch failed for {UnityComputeFireSimulator.FullGridKernelName}.", exception.Message);
         Assert.Equal(0, simulator.PendingChangeCount);
@@ -575,16 +647,9 @@ public sealed class UnityComputeFireSimulatorTests
             dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
 
         dispatcher.ThrowOnKernelName = null;
-        simulator.Tick();
+        Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        Assert.Equal(2, dispatcher.Dispatches.Count);
 
-        Assert.Equal(
-            [
-                UnityComputeFireSimulator.ApplyExternalChangesKernelName,
-                UnityComputeFireSimulator.FullGridKernelName,
-                UnityComputeFireSimulator.FullGridKernelName,
-            ],
-            dispatcher.Dispatches.Select(static dispatch => dispatch.KernelName).ToArray());
-        Assert.Equal(2u, dispatcher.Dispatches[^1].Tick);
     }
 
     [Fact]
@@ -661,7 +726,9 @@ public sealed class UnityComputeFireSimulatorTests
         UnityComputeFireSimulator simulator = new(grid, dispatcher);
         simulator.RegisterChange(new FireSimChange(CellIndex: 0, AddHeat: 1));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => simulator.Tick());
+        var failure = Assert.Throws<FireSimStepInputException>(() => simulator.Tick());
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        var exception = Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal("Upload failed for wildfire.queued_changes.", exception.Message);
         Assert.Equal(1, simulator.PendingChangeCount);
@@ -738,6 +805,12 @@ public sealed class UnityComputeFireSimulatorTests
 
             UploadedValues = values.ToArray();
             UploadHistory.Add(UploadedValues);
+        }
+
+        public uint[] ReadElements(int firstElement, int elementCount)
+        {
+            int words = StrideBytes / sizeof(uint);
+            return UploadedValues.Skip(firstElement * words).Take(elementCount * words).ToArray();
         }
 
         public void ResetAppendCounter()

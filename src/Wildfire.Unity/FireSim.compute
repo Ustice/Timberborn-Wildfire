@@ -1,10 +1,15 @@
 #pragma kernel ApplyExternalChanges
-#pragma kernel SimulateFullGrid
+#pragma kernel SimulateFullGrid MATERIAL_IDENTITY_READ_ONLY
 
 #define THREAD_GROUP_SIZE_X 8
 #define THREAD_GROUP_SIZE_Y 8
 #define THREAD_GROUP_SIZE_Z 4
 
+#define CHANGE_COLLECT_CLEAN_ASH 2048u
+#define CHANGE_APPLY_CLEAN_ASH 4096u
+#define APPLICATION_RECEIPT_MASK ((3u << 27) | (1u << 29) | (3u << 30))
+#define COLLECTION_RECEIPT_VALID (1u << 29)
+#define COLLECTION_RECEIPT_MASK ((3u << 27) | COLLECTION_RECEIPT_VALID)
 #define CHANGE_SET_CELL 1u
 #define CHANGE_SET_WATER 2u
 #define CHANGE_SET_FUEL 4u
@@ -47,7 +52,8 @@ struct CellDeltaGpu
     uint Index;
     uint OldCell;
     uint NewCell;
-    uint Reserved;
+    uint TargetId;
+    uint SlotId;
 };
 
 struct FireSimChangeGpu
@@ -58,12 +64,34 @@ struct FireSimChangeGpu
     uint SetValues;
 };
 
+struct MaterialRequestGpu
+{
+    uint CellIndex; uint ExpectedTarget; uint ExpectedSlot; uint IncomingTarget; uint IncomingSlot;
+    uint Mode; uint Material; uint Companion; uint SourceIndex; uint Reserved;
+};
+struct MaterialReceiptGpu
+{
+    uint CellIndex; uint PriorTarget; uint PriorSlot; uint PriorCell; uint PriorCompanion;
+    uint AppliedTarget; uint AppliedSlot; uint AppliedCell; uint AppliedCompanion; uint Status;
+};
+// Identity is mutable only during ordered material handoff, never during simulation.
+#ifdef MATERIAL_IDENTITY_READ_ONLY
+StructuredBuffer<uint> MaterialTargetIds;
+StructuredBuffer<uint> MaterialSlotIds;
+#else
+RWStructuredBuffer<uint> MaterialTargetIds;
+RWStructuredBuffer<uint> MaterialSlotIds;
+#endif
+StructuredBuffer<MaterialRequestGpu> MaterialRequests;
+RWStructuredBuffer<MaterialReceiptGpu> MaterialReceipts;
+uint MaterialRequestCapacity;
+
 RWStructuredBuffer<uint> CurrentCells;
 RWStructuredBuffer<uint> NextCells;
 RWStructuredBuffer<uint> CurrentAtmosphericFields;
 RWStructuredBuffer<uint> NextAtmosphericFields;
 RWStructuredBuffer<uint> CompanionFields;
-StructuredBuffer<FireSimChangeGpu> ExternalChanges;
+RWStructuredBuffer<FireSimChangeGpu> ExternalChanges;
 AppendStructuredBuffer<CellDeltaGpu> Deltas;
 RWStructuredBuffer<float4> VisualFields;
 
@@ -170,7 +198,8 @@ void AppendDelta(uint index, uint oldCell, uint newCell)
     delta.Index = index;
     delta.OldCell = oldCell;
     delta.NewCell = newCell;
-    delta.Reserved = 0u;
+    delta.TargetId = MaterialTargetIds[index];
+    delta.SlotId = MaterialSlotIds[index];
     Deltas.Append(delta);
 }
 
@@ -1549,6 +1578,161 @@ uint StepCell(uint index, uint3 coordinate, uint cell, uint oldAtmospheric)
     return Pack(fuel, heat, flammability, water, terrain, burningLevel);
 }
 
+#ifndef MATERIAL_IDENTITY_READ_ONLY
+// Material transactions use dedicated captures, never burn-damage deltas.
+#define MATERIAL_BATCH 0x80000000u
+#define MATERIAL_CELL_MASK 0x130fu
+#define MATERIAL_COMPANION_MASK 0x01f0ffffu
+#define MATERIAL_SOURCE_USED 0x80000000u
+
+bool MaterialIdentityEqual(uint targetA, uint slotA, uint targetB, uint slotB)
+{
+    return targetA == targetB && slotA == slotB;
+}
+
+// Exact unowned profiles; no capacity, fuel, flammability or history can enter through a baseline.
+// Keep this allowlist aligned with FireSimBaselineDefinition; ambient fields remain outside both masks.
+bool IsCanonicalMaterialBaseline(uint material, uint companion)
+{
+    return (material == 0u && (companion == 0u || companion == 1u ||
+        companion == (8u | (3u << 22)) || companion == (9u | (3u << 20) | (2u << 22)))) ||
+        (material == 0x1000u && companion == 1u);
+}
+
+uint ValidateMaterialRequest(uint index, uint count)
+{
+    MaterialRequestGpu request = MaterialRequests[index];
+    MaterialReceiptGpu prior = MaterialReceipts[index + 1u];
+    if (request.CellIndex >= CellCount || (index > 0u && request.CellIndex <= MaterialRequests[index - 1u].CellIndex)) return 7u;
+    if (!MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, prior.PriorTarget, prior.PriorSlot)) return 2u;
+    if ((request.ExpectedTarget == 0u) != (request.ExpectedSlot == 0u) ||
+        (request.IncomingTarget == 0u) != (request.IncomingSlot == 0u)) return 2u;
+    if (request.Reserved != 0u || (request.Material & ~MATERIAL_CELL_MASK) != 0u ||
+        (request.Companion & ~MATERIAL_COMPANION_MASK) != 0u ||
+        (request.Companion & 255u) > 10u || ((request.Companion >> 22u) & 7u) > 4u) return 4u;
+    if (request.Mode > 4u) return 8u;
+    if (request.Mode != 3u && request.SourceIndex != 0xffffffffu) return 5u;
+    if (request.Mode == 0u)
+    {
+        if (request.IncomingTarget == 0u || !MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot) ||
+            (request.Material & 15u) != 0u || (request.Companion & 0xf000u) != 0u ||
+            (prior.PriorCell & (MATERIAL_CELL_MASK & ~15u)) != request.Material ||
+            (prior.PriorCompanion & (MATERIAL_COMPANION_MASK & ~0xf000u)) != request.Companion) return 3u;
+    }
+    else if (request.Mode == 4u)
+    {
+        if (request.IncomingTarget != 0u || !IsCanonicalMaterialBaseline(request.Material, request.Companion)) return 4u;
+    }
+    else
+    {
+        if (request.IncomingTarget == 0u) return 2u;
+        if (request.Mode == 1u && (MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot) || (request.Companion & 0xf000u) != 0u)) return 3u;
+        if (request.Mode == 2u && MaterialIdentityEqual(request.ExpectedTarget, request.ExpectedSlot, request.IncomingTarget, request.IncomingSlot)) return 3u;
+        if (request.Mode == 3u)
+        {
+            if (request.SourceIndex >= count || request.SourceIndex == index || request.Material != 0u || request.Companion != 0u) return 5u;
+            MaterialReceiptGpu source = MaterialReceipts[request.SourceIndex + 1u];
+            if (!MaterialIdentityEqual(source.PriorTarget, source.PriorSlot, request.IncomingTarget, request.IncomingSlot) ||
+                MaterialRequests[request.SourceIndex].Mode == 0u) return 5u;
+            if ((source.Status & MATERIAL_SOURCE_USED) != 0u) return 6u;
+            source.Status |= MATERIAL_SOURCE_USED;
+            MaterialReceipts[request.SourceIndex + 1u] = source;
+        }
+    }
+    return 1u;
+}
+
+// Row zero holds the header; per-cell receipts begin at row one in this same UAV.
+void WriteMaterialHeader(uint token, uint status, uint count, uint rejected)
+{
+    MaterialReceiptGpu header;
+    header.CellIndex = token;
+    header.PriorTarget = status;
+    header.PriorSlot = count;
+    header.PriorCell = rejected;
+    header.PriorCompanion = 0u;
+    header.AppliedTarget = 0u;
+    header.AppliedSlot = 0u;
+    header.AppliedCell = 0u;
+    header.AppliedCompanion = 0u;
+    header.Status = 0u;
+    MaterialReceipts[0] = header;
+}
+
+void ApplyMaterialBatch(uint changeIndex, FireSimChangeGpu marker)
+{
+    uint count = marker.AddFields;
+    if (changeIndex + 1u != ChangeCount || marker.CellIndex != 0u || marker.SetMask != MATERIAL_BATCH || marker.SetValues == 0u || count == 0u || count > MaterialRequestCapacity)
+    {
+        WriteMaterialHeader(marker.SetValues, 2u, count, 0u);
+        return;
+    }
+    // Capture the entire table before validation/apply. Sources may be overwritten by any later row.
+    for (uint captureIndex = 0u; captureIndex < count; captureIndex++)
+    {
+        MaterialRequestGpu request = MaterialRequests[captureIndex];
+        MaterialReceiptGpu receipt;
+        receipt.CellIndex = request.CellIndex;
+        bool validCell = request.CellIndex < CellCount;
+        receipt.PriorTarget = validCell ? MaterialTargetIds[request.CellIndex] : 0u;
+        receipt.PriorSlot = validCell ? MaterialSlotIds[request.CellIndex] : 0u;
+        receipt.PriorCell = validCell ? CurrentCells[request.CellIndex] : 0u;
+        receipt.PriorCompanion = validCell ? CompanionFields[request.CellIndex] : 0u;
+        receipt.AppliedTarget = receipt.PriorTarget;
+        receipt.AppliedSlot = receipt.PriorSlot;
+        receipt.AppliedCell = receipt.PriorCell;
+        receipt.AppliedCompanion = receipt.PriorCompanion;
+        receipt.Status = 1u;
+        MaterialReceipts[captureIndex + 1u] = receipt;
+    }
+    uint rejected = 0xffffffffu;
+    for (uint validateIndex = 0u; validateIndex < count; validateIndex++)
+    {
+        uint status = ValidateMaterialRequest(validateIndex, count);
+        MaterialReceiptGpu receipt = MaterialReceipts[validateIndex + 1u];
+        receipt.Status = (receipt.Status & MATERIAL_SOURCE_USED) | status;
+        MaterialReceipts[validateIndex + 1u] = receipt;
+        if (status != 1u && rejected == 0xffffffffu) rejected = validateIndex;
+    }
+    for (uint cleanupIndex = 0u; cleanupIndex < count; cleanupIndex++)
+    {
+        MaterialReceiptGpu receipt = MaterialReceipts[cleanupIndex + 1u];
+        receipt.Status &= ~MATERIAL_SOURCE_USED;
+        MaterialReceipts[cleanupIndex + 1u] = receipt;
+    }
+    if (rejected != 0xffffffffu)
+    {
+        WriteMaterialHeader(marker.SetValues, 2u, count, rejected);
+        return;
+    }
+    for (uint applyIndex = 0u; applyIndex < count; applyIndex++)
+    {
+        MaterialRequestGpu request = MaterialRequests[applyIndex];
+        MaterialReceiptGpu receipt = MaterialReceipts[applyIndex + 1u];
+        uint material = request.Material;
+        uint companion = request.Companion;
+        if (request.Mode == 3u)
+        {
+            MaterialReceiptGpu source = MaterialReceipts[request.SourceIndex + 1u];
+            material = source.PriorCell & MATERIAL_CELL_MASK;
+            companion = source.PriorCompanion & MATERIAL_COMPANION_MASK;
+        }
+        if (request.Mode != 0u)
+        {
+            receipt.AppliedCell = (receipt.PriorCell & 0x0cf0u) | material;
+            receipt.AppliedCompanion = (receipt.PriorCompanion & ~MATERIAL_COMPANION_MASK) | companion;
+        }
+        receipt.AppliedTarget = request.IncomingTarget;
+        receipt.AppliedSlot = request.IncomingSlot;
+        CurrentCells[request.CellIndex] = receipt.AppliedCell;
+        CompanionFields[request.CellIndex] = receipt.AppliedCompanion;
+        MaterialTargetIds[request.CellIndex] = receipt.AppliedTarget;
+        MaterialSlotIds[request.CellIndex] = receipt.AppliedSlot;
+        MaterialReceipts[applyIndex + 1u] = receipt;
+    }
+    WriteMaterialHeader(marker.SetValues, 1u, count, 0xffffffffu);
+}
+
 // Baseline apply is intentionally single-threaded so repeated changes to one cell
 // remain in registration order until a later ordered parallel apply pass exists.
 [numthreads(1, 1, 1)]
@@ -1563,68 +1747,130 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
     {
         FireSimChangeGpu change = ExternalChanges[changeIndex];
 
+        if ((change.SetMask & MATERIAL_BATCH) != 0u)
+        {
+            ApplyMaterialBatch(changeIndex, change);
+            continue;
+        }
         if (change.CellIndex >= CellCount)
         {
             continue;
         }
 
-        uint oldCell = CurrentCells[change.CellIndex] & 0xFFFFu;
-        uint cell = oldCell;
-        uint oldAtmospheric = CurrentAtmosphericFields[change.CellIndex] & 0xFFFFu;
-
-        if ((change.SetMask & CHANGE_SET_CELL) != 0u)
+        if ((change.SetMask & CHANGE_COLLECT_CLEAN_ASH) != 0u)
         {
-            cell = change.SetValues & 0xFFFFu;
+            // Exclusive ordered resource conversion. Its receipt is authored here, not inferred
+            // from a later field difference (simulation may add, move, contaminate or decay ash).
+            uint requested = (change.AddFields >> 25) & 3u;
+            bool validRequest = change.SetMask == CHANGE_COLLECT_CLEAN_ASH &&
+                change.AddFields == (requested << 25) && change.SetValues == 0u;
+            change.AddFields &= ~COLLECTION_RECEIPT_MASK;
+            if (validRequest)
+            {
+                uint atmospheric = CurrentAtmosphericFields[change.CellIndex];
+                uint ash = AtmosphericAsh(atmospheric);
+                uint removed = AtmosphericAshContamination(atmospheric) == 0u ? min(requested, ash) : 0u;
+                CurrentAtmosphericFields[change.CellIndex] = PackAtmospheric(
+                    AtmosphericSteam(atmospheric), AtmosphericSmoke(atmospheric), AtmosphericSmokeContamination(atmospheric),
+                    ash - removed, AtmosphericAshContamination(atmospheric), (atmospheric & 0x8000u) != 0u);
+                change.AddFields |= (removed << 27) | COLLECTION_RECEIPT_VALID;
+            }
+            ExternalChanges[changeIndex] = change;
+            continue;
         }
 
-        uint addHeat = change.AddFields & 0xFu;
-        uint addFuel = (change.AddFields >> 4) & 0xFu;
-
-        if (addHeat > 0u)
+        if ((change.SetMask & CHANGE_APPLY_CLEAN_ASH) != 0u)
         {
-            cell = WithHeat(cell, min(15u, Heat(cell) + addHeat));
+            uint limit = (change.AddFields >> 25) & 3u;
+            bool validRequest = change.SetMask == CHANGE_APPLY_CLEAN_ASH && limit > 0u &&
+                change.AddFields == (limit << 25) && change.SetValues == 0u;
+            change.AddFields &= ~APPLICATION_RECEIPT_MASK;
+            if (validRequest)
+            {
+                uint index = change.CellIndex;
+                uint3 coordinate = uint3(index % Width, (index / Width) % Height, index / (Width * Height));
+                uint atmospheric = CurrentAtmosphericFields[index];
+                uint ash = AtmosphericAsh(atmospheric);
+                // Deterministic precedence: invalid landing surface, tainted ash, then full.
+                uint outcome = !IsAshLandingSurfaceForCell(CurrentCells[index], CompanionFields[index], coordinate) ? 3u :
+                    AtmosphericAshContamination(atmospheric) != 0u ? 2u : ash >= limit ? 1u : 0u;
+                uint added = outcome == 0u ? 1u : 0u;
+                if (added != 0u)
+                    CurrentAtmosphericFields[index] = (atmospheric & ~(7u << 9)) | ((ash + 1u) << 9);
+                change.AddFields |= (added << 27) | COLLECTION_RECEIPT_VALID | (outcome << 30);
+            }
+            ExternalChanges[changeIndex] = change;
         }
-
-        if (addFuel > 0u)
+        else
         {
-            cell = WithFuel(cell, min(15u, Fuel(cell) + addFuel));
-        }
 
-        if ((change.SetMask & CHANGE_SET_WATER) != 0u)
-        {
-            cell = WithWater(cell, (change.SetValues >> 16) & 0x3u);
-        }
+            uint oldCell = CurrentCells[change.CellIndex] & 0xFFFFu;
+            uint cell = oldCell;
+            uint oldAtmospheric = CurrentAtmosphericFields[change.CellIndex] & 0xFFFFu;
 
-        if ((change.SetMask & CHANGE_SET_FUEL) != 0u)
-        {
-            cell = WithFuel(cell, (change.SetValues >> 18) & 0xFu);
-        }
+            if ((change.SetMask & CHANGE_SET_CELL) != 0u)
+            {
+                cell = change.SetValues & 0xFFFFu;
+            }
 
-        if ((change.SetMask & CHANGE_SET_HEAT) != 0u)
-        {
-            cell = WithHeat(cell, (change.SetValues >> 22) & 0xFu);
-        }
+            uint addHeat = change.AddFields & 0xFu;
+            uint addFuel = (change.AddFields >> 4) & 0xFu;
+            uint addWater = (change.AddFields >> 23) & 0x3u;
 
-        if ((change.SetMask & CHANGE_SET_FLAMMABILITY) != 0u)
-        {
-            cell = WithFlammability(cell, (change.SetValues >> 26) & 0x3u);
-        }
+            if (addHeat > 0u)
+            {
+                cell = WithHeat(cell, min(15u, Heat(cell) + addHeat));
+            }
 
-        if ((change.SetMask & CHANGE_SET_BURNING_LEVEL) != 0u)
-        {
-            cell = WithBurningLevel(cell, (change.SetValues >> 28) & 0x7u);
-        }
+            if (addFuel > 0u)
+            {
+                cell = WithFuel(cell, min(15u, Fuel(cell) + addFuel));
+            }
 
-        if ((change.SetMask & CHANGE_SET_TERRAIN) != 0u)
-        {
-            cell = WithTerrain(cell, (change.SetValues >> 31) & 0x1u);
-        }
+            // Like heat and fuel, increments follow SetCell and precede field overrides.
+            if (addWater > 0u)
+            {
+                cell = WithWater(cell, min(3u, Water(cell) + addWater));
+            }
 
-        CurrentCells[change.CellIndex] = cell;
-        CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);
-        AppendDelta(change.CellIndex, oldCell, cell);
+            if ((change.SetMask & CHANGE_SET_WATER) != 0u)
+            {
+                cell = WithWater(cell, (change.SetValues >> 16) & 0x3u);
+            }
+
+            if ((change.SetMask & CHANGE_SET_FUEL) != 0u)
+            {
+                cell = WithFuel(cell, (change.SetValues >> 18) & 0xFu);
+            }
+
+            if ((change.SetMask & CHANGE_SET_HEAT) != 0u)
+            {
+                cell = WithHeat(cell, (change.SetValues >> 22) & 0xFu);
+            }
+
+            if ((change.SetMask & CHANGE_SET_FLAMMABILITY) != 0u)
+            {
+                cell = WithFlammability(cell, (change.SetValues >> 26) & 0x3u);
+            }
+
+            if ((change.SetMask & CHANGE_SET_BURNING_LEVEL) != 0u)
+            {
+                cell = WithBurningLevel(cell, (change.SetValues >> 28) & 0x7u);
+            }
+
+            if ((change.SetMask & CHANGE_SET_TERRAIN) != 0u)
+            {
+                cell = WithTerrain(cell, (change.SetValues >> 31) & 0x1u);
+            }
+
+            CurrentCells[change.CellIndex] = cell;
+            CurrentAtmosphericFields[change.CellIndex] = ApplyAshChange(oldAtmospheric, change);
+            AppendDelta(change.CellIndex, oldCell, cell);
+        }
     }
 }
+
+#endif
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void SimulateFullGrid(uint3 id : SV_DispatchThreadID)

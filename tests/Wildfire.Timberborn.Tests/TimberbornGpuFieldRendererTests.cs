@@ -172,8 +172,8 @@ public sealed class TimberbornGpuFieldRendererTests
         Assert.Contains("float smoke = atmospheric.Smoke / 7f;", simulatorSource, StringComparison.Ordinal);
         Assert.Contains("float ash = atmospheric.Ash / 7f;", simulatorSource, StringComparison.Ordinal);
         Assert.Contains("return new Vector4(fire, smoke, ash, visibility);", simulatorSource, StringComparison.Ordinal);
-        Assert.Contains("_step.RestoreTick(snapshot.Tick);", simulatorSource, StringComparison.Ordinal);
-        Assert.Contains("_visualFieldBindingLifecycle?.MarkUpdated(_step.CurrentTick);", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("_step.InitializeLegacyBuffers(snapshot.Tick, () =>", simulatorSource, StringComparison.Ordinal);
+        Assert.Contains("_visualFieldBindingLifecycle?.MarkUpdated(snapshot.Tick);", simulatorSource, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -218,7 +218,7 @@ public sealed class TimberbornSelectedCropTargetProvider : ITimberbornQaSelected
 
         return TimberbornLiveCropBurnDamageTargetCollector.CollectSelectedObject(
             grid,
-            $"selected_crop_harvestable:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)}",
+            TimberbornBurnDamageIdentity.ForEntity(blockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Crop),
             blockObject.Name,
             selectedObject.AllComponents,
             OccupiedCoordinates(blockObject)
@@ -487,7 +487,7 @@ public static class TimberbornLiveCropBurnDamageTargetCollector
 
         return BuildTarget(
             new TimberbornLiveCropBurnDamageCandidate(
-                StableId: $"crop_harvestable:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(blockObject)}",
+                StableId: TimberbornBurnDamageIdentity.ForEntity(blockObject.GetComponent<EntityComponent>().EntityId, NativeBurnTargetFamily.Crop),
                 SpecId: blockObject.Name,
                 ResourceId: yield.ResourceId,
                 YieldAmount: yield.Amount,

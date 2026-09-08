@@ -3,7 +3,7 @@ using Wildfire.Unity;
 
 namespace Wildfire.Core.Tests;
 
-public sealed class TimberbornQaCommandBridgeTests
+public sealed partial class TimberbornQaCommandBridgeTests
 {
     [Fact]
     public void ExecuteStatusReturnsStateProviderValuesAndLogsResult()
@@ -204,7 +204,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             new RecordingLogSink(),
-            inventoryAdjuster: inventoryAdjuster);
+            inventoryAdjuster: inventoryAdjuster,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-adjust-inventory all-consequences");
 
@@ -240,7 +241,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             new RecordingLogSink(),
-            inventoryAdjuster: inventoryAdjuster);
+            inventoryAdjuster: inventoryAdjuster,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-adjust-inventory unknown");
 
@@ -289,7 +291,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             new RecordingLogSink(),
-            storedMaterialStimulus: storedMaterialStimulus);
+            storedMaterialStimulus: storedMaterialStimulus,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-stored-material-stimulus all");
 
@@ -331,7 +334,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             new RecordingLogSink(),
-            storedMaterialStimulus: storedMaterialStimulus);
+            storedMaterialStimulus: storedMaterialStimulus,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-stored-material-stimulus ordinary-storage");
 
@@ -347,7 +351,8 @@ public sealed class TimberbornQaCommandBridgeTests
             new RecordingStateProvider(TimberbornQaCommandState.Placeholder),
             new RecordingDeltaStimulus(
                 new TimberbornQaDeltaStimulusResult(TimberbornQaFieldTargetSelectors.Default, 0, 0, 0, 0, WildfireMaterialClass.Tree, 1u, 1, 15, 1)),
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("help");
 
@@ -365,7 +370,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaDeltaStimulus.Instance,
             new RecordingBuildingBurnoutStimulus(
                 new TimberbornQaBuildingBurnoutStimulusResult(0, 0, 0, 0, 1, 15, 0, 2)),
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("help");
 
@@ -384,7 +390,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             new RecordingWaterSuppressionStimulus(
                 new TimberbornQaWaterSuppressionStimulusResult(TimberbornQaFieldTargetSelectors.Default, 0, 0, 0, 0, WildfireMaterialClass.Tree, 1u, 1, 3, 1)),
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("help");
 
@@ -417,7 +424,8 @@ public sealed class TimberbornQaCommandBridgeTests
                     64,
                     12,
                     12)),
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("help");
 
@@ -437,7 +445,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             new RecordingFireSimParameterPresetSelector(),
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("help");
 
@@ -504,7 +513,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             selector,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-fire-preset slow-reactable");
 
@@ -529,7 +539,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             NullTimberbornQaBurnDurationStimulus.Instance,
             selector,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-fire-preset IgnitionPoint=1");
 
@@ -660,7 +671,7 @@ public sealed class TimberbornQaCommandBridgeTests
                 SustainedHeatRemainingCycleCount: 12,
                 SustainedHeatQueuedCycleNumber: 1));
         RecordingLogSink logSink = new();
-        TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink);
+        TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink, access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus");
 
@@ -720,7 +731,8 @@ public sealed class TimberbornQaCommandBridgeTests
         TimberbornQaCommandBridge bridge = new(
             new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: true)),
             deltaStimulus,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus beaver-exposure");
 
@@ -773,7 +785,8 @@ public sealed class TimberbornQaCommandBridgeTests
         TimberbornQaCommandBridge bridge = new(
             new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: true)),
             deltaStimulus,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus toxic-beaver-exposure");
 
@@ -814,7 +827,8 @@ public sealed class TimberbornQaCommandBridgeTests
         TimberbornQaCommandBridge bridge = new(
             new RecordingStateProvider(new TimberbornQaCommandState(IsSimulatorIntegrated: true, WildfireEnabled: true)),
             deltaStimulus,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus tainted-ash");
 
@@ -849,7 +863,8 @@ public sealed class TimberbornQaCommandBridgeTests
             stateProvider,
             NullTimberbornQaDeltaStimulus.Instance,
             buildingBurnoutStimulus,
-            logSink);
+            logSink,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-building-burnout-stimulus");
 
@@ -907,7 +922,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             waterSuppressionStimulus,
-            logSink);
+            logSink,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-water-suppression-stimulus");
 
@@ -990,7 +1006,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaFireSimParameterPresetSelector.Instance,
             NullTimberbornQaSoilMoistureMapProbe.Instance,
             logSink,
-            ashWaterStimulus: ashWaterStimulus);
+            ashWaterStimulus: ashWaterStimulus,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute($"qa-ash-water-stimulus {target}");
 
@@ -1061,7 +1078,8 @@ public sealed class TimberbornQaCommandBridgeTests
             deltaStimulus,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             waterSuppressionStimulus,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute(command);
 
@@ -1095,7 +1113,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaDeltaStimulus.Instance,
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             waterSuppressionStimulus,
-            new RecordingLogSink());
+            new RecordingLogSink(),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-water-suppression-stimulus dynamite");
 
@@ -1151,7 +1170,8 @@ public sealed class TimberbornQaCommandBridgeTests
             NullTimberbornQaBuildingBurnoutStimulus.Instance,
             NullTimberbornQaWaterSuppressionStimulus.Instance,
             burnDurationStimulus,
-            logSink);
+            logSink,
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-burn-duration-stimulus high");
 
@@ -2251,7 +2271,7 @@ public sealed class TimberbornQaCommandBridgeTests
         RecordingDeltaStimulus deltaStimulus = new(
             new TimberbornQaDeltaStimulusResult(TimberbornQaFieldTargetSelectors.Default, 91, 3, 4, 2, WildfireMaterialClass.Tree, 77u, 498, 15, 1));
         RecordingLogSink logSink = new();
-        TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink);
+        TimberbornQaCommandBridge bridge = new(stateProvider, deltaStimulus, logSink, access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute("qa-delta-stimulus");
 
@@ -2791,7 +2811,8 @@ public sealed class TimberbornQaCommandBridgeTests
                     1,
                     1,
                     0,
-                    ExpectedWaterTaint: false)));
+                    ExpectedWaterTaint: false)),
+            access: TimberbornQaCommandAccess.Development);
 
         TimberbornQaCommandResult result = bridge.Execute(command);
 
@@ -2924,6 +2945,7 @@ public sealed class TimberbornQaCommandBridgeTests
             BeaverFieldBehaviorDecisionsSkippedCooldown: 59,
             BeaverFieldBehaviorDecisionsSkippedBatch: 60,
             BeaverFieldBehaviorFailedDecisions: 62,
+            BeaverFieldBehaviorUnsupportedDecisions: 7,
             BeaverFieldBehaviorRecoveryActions: 63,
             BeaverFieldBehaviorSmokeExposedSamples: 64,
             BeaverFieldBehaviorSmokeExposureAccumulatedSamples: 65,
@@ -3015,6 +3037,7 @@ public sealed class TimberbornQaCommandBridgeTests
             ContaminationFireNativeDecontaminationAttempts: 0,
             TaintedAshPoisonCandidateCells: 1,
             TaintedAshPoisonAppliedCells: 1,
+            TaintedAshPoisonOutcome: "applied",
             AshWaterWashoutCandidateAshCells: 4,
             AshWaterWashoutCleanAshWashed: 2,
             AshWaterWashoutTaintedAshWashed: 1,
@@ -3150,6 +3173,8 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("beaver_field_behavior_smoke_decisions_applied=55", result.ResultToken);
         Assert.Contains("beaver_field_behavior_toxic_smoke_decisions_applied=56", result.ResultToken);
         Assert.Contains("beaver_field_behavior_fire_heat_decisions_applied=57", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_unsupported_decisions=7", result.ResultToken);
+        Assert.Contains("beaver_field_behavior_fire_heat_contact_basis=nearby_visual_proxy", result.ResultToken);
         Assert.Contains("beaver_field_behavior_noop_decisions_applied=58", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_cooldown=59", result.ResultToken);
         Assert.Contains("beaver_field_behavior_decisions_skipped_batch=60", result.ResultToken);
@@ -3231,6 +3256,7 @@ public sealed class TimberbornQaCommandBridgeTests
         Assert.Contains("contamination_fire_native_decontamination_attempts=0", result.ResultToken);
         Assert.Contains("tainted_ash_poison_candidate_cells=1", result.ResultToken);
         Assert.Contains("tainted_ash_poison_applied_cells=1", result.ResultToken);
+        Assert.Contains("tainted_ash_poison_outcome=applied", result.ResultToken);
         Assert.Contains("ash_water_washout_candidate_ash_cells=4", result.ResultToken);
         Assert.Contains("ash_water_washout_clean_ash_washed=2", result.ResultToken);
         Assert.Contains("ash_water_washout_tainted_ash_washed=1", result.ResultToken);

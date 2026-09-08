@@ -35,7 +35,9 @@ public sealed class FireSimStepCoordinatorTests
         coordinator.RegisterChange(change);
         RecordingBackend backend = new() { FailingStage = failingStage };
 
-        Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+        var failure = Assert.Throws<FireSimStepInputException>(() => coordinator.Tick(backend));
+        Assert.Equal(failingStage == "reset" ? FireSimStepInputOutcome.NotApplied : FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal(1, coordinator.PendingChangeCount);
         Assert.Equal(0u, coordinator.CurrentTick);
@@ -43,6 +45,12 @@ public sealed class FireSimStepCoordinatorTests
         backend.FailingStage = null;
         backend.Events.Clear();
 
+        if (failingStage == "apply")
+        {
+            Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+            Assert.Empty(backend.Events);
+            return;
+        }
         coordinator.Tick(backend);
 
         Assert.Equal([change], backend.AppliedChanges);
@@ -62,7 +70,9 @@ public sealed class FireSimStepCoordinatorTests
         RecordingBackend backend = new() { FailingStage = failingStage };
         using IDisposable subscription = coordinator.Subscribe(new Listener(_ => backend.Events.Add("notify")));
 
-        Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+        var failure = Assert.Throws<FireSimStepInputException>(() => coordinator.Tick(backend));
+        Assert.Equal(FireSimStepInputOutcome.Indeterminate, failure.Outcome);
+        Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal(0, coordinator.PendingChangeCount);
         Assert.Equal(1u, coordinator.CurrentTick);
@@ -74,9 +84,8 @@ public sealed class FireSimStepCoordinatorTests
 
         backend.FailingStage = null;
         backend.Events.Clear();
-        coordinator.Tick(backend);
-
-        Assert.Equal(["reset:2", "simulate:2", "read:2", "swap:2", "notify"], backend.Events);
+        Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+        Assert.Empty(backend.Events);
     }
 
     [Fact]
@@ -100,7 +109,9 @@ public sealed class FireSimStepCoordinatorTests
         RecordingBackend backend = new();
         using IDisposable subscription = coordinator.Subscribe(new Listener(_ => throw new InvalidOperationException("Listener failed.")));
 
-        Assert.Throws<InvalidOperationException>(() => coordinator.Tick(backend));
+        var failure = Assert.Throws<FireSimStepInputException>(() => coordinator.Tick(backend));
+        Assert.Equal(FireSimStepInputOutcome.Committed, failure.Outcome);
+        Assert.IsType<InvalidOperationException>(failure.InnerException);
 
         Assert.Equal("swap:1", backend.Events.Last());
         Assert.Equal(1u, coordinator.CurrentTick);

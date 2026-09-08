@@ -1,0 +1,29 @@
+# Verified native followup contract gaps
+
+Initial read-only review at source `460a0cf`; unchanged by `6953d3e` save exclusion. Subsequent corrections and their proof limits are recorded below. Native instruction inspection used the installed Timberborn assemblies listed below; later executed regressions are linked separately.
+
+| Existing path | Verified native/source behavior | Remaining contract |
+| --- | --- | --- |
+| `Ash/TimberbornAshWorldEffects.cs`: TimberbornSoilContaminationPoisoningApi reflects `SoilContaminationService.UpdateContamination(Vector3Int,float)` | That method calls `TerrainMaterialMap.SetSoilContamination`. The queue consumer chain `ProcessContaminationTextureChanges → UpdateContaminationTexture` edits PixelData, changed-layer sets and a settling queue; `ApplyContaminationTextureChanges` uploads/copies textures. None of that chain calls contamination authority. `Contamination(int)` reads `_threadSafeContaminationLevels`. Native `SetContaminationLevel` separately enters/exits ContaminatedObject, calls the rendering update, then writes the authoritative array. | Historical false-success hook removed in `e63faad`; current Runtime reports Unavailable with zero applied cells. Native capability RED and render-chain IL are verified; full original render execution requires Unity. Lasting source-stage integration remains open; see [soil authority QA](tainted-ash-soil-authority.md). |
+| `Ash/TimberbornGrowableAshGrowthAdapter.cs`: `Growable.IncreaseGrowthProgress` | Native method calls `TimeTrigger.FastForwardProgress`: Pause, subtract from `_delayLeftInDays`, possibly Finish, then possibly Resume. Mutation can precede callbacks. Ash field growth is called through field application/synchronization and day-decay followup. | A throwing completion callback may leave progressed native growth while the outer legacy followup catches and continues. Prove at the native growth boundary, classify preflight/unsupported separately, and use the existing failure authority for an uncertain mutation. Do not classify every later summary-log failure as incomplete growth. |
+| `Beavers/TimberbornBeaverFieldBehavior.cs`: smoke apply/recovery | Status changes precede speed application. Native Worker speed setter writes `_workingSpeedMultiplier` before `CharacterAnimator.SetFloat`. Dispatcher records behavior history only after actuator return; recovery deactivates status before restoring speed. | A later callback can fail after native mutation but before matching history or remaining actors complete. Regression and classification belong at apply/recover, not a blanket runtime catch. Missing Worker is an intentional no-op; fire-heat actuation explicitly returns Unsupported. |
+| `Ash/TimberbornAshWorldEffects.cs`: water washout | Removal callbacks queue GPU inputs before tainted washouts call the water adapter. Runtime binds `UnavailableTimberbornAshWaterTaintAdapter`, which throws. | No native water-taint implementation is proved. Distinguish unavailable capability from partial queued-input work; poisoning every caught exception would reject routine tainted washout. Review capability admission/order before claiming a conserved ash-to-water effect. |
+| `Ash/TimberbornFertileAshCollection.cs`: current GathererPost followup | Enumerates candidates and reports reachability; returns zero collected goods and no collected cells. | This path is telemetry, not consumption. Actual finite cargo collection is the separate guarded resource scheduler/executor path. A read/capability error here cannot honestly be labelled uncertain goods mutation. |
+
+The outer Runtime catches mix these cases with final logs and player feedback. Save exclusion does not establish native completion of swallowed operations. Prioritize actual growth and smoke mutation-before-callback regression contracts; keep the unavailable lasting soil effect and washout coupling visible as functionality gaps. No quantity replay, new fuel policy or arbitrary private native write is implied.
+
+Native SHA-256 evidence:
+
+```
+Timberborn.Growing.dll 85e1eff96b241e4996b2bb63ac10cb1bdbe209711e75dcffc87bcbfeaf5253f0
+Timberborn.TimeSystem.dll e4d1f60b5a4bca37927659b28412f6fcd9b1ef02f85a6329c2a84bd8d2a4d20e
+Timberborn.SoilContaminationSystem.dll dca062222ef4b6334faddd79aa5cc94528e98cf9df1ed86c5781f08837bda97c
+Timberborn.TerrainSystemRendering.dll 14f756b26038146b3b410f1985ef01222fc73eeb633da1f5ba7339fc609b6922
+Timberborn.WorkSystem.dll e1b32c9b6c2c97223c9e3ca1d95c60e72f2afe7aa276175f5819b810fc69ca7e
+```
+
+Focused/full IL artifacts remain in `/tmp/wildfire-dispatch-save-exclusion-review/`: `soil-il.txt`, `soil-authority-il.txt`, `soil-map-il.txt`, `soil-service-all-il.txt`, `terrain-material-map-all-il.txt`, `growable-il.txt`, `time-trigger-il.txt`, `worker-il.txt`. The durable behavioral call chains above preserve the finding if scratch artifacts disappear; no live readback or callback-failure execution is claimed by that inspection.
+
+The smoke mutation/callback and ordinary recovery classification are now covered by the [native smoke delivery correction](smoke-native-delivery.md). Its executed per-actor/runtime regressions supersede the smoke row's source-only status; final observation failures remain distinct from incomplete native/history delivery.
+
+The [growth correction](ash-native-elapsed-growth.md) removes native mutation from restore, synchronization and decay. Actual native timer/callback regressions cover the replacement's guarded elapsed-time calculation, but its ticker remains unbound pending native soil mapping and readiness proof. The old growth row describes the reproduced defect, not current observation behavior. The [original soil hook now has an executed Unity counterexample](original-soil-hook-native-counterexample.md): rendering was queued while authoritative contamination remained zero. Lasting soil effects and ash-to-water coupling remain open.

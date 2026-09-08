@@ -23,6 +23,14 @@ const knownCommands = [
   "qa-ash-cell",
   "qa-ash-water-stimulus",
   "qa-adjust-inventory",
+  "qa-borrowed-duty-arm",
+  "qa-borrowed-duty-water",
+  "qa-borrowed-duty-source",
+  "qa-save-copy",
+  "qa-save-status",
+  "qa-game-speed",
+  "qa-borrowed-duty-cancel",
+  "qa-borrowed-duty-status",
   "qa-building-burnout-stimulus",
   "qa-burn-duration-stimulus",
   "qa-delta-stimulus",
@@ -40,6 +48,20 @@ const usage = `Usage:
 Commands:
   status                    Read-only Wildfire runtime status. Default.
   qa-readiness              Read-only loaded-game readiness summary.
+  qa-borrowed-duty-status   Read-only pending offer and active borrowed worker state.
+  qa-borrowed-duty-arm <donor-guid> <x> <y> <z>
+                            Offer one development duty at an explicit workplace; Unity y is vertical.
+                            Requires QA mutations and borrowed-duty process switches.
+  qa-borrowed-duty-source <input-x> <input-y> <input-z> <shore-x> <shore-y> <shore-z>
+                            Create one explicit fixed input; input z/shore y are vertical.
+  qa-borrowed-duty-water <donor-guid> <source-guid> <shore-x> <shore-y> <shore-z> <fire-cell> <approach-x> <approach-y> <approach-z> <return-owner-guid> <inventory-component>
+                            Offer one clean-source sortie; no mixed-water shipping policy.
+  qa-borrowed-duty-cancel   Disarm the offer and request active borrowed duty return.
+  qa-save-copy <request-guid> <QA-name>
+                            Request a disposable QA save copy; poll qa-save-status for completion.
+  qa-save-status <request-guid>
+                            Read the result of that exact save request.
+  qa-game-speed <0|1>       Pause or resume the native game through the QA service.
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-ash-water-stimulus <clean|tainted>
                             Queue simulator-owned ash plus water contact on one imported burnable field target.

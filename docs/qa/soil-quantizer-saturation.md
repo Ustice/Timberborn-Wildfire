@@ -1,0 +1,7 @@
+# Soil quantizer saturation regression
+
+The initial capture accepts finite nonnegative native soil readings. Before the fix, quantizers narrowed a floating-point band to `int` before clamping. Actual Unity 6000.3.6f1 Mono returned wetness **0** and contamination **1** for a captured `float.MaxValue` sample; the real unchanged initial projector assertion failed (Editor exit 1). The same two managed projector tests passed before the fix on .NET 10/arm64, whose conversion saturated instead. Managed success did not prove target-runtime behavior.
+
+Clamping the floating-point band before narrowing to byte produces the intended **3/7**. The identical licensed Unity reflection fixture then passed (exit 0). Existing ordinary boundaries, NaN and infinity behavior remain covered; full managed native suite: **1,101 passed, 0 failed/skipped**. No shader, material baseline, or default-field policy changed.
+
+Evidence: `/tmp/wildfire-soil-quantizer-saturation`. `unity-red` retains pre-fix assembly, probe, logs, result and hashes; `probe` retains the fixed run. Native assembly SHA256 before: `a8ae8c3d439ac5034c5f7170012978c143893a9b27927fe2dc54ff95b5e8f907`; after: `cafdfc8a669c713919eb073f547d05cacc00594837a11ce1021e10fe122431bf`. Probe code and Core hashes were unchanged between runs. The fixture constructs the actual immutable capture and invokes the production projector, with supplied finite data. It does not load a game, create native soil simulation, or prove full initial-world publication. No GPU dispatch was needed for this numeric helper.

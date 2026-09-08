@@ -1,11 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../../build/Timberborn.Managed.props" />
   <ItemGroup>
+    <AssemblyMetadata Include="TimberbornManagedPath" Value="$(TimberbornManagedPath)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/Wildfire.Core/Wildfire.Core.csproj" />
     <ProjectReference Include="../../src/Wildfire.Timberborn/Wildfire.Timberborn.csproj" />
     <ProjectReference Include="../../src/Wildfire.Unity/Wildfire.Unity.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Timberborn.MapIndexSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.MapIndexSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.SoilContaminationSystem">
+      <HintPath>$(TimberbornManagedPath)/Timberborn.SoilContaminationSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.SettingsSystem">
       <HintPath>$(TimberbornManagedPath)/Timberborn.SettingsSystem.dll</HintPath>
       <Private>true</Private>
