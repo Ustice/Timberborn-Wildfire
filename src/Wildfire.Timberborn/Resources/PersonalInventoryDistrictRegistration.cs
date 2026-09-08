@@ -20,6 +20,7 @@ internal sealed class PersonalInventoryDistrictRegistration
     private DistrictInventoryRegistry? _registry;
     private DistrictResourceCounter? _counter;
     internal bool Exited { get; private set; }
+    internal bool OwnsInventory(Inventory inventory) => ReferenceEquals(_inventory, inventory);
 
     internal PersonalInventoryDistrictRegistration(Inventory inventory, NativeResourceCoordinator resources,
         Func<bool> canRegister, Action<Exception> warn)

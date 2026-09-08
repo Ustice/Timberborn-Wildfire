@@ -17,7 +17,7 @@ internal sealed class NativeWardenReturnFixture : IDisposable
     internal object Reserver { get; }
     internal object Balance { get; }
     private readonly object _goods, _serializer;
-    internal NativeWardenReturnFixture()
+    internal NativeWardenReturnFixture(string name = "Wildfire.WardenEquipment", int capacity = 1, bool publicInput = false)
     {
         Resources = Activator.CreateInstance(Mod("Resources.NativeResourceCoordinator"))!;
         Equipment = Activator.CreateInstance(Mod("FireResponse.WardenEquipment"), Resources)!;
@@ -30,16 +30,18 @@ internal sealed class NativeWardenReturnFixture : IDisposable
         }
         Set(_goods, "_goodSpecsById", specs);
         _serializer = New("Timberborn.Goods.GoodRegistryValueSerializer", New("Timberborn.Goods.GoodAmountSerializer", New("Timberborn.Goods.SerializedGoodValueSerializer", _goods)));
-        Source = Inventory(1); Destination = Inventory(10);
+        Source = Inventory(capacity, name, publicInput); Destination = Inventory(10, "Fixture.Destination", false);
         Call(Equipment, "InitializeInventory", Source);
         Reserver = RuntimeHelpers.GetUninitializedObject(T("Timberborn.InventorySystem.GoodReserver"));
         Balance = New("Timberborn.ResourceCountingSystem.DistrictGoodsBalance", _serializer);
         var district = New("Timberborn.InventorySystem.DistrictInventoryRegistry", _goods);
         var evt = district.GetType().GetEvent("InventoryRegistered")!;
         evt.AddEventHandler(district, Delegate.CreateDelegate(evt.EventHandlerType!, Balance, Balance.GetType().GetMethod("OnInventoryRegistered", Flags)!));
-        Call(district, "Add", Source); Call(district, "Add", Destination);
+        // Public-input case is declaration-only refusal, not a supplied public district/validator graph.
+        if (!publicInput) Call(district, "Add", Source);
+        Call(district, "Add", Destination);
     }
-    private object Inventory(int capacity)
+    private object Inventory(int capacity, string name, bool publicInput)
     {
         var inventory = RuntimeHelpers.GetUninitializedObject(T("Timberborn.InventorySystem.Inventory"));
         foreach (var field in new[] { "_storage", "_reservedStock", "_reservedCapacity" }) Set(inventory, field, New("Timberborn.Goods.GoodRegistry"));
@@ -52,7 +54,8 @@ internal sealed class NativeWardenReturnFixture : IDisposable
         foreach (var component in list) map.GetType().GetMethod("CacheType")!.MakeGenericMethod(component.GetType()).Invoke(map, [readOnly]);
         Set(cache, "_components", list); Set(cache, "_typeIndexMap", map);
         foreach (var component in list) T("Timberborn.BaseComponentSystem.BaseComponent").GetField("_componentCache", Flags)!.SetValue(component, cache);
-        var initializer = Call(New("Timberborn.InventorySystem.InventoryInitializerFactory", _goods), "Create", inventory, capacity, "Fixture.Water" + capacity)!;
+        var initializer = Call(New("Timberborn.InventorySystem.InventoryInitializerFactory", _goods), "Create", inventory, capacity, name)!;
+        if (publicInput) Call(initializer, "HasPublicInput");
         var good = T("Timberborn.Goods.StorableGood").GetMethod("CreateAsGivable")!.Invoke(null, ["Water"]);
         Call(initializer, "AddAllowedGood", New("Timberborn.Goods.StorableGoodAmount", good, capacity));
         Call(initializer, "Initialize"); Call(inventory, "Enable"); return inventory;
@@ -82,5 +85,7 @@ internal sealed class NativeWardenReturnFixture : IDisposable
         .GetMethod("ExactCapacity", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [Destination, Reserver])!;
     internal void Reservation(object inventory, string good = "Water", int amount = 1, bool fixedAmount = true, bool consume = false, string kind = "Capacity")
         => Set(Reserver, "<" + kind + "Reservation>k__BackingField", New("Timberborn.InventorySystem.GoodReservation", inventory, Amount(good, amount), fixedAmount, consume));
+    internal object WatchRelease() => Activator.CreateInstance(Mod("FireResponse.WardenCapacityRelease"), Flags, null, [Destination, Reserver], null)!;
+    internal void ClearReservation() => Set(Reserver, "<CapacityReservation>k__BackingField", Activator.CreateInstance(T("Timberborn.InventorySystem.GoodReservation")));
     public void Dispose() => _native.Dispose();
 }

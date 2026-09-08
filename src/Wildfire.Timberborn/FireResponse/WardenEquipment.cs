@@ -4,6 +4,7 @@ using Timberborn.BaseComponentSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Goods;
 using Timberborn.InventorySystem;
+using Timberborn.MortalSystem;
 using Timberborn.TemplateInstantiation;
 
 namespace Wildfire.Timberborn.FireResponse;
@@ -59,6 +60,50 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
             destination.GiveExisting(Bucket);
         });
         return true;
+    }
+
+    /// <summary>The caller owns arrival and validates its return phase before clearing it in commitReturned.</summary>
+    public bool TryReturn(Inventory destination, GoodReserver reserver, Action commitReturned)
+    {
+        if (commitReturned is null) throw new ArgumentNullException(nameof(commitReturned));
+        var source = Inventory;
+        if (source is null || destination is null || reserver is null ||
+            !WardenEquipmentReturnStock.ExactCapacity(destination, reserver)) return false;
+        if (!this || !source || !reserver || _registration is null) return false;
+        var owner = GetComponent<EntityComponent>();
+        var mortal = GetComponent<Mortal>();
+        var destinationOwner = destination ? destination.GetComponent<EntityComponent>() : null;
+        bool Live() => this && source && reserver && !_registration.Exited && source.Enabled &&
+            ReferenceEquals(Inventory, source) && _registration.OwnsInventory(source) && WardenEquipmentReturnStock.IsDedicatedInventory(source) && owner && owner.Initialized && !owner.Deleted &&
+            mortal && !mortal.Dead && !mortal.ShouldDie && ReferenceEquals(GetComponent<Mortal>(), mortal) && ReferenceEquals(GetComponent<EntityComponent>(), owner) &&
+            ReferenceEquals(source.GetComponent<EntityComponent>(), owner) && ReferenceEquals(reserver.GetComponent<EntityComponent>(), owner);
+        bool DestinationLive() => destination && destination.Enabled && destinationOwner && destinationOwner.Initialized && !destinationOwner.Deleted &&
+            ReferenceEquals(destination.GetComponent<EntityComponent>(), destinationOwner);
+        if (!Live() || !DestinationLive() || ReferenceEquals(source, destination) ||
+            !WardenEquipmentReturnStock.HasUnit(source) || !WardenEquipmentReturnStock.ExactCapacity(destination, reserver)) return false;
+        bool returned = false;
+        _delivery.TransferInventory(() =>
+        {
+            if (!Live() || !DestinationLive() || !WardenEquipmentReturnStock.ExactCapacity(destination, reserver)) return;
+            using (var release = new WardenCapacityRelease(destination, reserver))
+            {
+                reserver.UnreserveCapacity();
+                release.RequireComplete();
+            }
+            if (!Live() || !DestinationLive()) return;
+            void Validate()
+            {
+                WardenEquipmentReturnStock.RequireReleased(reserver);
+                if (!Live() || !DestinationLive()) throw new InvalidOperationException("Warden return lost its live native owner or destination.");
+            }
+            returned = WardenEquipmentReturnStock.TryMove(source, destination, Validate, () =>
+            {
+                Validate();
+                commitReturned();
+                Validate();
+            });
+        });
+        return returned;
     }
 
     public void ConsumeBucket() => Inventory.TakeConsumed(Bucket);
