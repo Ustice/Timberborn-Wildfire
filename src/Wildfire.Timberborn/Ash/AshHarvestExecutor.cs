@@ -75,7 +75,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
         _worker = GetComponent<Worker>();
         _needs = GetComponent<NeedManager>();
         _mortal = GetComponent<Mortal>();
-        _transform = GetComponent<Transform>();
+        _transform = Transform;
         _cargo = new AshHarvestCargo(GetComponent<GoodCarrier>(), GetComponent<GoodReserver>(), _resources);
         _resources.Register(this);
     }

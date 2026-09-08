@@ -75,7 +75,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     public void Awake()
     {
         _entityId = GetComponent<EntityComponent>().EntityId;
-        _transform = GetComponent<Transform>();
+        _transform = Transform;
         _walker = GetComponent<Walker>();
         _behaviorManager = GetComponent<BehaviorManager>();
         _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());

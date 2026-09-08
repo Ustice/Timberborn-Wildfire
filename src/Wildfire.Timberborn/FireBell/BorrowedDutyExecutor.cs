@@ -73,7 +73,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
         _needs = GetComponent<NeedManager>(); _manager = GetComponent<BehaviorManager>();
         _walker = GetComponent<Walker>(); _walk = GetComponent<WalkToPositionExecutor>();
         _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
-        _navigator = GetComponent<Navigator>(); _transform = GetComponent<Transform>();
+        _navigator = GetComponent<Navigator>(); _transform = Transform;
         _walker.StartedNewPath += OnStartedNewPath;
         _fixture.Register(this);
     }

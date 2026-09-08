@@ -83,7 +83,7 @@ public sealed class WildfireCarryEmergencyExecutor : BaseComponent, IExecutor, I
         _control = GetComponent<ControllableCharacter>();
         _enterer = GetComponent<Enterer>();
         _needs = GetComponent<NeedManager>();
-        _transform = GetComponent<Transform>();
+        _transform = Transform;
         _id = GetComponent<EntityComponent>().EntityId;
         _walker.StartedNewPath += OnStartedNewPath;
         if (_session.AdmissionsEnabled) VerifyIdentity();
