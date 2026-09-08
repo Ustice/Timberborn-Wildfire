@@ -42,7 +42,7 @@ public sealed partial class FireSimStepCoordinator
     public void RegisterChange(FireSimChange change)
     {
         ThrowIfSnapshotInProgress();
-        RejectUnacknowledgedCollection(change);
+        RejectUnacknowledgedInput(change);
         _changes.Add(change);
     }
 
@@ -61,7 +61,7 @@ public sealed partial class FireSimStepCoordinator
 
     public GpuFireStepResult? TryTickWithInput(IFireSimStepBackend backend, FireSimChange input, Action commitInput)
     {
-        RejectUnacknowledgedCollection(input);
+        RejectUnacknowledgedInput(input);
         return TryTickWithInputCore(backend, input, commitInput);
     }
 
@@ -115,10 +115,12 @@ public sealed partial class FireSimStepCoordinator
         });
     }
 
-    private static void RejectUnacknowledgedCollection(FireSimChange change)
+    private static void RejectUnacknowledgedInput(FireSimChange change)
     {
         if (change.MaterialHandoff is not null)
             throw new ArgumentException("Material handoff requires acknowledged batch admission.", nameof(change));
+        if (change.ApplyCleanAshLimit.HasValue)
+            throw new ArgumentException("Clean ash application requires TryApplyCleanAsh and its GPU receipt.", nameof(change));
         if (change.CollectCleanAsh.HasValue)
             throw new ArgumentException("Clean ash collection requires TryCollectAsh and its GPU receipt.", nameof(change));
     }

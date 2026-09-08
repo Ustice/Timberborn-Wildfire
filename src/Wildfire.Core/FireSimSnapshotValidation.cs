@@ -40,7 +40,7 @@ public static class FireSimSnapshotValidation
         ValidateAuthority(copy.MaterialAuthority, active, count);
         foreach (var change in copy.PendingChanges)
         {
-            if (change.MaterialHandoff is not null || change.CollectCleanAsh.HasValue)
+            if (change.MaterialHandoff is not null || change.CollectCleanAsh.HasValue || change.ApplyCleanAshLimit.HasValue)
                 throw Invalid("Acknowledged inputs cannot be restored as queued ordinary changes.");
             // Out-of-grid ordinary inputs retain the existing queue's ignored-input semantics.
             FireSimGpuProtocol.EncodeChange(change with { CellIndex = 0 });

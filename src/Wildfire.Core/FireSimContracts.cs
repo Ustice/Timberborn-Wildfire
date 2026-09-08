@@ -30,6 +30,8 @@ public interface IFireSimListener
 /// Null and zero leave water unchanged. This is not a quantity of host inventory water.</param>
 /// <param name="CollectCleanAsh">Exclusive conditional collection request, strictly 0..3.
 /// Only TryCollectAsh admits this operation; generic queues reject it. No other fields may be supplied.</param>
+/// <param name="ApplyCleanAshLimit">Exclusive one-unit clean ash application with limit 1..3.
+/// Only TryApplyCleanAsh admits this receipt-bearing operation; generic queues reject it.</param>
 public readonly record struct FireSimChange(
     int CellIndex,
     ushort? SetCell = null,
@@ -49,4 +51,5 @@ public readonly record struct FireSimChange(
     byte? SetSmokeContamination = null,
     byte? AddWater = null,
     byte? CollectCleanAsh = null,
-    FireSimMaterialHandoffBatch? MaterialHandoff = null);
+    FireSimMaterialHandoffBatch? MaterialHandoff = null,
+    byte? ApplyCleanAshLimit = null);

@@ -56,6 +56,7 @@ public sealed class FireSimSnapshotValidationTests
             value with { MaterialAuthority = a with { Archives = [a.Archives[0] with { CaptureToken = 2 }] } },
             value with { MaterialAuthority = a with { Archives = [a.Archives[0] with { SourceCellIndex = 2 }] } },
             value with { PendingChanges = [new(0, CollectCleanAsh: 1)] },
+            value with { PendingChanges = [new(0, ApplyCleanAshLimit: 2)] },
             value with { Parameters = value.Parameters with { VisualFireBaseIntensity = float.NaN } },
         };
         foreach (var snapshot in malformed) Assert.Throws<ArgumentException>(() => FireSimSnapshotValidation.ValidateAndClone(snapshot));

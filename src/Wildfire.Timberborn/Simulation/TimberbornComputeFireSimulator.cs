@@ -451,7 +451,7 @@ public interface ITimberbornConfigurableFireSimParameters
 }
 
 public sealed partial class TimberbornComputeFireSimulator :
-    IFireSimAshCollectionSimulator,
+    IFireSimAshCollectionSimulator, IFireSimAshApplicationSimulator,
     ITimberbornGpuVisualFieldStateProvider,
     ITimberbornConfigurableFireSimParameters,
     ITimberbornFireSimPersistenceState,
@@ -833,6 +833,12 @@ public sealed partial class TimberbornComputeFireSimulator :
     {
         ThrowIfDisposed();
         return _step.TryCollectAsh(this, input, commitCollection);
+    }
+
+    public FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication)
+    {
+        ThrowIfDisposed();
+        return _step.TryApplyCleanAsh(this, input, commitApplication);
     }
 
     public bool IsSlotKnown(FireSimMaterialIdentity identity)

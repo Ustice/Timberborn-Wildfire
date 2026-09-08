@@ -3,7 +3,7 @@ using Wildfire.Core;
 
 namespace Wildfire.Unity;
 
-public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshCollectionBackend, IFireSimMaterialHandoffSimulator, IFireSimMaterialHandoffBackend
+public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSimulator, IFireSimAshApplicationSimulator, IFireSimAshCollectionBackend, IFireSimMaterialHandoffSimulator, IFireSimMaterialHandoffBackend
 {
     public const string ApplyExternalChangesKernelName = "ApplyExternalChanges";
     public const string FullGridKernelName = "SimulateFullGrid";
@@ -137,6 +137,14 @@ public sealed partial class UnityComputeFireSimulator : IFireSimAshCollectionSim
         if (BufferGrid is null || _dispatcher is null)
             throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
         return _step.TryCollectAsh(this, input, commitCollection);
+    }
+
+    public FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (BufferGrid is null || _dispatcher is null)
+            throw new InvalidOperationException("GPU compute simulation requires a buffer grid and compute dispatcher.");
+        return _step.TryApplyCleanAsh(this, input, commitApplication);
     }
 
     public bool IsSlotKnown(FireSimMaterialIdentity identity)

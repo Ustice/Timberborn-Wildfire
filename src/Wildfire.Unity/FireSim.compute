@@ -6,6 +6,8 @@
 #define THREAD_GROUP_SIZE_Z 4
 
 #define CHANGE_COLLECT_CLEAN_ASH 2048u
+#define CHANGE_APPLY_CLEAN_ASH 4096u
+#define APPLICATION_RECEIPT_MASK ((3u << 27) | (1u << 29) | (3u << 30))
 #define COLLECTION_RECEIPT_VALID (1u << 29)
 #define COLLECTION_RECEIPT_MASK ((3u << 27) | COLLECTION_RECEIPT_VALID)
 #define CHANGE_SET_CELL 1u
@@ -1772,6 +1774,30 @@ void ApplyExternalChanges(uint3 id : SV_DispatchThreadID)
                     AtmosphericSteam(atmospheric), AtmosphericSmoke(atmospheric), AtmosphericSmokeContamination(atmospheric),
                     ash - removed, AtmosphericAshContamination(atmospheric), (atmospheric & 0x8000u) != 0u);
                 change.AddFields |= (removed << 27) | COLLECTION_RECEIPT_VALID;
+            }
+            ExternalChanges[changeIndex] = change;
+            continue;
+        }
+
+        if ((change.SetMask & CHANGE_APPLY_CLEAN_ASH) != 0u)
+        {
+            uint limit = (change.AddFields >> 25) & 3u;
+            bool validRequest = change.SetMask == CHANGE_APPLY_CLEAN_ASH && limit > 0u &&
+                change.AddFields == (limit << 25) && change.SetValues == 0u;
+            change.AddFields &= ~APPLICATION_RECEIPT_MASK;
+            if (validRequest)
+            {
+                uint index = change.CellIndex;
+                uint3 coordinate = uint3(index % Width, (index / Width) % Height, index / (Width * Height));
+                uint atmospheric = CurrentAtmosphericFields[index];
+                uint ash = AtmosphericAsh(atmospheric);
+                // Deterministic precedence: invalid landing surface, tainted ash, then full.
+                uint outcome = !IsAshLandingSurfaceForCell(CurrentCells[index], CompanionFields[index], coordinate) ? 3u :
+                    AtmosphericAshContamination(atmospheric) != 0u ? 2u : ash >= limit ? 1u : 0u;
+                uint added = outcome == 0u ? 1u : 0u;
+                if (added != 0u)
+                    CurrentAtmosphericFields[index] = (atmospheric & ~(7u << 9)) | ((ash + 1u) << 9);
+                change.AddFields |= (added << 27) | COLLECTION_RECEIPT_VALID | (outcome << 30);
             }
             ExternalChanges[changeIndex] = change;
             continue;

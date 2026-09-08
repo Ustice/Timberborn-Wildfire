@@ -59,6 +59,12 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
         return default;
     }
 
+    public FireSimAshApplicationStepResult? TryApplyCleanAsh(IFireSimAshApplicationSimulator simulator,
+        FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication) =>
+        _transaction.TryApplyCleanAsh(simulator, input, commitApplication);
+
+    public void RequireAshApplicationCommit() => _transaction.RequireAshApplicationCommit();
+
     public T CaptureAtRest<T>(Func<T> capture) => _transaction.CaptureAtRest(capture);
 
     public void TransferInventory(Action transfer) => _transaction.TransferInventory(transfer);

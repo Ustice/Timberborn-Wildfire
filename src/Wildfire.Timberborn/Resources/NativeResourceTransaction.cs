@@ -6,6 +6,7 @@ namespace Wildfire.Timberborn.Resources;
 public sealed class NativeResourceTransaction : INativeResourceMutationGuard
 {
     private bool _delivering;
+    private bool _ashApplicationCommit;
     public bool IsIndeterminate { get; private set; }
 
     public GpuFireStepResult? TryDeliver(IFireSimStepInputSimulator simulator, FireSimChange input, Action commit)
@@ -16,7 +17,28 @@ public sealed class NativeResourceTransaction : INativeResourceMutationGuard
     public GpuFireStepResult? TryCollectAsh(IFireSimAshCollectionSimulator simulator, FireSimAshCollectionInput input,
         Action<FireSimAshCollectionReceipt> commit) => ExecuteStep(() => simulator.TryCollectAsh(input, commit));
 
-    private GpuFireStepResult? ExecuteStep(Func<GpuFireStepResult?> step)
+    public FireSimAshApplicationStepResult? TryApplyCleanAsh(IFireSimAshApplicationSimulator simulator,
+        FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication)
+    {
+        if (commitApplication is null) throw new ArgumentNullException(nameof(commitApplication));
+        return ExecuteStep(() => simulator.TryApplyCleanAsh(input, receipt =>
+        {
+            if (receipt.CellIndex != input.CellIndex || receipt.Limit != input.Limit ||
+                input.Limit is < 1 or > 3 || receipt.Added != 1 || receipt.Outcome != FireSimAshApplicationOutcome.Applied)
+                throw new InvalidOperationException("Only an exact accepted ash application can authorize native consumption.");
+            _ashApplicationCommit = true;
+            try { commitApplication(receipt); }
+            finally { _ashApplicationCommit = false; }
+        }));
+    }
+
+    public void RequireAshApplicationCommit()
+    {
+        if (!_delivering || !_ashApplicationCommit || IsIndeterminate)
+            throw new InvalidOperationException("Native fertilizer consumption requires an accepted ash application commit.");
+    }
+
+    private T ExecuteStep<T>(Func<T> step)
     {
         ThrowIfSaveUnsafe();
         _delivering = true;
