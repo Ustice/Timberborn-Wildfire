@@ -105,7 +105,8 @@ public sealed class NativeAshGrowthTickTests
                 if (m.Name != "GetObjectsWithComponentAt") throw new NotSupportedException(m.Name);
                 return Array.CreateInstance(m.GetGenericArguments().Single(), 0);
             });
-            Adapter = Activator.CreateInstance(Mod("TimberbornGrowableAshGrowthAdapter"), NativeAshGrowthFixture.Flags, null, [blocks], null)!;
+            var soil = new NativeAshGrowthSoilFixture(f);
+            Adapter = Activator.CreateInstance(Mod("TimberbornGrowableAshGrowthAdapter"), NativeAshGrowthFixture.Flags, null, [blocks, soil.Indices, soil.Columns], null)!;
             var observation = Mod("TimberbornAshGrowthObservation");
             Func<object?> read = () => Read();
             var readDelegate = Expression.Lambda(typeof(Func<>).MakeGenericType(observation),
