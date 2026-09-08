@@ -59,9 +59,14 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
         return default;
     }
 
-    public FireSimAshApplicationStepResult? TryApplyCleanAsh(IFireSimAshApplicationSimulator simulator,
-        FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commitApplication) =>
-        _transaction.TryApplyCleanAsh(simulator, input, commitApplication);
+    internal FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input,
+        Action<FireSimAshApplicationReceipt> commitApplication)
+    {
+        ThrowIfSaveUnsafe();
+        var simulator = _simulator as IFireSimAshApplicationSimulator ??
+            throw new InvalidOperationException("The attached world simulator lacks conditional ash application support.");
+        return _transaction.TryApplyCleanAsh(simulator, input, commitApplication);
+    }
 
     public void RequireAshApplicationCommit() => _transaction.RequireAshApplicationCommit();
 

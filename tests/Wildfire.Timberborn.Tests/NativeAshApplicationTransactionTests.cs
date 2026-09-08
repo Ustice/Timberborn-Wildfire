@@ -1,3 +1,4 @@
+using System.Reflection;
 using Wildfire.Core;
 using Wildfire.Timberborn.Resources;
 
@@ -95,11 +96,40 @@ public sealed class NativeAshApplicationTransactionTests
         transaction.ThrowIfSaveUnsafe();
     }
 
+    [Fact]
+    public void CoordinatorUsesAttachedWorldAndForwardsItsExistingTransaction()
+    {
+        using var native = new NativeManagedTestContext();
+        var type = native.LoadMod().GetType("Wildfire.Timberborn.Resources.NativeResourceCoordinator")!;
+        var coordinator = Activator.CreateInstance(type)!;
+        var apply = type.GetMethod("TryApplyCleanAsh", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        object? Invoke(string name, params object[] args) => type.GetMethod(name)!.Invoke(coordinator, args);
+        void Apply(Action<FireSimAshApplicationReceipt> commit) => apply.Invoke(coordinator,
+            [new FireSimAshApplicationInput(0, 2), commit]);
+        var absent = Assert.Throws<TargetInvocationException>(() => Apply(_ => { }));
+        Assert.IsType<InvalidOperationException>(absent.InnerException);
+        var simulator = new Simulator();
+        Invoke("Attach", simulator);
+        Apply(_ =>
+        {
+            Invoke("RequireAshApplicationCommit");
+            Assert.IsType<InvalidOperationException>(Assert.Throws<TargetInvocationException>(() => Invoke("ThrowIfSaveUnsafe")).InnerException);
+        });
+        Assert.Equal(1, simulator.ApplicationCalls);
+        Invoke("ThrowIfSaveUnsafe");
+        Assert.IsType<InvalidOperationException>(Assert.Throws<TargetInvocationException>(() => Invoke("RequireAshApplicationCommit")).InnerException);
+        Invoke("ResetForWorldLoad");
+        Assert.Throws<TargetInvocationException>(() => Apply(_ => { }));
+        Assert.Equal(1, simulator.ApplicationCalls);
+    }
+
     private static void Denied(NativeResourceTransaction transaction) =>
         Assert.Throws<InvalidOperationException>(transaction.RequireAshApplicationCommit);
 
-    private sealed class Simulator : IFireSimAshApplicationSimulator
+    private sealed class Simulator : IFireSimAshApplicationSimulator, IFireSimAshCollectionSimulator
     {
+        public int ApplicationCalls;
+        public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commit) => throw new NotSupportedException();
         public bool NoCapacity, Full, ListenerFailure;
         public string? Corruption;
         public Action? BeforeCommit;
@@ -120,6 +150,7 @@ public sealed class NativeAshApplicationTransactionTests
         }
         public FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input, Action<FireSimAshApplicationReceipt> commit)
         {
+            ApplicationCalls++;
             var receipt = new FireSimAshApplicationReceipt(input.CellIndex, input.Limit,
                 (byte)(Full ? 0 : 1), Full ? FireSimAshApplicationOutcome.Full : FireSimAshApplicationOutcome.Applied);
             receipt = Corruption switch
