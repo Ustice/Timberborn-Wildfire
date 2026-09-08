@@ -27,6 +27,31 @@ public sealed class FertilizerJobNativeTests
         Assert.Equal(true, f.Stock.Get(f.Stock.Call(behavior, "Decide", new object?[] { null })!, "ShouldReleaseNow"));
     }
 
+    [Fact]
+    public void ExplicitPendingOfferCancellationDoesNotTouchTheActiveNativeJobOrReservation()
+    {
+        using var f = new Fixture();
+        var workplace = Activator.CreateInstance(f.Stock.Mod("FertilizerWorkplaceBehavior"))!;
+        var field = workplace.GetType().GetField("_offer", Flags)!;
+        var tupleType = Nullable.GetUnderlyingType(field.FieldType)!;
+        var plant = RuntimeHelpers.GetUninitializedObject(f.Stock.T("Timberborn.BlockSystem", "BlockObject"));
+        // Supply pending fixture state; no positive Unity admission or physical offer launch is claimed.
+        field.SetValue(workplace, Activator.CreateInstance(tupleType, plant, f.Stock.Source, (byte)2));
+        f.Phase(3);
+        f.Stock.Give(f.Stock.Source);
+        f.Stock.Call(f.Stock.Reserver, "ReserveExactStockAmount", f.Stock.Source, f.Stock.Amount());
+        Assert.NotNull(field.GetValue(workplace));
+        f.Stock.Call(workplace, "CancelUnlaunchedOffer");
+        f.Stock.Call(workplace, "CancelUnlaunchedOffer");
+        Assert.Null(field.GetValue(workplace));
+        Assert.Equal(3, f.CurrentPhase);
+        Assert.Same(f.Executor, f.Manager.GetType().GetField("_runningExecutor", Flags)!.GetValue(f.Manager));
+        Assert.Same(f.Stock.Source, f.Stock.Get(f.Stock.Get(f.Stock.Reserver, "StockReservation")!, "Inventory"));
+        Assert.Equal(1, f.Stock.Quantity(f.Stock.Source));
+        Assert.Equal(0, f.Stock.Consumption);
+        Assert.Empty(f.Walk.Trace);
+    }
+
     [Theory]
     [InlineData("owner")]
     [InlineData("phase")]

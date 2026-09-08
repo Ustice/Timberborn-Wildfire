@@ -28,6 +28,8 @@ public sealed class FertilizerWorkplaceBehavior : WorkplaceBehavior, IAwakableCo
         if (!plant || !source || limit is < 1 or > 3) throw new ArgumentException("A live plant/source and limit1..3 are required.");
         _offer = (plant, source, limit);
     }
+    internal void CancelUnlaunchedOffer() => _offer = null;
+
     public override Decision Decide(BehaviorAgent agent)
     {
         if (!_offer.HasValue || !ReferenceEquals(agent.GetComponent<Worker>().Workplace, _workplace))
