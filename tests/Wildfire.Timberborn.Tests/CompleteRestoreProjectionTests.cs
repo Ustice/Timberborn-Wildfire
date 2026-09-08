@@ -32,6 +32,25 @@ public sealed class CompleteRestoreProjectionTests
         Assert.Empty(f.Native.InventoryCalls);
     }
 
+    [Fact]
+    public void DisabledPhysicalInventoryRemainsDesiredMaterialWithoutChangingStockOrSavedAuthority()
+    {
+        var f = new Fixture(withDisabledStock: true);
+        var before = TimberbornWildfirePersistenceCodec.Encode(f.Saved);
+        using var restored = f.Restore();
+        Assert.Contains(restored.Registry.ResolveCell(0).Contributors,
+            contributor => contributor.Parts.Contains(TimberbornMaterialPart.StoredGood("Carrot")));
+        Assert.All(f.Current.RetainedBodies, body =>
+        {
+            var inventory = Assert.Single(body.Inventories);
+            Assert.False(inventory.Enabled);
+            Assert.Equal(2, Assert.Single(inventory.Stock).Amount);
+        });
+        var empty = TimberbornWildfirePersistenceSnapshot.Empty;
+        Assert.Equal(before, TimberbornWildfirePersistenceCodec.Encode(restored.Capture(empty.AshField, empty.BeaverBehavior)));
+        Assert.Empty(f.Native.InventoryCalls);
+    }
+
     [Theory]
     [InlineData("membership")]
     [InlineData("quantity")]
@@ -146,12 +165,15 @@ public sealed class CompleteRestoreProjectionTests
         internal TimberbornOwnedRestoreObservation Current;
         internal Backend? Backend;
         internal Action? AfterCreate, DuringCapture;
-        internal Fixture()
+        private readonly bool _withDisabledStock;
+        internal Fixture(bool withDisabledStock = false)
         {
+            _withDisabledStock = withDisabledStock;
             var original = Observe(actual: 5);
             var compiled = TimberbornInitialBodyCompiler.Compile(original.CurrentWorld, original.RetainedBodies.Select(body =>
                 new TimberbornInitialBodySelection(body.EntityId, TimberbornInitialAccountingBasis.NativeResourceAmounts,
-                    [new("Gatherable", TimberbornCapturedYieldRole.Gatherable, TimberbornInitialYieldUse.Actual)], [])));
+                    [new("Gatherable", TimberbornCapturedYieldRole.Gatherable, TimberbornInitialYieldUse.Actual)],
+                    withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, TimberbornInitialInventoryUse.Excluded)] : [])));
             var registry = new TimberbornNativeMaterialRegistry(Grid, []);
             registry.Reconcile(compiled.Projections, []);
             var damage = compiled.CreateDamage(Grid);
@@ -174,10 +196,11 @@ public sealed class CompleteRestoreProjectionTests
             TimberbornInitialMaterialBody Body(Guid id) => new(id, "Carrot", TimberbornInitialBodyShape.Crop,
                 [new(new(0, 0, 0), mutation == "placement" && id == B ? 1 : 0)],
                 [new(TimberbornCapturedYieldRole.Gatherable, "Gatherable", "Carrot", mutation == "quantity" ? 2 : actual,
-                    "Carrot", 5, false, mutation != "disabled")], [], null);
+                    "Carrot", 5, false, mutation != "disabled")],
+                _withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, false, [new("Carrot", 2)])] : [], null);
             var bodies = new[] { Body(A), Body(B) };
             var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, mutation == "state", 
-                mutation is "declaration" or "new-role" ? [new(mutation == "new-role" ? TimberbornNativeInventoryRole.Manufactory : TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : [])).ToArray();
+                mutation is "declaration" or "new-role" ? [new(mutation == "new-role" ? TimberbornNativeInventoryRole.Manufactory : TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : _withDisabledStock ? [new(TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : [])).ToArray();
             var declarations = new TimberbornInventoryDeclarationCapture(states.Select(state => new TimberbornBodyInventoryDeclarations(state.EntityId, state.Inventories)));
             var worldBodies = mutation is "membership" or "excluded" ? bodies.Take(1).ToArray() : bodies;
             var world = new TimberbornInitialWorldCapture(Grid, worldBodies,

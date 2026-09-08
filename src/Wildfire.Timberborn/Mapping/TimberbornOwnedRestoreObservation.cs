@@ -70,9 +70,10 @@ internal sealed class TimberbornOwnedRestoreObservation
         InventoryDeclarations.RequireSupportedMaterialBodies(RetainedBodies);
         foreach (var body in RetainedBodies)
         {
-            if (body.Yields.Any(yield => !yield.YieldEnabled) || body.Inventories.Any(inventory => !inventory.Enabled))
-                throw new NotSupportedException("Disabled native roles require explicit material lifecycle evidence.");
-
+            // Disabled inventories still contain physical Stock; logistics eligibility belongs to
+            // the mutation sink. Disabled Yielder publicly reports zero and needs separate evidence.
+            if (body.Yields.Any(yield => !yield.YieldEnabled))
+                throw new NotSupportedException("Disabled native yield requires explicit material lifecycle evidence.");
         }
     }
 }
