@@ -4,7 +4,7 @@ using Wildfire.Core;
 namespace Wildfire.Timberborn.Resources;
 
 /// <summary>Pending jobs remain in native executors. Only one resource conversion enters an owned synchronous GPU step.</summary>
-public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
+public sealed class NativeResourceCoordinator : INativeResourceMutationGuard, ITimberbornFireDispatchHost
 {
     private readonly List<WardenExecutor> _wardens = new();
     private IFireSimAshCollectionSimulator? _simulator;
@@ -75,6 +75,9 @@ public sealed class NativeResourceCoordinator : INativeResourceMutationGuard
     public void TransferInventory(Action transfer) => _transaction.TransferInventory(transfer);
 
     public void ThrowIfSaveUnsafe() => _transaction.ThrowIfSaveUnsafe();
+
+    // A known step without complete host consequences uses the same irreversible session poison.
+    public void InvalidateIncompleteDispatch() => _transaction.InvalidateAfterLifecycleFailure();
 
     public void InvalidateAfterLifecycleFailure() => _transaction.InvalidateAfterLifecycleFailure();
 

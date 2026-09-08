@@ -253,28 +253,44 @@ public sealed partial class TimberbornFireRuntime :
 
         _gameUpdateId++;
         TimeSpan elapsed = TimeSpan.FromSeconds(Math.Max(0d, Time.deltaTime));
+        DispatchFireUpdate(new TimberbornFireUpdate(_gameUpdateId, elapsed));
+        _gpuIndirectRenderer?.OnUpdate();
+    }
+
+    // Native update supplies time above; this dispatch/completion path itself does not read Unity time.
+    internal void DispatchFireUpdate(TimberbornFireUpdate update)
+    {
+        _resources.ThrowIfSaveUnsafe();
+        bool awaitingFollowups = false;
         try
         {
-            TimberbornFireDispatchResult result = _dispatcher.Update(new TimberbornFireUpdate(_gameUpdateId, elapsed));
-
+            TimberbornFireDispatchResult result = _dispatcher!.Update(update);
             if (result.DidDispatch)
             {
+                awaitingFollowups = true;
                 uint tick = result.Step?.Tick ?? _fireSystem?.LastTick ?? 0;
                 SyncAshReadModelFromSimulator(tick);
                 TryApplyAshWorldEffects(tick);
                 TryDispatchBeaverFieldBehavior(tick);
+                awaitingFollowups = false;
                 _logSink.Info(
-                    $"wildfire_timberborn_runtime_dispatched game_update_id={_gameUpdateId} tick={result.Step?.Tick} delta_count={result.Step?.Deltas.Count}");
+                    $"wildfire_timberborn_runtime_dispatched game_update_id={update.GameUpdateId} tick={result.Step?.Tick} delta_count={result.Step?.Deltas.Count}");
             }
         }
         catch (Exception exception)
         {
-            _logSink.Warning(
-                $"wildfire_timberborn_runtime_dispatch_failed game_update_id={_gameUpdateId} message=\"{exception.Message}\"");
+            if (awaitingFollowups) _resources.InvalidateIncompleteDispatch();
+            try
+            {
+                _logSink.Warning(
+                    $"wildfire_timberborn_runtime_dispatch_failed game_update_id={update.GameUpdateId} message=\"{exception.Message}\"");
+            }
+            catch
+            {
+                // Preserve the original failure after recording the correct safety state.
+            }
             throw;
         }
-
-        _gpuIndirectRenderer?.OnUpdate();
     }
 
     private void TryDispatchBeaverFieldBehavior(uint tick)
@@ -398,7 +414,7 @@ public sealed partial class TimberbornFireRuntime :
             _observedTransportReader = fireSystem.Simulator as ITimberbornTransportFieldReader ??
                 throw new InvalidOperationException("Warden response requires native smoke observations.");
             _resources.Attach(fireSystem.Simulator!);
-            fireSystem.StepWithHostInput = _resources.Tick;
+            fireSystem.HostDispatch = _resources;
             _playerFireAlertCameraFocus.ConfigureGrid(grid);
             _gpuFieldRenderer.CompleteVisualEffectDispatch(fireSystem.LastTick ?? 0);
             TimberbornFixedCadenceFireDispatcher dispatcher = new(
