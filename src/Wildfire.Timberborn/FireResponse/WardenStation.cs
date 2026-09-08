@@ -1,5 +1,6 @@
 using Timberborn.BaseComponentSystem;
 using Timberborn.BlockSystem;
+using Timberborn.Buildings;
 using Timberborn.BlueprintSystem;
 using Timberborn.EntitySystem;
 using Timberborn.Goods;
@@ -34,7 +35,8 @@ public sealed class WardenStation : WorkplaceBehavior, IAwakableComponent, IFini
     public void Awake()
     {
         Workplace = GetComponent<Workplace>();
-        Access = GetComponent<Accessible>();
+        // Native buildings have distinct finished-building and construction-site access roles.
+        Access = GetComponent<BuildingAccessible>().Accessible;
     }
     public void OnEnterFinishedState() { _finished = true; Inventory.Enable(); }
     public void OnExitFinishedState() { _finished = false; Inventory.Disable(); }
