@@ -32,7 +32,7 @@ Full suite after `d4daf25` and the independent explicit world-domain dependency 
 
 ## Remaining policy and runtime limits
 
-Fresh eligibility currently conservatively excludes a body with any disabled named yield. A living tree's unripe or seasonal Gatherable may need different treatment from its separate physical Cuttable wood; that requires a bounded per-role eligibility design, not declaring the current predicate final policy.
+At this checkpoint Fresh eligibility conservatively excluded a body with any disabled named yield. The later [living-tree correction](living-tree-first-activation.md) uses verified enabled positive Cuttable wood independently of its first-unripe or regrowing Gatherable. Native evidence identifies growth timers, not a calendar-season rule. Dead-tree Fresh and initial material policy remain separate.
 
 Initial formation is also distinct: its existing provider excludes tree leftovers but does not capture death as an initial admission fact, and its compiler uses the selected native profile for fresh material independently of the accounting choice. Known-material restoration does not justify that initial deadwood/Fresh behavior. Explicit initial lifecycle evidence and material policy remain required before production activation; this slice adds no blanket tree gate and adopts no pending fuel-budget choice.
 
