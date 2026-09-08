@@ -2,6 +2,8 @@
 
 Source correction: `6d11fbe`, based on `79fa04a`. No receipt or fertilizer prerequisites.
 
+Subsequent structure: [shared owned-job walking](shared-owned-fire-walk.md) moves the Warden/Ash/Borrowed cached Transform binding into one native driver; emergency retains its explicit binding. The historical correction and executed counts below remain unchanged.
+
 ## Actual live failure
 
 The controlled Iron Teeth Warden test on deployed `2fd29af` reached its first response at simulation ticks 188–192 and failed while launching the walk to the station. Native `Walker.FindPath` invoked `WardenExecutor.OnStartedNewPath`, which threw `NullReferenceException`. This was before the first fetch; the station still had 20 Water. It does not establish water charging, suppression or a completed trip.
