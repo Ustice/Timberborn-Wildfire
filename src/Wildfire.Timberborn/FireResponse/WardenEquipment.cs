@@ -77,7 +77,7 @@ public sealed class WardenEquipment : BaseComponent, IAwakableComponent, IInitia
             ReferenceEquals(Inventory, source) && _registration.OwnsInventory(source) && WardenEquipmentReturnStock.IsDedicatedInventory(source) && owner && owner.Initialized && !owner.Deleted &&
             mortal && !mortal.Dead && !mortal.ShouldDie && ReferenceEquals(GetComponent<Mortal>(), mortal) && ReferenceEquals(GetComponent<EntityComponent>(), owner) &&
             ReferenceEquals(source.GetComponent<EntityComponent>(), owner) && ReferenceEquals(reserver.GetComponent<EntityComponent>(), owner);
-        bool DestinationLive() => destination && destination.Enabled && destinationOwner && destinationOwner.Initialized && !destinationOwner.Deleted &&
+        bool DestinationLive() => destination && destination.Enabled && destinationOwner is not null && destinationOwner && destinationOwner.Initialized && !destinationOwner.Deleted &&
             ReferenceEquals(destination.GetComponent<EntityComponent>(), destinationOwner);
         if (!Live() || !DestinationLive() || ReferenceEquals(source, destination) ||
             !WardenEquipmentReturnStock.HasUnit(source) || !WardenEquipmentReturnStock.ExactCapacity(destination, reserver)) return false;
