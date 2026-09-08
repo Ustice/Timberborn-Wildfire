@@ -1,5 +1,8 @@
 # Owned storage origin and consumption prototype
 
+Historical single-inventory prototype evidence. Current declaration-driven registration, private-input stock and same-owner multi-inventory effect behavior supersede the contracts below; see [exact declared storage effects](declared-storage-effects.md).
+
+
 This bounded route is implemented but not production-bound. Current WF1 production still uses the explicit legacy spatial adapter. Owned storage never calls that adapter, parses runtime hash IDs, scans overlaps, or retains an Inventory reference between mutations.
 
 ## Native ownership and accounting
