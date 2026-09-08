@@ -79,7 +79,9 @@ public sealed class NativeAshGrowthTickTests
     {
         var setup = new TickFixture(new());
         setup.Read = setup.EmptyObservation;
+        Assert.Null(setup.F.Get(setup.Ticker, "LastApplication"));
         setup.F.Call(setup.Ticker, "Tick");
+        Assert.NotNull(setup.F.Get(setup.Ticker, "LastApplication"));
         Assert.Equal(0, setup.Applied);
         var requests = setup.EmptyObservation().GetType().GetProperty("Requests", NativeAshGrowthFixture.Flags)!.GetValue(setup.EmptyObservation());
         var plan = setup.F.Call(setup.Adapter, "Prepare", new FireGrid(1, 1, 2), .01f, requests)!;
@@ -117,7 +119,8 @@ public sealed class NativeAshGrowthTickTests
         {
             get
             {
-                var result = F.Get(Ticker, "LastApplication")!;
+                var result = F.Get(Ticker, "LastApplication");
+                if (result is null) return 0;
                 return (int)result.GetType().GetProperty("AppliedGrowableCount")!.GetValue(result)!;
             }
         }

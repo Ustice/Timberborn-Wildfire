@@ -84,7 +84,7 @@ public sealed partial class NativeRuntimeIncompleteDispatchTests
                 .GetType("Timberborn.TimeSystem.IDayNightCycle")!, (method, _) =>
                 method.Name == "get_DayNumber" ? 0 : throw new InvalidOperationException(method.Name));
             Set(_runtime, "_dayNightCycle", clock);
-            var ash = New("Ash.TimberbornAshFieldService", null, log);
+            var ash = New("Ash.TimberbornAshFieldService", log);
             Set(_runtime, "_ashFieldService", ash);
             var synchronizer = New("Ash.TimberbornAshFieldSynchronizer", ash);
             // Test successful followup completion with the already-synchronized current tick;

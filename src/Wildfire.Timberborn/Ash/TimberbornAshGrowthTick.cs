@@ -17,7 +17,7 @@ internal sealed class TimberbornAshGrowthTick : ITickableSingleton, ILateTickabl
         TimberbornGrowableAshGrowthAdapter growth, Func<TimberbornAshGrowthObservation?> readReady) =>
         (_clock, _resources, _growth, _readReady) = (clock, resources, growth, readReady);
 
-    internal TimberbornAshGrowthApplicationResult LastApplication { get; private set; }
+    internal TimberbornAshGrowthApplicationResult? LastApplication { get; private set; }
 
     public void Tick()
     {
@@ -31,7 +31,12 @@ internal sealed class TimberbornAshGrowthTick : ITickableSingleton, ILateTickabl
             return _growth.Prepare(observation.Grid, elapsedDays, observation.Requests);
         });
         if (prepared is null) return;
-        _resources.TransferInventory(() => LastApplication = prepared.Apply());
+        _resources.TransferInventory(() =>
+        {
+            var result = prepared.Apply();
+            if (_resources.IsIndeterminate) _resources.ThrowIfSaveUnsafe();
+            LastApplication = result;
+        });
     }
 }
 
