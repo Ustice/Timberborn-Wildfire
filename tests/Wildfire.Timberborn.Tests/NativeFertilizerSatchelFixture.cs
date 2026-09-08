@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Wildfire.Core;
 
 namespace Wildfire.Timberborn.Tests;
 
@@ -65,13 +66,46 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     internal Type Mod(string name) => _native.LoadMod().GetType("Wildfire.Timberborn.Fertilizer." + name)!;
     internal Type T(string assembly, string name) => _native.LoadNative(assembly).GetType(assembly + "." + name)!;
     internal object Amount(string id = Good, int amount = 1) => Activator.CreateInstance(T("Timberborn.Goods", "GoodAmount"), id, amount)!;
+    internal void SetReservation(string kind, object inventory, string good = Good, int amount = 1,
+        bool fixedAmount = true, bool consume = false)
+    {
+        var reservation = Activator.CreateInstance(T("Timberborn.InventorySystem", "GoodReservation"),
+            inventory, Amount(good, amount), fixedAmount, consume);
+        Set(Reserver, "<" + kind + "Reservation>k__BackingField", reservation);
+    }
+    internal void ModelDistrictRegistration()
+    {
+        var counter = Activator.CreateInstance(T("Timberborn.ResourceCountingSystem", "DistrictResourceCounter"))!;
+        Call(counter, "Add", Satchel.GetType().GetField("_satchelCounter", Flags)!.GetValue(Satchel));
+        Set(Satchel, "_counter", counter);
+        Set(Satchel, "_registry", District);
+    }
+    internal int RegisteredProcessors
+    {
+        get
+        {
+            var counter = Satchel.GetType().GetField("_counter", Flags)!.GetValue(Satchel);
+            if (counter is null) return 0;
+            var processed = counter.GetType().GetField("_processedGoodCounter", Flags)!.GetValue(counter)!;
+            return ((IList)processed.GetType().GetField("_goodProcessors", Flags)!.GetValue(processed)!).Count;
+        }
+    }
+    internal void Capture(Action action) => Resources.GetType().GetMethod("CaptureAtRest")!.MakeGenericMethod(typeof(int))
+        .Invoke(Resources, [(Func<int>)(() => { action(); return 1; })]);
     internal void Give(object inventory, int amount = 1) => Call(inventory, "GiveExistingIgnoringCapacity", Amount(amount: amount));
     internal int Quantity(object inventory) => (int)Call(inventory, "AmountInStock", Good)!;
     internal int Consumption => (int)Call(Balance, "GetConsumption", Good)!;
     internal int Production => (int)Call(Balance, "GetProduction", Good)!;
     internal bool Poisoned => (bool)Get(Resources, "IsIndeterminate")!;
     internal bool Move(object source, object destination) => (bool)_stock.GetMethod("TryMoveUnit", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [source, destination])!;
-    internal void Consume() => _stock.GetMethod("ConsumeUnit", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [Inventory]);
+    internal void Consume(Action? commitPhase = null) => _stock.GetMethod("ConsumeCommittedUnit", BindingFlags.NonPublic | BindingFlags.Static)!
+        .Invoke(null, [Inventory, Resources, commitPhase ?? (() => { })]);
+    internal void Apply(Action? commitPhase = null, bool reject = false)
+    {
+        Call(Resources, "Attach", new ApplicationSimulator(reject));
+        Call(Resources, "TryApplyCleanAsh", new FireSimAshApplicationInput(0, 2),
+            (Action<FireSimAshApplicationReceipt>)(_ => Consume(commitPhase)));
+    }
     internal void Transfer(Action action) => Call(Resources, "TransferInventory", action);
     internal bool Reservation(string kind, object inventory) => (bool)Mod("FertilizerSatchel")
         .GetMethod("Exact" + kind + "Reservation", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [inventory, Reserver])!;
@@ -98,13 +132,50 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
             Set(inventory, field, Activator.CreateInstance(T("Timberborn.Goods", "GoodRegistry")));
         Set(inventory, "_allowedGoods", Activator.CreateInstance(T("Timberborn.Goods", "StorableGoodRegistry")));
         Set(inventory, "_goodRegistryValueSerializer", _serializer);
+        AttachCache(inventory, Activator.CreateInstance(T("Timberborn.InventorySystem", "Inventories"))!);
         return inventory;
+    }
+    private void AttachCache(params object[] components)
+    {
+        var list = components.ToList();
+        var cache = RuntimeHelpers.GetUninitializedObject(T("Timberborn.BaseComponentSystem", "ComponentCache"));
+        var mapType = T("Timberborn.BaseComponentSystem", "TypeIndexMap");
+        var map = Activator.CreateInstance(mapType)!;
+        var readOnlyType = T("Timberborn.Common", "ReadOnlyList`1").MakeGenericType(typeof(object));
+        var readOnly = Activator.CreateInstance(readOnlyType, Flags, null, [list], null)!;
+        foreach (var type in components.Select(component => component.GetType()).Distinct())
+            mapType.GetMethod("CacheType")!.MakeGenericMethod(type).Invoke(map, [readOnly]);
+        Set(cache, "_components", list);
+        Set(cache, "_typeIndexMap", map);
+        foreach (object component in components)
+            T("Timberborn.BaseComponentSystem", "BaseComponent").GetField("_componentCache", Flags)!.SetValue(component, cache);
     }
     internal object? Call(object owner, string name, params object?[] args) => owner.GetType().GetMethods(Flags)
         .Single(m => m.Name == name && m.GetParameters().Length == args.Length && m.GetParameters()
             .Select((p, i) => args[i] is null || p.ParameterType.IsInstanceOfType(args[i])).All(value => value)).Invoke(owner, args);
     internal object? Get(object owner, string name) => owner.GetType().GetProperty(name, Flags)!.GetValue(owner);
     internal static void Set(object owner, string name, object? value) => owner.GetType().GetField(name, Flags)!.SetValue(owner, value);
+    private sealed class ApplicationSimulator(bool reject) : IFireSimAshApplicationSimulator, IFireSimAshCollectionSimulator
+    {
+        public int Width => 1;
+        public int Height => 1;
+        public int Depth => 1;
+        public FireSimAshApplicationStepResult? TryApplyCleanAsh(FireSimAshApplicationInput input,
+            Action<FireSimAshApplicationReceipt> commit)
+        {
+            var receipt = new FireSimAshApplicationReceipt(input.CellIndex, input.Limit,
+                (byte)(reject ? 0 : 1), reject ? FireSimAshApplicationOutcome.Full : FireSimAshApplicationOutcome.Applied);
+            if (!reject)
+                try { commit(receipt); }
+                catch (Exception exception) { throw new FireSimStepInputException(FireSimStepInputOutcome.Indeterminate, exception); }
+            return new(new([], 1), receipt);
+        }
+        public GpuFireStepResult? TryCollectAsh(FireSimAshCollectionInput input, Action<FireSimAshCollectionReceipt> commit) => throw new NotSupportedException();
+        public GpuFireStepResult? TryTickWithInput(FireSimChange input, Action commit) => throw new NotSupportedException();
+        public GpuFireStepResult Tick() => throw new NotSupportedException();
+        public IDisposable Subscribe(IFireSimListener listener) => throw new NotSupportedException();
+        public void RegisterChange(FireSimChange change) => throw new NotSupportedException();
+    }
     internal const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     public void Dispose() => _native.Dispose();
 }

@@ -13,8 +13,8 @@ public sealed class NativeFertilizerSatchelTests
         Assert.Equal(1, f.Get(f.Inventory, "Capacity"));
         Assert.Equal(false, f.Get(f.Inventory, "PublicInput"));
         Assert.Equal(false, f.Get(f.Inventory, "PublicOutput"));
-        Assert.Contains("FertileAsh", ((IEnumerable)f.Get(f.Inventory, "InputGoods")!).Cast<string>());
-        Assert.Empty(((IEnumerable)f.Get(f.Inventory, "OutputGoods")!).Cast<string>());
+        Assert.Equal(true, f.Call(f.Get(f.Inventory, "InputGoods")!, "Contains", "FertileAsh"));
+        Assert.Equal(0, f.Get(f.Get(f.Inventory, "OutputGoods")!, "Count"));
         f.Give(f.Source);
         bool pickedUp = false;
         f.Transfer(() => pickedUp = f.Move(f.Source, f.Inventory));
@@ -38,12 +38,12 @@ public sealed class NativeFertilizerSatchelTests
     {
         using var f = new NativeFertilizerSatchelFixture();
         f.Give(f.Inventory);
-        f.Transfer(f.Consume); // Stock seam only; application phase enforcement is tested separately.
+        f.Apply(); // Actual stock seam through the attached-world application commit privilege.
         Assert.Equal(0, f.Quantity(f.Inventory));
         Assert.Equal(1, f.Consumption);
         Assert.Equal(0, f.Production);
         Assert.Equal(0, f.Quantity(f.SaveLoadInventory()));
-        Assert.Throws<TargetInvocationException>(() => f.Transfer(f.Consume));
+        Assert.Throws<TargetInvocationException>(() => f.Apply());
         Assert.Equal(1, f.Consumption);
     }
 
@@ -57,13 +57,13 @@ public sealed class NativeFertilizerSatchelTests
         var cause = new InvalidOperationException("native consume subscriber");
         f.On(f.Inventory, eventName, () => throw cause);
         bool committed = false;
-        var failure = Assert.Throws<TargetInvocationException>(() => f.Transfer(() => { f.Consume(); committed = true; }));
+        var failure = Assert.Throws<TargetInvocationException>(() => f.Apply(() => committed = true));
         Assert.Same(cause, failure.GetBaseException());
         Assert.False(committed);
         Assert.Equal(0, f.Quantity(f.Inventory));
         Assert.Equal(counted, f.Consumption);
         Assert.True(f.Poisoned);
-        Assert.Throws<TargetInvocationException>(() => f.Transfer(f.Consume));
+        Assert.Throws<TargetInvocationException>(() => f.Apply());
         Assert.Throws<TargetInvocationException>(() => f.Call(f.Resources, "ThrowIfSaveUnsafe"));
     }
 
@@ -104,7 +104,7 @@ public sealed class NativeFertilizerSatchelTests
     }
 
     [Fact]
-    public void RawExactReservationsRejectForeignAndWrongQuantityEvenWhenDisabled()
+    public void RawExactReservationOwnershipRemainsVisibleWhenDisabled()
     {
         using var f = new NativeFertilizerSatchelFixture();
         f.Give(f.Source, 2);
@@ -113,6 +113,162 @@ public sealed class NativeFertilizerSatchelTests
         Assert.False(f.Reservation("Stock", f.Inventory));
         f.Call(f.Source, "Disable");
         Assert.True(f.Reservation("Stock", f.Source)); // Ownership is not the Enabled getter.
-        Assert.Equal(1, f.Call(f.Source, "ReservedAmountInStock", "FertileAsh"));
+        Assert.Equal(1, f.Call(f.Source.GetType().GetField("_reservedStock", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Source)!, "Amount", "FertileAsh"));
     }
+
+    [Theory]
+    [InlineData("Water", 1, true, false)]
+    [InlineData("FertileAsh", 2, true, false)]
+    [InlineData("FertileAsh", 1, false, false)]
+    [InlineData("FertileAsh", 1, true, true)]
+    public void PickupReservationMustBeExactNonconsumingUnit(string good, int quantity, bool fixedAmount, bool consume)
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.SetReservation("Stock", f.Source, good, quantity, fixedAmount, consume);
+        Assert.False(f.Reservation("Stock", f.Source));
+        Assert.Same(f.Source, f.Get(f.Get(f.Reserver, "StockReservation")!, "Inventory"));
+    }
+
+    [Fact]
+    public void ReturnRequiresExactCapacityAndNeverAcceptsForeignStockOwnership()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Call(f.Reserver, "ReserveCapacity", f.Source, f.Amount());
+        Assert.True(f.Reservation("Capacity", f.Source));
+        Assert.False(f.Reservation("Capacity", f.Inventory));
+        f.SetReservation("Stock", f.Inventory);
+        Assert.False(f.Reservation("Capacity", f.Source));
+        Assert.False(f.Reservation("Stock", f.Inventory));
+    }
+
+    [Fact]
+    public void ConsumptionPrivilegeRejectsOutsideAndReadOrTransferScopesAndValidRejectionKeepsCargo()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        Assert.Throws<TargetInvocationException>(() => f.Consume());
+        f.Capture(() => Assert.Throws<TargetInvocationException>(() => f.Consume()));
+        f.Transfer(() => Assert.Throws<TargetInvocationException>(() => f.Consume()));
+        f.Apply(reject: true);
+        Assert.Equal(1, f.Quantity(f.Inventory));
+        Assert.Equal(0, f.Consumption);
+        Assert.False(f.Poisoned);
+        Assert.Throws<TargetInvocationException>(() => f.Consume());
+    }
+
+    [Fact]
+    public void PhaseFailureAfterActualConsumptionRetainsLossAndPoisonsTheSameCoordinator()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        var cause = new IOException("worker phase callback");
+        var failure = Assert.Throws<TargetInvocationException>(() => f.Apply(() => throw cause));
+        Assert.Same(cause, failure.GetBaseException());
+        Assert.Equal(0, f.Quantity(f.Inventory));
+        Assert.Equal(1, f.Consumption);
+        Assert.True(f.Poisoned);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReturnDestinationOrPhaseFailureNeverRefundsACompletedNativeTransfer(bool phaseFailure)
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        if (!phaseFailure) f.On(f.Source, "InventoryChanged", () => throw new IOException("destination callback"));
+        Assert.Throws<TargetInvocationException>(() => f.Transfer(() =>
+        {
+            Assert.True(f.Move(f.Inventory, f.Source));
+            throw new IOException("worker phase callback");
+        }));
+        Assert.Equal(0, f.Quantity(f.Inventory));
+        Assert.Equal(1, f.Quantity(f.Source));
+        Assert.Equal(0, f.Consumption);
+        Assert.True(f.Poisoned);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DeathCleanupDoesNotAbortNativeMortalityOrRetryPoisonedRegistration(bool alreadyPoisoned)
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        f.ModelDistrictRegistration();
+        int unregistered = 0;
+        f.On(f.District, "InventoryUnregistered", () => { unregistered++; throw new IOException("district cleanup callback"); });
+        if (alreadyPoisoned) Assert.Throws<TargetInvocationException>(() => f.Transfer(() => throw new IOException("prior poison")));
+        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+        Assert.Equal(alreadyPoisoned ? 0 : 1, unregistered);
+        Assert.True(f.Poisoned);
+        Assert.Equal(1, f.Quantity(f.Inventory)); // Native owner deletion, not a refund or consumption, owns eventual loss.
+        Assert.Equal(0, f.Consumption);
+    }
+
+    [Fact]
+    public void CaughtDeathDuringCapturePreventsSnapshotPublicationAndAnyLaterSave()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        f.ModelDistrictRegistration();
+        bool mortalityContinued = false;
+        Assert.Throws<TargetInvocationException>(() => f.Capture(() =>
+        {
+            f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+            mortalityContinued = true;
+        }));
+        Assert.True(mortalityContinued);
+        Assert.True(f.Poisoned);
+        Assert.Equal(1, f.RegisteredProcessors); // Reentrant cleanup was denied, never reported complete.
+        Assert.Equal(1, f.Quantity(f.Inventory));
+        Assert.Throws<TargetInvocationException>(() => f.Call(f.Resources, "ThrowIfSaveUnsafe"));
+    }
+
+    [Fact]
+    public void SuccessfulDeathCleanupUnregistersNativePrivateCounterWithoutSpendingGoods()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        f.ModelDistrictRegistration();
+        int unregistered = 0;
+        f.On(f.District, "InventoryUnregistered", () => unregistered++);
+        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+        f.Call(f.Satchel, "OnDied", null, EventArgs.Empty);
+        Assert.Equal(1, unregistered);
+        Assert.Equal(0, f.RegisteredProcessors);
+        Assert.Equal(1, f.Quantity(f.Inventory));
+        Assert.Equal(0, f.Consumption);
+        Assert.False(f.Poisoned);
+    }
+
+
+    [Fact]
+    public void DeathDuringAppliedCallbackConsumesOnlyOnceButCannotReportSuccessfulStep()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        f.ModelDistrictRegistration();
+        var failure = Assert.Throws<TargetInvocationException>(() =>
+            f.Apply(() => f.Call(f.Satchel, "OnDied", null, EventArgs.Empty)));
+        var step = Assert.IsType<Wildfire.Core.FireSimStepInputException>(failure.InnerException);
+        Assert.Equal(Wildfire.Core.FireSimStepInputOutcome.Indeterminate, step.Outcome);
+        Assert.Equal(0, f.Quantity(f.Inventory));
+        Assert.Equal(1, f.Consumption);
+        Assert.True(f.Poisoned);
+        Assert.Throws<TargetInvocationException>(() => f.Call(f.Resources, "RequireAshApplicationCommit"));
+    }
+
+    [Fact]
+    public void ComponentRejectsNullPhaseBeforeReadingLiveStateOrConsuming()
+    {
+        using var f = new NativeFertilizerSatchelFixture();
+        f.Give(f.Inventory);
+        var error = Assert.Throws<TargetInvocationException>(() => f.Call(f.Satchel, "ConsumeCommittedUnit", new object?[] { null }));
+        Assert.IsType<ArgumentNullException>(error.InnerException);
+        Assert.Equal(1, f.Quantity(f.Inventory));
+        Assert.False(f.Poisoned);
+    }
+
 }

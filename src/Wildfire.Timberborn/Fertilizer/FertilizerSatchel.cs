@@ -51,7 +51,7 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
     {
         _citizen.ChangedAssignedDistrict -= OnDistrictChanged;
         _character.Died -= OnDied;
-        UnregisterDistrict();
+        CleanupDistrictForExit();
     }
 
     /// <summary>The owning worker must prove arrival and own this exact non-consuming source reservation.</summary>
@@ -96,8 +96,17 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
         return moved;
     }
 
-    // Application entry is added with the validated GPU-receipt/guard dependency; no public
-    // standalone consumption is exposed while that capability is absent from this branch.
+    internal void ConsumeCommittedUnit(Action commitPhase)
+    {
+        if (commitPhase is null) throw new ArgumentNullException(nameof(commitPhase));
+        _resources.RequireAshApplicationCommit();
+        if (!Live) throw new InvalidOperationException("Fertilizer application lost its live native owner.");
+        FertilizerSatchelStock.ConsumeCommittedUnit(Inventory, _resources, () =>
+        {
+            if (!Live) throw new InvalidOperationException("Fertilizer owner died during native consumption.");
+            commitPhase();
+        });
+    }
 
     private bool Live => this && Inventory && Inventory.Enabled && _mortal && !_mortal.Dead && !_mortal.ShouldDie;
 
@@ -125,14 +134,19 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
 
     private void RestoreRegistration()
     {
-        Inventory.Enable();
-        RegisterDistrict();
+        _resources.TransferInventory(() =>
+        {
+            Inventory.Enable();
+            RegisterDistrictCore();
+        });
     }
 
     private void OnDistrictChanged(object sender, ChangeAssignedDistrictEventArgs args) => RegisterDistrict();
-    private void OnDied(object sender, EventArgs args) => UnregisterDistrict();
+    private void OnDied(object sender, EventArgs args) => CleanupDistrictForExit();
 
-    private void RegisterDistrict()
+    private void RegisterDistrict() => _resources.TransferInventory(RegisterDistrictCore);
+
+    private void RegisterDistrictCore()
     {
         UnregisterDistrict();
         if (!_citizen.HasAssignedDistrict || _mortal.Dead || _mortal.ShouldDie) return;
@@ -140,6 +154,20 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
         _counter = _citizen.AssignedDistrict.GetComponent<DistrictResourceCounter>();
         _registry.Add(Inventory);
         _counter.Add(_satchelCounter);
+    }
+
+    private void CleanupDistrictForExit()
+    {
+        // Mortality/deletion must continue even after a prior unsafe resource mutation.
+        // Do not retry uncertain native writes or turn death into consumed/produced goods.
+        if (_resources.IsIndeterminate) return;
+        try { _resources.TransferInventory(UnregisterDistrict); }
+        catch
+        {
+            _resources.InvalidateAfterLifecycleFailure();
+            // Includes rejected reentrant cleanup: an enclosing read cannot still publish
+            // a safe snapshot after irreversible native death/deletion continued.
+        }
     }
 
     private void UnregisterDistrict()

@@ -1,5 +1,6 @@
 using Timberborn.Goods;
 using Timberborn.InventorySystem;
+using Wildfire.Timberborn.Resources;
 
 namespace Wildfire.Timberborn.Fertilizer;
 
@@ -27,12 +28,15 @@ internal static class FertilizerSatchelStock
         return true;
     }
 
-    internal static void ConsumeUnit(Inventory inventory)
+    internal static void ConsumeCommittedUnit(Inventory inventory, NativeResourceCoordinator resources, Action commitPhase)
     {
+        resources.RequireAshApplicationCommit();
+        if (commitPhase is null) throw new ArgumentNullException(nameof(commitPhase));
         if (!inventory.Enabled || !HasUnit(inventory) || !inventory.HasUnreservedStock(Unit))
             throw new InvalidOperationException("Fertilizer application requires exactly one unreserved native ash unit.");
         inventory.TakeConsumed(Unit);
         if (!IsEmpty(inventory))
             throw new InvalidOperationException("Fertilizer stock changed during the consumption callback.");
+        commitPhase();
     }
 }
