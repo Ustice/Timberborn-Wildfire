@@ -8,6 +8,9 @@ for (const payload of [
   ["qa-borrowed-duty-arm", "01234567-89ab-cdef-0123-456789abcdef", "1.25", "2", "3.5"],
   ["qa-borrowed-duty-water", "01234567-89ab-cdef-0123-456789abcdef", "12345678-1234-1234-1234-123456789abc", "1.5", "4", "2.5", "123", "3.5", "4", "2.5", "22345678-1234-1234-1234-123456789abc", "Inventory"],
   ["qa-borrowed-duty-source", "3", "1", "4", "2.5", "4", "1.5"],
+  ["qa-save-copy", "01234567-89ab-cdef-0123-456789abcdef", "QA-WaterSortie"],
+  ["qa-save-status", "01234567-89ab-cdef-0123-456789abcdef"],
+  ["qa-game-speed", "0"],
   ["qa-borrowed-duty-cancel"],
   ["qa-borrowed-duty-status"],
 ]) {

@@ -26,6 +26,9 @@ const knownCommands = [
   "qa-borrowed-duty-arm",
   "qa-borrowed-duty-water",
   "qa-borrowed-duty-source",
+  "qa-save-copy",
+  "qa-save-status",
+  "qa-game-speed",
   "qa-borrowed-duty-cancel",
   "qa-borrowed-duty-status",
   "qa-building-burnout-stimulus",
@@ -54,6 +57,11 @@ Commands:
   qa-borrowed-duty-water <donor-guid> <source-guid> <shore-x> <shore-y> <shore-z> <fire-cell> <approach-x> <approach-y> <approach-z> <return-owner-guid> <inventory-component>
                             Offer one clean-source sortie; no mixed-water shipping policy.
   qa-borrowed-duty-cancel   Disarm the offer and request active borrowed duty return.
+  qa-save-copy <request-guid> <QA-name>
+                            Request a disposable QA save copy; poll qa-save-status for completion.
+  qa-save-status <request-guid>
+                            Read the result of that exact save request.
+  qa-game-speed <0|1>       Pause or resume the native game through the QA service.
   qa-ash-cell <cell-index>  Read-only simulator transport/read-model ash state for one cell.
   qa-ash-water-stimulus <clean|tainted>
                             Queue simulator-owned ash plus water contact on one imported burnable field target.
