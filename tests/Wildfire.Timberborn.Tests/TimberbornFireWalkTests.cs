@@ -123,7 +123,7 @@ public sealed class TimberbornFireWalkTests
         Assert.Empty(f.Trace);
     }
 
-    private sealed class Fixture
+    internal sealed class Fixture
     {
         internal NativeManagedTestContext Native { get; } = NativeManagedTestContext.ProxyContracts;
         internal Assembly Mod { get; }

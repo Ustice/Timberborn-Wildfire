@@ -8,7 +8,7 @@ namespace Wildfire.Timberborn.Tests;
 
 internal sealed class NativeFertilizerSatchelFixture : IDisposable
 {
-    private readonly NativeManagedTestContext _native = new();
+    private readonly NativeManagedTestContext _native;
     internal object Resources { get; }
     internal object Satchel { get; }
     internal object Registration => Satchel.GetType().GetField("_registration", Flags)!.GetValue(Satchel)!;
@@ -27,8 +27,9 @@ internal sealed class NativeFertilizerSatchelFixture : IDisposable
     internal Action<string>? OnWarning;
     internal const string Good = "FertileAsh";
 
-    internal NativeFertilizerSatchelFixture()
+    internal NativeFertilizerSatchelFixture(NativeManagedTestContext? native = null)
     {
+        _native = native ?? new();
         _stock = Mod("FertilizerSatchelStock");
         Resources = Activator.CreateInstance(_native.LoadMod().GetType("Wildfire.Timberborn.Resources.NativeResourceCoordinator")!)!;
         Satchel = Activator.CreateInstance(Mod("FertilizerSatchel"), Resources)!;
