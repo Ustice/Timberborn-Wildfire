@@ -54,7 +54,7 @@ work; this entry is not a parallel production tick loop.
 
 Protocol negative draft: 12 failed / 5 passed against deliberately unconditional fabricated
 success; strict decoder: 17 passed. Focused application/step/snapshot suite: 36 passed.
-Full portable suite: 227 passed. Full native suite: 1,314 passed, zero failures or skips.
+Original portable suite: 227 passed. Original native suite: 1,314 passed. After integration with current lifecycle and walking fixes, portable 227 and native 1,386 pass with zero failures or skips. Four added integration cases ensure lifecycle invalidation cannot hide behind an accepted callback, rejected receipt or null admission.
 Managed tests exercise phase rejection, exact accepted callback, native coordinator
 forwarding through its installed-assembly context, failed callback poison, and listener
 failure completion. They do not execute native stock changes or GPU code. A Unity adapter test verifies the
@@ -62,13 +62,6 @@ appended structured command index and outcome bits30–31 through the existing f
 readback abstraction. Both positive and rejected receipts retain committed failure semantics
 when a later listener throws.
 
-Seven `AshApplicationShaderTests` compile without warnings. They cover competing requests,
-earlier removal/taint, later removal, OpenSoil, rejection field preservation against an
-identical control simulation, falling ash after application, and malformed/stale command
-words. Shader execution is pending the sole controller; a compiled fixture is not GPU proof.
+All seven `AshApplicationShaderTests` pass in actual Unity 6000.3.6f1 on Metal/Apple M2 Pro. They cover competing requests, earlier removal/taint, later removal, OpenSoil, rejection field preservation against an identical control simulation, falling ash after application, and malformed/stale command words. The nine related collection/external-input cases and full 46-test shader suite also pass with zero failures/skips; 101 captures contain no shader/UAV-limit warnings.
 
-Controller request: pin the final source/fixture commit, run the seven application tests
-first, then existing collection/external-change tests and full shader suite because all
-share ApplyExternalChanges. Use the repository's licensed Unity harness and exclusive QA
-lock; preserve captures and exact command receipt words. No deployment or game launch is
-part of this request.
+The first source shape lost its application writes before Metal translation. The corrected source joins the application and generic paths at the normal loop end, preserving their rules. The exact passing plain shader is SHA256 `97a49b3feaa9592803bb372108f70e21c2494c66c1a0e43089d3ee521fd6f5a7`; diagnostic pragmas are absent. [Failure localization and final GPU evidence](ash-application-first-gpu-failure.md) record the immutable candidates and acceptance limits. The successful branch shape does not identify a proprietary compiler pass. Native fertilizer worker, physical consumption and complete runtime adoption remain unproved by these shader fixtures.

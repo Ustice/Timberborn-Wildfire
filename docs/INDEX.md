@@ -22,6 +22,7 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Warden charge and return](qa/warden-native-charge-return-live.md): actual Water pickup, unsafe-route withdrawal, retained-charge saves and return to ordinary activity; suppression and active-phase reload remain open.
 - [Shared fire walking](qa/shared-owned-fire-walk.md): three jobs share native path monitoring while preserving their phase, resource and save decisions; the extraction awaits live acceptance.
 - [Warden district lifecycle](qa/warden-district-lifecycle.md): native death and deletion continue after cleanup failures while the shared resource guard prevents inconsistent saves.
+- [Clean ash application](qa/clean-ash-application-receipt.md): exact conditional receipts, guarded consumption privilege and a full 46-test GPU pass; fertilizer worker adoption remains open.
 - [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
 - [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
 - [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
