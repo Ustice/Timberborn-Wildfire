@@ -15,13 +15,13 @@ internal sealed class NativeShorelineWaterFixture : IDisposable
     internal readonly float BucketVolume;
     internal readonly NativeResourceTransaction Transaction = new();
     internal Type Type(string assembly, string name) => _native.LoadNative(assembly).GetType(name)!;
-    internal NativeShorelineWaterFixture(NativeManagedTestContext? native = null)
+    internal NativeShorelineWaterFixture(NativeManagedTestContext? native = null, int sourceZ = 0)
     {
         _native = native ?? new NativeManagedTestContext();
         _ownsNative = native is null;
         Changes = Activator.CreateInstance(Type("Timberborn.WaterSystem", "Timberborn.WaterSystem.WaterChangeService"))!;
         InputService = Activator.CreateInstance(Type("Timberborn.WaterBuildings", "Timberborn.WaterBuildings.WaterInputService"), Changes)!;
-        Source = NewInput();
+        Source = NewInput(z: sourceZ);
         var specType = Type("Timberborn.Goods", "Timberborn.Goods.GoodAmountSpec");
         var spec = Activator.CreateInstance(specType)!;
         specType.GetProperty("Id")!.SetValue(spec, "Water");
@@ -30,13 +30,12 @@ internal sealed class NativeShorelineWaterFixture : IDisposable
         var converter = Type("Timberborn.WaterWorkshops", "Timberborn.WaterWorkshops.WaterGoodToWaterAmountConverter");
         BucketVolume = (float)converter.GetMethod("GetWaterAmount")!.Invoke(null, [specs])!;
     }
-    internal object NewInput(bool register = true, int x = 4)
+    internal object NewInput(bool register = true, int x = 4, int z = 0)
     {
-        var waterService = RuntimeHelpers.GetUninitializedObject(Type("Timberborn.WaterSystem", "Timberborn.WaterSystem.WaterService"));
-        Set(waterService, "_waterChangeService", Changes);
+        var waterService = Activator.CreateInstance(Type("Timberborn.WaterSystem", "Timberborn.WaterSystem.WaterService"), null, Changes, null, null)!;
         var input = Activator.CreateInstance(Type("Timberborn.WaterBuildings", "Timberborn.WaterBuildings.WaterInput"), waterService, null, InputService)!;
         var coordinates = RuntimeHelpers.GetUninitializedObject(Type("Timberborn.WaterBuildings", "Timberborn.WaterBuildings.WaterInputFixedCoordinates"));
-        Set(coordinates, "<Coordinates>k__BackingField", Activator.CreateInstance(Type("UnityEngine.CoreModule", "UnityEngine.Vector3Int"), x, 5, 0)!);
+        Set(coordinates, "<Coordinates>k__BackingField", Activator.CreateInstance(Type("UnityEngine.CoreModule", "UnityEngine.Vector3Int"), x, 5, z)!);
         Set(input, "_inputCoordinates", coordinates);
         if (register) Call(input, "OnEnterFinishedState");
         return input;
