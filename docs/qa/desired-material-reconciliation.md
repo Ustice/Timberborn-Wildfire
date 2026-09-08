@@ -13,6 +13,11 @@ remains unchanged as independent prior evidence.
 The planner checks exact grid dimensions, canonical retention for every binding, and every desired
 contributor, including hidden ones. Every coordinator known/archive query must agree with the
 captured authority; restore requests retain the coordinator's exact single-use archive object.
+Contributing native Guids must exactly equal the canonical retained-owner set. A diagnostic registry
+containing only bindings, or an omitted wholly hidden retained projection, rejects before planning;
+missing desired input is never inferred to mean suspension or removal. These two counterexamples
+failed against the first planner revision (`807ac87`) before the equality check was added; evidence
+is retained in `missing-projections-red.log` beside the original counterfactual log.
 The caller must hold the shared native guard and supply a supported, fully observed native world.
 This API does not independently observe native presence, eligibility, inventory compatibility or
 state/profile policy. Those cannot be inferred from a retained Guid alone.

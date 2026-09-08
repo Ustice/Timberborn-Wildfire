@@ -177,6 +177,28 @@ public sealed class DesiredMaterialReconciliationTests
     }
 
     [Fact]
+    public void DiagnosticBindingOnlyRestoreCannotDetachRetainedActiveMaterial()
+    {
+        var source = Registry(1); source.Reconcile([Projection(A, 0)], []);
+        var diagnostic = Registry(1); diagnostic.RestoreBindings(source.CaptureBindings());
+        var simulator = Sim(1, [5], [Tree], [1], [1], [new(1, 1)]);
+        Assert.Throws<InvalidOperationException>(() => Planner.Plan(diagnostic, Owners(A), simulator));
+        Assert.Equal(0, simulator.Uploads);
+        Assert.Equal(new uint[] { 1 }, simulator.CaptureSnapshot().TargetIds);
+    }
+
+    [Fact]
+    public void MissingWhollyHiddenRetainedProjectionIsNotImplicitSuspension()
+    {
+        var registry = Registry(1); registry.Reconcile([Projection(A, 0), Projection(B, 0)], []);
+        var simulator = Sim(1, [5], [Tree], [1], [1], [new(1, 1)]);
+        registry.Reconcile([], [B]); // Native desired input was omitted, but canonical retention still requires it.
+        Assert.Throws<InvalidOperationException>(() => Planner.Plan(registry, Owners(A, B), simulator));
+        Assert.Equal(0, simulator.Uploads);
+        Assert.Equal(2, registry.CaptureBindings().Entities.Count);
+    }
+
+    [Fact]
     public void EqualCellCountDifferentGridShapeRejects()
     {
         var registry = new TimberbornNativeMaterialRegistry(new FireGrid(1, 2, 1), []);

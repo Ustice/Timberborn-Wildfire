@@ -91,11 +91,13 @@ internal static class TimberbornDesiredMaterialReconciliation
         IReadOnlyDictionary<Guid, OwnedBodyRetention> owners, TimberbornNativeMaterialRegistry registry)
     {
         var seen = new HashSet<FireSimMaterialIdentity>();
+        var contributingOwners = new HashSet<Guid>();
         foreach (var cell in cells)
         {
             foreach (var contributor in cell.Contributors)
             {
                 var owner = contributor.Owner;
+                contributingOwners.Add(owner.EntityId);
                 if (!owners.TryGetValue(owner.EntityId, out var retention) || retention != OwnedBodyRetention.RetainedBody ||
                     !registry.TryResolveOrigin(owner.TargetId, out var entity) || entity != owner.EntityId ||
                     !registry.IsSlotBound(owner.TargetId, owner.SlotId))
@@ -104,6 +106,8 @@ internal static class TimberbornDesiredMaterialReconciliation
             if (cell.Owner is { } selected && !seen.Add(new(selected.TargetId, selected.SlotId)))
                 throw new InvalidOperationException("A desired material slot cannot occupy two cells.");
         }
+        if (!contributingOwners.SetEquals(owners.Where(pair => pair.Value == OwnedBodyRetention.RetainedBody).Select(pair => pair.Key)))
+            throw new InvalidOperationException("Every retained native owner requires a desired projection, including wholly hidden owners; absence cannot imply suspension.");
     }
 
     private static Dictionary<FireSimMaterialIdentity, FireSimMaterialArchive> ReadAgreedArchives<TSimulator>(
