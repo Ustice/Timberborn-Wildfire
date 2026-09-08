@@ -15,9 +15,10 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Current-build live baseline](qa/live-current-build-baseline.md): verified deployment, ordinary GPU ticks, and tick-33 save/reload at `8cbeb19`.
 - [Fresh faction startup](qa/live-faction-startup.md): populated Folktails success and the Iron Teeth Warden preview failure on that build.
 - [Corrected Iron Teeth startup](qa/warden-corrected-startup-live.md), [green placement preview](qa/warden-pivot-placement-live.md), [doorstep parent fix](qa/warden-doorstep-parent.md), and [completed placement](qa/warden-doorstep-placement-live.md): placement, district connection and native Warden assignment passed; subsequent ordinary hauling exposed a missing public-input validator.
-- [Warden public input](qa/warden-public-input-native-contract.md): native validator and emptying behavior regressions; corrected live hauling remains to be verified.
+- [Warden public input](qa/warden-public-input-native-contract.md): native validator and emptying behavior regressions; [ordinary native hauling](qa/warden-native-supply-first-response-live.md) subsequently supplied both stations with 20 Water.
 - [Warden helmet presentation](qa/warden-helmet-presentation.md): lazy attachment, ownership and lifecycle proof; provisional pose and full native rendering remain unverified.
-- [Warden coverage display](qa/warden-native-range-display.md): native selection highlighting of potential response surfaces; live rendering remains unverified.
+- [Warden coverage display](qa/warden-native-range-display.md): native placement-preview and selection highlighting of potential response surfaces; live rendering remains unverified.
+- [Native executor Transform](qa/native-executor-transform.md): the first live Warden response exposed a custom-component lookup error; four executor initialization regressions now pass. Physical response remains to be retried.
 - [Warden district lifecycle](qa/warden-district-lifecycle.md): native death and deletion continue after cleanup failures while the shared resource guard prevents inconsistent saves.
 - [Full native domain engine proof](qa/owned-full-domain-engine-proof.md): bounded OWNED4 formation/restore with native objects and the 33-layer world domain; production still uses WF1.
 - [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
