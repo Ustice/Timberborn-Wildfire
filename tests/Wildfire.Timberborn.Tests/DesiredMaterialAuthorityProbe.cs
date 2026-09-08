@@ -7,12 +7,13 @@ internal sealed class DesiredMaterialAuthorityProbe(RetiredDetachmentSimulatorFi
     : IFireSimMaterialHandoffSimulator, IFireSimSnapshotSimulator
 {
     internal int Captures;
+    internal Action? ReadWidth;
     internal bool HideArchives, DenyKnown;
     internal FireSimMaterialArchive? SubstituteArchive;
     internal Func<FireSimSnapshot, FireSimSnapshot>? TransformSnapshot;
     public FireSimSnapshotCapability SnapshotCapability { get; set; } = FireSimSnapshotCapability.CompleteMaterialHistory;
     public FireSimSnapshot CaptureSnapshot() { Captures++; var value = inner.CaptureSnapshot(); return TransformSnapshot?.Invoke(value) ?? value; }
-    public int Width => inner.Width;
+    public int Width { get { ReadWidth?.Invoke(); return inner.Width; } }
     public int Height => inner.Height;
     public int Depth => inner.Depth;
     public bool IsSlotKnown(FireSimMaterialIdentity identity) => !DenyKnown && inner.IsSlotKnown(identity);

@@ -223,6 +223,26 @@ public sealed class DesiredMaterialReconciliationTests
     }
 
     [Fact]
+    public void LaterSimulatorCallbackCannotRewriteTheAlreadyValidatedPlanningSnapshot()
+    {
+        var registry = Registry(1, [new(0, FireSimBaselineDefinition.OpenSoil)]);
+        var simulator = Sim(1, [0], [0], [0], [0], []);
+        FireSimSnapshot? returned = null;
+        var probe = new DesiredMaterialAuthorityProbe(simulator)
+        {
+            TransformSnapshot = snapshot => returned = snapshot,
+            ReadWidth = () => returned!.CompanionFields[0] = FireSimBaselineDefinition.OpenSoil.CompanionMaterial,
+        };
+        var plan = Planner.Plan(registry, Owners(), probe, []);
+        Assert.NotNull(plan);
+        var request = Assert.Single(plan.Requests);
+        Assert.Equal(FireSimMaterialHandoffMode.Baseline, request.Mode);
+        Assert.Equal(FireSimBaselineDefinition.OpenSoil.CompanionMaterial, request.CompanionMaterial);
+        Assert.Equal(0u, simulator.CaptureSnapshot().CompanionFields[0]);
+        Assert.Equal(0, simulator.Uploads);
+    }
+
+    [Fact]
     public void MissingOrChangedArchiveAuthorityRejectsBeforeFreshFallback()
     {
         var registry = Registry(1); registry.Reconcile([Projection(A, 0)], []);
