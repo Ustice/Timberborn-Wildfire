@@ -1,0 +1,15 @@
+{
+  "TemplateAttachmentsSpec": {
+    "Attachments#append": [
+      {
+        "AttachmentId": "Wildfire.WardenHelmet.IronTeeth",
+        "Prefab": "Wildfire/Characters/Attachments/WardenHelmet.IronTeeth",
+        "Parent": "#Head",
+        "Position": { "X": 0.0, "Y": 0.0, "Z": 0.0 },
+        "Rotation": { "X": 0.0, "Y": 0.0, "Z": 0.0 },
+        "Scale": { "X": 1.0, "Y": 1.0, "Z": 1.0 },
+        "CreateInstantly": false
+      }
+    ]
+  }
+}

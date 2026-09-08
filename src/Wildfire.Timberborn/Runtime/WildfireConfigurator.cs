@@ -4,6 +4,7 @@ using Wildfire.Timberborn.Resources;
 using Bindito.Core;
 using Timberborn.EntityPanelSystem;
 using Wildfire.Timberborn.FireResponse;
+using Wildfire.Timberborn.FireResponse.Presentation;
 using Timberborn.WorkSystem;
 using Timberborn.Beavers;
 using Timberborn.InventorySystem;
@@ -57,6 +58,7 @@ public sealed class WildfireConfigurator : Configurator
         Bind<WardenStation>().AsTransient();
         Bind<WardenEquipment>().AsTransient();
         Bind<WardenExecutor>().AsTransient();
+        Bind<WardenHelmetPresentation>().AsTransient();
         Bind<WardenStationInventoryInitializer>().AsSingleton();
         Bind<WardenEquipmentInventoryInitializer>().AsSingleton();
         MultiBind<TemplateModule>().ToProvider<WardenTemplateModuleProvider>().AsSingleton();
@@ -106,6 +108,7 @@ public sealed class WildfireConfigurator : Configurator
             builder.AddDecorator<AdultSpec, WardenEquipment>();
             builder.AddDedicatedDecorator<WardenEquipment, Inventory>(_equipment);
             builder.AddDecorator<AdultSpec, WardenExecutor>();
+            builder.AddDecorator<AdultSpec, WardenHelmetPresentation>();
             builder.AddDecorator<AdultSpec, WildfireCarryEmergencyExecutor>();
             builder.AddDecorator<AdultSpec, CarryEmergencyInterrupter>();
             return builder.Build();

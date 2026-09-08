@@ -40,6 +40,7 @@ public static class WardenAttachmentProbe
                 var asset = loader.Load<GameObject>(path);
                 Require(ReferenceEquals(asset, loader.Load<GameObject>(path.ToLowerInvariant())), "cache mismatch");
                 Require(asset.GetComponents<Component>().Length == 2, "wrapper has unexpected components");
+                Require(asset.activeSelf == (i != 0), "only the helmet descriptor must start inactive");
                 var description = asset.GetComponent<TimbermeshDescription>();
                 Require(description != null, "native description missing");
                 Require(description.ModelName == "Equipment/FireResponse/" + names[i] + ".IronTeeth", "model path mismatch");
@@ -48,6 +49,7 @@ public static class WardenAttachmentProbe
                 // Native static importer, isolated from game material/atlas collection.
                 var target = UnityEngine.Object.Instantiate(asset);
                 imports.Add(target);
+                Require(target.activeSelf == asset.activeSelf, "clone changed source active state");
                 var modelPath = Path.Combine(Environment.GetEnvironmentVariable("WILDFIRE_GEAR_SOURCE_ROOT"), "src/Wildfire.Timberborn/Data", description.ModelName + ".timbermesh");
                 using (var stream = File.OpenRead(modelPath))
                     new TimbermeshImporter(new StaticMeshBuilder(materials), Array.Empty<IModelPostprocessor>()).Import(stream, target.transform);

@@ -29,6 +29,9 @@ public sealed class WardenAttachmentAssetProvider : IAssetProvider
         {
             prefab = new GameObject(path) { hideFlags = HideFlags.HideAndDontSave };
             prefab.AddComponent<TimbermeshDescription>().SetModelName(modelName);
+            // Helmet instances remain hidden even if native material registration fails
+            // before our presentation component can acquire its visibility toggle.
+            if (modelName == "Equipment/FireResponse/WardenHelmet.IronTeeth") prefab.SetActive(false);
             _prefabs[path] = prefab;
         }
         // Namespace ownership, not a high override priority, selects these assets.
