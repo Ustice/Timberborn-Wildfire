@@ -38,6 +38,6 @@ Use the sole controller and disposable world/explicit fixture admission. Keep th
 
 ## Independent review attempt
 
-One authenticated tools-disabled Claude attempt reviewed an immutable packet of `5c8aa14` source/native IL. It ended **exit 1 after 242.399 seconds**, `is_error=true`, `terminal_reason=api_error`, `stop_reason=refusal`, with provider detail `[bio]`. It returned no critique or actionable findings. This is an unavailable second opinion, not clearance; no retry/workaround was attempted. Exact prompt/hash, CLI arguments, response and terminal metadata remain in `/tmp/wildfire-fertilizer-destination-claude-review/`.
+One authenticated tools-disabled Claude attempt was given an immutable packet of `5c8aa14` source/native IL. It ended **exit 1 after 242.399 seconds**, `is_error=true`, `terminal_reason=api_error`, `stop_reason=refusal`, with provider detail `[bio]`. It returned no critique or actionable findings. This is an unavailable second opinion, not clearance; no retry/workaround was attempted. Exact prompt/hash, CLI arguments, response and terminal metadata remain in `/tmp/wildfire-fertilizer-destination-claude-review/`.
 
 Root separately reviewed the source/tests and reported **1,623 Release native tests plus hosted checks passed** at integration `693fb46`. That remains source/native evidence, not physical engine acceptance.
