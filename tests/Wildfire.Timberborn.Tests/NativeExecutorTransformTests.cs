@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 
 namespace Wildfire.Timberborn.Tests;
@@ -72,7 +73,48 @@ public sealed class NativeExecutorTransformTests
         Assert.Same(cachedTransform, baseType.GetProperty("Transform")!.GetValue(executor));
         Assert.Null(baseType.GetMethod("GetComponent")!.MakeGenericMethod(transformType).Invoke(executor, null));
         type.GetMethod("Awake")!.Invoke(executor, null); // Actual production wiring, including actual native path-event subscription.
-        Assert.Same(cachedTransform, type.GetField("_transform", Flags)!.GetValue(executor));
+        if (name == "Beavers.Emergency.WildfireCarryEmergencyExecutor")
+        {
+            Assert.Same(cachedTransform, type.GetField("_transform", Flags)!.GetValue(executor));
+            return; // Emergency keeps its explicit native carrying ownership protocol.
+        }
+        var walkField = name == "Ash.AshHarvestExecutor" ? "_ownedWalk" : "_movement";
+        var walk = type.GetField(walkField, Flags)!.GetValue(executor)!;
+        var driver = walk.GetType().GetField("_driver", Flags)!.GetValue(walk)!;
+        Assert.Same(cachedTransform, driver.GetType().GetField("_transform", Flags)!.GetValue(driver));
+        var walker = components.Single(c => c.GetType() == T("Timberborn.WalkingSystem", "Walker"));
+        var mover = components.Single(c => c.GetType() == T("Timberborn.WalkingSystem", "WalkerMover"));
+        var enabled = baseType.GetField("<Enabled>k__BackingField", Flags)!;
+        void Call(string method) => walk.GetType().GetMethod(method, Flags)!.Invoke(walk, null);
+        // Real native pause operations must not revive a mover disabled by another owner.
+        enabled.SetValue(mover, false);
+        Call("RejectRoute");
+        Call("ReleasePause");
+        Assert.Equal(false, enabled.GetValue(mover));
+        enabled.SetValue(mover, true);
+        Call("RejectRoute");
+        Assert.Equal(false, enabled.GetValue(mover));
+        Call("ReleasePause");
+        Assert.Equal(true, enabled.GetValue(mover));
+
+        var started = walker.GetType().GetEvent("StartedNewPath")!;
+        var handlers = walker.GetType().GetField("StartedNewPath", Flags)!;
+        Assert.Single(((Delegate)handlers.GetValue(walker)!).GetInvocationList());
+        int otherCalls = 0;
+        Action other = () => otherCalls++;
+        var parameters = started.EventHandlerType!.GetMethod("Invoke")!.GetParameters()
+            .Select(p => Expression.Parameter(p.ParameterType)).ToArray();
+        var otherHandler = Expression.Lambda(started.EventHandlerType,
+            Expression.Invoke(Expression.Constant(other)), parameters).Compile();
+        started.AddEventHandler(walker, otherHandler);
+        // Actual native event dispatch in the idle phase avoids every engine-bound position read.
+        ((Delegate)handlers.GetValue(walker)!).DynamicInvoke(walker, null);
+        Assert.Equal(1, otherCalls);
+        Call("Dispose");
+        Call("Dispose");
+        Assert.Same(otherHandler, Assert.Single(((Delegate)handlers.GetValue(walker)!).GetInvocationList()));
+        ((Delegate)handlers.GetValue(walker)!).DynamicInvoke(walker, null);
+        Assert.Equal(2, otherCalls);
     }
 
     private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

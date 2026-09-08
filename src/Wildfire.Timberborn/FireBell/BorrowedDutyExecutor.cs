@@ -10,7 +10,6 @@ using Timberborn.MortalSystem;
 using Timberborn.Navigation;
 using Timberborn.NeedSystem;
 using Timberborn.Persistence;
-using Timberborn.WalkingSystem;
 using Timberborn.WorkSystem;
 using Timberborn.WorldPersistence;
 using UnityEngine;
@@ -46,15 +45,11 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     private Mortal _mortal = null!;
     private NeedManager _needs = null!;
     private BehaviorManager _manager = null!;
-    private Walker _walker = null!;
-    private TimberbornOwnedWalker _movement = null!;
-    private WalkToPositionExecutor _walk = null!;
+    private TimberbornFireWalk _movement = null!;
     private Navigator _navigator = null!;
-    private Transform _transform = null!;
     private Workplace? _donor;
     private Vector3 _origin, _point, _destination;
-    private bool _restored, _unsafeRoute;
-    private long _routeRevision = -1;
+    private bool _restored;
     public BorrowedDutyPhase Phase => _progress.Phase;
     public bool CancellationRequested => _progress.CancellationRequested;
     public bool NativeExecutionOwned => _manager is not null && _manager.IsRunningExecutor<BorrowedDutyExecutor>();
@@ -71,10 +66,13 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
         _carrier = GetComponent<GoodCarrier>(); _reserver = GetComponent<GoodReserver>();
         _equipment = GetComponent<WardenEquipment>(); _mortal = GetComponent<Mortal>();
         _needs = GetComponent<NeedManager>(); _manager = GetComponent<BehaviorManager>();
-        _walker = GetComponent<Walker>(); _walk = GetComponent<WalkToPositionExecutor>();
-        _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
-        _navigator = GetComponent<Navigator>(); _transform = Transform;
-        _walker.StartedNewPath += OnStartedNewPath;
+        _movement = TimberbornFireWalk.Create(this, _field, () => Phase switch
+        {
+            BorrowedDutyPhase.Outbound => FireWalkMode.Outbound,
+            BorrowedDutyPhase.Returning => FireWalkMode.Escape,
+            _ => FireWalkMode.Ignore
+        });
+        _navigator = GetComponent<Navigator>();
         _fixture.Register(this);
     }
     internal bool TryLaunch(Workplace donor, Vector3 point)
@@ -117,9 +115,8 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
             _movement.Stop();
             if (!Launch(_destination)) return Finish();
         }
-        if (_routeRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
-        if (_unsafeRoute) return Phase == BorrowedDutyPhase.Returning ? Finish() : Return();
-        var status = _walk.Tick(hours);
+        if (!_movement.RefreshIfNeeded()) return Phase == BorrowedDutyPhase.Returning ? Finish() : Return();
+        var status = _movement.Tick(hours);
         if (status == ExecutorStatus.Running) return status;
         if (status == ExecutorStatus.Failure || !At(_destination)) return Finish();
         _movement.Stop();
@@ -136,17 +133,8 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     private bool Launch(Vector3 destination)
     {
         if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination, Phase == BorrowedDutyPhase.Returning)) return false;
-        _destination = destination; _unsafeRoute = false;
-        var status = _walk.Launch(destination);
-        if (status == ExecutorStatus.Failure || _unsafeRoute) { _movement.Stop(); return false; }
-        _movement.ReleasePause(); return true;
-    }
-    private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
-    {
-        if (Phase is not (BorrowedDutyPhase.Outbound or BorrowedDutyPhase.Returning)) return;
-        _routeRevision = _field.Revision;
-        _unsafeRoute = !_field.SafeInstalledPath(_transform.position, _walker.PathCorners, Phase == BorrowedDutyPhase.Returning);
-        if (_unsafeRoute) _movement.RejectRoute();
+        _destination = destination;
+        return _movement.Launch(destination);
     }
     private bool At(Vector3 destination) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), destination);
     private ExecutorStatus Finish()
@@ -156,7 +144,7 @@ public sealed class BorrowedDutyExecutor : BaseComponent, IExecutor, IAwakableCo
     }
     public void DeleteEntity()
     {
-        _walker.StartedNewPath -= OnStartedNewPath; _fixture.Unregister(this);
+        _movement.Dispose(); _fixture.Unregister(this);
     }
     public void Save(IEntitySaver saver)
     {

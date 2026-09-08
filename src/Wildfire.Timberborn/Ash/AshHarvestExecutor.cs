@@ -12,7 +12,6 @@ using Timberborn.Navigation;
 using Timberborn.NeedSystem;
 using Timberborn.Persistence;
 using Timberborn.SimpleOutputBuildings;
-using Timberborn.WalkingSystem;
 using Timberborn.WorkSystem;
 using Timberborn.WorldPersistence;
 using UnityEngine;
@@ -38,24 +37,19 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     private readonly INavigationService _navigation;
     private readonly AshHarvestCycle _cycle = new();
     private AshHarvestCargo _cargo = null!;
-    private Walker _walker = null!;
-    private TimberbornOwnedWalker _ownedWalk = null!;
-    private WalkToPositionExecutor _walk = null!;
+    private TimberbornFireWalk _ownedWalk = null!;
     private Navigator _navigator = null!;
     private Citizen _citizen = null!;
     private BehaviorManager _behavior = null!;
     private Worker _worker = null!;
     private NeedManager _needs = null!;
     private Mortal _mortal = null!;
-    private Transform _transform = null!;
     private Workplace? _workplace;
     private int _cell;
     private Vector3 _target;
     private Vector3 _destination;
     private bool _replan;
     private bool _restored;
-    private bool _routeUnsafe;
-    private long _routeRevision = -1;
     public AshHarvestPhase Phase => _cycle.Phase;
     public string StatusKey { get; private set; } = "Wildfire.Ash.Ready";
 
@@ -65,17 +59,15 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
 
     public void Awake()
     {
-        _walker = GetComponent<Walker>();
-        _ownedWalk = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
-        _walker.StartedNewPath += OnStartedNewPath;
-        _walk = GetComponent<WalkToPositionExecutor>();
+        _ownedWalk = TimberbornFireWalk.Create(this, _field, () => Phase is AshHarvestPhase.Approaching or AshHarvestPhase.Returning
+            ? (_cycle.HasCargo ? FireWalkMode.Escape : FireWalkMode.Outbound)
+            : FireWalkMode.Ignore);
         _navigator = GetComponent<Navigator>();
         _citizen = GetComponent<Citizen>();
         _behavior = GetComponent<BehaviorManager>();
         _worker = GetComponent<Worker>();
         _needs = GetComponent<NeedManager>();
         _mortal = GetComponent<Mortal>();
-        _transform = Transform;
         _cargo = new AshHarvestCargo(GetComponent<GoodCarrier>(), GetComponent<GoodReserver>(), _resources);
         _resources.Register(this);
     }
@@ -252,26 +244,15 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
     }
     private bool AdvanceWalk(float hours, out ExecutorStatus status)
     {
-        if (_routeRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
-        if (_routeUnsafe) { _ownedWalk.Stop(); status = ExecutorStatus.Failure; return false; }
-        status = _walk.Tick(hours);
+        if (!_ownedWalk.RefreshIfNeeded()) { _ownedWalk.Stop(); status = ExecutorStatus.Failure; return false; }
+        status = _ownedWalk.Tick(hours);
         return status != ExecutorStatus.Failure && (status == ExecutorStatus.Running || At(_destination));
     }
     private bool LaunchWalk(Vector3 destination)
     {
         if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination, _cycle.HasCargo)) return false;
-        _destination = destination; _routeUnsafe = false;
-        var status = _walk.Launch(destination);
-        if (status == ExecutorStatus.Failure || _routeUnsafe) { _ownedWalk.Stop(); return false; }
-        _ownedWalk.ReleasePause();
-        return true;
-    }
-    private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
-    {
-        if (Phase is not (AshHarvestPhase.Approaching or AshHarvestPhase.Returning)) return;
-        _routeRevision = _field.Revision;
-        _routeUnsafe = !_field.SafeInstalledPath(_transform.position, _walker.PathCorners, _cycle.HasCargo);
-        if (_routeUnsafe) _ownedWalk.RejectRoute();
+        _destination = destination;
+        return _ownedWalk.Launch(destination);
     }
     private bool At(Vector3 position) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), position);
     private ExecutorStatus CancelBeforeReceipt()
@@ -294,7 +275,7 @@ public sealed class AshHarvestExecutor : BaseComponent, IExecutor, IAwakableComp
         {
             _resources.TransferInventory(_cargo.ReleaseReservation);
         }
-        _walker.StartedNewPath -= OnStartedNewPath;
+        _ownedWalk.Dispose();
         _resources.Unregister(this);
     }
     public void Save(IEntitySaver saver)

@@ -11,7 +11,6 @@ using Timberborn.MortalSystem;
 using Timberborn.Navigation;
 using Timberborn.NeedSystem;
 using Timberborn.Persistence;
-using Timberborn.WalkingSystem;
 using Timberborn.WorkSystem;
 using Timberborn.WorldPersistence;
 using UnityEngine;
@@ -35,10 +34,8 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private readonly ReferenceSerializer _references;
     private readonly INavigationService _navigation;
     private readonly WardenSortie _sortie = new();
-    private Walker _walker = null!;
     private BehaviorManager _behaviorManager = null!;
-    private TimberbornOwnedWalker _movement = null!;
-    private WalkToPositionExecutor _walk = null!;
+    private TimberbornFireWalk _movement = null!;
     private Navigator _navigator = null!;
     private WardenEquipment _equipment = null!;
     private GoodReserver _reserver = null!;
@@ -50,9 +47,6 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     private WardenTarget _target;
     private Vector3 _destination;
     private bool _restoreWalk;
-    private bool _installedRouteUnsafe;
-    private long _routeFieldRevision = -1;
-    private Transform _transform = null!;
     private Guid _entityId;
     public WardenPhase Phase => _sortie.Phase;
     public WardenResponseReason ResponseReason { get; private set; }
@@ -75,12 +69,13 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     public void Awake()
     {
         _entityId = GetComponent<EntityComponent>().EntityId;
-        _transform = Transform;
-        _walker = GetComponent<Walker>();
         _behaviorManager = GetComponent<BehaviorManager>();
-        _movement = new TimberbornOwnedWalker(_walker, GetComponent<WalkerMover>());
-        _walker.StartedNewPath += OnStartedNewPath;
-        _walk = GetComponent<WalkToPositionExecutor>();
+        _movement = TimberbornFireWalk.Create(this, _field, () => _sortie.Phase switch
+        {
+            WardenPhase.Fetching or WardenPhase.Approaching => FireWalkMode.Outbound,
+            WardenPhase.Returning => FireWalkMode.Escape,
+            _ => FireWalkMode.Ignore
+        });
         _navigator = GetComponent<Navigator>();
         _equipment = GetComponent<WardenEquipment>();
         _reserver = GetComponent<GoodReserver>();
@@ -94,7 +89,7 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     public void DeleteEntity()
     {
         ReleaseReservation();
-        _walker.StartedNewPath -= OnStartedNewPath;
+        _movement.Dispose();
         _delivery.Unregister(this);
     }
 
@@ -174,9 +169,8 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
             return ExecutorStatus.Running;
         }
         // Regenerate on field changes, then inspect the path Walker actually installed (including its prefix).
-        if (_routeFieldRevision != _field.Revision && !_walker.Stopped()) _walker.RefreshPath();
-        if (_installedRouteUnsafe) return Retreat(WardenResponseReason.UnsafeRoute, "Installed route became unsafe");
-        var walkStatus = _walk.Tick(deltaTimeInHours);
+        if (!_movement.RefreshIfNeeded()) return Retreat(WardenResponseReason.UnsafeRoute, "Installed route became unsafe");
+        var walkStatus = _movement.Tick(deltaTimeInHours);
         if (walkStatus == ExecutorStatus.Running) return ExecutorStatus.Running;
         if (walkStatus == ExecutorStatus.Failure || !At(_destination)) return Retreat(WardenResponseReason.Interrupted, "Route interrupted before arrival");
         if (_sortie.Phase == WardenPhase.Fetching)
@@ -244,27 +238,8 @@ public sealed class WardenExecutor : BaseComponent, IExecutor, IAwakableComponen
     {
         if (!_field.SafeRoute(_navigator.CurrentAccessOrPosition(), destination, _sortie.Phase == WardenPhase.Returning)) return false;
         _destination = destination;
-        _installedRouteUnsafe = false;
-        var status = _walk.Launch(destination);
-        if (status == ExecutorStatus.Failure || _installedRouteUnsafe)
-        { _movement.Stop(); return false; }
-        _movement.ReleasePause();
-        return true;
+        return _movement.Launch(destination);
     }
-    private void OnStartedNewPath(object sender, StartedNewPathEventArgs args)
-    {
-        if (_sortie.Phase is not (WardenPhase.Fetching or WardenPhase.Approaching or WardenPhase.Returning)) return;
-        _routeFieldRevision = _field.Revision;
-        _installedRouteUnsafe = !_field.SafeInstalledPath(_transform.position, _walker.PathCorners,
-            _sortie.Phase == WardenPhase.Returning);
-        if (_installedRouteUnsafe)
-        {
-            // FindPath still uses this path after the event. Its late WalkerMover is disabled now,
-            // then our Tick/Launch caller synchronously stops the walker after FindPath returns.
-            _movement.RejectRoute();
-        }
-    }
-
     private bool At(Vector3 destination) => _navigation.InStoppingProximity(_navigator.CurrentAccessOrPosition(), destination);
     private bool AtStation() => _station is not null && _station.Access.Accesses.Any(At);
     private bool Refuse(WardenResponseReason responseReason, string reason) { ResponseReason = responseReason; Status = reason; return false; }

@@ -37,7 +37,16 @@ public sealed class NativeResourcePoisonMovementTests
         var executorType = mod.GetType($"Wildfire.Timberborn.{(warden ? "FireResponse" : "Ash")}.{kind}Executor")!;
         var executor = Activator.CreateInstance(executorType, new object?[5])!;
         Field(executorType, warden ? "_delivery" : "_resources").SetValue(executor, resources);
-        Field(executorType, warden ? "_movement" : "_ownedWalk").SetValue(executor, helper);
+        // Exercise the real new adapter's pause delegation. Field/route dependencies stay absent:
+        // poison must not query navigation or touch the existing native destination.
+        var driverType = mod.GetType("Wildfire.Timberborn.FireSafety.TimberbornFireWalkDriver")!;
+        var driver = RuntimeHelpers.GetUninitializedObject(driverType);
+        Field(driverType, "_walker").SetValue(driver, walker);
+        Field(driverType, "_movement").SetValue(driver, helper);
+        var fireWalkType = mod.GetType("Wildfire.Timberborn.FireSafety.TimberbornFireWalk")!;
+        var fireWalk = Activator.CreateInstance(fireWalkType,
+            BindingFlags.Instance | BindingFlags.NonPublic, null, [driver, null], null)!;
+        Field(executorType, warden ? "_movement" : "_ownedWalk").SetValue(executor, fireWalk);
         var mortalType = native.LoadNative("Timberborn.MortalSystem").GetType("Timberborn.MortalSystem.Mortal")!;
         var mortal = RuntimeHelpers.GetUninitializedObject(mortalType);
         var characterType = native.LoadNative("Timberborn.Characters").GetType("Timberborn.Characters.Character")!;
