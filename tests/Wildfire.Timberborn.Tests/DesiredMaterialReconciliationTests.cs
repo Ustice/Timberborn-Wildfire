@@ -84,11 +84,13 @@ public sealed class DesiredMaterialReconciliationTests
         Assert.Null(Planner.Plan(registry, Owners(A), simulator, []));
     }
 
-    [Fact]
-    public void HiddenExhaustedArchiveRevealsWithoutFreshFuelAndRetiredOwnerIsArchived()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public void HiddenArchiveRevealsExactFuelWithoutFreshEligibilityAndRetiredOwnerIsArchived(int remainingFuel)
     {
         var registry = Registry(1); registry.Reconcile([Projection(A, 0), Projection(B, 0)], []);
-        var archived = new FireSimMaterialArchiveSnapshot(new(2, 1), 1, 0, 0, Tree);
+        var archived = new FireSimMaterialArchiveSnapshot(new(2, 1), 1, 0, (uint)remainingFuel, Tree);
         var simulator = Sim(1, [5], [Tree], [1], [1], [new(1, 1), new(2, 1)], [archived]);
         registry.Reconcile([], [A]);
         var owners = Owners(A, B); owners[A] = OwnedBodyRetention.RetiredNativeOwner;
@@ -97,7 +99,7 @@ public sealed class DesiredMaterialReconciliationTests
         Assert.True(simulator.TryGetMaterialArchive(new(2, 1), out var exact));
         Assert.Same(exact, request.Archive);
         Apply(simulator, plan);
-        Assert.Equal(0, PackedCell.Fuel(simulator.CaptureSnapshot().Cells[0]));
+        Assert.Equal(remainingFuel, PackedCell.Fuel(simulator.CaptureSnapshot().Cells[0]));
         Assert.True(simulator.TryGetMaterialArchive(new(1, 1), out _));
         Assert.False(simulator.TryGetMaterialArchive(new(2, 1), out _));
         Assert.Null(Planner.Plan(registry, owners, simulator, []));

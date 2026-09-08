@@ -52,6 +52,72 @@ public sealed class CompleteRestoreProjectionTests
     }
 
     [Theory]
+    [InlineData("state", 0)]
+    [InlineData("state", 3)]
+    [InlineData("disabled", 0)]
+    [InlineData("disabled", 3)]
+    public void VerifiedKnownTreeMaterialRestoresExactHistoryWithoutFreshEligibility(string state, int archivedFuel)
+    {
+        var f = new Fixture(tree: true);
+        f.Current = f.Observe(state);
+        var material = f.Saved.OwnedMaterial!;
+        var simulation = material.CaptureSimulation();
+        var archive = Assert.Single(simulation.MaterialAuthority.Archives);
+        simulation = simulation with { MaterialAuthority = simulation.MaterialAuthority with
+            { Archives = [archive with { PackedCell = (uint)archivedFuel }] } };
+        f.Saved = f.Saved with { OwnedMaterial = new(simulation, material.Bindings, material.History) };
+        var before = TimberbornWildfirePersistenceCodec.Encode(f.Saved);
+        var ids = f.Current.RetainedBodies.Select(body => body.EntityId).ToArray();
+        Assert.Empty(f.Current.CaptureFreshEligibleOwners(ids));
+        using var restored = f.Restore();
+        Assert.Equal(2, restored.Registry.ResolveCell(0).Contributors.Count);
+        Assert.Equal(archivedFuel, PackedCell.Fuel((ushort)Assert.Single(restored.Simulator.CaptureSnapshot().MaterialAuthority.Archives).PackedCell));
+        Assert.Equal(simulation.Cells, restored.Simulator.CaptureSnapshot().Cells);
+        var empty = TimberbornWildfirePersistenceSnapshot.Empty;
+        Assert.Equal(before, TimberbornWildfirePersistenceCodec.Encode(restored.Capture(empty.AshField, empty.BeaverBehavior)));
+        Assert.Empty(f.Native.TreeCalls);
+        Assert.Empty(f.Native.InventoryCalls);
+        Assert.All(restored.Damage.States.Values, value => Assert.Equal(60, value.DamageCapacity));
+    }
+
+    [Fact]
+    public void RetainedTreeLeftoverRemainsExplicitlyUnsupported()
+    {
+        var f = new Fixture(tree: true);
+        f.Current = f.Observe("excluded");
+        Assert.Throws<NotSupportedException>(() => f.Restore());
+        Assert.Null(f.Backend);
+        Assert.Empty(f.Native.TreeCalls);
+    }
+
+    [Fact]
+    public void CurrentSupportedLiveObservationDerivesFreshEligibilityWithoutSavingIt()
+    {
+        var f = new Fixture(tree: true);
+        var ids = f.Current.RetainedBodies.Select(body => body.EntityId).ToArray();
+        Assert.Equal(ids, f.Current.CaptureFreshEligibleOwners(ids));
+        f.Current = f.Observe("state");
+        Assert.Empty(f.Current.CaptureFreshEligibleOwners(ids));
+        f.Current = f.Observe();
+        Assert.Equal(ids, f.Current.CaptureFreshEligibleOwners(ids));
+    }
+
+    [Fact]
+    public void UnprovedOrChangedNativeTreeCompositionCannotBroadenKnownMaterialRestore()
+    {
+        var f = new Fixture(tree: true);
+        f.Current = f.Observe("tree-evidence");
+        Assert.Throws<NotSupportedException>(() => f.Restore());
+        Assert.Null(f.Backend);
+        f.Current = f.Observe("state");
+        f.AfterCreate = () => f.Current = f.Observe("tree-evidence");
+        Assert.Throws<ArgumentException>(() => f.Restore());
+        Assert.Equal(1, f.Backend!.Disposals);
+        Assert.False(f.Guard.IsIndeterminate);
+        Assert.Empty(f.Native.TreeCalls);
+    }
+
+    [Theory]
     [InlineData("membership")]
     [InlineData("quantity")]
     [InlineData("placement")]
@@ -179,13 +245,15 @@ public sealed class CompleteRestoreProjectionTests
         internal Backend? Backend;
         internal Action? AfterCreate, DuringCapture;
         private readonly bool _withDisabledStock;
-        internal Fixture(bool withDisabledStock = false)
+        private readonly bool _tree;
+        internal Fixture(bool withDisabledStock = false, bool tree = false)
         {
             _withDisabledStock = withDisabledStock;
+            _tree = tree;
             var original = Observe(actual: 5);
             var compiled = TimberbornInitialBodyCompiler.Compile(original.CurrentWorld, original.RetainedBodies.Select(body =>
                 new TimberbornInitialBodySelection(body.EntityId, TimberbornInitialAccountingBasis.NativeResourceAmounts,
-                    [new("Gatherable", TimberbornCapturedYieldRole.Gatherable, TimberbornInitialYieldUse.Actual)],
+                    [new(_tree ? "Cuttable" : "Gatherable", _tree ? TimberbornCapturedYieldRole.Cuttable : TimberbornCapturedYieldRole.Gatherable, TimberbornInitialYieldUse.Actual)],
                     withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, TimberbornInitialInventoryUse.Excluded)] : [])));
             var registry = new TimberbornNativeMaterialRegistry(Grid, []);
             registry.Reconcile(compiled.Projections, []);
@@ -206,18 +274,20 @@ public sealed class CompleteRestoreProjectionTests
         }
         internal TimberbornOwnedRestoreObservation Observe(string? mutation = null, int actual = 3)
         {
-            TimberbornInitialMaterialBody Body(Guid id) => new(id, "Carrot", TimberbornInitialBodyShape.Crop,
+            TimberbornInitialMaterialBody Body(Guid id) => new(id, _tree ? "Pine" : "Carrot", _tree ? TimberbornInitialBodyShape.Tree : TimberbornInitialBodyShape.Crop,
                 [new(new(0, 0, 0), mutation == "placement" && id == B ? 1 : 0)],
-                [new(TimberbornCapturedYieldRole.Gatherable, "Gatherable", "Carrot", mutation == "quantity" ? 2 : actual,
-                    "Carrot", 5, false, mutation != "disabled")],
+                [new(_tree ? TimberbornCapturedYieldRole.Cuttable : TimberbornCapturedYieldRole.Gatherable,
+                    _tree ? "Cuttable" : "Gatherable", _tree ? "Log" : "Carrot",
+                    _tree && mutation == "disabled" ? 0 : mutation == "quantity" ? 2 : actual,
+                    _tree ? "Log" : "Carrot", 5, false, mutation != "disabled")],
                 _withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, false, [new("Carrot", 2)])] : [], null);
             var bodies = new[] { Body(A), Body(B) };
-            var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, mutation == "state", false, 
+            var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, mutation is "state" or "tree-evidence", _tree && mutation != "tree-evidence",
                 mutation is "declaration" or "new-role" ? [new(mutation == "new-role" ? TimberbornNativeInventoryRole.Manufactory : TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : _withDisabledStock ? [new(TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : [])).ToArray();
             var declarations = new TimberbornInventoryDeclarationCapture(states.Select(state => new TimberbornBodyInventoryDeclarations(state.EntityId, state.Inventories)));
             var worldBodies = mutation is "membership" or "excluded" ? bodies.Take(1).ToArray() : bodies;
             var world = new TimberbornInitialWorldCapture(Grid, worldBodies,
-                mutation == "excluded" ? [new(B, "Carrot", TimberbornInitialCaptureExclusion.TreeLeftover)] : [], [],
+                mutation == "excluded" ? [new(B, _tree ? "Pine" : "Carrot", TimberbornInitialCaptureExclusion.TreeLeftover)] : [], [],
                 TimberbornInitialEnvironmentCapture.ForOwnedDomain(new TimberbornWorldDomain(Grid, new(Grid.Width, Grid.Height, 1)), [1, 4], [new(6, .2f, .1f, true, true)],
                     [new(2, 0, 0, 1, mutation == "water" ? .9f : .5f, 0, 0), new(3, 0, 0, 1, .5f, .5f, 0)]),
                 new(declarations.Bodies.Where(body => worldBodies.Any(value => value.EntityId == body.EntityId))));
