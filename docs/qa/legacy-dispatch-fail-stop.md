@@ -2,6 +2,8 @@
 
 Source base: `54b0d83`. Classification commit: `fcdca3a`. Host delivery commit: `2d1ef43`.
 
+Subsequent source `6953d3e` adds [normal runtime dispatch save exclusion](dispatch-save-exclusion.md). The reentrant-save limit below describes this earlier proof; direct-call bypasses and swallowed-followup limits remain.
+
 A simulator step could finish buffer swap and then fail in an ordinary listener, native consequence, or later FireSystem callback while the native resource guard still admitted saves. FireSystem could also return successfully and a runtime synchronization failure prevent the remaining followups. This change closes those escaping-failure paths without wrapping the entire dispatch in a resource transaction.
 
 ## Completion boundary
