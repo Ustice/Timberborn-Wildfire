@@ -9,7 +9,7 @@
   },
   "BuildingModelSpec": {
     "FinishedModelName": "#Finished",
-    "UnfinishedModelName": "",
+    "UnfinishedModelName": "#Unfinished",
     "ConstructionModeModel": "Finished"
   },
   "BlockObjectSpec": {
@@ -187,6 +187,13 @@
     "Icon": "Sprites/StatusIcons/BuildingNeedsWater"
   },
   "Children": {
+    "#Unfinished": {
+      "Children": {
+        "ConstructionBase3x3#nested": {
+          "BlueprintPath": "ConstructionBases/ConstructionBase3x3/ConstructionBase3x3.blueprint"
+        }
+      }
+    },
     "#Finished": {
       "TimbermeshSpec": {
         "Model": "Buildings/FireResponse/WardenStation.IronTeeth"
