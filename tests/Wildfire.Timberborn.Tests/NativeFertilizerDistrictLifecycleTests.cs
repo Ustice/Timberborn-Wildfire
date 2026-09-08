@@ -5,6 +5,82 @@ namespace Wildfire.Timberborn.Tests;
 public sealed class NativeFertilizerDistrictLifecycleTests
 {
     [Fact]
+    public void ActualMortalityImmediatelyMakesNativeMortalDead()
+    {
+        using var f = Ready();
+        var mortal = f.Satchel.GetType().GetField("_mortal", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Satchel)!;
+        Assert.False((bool)f.Get(mortal, "Dead")!);
+        Assert.False((bool)f.Get(mortal, "ShouldDie")!);
+        f.Call(f.Character, "KillCharacter");
+        Assert.True((bool)f.Get(mortal, "Dead")!);
+        Assert.False((bool)f.Get(mortal, "ShouldDie")!);
+        Assert.False(f.Poisoned);
+    }
+
+    [Fact]
+    public void NativeDeleteEventOccursAfterSatchelExitButBeforeAnyMortalityOrInventoryDisable()
+    {
+        using var f = Ready();
+        var mortal = f.Satchel.GetType().GetField("_mortal", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Satchel)!;
+        bool observed = false;
+        f.DeleteThroughNativeEntity(() =>
+        {
+            observed = true;
+            Assert.True((bool)f.Satchel.GetType().GetField("_exited", NativeFertilizerSatchelFixture.Flags)!.GetValue(f.Satchel)!);
+            Assert.True((bool)f.Get(f.Character, "Alive")!);
+            Assert.False((bool)f.Get(mortal, "Dead")!);
+            Assert.False((bool)f.Get(mortal, "ShouldDie")!);
+            Assert.True((bool)f.Get(f.Inventory, "Enabled")!);
+            Assert.False(f.Poisoned);
+            Assert.Equal(1, f.Quantity(f.Inventory));
+            Assert.Equal(0, f.Consumption);
+        });
+        Assert.True(observed);
+    }
+
+    [Theory]
+    [InlineData("TryPickup")]
+    [InlineData("TryReturn")]
+    [InlineData("ConsumeCommittedUnit")]
+    public void ActualCleanDeleteRejectsEverySatchelStockEntryBeforeUnityOrNativeStockAccess(string operation)
+    {
+        using var f = Ready();
+        f.Give(f.Source);
+        if (operation == "TryPickup")
+        {
+            f.Call(f.Inventory, "TakeExisting", f.Amount());
+            f.SetReservation("Stock", f.Source);
+        }
+        else if (operation == "TryReturn") f.SetReservation("Capacity", f.Source);
+        int before = f.Quantity(f.Inventory);
+        bool phase = false;
+        f.DeleteThroughNativeEntity(() =>
+        {
+            // Remove only the fixture's satchel cache after the actual exit callback. Any
+            // attempted Unity truth lookup now fails; no positive liveness is fabricated.
+            f.T("Timberborn.BaseComponentSystem", "BaseComponent")
+                .GetField("_componentCache", NativeFertilizerSatchelFixture.Flags)!.SetValue(f.Satchel, null);
+            if (operation == "ConsumeCommittedUnit")
+            {
+                var error = Assert.Throws<TargetInvocationException>(() =>
+                    f.ApplyCallback(() => f.Call(f.Satchel, operation, (Action)(() => phase = true))));
+                var stepError = Assert.IsType<Wildfire.Core.FireSimStepInputException>(error.InnerException);
+                var invocation = Assert.IsType<TargetInvocationException>(stepError.InnerException);
+                var rejection = Assert.IsType<InvalidOperationException>(invocation.InnerException);
+                Assert.Contains("lost its live native owner", rejection.Message);
+            }
+            else Assert.False((bool)f.Call(f.Satchel, operation, f.Source, f.Reserver, (Action)(() => phase = true))!);
+        });
+        Assert.False(phase);
+        Assert.Equal(before, f.Quantity(f.Inventory));
+        Assert.Equal(1, f.Quantity(f.Source));
+        Assert.Equal(0, f.Consumption);
+        Assert.Equal(0, f.Production);
+        if (operation == "TryPickup") Assert.True(f.Reservation("Stock", f.Source));
+        if (operation == "TryReturn") Assert.True(f.Reservation("Capacity", f.Source));
+    }
+
+    [Fact]
     public void CitizenFirstDeathFailureDoesNotAbortLaterNativeDeathSubscribers()
     {
         using var f = Ready();

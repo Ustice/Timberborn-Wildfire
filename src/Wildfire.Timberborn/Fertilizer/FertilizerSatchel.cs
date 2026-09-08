@@ -106,7 +106,7 @@ public sealed class FertilizerSatchel : BaseComponent, IAwakableComponent, IInit
         });
     }
 
-    private bool Live => this && Inventory && Inventory.Enabled && _mortal && !_mortal.Dead && !_mortal.ShouldDie;
+    private bool Live => !_exited && this && Inventory && Inventory.Enabled && _mortal && !_mortal.Dead && !_mortal.ShouldDie;
 
     internal static bool ExactStockReservation(Inventory source, GoodReserver reserver)
     {
