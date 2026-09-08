@@ -1,6 +1,8 @@
-# Native definition evidence for owned restoration
+# Native definition evidence — historical OWNED3 diagnostic restoration
 
-Complete restoration must preserve the saved body's accounting definition when native quantities change.
+This report preserves the executed OWNED3 checkpoints and their later fidelity regressions. The old WorldSession `PrepareRestore` is now `PrepareDiagnosticRestore`. OWNED3 lacks original inventory-role evidence and is universally diagnostic-only. See [current OWNED4 complete staging](complete-owned-restore-staging.md) for the required declaration evidence, complete desired registry and rich baseline. Historical counts and engine boundaries below are unchanged.
+
+Restoration must preserve the saved body's accounting definition when native quantities change.
 The earlier fresh-definition path selected positive current Yielder amounts: an initial five-unit body
 with capacity 15 could become a freshly calculated capacity 9 after its native yield fell to three.
 Initial eligibility also excluded some retained leftovers. Neither fact makes the saved body invalid.
@@ -23,7 +25,7 @@ The separate static witness contains exact Guid/spec, native body shape, configu
 transformed-independent local footprint, named yield roles with declared goods/amounts/RemoveOnCut,
 and static building cost. Null cost means nonbuilding; an empty building cost is meaningful. Current
 yield, inventory quantity, Enabled flags, timers and reservations are excluded. The complete set must
-match exactly the retained owners and their saved local-slot bindings. Retired owners have no witness
+match exactly the retained owners and their saved local-slot bindings. In this OWNED3 format, retired owners have no witness
 or BURN body; their canonical origin and effect history remain retained.
 
 `CreateWithNativeDefinitions` uses the existing registry and consumer. It accepts settled initial facts
@@ -106,4 +108,4 @@ Four counterfactual cases (changed declared definition, actual quantity, availab
 
 Initial and restored sessions now share complete snapshot comparison after backend construction. The factory receives a separate array copy, must report complete material history, and must return the expected cells, companion and transport fields, identities, tick, parameters, seed, ordered pending commands, known identities and exact archive records. Set ordering of identities/archives is immaterial; their membership and archive bytes are exact. Native final rereading follows backend readback and all other callback-capable staging.
 
-Five counterfactual fixtures all failed against the former dimensions-only restore check: altered archived fuel, dropped pending input, dropped archive, legacy capability and mutation of factory input arrays. The corrected full native suite passes **1,118 tests**, zero failures/skips. Failure disposes the unpublished backend and leaves both saved evidence and the existing native guard usable. Evidence: `/tmp/wildfire-restore-backend-counterfactual.log` and `/tmp/wildfire-restore-backend-integrated.log`. This verifies staged backend fidelity; rebuilding desired native projections and the rich baseline on restore remains a separate activation requirement.
+Five counterfactual fixtures all failed against the former dimensions-only restore check: altered archived fuel, dropped pending input, dropped archive, legacy capability and mutation of factory input arrays. The corrected full native suite passes **1,118 tests**, zero failures/skips. Failure disposes the unpublished backend and leaves both saved evidence and the existing native guard usable. Evidence: `/tmp/wildfire-restore-backend-counterfactual.log` and `/tmp/wildfire-restore-backend-integrated.log`. This verifies staged backend fidelity at that checkpoint. The linked OWNED4 report now covers rebuilding desired native projections and the rich baseline; reconciliation and runtime publication remain separate activation requirements.
