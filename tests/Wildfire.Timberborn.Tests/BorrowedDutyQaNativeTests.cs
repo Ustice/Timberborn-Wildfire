@@ -34,7 +34,7 @@ public sealed class BorrowedDutyQaNativeTests
         var mod = native.LoadMod();
         var fixture = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.FireBell.BorrowedDutyFixture")!)!;
         var type = mod.GetType("Wildfire.Timberborn.FireBell.BorrowedDutyQaApi")!;
-        var api = Activator.CreateInstance(type, new[] { fixture, null, null, null })!;
+        var api = Activator.CreateInstance(type, new[] { fixture, null, null, null, null })!;
         var request = Activator.CreateInstance(mod.GetType("Wildfire.Timberborn.Qa.BorrowedDutyQaArmRequest")!, Guid.NewGuid(), 1f, 2f, 3f)!;
         var failure = Assert.Throws<TargetInvocationException>(() => type.GetMethod("Arm")!.Invoke(api, new[] { request }));
         Assert.Contains("--wildfire-enable-borrowed-duty", failure.InnerException!.Message);

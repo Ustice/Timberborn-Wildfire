@@ -14,6 +14,7 @@ public sealed class BorrowedDutyFixture : ILoadableSingleton
     private readonly List<BorrowedDutyExecutor> _executors = new();
     private Workplace? _donor;
     private Vector3 _point;
+    private BorrowedWaterTrip? _waterTrip;
     public void Load() => Disarm(); // Saved actors remain registered and continue their bounded job.
     internal void Register(BorrowedDutyExecutor executor) => _executors.Add(executor);
     internal void Unregister(BorrowedDutyExecutor executor) => _executors.Remove(executor);
@@ -27,17 +28,30 @@ public sealed class BorrowedDutyFixture : ILoadableSingleton
             throw new ArgumentException("A live enabled donor and finite destination are required.");
         _donor = donor; _point = destination;
     }
+    internal void ArmWater(Workplace donor, BorrowedWaterTrip trip)
+    {
+        Arm(donor, trip.Shore);
+        try
+        {
+            bool prepared = false;
+            foreach (var executor in _executors.ToArray()) prepared |= executor.PrepareWaterOffer(donor);
+            if (!prepared) throw new InvalidOperationException("The finite water offer requires a current initialized donor employee.");
+            _waterTrip = trip;
+        }
+        catch { Disarm(); throw; }
+    }
     public BorrowedDutyQaStatus CaptureQaStatus()
     {
         bool donorLive = _donor is not null && _donor && !_donor.GetComponent<EntityComponent>().Deleted;
         return new BorrowedDutyQaStatus(AdmissionsEnabled,
             _donor is null ? "none" : donorLive ? "armed" : "unavailable",
             donorLive ? _donor!.GetComponent<EntityComponent>().EntityId : null,
-            _executors.Where(executor => executor.Phase != BorrowedDutyPhase.Idle)
-                .Select(executor => new BorrowedDutyQaActor(executor.EntityId, executor.Phase.ToString(), executor.CancellationRequested, executor.NativeExecutionOwned)).ToArray(),
+            _executors.Where(executor => executor.Phase != BorrowedDutyPhase.Idle || executor.RetainedWater)
+                .Select(executor => new BorrowedDutyQaActor(executor.EntityId, executor.Phase.ToString(), executor.CancellationRequested, executor.NativeExecutionOwned,
+                    executor.WaterIntent, executor.WaterStock, executor.WaterSourceId, executor.ReturnAssigned)).ToArray(),
             _donor is null ? null : new BorrowedDutyQaPoint(_point.x, _point.y, _point.z));
     }
-    public void Disarm() => _donor = null;
+    public void Disarm() { _donor = null; _waterTrip = null; }
     public void Cancel()
     {
         Disarm();
@@ -46,7 +60,9 @@ public sealed class BorrowedDutyFixture : ILoadableSingleton
     internal bool IsArmedAt(Workplace donor) => AdmissionsEnabled && ReferenceEquals(donor, _donor);
     internal bool TryOffer(Workplace donor, BorrowedDutyExecutor executor)
     {
-        if (!IsArmedAt(donor) || !executor.TryLaunch(donor, _point)) return false;
+        if (!IsArmedAt(donor)) return false;
+        bool launched = _waterTrip is { } trip ? executor.TryLaunchWater(donor, trip) : executor.TryLaunch(donor, _point);
+        if (!launched) return false;
         Disarm(); return true;
     }
 }

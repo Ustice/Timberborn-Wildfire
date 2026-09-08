@@ -56,6 +56,33 @@ public sealed class BorrowedDutyQaCommandTests
     }
 
     [Fact]
+    public void WaterAdmissionPreservesExactSourceReturnIdentityAndSeparateCoordinateSystems()
+    {
+        var api = new FakeDuty();
+        var bridge = Bridge(api, TimberbornQaCommandAccess.Development);
+        Assert.True(bridge.Execute($"qa-borrowed-duty-source 3 1 4 2.5 4 1.5").Success);
+        Assert.Equal(new BorrowedSourceQaRequest(3, 1, 4, new(2.5f, 4, 1.5f)), api.LastSource);
+        Assert.True(bridge.Execute($"qa-borrowed-duty-water {Donor} {Donor} 2.5 4 1.5 123 4.5 4 1.5 {Donor} Stockpile").Success);
+        Assert.Equal(new BorrowedWaterQaRequest(Guid.Parse(Donor), Guid.Parse(Donor), new(2.5f, 4, 1.5f),
+            123, new(4.5f, 4, 1.5f), Guid.Parse(Donor), "Stockpile"), api.LastWater);
+        Assert.False(Bridge(api, TimberbornQaCommandAccess.Diagnostics).Execute("qa-borrowed-duty-source 3 1 4 2.5 4 1.5").Success);
+        Assert.Equal(2, api.Calls);
+    }
+
+    [Theory]
+    [InlineData("qa-borrowed-duty-source 3 1 4 2.5 NaN 1.5")]
+    [InlineData("qa-borrowed-duty-source 3.1 1 4 2.5 4 1.5")]
+    [InlineData("qa-borrowed-duty-source -1 1 4 2.5 4 1.5")]
+    [InlineData("qa-borrowed-duty-water " + Donor + " " + Donor + " 2.5 4 1.5 -1 4.5 4 1.5 " + Donor + " Stockpile")]
+    [InlineData("qa-borrowed-duty-water " + Donor + " " + Donor + " 2.5 4 1.5 123 4.5 Infinity 1.5 " + Donor + " Stockpile")]
+    public void MalformedWaterCommandsDoNotCreateSourcesOrOfferWork(string command)
+    {
+        var api = new FakeDuty();
+        Assert.False(Bridge(api, TimberbornQaCommandAccess.Development).Execute(command).Success);
+        Assert.Equal(0, api.Calls);
+    }
+
+    [Fact]
     public void AbsentNativeCapabilityIsExplicitlyUnsupported()
     {
         var result = Bridge(null, TimberbornQaCommandAccess.Development).Execute($"qa-borrowed-duty-arm {Donor} 1 2 3");
@@ -73,9 +100,13 @@ public sealed class BorrowedDutyQaCommandTests
     {
         public int Calls;
         public BorrowedDutyQaArmRequest LastArm;
+        public BorrowedWaterQaRequest LastWater;
+        public BorrowedSourceQaRequest LastSource;
         public BorrowedDutyQaStatus Value = new(false, "none", null, Array.Empty<BorrowedDutyQaActor>());
         public BorrowedDutyQaStatus Arm(BorrowedDutyQaArmRequest request)
         { Calls++; LastArm = request; return Value = new(true, "armed", request.DonorId, Array.Empty<BorrowedDutyQaActor>()); }
+        public BorrowedDutyQaStatus ArmWater(BorrowedWaterQaRequest request) { Calls++; LastWater = request; return Value; }
+        public BorrowedDutyQaStatus CreateSource(BorrowedSourceQaRequest request) { Calls++; LastSource = request; return Value; }
         public BorrowedDutyQaStatus Cancel() { Calls++; return Value = Value with { OfferState = "none", DonorId = null }; }
         public BorrowedDutyQaStatus Status() { Calls++; return Value; }
     }

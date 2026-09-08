@@ -28,11 +28,12 @@ public sealed class BorrowedDutyBehavior : RootBehavior, IPersistentEntity, IAwa
     internal bool ReturnAssigned { get; private set; }
     internal Inventory? ReturnDestination { get; private set; }
     public string? UnsupportedReason { get; private set; }
-    internal bool RecoveryReady
+    internal bool RecoveryReady => ReturnAssigned && RecoveryPrepared;
+    internal bool RecoveryPrepared
     {
         get
         {
-            if (!_initialized || !ReturnAssigned) return false;
+            if (!_initialized) return false;
             try { return BorrowedDutyRecoveryOrder.IsInstalled(_manager, this); }
             catch (Exception exception) { UnsupportedReason = exception.Message; return false; }
         }
@@ -53,16 +54,22 @@ public sealed class BorrowedDutyBehavior : RootBehavior, IPersistentEntity, IAwa
         try { BorrowedDutyRecoveryOrder.Install(_manager, this); UnsupportedReason = null; }
         catch (Exception exception) { UnsupportedReason = exception.Message; }
     }
-    // Separate pre-pickup assignment; never call inside a source transfer or another guard.
+    // QA prepares current employees outside native root enumeration. An unassigned root stays inert.
+    internal void PrepareRecovery()
+    {
+        if (!_initialized) throw new InvalidOperationException("Borrowed recovery preparation requires an initialized actor.");
+        BorrowedDutyRecoveryOrder.RequireInstallable(_manager, this);
+        _resources.TransferInventory(() => BorrowedDutyRecoveryOrder.Install(_manager, this));
+    }
+    // Called during workplace arbitration: never change the list currently enumerated by BehaviorManager.
     internal void BindReturn(Inventory destination)
     {
         if (!_initialized || !destination || ReferenceEquals(destination, _equipment.Inventory) ||
-            !string.IsNullOrEmpty(_manager.RunningExecutor.Name) || _executor.HasReservations)
-            throw new InvalidOperationException("Borrowed return binding requires an initialized idle actor and destination.");
-        BorrowedDutyRecoveryOrder.RequireInstallable(_manager, this);
+            !string.IsNullOrEmpty(_manager.RunningExecutor.Name) || _executor.HasReservations || !RecoveryPrepared)
+            throw new InvalidOperationException("Borrowed return binding requires a prepared idle actor and destination.");
         _resources.TransferInventory(() =>
         {
-            BorrowedDutyRecoveryOrder.Install(_manager, this);
+            if (!RecoveryPrepared) throw new InvalidOperationException("Prepared borrowed recovery order changed before binding.");
             ReturnAssigned = true;
             ReturnDestination = destination;
         });

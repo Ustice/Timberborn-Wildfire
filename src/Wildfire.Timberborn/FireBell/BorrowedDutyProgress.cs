@@ -1,8 +1,8 @@
 namespace Wildfire.Timberborn.FireBell;
 
-public enum BorrowedDutyPhase { Idle, Outbound, AtPoint, Returning }
+public enum BorrowedDutyPhase { Idle, Outbound, AtPoint, Returning, FetchingWater, AwaitingCredit, ApproachingFire, AwaitingApplication }
 
-/// <summary>Disposable workforce experiment; no old executor stack or goods are owned here.</summary>
+/// <summary>Actor phases and elapsed deadline; native inventory remains the only carried quantity.</summary>
 public sealed class BorrowedDutyProgress
 {
     public BorrowedDutyPhase Phase { get; private set; }
@@ -13,6 +13,16 @@ public sealed class BorrowedDutyProgress
     {
         if (Phase != BorrowedDutyPhase.Outbound || !physicallyPresent) throw new InvalidOperationException("Borrowed duty requires physical arrival.");
         Phase = BorrowedDutyPhase.AtPoint;
+    }
+    public void BeginWater() { Begin(); Phase = BorrowedDutyPhase.FetchingWater; }
+    public void ArriveSource(bool physicallyPresent) => Transition(BorrowedDutyPhase.FetchingWater, BorrowedDutyPhase.AwaitingCredit, physicallyPresent);
+    public void Loaded() => Transition(BorrowedDutyPhase.AwaitingCredit, BorrowedDutyPhase.ApproachingFire);
+    public void ArriveFire(bool physicallyPresent) => Transition(BorrowedDutyPhase.ApproachingFire, BorrowedDutyPhase.AwaitingApplication, physicallyPresent);
+    public void Applied() => Transition(BorrowedDutyPhase.AwaitingApplication, BorrowedDutyPhase.Returning);
+    private void Transition(BorrowedDutyPhase expected, BorrowedDutyPhase next, bool permitted = true)
+    {
+        if (Phase != expected || !permitted) throw new InvalidOperationException("Borrowed water phase or physical arrival changed.");
+        Phase = next;
     }
     public void Advance(float hours)
     {

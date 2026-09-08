@@ -24,6 +24,7 @@ public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAw
     private static readonly ComponentKey Key = new("Wildfire.BorrowedDutyExecutor");
     private static readonly PropertyKey<int> VersionKey = new("Version");
     private static readonly PropertyKey<Inventory> ReturnInventoryKey = new("ReturnInventory");
+    private static readonly PropertyKey<bool> WaterIntentKey = new("WaterSortie");
     private static readonly PropertyKey<bool> ReturnOnlyKey = new("ReturnOnly");
     private static readonly PropertyKey<int> PhaseKey = new("Phase");
     private static readonly PropertyKey<float> HoursKey = new("Hours");
@@ -72,12 +73,13 @@ public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAw
         _needs = GetComponent<NeedManager>(); _manager = GetComponent<BehaviorManager>();
         _movement = TimberbornFireWalk.Create(this, _field, () => Phase switch
         {
-            BorrowedDutyPhase.Outbound => FireWalkMode.Outbound,
+            BorrowedDutyPhase.Outbound or BorrowedDutyPhase.FetchingWater or BorrowedDutyPhase.ApproachingFire => FireWalkMode.Outbound,
             BorrowedDutyPhase.Returning => FireWalkMode.Escape,
             _ => FireWalkMode.Ignore
         });
         _navigator = GetComponent<Navigator>();
         _fixture.Register(this);
+        _resources.Register((INativeWaterApplicationProducer)this);
     }
     internal bool TryLaunch(Workplace donor, Vector3 point)
     {
@@ -102,6 +104,7 @@ public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAw
         if (Phase == BorrowedDutyPhase.Idle) return ExecutorStatus.Success;
         if (!_manager.IsRunningExecutor<BorrowedDutyExecutor>()) throw new InvalidOperationException("Borrowed duty does not own native movement.");
         if (_returnOnly) return TickReturn(hours);
+        if (_waterIntent) return TickWater(hours);
         if (_mortal.Dead || _mortal.ShouldDie)
         { _movement.Stop(); _progress.Finish(); return ExecutorStatus.Failure; }
         if (_resources.IsIndeterminate) { _movement.RejectRoute(); return ExecutorStatus.Running; }
@@ -150,13 +153,14 @@ public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAw
     public void DeleteEntity()
     {
         try { if (_returnOnly) FinishReturn(dying: true); }
-        finally { _movement.Dispose(); _fixture.Unregister(this); }
+        finally { _movement.Dispose(); _fixture.Unregister(this); _resources.Unregister((INativeWaterApplicationProducer)this); }
     }
     public void Save(IEntitySaver saver)
     {
-        if (_returnOnly) _resources.ThrowIfSaveUnsafe();
+        if (_returnOnly || _waterIntent) _resources.ThrowIfSaveUnsafe();
         var state = saver.GetComponent(Key);
-        state.Set(VersionKey, 2);
+        state.Set(VersionKey, 3);
+        state.Set(WaterIntentKey, _waterIntent);
         state.Set(ReturnOnlyKey, _returnOnly);
         if (_returnOnly && _returnInventory is not null && _returnInventory)
             state.Set(ReturnInventoryKey, _returnInventory, _references.Of<Inventory>());
@@ -167,13 +171,19 @@ public sealed partial class BorrowedDutyExecutor : BaseComponent, IExecutor, IAw
     public void Load(IEntityLoader loader)
     {
         var state = loader.GetComponent(Key);
-        if (state.Has(VersionKey) && state.Get(VersionKey) != 2)
+        int version = state.Has(VersionKey) ? state.Get(VersionKey) : 1;
+        if (state.Has(VersionKey) && version is not (2 or 3))
             throw new InvalidOperationException("Unsupported borrowed executor version.");
-        _returnOnly = state.Has(VersionKey) && state.Get(ReturnOnlyKey);
+        _returnOnly = version >= 2 && state.Get(ReturnOnlyKey);
+        _waterIntent = version >= 3 && state.Get(WaterIntentKey);
+        _waterTrip = null; _waterRoutePending = false;
         _returnInventory = null;
         if (_returnOnly && state.Has(ReturnInventoryKey))
             state.GetObsoletable(ReturnInventoryKey, _references.Of<Inventory>(), out _returnInventory);
         _progress.Restore(state.Get(PhaseKey), state.Get(HoursKey), state.Get(CancelKey));
+        if (_waterIntent && (_returnOnly || Phase is BorrowedDutyPhase.Idle or BorrowedDutyPhase.Outbound or BorrowedDutyPhase.AtPoint) ||
+            !_waterIntent && (int)Phase > (int)BorrowedDutyPhase.Returning)
+            throw new InvalidOperationException("Borrowed water phases require their own finite intent version.");
         if (_returnOnly && Phase != BorrowedDutyPhase.Returning)
             throw new InvalidOperationException("Borrowed recovery has a non-return phase.");
         if (state.Has(DonorKey)) state.GetObsoletable(DonorKey, _references.Of<Workplace>(), out _donor);
