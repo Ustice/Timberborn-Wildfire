@@ -32,7 +32,7 @@ public sealed class OwnedInitialSessionTests
         Assert.NotNull(saved.OwnedMaterial!.History!.NativeDefinitions);
         Assert.All(saved.OwnedMaterial.History.Natural, entry => Assert.Equal(0, entry.AppliedYieldLoss));
         using var restored = TimberbornOwnedWorldSession<Simulator>.PrepareCompleteRestore(saved, value => new(value),
-            (_, _) => new(f.Current, f.Current.Bodies, f.Current.Bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, false, []))), f.Effects, f.Guard);
+            (_, _) => new(f.Current, f.Current.Bodies, f.Current.Bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, false, false, []))), f.Effects, f.Guard);
         Assert.Equal(TimberbornWildfirePersistenceCodec.Encode(saved),
             TimberbornWildfirePersistenceCodec.Encode(restored.Capture(empty.AshField, empty.BeaverBehavior)));
         Assert.Empty(f.Native.TreeCalls); Assert.Empty(f.Native.CropCalls); Assert.Empty(f.Native.InventoryCalls);

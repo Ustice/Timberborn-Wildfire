@@ -18,7 +18,7 @@ public sealed partial class TimberbornInitialWorldProjectionProvider
             var dead = ReadDeathState(entity, body.Shape);
             var inventories = TimberbornNativeInventoryRoles.Capture(entity);
             return new TimberbornRetainedBodyObservation(body.EntityId, Exclusion(entity, block), dead,
-                inventories.Select(inventory => inventory.Declaration));
+                TimberbornRetainedTreeMaterialEvidence.Observe(entity, body), inventories.Select(inventory => inventory.Declaration));
         }).ToArray();
         return new(world, retained, states);
     }

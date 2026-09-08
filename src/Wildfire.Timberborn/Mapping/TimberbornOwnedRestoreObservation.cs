@@ -4,7 +4,7 @@ namespace Wildfire.Timberborn.Mapping;
 internal sealed class TimberbornRetainedBodyObservation
 {
     internal TimberbornRetainedBodyObservation(Guid entityId, TimberbornInitialCaptureExclusion? exclusion,
-        bool? isDead, IEnumerable<TimberbornInventoryDeclaration> inventories)
+        bool? isDead, bool supportsRetainedTreeMaterial, IEnumerable<TimberbornInventoryDeclaration> inventories)
     {
         if (entityId == Guid.Empty || exclusion is { } reason && !Enum.IsDefined(typeof(TimberbornInitialCaptureExclusion), reason))
             throw new ArgumentException("Retained observation requires an exact native identity and known state.");
@@ -15,14 +15,17 @@ internal sealed class TimberbornRetainedBodyObservation
         EntityId = entityId;
         Exclusion = exclusion;
         IsDead = isDead;
+        SupportsRetainedTreeMaterial = supportsRetainedTreeMaterial;
         Inventories = Array.AsReadOnly(roles);
     }
     internal Guid EntityId { get; }
     internal TimberbornInitialCaptureExclusion? Exclusion { get; }
     internal bool? IsDead { get; }
+    internal bool SupportsRetainedTreeMaterial { get; }
     internal IReadOnlyList<TimberbornInventoryDeclaration> Inventories { get; }
     internal bool SameReadings(TimberbornRetainedBodyObservation other) => EntityId == other.EntityId &&
-        Exclusion == other.Exclusion && IsDead == other.IsDead && Inventories.SequenceEqual(other.Inventories);
+        Exclusion == other.Exclusion && IsDead == other.IsDead &&
+        SupportsRetainedTreeMaterial == other.SupportsRetainedTreeMaterial && Inventories.SequenceEqual(other.Inventories);
 }
 
 /// <summary>One settled native observation, separate from saved accounting and GPU material history.</summary>
@@ -63,19 +66,32 @@ internal sealed class TimberbornOwnedRestoreObservation
             throw new NotSupportedException("Current material membership needs explicit new-owner or retained-state admission.");
         // Unfinished/leftover/deleted exclusions can still represent physical material. No automatic
         // omission policy is established here, even for an unregistered native owner.
-        if (CurrentWorld.Excluded.Count != 0 || States.Any(state => state.Exclusion is not null || state.IsDead == true))
+        if (CurrentWorld.Excluded.Count != 0 || States.Any(state => state.Exclusion is not null))
             throw new NotSupportedException("Excluded or terminal native body state needs an explicit material lifecycle decision.");
         if (!RetainedBodies.Zip(CurrentWorld.Bodies, (a, b) => a.SameReadings(b)).All(equal => equal))
             throw new ArgumentException("Required native facts differ from the full-world observation.");
         if (!InventoryDeclarations.SameReadings(CurrentWorld.InventoryDeclarations))
             throw new ArgumentException("Full-world and retained inventory declarations differ.");
         InventoryDeclarations.RequireSupportedMaterialBodies(RetainedBodies);
-        foreach (var body in RetainedBodies)
+        for (int index = 0; index < RetainedBodies.Count; index++)
         {
+            var body = RetainedBodies[index];
+            var state = States[index];
             // Disabled inventories still contain physical Stock; logistics eligibility belongs to
             // the mutation sink. Disabled Yielder publicly reports zero and needs separate evidence.
-            if (body.Yields.Any(yield => !yield.YieldEnabled))
-                throw new NotSupportedException("Disabled native yield requires explicit material lifecycle evidence.");
+            if ((state.IsDead == true || body.Yields.Any(yield => !yield.YieldEnabled)) &&
+                (body.Shape != TimberbornInitialBodyShape.Tree || !state.SupportsRetainedTreeMaterial))
+                throw new NotSupportedException("Terminal or disabled native yield lacks verified retained-tree material evidence.");
         }
     }
+
+    /// <summary>Derive anew inside the current observation scope; never persist this first-activation permission.</summary>
+    internal IReadOnlyCollection<Guid> CaptureFreshEligibleOwners(IReadOnlyList<Guid> requiredIds)
+    {
+        RequireSupported(requiredIds);
+        return Array.AsReadOnly(RetainedBodies.Where((body, index) =>
+            States[index].IsDead != true && body.Yields.All(yield => yield.YieldEnabled))
+            .Select(body => body.EntityId).ToArray());
+    }
+
 }

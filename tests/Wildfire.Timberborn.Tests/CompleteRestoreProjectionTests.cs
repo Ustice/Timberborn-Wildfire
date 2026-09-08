@@ -212,7 +212,7 @@ public sealed class CompleteRestoreProjectionTests
                     "Carrot", 5, false, mutation != "disabled")],
                 _withDisabledStock ? [new(TimberbornCapturedInventoryRole.GoodStack, false, [new("Carrot", 2)])] : [], null);
             var bodies = new[] { Body(A), Body(B) };
-            var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, mutation == "state", 
+            var states = bodies.Select(body => new TimberbornRetainedBodyObservation(body.EntityId, null, mutation == "state", false, 
                 mutation is "declaration" or "new-role" ? [new(mutation == "new-role" ? TimberbornNativeInventoryRole.Manufactory : TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : _withDisabledStock ? [new(TimberbornNativeInventoryRole.GoodStack, "HarvestStack")] : [])).ToArray();
             var declarations = new TimberbornInventoryDeclarationCapture(states.Select(state => new TimberbornBodyInventoryDeclarations(state.EntityId, state.Inventories)));
             var worldBodies = mutation is "membership" or "excluded" ? bodies.Take(1).ToArray() : bodies;
