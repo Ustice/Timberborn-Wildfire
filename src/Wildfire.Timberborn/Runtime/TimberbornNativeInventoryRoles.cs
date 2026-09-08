@@ -6,6 +6,7 @@ using Timberborn.RecoveredGoodSystem;
 using Timberborn.SimpleOutputBuildings;
 using Timberborn.Stockpiles;
 using Timberborn.Workshops;
+using Wildfire.Timberborn.FireResponse;
 
 namespace Wildfire.Timberborn.Runtime;
 
@@ -28,6 +29,7 @@ internal static class TimberbornNativeInventoryRoles
         Add(entity.GetComponentsAllocating<GoodStack>(), TimberbornNativeInventoryRole.GoodStack, role => role.Inventory);
         Add(entity.GetComponentsAllocating<Manufactory>(), TimberbornNativeInventoryRole.Manufactory, role => role.Inventory);
         Add(entity.GetComponentsAllocating<RecoveredGoodStack>(), TimberbornNativeInventoryRole.RecoveredGoodStack, role => role.Inventory);
+        Add(entity.GetComponentsAllocating<WardenStation>(), TimberbornNativeInventoryRole.WardenStation, role => role.Inventory);
         var result = ValidateClaims(inventories, claims);
         foreach (var inventory in inventories)
             if (!inventory || !ReferenceEquals(inventory.GetComponent<EntityComponent>(), entity))

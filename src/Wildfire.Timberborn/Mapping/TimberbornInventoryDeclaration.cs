@@ -1,7 +1,7 @@
 namespace Wildfire.Timberborn.Mapping;
 
 // Declared native capability, independent of physical stock and admitted material/effect roles.
-public enum TimberbornNativeInventoryRole { Stockpile, SimpleOutput, GoodStack, Manufactory, RecoveredGoodStack }
+public enum TimberbornNativeInventoryRole { Stockpile, SimpleOutput, GoodStack, Manufactory, RecoveredGoodStack, WardenStation = 5 }
 
 public sealed record TimberbornInventoryDeclaration
 {

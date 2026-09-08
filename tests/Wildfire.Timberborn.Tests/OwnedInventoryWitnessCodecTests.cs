@@ -24,6 +24,27 @@ public sealed class OwnedInventoryWitnessCodecTests
     }
 
     [Fact]
+    public void WardenDeclarationExactNativeNameSurvivesOwnedFourCodec()
+    {
+        using var native = new NativeInventoryRoleFixture(input: true);
+        native.InitializeNamedInventory("Station.ActualName");
+        var type = native.Stock.Resources.GetType().Assembly.GetType("Wildfire.Timberborn.FireResponse.WardenStation")!;
+        var station = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(type);
+        native.Call(station, "InitializeInventory", native.Inventory);
+        var inventory = native.Property(station, "Inventory")!;
+        string name = (string)native.Property(inventory, "ComponentName")!;
+        // Codec-only body fixture: this does not compile or admit station material/accounting.
+        var encoded = TimberbornWildfirePersistenceCodec.Encode(WithDeclarations(new F().Snapshot(),
+            [new(TimberbornNativeInventoryRole.WardenStation, name)]));
+        var decoded = TimberbornWildfirePersistenceCodec.Decode(encoded);
+        var declaration = decoded.OwnedMaterial!.History!.NativeDefinitions!.Definitions.Single().InventoryDeclarations!.Single();
+        Assert.Equal(TimberbornNativeInventoryRole.WardenStation, declaration.Role);
+        Assert.Equal(name, declaration.ComponentName); Assert.Equal(4, Envelope(encoded));
+        Assert.Equal(encoded, TimberbornWildfirePersistenceCodec.Encode(decoded));
+        Assert.Equal(0, native.Physical);
+    }
+
+    [Fact]
     public void LegacyEmptyOwnerSetDoesNotAcquireCompletenessByVacuousInference()
     {
         var legacy = new TimberbornOwnedConsequenceSnapshot([], [], [], new([]));

@@ -4,7 +4,7 @@ Source checkpoint `a8bd26c` adds an **unwired** native discovery helper. It does
 
 `TimberbornNativeInventoryRoles.Capture(EntityComponent)` returns a copied read-only list of transient `TimberbornDeclaredInventory` bindings. Each contains the immutable public `TimberbornInventoryDeclaration` (native role plus exact `Inventory.ComponentName`) and its native inventory reference. References are only for same-scope validation; future compatibility data uses declarations, never native references.
 
-The declared roles are `Stockpile`, `SimpleOutput`, `GoodStack`, `Manufactory` and `RecoveredGoodStack`. This enum is separate from the currently admitted physical material role enum. Discovery enumerates all instances of these actual native components and every native `Inventory` on the body. It rejects:
+The declared roles are `Stockpile`, `SimpleOutput`, `GoodStack`, `Manufactory` `RecoveredGoodStack` and `WardenStation`. This enum is separate from the currently admitted physical material role enum. Discovery enumerates all instances of these actual native components and every native `Inventory` on the body. It rejects:
 
 - Missing or foreign role/inventory references, including native role components whose owning entity differs.
 - Duplicate role instances, repeated inventory components, or one inventory claimed by two roles.
@@ -23,9 +23,13 @@ Read-only template/source audit found two dedicated mod inventories:
 
 | Template/role | Native inventory name | Consequence for later observation wiring |
 | --- | --- | --- |
-| `WildfireWardenStationSpec → WardenStation → Inventory` | `Wildfire.WardenStation` (capacity 20, input-only Water) | The shipping-source station blueprint has `BuildingSpec` and `BlockObjectSpec`, but none of the five supported inventory-role components. Its inventory will correctly reject as unclaimed until an explicit WardenStation declaration role is added. This is an initial-world completeness gate even if Water has no combustible contribution. |
+| `WildfireWardenStationSpec → WardenStation → Inventory` | `Wildfire.WardenStation` (capacity 20, input-only Water) | The shipping-source station blueprint has `BuildingSpec` and `BlockObjectSpec`, and uses its custom WardenStation component. The follow-up now recognizes this exact declaration role; physical stock material/profile/accounting support is unchanged. |
 | `AdultSpec → WardenEquipment → Inventory` | `Wildfire.WardenEquipment` (capacity 1, private Water) | Every adult gets the dedicated equipment inventory, including adults who are not on warden duty. Direct complete inventory discovery of that entity rejects until the equipment role is supported. Current body capture skips entities without `BlockObject`; the installed `Characters/Beaver/BeaverAdult.blueprint.json` has `AdultSpec` and no `BlockObjectSpec`, so this is not the same immediate body-observation gate as the station. |
 
 Evidence: `WildfireConfigurator.WardenTemplateModuleProvider.Get`, `WardenStationInventoryInitializer.Initialize`, `WardenEquipmentInventoryInitializer.Initialize`, source `Data/Buildings/FireResponse/WardenStation.IronTeeth.blueprint.json`, and the installed `Blueprints.zip` adult definition. The other mod ash/borrowed-duty decorators add executors/behaviors; source search found no additional dedicated mod inventory initializer. This is source/template distribution evidence, not a live template-instantiation census.
 
-Recommended next change when observation wiring reaches these templates: add the two exact declaration roles and native property bindings deliberately, with same alias/name/ownership checks. Do not infer WardenStation as SimpleOutput merely because it implements `IGoodProcessor`, or treat private equipment as a district stockpile. No such extension is implemented in this checkpoint.
+The WardenStation follow-up appends stable enum value 5 and reads the actual `WardenStation.Inventory` property and native `ComponentName`. It retains the same alias/name/ownership checks. It does not infer SimpleOutput from `IGoodProcessor`, change material/accounting support, or add WardenEquipment to building capture. Private equipment remains explicitly unsupported if direct adult inventory discovery is later required.
+
+## WardenStation declaration follow-up
+
+Two added tests use the actual station component/property with supplied native Inventory. Empty/disabled station inventory keeps its exact supplied name; aliasing it through SimpleOutput rejects. Its exact name and appended role survive OWNED4 codec round trip. The codec case deliberately isolates declaration serialization using the existing synthetic body fixture; it does not claim successful station material formation. The 36 combined discovery/witness cases pass; original enum values remain unchanged. Complete template instantiation and live station capture remain unexecuted here.

@@ -25,6 +25,27 @@ public sealed class NativeInventoryDiscoveryTests
     }
 
     [Fact]
+    public void ActualDisabledEmptyStationInventoryRetainsItsExactNameAndRejectsAlias()
+    {
+        using var f = new Fixture();
+        f.Native.InitializeNamedInventory("Station.ActualName");
+        var type = f.Native.Stock.Resources.GetType().Assembly.GetType("Wildfire.Timberborn.FireResponse.WardenStation")!;
+        var station = RuntimeHelpers.GetUninitializedObject(type);
+        f.Native.Call(station, "InitializeInventory", f.Inventory);
+        var owned = f.Native.Property(station, "Inventory");
+        var result = f.Validate([f.Inventory], [("WardenStation", owned)]);
+        Assert.Equal(new[] { "Station.ActualName" }, f.Names(result));
+        Assert.Equal(false, f.Native.Property(f.Inventory, "Enabled"));
+        Assert.Equal(0, f.Native.Physical);
+        var output = f.Native.Role("SimpleOutput");
+        var error = Assert.Throws<TargetInvocationException>(() => f.Validate([f.Inventory],
+            [("WardenStation", owned), ("SimpleOutput", f.Native.Property(output, "Inventory"))]));
+        Assert.Contains("aliased", error.GetBaseException().Message);
+        Assert.Equal(5, (int)TimberbornNativeInventoryRole.WardenStation);
+        Assert.Equal(4, (int)TimberbornNativeInventoryRole.RecoveredGoodStack);
+    }
+
+    [Fact]
     public void ActualRoleInitializerAliasIsRejectedBeforeReturningAnyBindings()
     {
         using var f = new Fixture();
