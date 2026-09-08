@@ -21,6 +21,7 @@ Use the entry point that matches the work. Source and fresh validation establish
 - [Two-inventory engine proof](qa/two-inventory-session-engine-proof.md): exact restore, actual native consumption receipts and reserved-stock preservation under the shared guard, using explicit synthetic damage inputs.
 - [Declared storage effects](qa/declared-storage-effects.md): exact inventory identity, reserved-stock preservation, one owner budget and verified withdrawal receipts.
 - [Snapshot validation allocation](qa/snapshot-enum-allocation.md): measured optimization and limits of its small-grid comparison.
+- [Remaining snapshot copies](qa/planner-snapshot-copy-allocation.md): full-domain allocation attribution, callback isolation regression, and why removing a copy needs an explicit ownership boundary.
 
 ## Focused references
 
