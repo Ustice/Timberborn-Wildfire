@@ -16,12 +16,20 @@ internal static class TimberbornDesiredMaterialReconciliation
     private const uint StaticCompanionMask = FireSimMaterialHandoffProtocol.CompanionMaterialMask & ~0xf000u;
 
     internal static FireSimMaterialHandoffBatch? Plan<TSimulator>(TimberbornNativeMaterialRegistry registry,
-        IReadOnlyDictionary<Guid, OwnedBodyRetention> canonicalOwners, TSimulator simulator)
+        IReadOnlyDictionary<Guid, OwnedBodyRetention> canonicalOwners, TSimulator simulator,
+        IReadOnlyCollection<Guid> freshEligibleOwners)
         where TSimulator : IFireSimMaterialHandoffSimulator, IFireSimSnapshotSimulator
     {
         if (registry is null) throw new ArgumentNullException(nameof(registry));
         if (canonicalOwners is null) throw new ArgumentNullException(nameof(canonicalOwners));
         if (simulator is null) throw new ArgumentNullException(nameof(simulator));
+        if (freshEligibleOwners is null) throw new ArgumentNullException(nameof(freshEligibleOwners));
+        var owners = canonicalOwners.ToDictionary(pair => pair.Key, pair => pair.Value);
+        var freshOwners = freshEligibleOwners.ToArray();
+        if (freshOwners.Distinct().Count() != freshOwners.Length || freshOwners.Any(id =>
+                id == Guid.Empty || !owners.TryGetValue(id, out var retention) || retention != OwnedBodyRetention.RetainedBody))
+            throw new ArgumentException("Fresh eligibility must be an explicit unique subset of current retained owners.");
+        var freshEligible = freshOwners.ToHashSet();
         if (simulator.SnapshotCapability != FireSimSnapshotCapability.CompleteMaterialHistory)
             throw new NotSupportedException("Desired material planning requires complete GPU history.");
         var snapshot = FireSimSnapshotValidation.ValidateAndClone(simulator.CaptureSnapshot());
@@ -32,7 +40,6 @@ internal static class TimberbornDesiredMaterialReconciliation
         // constructing another registry and cloning/revalidating every cell a third time.
         if (snapshot.MaterialAuthority.KnownSlots.Any(identity => !registry.IsSlotBound(identity.TargetId, identity.SlotId)))
             throw new ArgumentException("Every simulator material identity requires an exact retained native Guid/local-slot binding.");
-        var owners = canonicalOwners.ToDictionary(pair => pair.Key, pair => pair.Value);
         if (!owners.Keys.ToHashSet().SetEquals(bindings.Entities.Select(entity => entity.EntityId)) ||
             owners.Any(pair => pair.Key == Guid.Empty || !Enum.IsDefined(typeof(OwnedBodyRetention), pair.Value)))
             throw new ArgumentException("Every retained native binding requires one explicit canonical owner retention.");
@@ -72,7 +79,11 @@ internal static class TimberbornDesiredMaterialReconciliation
             if (incoming == expected)
                 throw new InvalidOperationException("A captured source cannot remain active at its previous cell.");
             if (!known.Contains(incoming))
+            {
+                if (!freshEligible.Contains(owner.EntityId))
+                    throw new NotSupportedException("Never-activated native material lacks current first-activation evidence.");
                 requests.Add(cell, registry.CreateFirstActivationRequest(cell, expected, simulator));
+            }
             else if (archives.TryGetValue(incoming, out var archive))
                 requests.Add(cell, FireSimMaterialHandoffRequest.RestoreArchived(cell, expected, archive));
             else if (active.TryGetValue(incoming, out int source))
